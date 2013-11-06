@@ -102,6 +102,103 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && !ACTION) {
     lovd_showJGNavigation($aNavigation, 'Individuals');
     */
 
+    print('<BR><BR>' . "\n\n");
+    lovd_includeJS('inc-js-tooltip.php');
+
+    // Show info table about data analysis.
+    if ($zData['analysis_statusid'] == ANALYSIS_STATUS_WAIT) {
+        // Can't start.
+        lovd_showInfoTable('Can\'t start analysis, still waiting for variant data to be uploaded.', 'stop', 600);
+        $_T->printFooter();
+        exit;
+    } elseif ($zData['analysis_statusid'] == ANALYSIS_STATUS_READY) {
+        // Not started yet, create notice and allow starting analysis.
+        lovd_showInfoTable('Data analysis ready to start; click here to view your options.', 'information', 600,
+            '$(\'#analyses\').removeClass(); $(this).hide();');
+    }
+    lovd_includeJS('inc-js-analyses.php');
+
+    // If we're ready to analyze, or if we are analyzing already, show analysis options.
+    $zAnalyses = $_DB->query('SELECT a.id, a.name, a.description, a.filters, (ar.id IS NOT NULL) AS analysis_run, ar.id AS runid, ar.modified, GROUP_CONCAT(arf.filterid, ";", IFNULL(arf.filtered_out, "-"), ";", IFNULL(arf.run_time, "-") ORDER BY arf.filter_order SEPARATOR ";;") AS __run_filters FROM ' . TABLE_ANALYSES . ' AS a LEFT OUTER JOIN ' . TABLE_ANALYSES_RUN . ' AS ar ON (a.id = ar.analysisid) LEFT OUTER JOIN ' . TABLE_ANALYSES_RUN_FILTERS . ' AS arf ON (ar.id = arf.runid) WHERE (ar.id IS NULL OR ar.individualid = ?)', array($zData['id']))->fetchAllAssoc();
+    print('
+      <DIV id="analyses"' . ($zData['analysis_statusid'] != ANALYSIS_STATUS_READY? '' : ' class="analyses_none_run"') . '>
+        <TABLE border="0" cellpadding="0" cellspacing="0">
+          <TR>');
+    foreach ($zAnalyses as $zAnalysis) {
+        $aFilters = preg_split('/\s+/', $zAnalysis['filters']);
+        if ($zAnalysis['analysis_run'] && $zAnalysis['__run_filters']) {
+            list($aFiltersRunRaw) = $_DATA->autoExplode(array('__0' => $zAnalysis['__run_filters']));
+            $aFiltersRun = array();
+            foreach ($aFiltersRunRaw as $aFilter) {
+                $aFiltersRun[$aFilter[0]] = array($aFilter[1], $aFilter[2]);
+            }
+            $sLastFilter = $aFilter[0]; // For checking if this analysis is done or not.
+        } else {
+            $aFiltersRun = array();
+        }
+
+        if ($zAnalysis['analysis_run']) {
+            // Was run complete?
+            if ($aFiltersRun[$sLastFilter][0] == '-') {
+                // It's not done... this is strange... half an analysis should normally not happen.
+                $sAnalysisClassName = 'analysis_running';
+            } else {
+                $sAnalysisClassName = 'analysis_run';
+            }
+        } else {
+            $sAnalysisClassName = 'analysis_not_run';
+        }
+        print('
+            <TD valign="top">
+              <TABLE border="0" cellpadding="0" cellspacing="1" id="analysis_' . $zAnalysis['id'] . '" class="analysis ' . $sAnalysisClassName . '"' .
+            ($zAnalysis['analysis_run']? '' : ' onclick="lovd_runAnalysis(\'' . $zData['id'] . '\', \'' . $zAnalysis['id'] . '\');"') . '>
+                <TR>
+                  <TH colspan="3">
+                    <DIV style="position : relative">
+                      ' . $zAnalysis['name'] . '
+                      <IMG src="gfx/lovd_form_question.png" alt="" onmouseover="lovd_showToolTip(\'' . $zAnalysis['description'] . '\');" onmouseout="lovd_hideToolTip();" width="14" height="14" class="help" style="position: absolute; top: -4px; right: 0px;">
+                    </DIV>
+                  </TH>
+                </TR>
+                <TR>
+                  <TD><B>Filter</B></TD>
+                  <TD><B>Time</B></TD>
+                  <TD><B>Var left</B></TD>
+                </TR>');
+        $nVariantsLeft = $zData['variants'];
+        foreach ($aFilters as $sFilter) {
+            $sFilterClassName = '';
+            $nTime = '-';
+            if ($zAnalysis['analysis_run']) {
+                if (!isset($aFiltersRun[$sFilter])) {
+                    $sFilterClassName = 'filter_skipped';
+                } else {
+                    list($nVariantsFiltered, $nTime) = $aFiltersRun[$sFilter];
+                    if ($nVariantsFiltered != '-' && $nTime != '-') {
+                        $nVariantsLeft -= $nVariantsFiltered;
+                        $sFilterClassName = 'filter_completed';
+                    }
+                }
+            }
+            print('
+                <TR id="analysis_' . $zAnalysis['id'] . '_filter_' . $sFilter . '"' . (!$sFilterClassName? '' : ' class="' . $sFilterClassName . '"') . '>
+                  <TD>' . $sFilter . '</TD>
+                  <TD>' . ($nTime == '-'? '-' : lovd_convertSecondsToTime($nTime, 1)) . '</TD>
+                  <TD>' . ($nTime == '-'? '-' : $nVariantsLeft) . '</TD>
+                </TR>');
+        }
+        print('
+                <TR id="analysis_' . $zAnalysis['id'] . '_message" class="message">
+                  <TD colspan="3">' . ($sAnalysisClassName == 'analysis_running'? 'Analysis seems to have been interrupted' : ($sAnalysisClassName == 'analysis_run'? 'Click to see results' : 'Click to run this analysis')) . '</TD>
+                </TR>
+              </TABLE>
+            </TD>');
+    }
+    print('
+          </TR>
+        </TABLE>
+      </DIV>' . "\n\n");
+
     $_T->printFooter();
     exit;
 }

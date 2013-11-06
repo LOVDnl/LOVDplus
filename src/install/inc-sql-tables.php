@@ -760,9 +760,11 @@ $aTableSQL =
    'CREATE TABLE ' . TABLE_ANALYSES_RUN_FILTERS . ' (
     runid SMALLINT(5) UNSIGNED ZEROFILL NOT NULL,
     filterid VARCHAR(25) NOT NULL,
+    filter_order TINYINT UNSIGNED NOT NULL,
     filtered_out MEDIUMINT UNSIGNED,
     run_time TINYINT UNSIGNED,
     PRIMARY KEY (runid, filterid),
+    UNIQUE (runid, filter_order),
     INDEX (filterid),
     CONSTRAINT ' . TABLE_ANALYSES_RUN_FILTERS . '_fk_runid FOREIGN KEY (runid) REFERENCES ' . TABLE_ANALYSES_RUN . ' (id) ON DELETE CASCADE ON UPDATE CASCADE)
     ' . $sSettings
@@ -772,7 +774,9 @@ $aTableSQL =
     runid SMALLINT(5) UNSIGNED ZEROFILL NOT NULL,
     variantid INT(10) UNSIGNED ZEROFILL NOT NULL,
     PRIMARY KEY (runid, variantid),
+    INDEX (runid),
     INDEX (variantid),
+    CONSTRAINT ' . TABLE_ANALYSES_RUN_RESULTS . '_fk_runid FOREIGN KEY (runid) REFERENCES ' . TABLE_ANALYSES_RUN . ' (id) ON DELETE CASCADE ON UPDATE CASCADE,
     CONSTRAINT ' . TABLE_ANALYSES_RUN_RESULTS . '_fk_variantid FOREIGN KEY (variantid) REFERENCES ' . TABLE_VARIANTS . ' (id) ON DELETE CASCADE ON UPDATE CASCADE)
     ' . $sSettings
           );

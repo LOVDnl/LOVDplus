@@ -3,7 +3,7 @@
  * LEIDEN OPEN VARIATION DATABASE (LOVD)
  *
  * Created     : 2013-11-05
- * Modified    : 2013-11-05
+ * Modified    : 2013-11-06
  * For LOVD    : 3.0-09
  *
  * Copyright   : 2004-2013 Leiden University Medical Center; http://www.LUMC.nl/
@@ -34,23 +34,27 @@ table.analysis               {font-size: 11px; border: 1px solid #000; margin: 2
 table.analysis th            {font-size: 13px; border-bottom: 3px double #000;}
 table.analysis th,
 table.analysis td            {padding: 0px 4px 0px 4px;}
-table.analysis tr.message    {text-align: center; display: none;}
+table.analysis tr.message    {text-align: center; font-weight: bold; display: none;}
 table.analysis tr.message td {border-top: 1px dotted #000;}
 
+table.analysis_run           {cursor: pointer;}
+table.analysis_run:hover     {border: 3px double #000; margin: 0px;}
+table.analysis_run:hover
+  tr.message                 {display: table-row;}
 table.analysis_run th        {background: #B0E0B0;}
 table.analysis_run td        {background: #E0FFE0;}
 
 table.analysis_not_run       {cursor: pointer;}
 table.analysis_not_run:hover {border: 3px double #000; margin: 0px;}
 table.analysis_not_run:hover
-  tr.message                 {display: table-row; font-weight: bold;}
+  tr.message                 {display: table-row;}
 table.analysis_not_run th    {background: #C0C0C0;}
 table.analysis_not_run td    {background: #EEEEEE;}
 
 table.analysis_running       {border: 3px double #000; margin: 0px;}
 table.analysis_running
-  tr.message                 {display: table-row; font-weight: bold;}
+  tr.message                 {display: table-row;}
 table.analysis_running th    {background: #E0B0B0;}
 table.analysis_running td    {background: #EEEEEE;}
 table.analysis_running
-  td.filter_completed        {background: #E0FFE0;}
+  tr.filter_completed td     {background: #E0FFE0;}

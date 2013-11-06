@@ -1112,4 +1112,40 @@ function lovd_convertIniValueToBytes ($sValue)
 
     return $nValue;
 }
+
+
+
+
+
+function lovd_convertSecondsToTime ($sValue, $nDecimals = 0)
+{
+    // This function takes a number of seconds and converts it into whole
+    // minutes, hours, days, months or years.
+    // FIXME; Implement proper checks here? Regexp?
+
+    $nValue = (int) $sValue;
+    if (ctype_digit((string) $sValue)) {
+        $sValue .= 's';
+    }
+    $sLast = strtolower(substr($sValue, -1));
+    $nDecimals = (int) $nDecimals;
+
+    $aConversion =
+        array(
+            's' => array(60, 'm'),
+            'm' => array(60, 'h'),
+            'h' => array(24, 'd'),
+            'd' => array(265, 'y'),
+        );
+
+    foreach ($aConversion as $sUnit => $aConvert) {
+        list($nFactor, $sNextUnit) = $aConvert;
+        if ($sLast == $sUnit && $nValue > $nFactor) {
+            $nValue /= $nFactor;
+            $sLast = $sNextUnit;
+        }
+    }
+
+    return round($nValue, $nDecimals) . $sLast;
+}
 ?>
