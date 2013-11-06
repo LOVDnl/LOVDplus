@@ -224,6 +224,13 @@ $aTableSQL =
     PRIMARY KEY (id))
     ' . $sSettings
 
+         , 'TABLE_ANALYSIS_STATUS' =>
+         'CREATE TABLE ' . TABLE_ANALYSIS_STATUS . ' (
+    id TINYINT(1) UNSIGNED NOT NULL,
+    name VARCHAR(25) NOT NULL,
+    PRIMARY KEY (id))
+    ' . $sSettings
+
              , 'TABLE_ALLELES' =>
    'CREATE TABLE ' . TABLE_ALLELES . ' (
     id TINYINT(2) UNSIGNED NOT NULL,
@@ -252,6 +259,13 @@ $aTableSQL =
     created_date DATETIME NOT NULL,
     edited_by SMALLINT(5) UNSIGNED ZEROFILL,
     edited_date DATETIME,
+
+    analysis_statusid TINYINT(1) UNSIGNED,
+    analysis_by SMALLINT(5) UNSIGNED ZEROFILL,
+    analysis_date DATETIME,
+    analysis_approved_by SMALLINT(5) UNSIGNED ZEROFILL,
+    analysis_approved_date DATETIME,
+
     PRIMARY KEY (id),
     INDEX (fatherid),
     INDEX (motherid),
@@ -259,6 +273,14 @@ $aTableSQL =
     INDEX (statusid),
     INDEX (created_by),
     INDEX (edited_by),
+
+    INDEX (analysis_statusid),
+    INDEX (analysis_by),
+    INDEX (analysis_approved_by),
+    CONSTRAINT ' . TABLE_INDIVIDUALS . '_fk_analysis_statusid FOREIGN KEY (analysis_statusid) REFERENCES ' . TABLE_ANALYSIS_STATUS . ' (id) ON DELETE SET NULL ON UPDATE CASCADE,
+    CONSTRAINT ' . TABLE_INDIVIDUALS . '_fk_analysis_by FOREIGN KEY (analysis_by) REFERENCES ' . TABLE_USERS . ' (id) ON DELETE SET NULL ON UPDATE CASCADE,
+    CONSTRAINT ' . TABLE_INDIVIDUALS . '_fk_analysis_approved_by FOREIGN KEY (analysis_approved_by) REFERENCES ' . TABLE_USERS . ' (id) ON DELETE SET NULL ON UPDATE CASCADE,
+
     CONSTRAINT ' . TABLE_INDIVIDUALS . '_fk_fatherid FOREIGN KEY (fatherid) REFERENCES ' . TABLE_INDIVIDUALS . ' (id) ON DELETE SET NULL ON UPDATE CASCADE,
     CONSTRAINT ' . TABLE_INDIVIDUALS . '_fk_motherid FOREIGN KEY (motherid) REFERENCES ' . TABLE_INDIVIDUALS . ' (id) ON DELETE SET NULL ON UPDATE CASCADE,
     CONSTRAINT ' . TABLE_INDIVIDUALS . '_fk_panelid FOREIGN KEY (panelid) REFERENCES ' . TABLE_INDIVIDUALS . ' (id) ON DELETE SET NULL ON UPDATE CASCADE,
@@ -695,6 +717,63 @@ $aTableSQL =
     installed_date DATE NOT NULL,
     updated_date DATE,
     PRIMARY KEY (id))
+    ' . $sSettings
+
+
+
+
+
+        , 'TABLE_ANALYSES' =>
+   'CREATE TABLE ' . TABLE_ANALYSES . ' (
+    id TINYINT(3) UNSIGNED ZEROFILL NOT NULL AUTO_INCREMENT,
+    name VARCHAR(50) NOT NULL,
+    description TEXT NOT NULL,
+    filters TEXT NOT NULL,
+    created_by SMALLINT(5) UNSIGNED ZEROFILL,
+    created_date DATETIME NOT NULL,
+    edited_by SMALLINT(5) UNSIGNED ZEROFILL,
+    edited_date DATETIME,
+    PRIMARY KEY (id),
+    INDEX (created_by),
+    INDEX (edited_by),
+    CONSTRAINT ' . TABLE_ANALYSES . '_fk_created_by FOREIGN KEY (created_by) REFERENCES ' . TABLE_USERS . ' (id) ON DELETE SET NULL ON UPDATE CASCADE,
+    CONSTRAINT ' . TABLE_ANALYSES . '_fk_edited_by FOREIGN KEY (edited_by) REFERENCES ' . TABLE_USERS . ' (id) ON DELETE SET NULL ON UPDATE CASCADE)
+    ' . $sSettings
+
+        , 'TABLE_ANALYSES_RUN' =>
+   'CREATE TABLE ' . TABLE_ANALYSES_RUN . ' (
+    id SMALLINT(5) UNSIGNED ZEROFILL NOT NULL AUTO_INCREMENT,
+    analysisid TINYINT(3) UNSIGNED ZEROFILL,
+    individualid MEDIUMINT(8) UNSIGNED ZEROFILL NOT NULL,
+    modified BOOLEAN NOT NULL,
+    created_by SMALLINT(5) UNSIGNED ZEROFILL,
+    created_date DATETIME NOT NULL,
+    PRIMARY KEY (id),
+    INDEX (individualid),
+    INDEX (created_by),
+    CONSTRAINT ' . TABLE_ANALYSES_RUN . '_fk_individualid FOREIGN KEY (individualid) REFERENCES ' . TABLE_INDIVIDUALS . ' (id) ON DELETE CASCADE ON UPDATE CASCADE,
+    CONSTRAINT ' . TABLE_ANALYSES_RUN . '_fk_analysisid FOREIGN KEY (analysisid) REFERENCES ' . TABLE_ANALYSES . ' (id) ON DELETE SET NULL ON UPDATE CASCADE,
+    CONSTRAINT ' . TABLE_ANALYSES_RUN . '_fk_created_by FOREIGN KEY (created_by) REFERENCES ' . TABLE_USERS . ' (id) ON DELETE SET NULL ON UPDATE CASCADE)
+    ' . $sSettings
+
+        , 'TABLE_ANALYSES_RUN_FILTERS' =>
+   'CREATE TABLE ' . TABLE_ANALYSES_RUN_FILTERS . ' (
+    runid SMALLINT(5) UNSIGNED ZEROFILL NOT NULL,
+    filterid VARCHAR(25) NOT NULL,
+    filtered_out MEDIUMINT UNSIGNED,
+    run_time TINYINT UNSIGNED,
+    PRIMARY KEY (runid, filterid),
+    INDEX (filterid),
+    CONSTRAINT ' . TABLE_ANALYSES_RUN_FILTERS . '_fk_runid FOREIGN KEY (runid) REFERENCES ' . TABLE_ANALYSES_RUN . ' (id) ON DELETE CASCADE ON UPDATE CASCADE)
+    ' . $sSettings
+
+        , 'TABLE_ANALYSES_RUN_RESULTS' =>
+   'CREATE TABLE ' . TABLE_ANALYSES_RUN_RESULTS . ' (
+    runid SMALLINT(5) UNSIGNED ZEROFILL NOT NULL,
+    variantid INT(10) UNSIGNED ZEROFILL NOT NULL,
+    PRIMARY KEY (runid, variantid),
+    INDEX (variantid),
+    CONSTRAINT ' . TABLE_ANALYSES_RUN_RESULTS . '_fk_variantid FOREIGN KEY (variantid) REFERENCES ' . TABLE_VARIANTS . ' (id) ON DELETE CASCADE ON UPDATE CASCADE)
     ' . $sSettings
           );
 

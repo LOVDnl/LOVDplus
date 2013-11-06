@@ -858,6 +858,45 @@ if (PATH_COUNT == 2 && $_PE[1] == 'upload' && ACTION == 'create') {
 
 
 
+    // Define list of columns from SeattleSeq format that we are recognizing.
+    $aSeattleSeqCols =
+     array(
+        'ALTPERC' => 'VariantOnGenome/Sequencing/Depth/Alt/Fraction',
+        'distanceToSplice' => 'VariantOnTranscript/Distance_to_splice_site',
+        'DP' => 'VariantOnGenome/Sequencing/Depth/Total',
+        'DPALT' => 'VariantOnGenome/Sequencing/Depth/Alt',
+        'DPREF' => 'VariantOnGenome/Sequencing/Depth/Ref',
+        'FILTERvcf' => 'VariantOnGenome/Sequencing/Filter',
+        'functionGVS' => 'VariantOnTranscript/GVS/Function',
+        'QUAL' => 'VariantOnGenome/Sequencing/Quality',
+        'scorePhastCons' => 'VariantOnGenome/Conservation_score/Phast',
+//        'FAM_UNAFFECTED_genotype_father' => 'VariantOnGenome/Sequencing/Father/Genotype',
+        'FAM_UNAFFECTED_reads_fatherDP' => 'VariantOnGenome/Sequencing/Father/Depth/Total',
+//        'FAM_UNAFFECTED_genotype_mother' => 'VariantOnGenome/Sequencing/Mother/Genotype',
+        'FAM_UNAFFECTED_reads_motherDP' => 'VariantOnGenome/Sequencing/Mother/Depth/Total',
+        'ISPRESENT_father' => 'VariantOnGenome/Sequencing/Father/VarPresent',
+        'ALTPERC_father' => 'VariantOnGenome/Sequencing/Father/Depth/Alt/Fraction',
+        'ISPRESENT_mother' => 'VariantOnGenome/Sequencing/Mother/VarPresent',
+        'ALTPERC_mother' => 'VariantOnGenome/Sequencing/Mother/Depth/Alt/Fraction',
+        'phyloP' => 'VariantOnGenome/Conservation_score/PhyloP',
+        'AF1000G' => 'VariantOnGenome/Frequency/1000G',
+        'AFGONL' => 'VariantOnGenome/Frequency/GoNL',
+        'AFESP5400' => 'VariantOnGenome/Frequency/EVS',
+        'SIFT' => 'VariantOnTranscript/Prediction/SIFT',
+        'MutationTaster_pred' => 'VariantOnTranscript/Prediction/MutationTaster',
+        'MutationTaster_score' => 'VariantOnTranscript/Prediction/MutationTaster/Score',
+        'granthamScore' => 'VariantOnTranscript/Prediction/Grantham',
+//        '' => '',
+//        '' => '',
+        // In use by old code.
+        'cDNAPosition' => 'VariantOnTranscript/Position',
+        'polyPhen' => 'VariantOnTranscript/PolyPhen',
+        );
+
+
+
+
+
     function lovd_getVCFLine ($fInput)
     {
         // This function reads and returns one line in $fInput.
@@ -899,10 +938,11 @@ if (PATH_COUNT == 2 && $_PE[1] == 'upload' && ACTION == 'create') {
         }
         if (!isset($sLine)) {
             $sLine = '';
+            $bFirstLineRead = true; // Will tell us to "hack" the parser and fake the '#' in front of the header line.
         }
 
         do {
-            // Variants have a seperate line for each transcript they hit. We read lines
+            // Variants have a separate line for each transcript they hit. We read lines
             // until we've got all data for one genomic position and then exit of the loop.
 
             do {
@@ -913,6 +953,12 @@ if (PATH_COUNT == 2 && $_PE[1] == 'upload' && ACTION == 'create') {
                 $nParsedBytes += strlen($sNextLine);
             } while ($sNextLine !== false && !trim($sNextLine));
 
+            // Create hack for KG pipeline file.
+            if (!empty($bFirstLineRead)) {
+                $sNextLine = '# ' . $sNextLine;
+                $bFirstLineRead = false;
+            }
+
             // If we don't have a header line yet, we keep reading lines until we've got one. Then we enter the if() below.
             if (empty($aHeaders) && $sNextLine && substr($sNextLine, 0, 2) != '# ') {
                 // We moved past the header line with $sNextLine, so the header was the previous line. $sLine has it.
@@ -922,6 +968,7 @@ if (PATH_COUNT == 2 && $_PE[1] == 'upload' && ACTION == 'create') {
                     return false;
                 }
                 $aHeaders = explode("\t", substr(rtrim($sLine, "\r\n"), 2));
+                $aHeaders = array_map('trim', $aHeaders, array_fill(0, count($aHeaders), '"'));
             }
 
             // If we do have a header line, we keep reading lines until we move to the next variant.
@@ -929,15 +976,20 @@ if (PATH_COUNT == 2 && $_PE[1] == 'upload' && ACTION == 'create') {
             if (!empty($aHeaders) && $sLine && substr($sLine, 0, 2) != '# ') {
                 if (empty($aLine)) {
                     // $aLine is going to hold the actual variant data that we return.
-                    // Its inital data comes from $sLine (which is the previously-read line; usually even from the previous call to this function).
-                    // This is because we always read one line 'too much'; we only know $sNextLine is not part of the current variant once w've already read it.
+                    // Its initial data comes from $sLine (which is the previously-read line; usually even from the previous call to this function).
+                    // This is because we always read one line 'too much'; we only know $sNextLine is not part of the current variant once we've already read it.
                     $aLine = array_combine($aHeaders, explode("\t", rtrim($sLine, "\r\n")));
+                    // KG data has quotes.
+                    foreach ($aLine as $key => $val) {
+                        $aLine[$key] = trim($val, '"');
+                    }
 
-                    foreach (array('accession', 'functionGVS', 'functionDBSNP', 'aminoAcids', 'proteinPosition', 'cDNAPosition', 'polyPhen', 'granthamScore', 'proteinSequence', 'distanceToSplice') as $sKey) {
+                    foreach (array('accession', 'functionGVS', 'functionDBSNP', 'aminoAcids', 'proteinPosition', 'cDNAPosition', 'polyPhen', 'granthamScore', 'proteinSequence', 'distanceToSplice', 'SIFT', 'MutationTaster_pred', 'MutationTaster_score') as $sKey) {
+                        // FIXME: You should base this partially on $aSeattleSeqCols.
                         // Making arrays of some transcript-specific columns.
 
                         if (!isset($aLine[$sKey])) {
-                            // cDNAPosition, polyPhen, granthamScore, proteinSequence and distanceToSplice are optional columns so we should check for their existance.
+                            // cDNAPosition, polyPhen, granthamScore, proteinSequence and distanceToSplice are optional columns so we should check for their existence.
                             continue;
                         }
                         $aLine[$sKey] = array($aLine[$sKey]);
@@ -1330,14 +1382,16 @@ if (PATH_COUNT == 2 && $_PE[1] == 'upload' && ACTION == 'create') {
                     'X' => array('G', 'A', 'T', 'C')
                 );
 
-                // Check whether the GERP column is available.
-                $bGERPColumnAvailable = (bool) $_DB->query('SELECT colid FROM ' . TABLE_ACTIVE_COLS . ' WHERE colid = "VariantOnGenome/Conservation_score/GERP"')->fetchColumn();
+                // Check which VOG columns are available.
+                $aVOGColumnsAvailable = $_DB->query('SELECT colid FROM ' . TABLE_ACTIVE_COLS . ' WHERE colid LIKE "VariantOnGenome%"')->fetchAllColumn();
 
-                // Define the list of VariantOnTranscript columns once and for all.
-                $aVOTCols = array('VariantOnTranscript/Distance_to_splice_site',
-                                  'VariantOnTranscript/GVS/Function',
-                                  'VariantOnTranscript/PolyPhen',
-                                  'VariantOnTranscript/Position');
+                // ... And gather all VOT columns names, so we can check which ones are standard.
+                $aVOTCols = array();
+                foreach ($aSeattleSeqCols as $sColID) {
+                    if (strpos($sColID, 'VariantOnTranscript') === 0) {
+                        $aVOTCols[] = $sColID;
+                    }
+                }
 
                 // We also need to get a list of standard VariantOnTranscript columns.
                 $aColsStandard = $_DB->query('SELECT id FROM ' . TABLE_COLS . ' WHERE standard = 1 AND id IN("' . implode('", "', $aVOTCols) . '")')->fetchAllColumn();
@@ -1363,7 +1417,7 @@ if (PATH_COUNT == 2 && $_PE[1] == 'upload' && ACTION == 'create') {
                 $aUnsupportedLines = array();
                 while ($aVariant = lovd_getVariantFromSeattleSeq($fInput)) {
                     // Empty the arrays that will hold the variant data to be inserted into the database.
-                    $aFieldsVariantOnGenome = array();
+                    $aFieldsVariantOnGenome = array(); // [0] is the first variant, [1] is filled in case of compound heterozygosity.
                     $aFieldsVariantOnTranscript = array();
 
                     // lovd_fetchDBID wants to have some additional data in the variant's array which we need to store seperately for now.
@@ -1388,8 +1442,24 @@ if (PATH_COUNT == 2 && $_PE[1] == 'upload' && ACTION == 'create') {
                         'created_date' => $aUploadData['upload_date'],
                         );
 
-                    if ($bGERPColumnAvailable && !in_array($aVariant['consScoreGERP'], array('NA', 'unknown', 'none'))) {
-                        $aFieldsVariantOnGenome[0]['VariantOnGenome/Conservation_score/GERP'] = $aVariant['consScoreGERP'];
+                    // Load VOG columns mapped to SeattleSeq output cols.
+                    foreach ($aSeattleSeqCols as $sSeattleSeqCol => $sColID) {
+                        if (in_array($sColID, $aVOGColumnsAvailable) && !in_array($aVariant[$sSeattleSeqCol], array('NA', 'unknown', 'none'))) {
+                            $Val = $aVariant[$sSeattleSeqCol];
+                            switch ($sSeattleSeqCol) {
+                                case 'ALTPERC':
+                                case 'ALTPERC_father':
+                                case 'ALTPERC_mother':
+                                case 'AFESP5400':
+                                    $Val /= 100; // Percentage to fraction.
+                                    break;
+                            }
+                            $aFieldsVariantOnGenome[0][$sColID] = $Val;
+                        }
+                    }
+                    // Include Alamut link.
+                    if (in_array('VariantOnGenome/Alamut', $aVOGColumnsAvailable)) {
+                        $aFieldsVariantOnGenome[0]['VariantOnGenome/Alamut'] = '{Alamut:' . $aVariant['chromosome'] . ':' . $aVariant['position'] . ':' . $aVariant['REF'] . '>' . $aVariant['ALT'] . '}';
                     }
 
                     if ($_POST['dbSNP_column'] > 0 && preg_match('/\d+/', $aVariant['rsID'], $aDbSNP) && $aDbSNP[0] != '0') {
@@ -1849,19 +1919,11 @@ if (PATH_COUNT == 2 && $_PE[1] == 'upload' && ACTION == 'create') {
                                                     'VariantOnTranscript/DNA' => substr($sVariantOnTranscript, strpos($sVariantOnTranscript, ':') + 1),
                                                     'VariantOnTranscript/Protein' => $sProteinChange);
 
-                                                if (in_array('VariantOnTranscript/GVS/Function', $aGenesChecked[$sSymbol]['columns'])) {
-                                                    $aFieldsVariantOnTranscript[$j][$sAccession]['VariantOnTranscript/GVS/Function'] = $aVariant['functionGVS'][$i];
-                                                }
-
-                                                // cDNAPosition, polyPhen and distanceToSplice are optional columns so we should check for their existance too.
-                                                if (isset($aVariant['cDNAPosition']) && in_array('VariantOnTranscript/Position', $aGenesChecked[$sSymbol]['columns'])) {
-                                                    $aFieldsVariantOnTranscript[$j][$sAccession]['VariantOnTranscript/Position'] = $aVariant['cDNAPosition'][$i];
-                                                }
-                                                if (isset($aVariant['polyPhen']) && in_array('VariantOnTranscript/PolyPhen', $aGenesChecked[$sSymbol]['columns'])) {
-                                                    $aFieldsVariantOnTranscript[$j][$sAccession]['VariantOnTranscript/PolyPhen'] = $aVariant['polyPhen'][$i];
-                                                }
-                                                if (isset($aVariant['distanceToSplice']) && in_array('VariantOnTranscript/Distance_to_splice_site', $aGenesChecked[$sSymbol]['columns'])) {
-                                                    $aFieldsVariantOnTranscript[$j][$sAccession]['VariantOnTranscript/Distance_to_splice_site'] = $aVariant['distanceToSplice'][$i];
+                                                // Load VOT columns mapped to SeattleSeq output cols.
+                                                foreach ($aSeattleSeqCols as $sSeattleSeqCol => $sColID) {
+                                                    if (in_array($sColID, $aGenesChecked[$sSymbol]['columns']) && isset($aVariant[$sSeattleSeqCol]) && !in_array($aVariant[$sSeattleSeqCol][$i], array('NA', 'unknown', 'none'))) {
+                                                        $aFieldsVariantOnTranscript[$j][$sAccession][$sColID] = $aVariant[$sSeattleSeqCol][$i];
+                                                    }
                                                 }
 
                                                 // lovd_fetchDBID needs some VariantOnTranscript information too.

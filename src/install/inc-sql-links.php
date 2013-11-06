@@ -42,5 +42,12 @@ $aLinkSQL =
                 'INSERT INTO ' . TABLE_COLS2LINKS . ' VALUES ("VariantOnGenome/Reference", 004)',
                 'DOI' => 'INSERT INTO ' . TABLE_LINKS . ' VALUES (005, "DOI", "{DOI:[1]:[2]}", "<A href=\"http://dx.doi.org/[2]\" target=\"_blank\">[1]</A>", "Links directly to an article using the DOI.\r\n[1] = The name of the author(s), possibly followed by the year of publication.\r\n[2] = The DOI.\r\n\r\nExample:\r\n{DOI:Fokkema et al. (2011):10.1002/humu.21438}", 0, NOW(), NULL, NULL)',
                 'INSERT INTO ' . TABLE_COLS2LINKS . ' VALUES ("Individual/Reference", 005)',
+
+
+
+
+
+                'Alamut' => 'INSERT INTO ' . TABLE_LINKS . ' VALUES (006, "Alamut", "{Alamut:[1]:[2]:[3]}", "<A href=\"http://127.0.0.1:10000/show?request=[1]:[2][3]\" target=\"_blank\">Alamut</A>", "Links directly to the variant in the Alamut software.\r\n[1] = The chromosome letter or number.\r\n[2] = The genomic position.\r\n[3] = The genetic change on DNA level.\r\n\r\nExample:\r\n{Alamut:16:21854780:G>A}", 0, NOW(), NULL, NULL)',
+                'INSERT INTO ' . TABLE_COLS2LINKS . ' VALUES ("VariantOnGenome/Alamut", 006)',
          );
 ?>

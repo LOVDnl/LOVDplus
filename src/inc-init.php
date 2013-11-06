@@ -271,6 +271,23 @@ list($_SETT['system']['tree'], $_SETT['system']['build']) = explode('-', $_SETT[
 $_SETT['update_URL'] = $_SETT['upstream_URL'] . $_SETT['system']['tree'] . '/package_update.php';
 $_SETT['check_location_URL'] = $_SETT['upstream_URL'] . $_SETT['system']['tree'] . '/check_location.php';
 
+// Additions for KG.
+define('ANALYSIS_STATUS_WAIT', 0);
+define('ANALYSIS_STATUS_READY', 1);
+define('ANALYSIS_STATUS_IN_PROGRESS', 2);
+define('ANALYSIS_STATUS_WAIT_APPROVAL', 4);     // Submission completed and curator notified, but awaiting curation.
+define('ANALYSIS_STATUS_APPROVED', 7);
+define('ANALYSIS_STATUS_ARCHIVED', 9);
+$_SETT['analysis_status'] =
+    array(
+        ANALYSIS_STATUS_WAIT => 'Waiting for data upload',
+        ANALYSIS_STATUS_READY => 'Ready for analysis',
+        ANALYSIS_STATUS_IN_PROGRESS => 'In progress',
+        ANALYSIS_STATUS_WAIT_APPROVAL => 'Awaiting approval',
+        ANALYSIS_STATUS_APPROVED => 'Approved',
+        ANALYSIS_STATUS_ARCHIVED => 'Archived',
+    );
+
 // Before we have any output, initiate the template class which takes care of headers and such.
 require ROOT_PATH . 'class/template.php';
 $_T = new LOVD_Template();
@@ -470,6 +487,13 @@ $_TABLES =
                 // REMOVED IN 3.0-05; delete only if sure that there are no legacy versions still out there!
                 'TABLE_HITS' => TABLEPREFIX . '_hits',
                 // They can also be removed, if they are completely removed from the code (also inc-upgrade.php), and only the DROP code is kept with the name hard coded.
+
+                // For KG.
+                'TABLE_ANALYSIS_STATUS' => TABLEPREFIX . '_analysis_status',
+                'TABLE_ANALYSES' => TABLEPREFIX . '_analyses',
+                'TABLE_ANALYSES_RUN' => TABLEPREFIX . '_analyses_run',
+                'TABLE_ANALYSES_RUN_FILTERS' => TABLEPREFIX . '_analyses_run_filters',
+                'TABLE_ANALYSES_RUN_RESULTS' => TABLEPREFIX . '_analyses_run_results',
               );
 
 foreach ($_TABLES as $sConst => $sTable) {

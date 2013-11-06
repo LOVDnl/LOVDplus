@@ -41,6 +41,13 @@ if ($_AUTH && $_AUTH['level'] >= LEVEL_MANAGER) {
 } else {
     $sFile = 'genes';
 }
+
+if ($_AUTH && $_AUTH['level'] == LEVEL_ADMIN) {
+    $sFile = 'setup';
+} else {
+    $sFile = 'individuals';
+}
+
 header('Location: ' . lovd_getInstallURL() . $sFile);
 exit;
 ?>
