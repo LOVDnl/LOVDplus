@@ -216,6 +216,10 @@ class LOVD_Template {
             unset($this->aMenu['configuration_']);
         }
 
+        // Unset unneeded tabs.
+        unset($this->aMenu['transcripts'], $this->aMenu['transcripts_']);
+        unset($this->aMenu['screenings'], $this->aMenu['screenings_']);
+
         if (!defined('PAGE_TITLE')) {
             $sFile = substr(lovd_getProjectFile(), 1, strrpos(lovd_getProjectFile(), '.') - 1); // Isolate "genes" out of "/genes.php".
             if (array_key_exists($sFile, $this->aMenu)) {
@@ -467,6 +471,7 @@ function lovd_mapVariants ()
   <META name="generator" content="gPHPEdit / GIMP @ GNU/Linux (Ubuntu)">
   <BASE href="<?php echo lovd_getInstallURL(); ?>">
   <LINK rel="stylesheet" type="text/css" href="styles.css">
+  <LINK rel="stylesheet" type="text/css" href="styles.mod.css">
   <LINK rel="shortcut icon" href="favicon.ico" type="image/x-icon">
 
 <?php

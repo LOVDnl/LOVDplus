@@ -1,0 +1,56 @@
+/*******************************************************************************
+ *
+ * LEIDEN OPEN VARIATION DATABASE (LOVD)
+ *
+ * Created     : 2013-11-05
+ * Modified    : 2013-11-05
+ * For LOVD    : 3.0-09
+ *
+ * Copyright   : 2004-2013 Leiden University Medical Center; http://www.LUMC.nl/
+ * Programmer  : Ing. Ivo F.A.C. Fokkema <I.F.A.C.Fokkema@LUMC.nl>
+ *
+ *
+ * This file is part of LOVD.
+ *
+ * LOVD is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * LOVD is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with LOVD.  If not, see <http://www.gnu.org/licenses/>.
+ *
+ *************/
+
+/* Styles for diagnostic module */
+div.analyses_none_run        {display: none}
+
+table.analysis               {font-size: 11px; border: 1px solid #000; margin: 2px 2px 17px 2px;}
+table.analysis th            {font-size: 13px; border-bottom: 3px double #000;}
+table.analysis th,
+table.analysis td            {padding: 0px 4px 0px 4px;}
+table.analysis tr.message    {text-align: center; display: none;}
+table.analysis tr.message td {border-top: 1px dotted #000;}
+
+table.analysis_run th        {background: #B0E0B0;}
+table.analysis_run td        {background: #E0FFE0;}
+
+table.analysis_not_run       {cursor: pointer;}
+table.analysis_not_run:hover {border: 3px double #000; margin: 0px;}
+table.analysis_not_run:hover
+  tr.message                 {display: table-row; font-weight: bold;}
+table.analysis_not_run th    {background: #C0C0C0;}
+table.analysis_not_run td    {background: #EEEEEE;}
+
+table.analysis_running       {border: 3px double #000; margin: 0px;}
+table.analysis_running
+  tr.message                 {display: table-row; font-weight: bold;}
+table.analysis_running th    {background: #E0B0B0;}
+table.analysis_running td    {background: #EEEEEE;}
+table.analysis_running
+  td.filter_completed        {background: #E0FFE0;}
