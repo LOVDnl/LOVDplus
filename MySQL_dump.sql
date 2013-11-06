@@ -36,7 +36,7 @@ CREATE TABLE `lovd_KG_analyses` (
   KEY `edited_by` (`edited_by`),
   CONSTRAINT `lovd_KG_analyses_fk_created_by` FOREIGN KEY (`created_by`) REFERENCES `lovd_KG_users` (`id`) ON DELETE SET NULL ON UPDATE CASCADE,
   CONSTRAINT `lovd_KG_analyses_fk_edited_by` FOREIGN KEY (`edited_by`) REFERENCES `lovd_KG_users` (`id`) ON DELETE SET NULL ON UPDATE CASCADE
-) ENGINE=InnoDB AUTO_INCREMENT=2 DEFAULT CHARSET=utf8;
+) ENGINE=InnoDB AUTO_INCREMENT=3 DEFAULT CHARSET=utf8;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -47,6 +47,7 @@ CREATE TABLE `lovd_KG_analyses` (
 LOCK TABLES `lovd_KG_analyses` WRITE;
 /*!40000 ALTER TABLE `lovd_KG_analyses` DISABLE KEYS */;
 INSERT INTO `lovd_KG_analyses` VALUES (001,'De novo','Filters for de novo variants, not reported before in known databases.','remove_with_any_frequency\r\nis_present_mother_1\r\nis_present_father_1',00001,'2013-11-04 17:08:18',NULL,NULL);
+INSERT INTO `lovd_KG_analyses` VALUES (002,'X-linked recessive','Filters for X-linked recessive variants, not found in father, not homozygous in mother. High frequencies (> 3%) are also filtered out.','chromosome_X\r\nremove_with_any_frequency_gt_3\r\nis_present_father_1\r\nread_perc_in_mother_lt_75',00001,'2013-11-06 17:00:26',NULL,NULL);
 /*!40000 ALTER TABLE `lovd_KG_analyses` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -7825,4 +7826,4 @@ UNLOCK TABLES;
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2013-11-06 16:38:01
+-- Dump completed on 2013-11-06 17:36:02

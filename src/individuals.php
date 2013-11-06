@@ -119,7 +119,7 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && !ACTION) {
     lovd_includeJS('inc-js-analyses.php');
 
     // If we're ready to analyze, or if we are analyzing already, show analysis options.
-    $zAnalyses = $_DB->query('SELECT a.id, a.name, a.description, a.filters, (ar.id IS NOT NULL) AS analysis_run, ar.id AS runid, ar.modified, GROUP_CONCAT(arf.filterid, ";", IFNULL(arf.filtered_out, "-"), ";", IFNULL(arf.run_time, "-") ORDER BY arf.filter_order SEPARATOR ";;") AS __run_filters FROM ' . TABLE_ANALYSES . ' AS a LEFT OUTER JOIN ' . TABLE_ANALYSES_RUN . ' AS ar ON (a.id = ar.analysisid) LEFT OUTER JOIN ' . TABLE_ANALYSES_RUN_FILTERS . ' AS arf ON (ar.id = arf.runid) WHERE (ar.id IS NULL OR ar.individualid = ?)', array($zData['id']))->fetchAllAssoc();
+    $zAnalyses = $_DB->query('SELECT a.id, a.name, a.description, a.filters, (ar.id IS NOT NULL) AS analysis_run, ar.id AS runid, ar.modified, GROUP_CONCAT(arf.filterid, ";", IFNULL(arf.filtered_out, "-"), ";", IFNULL(arf.run_time, "-") ORDER BY arf.filter_order SEPARATOR ";;") AS __run_filters FROM ' . TABLE_ANALYSES . ' AS a LEFT OUTER JOIN ' . TABLE_ANALYSES_RUN . ' AS ar ON (a.id = ar.analysisid) LEFT OUTER JOIN ' . TABLE_ANALYSES_RUN_FILTERS . ' AS arf ON (ar.id = arf.runid) WHERE (ar.id IS NULL OR ar.individualid = ?) GROUP BY a.id', array($zData['id']))->fetchAllAssoc();
     print('
       <DIV id="analyses"' . ($zData['analysis_statusid'] != ANALYSIS_STATUS_READY? '' : ' class="analyses_none_run"') . '>
         <TABLE border="0" cellpadding="0" cellspacing="0">
