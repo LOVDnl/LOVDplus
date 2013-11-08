@@ -102,7 +102,11 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && !ACTION) {
     lovd_showJGNavigation($aNavigation, 'Individuals');
     */
 
-    print('<BR><BR>' . "\n\n");
+
+
+
+
+    print('      <BR><BR>' . "\n\n");
     lovd_includeJS('inc-js-tooltip.php');
 
     // Show info table about data analysis.
@@ -119,12 +123,25 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && !ACTION) {
     lovd_includeJS('inc-js-analyses.php');
 
     // If we're ready to analyze, or if we are analyzing already, show analysis options.
-    $zAnalyses = $_DB->query('SELECT a.id, a.name, a.description, a.filters, (ar.id IS NOT NULL) AS analysis_run, ar.id AS runid, ar.modified, GROUP_CONCAT(arf.filterid, ";", IFNULL(arf.filtered_out, "-"), ";", IFNULL(arf.run_time, "-") ORDER BY arf.filter_order SEPARATOR ";;") AS __run_filters FROM ' . TABLE_ANALYSES . ' AS a LEFT OUTER JOIN ' . TABLE_ANALYSES_RUN . ' AS ar ON (a.id = ar.analysisid) LEFT OUTER JOIN ' . TABLE_ANALYSES_RUN_FILTERS . ' AS arf ON (ar.id = arf.runid) WHERE (ar.id IS NULL OR ar.individualid = ?) GROUP BY a.id', array($zData['id']))->fetchAllAssoc();
+    // Both already run analyses and analyses not yet run will be shown. Analyses already run are fetched differently, though.
+    $zAnalysesRun    = $_DB->query('SELECT a.id, a.name, a.description, a.filters, 1 AS analysis_run, ar.id AS runid, ar.modified, GROUP_CONCAT(arf.filterid, ";", IFNULL(arf.filtered_out, "-"), ";", IFNULL(arf.run_time, "-") ORDER BY arf.filter_order SEPARATOR ";;") AS __run_filters FROM ' . TABLE_ANALYSES . ' AS a INNER JOIN ' . TABLE_ANALYSES_RUN . ' AS ar ON (a.id = ar.analysisid) INNER JOIN ' . TABLE_ANALYSES_RUN_FILTERS . ' AS arf ON (ar.id = arf.runid) WHERE ar.individualid = ? GROUP BY ar.id ORDER BY ar.id', array($zData['id']))->fetchAllAssoc();
+    $zAnalysesNotRun = $_DB->query('SELECT a.id, a.name, a.description, a.filters, 0 AS analysis_run,               0 AS modified FROM ' . TABLE_ANALYSES . ' AS a WHERE a.id NOT IN (SELECT ar.analysisid FROM ' . TABLE_ANALYSES_RUN . ' AS ar WHERE ar.individualid = ? AND ar.modified = 0)', array($zData['id']))->fetchAllAssoc();
+    $zAnalyses = array_merge($zAnalysesRun, array(''), $zAnalysesNotRun);
     print('
       <DIV id="analyses"' . ($zData['analysis_statusid'] != ANALYSIS_STATUS_READY? '' : ' class="analyses_none_run"') . '>
-        <TABLE border="0" cellpadding="0" cellspacing="0">
+        <TABLE id="analysesTable" border="0" cellpadding="0" cellspacing="0">
           <TR>');
-    foreach ($zAnalyses as $zAnalysis) {
+    foreach ($zAnalyses as $key => $zAnalysis) {
+        if (!$zAnalysis) {
+            // This is the separation between run and non-run filters.
+            if ($key) {
+                // We've got run filters on the left, and non-run filters on the right.
+                // Create division.
+                print('
+            <TD class="divider">&nbsp;</TD>');
+            }
+            continue;
+        }
         $aFilters = preg_split('/\s+/', $zAnalysis['filters']);
         if ($zAnalysis['analysis_run'] && $zAnalysis['__run_filters']) {
             list($aFiltersRunRaw) = $_DATA->autoExplode(array('__0' => $zAnalysis['__run_filters']));
@@ -132,14 +149,14 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && !ACTION) {
             foreach ($aFiltersRunRaw as $aFilter) {
                 $aFiltersRun[$aFilter[0]] = array($aFilter[1], $aFilter[2]);
             }
-            $sLastFilter = $aFilter[0]; // For checking if this analysis is done or not.
+            $sFilterLastRun = $aFilter[0]; // For checking if this analysis is done or not.
         } else {
             $aFiltersRun = array();
         }
 
         if ($zAnalysis['analysis_run']) {
             // Was run complete?
-            if ($aFiltersRun[$sLastFilter][0] == '-') {
+            if ($aFiltersRun[$sFilterLastRun][0] == '-') {
                 // It's not done... this is strange... half an analysis should normally not happen.
                 $sAnalysisClassName = 'analysis_running';
             } else {
@@ -149,13 +166,13 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && !ACTION) {
             $sAnalysisClassName = 'analysis_not_run';
         }
         print('
-            <TD valign="top">
-              <TABLE border="0" cellpadding="0" cellspacing="1" id="analysis_' . $zAnalysis['id'] . '" class="analysis ' . $sAnalysisClassName . '"' .
-            ($zAnalysis['analysis_run']? '' : ' onclick="lovd_runAnalysis(\'' . $zData['id'] . '\', \'' . $zAnalysis['id'] . '\');"') . '>
+            <TD class="analysis" valign="top">
+              <TABLE border="0" cellpadding="0" cellspacing="1" id="' . ($zAnalysis['analysis_run']? 'run_' . $zAnalysis['runid'] : 'analysis_' . $zAnalysis['id']) . '" class="analysis ' . $sAnalysisClassName . '" onclick="' .
+            ($zAnalysis['analysis_run']? 'lovd_showAnalysisResults(\'' . $zAnalysis['runid'] . '\');' : 'lovd_runAnalysis(\'' . $zData['id'] . '\', \'' . $zAnalysis['id'] . '\');') . '">
                 <TR>
                   <TH colspan="3">
                     <DIV style="position : relative">
-                      ' . $zAnalysis['name'] . '
+                      ' . $zAnalysis['name'] . (!$zAnalysis['modified']? '' : ' (modified)') . '
                       <IMG src="gfx/lovd_form_question.png" alt="" onmouseover="lovd_showToolTip(\'' . $zAnalysis['description'] . '\');" onmouseout="lovd_hideToolTip();" width="14" height="14" class="help" style="position: absolute; top: -4px; right: 0px;">
                     </DIV>
                   </TH>
@@ -181,14 +198,14 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && !ACTION) {
                 }
             }
             print('
-                <TR id="analysis_' . $zAnalysis['id'] . '_filter_' . $sFilter . '"' . (!$sFilterClassName? '' : ' class="' . $sFilterClassName . '"') . '>
+                <TR id="' . ($zAnalysis['analysis_run']? 'run_' . $zAnalysis['runid'] : 'analysis_' . $zAnalysis['id']) . '_filter_' . $sFilter . '"' . (!$sFilterClassName? '' : ' class="' . $sFilterClassName . '"') . '>
                   <TD>' . $sFilter . '</TD>
                   <TD>' . ($nTime == '-'? '-' : lovd_convertSecondsToTime($nTime, 1)) . '</TD>
                   <TD>' . ($nTime == '-'? '-' : $nVariantsLeft) . '</TD>
                 </TR>');
         }
         print('
-                <TR id="analysis_' . $zAnalysis['id'] . '_message" class="message">
+                <TR id="' . ($zAnalysis['analysis_run']? 'run_' . $zAnalysis['runid'] : 'analysis_' . $zAnalysis['id']) . '_message" class="message">
                   <TD colspan="3">' . ($sAnalysisClassName == 'analysis_running'? 'Analysis seems to have been interrupted' : ($sAnalysisClassName == 'analysis_run'? 'Click to see results' : 'Click to run this analysis')) . '</TD>
                 </TR>
               </TABLE>
@@ -198,6 +215,28 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && !ACTION) {
           </TR>
         </TABLE>
       </DIV>' . "\n\n");
+
+
+
+
+
+    // This where the VL should be loaded. Since a VL needs quite a lot of HTML
+    // that does not come out of the Ajax VL interface, we must initiate a VL here.
+    // We make sure it returns no results to prevent useless database usage, but
+    // like that it can easily be manipulated through Ajax to return results and
+    // be visible whenever necessary.
+    print('
+
+      <DIV id="analysis_results_VL" style="display: none;">' . "\n");
+    $_GET['search_runid'] = '0'; // Will for sure not return anything.
+//    $_T->printTitle('Variants', 'H4'); // Is this needed?
+
+    require ROOT_PATH . 'class/object_custom_viewlists.mod.php';
+    // VOG needs to be first, so it groups by the VOG ID.
+    $_DATA = new LOVD_CustomViewListMOD(array('AnalysisRunResults', 'VariantOnGenome', 'VariantOnTranscript'));
+    $_DATA->viewList('CustomVL_AnalysisRunResults_for_I_VE', array(), false, false, true); // Options always on!
+    print('
+      </DIV>');
 
     $_T->printFooter();
     exit;

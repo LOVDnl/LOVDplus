@@ -1202,7 +1202,7 @@ class LOVD_Object {
         // FIXME; this is a temporary hack just to get the genes?authorize working when all users have been selected.
         //   There is no longer a viewList when all users have been selected, but we need one for the JS execution.
         //   Possibly, this code can be standardized a bit and, if necessary for other viewLists as well, can be kept here.
-        if (!$nTotal && $this->sObject == 'User' && !$bSearched && !empty($_GET['search_id'])) {
+        if (!$nTotal && !$bSearched && (($this->sObject == 'User' && !empty($_GET['search_id'])) || ($this->sObject == 'Custom_ViewList' && isset($_GET['search_runid'])))) {
             // FIXME; Maybe check for JS contents of the rowlink?
             // There has been searched, but apparently the ID column is forced hidden. This must be the authorize page.
             $bSearched = true; // This will trigger the creation of the viewList table.
@@ -1378,7 +1378,7 @@ class LOVD_Object {
         }
 
         // Now loop through the data and print. But check for $q to be set; if we had a bad search syntax, we end up here as well, but without an $q.
-        while (isset($q) && $zData = $q->fetchAssoc()) {
+        while (isset($q) && $nTotal && $zData = $q->fetchAssoc()) {
             // If row_id is not given by the database, but it should be created according to some format ($this->sRowID), put the data's ID in this format.
             $zData = $this->generateRowID($zData);
             // If row_link is not given by the database, but it should be created according to some format ($this->sRowLink), put the data's ID and the viewList's ID in this format.

@@ -4,7 +4,7 @@
  * LEIDEN OPEN VARIATION DATABASE (LOVD)
  *
  * Created     : 2013-11-05
- * Modified    : 2013-11-06
+ * Modified    : 2013-11-08
  * For LOVD    : 3.0-09
  *
  * Copyright   : 2004-2013 Leiden University Medical Center; http://www.LUMC.nl/
@@ -29,6 +29,7 @@
  *************/
 
 define('ROOT_PATH', './');
+header('Content-type: text/javascript; charset=UTF-8');
 header('Expires: ' . date('r', time()+(180*60)));
 require ROOT_PATH . 'inc-lib-init.php';
 
@@ -138,7 +139,7 @@ function lovd_runNextFilter (nAnalysisID, nRunID)
                     // Failure, we're in trouble, reload view.
                     alert('Filter step not valid or no authorization to start a new filter step. Refreshing the page...');
                     location.reload();
-                    return false;
+
                 } else if (oRegExp = /1\s(\w+)\s(\d+)\s([^\s]+)(\sdone)?$/.exec(data)) {
                     // Success! Mark line and continue to the next, or stop if we're done...
                     var sFilterID     = oRegExp[1];
@@ -158,34 +159,60 @@ function lovd_runNextFilter (nAnalysisID, nRunID)
                     $('#analysis_' + nAnalysisID).attr('class', 'analysis analysis_run');
                     $('#analysis_' + nAnalysisID + '_message td').html('Click to see results');
 
-                    // So this is where we should load the VL... that should get the IDs based on the data stored in the session.
-                    // To make sure we don't send huge lists of IDs over with GET, we should send the runID as an argument. Use it in a hidden col? Special custom VL?
-                    // By the way, once we have modified analyses, we need analysis_ID and analysis_run_ID table elements????
+                    // Table should get a new ID, maybe also the filter lines (although those IDs are not used anymore).
+                    $('#analysis_' + nAnalysisID).attr('id', 'run_' + nRunID);
+                    // Also fix onclick.
+                    $('#run_' + nRunID).attr('onclick', 'lovd_showAnalysisResults(\'' + nRunID + '\');');
+                    $('#run_' + nRunID).attr('onclickold', '');
 
-
+                    // Now load the VL.
+                    lovd_showAnalysisResults(nRunID);
+                    return true;
 
                 } else if (data == '8') {
                     // Failure, we're in trouble, reload view.
                     alert('Lost your session. Please log in again.');
                     location.reload();
-                    return false;
+
                 } else if (data == '9') {
                     // Failure, we're in trouble, reload view.
                     alert('Error while sending data. Please try again.\nIf this error persists, please contact support.');
                     location.reload();
-                    return false;
+
                 } else {
                     // Some other error.
                     alert(data);
                     location.reload();
-                    return false;
                 }})
         .fail(
             function (data) {
                 // Failure, we're in trouble, reload view.
                 alert('Failed to start analysis. Please try again.\nIf this error persists, please contact support.');
                 location.reload();
-                return false;
             });
-    return true;
+    return false;
+}
+
+
+
+
+
+function lovd_showAnalysisResults (nRunID)
+{
+    // Calls the ViewList to refresh and load the given Run ID's results.
+
+    // Set loading image, and show VL Div.
+    $('#viewlistDiv_CustomVL_AnalysisRunResults_for_I_VE').html('<IMG src="gfx/ajax_loading.gif" alt="Loading..." width="100" height="100">');
+    $('#analysis_results_VL').show();
+
+    // Set new search value.
+    $('#viewlistForm_CustomVL_AnalysisRunResults_for_I_VE').children('input[name="search_runid"]').attr('value', nRunID);
+    // Sometimes it's disabled...
+    $('#viewlistForm_CustomVL_AnalysisRunResults_for_I_VE').children('input[name="search_runid"]')[0].disabled = false;
+
+    // Mark the currently selected filter.
+    $('#analysesTable td').css('background', '');
+    $('#run_' + nRunID).parent().css('background', '#DDD');
+
+    lovd_AJAX_viewListSubmit('CustomVL_AnalysisRunResults_for_I_VE');
 }

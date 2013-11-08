@@ -65,6 +65,7 @@ if (isset($aNeededLevel[$_GET['object']])) {
 // Building list of allowed combinations of objects for custom viewlists.
 if ($_GET['object'] == 'Custom_ViewList' && (!isset($_GET['object_id']) || !in_array($_GET['object_id'],
             array(
+                'AnalysisRunResults,VariantOnGenome,VariantOnTranscript', // Analysis results on I VE.
                 'VariantOnGenome,Scr2Var,VariantOnTranscript', // Variants on I and S VEs.
                 'Transcript,VariantOnTranscript,VariantOnGenome', // IN_GENE.
                 'VariantOnTranscript,VariantOnGenome', // Gene-specific variant view.
@@ -115,6 +116,15 @@ if (FORMAT == 'text/plain' && !defined('FORMAT_ALLOW_TEXTPLAIN')) {
 }
 
 $sFile = ROOT_PATH . 'class/object_' . strtolower($_GET['object']) . 's.php';
+// FOR DIAGNOSIS
+if ($_GET['object'] == 'Custom_ViewList' && $_GET['object_id'] == 'AnalysisRunResults,VariantOnGenome,VariantOnTranscript') {
+    $_GET['object'] = 'Custom_ViewListMOD';
+    $sFile = '../class/object_custom_viewlists.mod.php';
+    if (empty($_GET['search_runid'])) {
+        // Prevent from all variants to show, just show nothing then.
+        $_GET['search_runid'] = '0';
+    }
+}
 
 if (!file_exists($sFile)) {
     header('HTTP/1.0 404 Not Found');
@@ -125,7 +135,7 @@ if (!file_exists($sFile)) {
 
 $sObjectID = '';
 $nID = '';
-if (in_array($_GET['object'], array('Custom_ViewList', 'Phenotype', 'Shared_Column', 'Transcript_Variant'))) {
+if (in_array($_GET['object'], array('Custom_ViewList', 'Custom_ViewListMOD', 'Phenotype', 'Shared_Column', 'Transcript_Variant'))) {
     if (isset($_GET['object_id'])) {
         $sObjectID = $_GET['object_id'];
     }
