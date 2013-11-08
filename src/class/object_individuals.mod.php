@@ -4,7 +4,7 @@
  * LEIDEN OPEN VARIATION DATABASE (LOVD)
  *
  * Created     : 2013-10-28
- * Modified    : 2013-11-04
+ * Modified    : 2013-11-08
  * For LOVD    : 3.0-09
  *
  * Copyright   : 2004-2013 Leiden University Medical Center; http://www.LUMC.nl/
@@ -82,7 +82,7 @@ class LOVD_IndividualMOD extends LOVD_Individual {
                                           'i.id AS individualid, ' .
                                         // FIXME; Can we get this order correct, such that diseases without abbreviation nicely mix with those with? Right now, the diseases without symbols are in the back.
                                           'GROUP_CONCAT(DISTINCT IF(CASE d.symbol WHEN "-" THEN "" ELSE d.symbol END = "", d.name, d.symbol) ORDER BY (d.symbol != "" AND d.symbol != "-") DESC, d.symbol, d.name SEPARATOR ", ") AS diseases_, ' .
-                                          'COUNT(DISTINCT ' . ($_AUTH['level'] >= LEVEL_COLLABORATOR? 's2v.variantid' : 'vog.id') . ') AS variants_, ' . // Counting s2v.variantid will not include the limit opposed to vog in the join's ON() clause.
+//                                          'COUNT(DISTINCT ' . ($_AUTH['level'] >= LEVEL_COLLABORATOR? 's2v.variantid' : 'vog.id') . ') AS variants_, ' . // Counting s2v.variantid will not include the limit opposed to vog in the join's ON() clause.
                                           'ua.name AS analysis_by_, ' .
                                           'uaa.name AS analysis_approved_by_, ' .
                                           'CONCAT_WS(";", ua.id, ua.name, ua.email, ua.institute, ua.department, IFNULL(ua.countryid, "")) AS _analyzer, ' .
@@ -91,10 +91,10 @@ class LOVD_IndividualMOD extends LOVD_Individual {
         $this->aSQLViewList['FROM']     = TABLE_INDIVIDUALS . ' AS i ' .
                                           'LEFT OUTER JOIN ' . TABLE_IND2DIS . ' AS i2d ON (i.id = i2d.individualid) ' .
                                           'LEFT OUTER JOIN ' . TABLE_DISEASES . ' AS d ON (i2d.diseaseid = d.id) ' .
-                                          'LEFT OUTER JOIN ' . TABLE_SCREENINGS . ' AS s ON (i.id = s.individualid) ' .
-                                          'LEFT OUTER JOIN ' . TABLE_SCR2VAR . ' AS s2v ON (s2v.screeningid = s.id) ' .
-                                          ($_AUTH['level'] >= LEVEL_COLLABORATOR? '' :
-                                              'LEFT OUTER JOIN ' . TABLE_VARIANTS . ' AS vog ON (s2v.variantid = vog.id AND (vog.statusid >= ' . STATUS_MARKED . (!$_AUTH? '' : ' OR vog.created_by = "' . $_AUTH['id'] . '" OR vog.owned_by = "' . $_AUTH['id'] . '"') . ')) ') .
+//                                          'LEFT OUTER JOIN ' . TABLE_SCREENINGS . ' AS s ON (i.id = s.individualid) ' .
+//                                          'LEFT OUTER JOIN ' . TABLE_SCR2VAR . ' AS s2v ON (s2v.screeningid = s.id) ' .
+//                                          ($_AUTH['level'] >= LEVEL_COLLABORATOR? '' :
+//                                              'LEFT OUTER JOIN ' . TABLE_VARIANTS . ' AS vog ON (s2v.variantid = vog.id AND (vog.statusid >= ' . STATUS_MARKED . (!$_AUTH? '' : ' OR vog.created_by = "' . $_AUTH['id'] . '" OR vog.owned_by = "' . $_AUTH['id'] . '"') . ')) ') .
                                           'LEFT OUTER JOIN ' . TABLE_USERS . ' AS ua ON (i.analysis_by = ua.id) ' .
                                           'LEFT OUTER JOIN ' . TABLE_USERS . ' AS uaa ON (i.analysis_approved_by = uaa.id) ' .
                                           'LEFT OUTER JOIN ' . TABLE_ANALYSIS_STATUS . ' AS ds ON (i.analysis_statusid = ds.id)';
@@ -133,9 +133,9 @@ class LOVD_IndividualMOD extends LOVD_Individual {
                      'diseases_' => array(
                          'view' => array('Disease', 175),
                          'db'   => array('diseases_', 'ASC', true)),
-                     'variants_' => array(
-                         'view' => array('Variants', 75),
-                         'db'   => array('variants_', 'ASC', 'INT_UNSIGNED')),
+//                     'variants_' => array(
+//                         'view' => array('Variants', 75),
+//                         'db'   => array('variants_', 'ASC', 'INT_UNSIGNED')),
                      'analysis_status' => array(
                          'view' => array('Analysis status', 120),
                          'db'   => array('ds.name', false, true)),

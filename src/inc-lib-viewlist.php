@@ -160,7 +160,7 @@ function lovd_pagesplitInit ()
         // Special allowance for page_size = 1 for Ajax retrieval of 1 row after deleting one.
         $_GET['page_size'] = (int) $_GET['page_size'];
     } else {
-        $_GET['page_size'] = 100;
+        $_GET['page_size'] = 25;
     }
 
     global $_PAGESPLIT;
