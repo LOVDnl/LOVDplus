@@ -94,7 +94,7 @@ DROP TABLE IF EXISTS `lovd_KG_analyses_run_filters`;
 /*!40101 SET character_set_client = utf8 */;
 CREATE TABLE `lovd_KG_analyses_run_filters` (
   `runid` smallint(5) unsigned zerofill NOT NULL,
-  `filterid` varchar(25) NOT NULL,
+  `filterid` varchar(50) NOT NULL,
   `filter_order` tinyint(3) unsigned NOT NULL,
   `filtered_out` mediumint(8) unsigned DEFAULT NULL,
   `run_time` tinyint(3) unsigned DEFAULT NULL,
@@ -7826,4 +7826,4 @@ UNLOCK TABLES;
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2013-11-06 17:36:02
+-- Dump completed on 2013-11-08 15:46:01
