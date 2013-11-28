@@ -288,7 +288,7 @@ if (!isset($_GET['nohistory'])) {
                             // The following adds the page to the history in Firefox, such that the user *can* push the back button.
                             // I chose not to use sGET (created somewhere below) here, because it contains 'viewlistid' and 'object' which I don't want to use now and I guess it would be possible that it won't be set.
                             $(oForm).find('input').each(function(){
-                                if (!this.disabled && this.value && this.name != 'viewlistid' && this.name != 'object' && this.name.substring(0,6) != 'check_') {
+                                if ((!this.disabled && this.value && this.name != 'viewlistid' && this.name != 'object' && this.name.substring(0,6) != 'check_') || this.name == 'search_vog_effect') {
                                     sHash += (sHash? '&' : '') + this.name + '=' + encodeURIComponent(this.value);
                                 }
                             });
@@ -323,7 +323,7 @@ if (!isset($_GET['nohistory'])) {
         // Build GET query.
         var sGET = '';
         $(oForm).find('input').each(function(){
-            if (!this.disabled && this.value && this.name.substring(0,6) != 'check_') {
+            if ((!this.disabled && this.value && this.name.substring(0,6) != 'check_') || this.name == 'search_vog_effect') {
                 sGET += (sGET? '&' : '') + this.name + '=' + encodeURIComponent(this.value);
             }
         });
