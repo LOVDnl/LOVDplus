@@ -4,7 +4,7 @@
  * LEIDEN OPEN VARIATION DATABASE (LOVD)
  *
  * Created     : 2013-11-07
- * Modified    : 2013-11-07
+ * Modified    : 2013-11-27
  * For LOVD    : 3.0-09
  *
  * Copyright   : 2004-2013 Leiden University Medical Center; http://www.LUMC.nl/
@@ -192,6 +192,7 @@ class LOVD_CustomViewListMOD extends LOVD_CustomViewList {
                             }
                         }
                         // Security checks in this file's prepareData() need geneid to see if the column in question is set to non-public for one of the genes.
+                        $aSQL['SELECT'] .= (!$aSQL['SELECT']? '' : ', ') . 'GROUP_CONCAT(DISTINCT t.geneid SEPARATOR ";") AS _geneid';
                         $aSQL['FROM'] .= ' LEFT JOIN ' . TABLE_VARIANTS_ON_TRANSCRIPTS . ' AS vot ON (';
                         // Earlier, VOG was used, join to that.
                         $aSQL['FROM'] .= 'vog.id = vot.id)';

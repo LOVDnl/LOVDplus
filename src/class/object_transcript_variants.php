@@ -93,8 +93,8 @@ class LOVD_TranscriptVariant extends LOVD_Custom {
                  array(
                         'geneid_' => 'Gene',
                         'id_ncbi_' => 'Transcript ID',
-                        'effect_reported' => 'Affects function (reported)',
-                        'effect_concluded' => 'Affects function (concluded)',
+//                        'effect_reported' => 'Affects function (reported)',
+//                        'effect_concluded' => 'Affects function (concluded)',
                       ),
                  $this->buildViewEntry());
 
@@ -113,11 +113,11 @@ class LOVD_TranscriptVariant extends LOVD_Custom {
                         'id_' => array(
                                     'view' => array('Variant ID', 90),
                                     'db'   => array('vot.id', 'ASC', true)),
-                        'effect' => array(
-                                    'view' => array('Affects function', 70),
-                                    'db'   => array('e.name', 'ASC', true),
-                                    'legend' => array('The variant\'s effect on the protein\'s function, in the format Reported/Curator concluded; ranging from \'+\' (variant affects function) to \'-\' (does not affect function).',
-                                                      'The variant\'s affect on the protein\'s function, in the format Reported/Curator concluded; \'+\' indicating the variant affects function, \'+?\' probably affects function, \'-\' does not affect function, \'-?\' probably does not affect function, \'?\' effect unknown.')),
+//                        'effect' => array(
+//                                    'view' => array('Affects function', 70),
+//                                    'db'   => array('e.name', 'ASC', true),
+//                                    'legend' => array('The variant\'s effect on the protein\'s function, in the format Reported/Curator concluded; ranging from \'+\' (variant affects function) to \'-\' (does not affect function).',
+//                                                      'The variant\'s affect on the protein\'s function, in the format Reported/Curator concluded; \'+\' indicating the variant affects function, \'+?\' probably affects function, \'-\' does not affect function, \'-?\' probably does not affect function, \'?\' effect unknown.')),
                       ),
                  $this->buildViewList(),
                  array(

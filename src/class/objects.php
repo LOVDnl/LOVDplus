@@ -4,8 +4,8 @@
  * LEIDEN OPEN VARIATION DATABASE (LOVD)
  *
  * Created     : 2009-10-21
- * Modified    : 2013-07-27
- * For LOVD    : 3.0-07
+ * Modified    : 2013-11-28
+ * For LOVD    : 3.0-09
  *
  * Copyright   : 2004-2013 Leiden University Medical Center; http://www.LUMC.nl/
  * Programmers : Ing. Ivo F.A.C. Fokkema <I.F.A.C.Fokkema@LUMC.nl>
@@ -1176,6 +1176,10 @@ class LOVD_Object {
                 $nTotal = $aSessionViewList['counts'][$sFilterMD5]['n'];
             }
             $_DB->commit(); // To end the transaction and the locks that come with it.
+        } else {
+            // Set certain values that are needed for hiding notices, applicable for the "incorrect syntax" error message.
+            $bTrueCount = true; // Yes, we're sure we have 0 results.
+            $bSortableVL = false; // Sorting makes no sense when you have no results.
         }
 
         // If no results are found, try to figure out if it was because of the user's searching or not.
