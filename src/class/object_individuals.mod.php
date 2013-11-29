@@ -4,7 +4,7 @@
  * LEIDEN OPEN VARIATION DATABASE (LOVD)
  *
  * Created     : 2013-10-28
- * Modified    : 2013-11-08
+ * Modified    : 2013-11-29
  * For LOVD    : 3.0-09
  *
  * Copyright   : 2004-2013 Leiden University Medical Center; http://www.LUMC.nl/
@@ -102,6 +102,10 @@ class LOVD_IndividualMOD extends LOVD_Individual {
 
         // List of columns and (default?) order for viewing an entry.
         $this->aColumnsViewEntry = array_merge(
+            array(
+                'id_zis' => 'ZIS ID',
+                'id_miracle' => 'Miracle ID',
+            ),
                  $this->buildViewEntry(),
                  array(
                         'diseases_' => 'Diseases',
@@ -127,6 +131,9 @@ class LOVD_IndividualMOD extends LOVD_Individual {
                         'id' => array(
                                     'view' => array('Individual ID', 100),
                                     'db'   => array('i.id', 'ASC', true)),
+                        'id_zis' => array(
+                                    'view' => array('ZIS ID', 100),
+                                    'db'   => array('i.id_zis', 'ASC', true)),
                       ),
                  $this->buildViewList(),
                  array(

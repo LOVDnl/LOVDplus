@@ -16,6 +16,68 @@
 /*!40111 SET @OLD_SQL_NOTES=@@SQL_NOTES, SQL_NOTES=0 */;
 
 --
+-- Table structure for table `lovd_KG_individuals`
+--
+
+DROP TABLE IF EXISTS `lovd_KG_individuals`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `lovd_KG_individuals` (
+  `id` mediumint(8) unsigned zerofill NOT NULL AUTO_INCREMENT,
+  `fatherid` mediumint(8) unsigned zerofill DEFAULT NULL,
+  `motherid` mediumint(8) unsigned zerofill DEFAULT NULL,
+  `panelid` mediumint(8) unsigned zerofill DEFAULT NULL,
+  `panel_size` mediumint(8) unsigned NOT NULL DEFAULT '1',
+  `owned_by` smallint(5) unsigned zerofill DEFAULT NULL,
+  `statusid` tinyint(1) unsigned DEFAULT NULL,
+  `created_by` smallint(5) unsigned zerofill DEFAULT NULL,
+  `created_date` datetime NOT NULL,
+  `edited_by` smallint(5) unsigned zerofill DEFAULT NULL,
+  `edited_date` datetime DEFAULT NULL,
+  `id_miracle` bigint(20) unsigned DEFAULT NULL,
+  `id_zis` mediumint(8) unsigned DEFAULT NULL,
+  `analysis_statusid` tinyint(1) unsigned DEFAULT NULL,
+  `analysis_by` smallint(5) unsigned zerofill DEFAULT NULL,
+  `analysis_date` datetime DEFAULT NULL,
+  `analysis_approved_by` smallint(5) unsigned zerofill DEFAULT NULL,
+  `analysis_approved_date` datetime DEFAULT NULL,
+  `Individual/Lab_ID` varchar(15) DEFAULT NULL,
+  `Individual/Gender` varchar(100) DEFAULT NULL,
+  PRIMARY KEY (`id`),
+  KEY `fatherid` (`fatherid`),
+  KEY `motherid` (`motherid`),
+  KEY `owned_by` (`owned_by`),
+  KEY `statusid` (`statusid`),
+  KEY `created_by` (`created_by`),
+  KEY `edited_by` (`edited_by`),
+  KEY `lovd_KG_individuals_fk_panelid` (`panelid`),
+  KEY `analysis_statusid` (`analysis_statusid`),
+  KEY `analysis_by` (`analysis_by`),
+  KEY `analysis_approved_by` (`analysis_approved_by`),
+  CONSTRAINT `lovd_KG_individuals_fk_analysis_approved_by` FOREIGN KEY (`analysis_approved_by`) REFERENCES `lovd_KG_users` (`id`) ON DELETE SET NULL ON UPDATE CASCADE,
+  CONSTRAINT `lovd_KG_individuals_fk_analysis_by` FOREIGN KEY (`analysis_by`) REFERENCES `lovd_KG_users` (`id`) ON DELETE SET NULL ON UPDATE CASCADE,
+  CONSTRAINT `lovd_KG_individuals_fk_analysis_statusid` FOREIGN KEY (`analysis_statusid`) REFERENCES `lovd_KG_analysis_status` (`id`) ON DELETE SET NULL ON UPDATE CASCADE,
+  CONSTRAINT `lovd_KG_individuals_fk_created_by` FOREIGN KEY (`created_by`) REFERENCES `lovd_KG_users` (`id`) ON DELETE SET NULL ON UPDATE CASCADE,
+  CONSTRAINT `lovd_KG_individuals_fk_edited_by` FOREIGN KEY (`edited_by`) REFERENCES `lovd_KG_users` (`id`) ON DELETE SET NULL ON UPDATE CASCADE,
+  CONSTRAINT `lovd_KG_individuals_fk_fatherid` FOREIGN KEY (`fatherid`) REFERENCES `lovd_KG_individuals` (`id`) ON DELETE SET NULL ON UPDATE CASCADE,
+  CONSTRAINT `lovd_KG_individuals_fk_motherid` FOREIGN KEY (`motherid`) REFERENCES `lovd_KG_individuals` (`id`) ON DELETE SET NULL ON UPDATE CASCADE,
+  CONSTRAINT `lovd_KG_individuals_fk_owned_by` FOREIGN KEY (`owned_by`) REFERENCES `lovd_KG_users` (`id`) ON DELETE SET NULL ON UPDATE CASCADE,
+  CONSTRAINT `lovd_KG_individuals_fk_panelid` FOREIGN KEY (`panelid`) REFERENCES `lovd_KG_individuals` (`id`) ON DELETE SET NULL ON UPDATE CASCADE,
+  CONSTRAINT `lovd_KG_individuals_fk_statusid` FOREIGN KEY (`statusid`) REFERENCES `lovd_KG_data_status` (`id`) ON DELETE SET NULL ON UPDATE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `lovd_KG_individuals`
+--
+-- ORDER BY:  `id`
+
+LOCK TABLES `lovd_KG_individuals` WRITE;
+/*!40000 ALTER TABLE `lovd_KG_individuals` DISABLE KEYS */;
+/*!40000 ALTER TABLE `lovd_KG_individuals` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
 -- Table structure for table `lovd_KG_analyses`
 --
 
@@ -7826,4 +7888,4 @@ UNLOCK TABLES;
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2013-11-08 15:46:01
+-- Dump completed on 2013-11-29 13:04:58
