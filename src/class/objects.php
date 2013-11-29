@@ -4,7 +4,7 @@
  * LEIDEN OPEN VARIATION DATABASE (LOVD)
  *
  * Created     : 2009-10-21
- * Modified    : 2013-11-28
+ * Modified    : 2013-11-29
  * For LOVD    : 3.0-09
  *
  * Copyright   : 2004-2013 Leiden University Medical Center; http://www.LUMC.nl/
@@ -210,8 +210,10 @@ class LOVD_Object {
                             break;
                         case 'DECIMAL':
                         case 'DECIMAL_UNSIGNED':
-                            if (!is_numeric($aData[$sName]) || ($sMySQLType != 'DECIMAL' && $aData[$sName] < 0)) {
-                                lovd_errorAdd($sName, 'The field \'' . $sHeader . '\' must contain a' . ($sMySQLType == 'DECIMAL'? '' : ' positive') . ' number.');
+                        case 'FLOAT':
+                        case 'FLOAT_UNSIGNED':
+                            if (!is_numeric($aData[$sName]) || (substr($sMySQLType, -8) == 'UNSIGNED' && $aData[$sName] < 0)) {
+                                lovd_errorAdd($sName, 'The field \'' . $sHeader . '\' must contain a' . (substr($sMySQLType, -8) != 'UNSIGNED'? '' : ' positive') . ' number.');
                             }
                             break;
                         case 'INT':
@@ -389,7 +391,7 @@ class LOVD_Object {
                 // Field may be not set, make sure it is (happens in very rare cases).
                 $aData[$sField] = '';
             }
-            if ($aData[$sField] === '' && in_array(substr(lovd_getColumnType(constant($this->sTable), $sField), 0, 3), array('INT', 'DAT', 'DEC'))) {
+            if ($aData[$sField] === '' && in_array(substr(lovd_getColumnType(constant($this->sTable), $sField), 0, 3), array('INT', 'DAT', 'DEC', 'FLO'))) {
                 $aData[$sField] = NULL;
             }
             $aSQL[] = $aData[$sField];
@@ -617,7 +619,7 @@ class LOVD_Object {
                 // Field may be not set, make sure it is (happens in very rare cases).
                 $aData[$sField] = '';
             }
-            if ($aData[$sField] === '' && in_array(substr(lovd_getColumnType(constant($this->sTable), $sField), 0, 3), array('INT', 'DAT', 'DEC'))) {
+            if ($aData[$sField] === '' && in_array(substr(lovd_getColumnType(constant($this->sTable), $sField), 0, 3), array('INT', 'DAT', 'DEC', 'FLO'))) {
                 $aData[$sField] = NULL;
             }
             $aSQL[] = $aData[$sField];
@@ -821,6 +823,8 @@ class LOVD_Object {
                             switch ($sColType) {
                                 case 'DECIMAL_UNSIGNED':
                                 case 'DECIMAL':
+                                case 'FLOAT_UNSIGNED':
+                                case 'FLOAT':
                                 case 'INT_UNSIGNED':
                                 case 'INT':
                                     if (preg_match('/^([><]=?|!)?(-?\d+(\.\d+)?)$/', $sTerm, $aMatches)) {
@@ -834,7 +838,7 @@ class LOVD_Object {
                                         $$CLAUSE .= '(' . $aCol['db'][0] . ' ' . $sOperator . ' ' . ($_INI['database']['driver'] != 'sqlite'? '?' : 'CAST(? AS NUMERIC)') . ($sOperator == '!='? ' OR ' . $aCol['db'][0] . ' IS NULL)' : ')');
                                         $aArguments[$CLAUSE][] = $sTerm;
                                     } elseif (preg_match('/^!?=""$/', $sTerm)) {
-                                        // INT fields cannot be empty, they are NULL. So searching for ="" must return all NULL values.
+                                        // Numeric fields cannot be empty, they are NULL. So searching for ="" must return all NULL values.
                                         $$CLAUSE .= $aCol['db'][0] . ' IS ' . (substr($sTerm, 0, 1) == '!'? 'NOT ' : '') . 'NULL';
                                     } elseif ($aCol['view']) {
                                         $aBadSyntaxColumns[] = $aCol['view'][0];
