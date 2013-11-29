@@ -232,12 +232,12 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && !ACTION) {
       <DIV id="analysis_results_VL" style="display: none;">' . "\n");
     $_GET['search_runid'] = '0'; // Will for sure not return anything.
     $_GET['search_vog_effect'] = '!-'; // We always want to exclude the (probably) non-pathogenic ones by default.
-//    $_T->printTitle('Variants', 'H4'); // Is this needed?
 
     require ROOT_PATH . 'class/object_custom_viewlists.mod.php';
     // VOG needs to be first, so it groups by the VOG ID.
     $_DATA = new LOVD_CustomViewListMOD(array('AnalysisRunResults', 'VariantOnGenome', 'VariantOnTranscript'));
     // Define menu, to set pathogenicity flags of multiple variants in one go.
+    $_DATA->setRowLink('CustomVL_AnalysisRunResults_for_I_VE', 'javascript:lovd_openWindow(\'' . lovd_getInstallURL() . 'variants/{{ID}}?&in_window\', \'VarVE_{{ID}}\', 1000); return false;');
     print('      <UL id="viewlistMenu_CustomVL_AnalysisRunResults_for_I_VE" class="jeegoocontext jeegooviewlist">' . "\n");
     foreach ($_SETT['var_effect'] as $nEffectID => $sEffect) {
         print('        <LI class="icon"><A click="lovd_AJAX_viewListSubmit(\'CustomVL_AnalysisRunResults_for_I_VE\', function(){$.get(\'ajax/set_variant_effect.php?' . $nEffectID . '&id=selected\', function(sResponse){if(sResponse.substring(0,1) == \'1\'){alert(\'Successfully set reported variant effect of \' + sResponse.substring(2) + \' variants to \\\'' . $sEffect . '\\\'.\');lovd_AJAX_viewListSubmit(\'CustomVL_AnalysisRunResults_for_I_VE\');}}).error(function(){alert(\'Error while setting variant effect.\');});});"><SPAN class="icon" style="background-image: url(gfx/menu_edit.png);"></SPAN>Set variant effect to "' . $sEffect . '"</A></LI>' . "\n");

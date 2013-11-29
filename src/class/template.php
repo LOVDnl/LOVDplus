@@ -4,8 +4,8 @@
  * LEIDEN OPEN VARIATION DATABASE (LOVD)
  *
  * Created     : 2012-03-27
- * Modified    : 2013-05-17
- * For LOVD    : 3.0-05
+ * Modified    : 2013-11-29
+ * For LOVD    : 3.0-09
  *
  * Copyright   : 2004-2013 Leiden University Medical Center; http://www.LUMC.nl/
  * Programmers : Ing. Ivo F.A.C. Fokkema <I.F.A.C.Fokkema@LUMC.nl>
@@ -135,6 +135,7 @@ class LOVD_Template {
                                 '/columns/Screening?search_active_=0' => array('menu_columns.png', 'Enable more custom columns', LEVEL_MANAGER),
                               ),
                         'submit' => 'Submit new data',
+                        'submit_' =>
                          array(
                                  '' => array('plus.png', 'Submit new data', 0),
                               ),
@@ -216,9 +217,10 @@ class LOVD_Template {
             unset($this->aMenu['configuration_']);
         }
 
-        // Unset unneeded tabs.
+        // Unset unneeded tabs for KG.
         unset($this->aMenu['transcripts'], $this->aMenu['transcripts_']);
         unset($this->aMenu['screenings'], $this->aMenu['screenings_']);
+        unset($this->aMenu['submit'], $this->aMenu['submit_']);
 
         if (!defined('PAGE_TITLE')) {
             $sFile = substr(lovd_getProjectFile(), 1, strrpos(lovd_getProjectFile(), '.') - 1); // Isolate "genes" out of "/genes.php".
@@ -472,6 +474,7 @@ function lovd_mapVariants ()
   <BASE href="<?php echo lovd_getInstallURL(); ?>">
   <LINK rel="stylesheet" type="text/css" href="styles.css">
   <LINK rel="stylesheet" type="text/css" href="styles.mod.css">
+  <LINK rel="stylesheet" type="text/css" href="lib/jeegoocontext/style.css">
   <LINK rel="shortcut icon" href="favicon.ico" type="image/x-icon">
 
 <?php
@@ -481,6 +484,7 @@ function lovd_mapVariants ()
         lovd_includeJS('inc-js-toggle-visibility.js', 1); // Used on forms and variant overviews for small info tables.
         lovd_includeJS('lib/jQuery/jquery.min.js', 1);
         lovd_includeJS('lib/jQuery/jquery-ui.custom.min.js', 1);
+        lovd_includeJS('lib/jeegoocontext/jquery.jeegoocontext.min.js', 1);
 
         if (!$bFull) {
 ?>
@@ -536,10 +540,6 @@ function lovd_mapVariants ()
 
     //-->
   </SCRIPT>
-<?php
-        lovd_includeJS('lib/jeegoocontext/jquery.jeegoocontext.min.js', 1);
-?>
-  <LINK rel="stylesheet" type="text/css" href="lib/jeegoocontext/style.css">
   <LINK rel="stylesheet" type="text/css" href="lib/jQuery/css/cupertino/jquery-ui.custom.css">
 </HEAD>
 
