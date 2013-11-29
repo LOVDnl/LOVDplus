@@ -3,7 +3,7 @@
  * LEIDEN OPEN VARIATION DATABASE (LOVD)
  *
  * Created     : 2013-11-05
- * Modified    : 2013-11-08
+ * Modified    : 2013-11-29
  * For LOVD    : 3.0-09
  *
  * Copyright   : 2004-2013 Leiden University Medical Center; http://www.LUMC.nl/
@@ -62,3 +62,22 @@ table.analysis_running th    {background: #E0B0B0;}
 table.analysis_running td    {background: #EEEEEE;}
 table.analysis_running
   tr.filter_completed td     {background: #E0FFE0;}
+
+/* Color coding the variants */
+table.data tr.colRed td                   {background : #FAD5D5;}
+table.data tr.colRed td.ordered           {background : #FFB5B5;}
+table.data tr.colRed:hover td             {background : #FFB5B5;}
+table.data tr.colRed:hover td.ordered     {background : #FF9090;}
+table.data tr.colRed:hover td.checkbox    {background : #FAD5D5; cursor : default;}
+
+table.data tr.colGreen td                 {background : #D0FFD0;}
+table.data tr.colGreen td.ordered         {background : #B0FFB0;}
+table.data tr.colGreen:hover td           {background : #B0FFB0;}
+table.data tr.colGreen:hover td.ordered   {background : #80FF80;}
+table.data tr.colGreen:hover td.checkbox  {background : #D0FFD0; cursor : default;}
+
+table.data tr.colOrange td                {background : #FFE5C0;}
+table.data tr.colOrange td.ordered        {background : #FFD090;}
+table.data tr.colOrange:hover td          {background : #FFD090;}
+table.data tr.colOrange:hover td.ordered  {background : #FFC070;}
+table.data tr.colOrange:hover td.checkbox {background : #FFE5C0; cursor : default;}

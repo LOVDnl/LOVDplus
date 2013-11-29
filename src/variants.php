@@ -392,7 +392,7 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && !ACTION) {
       </SCRIPT>
 <?php
 
-    if (!empty($zData['screeningids'])) {
+    if (false && !empty($zData['screeningids'])) {
         $_GET['search_screeningid'] = $zData['screeningids'];
         print('<BR><BR>' . "\n\n");
         $_T->printTitle('Screenings', 'H4');

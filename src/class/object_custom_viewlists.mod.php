@@ -4,7 +4,7 @@
  * LEIDEN OPEN VARIATION DATABASE (LOVD)
  *
  * Created     : 2013-11-07
- * Modified    : 2013-11-27
+ * Modified    : 2013-11-29
  * For LOVD    : 3.0-09
  *
  * Copyright   : 2004-2013 Leiden University Medical Center; http://www.LUMC.nl/
@@ -172,11 +172,10 @@ class LOVD_CustomViewListMOD extends LOVD_CustomViewList {
                             'VariantOnTranscript/Protein',
                             'VariantOnTranscript/GVS/Function',
                         );
-                    $aSQL['SELECT'] .= (!$aSQL['SELECT']? '' : ', ') . 'vot.*';
                     $nKeyVOG = array_search('VariantOnGenome', $aObjects);
                     if (!$aSQL['FROM']) {
                         // First data table in query.
-                        $aSQL['SELECT'] .= ', vot.id AS row_id'; // To ensure other table's id columns don't interfere.
+                        $aSQL['SELECT'] .= (!$aSQL['SELECT']? '' : ', ') . 'vot.*, vot.id AS row_id'; // To ensure other table's id columns don't interfere.
                         $aSQL['FROM'] = TABLE_VARIANTS_ON_TRANSCRIPTS . ' AS vot';
                         $this->nCount = $_DB->query('SELECT COUNT(*) FROM ' . TABLE_VARIANTS_ON_TRANSCRIPTS)->fetchColumn();
                         $aSQL['GROUP_BY'] = 'vot.id'; // Necessary for GROUP_CONCAT(), such as in Screening.
@@ -313,6 +312,53 @@ class LOVD_CustomViewListMOD extends LOVD_CustomViewList {
         // Not including parent constructor, because these table settings will make it freak out.
         //parent::__construct();
         // Therefore, row links need to be created by us (which is done above).
+    }
+
+
+
+
+
+    function prepareData ($zData = '', $sView = 'list')
+    {
+        // Prepares the data by "enriching" the variable received with links, pictures, etc.
+
+        // Makes sure it's an array and htmlspecialchars() all the values.
+        $zData = parent::prepareData($zData, $sView);
+
+        // Coloring...
+        if (!empty($zData['VariantOnTranscript/GVS/Function'])) {
+            switch ($zData['VariantOnTranscript/GVS/Function']) {
+                case 'coding-synonymous':
+                case 'coding-synonymous-near-splice':
+                case 'intron':
+                    $zData['class_name'] = 'colGreen';
+                    break;
+                case 'coding':
+                case 'coding-near-splice':
+                case 'coding-notMod3':
+                case 'codingComplex':
+                case 'missense':
+                case 'missense-near-splice':
+                    $zData['class_name'] = 'colOrange';
+                    break;
+                case 'frameshift':
+                case 'frameshift-near-splice':
+                case 'splice-3':
+                case 'splice-5':
+                case 'stop-gained':
+                    $zData['class_name'] = 'colRed';
+                    break;
+            }
+        }
+
+        if (!empty($zData['VariantOnGenome/DNA'])) {
+            $zData['VariantOnGenome/DNA'] = preg_replace('/ins([ACTG]{3})([ACTG]{3,})/', 'ins${1}...', $zData['VariantOnGenome/DNA']);
+        }
+        if (!empty($zData['VariantOnTranscript/DNA'])) {
+            $zData['VariantOnTranscript/DNA'] = preg_replace('/ins([ACTG]{3})([ACTG]{3,})/', 'ins${1}...', $zData['VariantOnTranscript/DNA']);
+        }
+
+        return $zData;
     }
 }
 ?>
