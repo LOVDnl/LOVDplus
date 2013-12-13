@@ -4,8 +4,8 @@
  * LEIDEN OPEN VARIATION DATABASE (LOVD)
  *
  * Created     : 2010-12-21
- * Modified    : 2013-10-15
- * For LOVD    : 3.0-08
+ * Modified    : 2013-11-25
+ * For LOVD    : 3.0-09
  *
  * Copyright   : 2004-2013 Leiden University Medical Center; http://www.LUMC.nl/
  * Programmers : Ing. Ivar C. Lugtenburg <I.C.Lugtenburg@LUMC.nl>
@@ -2342,7 +2342,7 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && in_array(ACTION, array('edit', 'p
                 foreach($_POST['aTranscripts'] as $nTranscriptID => $aTranscript) {
                     if (!empty($_POST[$nTranscriptID . '_VariantOnTranscript/DNA']) && ($_POST[$nTranscriptID . '_VariantOnTranscript/DNA'] != $zData[$nTranscriptID . '_VariantOnTranscript/DNA'] || $zData[$nTranscriptID . '_position_c_start'] === NULL)) {
                         $aOutput = $_MutalyzerWS->moduleCall('mappingInfo', array('LOVD_ver' => $_SETT['system']['version'], 'build' => $_CONF['refseq_build'], 'accNo' => $aTranscript[0], 'variant' => $_POST[$nTranscriptID . '_VariantOnTranscript/DNA']));
-                        if (!empty($aOutput) && empty($aOutput['messages'][0]['v'])) {
+                        if (!empty($aOutput) && is_array($aOutput) && empty($aOutput['messages'][0]['v'])) {
                             $_POST[$nTranscriptID . '_position_c_start'] = $aOutput['startmain'][0]['v'];
                             $_POST[$nTranscriptID . '_position_c_start_intron'] = $aOutput['startoffset'][0]['v'];
                             $_POST[$nTranscriptID . '_position_c_end'] = $aOutput['endmain'][0]['v'];
@@ -2413,6 +2413,10 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && in_array(ACTION, array('edit', 'p
                 }
                 $aTranscriptID = $_DATA['Transcript'][$sGene]->updateAll($nID, $_POST, $aFieldsTranscripts);
 
+                // Update gene timestamp, but submitters don't have a $_POST['statusid']...
+                if (!isset($_POST['statusid'])) {
+                    $_POST['statusid'] = $zData['statusid'];
+                }
                 if (max($_POST['statusid'], $zData['statusid']) >= STATUS_MARKED) {
                     lovd_setUpdatedDate($aGenes);
                 }
@@ -2798,7 +2802,7 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && ACTION == 'map') {
                             if (!empty($aVariant['v']) && preg_match('/^' . preg_quote($zTranscript['id_ncbi']) . ':([cn]\..+)$/', $aVariant['v'], $aMatches)) {
                                 // Call the mappingInfo module of mutalyzer to get the start & stop positions of this variant on the transcript.
                                 $aMapping = $_MutalyzerWS->moduleCall('mappingInfo', array('LOVD_ver' => $_SETT['system']['version'], 'build' => $_CONF['refseq_build'], 'accNo' => $zTranscript['id_ncbi'], 'variant' => $aMatches[1]));
-                                if (!empty($aMapping) && empty($aMapping['errorcode'][0]['v'])) {
+                                if (!empty($aMapping) && is_array($aMapping) && empty($aMapping['errorcode'][0]['v'])) {
                                     $aMapping['position_c_start'] = $aMapping['startmain'][0]['v'];
                                     $aMapping['position_c_start_intron'] = $aMapping['startoffset'][0]['v'];
                                     $aMapping['position_c_end'] = $aMapping['endmain'][0]['v'];
