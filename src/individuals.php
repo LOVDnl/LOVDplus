@@ -54,6 +54,8 @@ if (PATH_COUNT == 1 && !ACTION) {
     $_T->printHeader();
     $_T->printTitle();
 
+    lovd_requireAUTH(LEVEL_COLLABORATOR);
+
     require ROOT_PATH . 'class/object_individuals.mod.php';
     $_DATA = new LOVD_IndividualMOD();
     $_DATA->viewList('Individuals', array(), false, false, (bool) ($_AUTH['level'] >= LEVEL_MANAGER));

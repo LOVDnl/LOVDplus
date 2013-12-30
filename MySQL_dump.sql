@@ -45,6 +45,8 @@ CREATE TABLE `lovd_KG_individuals` (
   `Individual/Gender` varchar(100) DEFAULT NULL,
   `Individual/Remarks` text,
   PRIMARY KEY (`id`),
+  UNIQUE KEY `id_miracle` (`id_miracle`),
+  UNIQUE KEY `id_zis` (`id_zis`),
   KEY `fatherid` (`fatherid`),
   KEY `motherid` (`motherid`),
   KEY `owned_by` (`owned_by`),
@@ -99,7 +101,7 @@ CREATE TABLE `lovd_KG_analyses` (
   KEY `edited_by` (`edited_by`),
   CONSTRAINT `lovd_KG_analyses_fk_created_by` FOREIGN KEY (`created_by`) REFERENCES `lovd_KG_users` (`id`) ON DELETE SET NULL ON UPDATE CASCADE,
   CONSTRAINT `lovd_KG_analyses_fk_edited_by` FOREIGN KEY (`edited_by`) REFERENCES `lovd_KG_users` (`id`) ON DELETE SET NULL ON UPDATE CASCADE
-) ENGINE=InnoDB AUTO_INCREMENT=3 DEFAULT CHARSET=utf8;
+) ENGINE=InnoDB AUTO_INCREMENT=4 DEFAULT CHARSET=utf8;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -109,8 +111,9 @@ CREATE TABLE `lovd_KG_analyses` (
 
 LOCK TABLES `lovd_KG_analyses` WRITE;
 /*!40000 ALTER TABLE `lovd_KG_analyses` DISABLE KEYS */;
-INSERT INTO `lovd_KG_analyses` VALUES (001,'De novo','Filters for de novo variants, not reported before in known databases.','remove_not_in_gene_panel\r\nremove_with_any_frequency\r\nis_present_mother_1\r\nis_present_father_1',00001,'2013-11-04 17:08:18',NULL,NULL);
-INSERT INTO `lovd_KG_analyses` VALUES (002,'X-linked recessive','Filters for X-linked recessive variants, not found in father, not homozygous in mother. High frequencies (> 3%) are also filtered out.','chromosome_X\r\nremove_not_in_gene_panel\r\nremove_with_any_frequency_gt_3\r\nis_present_father_1\r\nread_perc_in_mother_lt_75',00001,'2013-11-06 17:00:26',NULL,NULL);
+INSERT INTO `lovd_KG_analyses` VALUES (001,'De novo','Filters for de novo variants, not reported before in known databases.','remove_not_in_gene_panel\r\nremove_with_any_frequency_dbSNP\r\nremove_with_any_frequency_1000G\r\nremove_with_any_frequency_goNL\r\nremove_with_any_frequency_EVS\r\nis_present_mother_lte_4\r\nis_present_father_lte_4\r\nis_present_mother_1\r\nis_present_father_1\r\nremove_intronic_distance_gt_2\r\nremove_by_function_coding_synonymous',00001,'2013-11-04 17:08:18',NULL,NULL);
+INSERT INTO `lovd_KG_analyses` VALUES (002,'X-linked recessive','Filters for X-linked recessive variants, not found in father, not homozygous in mother. High frequencies (> 3%) are also filtered out.','chromosome_X\r\nremove_not_in_gene_panel\r\nremove_with_any_frequency_gt_3\r\nis_present_father_lte_4\r\nremove_intronic_distance_gt_2\r\nremove_by_function_coding_synonymous',00001,'2013-11-06 17:00:26',NULL,NULL);
+INSERT INTO `lovd_KG_analyses` VALUES (003,'Recessive','Filters for recessive variants, homozygous or compound heterozygous in patient, but not in the parents. High frequencies (> 3%) are also filtered out.','remove_not_in_gene_panel\r\nremove_with_any_frequency_gt_3\r\nremove_intronic_distance_gt_2\r\nselect_homozygous_or_compound_heterozygous\r\nremove_homozygous_in_parents\r\nremove_by_function_coding_synonymous',00001,'2013-12-16 16:29:53',NULL,NULL);
 /*!40000 ALTER TABLE `lovd_KG_analyses` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -1666,7 +1669,7 @@ INSERT INTO `lovd_KG_genes` VALUES ('ATP13A4','ATPase type 13A4','3','q29','unkn
 INSERT INTO `lovd_KG_genes` VALUES ('ATP13A5','ATPase type 13A5','3','q29','unknown','NC_000003.11','UD_134753467531','','','',0,0,31789,344905,0,1,1,1,'','','','',1,'','',-1,'',-1,00000,'2013-10-29 09:55:30',NULL,NULL,00001,'2013-11-29 17:39:48');
 INSERT INTO `lovd_KG_genes` VALUES ('ATP1A1','ATPase, Na+/K+ transporting, alpha 1 polypeptide','1','p13','unknown','NC_000001.10','UD_138303688151','','','',0,0,799,476,182310,1,1,1,'','','','',1,'','',-1,'',-1,00000,'2013-10-29 09:55:36',NULL,NULL,00001,'2013-11-29 17:39:48');
 INSERT INTO `lovd_KG_genes` VALUES ('ATP1A2','ATPase, Na+/K+ transporting, alpha 2 polypeptide','1','q23.2','unknown','LRG_6','UD_132118229880','','','',0,0,800,477,182340,1,1,1,'','','','',1,'','',-1,'',-1,00000,'2013-10-29 09:55:46',NULL,NULL,00001,'2013-11-29 17:39:48');
-INSERT INTO `lovd_KG_genes` VALUES ('ATP1A3','ATPase, Na+/K+ transporting, alpha 3 polypeptide','19','q13.2','unknown','NG_008015.1','UD_138303689637','','','',0,0,801,478,182350,1,1,1,'','','','',1,'','',-1,'',-1,00000,'2013-10-29 09:55:51',NULL,NULL,00001,'2013-11-29 17:39:48');
+INSERT INTO `lovd_KG_genes` VALUES ('ATP1A3','ATPase, Na+/K+ transporting, alpha 3 polypeptide','19','q13.2','unknown','NG_008015.1','UD_138303689637','','','',0,0,801,478,182350,1,1,1,'','','','',1,'','',-1,'',-1,00000,'2013-10-29 00:00:00',00001,'2013-12-17 14:38:21',00001,'2013-11-29 17:39:48');
 INSERT INTO `lovd_KG_genes` VALUES ('ATP1A4','ATPase, Na+/K+ transporting, alpha 4 polypeptide','1','q23.2','unknown','NC_000001.10','UD_132319189882','','','',0,0,14073,480,607321,1,1,1,'','','','',1,'','',-1,'',-1,00000,'2013-10-29 09:55:56',NULL,NULL,00001,'2013-11-29 17:39:48');
 INSERT INTO `lovd_KG_genes` VALUES ('ATP1B1','ATPase, Na+/K+ transporting, beta 1 polypeptide','1','q24.2','unknown','NG_023230.1','UD_132118557322','','','',0,0,804,481,182330,1,1,1,'','','','',1,'','',-1,'',-1,00000,'2013-10-29 09:56:00',NULL,NULL,00001,'2013-11-29 17:39:48');
 INSERT INTO `lovd_KG_genes` VALUES ('ATP1B3','ATPase, Na+/K+ transporting, beta 3 polypeptide','3','q23','unknown','NC_000003.11','UD_138303691368','','','',0,0,806,483,601867,1,1,1,'','','','',1,'','',-1,'',-1,00000,'2013-10-29 09:56:08',NULL,NULL,00001,'2013-11-29 17:39:48');
@@ -10198,4 +10201,4 @@ UNLOCK TABLES;
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2013-12-13 14:57:07
+-- Dump completed on 2013-12-30 17:58:30
