@@ -4,7 +4,7 @@
  * LEIDEN OPEN VARIATION DATABASE (LOVD)
  *
  * Created     : 2014-01-03
- * Modified    : 2014-01-03
+ * Modified    : 2014-01-07
  * For LOVD    : 3.0-09
  *
  * Copyright   : 2004-2014 Leiden University Medical Center; http://www.LUMC.nl/
@@ -131,6 +131,17 @@ class LOVD_ScreeningMOD extends LOVD_Screening {
                                     'db'   => array('s.created_date', 'ASC')),
                       ));
         $this->sSortDefault = 'id';
+
+        // Hide some custom columns from view.
+        unset($this->aColumnsViewList['Screening/SNP_overlap']);
+        unset($this->aColumnsViewList['Screening/Derived_gender']);
+        unset($this->aColumnsViewList['Screening/Covered_exome/Fraction']);
+        unset($this->aColumnsViewList['Screening/Father/Covered_exome/Fraction']);
+        unset($this->aColumnsViewList['Screening/Mother/Covered_exome/Fraction']);
+        unset($this->aColumnsViewList['Screening/Reads_on_target/Fraction']);
+        unset($this->aColumnsViewList['Screening/Father/Reads_on_target/Fraction']);
+        unset($this->aColumnsViewList['Screening/Mother/Reads_on_target/Fraction']);
+        unset($this->aColumnsViewList['Screening/Analysis_restricted']);
 
         // Also make sure the custom cols are not searchable.
         foreach ($this->aColumnsViewList as $sCol => $aCol) {

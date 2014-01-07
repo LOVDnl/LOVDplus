@@ -81,6 +81,56 @@ LOCK TABLES `lovd_KG_individuals` WRITE;
 UNLOCK TABLES;
 
 --
+-- Table structure for table `lovd_KG_screenings`
+--
+
+DROP TABLE IF EXISTS `lovd_KG_screenings`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `lovd_KG_screenings` (
+  `id` int(10) unsigned zerofill NOT NULL AUTO_INCREMENT,
+  `individualid` mediumint(8) unsigned zerofill NOT NULL,
+  `id_sample` mediumint(8) unsigned NOT NULL,
+  `variants_found` tinyint(1) NOT NULL DEFAULT '1',
+  `owned_by` smallint(5) unsigned zerofill DEFAULT NULL,
+  `created_by` smallint(5) unsigned zerofill DEFAULT NULL,
+  `created_date` datetime NOT NULL,
+  `edited_by` smallint(5) unsigned zerofill DEFAULT NULL,
+  `edited_date` datetime DEFAULT NULL,
+  `Screening/Technique` text,
+  `Screening/Template` text,
+  `Screening/Covered_exome/Fraction` float unsigned DEFAULT NULL,
+  `Screening/Father/Covered_exome/Fraction` float unsigned DEFAULT NULL,
+  `Screening/Mother/Covered_exome/Fraction` float unsigned DEFAULT NULL,
+  `Screening/Derived_gender` varchar(100) DEFAULT NULL,
+  `Screening/Reads_on_target/Fraction` float unsigned DEFAULT NULL,
+  `Screening/Father/Reads_on_target/Fraction` float unsigned DEFAULT NULL,
+  `Screening/Mother/Reads_on_target/Fraction` float unsigned DEFAULT NULL,
+  `Screening/SNP_overlap` float unsigned DEFAULT NULL,
+  `Screening/Analysis_restricted` tinyint(1) DEFAULT NULL,
+  PRIMARY KEY (`id`),
+  KEY `individualid` (`individualid`),
+  KEY `owned_by` (`owned_by`),
+  KEY `created_by` (`created_by`),
+  KEY `edited_by` (`edited_by`),
+  CONSTRAINT `lovd_KG_screenings_fk_created_by` FOREIGN KEY (`created_by`) REFERENCES `lovd_KG_users` (`id`) ON DELETE SET NULL ON UPDATE CASCADE,
+  CONSTRAINT `lovd_KG_screenings_fk_edited_by` FOREIGN KEY (`edited_by`) REFERENCES `lovd_KG_users` (`id`) ON DELETE SET NULL ON UPDATE CASCADE,
+  CONSTRAINT `lovd_KG_screenings_fk_individualid` FOREIGN KEY (`individualid`) REFERENCES `lovd_KG_individuals` (`id`) ON DELETE CASCADE ON UPDATE CASCADE,
+  CONSTRAINT `lovd_KG_screenings_fk_owned_by` FOREIGN KEY (`owned_by`) REFERENCES `lovd_KG_users` (`id`) ON DELETE SET NULL ON UPDATE CASCADE
+) ENGINE=InnoDB AUTO_INCREMENT=3 DEFAULT CHARSET=utf8;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `lovd_KG_screenings`
+--
+-- ORDER BY:  `id`
+
+LOCK TABLES `lovd_KG_screenings` WRITE;
+/*!40000 ALTER TABLE `lovd_KG_screenings` DISABLE KEYS */;
+/*!40000 ALTER TABLE `lovd_KG_screenings` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
 -- Table structure for table `lovd_KG_analyses`
 --
 
@@ -10201,4 +10251,4 @@ UNLOCK TABLES;
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2014-01-07 15:48:26
+-- Dump completed on 2014-01-07 17:26:04
