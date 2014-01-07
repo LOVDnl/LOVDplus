@@ -4,10 +4,10 @@
  * LEIDEN OPEN VARIATION DATABASE (LOVD)
  *
  * Created     : 2013-11-05
- * Modified    : 2013-11-28
+ * Modified    : 2014-01-07
  * For LOVD    : 3.0-09
  *
- * Copyright   : 2004-2013 Leiden University Medical Center; http://www.LUMC.nl/
+ * Copyright   : 2004-2014 Leiden University Medical Center; http://www.LUMC.nl/
  * Programmer  : Ing. Ivo F.A.C. Fokkema <I.F.A.C.Fokkema@LUMC.nl>
  *
  *
@@ -63,16 +63,16 @@ function lovd_resetAfterFailedRun (nAnalysisID)
 
 
 
-function lovd_runAnalysis (nIndividualID, nAnalysisID)
+function lovd_runAnalysis (nScreeningID, nAnalysisID)
 {
-    // Starts the analysis of the given individual.
+    // Starts the analysis of the given screening.
 
-    if (typeof(nIndividualID) == 'undefined' || typeof(nAnalysisID) == 'undefined') {
+    if (typeof(nScreeningID) == 'undefined' || typeof(nAnalysisID) == 'undefined') {
         alert('Incorrect argument(s) passed to runAnalysis function.');
         return false;
     }
 
-    $.get('<?php echo lovd_getInstallURL(); ?>ajax/run_analysis.php?individualid=' + escape(nIndividualID) + '&analysisid=' + escape(nAnalysisID),
+    $.get('<?php echo lovd_getInstallURL(); ?>ajax/run_analysis.php?screeningid=' + escape(nScreeningID) + '&analysisid=' + escape(nAnalysisID),
         function () {
             // Remove onClick handler and change class of table, to visually show that it's running.
             $('#analysis_' + nAnalysisID)
@@ -88,7 +88,7 @@ function lovd_runAnalysis (nIndividualID, nAnalysisID)
                 if (data == '0') {
                     // Failure, reset table.
                     lovd_resetAfterFailedRun(nAnalysisID);
-                    alert('Individual not valid or no authorization to start a new analysis. Refreshing the page...');
+                    alert('Screening not valid or no authorization to start a new analysis. Refreshing the page...');
                     location.reload();
                     return false;
                 } else if (oRegExp = /1\s(\d+)/.exec(data)) {

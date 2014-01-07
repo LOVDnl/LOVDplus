@@ -4,10 +4,10 @@
  * LEIDEN OPEN VARIATION DATABASE (LOVD)
  *
  * Created     : 2013-11-05
- * Modified    : 2013-11-08
+ * Modified    : 2014-01-07
  * For LOVD    : 3.0-09
  *
- * Copyright   : 2004-2013 Leiden University Medical Center; http://www.LUMC.nl/
+ * Copyright   : 2004-2014 Leiden University Medical Center; http://www.LUMC.nl/
  * Programmer  : Ing. Ivo F.A.C. Fokkema <I.F.A.C.Fokkema@LUMC.nl>
  *
  *
@@ -38,14 +38,14 @@ if (!$_AUTH || $_AUTH['level'] < LEVEL_COLLABORATOR) {
 }
 
 // Check if the data sent is correct or not.
-if (empty($_GET['individualid']) || empty($_GET['analysisid']) || !ctype_digit($_GET['individualid']) || !ctype_digit($_GET['analysisid'])) {
+if (empty($_GET['screeningid']) || empty($_GET['analysisid']) || !ctype_digit($_GET['screeningid']) || !ctype_digit($_GET['analysisid'])) {
     die(AJAX_DATA_ERROR);
 }
 
 
 
-// Find individual data, make sure we have the right to analyze this patient.
-$zIndividual = $_DB->query('SELECT id FROM ' . TABLE_INDIVIDUALS . ' WHERE id = ? AND (analysis_statusid = ? OR analysis_by = ?)', array($_GET['individualid'], ANALYSIS_STATUS_READY, $_AUTH['id']))->fetchAssoc();
+// Find screening data, make sure we have the right to analyze this patient.
+$zIndividual = $_DB->query('SELECT i.id FROM ' . TABLE_INDIVIDUALS . ' AS i INNER JOIN ' . TABLE_SCREENINGS . ' AS s ON (i.id = s.individualid) WHERE s.id = ? AND (i.analysis_statusid = ? OR i.analysis_by = ?)', array($_GET['screeningid'], ANALYSIS_STATUS_READY, $_AUTH['id']))->fetchAssoc();
 if (!$zIndividual) {
     die(AJAX_FALSE);
 }
@@ -58,19 +58,17 @@ if (!$zAnalysis || !$zAnalysis['filters']) {
 
 // Check if this analysis has not been run before. If so, return a specific error. If somehow things don't complete, we should maybe just delete them and run again.
 //   Otherwise, this check needs to be modified.
-if ($_DB->query('SELECT COUNT(*) FROM ' . TABLE_ANALYSES_RUN . ' AS ar WHERE ar.analysisid = ? AND ar.individualid = ? AND modified = 0', array($zAnalysis['id'], $zIndividual['id']))->fetchColumn()) {
-    die('This analysis has already been performed on this individual.');
+if ($_DB->query('SELECT COUNT(*) FROM ' . TABLE_ANALYSES_RUN . ' AS ar WHERE ar.analysisid = ? AND ar.screeningid = ? AND modified = 0', array($zAnalysis['id'], $_GET['screeningid']))->fetchColumn()) {
+    die('This analysis has already been performed on this screening.');
 }
 
 
 
 
 
-// All checked. Lock individual.
+// All checked. Update individual. We already have checked that we're allowed to analyze this one. So just update the settings, if not already done before.
 $_DB->beginTransaction();
-if (!$_DB->query('UPDATE ' . TABLE_INDIVIDUALS . ' SET analysis_statusid = ?, analysis_by = ?, analysis_date = NOW() WHERE id = ? AND (analysis_statusid = ? OR analysis_by = ?)', array(ANALYSIS_STATUS_IN_PROGRESS, $_AUTH['id'], $zIndividual['id'], ANALYSIS_STATUS_READY, $_AUTH['id']))->rowCount()) {
-    die(AJAX_FALSE);
-}
+$_DB->query('UPDATE ' . TABLE_INDIVIDUALS . ' SET analysis_statusid = ?, analysis_by = ?, analysis_date = NOW() WHERE id = ? AND (analysis_statusid = ? OR analysis_by IS NULL OR analysis_date IS NULL)', array(ANALYSIS_STATUS_IN_PROGRESS, $_AUTH['id'], $zIndividual['id'], ANALYSIS_STATUS_READY));
 
 // Create analysis in database.
 $q = $_DB->query('INSERT INTO ' . TABLE_ANALYSES_RUN . ' VALUES (NULL, ?, ?, 0, ?, NOW())', array($zAnalysis['id'], $zIndividual['id'], $_AUTH['id']));
@@ -99,16 +97,16 @@ $_DB->commit();
 if (empty($_SESSION['analyses'])) {
     $_SESSION['analyses'] = array();
 }
-// Store individualid and filters in session.
+// Store screeningid and filters in session.
 $_SESSION['analyses'][$nRunID] =
     array(
-        'individualid' => (int) $zIndividual['id'], // (int) is to prevent zerofill from messing things up.
+        'screeningid' => (int) $_GET['screeningid'], // (int) is to prevent zerofill from messing things up.
         'filters' => $aFilters,
         'IDsLeft' => array()
     );
 
 // Collect variant IDs and store in session.
-$_SESSION['analyses'][$nRunID]['IDsLeft'] = $_DB->query('SELECT DISTINCT CAST(s2v.variantid AS UNSIGNED) FROM ' . TABLE_SCR2VAR . ' AS s2v INNER JOIN ' . TABLE_SCREENINGS . ' AS s ON (s2v.screeningid = s.id) WHERE s.individualid = ?', array($zIndividual['id']))->fetchAllColumn();
+$_SESSION['analyses'][$nRunID]['IDsLeft'] = $_DB->query('SELECT DISTINCT CAST(s2v.variantid AS UNSIGNED) FROM ' . TABLE_SCR2VAR . ' AS s2v WHERE s2v.screeningid = ?', array($_GET['screeningid']))->fetchAllColumn();
 
 // Instruct page to start running filters in sequence.
 die(AJAX_TRUE . ' ' . str_pad($nRunID, 5, '0', STR_PAD_LEFT));

@@ -127,17 +127,17 @@ DROP TABLE IF EXISTS `lovd_KG_analyses_run`;
 CREATE TABLE `lovd_KG_analyses_run` (
   `id` smallint(5) unsigned zerofill NOT NULL AUTO_INCREMENT,
   `analysisid` tinyint(3) unsigned zerofill DEFAULT NULL,
-  `individualid` mediumint(8) unsigned zerofill NOT NULL,
+  `screeningid` int(10) unsigned zerofill NOT NULL,
   `modified` tinyint(1) NOT NULL,
   `created_by` smallint(5) unsigned zerofill DEFAULT NULL,
   `created_date` datetime NOT NULL,
   PRIMARY KEY (`id`),
   KEY `created_by` (`created_by`),
   KEY `lovd_KG_analyses_run_fk_analysisid` (`analysisid`),
-  KEY `individualid` (`individualid`),
+  KEY `screeningid` (`screeningid`),
+  CONSTRAINT `lovd_KG_analyses_run_fk_screeningid` FOREIGN KEY (`screeningid`) REFERENCES `lovd_KG_screenings` (`id`) ON DELETE CASCADE ON UPDATE CASCADE,
   CONSTRAINT `lovd_KG_analyses_run_fk_analysisid` FOREIGN KEY (`analysisid`) REFERENCES `lovd_KG_analyses` (`id`) ON DELETE SET NULL ON UPDATE CASCADE,
-  CONSTRAINT `lovd_KG_analyses_run_fk_created_by` FOREIGN KEY (`created_by`) REFERENCES `lovd_KG_users` (`id`) ON DELETE SET NULL ON UPDATE CASCADE,
-  CONSTRAINT `lovd_KG_analyses_run_fk_individualid` FOREIGN KEY (`individualid`) REFERENCES `lovd_KG_individuals` (`id`) ON DELETE CASCADE ON UPDATE CASCADE
+  CONSTRAINT `lovd_KG_analyses_run_fk_created_by` FOREIGN KEY (`created_by`) REFERENCES `lovd_KG_users` (`id`) ON DELETE SET NULL ON UPDATE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
@@ -10201,4 +10201,4 @@ UNLOCK TABLES;
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2013-12-30 17:58:30
+-- Dump completed on 2014-01-07 15:48:26

@@ -42,10 +42,12 @@ $aNeededLevel =
          array(
                 'Column' => LEVEL_CURATOR,
                 'Custom_ViewList' => 0,
+                'Custom_ViewListMOD' => 0,
                 'Disease' => 0,
                 'Gene' => 0,
                 'Genome_Variant' => 0,
                 'Individual' => 0,
+                'IndividualMOD' => 0,
                 'Link' => LEVEL_MANAGER,
                 'Log' => LEVEL_MANAGER,
                 'Phenotype' => 0,
@@ -65,7 +67,6 @@ if (isset($aNeededLevel[$_GET['object']])) {
 // Building list of allowed combinations of objects for custom viewlists.
 if ($_GET['object'] == 'Custom_ViewList' && (!isset($_GET['object_id']) || !in_array($_GET['object_id'],
             array(
-                'AnalysisRunResults,VariantOnGenome,VariantOnTranscript', // Analysis results on I VE.
                 'VariantOnGenome,Scr2Var,VariantOnTranscript', // Variants on I and S VEs.
                 'Transcript,VariantOnTranscript,VariantOnGenome', // IN_GENE.
                 'VariantOnTranscript,VariantOnGenome', // Gene-specific variant view.
@@ -117,13 +118,14 @@ if (FORMAT == 'text/plain' && !defined('FORMAT_ALLOW_TEXTPLAIN')) {
 
 $sFile = ROOT_PATH . 'class/object_' . strtolower($_GET['object']) . 's.php';
 // FOR DIAGNOSIS
-if ($_GET['object'] == 'Custom_ViewList' && $_GET['object_id'] == 'AnalysisRunResults,VariantOnGenome,VariantOnTranscript') {
-    $_GET['object'] = 'Custom_ViewListMOD';
+if ($_GET['object'] == 'Custom_ViewListMOD' && $_GET['object_id'] == 'AnalysisRunResults,VariantOnGenome,VariantOnTranscript') {
     $sFile = '../class/object_custom_viewlists.mod.php';
     if (empty($_GET['search_runid'])) {
         // Prevent from all variants to show, just show nothing then.
         $_GET['search_runid'] = '0';
     }
+} elseif (substr($_GET['object'], -3) == 'MOD') {
+    $sFile = str_replace('mods.', 's.mod.', $sFile);
 }
 
 if (!file_exists($sFile)) {

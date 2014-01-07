@@ -68,11 +68,13 @@ if (PATH_COUNT == 1 && !ACTION) {
 
 
 
-if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && !ACTION) {
+if (PATH_COUNT >= 2 && ctype_digit($_PE[1]) && !ACTION && (PATH_COUNT == 2 || PATH_COUNT == 4 && $_PE[2] == 'analyze' && ctype_digit($_PE[3]))) {
     // URL: /individuals/00000001
+    // URL: /individuals/00000001/analyze/0000000001
     // View specific entry.
 
     $nID = sprintf('%08d', $_PE[1]);
+    $nScreeningToAnalyze = (PATH_COUNT == 4? $_PE[3] : 0);
     define('PAGE_TITLE', 'View individual #' . $nID);
     $_T->printHeader();
     $_T->printTitle();
@@ -114,65 +116,113 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && !ACTION) {
     lovd_includeJS('inc-js-tooltip.php');
 
     // Show info table about data analysis.
-    if ($zData['analysis_statusid'] == ANALYSIS_STATUS_WAIT) {
+    if ($zData['analysis_statusid'] == ANALYSIS_STATUS_WAIT || !count($zData['screeningids'])) {
         // Can't start.
         lovd_showInfoTable('Can\'t start analysis, still waiting for variant data to be uploaded.', 'stop', 600);
         $_T->printFooter();
         exit;
-    } elseif ($zData['analysis_statusid'] == ANALYSIS_STATUS_READY) {
+    } elseif ($zData['analysis_statusid'] == ANALYSIS_STATUS_READY && !$nScreeningToAnalyze) {
         // Not started yet, create notice and allow starting analysis.
         lovd_showInfoTable('Data analysis ready to start; click here to view your options.', 'information', 600,
-            '$(\'#analyses\').removeClass(); $(this).hide();');
+            '$(\'#screenings\').show(); $(this).hide();');
     }
-    lovd_includeJS('inc-js-analyses.php');
 
-    // If we're ready to analyze, or if we are analyzing already, show analysis options.
-    // Both already run analyses and analyses not yet run will be shown. Analyses already run are fetched differently, though.
-    $zAnalysesRun    = $_DB->query('SELECT a.id, a.name, a.description, a.filters, 1 AS analysis_run, ar.id AS runid, ar.modified, GROUP_CONCAT(arf.filterid, ";", IFNULL(arf.filtered_out, "-"), ";", IFNULL(arf.run_time, "-") ORDER BY arf.filter_order SEPARATOR ";;") AS __run_filters FROM ' . TABLE_ANALYSES . ' AS a INNER JOIN ' . TABLE_ANALYSES_RUN . ' AS ar ON (a.id = ar.analysisid) INNER JOIN ' . TABLE_ANALYSES_RUN_FILTERS . ' AS arf ON (ar.id = arf.runid) WHERE ar.individualid = ? GROUP BY ar.id ORDER BY ar.id', array($zData['id']))->fetchAllAssoc();
-    $zAnalysesNotRun = $_DB->query('SELECT a.id, a.name, a.description, a.filters, 0 AS analysis_run,               0 AS modified FROM ' . TABLE_ANALYSES . ' AS a WHERE a.id NOT IN (SELECT ar.analysisid FROM ' . TABLE_ANALYSES_RUN . ' AS ar WHERE ar.individualid = ? AND ar.modified = 0)', array($zData['id']))->fetchAllAssoc();
-    $zAnalyses = array_merge($zAnalysesRun, array(''), $zAnalysesNotRun);
+
+
+
+
+    // Analysis is done per screening; show list of screenings, select one to actually start/view analyses.
     print('
-      <DIV id="analyses"' . ($zData['analysis_statusid'] != ANALYSIS_STATUS_READY? '' : ' class="analyses_none_run"') . '>
+      <DIV id="screenings"' . ($zData['analysis_statusid'] > ANALYSIS_STATUS_READY? '' : ' style="display : none;"') . '>' . "\n");
+    $_GET['search_individualid'] = $nID;
+    $_T->printTitle('Screenings', 'H4');
+    require ROOT_PATH . 'class/object_screenings.mod.php';
+    $_DATA = new LOVD_ScreeningMOD();
+    $_DATA->setSortDefault('id');
+    $_DATA->setRowID('Screenings_for_I_VE', 'Screening_{{screeningid}}');
+    $_DATA->setRowLink('Screenings_for_I_VE', 'javascript:window.location.href=\'' . lovd_getInstallURL() . $_PE[0] . '/' . $nID . '/analyze/{{screeningid}}\'; return false');
+    $_DATA->viewList('Screenings_for_I_VE', array(), true, true);
+    unset($_GET['search_individualid']);
+    print('      </DIV>' . "\n\n");
+
+
+
+
+
+    // If we are analyzing a screening, highlight it.
+    if ($nScreeningToAnalyze) {
+?>
+    <SCRIPT type="text/javascript">
+        var nScreeningID;
+        function lovd_highlightScreening ()
+        {
+            // Highlights the selected screening, by parsing the URL.
+            $('#Screening_' + nScreeningID).attr('class', 'data bold');
+        }
+
+        $(function () {
+            var aScreenings = window.location.href.split('/');
+            nScreeningID = aScreenings[aScreenings.length-1];
+            // Not so efficient, but oh well... Needs to be done this way to make sure it gets highlighted again if the VL is reloaded.
+            // FIXME: Can we somehow hook this into the reloading of the VL?
+            setInterval(lovd_highlightScreening, 250);
+        });
+    </SCRIPT>
+    <?php
+
+
+
+
+
+        lovd_includeJS('inc-js-analyses.php');
+
+        // If we're ready to analyze, or if we are analyzing already, show analysis options.
+        // Both already run analyses and analyses not yet run will be shown. Analyses already run are fetched differently, though.
+        $zAnalysesRun    = $_DB->query('SELECT a.id, a.name, a.description, a.filters, 1 AS analysis_run, ar.id AS runid, ar.modified, GROUP_CONCAT(arf.filterid, ";", IFNULL(arf.filtered_out, "-"), ";", IFNULL(arf.run_time, "-") ORDER BY arf.filter_order SEPARATOR ";;") AS __run_filters FROM ' . TABLE_ANALYSES . ' AS a INNER JOIN ' . TABLE_ANALYSES_RUN . ' AS ar ON (a.id = ar.analysisid) INNER JOIN ' . TABLE_ANALYSES_RUN_FILTERS . ' AS arf ON (ar.id = arf.runid) WHERE ar.screeningid = ? GROUP BY ar.id ORDER BY ar.id', array($nScreeningToAnalyze))->fetchAllAssoc();
+        $zAnalysesNotRun = $_DB->query('SELECT a.id, a.name, a.description, a.filters, 0 AS analysis_run,               0 AS modified FROM ' . TABLE_ANALYSES . ' AS a WHERE a.id NOT IN (SELECT ar.analysisid FROM ' . TABLE_ANALYSES_RUN . ' AS ar WHERE ar.screeningid = ? AND ar.modified = 0)', array($nScreeningToAnalyze))->fetchAllAssoc();
+        $zAnalyses = array_merge($zAnalysesRun, array(''), $zAnalysesNotRun);
+        print('
+      <DIV id="analyses">
         <TABLE id="analysesTable" border="0" cellpadding="0" cellspacing="0">
           <TR>');
-    foreach ($zAnalyses as $key => $zAnalysis) {
-        if (!$zAnalysis) {
-            // This is the separation between run and non-run filters.
-            if ($key) {
-                // We've got run filters on the left, and non-run filters on the right.
-                // Create division.
-                print('
+        foreach ($zAnalyses as $key => $zAnalysis) {
+            if (!$zAnalysis) {
+                // This is the separation between run and non-run filters.
+                if ($key) {
+                    // We've got run filters on the left, and non-run filters on the right.
+                    // Create division.
+                    print('
             <TD class="divider">&nbsp;</TD>');
+                }
+                continue;
             }
-            continue;
-        }
-        $aFilters = preg_split('/\s+/', $zAnalysis['filters']);
-        if ($zAnalysis['analysis_run'] && $zAnalysis['__run_filters']) {
-            list($aFiltersRunRaw) = $_DATA->autoExplode(array('__0' => $zAnalysis['__run_filters']));
-            $aFiltersRun = array();
-            foreach ($aFiltersRunRaw as $aFilter) {
-                $aFiltersRun[$aFilter[0]] = array($aFilter[1], $aFilter[2]);
-            }
-            $sFilterLastRun = $aFilter[0]; // For checking if this analysis is done or not.
-        } else {
-            $aFiltersRun = array();
-        }
-
-        if ($zAnalysis['analysis_run']) {
-            // Was run complete?
-            if ($aFiltersRun[$sFilterLastRun][0] == '-') {
-                // It's not done... this is strange... half an analysis should normally not happen.
-                $sAnalysisClassName = 'analysis_running';
+            $aFilters = preg_split('/\s+/', $zAnalysis['filters']);
+            if ($zAnalysis['analysis_run'] && $zAnalysis['__run_filters']) {
+                list($aFiltersRunRaw) = $_DATA->autoExplode(array('__0' => $zAnalysis['__run_filters']));
+                $aFiltersRun = array();
+                foreach ($aFiltersRunRaw as $aFilter) {
+                    $aFiltersRun[$aFilter[0]] = array($aFilter[1], $aFilter[2]);
+                }
+                $sFilterLastRun = $aFilter[0]; // For checking if this analysis is done or not.
             } else {
-                $sAnalysisClassName = 'analysis_run';
+                $aFiltersRun = array();
             }
-        } else {
-            $sAnalysisClassName = 'analysis_not_run';
-        }
-        print('
+
+            if ($zAnalysis['analysis_run']) {
+                // Was run complete?
+                if ($aFiltersRun[$sFilterLastRun][0] == '-') {
+                    // It's not done... this is strange... half an analysis should normally not happen.
+                    $sAnalysisClassName = 'analysis_running';
+                } else {
+                    $sAnalysisClassName = 'analysis_run';
+                }
+            } else {
+                $sAnalysisClassName = 'analysis_not_run';
+            }
+            print('
             <TD class="analysis" valign="top">
               <TABLE border="0" cellpadding="0" cellspacing="1" id="' . ($zAnalysis['analysis_run']? 'run_' . $zAnalysis['runid'] : 'analysis_' . $zAnalysis['id']) . '" class="analysis ' . $sAnalysisClassName . '" onclick="' .
-            ($zAnalysis['analysis_run']? 'lovd_showAnalysisResults(\'' . $zAnalysis['runid'] . '\');' : 'lovd_runAnalysis(\'' . $zData['id'] . '\', \'' . $zAnalysis['id'] . '\');') . '">
+                ($zAnalysis['analysis_run']? 'lovd_showAnalysisResults(\'' . $zAnalysis['runid'] . '\');' : 'lovd_runAnalysis(\'' . $nScreeningToAnalyze . '\', \'' . $zAnalysis['id'] . '\');') . '">
                 <TR>
                   <TH colspan="3">
                     <DIV style="position : relative">
@@ -186,36 +236,36 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && !ACTION) {
                   <TD><B>Time</B></TD>
                   <TD><B>Var left</B></TD>
                 </TR>');
-        $nVariantsLeft = $zData['variants'];
-        foreach ($aFilters as $sFilter) {
-            $sFilterClassName = '';
-            $nTime = '-';
-            if ($zAnalysis['analysis_run']) {
-                if (!isset($aFiltersRun[$sFilter])) {
-                    $sFilterClassName = 'filter_skipped';
-                } else {
-                    list($nVariantsFiltered, $nTime) = $aFiltersRun[$sFilter];
-                    if ($nVariantsFiltered != '-' && $nTime != '-') {
-                        $nVariantsLeft -= $nVariantsFiltered;
-                        $sFilterClassName = 'filter_completed';
+            $nVariantsLeft = $zData['variants'];
+            foreach ($aFilters as $sFilter) {
+                $sFilterClassName = '';
+                $nTime = '-';
+                if ($zAnalysis['analysis_run']) {
+                    if (!isset($aFiltersRun[$sFilter])) {
+                        $sFilterClassName = 'filter_skipped';
+                    } else {
+                        list($nVariantsFiltered, $nTime) = $aFiltersRun[$sFilter];
+                        if ($nVariantsFiltered != '-' && $nTime != '-') {
+                            $nVariantsLeft -= $nVariantsFiltered;
+                            $sFilterClassName = 'filter_completed';
+                        }
                     }
                 }
-            }
-            print('
+                print('
                 <TR id="' . ($zAnalysis['analysis_run']? 'run_' . $zAnalysis['runid'] : 'analysis_' . $zAnalysis['id']) . '_filter_' . $sFilter . '"' . (!$sFilterClassName? '' : ' class="' . $sFilterClassName . '"') . '>
                   <TD>' . $sFilter . '</TD>
                   <TD>' . ($nTime == '-'? '-' : lovd_convertSecondsToTime($nTime, 1)) . '</TD>
                   <TD>' . ($nTime == '-'? '-' : $nVariantsLeft) . '</TD>
                 </TR>');
-        }
-        print('
+            }
+            print('
                 <TR id="' . ($zAnalysis['analysis_run']? 'run_' . $zAnalysis['runid'] : 'analysis_' . $zAnalysis['id']) . '_message" class="message">
                   <TD colspan="3">' . ($sAnalysisClassName == 'analysis_running'? 'Analysis seems to have been interrupted' : ($sAnalysisClassName == 'analysis_run'? 'Click to see results' : 'Click to run this analysis')) . '</TD>
                 </TR>
               </TABLE>
             </TD>');
-    }
-    print('
+        }
+        print('
           </TR>
         </TABLE>
       </DIV>' . "\n\n");
@@ -224,30 +274,31 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && !ACTION) {
 
 
 
-    // This where the VL should be loaded. Since a VL needs quite a lot of HTML
-    // that does not come out of the Ajax VL interface, we must initiate a VL here.
-    // We make sure it returns no results to prevent useless database usage, but
-    // like that it can easily be manipulated through Ajax to return results and
-    // be visible whenever necessary.
-    print('
+        // This where the VL should be loaded. Since a VL needs quite a lot of HTML
+        // that does not come out of the Ajax VL interface, we must initiate a VL here.
+        // We make sure it returns no results to prevent useless database usage, but
+        // like that it can easily be manipulated through Ajax to return results and
+        // be visible whenever necessary.
+        print('
 
       <DIV id="analysis_results_VL" style="display: none;">' . "\n");
-    $_GET['search_runid'] = '0'; // Will for sure not return anything.
-    $_GET['search_vog_effect'] = '!-'; // We always want to exclude the (probably) non-pathogenic ones by default.
+        $_GET['search_runid'] = '0'; // Will for sure not return anything.
+        $_GET['search_vog_effect'] = '!-'; // We always want to exclude the (probably) non-pathogenic ones by default.
 
-    require ROOT_PATH . 'class/object_custom_viewlists.mod.php';
-    // VOG needs to be first, so it groups by the VOG ID.
-    $_DATA = new LOVD_CustomViewListMOD(array('AnalysisRunResults', 'VariantOnGenome', 'VariantOnTranscript'));
-    // Define menu, to set pathogenicity flags of multiple variants in one go.
-    $_DATA->setRowLink('CustomVL_AnalysisRunResults_for_I_VE', 'javascript:lovd_openWindow(\'' . lovd_getInstallURL() . 'variants/{{ID}}?&in_window\', \'VarVE_{{ID}}\', 1000); return false;');
-    print('      <UL id="viewlistMenu_CustomVL_AnalysisRunResults_for_I_VE" class="jeegoocontext jeegooviewlist">' . "\n");
-    foreach ($_SETT['var_effect'] as $nEffectID => $sEffect) {
-        print('        <LI class="icon"><A click="lovd_AJAX_viewListSubmit(\'CustomVL_AnalysisRunResults_for_I_VE\', function(){$.get(\'ajax/set_variant_effect.php?' . $nEffectID . '&id=selected\', function(sResponse){if(sResponse.substring(0,1) == \'1\'){alert(\'Successfully set reported variant effect of \' + sResponse.substring(2) + \' variants to \\\'' . $sEffect . '\\\'.\');lovd_AJAX_viewListSubmit(\'CustomVL_AnalysisRunResults_for_I_VE\');}}).error(function(){alert(\'Error while setting variant effect.\');});});"><SPAN class="icon" style="background-image: url(gfx/menu_edit.png);"></SPAN>Set variant effect to "' . $sEffect . '"</A></LI>' . "\n");
+        require ROOT_PATH . 'class/object_custom_viewlists.mod.php';
+        // VOG needs to be first, so it groups by the VOG ID.
+        $_DATA = new LOVD_CustomViewListMOD(array('AnalysisRunResults', 'VariantOnGenome', 'VariantOnTranscript'));
+        // Define menu, to set pathogenicity flags of multiple variants in one go.
+        $_DATA->setRowLink('CustomVL_AnalysisRunResults_for_I_VE', 'javascript:lovd_openWindow(\'' . lovd_getInstallURL() . 'variants/{{ID}}?&in_window\', \'VarVE_{{ID}}\', 1000); return false;');
+        print('      <UL id="viewlistMenu_CustomVL_AnalysisRunResults_for_I_VE" class="jeegoocontext jeegooviewlist">' . "\n");
+        foreach ($_SETT['var_effect'] as $nEffectID => $sEffect) {
+            print('        <LI class="icon"><A click="lovd_AJAX_viewListSubmit(\'CustomVL_AnalysisRunResults_for_I_VE\', function(){$.get(\'ajax/set_variant_effect.php?' . $nEffectID . '&id=selected\', function(sResponse){if(sResponse.substring(0,1) == \'1\'){alert(\'Successfully set reported variant effect of \' + sResponse.substring(2) + \' variants to \\\'' . $sEffect . '\\\'.\');lovd_AJAX_viewListSubmit(\'CustomVL_AnalysisRunResults_for_I_VE\');}}).error(function(){alert(\'Error while setting variant effect.\');});});"><SPAN class="icon" style="background-image: url(gfx/menu_edit.png);"></SPAN>Set variant effect to "' . $sEffect . '"</A></LI>' . "\n");
+        }
+        print('      </UL>' . "\n\n");
+        $_DATA->viewList('CustomVL_AnalysisRunResults_for_I_VE', array(), false, false, true); // Options always on!
+        print('
+          </DIV>');
     }
-    print('      </UL>' . "\n\n");
-    $_DATA->viewList('CustomVL_AnalysisRunResults_for_I_VE', array(), false, false, true); // Options always on!
-    print('
-      </DIV>');
 
     $_T->printFooter();
     exit;

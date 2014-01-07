@@ -3,10 +3,10 @@
  * LEIDEN OPEN VARIATION DATABASE (LOVD)
  *
  * Created     : 2013-11-05
- * Modified    : 2013-11-29
+ * Modified    : 2014-01-07
  * For LOVD    : 3.0-09
  *
- * Copyright   : 2004-2013 Leiden University Medical Center; http://www.LUMC.nl/
+ * Copyright   : 2004-2014 Leiden University Medical Center; http://www.LUMC.nl/
  * Programmer  : Ing. Ivo F.A.C. Fokkema <I.F.A.C.Fokkema@LUMC.nl>
  *
  *
@@ -28,7 +28,6 @@
  *************/
 
 /* Styles for diagnostic module */
-div.analyses_none_run        {display: none;}
 div#analyses td.divider      {width: 50px;}
 
 table#analysesTable
