@@ -4,7 +4,7 @@
  * LEIDEN OPEN VARIATION DATABASE (LOVD)
  *
  * Created     : 2014-01-03
- * Modified    : 2014-01-07
+ * Modified    : 2014-01-08
  * For LOVD    : 3.0-09
  *
  * Copyright   : 2004-2014 Leiden University Medical Center; http://www.LUMC.nl/
@@ -97,17 +97,9 @@ class LOVD_ScreeningMOD extends LOVD_Screening {
 
         // List of columns and (default?) order for viewing an entry.
         $this->aColumnsViewEntry = array_merge(
-                 array(
-                        'individualid_' => 'Individual ID',
-                      ),
                  $this->buildViewEntry(),
                  array(
                         'variants_found_' => 'Variants found?',
-                        'owned_by_' => 'Owner name',
-                        'created_by_' => array('Created by', LEVEL_COLLABORATOR),
-                        'created_date' => array('Date created', LEVEL_COLLABORATOR),
-                        'edited_by_' => array('Last edited by', LEVEL_COLLABORATOR),
-                        'edited_date_' => array('Date last edited', LEVEL_COLLABORATOR),
                       ));
 
         // List of columns and (default?) order for viewing a list of entries.
@@ -162,7 +154,7 @@ class LOVD_ScreeningMOD extends LOVD_Screening {
     function prepareData ($zData = '', $sView = 'list')
     {
         // Prepares the data by "enriching" the variable received with links, pictures, etc.
-        global $_AUTH, $_SETT;
+        global $_AUTH, $_PE, $_SETT;
 
         if (!in_array($sView, array('list', 'entry'))) {
             $sView = 'list';
@@ -175,6 +167,10 @@ class LOVD_ScreeningMOD extends LOVD_Screening {
             $zData['individualid_'] = '<A href="individuals/' . $zData['individualid'] . '">' . $zData['individualid'] . '</A>';
             if ($_AUTH['level'] >= LEVEL_COLLABORATOR) {
                 $zData['individualid_'] .= ' <SPAN style="color : #' . $this->getStatusColor($zData['individual_statusid']) . '">(' . $_SETT['data_status'][$zData['individual_statusid']] . ')</SPAN>';
+            }
+            if ($_PE[0] == 'individuals') {
+                // Screenings VE op Individuals VE.
+                $zData['variants_found_'] .= ' (<A href="screenings/' . $zData['id'] . '">See all</A>)';
             }
         }
         $zData['variants_found_'] = ($zData['variants_found_'] == -1? 'Not yet submitted' : $zData['variants_found_']);

@@ -84,6 +84,9 @@ if (PATH_COUNT >= 2 && ctype_digit($_PE[1]) && !ACTION && (PATH_COUNT == 2 || PA
 
     lovd_requireAUTH(LEVEL_COLLABORATOR);
 
+    print('      <TABLE cellpadding="0" cellspacing="0" border="0" width="100%">
+        <TR>
+          <TD valign="top">' . "\n");
     require ROOT_PATH . 'class/object_individuals.mod.php';
     $_DATA = new LOVD_IndividualMOD($nID);
     $zData = $_DATA->viewEntry($nID);
@@ -107,6 +110,21 @@ if (PATH_COUNT >= 2 && ctype_digit($_PE[1]) && !ACTION && (PATH_COUNT == 2 || PA
     }
     lovd_showJGNavigation($aNavigation, 'Individuals');
     */
+
+    print('
+          </TD>
+          <TD valign="top">' . "\n");
+
+    // If we're here, analyzing a screening, show the screening VE on the right.
+    if ($nScreeningToAnalyze) {
+        require_once ROOT_PATH . 'class/object_screenings.mod.php';
+        $_DATA = new LOVD_ScreeningMOD($nID);
+        $_DATA->viewEntry($nID);
+    }
+    print('
+          </TD>
+        </TR>
+      </TABLE>' . "\n\n");
 
 
 
@@ -136,7 +154,7 @@ if (PATH_COUNT >= 2 && ctype_digit($_PE[1]) && !ACTION && (PATH_COUNT == 2 || PA
       <DIV id="screenings"' . ($zData['analysis_statusid'] > ANALYSIS_STATUS_READY? '' : ' style="display : none;"') . '>' . "\n");
     $_GET['search_individualid'] = $nID;
     $_T->printTitle('Screenings', 'H4');
-    require ROOT_PATH . 'class/object_screenings.mod.php';
+    require_once ROOT_PATH . 'class/object_screenings.mod.php';
     $_DATA = new LOVD_ScreeningMOD();
     $_DATA->setSortDefault('id');
     $_DATA->setRowID('Screenings_for_I_VE', 'Screening_{{screeningid}}');
