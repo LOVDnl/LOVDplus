@@ -545,6 +545,18 @@ function lovd_mapVariants ()
 
 <BODY style="margin : 0px;">
 
+<?php
+
+if ($_SERVER['HTTP_HOST'] == 'leiden-test.diagnostics.lovd.nl') {
+    print('
+      <TABLE border="0" cellpadding="2" cellspacing="0" width="100%" class="info">
+        <TR>
+          <TD valign="top" align="center" width="40"><IMG src="gfx/lovd_warning.png" alt="Warning" title="Warning" width="32" height="32" style="margin : 4px;"></TD>
+          <TD valign="middle"><B>You are currently viewing the TEST development installation of the Leiden exome diagnostics software.</B><BR>Features present here may not be present in the <I>live</I> installation. You may experience problems, especially using any new features. Problems can be reported to <A href="mailto:Ivo@LOVD.nl?subject=' . rawurlencode('Problem with ' . $_STAT['signature'] . ' (' . $_SERVER['HTTP_HOST'] . ')') . '">Ivo@LOVD.nl</A>.</TD></TR></TABLE>');
+}
+
+?>
+
 <TABLE border="0" cellpadding="0" cellspacing="0" width="100%"><TR><TD>
 
 <TABLE border="0" cellpadding="0" cellspacing="0" width="100%" class="logo">

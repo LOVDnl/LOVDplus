@@ -4,10 +4,10 @@
  * LEIDEN OPEN VARIATION DATABASE (LOVD)
  *
  * Created     : 2010-12-21
- * Modified    : 2013-11-25
+ * Modified    : 2014-01-13
  * For LOVD    : 3.0-09
  *
- * Copyright   : 2004-2013 Leiden University Medical Center; http://www.LUMC.nl/
+ * Copyright   : 2004-2014 Leiden University Medical Center; http://www.LUMC.nl/
  * Programmers : Ing. Ivar C. Lugtenburg <I.C.Lugtenburg@LUMC.nl>
  *               Ing. Ivo F.A.C. Fokkema <I.F.A.C.Fokkema@LUMC.nl>
  *               Jerry Hoogenboom <J.Hoogenboom@LUMC.nl>
@@ -861,23 +861,23 @@ if (PATH_COUNT == 2 && $_PE[1] == 'upload' && ACTION == 'create') {
     // Define list of columns from SeattleSeq format that we are recognizing.
     $aSeattleSeqCols =
      array(
-        'ALTPERC' => 'VariantOnGenome/Sequencing/Depth/Alt/Fraction',
+        'ALTPERC_Child' => 'VariantOnGenome/Sequencing/Depth/Alt/Fraction',
         'distanceToSplice' => 'VariantOnTranscript/Distance_to_splice_site',
-        'DP' => 'VariantOnGenome/Sequencing/Depth/Total',
-        'DPALT' => 'VariantOnGenome/Sequencing/Depth/Alt',
-        'DPREF' => 'VariantOnGenome/Sequencing/Depth/Ref',
+        'DP_Child' => 'VariantOnGenome/Sequencing/Depth/Total',
+        'DPALT_Child' => 'VariantOnGenome/Sequencing/Depth/Alt',
+        'DPREF_Child' => 'VariantOnGenome/Sequencing/Depth/Ref',
         'FILTERvcf' => 'VariantOnGenome/Sequencing/Filter',
         'functionGVS' => 'VariantOnTranscript/GVS/Function',
         'QUAL' => 'VariantOnGenome/Sequencing/Quality',
         'scorePhastCons' => 'VariantOnGenome/Conservation_score/Phast',
 //        'FAM_UNAFFECTED_genotype_father' => 'VariantOnGenome/Sequencing/Father/Genotype',
-        'FAM_UNAFFECTED_reads_fatherDP' => 'VariantOnGenome/Sequencing/Father/Depth/Total',
+        'DP_Father' => 'VariantOnGenome/Sequencing/Father/Depth/Total',
 //        'FAM_UNAFFECTED_genotype_mother' => 'VariantOnGenome/Sequencing/Mother/Genotype',
-        'FAM_UNAFFECTED_reads_motherDP' => 'VariantOnGenome/Sequencing/Mother/Depth/Total',
-        'ISPRESENT_father' => 'VariantOnGenome/Sequencing/Father/VarPresent',
-        'ALTPERC_father' => 'VariantOnGenome/Sequencing/Father/Depth/Alt/Fraction',
-        'ISPRESENT_mother' => 'VariantOnGenome/Sequencing/Mother/VarPresent',
-        'ALTPERC_mother' => 'VariantOnGenome/Sequencing/Mother/Depth/Alt/Fraction',
+        'DP_Mother' => 'VariantOnGenome/Sequencing/Mother/Depth/Total',
+        'ISPRESENT_Father' => 'VariantOnGenome/Sequencing/Father/VarPresent',
+        'ALTPERC_Father' => 'VariantOnGenome/Sequencing/Father/Depth/Alt/Fraction',
+        'ISPRESENT_Mother' => 'VariantOnGenome/Sequencing/Mother/VarPresent',
+        'ALTPERC_Mother' => 'VariantOnGenome/Sequencing/Mother/Depth/Alt/Fraction',
         'phyloP' => 'VariantOnGenome/Conservation_score/PhyloP',
         'AF1000G' => 'VariantOnGenome/Frequency/1000G',
         'AFGONL' => 'VariantOnGenome/Frequency/GoNL',
@@ -955,7 +955,12 @@ if (PATH_COUNT == 2 && $_PE[1] == 'upload' && ACTION == 'create') {
 
             // Create hack for KG pipeline file.
             if (!empty($bFirstLineRead)) {
-                $sNextLine = '# ' . $sNextLine;
+                if (preg_match('/^#[^ ]/', $sNextLine)) {
+                    // KG-style '#chromosome' header.
+                    $sNextLine = '# ' . substr($sNextLine, 1);
+                } else {
+                    $sNextLine = '# ' . $sNextLine;
+                }
                 $bFirstLineRead = false;
             }
 
@@ -967,7 +972,7 @@ if (PATH_COUNT == 2 && $_PE[1] == 'upload' && ACTION == 'create') {
                     // This can't be a SeattleSeq file; just return false.
                     return false;
                 }
-                $aHeaders = explode("\t", substr(rtrim($sLine, "\r\n"), 2));
+                $aHeaders = explode("\t", ltrim(rtrim($sLine, "\r\n"), '# '));
                 $aHeaders = array_map('trim', $aHeaders, array_fill(0, count($aHeaders), '"'));
             }
 
@@ -1003,8 +1008,10 @@ if (PATH_COUNT == 2 && $_PE[1] == 'upload' && ACTION == 'create') {
                 }
 
                 // Compare the next line with the current variant data.
-                $aNextLine = array_combine($aHeaders, explode("\t", rtrim($sNextLine, "\r\n")));
-                if ($aLine['chromosome'] == $aNextLine['chromosome'] && $aLine['position'] == $aNextLine['position']) {
+                // Prepare $aNextLine a little more carefully, since some files just plainly suck...
+                $aNextLine = array_pad(explode("\t", rtrim($sNextLine, "\r\n")), count($aHeaders), '');
+                $aNextLine = array_combine($aHeaders, $aNextLine);
+                if (isset($aLine['chromosome']) && isset($aNextLine['chromosome']) && $aLine['chromosome'] == $aNextLine['chromosome'] && isset($aLine['position']) && isset($aNextLine['position']) && $aLine['position'] == $aNextLine['position']) {
                     // The variant in $aNextLine is the same as $aLine, but on another transcript. Add the transcript-specific values.
                     foreach ($aLine as $sKey => &$value) {
                         if (is_array($value)) {
@@ -1037,14 +1044,26 @@ if (PATH_COUNT == 2 && $_PE[1] == 'upload' && ACTION == 'create') {
         // Returns the given variant as a string, like it was in the SeattleSeq file.
         // This is used to be able to print a SeattleSeq line to the user in case a variant can't be imported.
 
-        foreach (array('accession', 'functionGVS', 'functionDBSNP', 'aminoAcids', 'proteinPosition', 'cDNAPosition', 'polyPhen', 'granthamScore', 'proteinSequence', 'distanceToSplice') as $sKey) {
+        foreach (array('accession', 'functionGVS', 'functionDBSNP', 'aminoAcids', 'proteinPosition', 'cDNAPosition', 'polyPhen', 'granthamScore', 'proteinSequence', 'distanceToSplice', 'SIFT', 'MutationTaster_pred', 'MutationTaster_score') as $sKey) {
+            // FIXME: You should base this partially on $aSeattleSeqCols.
             // Getting the selected index from the transcript-dependent fields.
 
             if (!isset($aVariant[$sKey])) {
-                // cDNAPosition, polyPhen, granthamScore, proteinSequence and distanceToSplice are optional columns so we should check for their existance.
+                // cDNAPosition, polyPhen, granthamScore, proteinSequence and distanceToSplice are optional columns so we should check for their existence.
                 continue;
             }
             $aVariant[$sKey] = $aVariant[$sKey][$nTranscriptIndex];
+        }
+
+        // KG: More array values we need to reset to string? FIXME: We could also extend the col list above, or just remove it and scan $aVariants completely with the code below.
+        foreach ($aVariant as $key => $val) {
+            if (is_array($val)) {
+                if (!$val) {
+                    $aVariant[$key] = '';
+                } else {
+                    $aVariant[$key] = $aVariant[$sKey][$nTranscriptIndex];
+                }
+            }
         }
 
         return implode("\t", $aVariant);
@@ -1435,7 +1454,7 @@ if (PATH_COUNT == 2 && $_PE[1] == 'upload' && ACTION == 'create') {
                     // Prepare genomic variant.
                     $aFieldsVariantOnGenome[0] = array(
                         'effectid' => 55,
-                        'chromosome' => $aVariant['chromosome'],
+                        'chromosome' => (!isset($aVariant['chromosome'])? '' : $aVariant['chromosome']),
                         'owned_by' => $_POST['owned_by'],
                         'statusid' => $_POST['statusid'],
                         'created_by' => $_AUTH['id'],
@@ -1444,7 +1463,7 @@ if (PATH_COUNT == 2 && $_PE[1] == 'upload' && ACTION == 'create') {
 
                     // Load VOG columns mapped to SeattleSeq output cols.
                     foreach ($aSeattleSeqCols as $sSeattleSeqCol => $sColID) {
-                        if (in_array($sColID, $aVOGColumnsAvailable) && !in_array($aVariant[$sSeattleSeqCol], array('NA', 'unknown', 'none'))) {
+                        if (in_array($sColID, $aVOGColumnsAvailable) && isset($aVariant[$sSeattleSeqCol]) && !in_array($aVariant[$sSeattleSeqCol], array('NA', 'unknown', 'none'))) {
                             $Val = $aVariant[$sSeattleSeqCol];
                             switch ($sSeattleSeqCol) {
                                 case 'ALTPERC':
@@ -1638,7 +1657,7 @@ if (PATH_COUNT == 2 && $_PE[1] == 'upload' && ACTION == 'create') {
                                 if (empty($aGeneInfo)) {
                                     // Getting all gene information from the HGNC takes a few seconds.
                                     $_BAR->setMessage('Loading gene data...', 'done');
-                                    $aGeneInfo = lovd_getGeneInfoFromHgnc(true, array('gd_hgnc_id', 'gd_app_sym', 'gd_app_name', 'gd_pub_chrom_map', 'gd_locus_type', 'gd_pub_eg_id', 'md_mim_id'));
+                                    $aGeneInfo = lovd_getGeneInfoFromHgncOld(true, array('gd_hgnc_id', 'gd_app_sym', 'gd_app_name', 'gd_pub_chrom_map', 'gd_locus_type', 'gd_pub_eg_id', 'md_mim_id'));
 
                                     if (empty($aGeneInfo)) {
                                         // We can't gene information from the HGNC, so we can't add them.
@@ -1860,13 +1879,13 @@ if (PATH_COUNT == 2 && $_PE[1] == 'upload' && ACTION == 'create') {
 
                                 // Find out the protein change.
                                 $sProteinChange = 'p.?';
-                                if ($aVariant['aminoAcids'][$i] == 'none' && ctype_digit($aVariant['distanceToSplice'][$i]) && $aVariant['distanceToSplice'][$i] > 10) {
+                                if (in_array($aVariant['aminoAcids'][$i], array('none', 'unknown')) && $aVariant['functionGVS'][$i] == 'intron' && ctype_digit($aVariant['distanceToSplice'][$i]) && $aVariant['distanceToSplice'][$i] > 10) {
                                     $sProteinChange = 'p.(=)';
-                                } elseif ($aVariant['aminoAcids'][$i] != 'none' && count($aFieldsVariantOnGenome) == 1) {
+                                } elseif (!in_array($aVariant['aminoAcids'][$i], array('none', 'unknown')) && count($aFieldsVariantOnGenome) == 1) {
                                     // Because of the way SeattleSeq reports amino acids, we can only reliably define
                                     // the protein change if we have just one alternate (non-reference) allele.
 
-                                    $aAminoAcids = explode(',', $aVariant['aminoAcids'][$i]);
+                                    $aAminoAcids = preg_split('/[,\/]/', $aVariant['aminoAcids'][$i]); // Old SeattleSeq uses comma, new uses slash.
                                     $aProteinPositions = explode('/', $aVariant['proteinPosition'][$i]);
                                     if ($aVariant['functionGVS'][$i] == 'missense') {
                                         if ($aAminoAcids[0] == 'MET' && $aProteinPositions[0] == 1) {

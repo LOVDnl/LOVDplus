@@ -262,7 +262,7 @@ $aTableSQL =
 
     id_miracle BIGINT UNSIGNED,
     id_zis MEDIUMINT UNSIGNED,
-    analysis_statusid TINYINT(1) UNSIGNED,
+    analysis_statusid TINYINT(1) UNSIGNED DEFAULT 0,
     analysis_by SMALLINT(5) UNSIGNED ZEROFILL,
     analysis_date DATETIME,
     analysis_approved_by SMALLINT(5) UNSIGNED ZEROFILL,

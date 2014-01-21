@@ -91,10 +91,9 @@ if (PATH_COUNT >= 2 && ctype_digit($_PE[1]) && !ACTION && (PATH_COUNT == 2 || PA
     $_DATA = new LOVD_IndividualMOD($nID);
     $zData = $_DATA->viewEntry($nID);
 
-    /*
     // Currently not needed.
     $aNavigation = array();
-    if ($_AUTH && $_AUTH['level'] >= LEVEL_OWNER) {
+    if ($_AUTH && $_AUTH['level'] == LEVEL_ADMIN) {
         $aNavigation[CURRENT_PATH . '?edit']                     = array('menu_edit.png', 'Edit individual entry', 1);
         if ($zData['statusid'] < STATUS_OK && $_AUTH['level'] >= LEVEL_CURATOR) {
             $aNavigation[CURRENT_PATH . '?publish']              = array('check.png', ($zData['statusid'] == STATUS_MARKED ? 'Removed mark from' : 'Publish (curate)') . ' individual entry', 1);
@@ -109,7 +108,6 @@ if (PATH_COUNT >= 2 && ctype_digit($_PE[1]) && !ACTION && (PATH_COUNT == 2 || PA
         }
     }
     lovd_showJGNavigation($aNavigation, 'Individuals');
-    */
 
     print('
           </TD>
@@ -151,7 +149,7 @@ if (PATH_COUNT >= 2 && ctype_digit($_PE[1]) && !ACTION && (PATH_COUNT == 2 || PA
 
     // Analysis is done per screening; show list of screenings, select one to actually start/view analyses.
     print('
-      <DIV id="screenings"' . ($zData['analysis_statusid'] > ANALYSIS_STATUS_READY? '' : ' style="display : none;"') . '>' . "\n");
+      <DIV id="screenings"' . ($zData['analysis_statusid'] > ANALYSIS_STATUS_READY || $nScreeningToAnalyze? '' : ' style="display : none;"') . '>' . "\n");
     $_GET['search_individualid'] = $nID;
     $_T->printTitle('Screenings', 'H4');
     require_once ROOT_PATH . 'class/object_screenings.mod.php';
