@@ -5,6 +5,53 @@
  *************/
 
 /**************************
+ * 3.0 Build 10 (r???)
+ * 2014-02-??
+ *********/
+ * Selecting a new transcript now also works with an NG reference sequence, not
+   only an UD. Sometimes UDs don't work in case of overlapping genes.
+ * Fixed bug; The API didn't return a proper date of last update. This is now
+   returned for the genes separately as for the variants.
+ * Added a chapter on the LOVD API to the manual, containing the sections
+   "Format" and "Possibilities".
+
+
+/**************************
+ * 3.0 Build 09 (r383)
+ * 2014-02-13
+ *********/
+ * The script that fetches frequencies from the LOVD whole genome installation,
+   was keeping the session locked.
+ * Fixed bug; Editing or manually mapping unmappable variants could result in a
+   fatal error depending on the PHP settings.
+ * The variant checker (protein predictor) using the Mutalyzer services can now
+   also work with an NG reference sequence, not only a UD. Sometimes UDs don't
+   work in case of overlapping genes.
+ * Fixed bug; Editing a public variant by a submitter could result in a fatal
+   error.
+ * Fixed notices in the data listings caused by incorrect search expressions.
+ * Improved views for diseases associated with many genes; the data listings and
+   the detailed views of the diseases now show a maximum number of gene entries,
+   but always show the total number.
+ * Fixed bug; MySQL 5.6 reported to not have InnoDB, because the variable we use
+   to check this, has become unavailable.
+   Closes #26: "LOVD uninstallable on Xampp on Mac OS X 10.8.5".
+   (thanks to Tyler Hill, Oregon Health & Science Univ., USA, for reporting)
+ * From the "Your account" link in the top right-hand side of the screen, but
+   also for authorized users when viewing any user's details, links are provided
+   to view the data owned by the user in question.
+ * Due to the HGNC changing their URL schema again, no new genes could be
+   created starting from Wednesday, January 8th.
+ * Improved the speed of the variant overview on the Screenings or Individuals
+   detailed pages, especially noticable when having many VariantOnTranscript
+   columns.
+ * Fixed bug; Uploading a non-SeattleSeq file into the SeattleSeq parser resul-
+   ted in many notices, and the message only one variant was found (but not
+   imported). Now it doesn't throw the notices, and reports the correct number
+   of ignored variants.
+
+
+/**************************
  * 3.0 Build 08 (r349)
  * 2013-10-16
  *********/

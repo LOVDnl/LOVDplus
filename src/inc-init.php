@@ -4,10 +4,10 @@
  * LEIDEN OPEN VARIATION DATABASE (LOVD)
  *
  * Created     : 2009-10-19
- * Modified    : 2013-10-16
- * For LOVD    : 3.0-08
+ * Modified    : 2014-01-13
+ * For LOVD    : 3.0-09
  *
- * Copyright   : 2004-2013 Leiden University Medical Center; http://www.LUMC.nl/
+ * Copyright   : 2004-2014 Leiden University Medical Center; http://www.LUMC.nl/
  * Programmers : Ing. Ivo F.A.C. Fokkema <I.F.A.C.Fokkema@LUMC.nl>
  *               Ing. Ivar C. Lugtenburg <I.C.Lugtenburg@LUMC.nl>
  *
@@ -127,7 +127,7 @@ $aRequired =
 $_SETT = array(
                 'system' =>
                      array(
-                            'version' => '3.0-08',
+                            'version' => '3.0-09',
                           ),
                 'user_levels' =>
                      array(
@@ -275,7 +275,7 @@ $_SETT['check_location_URL'] = $_SETT['upstream_URL'] . $_SETT['system']['tree']
 define('ANALYSIS_STATUS_WAIT', 0);
 define('ANALYSIS_STATUS_READY', 1);
 define('ANALYSIS_STATUS_IN_PROGRESS', 2);
-define('ANALYSIS_STATUS_WAIT_APPROVAL', 4);     // Submission completed and curator notified, but awaiting curation.
+define('ANALYSIS_STATUS_WAIT_APPROVAL', 4); // Analysis complete, needs to be approved by staff.
 define('ANALYSIS_STATUS_APPROVED', 7);
 define('ANALYSIS_STATUS_ARCHIVED', 9);
 $_SETT['analysis_status'] =
