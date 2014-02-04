@@ -168,7 +168,7 @@ if (PATH_COUNT >= 2 && ctype_digit($_PE[1]) && !ACTION && (PATH_COUNT == 2 || PA
     // If we are analyzing a screening, highlight it.
     if ($nScreeningToAnalyze) {
 ?>
-    <SCRIPT type="text/javascript">
+      <SCRIPT type="text/javascript">
         var nScreeningID;
         function lovd_highlightScreening ()
         {
@@ -183,19 +183,25 @@ if (PATH_COUNT >= 2 && ctype_digit($_PE[1]) && !ACTION && (PATH_COUNT == 2 || PA
             // FIXME: Can we somehow hook this into the reloading of the VL?
             setInterval(lovd_highlightScreening, 250);
         });
-    </SCRIPT>
+      </SCRIPT>
     <?php
 
 
 
 
 
-        lovd_includeJS('inc-js-analyses.php');
+        lovd_includeJS('inc-js-analyses.php', 1);
 
         // If we're ready to analyze, or if we are analyzing already, show analysis options.
         // Both already run analyses and analyses not yet run will be shown. Analyses already run are fetched differently, though.
-        $zAnalysesRun    = $_DB->query('SELECT a.id, a.name, a.description, a.filters, 1 AS analysis_run, ar.id AS runid, ar.modified, GROUP_CONCAT(arf.filterid, ";", IFNULL(arf.filtered_out, "-"), ";", IFNULL(arf.run_time, "-") ORDER BY arf.filter_order SEPARATOR ";;") AS __run_filters FROM ' . TABLE_ANALYSES . ' AS a INNER JOIN ' . TABLE_ANALYSES_RUN . ' AS ar ON (a.id = ar.analysisid) INNER JOIN ' . TABLE_ANALYSES_RUN_FILTERS . ' AS arf ON (ar.id = arf.runid) WHERE ar.screeningid = ? GROUP BY ar.id ORDER BY ar.id', array($nScreeningToAnalyze))->fetchAllAssoc();
-        $zAnalysesNotRun = $_DB->query('SELECT a.id, a.name, a.description, a.filters, 0 AS analysis_run,               0 AS modified FROM ' . TABLE_ANALYSES . ' AS a WHERE a.id NOT IN (SELECT ar.analysisid FROM ' . TABLE_ANALYSES_RUN . ' AS ar WHERE ar.screeningid = ? AND ar.modified = 0)', array($nScreeningToAnalyze))->fetchAllAssoc();
+        $zAnalysesRun    = $_DB->query('SELECT a.id, a.name, a.description, a.filters, IFNULL(MAX(arf.run_time)>-1, 0) AS analysis_run, ar.id AS runid,   ar.modified, GROUP_CONCAT(arf.filterid, ";", IFNULL(arf.filtered_out, "-"), ";", IFNULL(arf.run_time, "-") ORDER BY arf.filter_order SEPARATOR ";;") AS __run_filters
+                                        FROM ' . TABLE_ANALYSES . ' AS a INNER JOIN ' . TABLE_ANALYSES_RUN . ' AS ar ON (a.id = ar.analysisid) INNER JOIN ' . TABLE_ANALYSES_RUN_FILTERS . ' AS arf ON (ar.id = arf.runid)
+                                        WHERE ar.screeningid = ? GROUP BY ar.id ORDER BY ar.id', array($nScreeningToAnalyze))->fetchAllAssoc();
+        $zAnalysesNotRun = $_DB->query('SELECT a.id, a.name, a.description, a.filters, 0                               AS analysis_run, 0     AS runid, 0 AS modified
+                                        FROM ' . TABLE_ANALYSES . ' AS a
+                                        WHERE a.id NOT IN (SELECT ar.analysisid
+                                                           FROM ' . TABLE_ANALYSES_RUN . ' AS ar
+                                                           WHERE ar.screeningid = ? AND ar.modified = 0)', array($nScreeningToAnalyze))->fetchAllAssoc();
         $zAnalyses = array_merge($zAnalysesRun, array(''), $zAnalysesNotRun);
         print('
       <DIV id="analyses">
@@ -213,15 +219,14 @@ if (PATH_COUNT >= 2 && ctype_digit($_PE[1]) && !ACTION && (PATH_COUNT == 2 || PA
                 continue;
             }
             $aFilters = preg_split('/\s+/', $zAnalysis['filters']);
-            if ($zAnalysis['analysis_run'] && $zAnalysis['__run_filters']) {
+            $aFiltersRun = array();
+            $aFiltersRunRaw = array();
+            if (!empty($zAnalysis['__run_filters'])) {
                 list($aFiltersRunRaw) = $_DATA->autoExplode(array('__0' => $zAnalysis['__run_filters']));
-                $aFiltersRun = array();
                 foreach ($aFiltersRunRaw as $aFilter) {
                     $aFiltersRun[$aFilter[0]] = array($aFilter[1], $aFilter[2]);
                 }
-                $sFilterLastRun = $aFilter[0]; // For checking if this analysis is done or not.
-            } else {
-                $aFiltersRun = array();
+                $sFilterLastRun = $aFilter[0]; // For checking if this analysis is done or not ($aFilter came from the loop).
             }
 
             if ($zAnalysis['analysis_run']) {
@@ -237,12 +242,16 @@ if (PATH_COUNT >= 2 && ctype_digit($_PE[1]) && !ACTION && (PATH_COUNT == 2 || PA
             }
             print('
             <TD class="analysis" valign="top">
-              <TABLE border="0" cellpadding="0" cellspacing="1" id="' . ($zAnalysis['analysis_run']? 'run_' . $zAnalysis['runid'] : 'analysis_' . $zAnalysis['id']) . '" class="analysis ' . $sAnalysisClassName . '" onclick="' .
-                ($zAnalysis['analysis_run']? 'lovd_showAnalysisResults(\'' . $zAnalysis['runid'] . '\');' : 'lovd_runAnalysis(\'' . $nScreeningToAnalyze . '\', \'' . $zAnalysis['id'] . '\');') . '">
+              <TABLE border="0" cellpadding="0" cellspacing="1" id="' . ($zAnalysis['runid']? 'run_' . $zAnalysis['runid'] : 'analysis_' . $zAnalysis['id']) . '" class="analysis ' . $sAnalysisClassName . '" onclick="' .
+                ($zAnalysis['analysis_run']? 'lovd_showAnalysisResults(\'' . $zAnalysis['runid'] . '\');' : 'lovd_runAnalysis(\'' . $nScreeningToAnalyze . '\', \'' . $zAnalysis['id'] . '\'' . (!$zAnalysis['runid']? '' : ', \'' . $zAnalysis['runid'] . '\'') . ');') . '">
                 <TR>
                   <TH colspan="3">
                     <DIV style="position : relative">
-                      ' . $zAnalysis['name'] . (!$zAnalysis['modified']? '' : ' (modified)') . '
+                      ' . $zAnalysis['name'] . (!$zAnalysis['modified']? '' : ' (modified)') .
+                // FIXME: Probably an Ajax call would be better maybe? The window opening with refresh is ugly... we could just let this table disappear when successful (which may not work for the last run analysis because of the divider)...
+                (!$zAnalysis['runid']? '' : '
+                      <SPAN class="remove" onclick="if(window.confirm(\'Are you sure you want to remove this analysis run? The variants will not be deleted.\')){lovd_openWindow(\'' . lovd_getInstallURL() . 'analyses/run/' . $zAnalysis['runid'] . '?delete&amp;in_window\', \'DeleteAnalysisRun\', 780, 400);} cancelParentEvent(event);">(remove)</SPAN>') . '
+                      <SPAN class="modify" onclick="lovd_openWindow(\'' . lovd_getInstallURL() . 'analyses/' . ($zAnalysis['runid']? 'run/' . $zAnalysis['runid'] : $zAnalysis['id']) . '?modify&amp;in_window\', \'ModifyAnalysisRun\', 780, 400); cancelParentEvent(event);">(modify)</SPAN>
                       <IMG src="gfx/lovd_form_question.png" alt="" onmouseover="lovd_showToolTip(\'' . $zAnalysis['description'] . '\');" onmouseout="lovd_hideToolTip();" width="14" height="14" class="help" style="position: absolute; top: -4px; right: 0px;">
                     </DIV>
                   </TH>
@@ -256,26 +265,24 @@ if (PATH_COUNT >= 2 && ctype_digit($_PE[1]) && !ACTION && (PATH_COUNT == 2 || PA
             foreach ($aFilters as $sFilter) {
                 $sFilterClassName = '';
                 $nTime = '-';
-                if ($zAnalysis['analysis_run']) {
-                    if (!isset($aFiltersRun[$sFilter])) {
-                        $sFilterClassName = 'filter_skipped';
-                    } else {
-                        list($nVariantsFiltered, $nTime) = $aFiltersRun[$sFilter];
-                        if ($nVariantsFiltered != '-' && $nTime != '-') {
-                            $nVariantsLeft -= $nVariantsFiltered;
-                            $sFilterClassName = 'filter_completed';
-                        }
+                if ($aFiltersRun && !isset($aFiltersRun[$sFilter])) {
+                    $sFilterClassName = 'filter_skipped';
+                } elseif ($zAnalysis['analysis_run']) {
+                    list($nVariantsFiltered, $nTime) = $aFiltersRun[$sFilter];
+                    if ($nVariantsFiltered != '-' && $nTime != '-') {
+                        $nVariantsLeft -= $nVariantsFiltered;
+                        $sFilterClassName = 'filter_completed';
                     }
                 }
                 print('
-                <TR id="' . ($zAnalysis['analysis_run']? 'run_' . $zAnalysis['runid'] : 'analysis_' . $zAnalysis['id']) . '_filter_' . $sFilter . '"' . (!$sFilterClassName? '' : ' class="' . $sFilterClassName . '"') . '>
+                <TR id="' . ($zAnalysis['runid']? 'run_' . $zAnalysis['runid'] : 'analysis_' . $zAnalysis['id']) . '_filter_' . $sFilter . '"' . (!$sFilterClassName? '' : ' class="' . $sFilterClassName . '"') . '>
                   <TD>' . $sFilter . '</TD>
                   <TD>' . ($nTime == '-'? '-' : lovd_convertSecondsToTime($nTime, 1)) . '</TD>
                   <TD>' . ($nTime == '-'? '-' : $nVariantsLeft) . '</TD>
                 </TR>');
             }
             print('
-                <TR id="' . ($zAnalysis['analysis_run']? 'run_' . $zAnalysis['runid'] : 'analysis_' . $zAnalysis['id']) . '_message" class="message">
+                <TR id="' . ($zAnalysis['runid']? 'run_' . $zAnalysis['runid'] : 'analysis_' . $zAnalysis['id']) . '_message" class="message">
                   <TD colspan="3">' . ($sAnalysisClassName == 'analysis_running'? 'Analysis seems to have been interrupted' : ($sAnalysisClassName == 'analysis_run'? 'Click to see results' : 'Click to run this analysis')) . '</TD>
                 </TR>
               </TABLE>

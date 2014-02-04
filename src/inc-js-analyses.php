@@ -4,8 +4,8 @@
  * LEIDEN OPEN VARIATION DATABASE (LOVD)
  *
  * Created     : 2013-11-05
- * Modified    : 2014-01-07
- * For LOVD    : 3.0-09
+ * Modified    : 2014-02-04
+ * For LOVD    : 3.0-10
  *
  * Copyright   : 2004-2014 Leiden University Medical Center; http://www.LUMC.nl/
  * Programmer  : Ing. Ivo F.A.C. Fokkema <I.F.A.C.Fokkema@LUMC.nl>
@@ -41,20 +41,20 @@ if (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] == 'on' && !empty($_SERVER['S
     define('PROTOCOL', 'http://');
 }
 ?>
-function lovd_resetAfterFailedRun (nAnalysisID)
+function lovd_resetAfterFailedRun (sClassName)
 {
     // Resets the table after a failed run attempt.
 
-    if (typeof(nAnalysisID) == 'undefined') {
+    if (typeof(sClassName) == 'undefined') {
         return false;
     }
 
-    $('#analysis_' + nAnalysisID).attr('class', 'analysis analysis_not_run');
-    $('#analysis_' + nAnalysisID + '_message td')
-        .html($('#analysis_' + nAnalysisID + '_message td').attr('htmlold'))
+    $('#' + sClassName).attr('class', 'analysis analysis_not_run');
+    $('#' + sClassName + '_message td')
+        .html($('#' + sClassName + '_message td').attr('htmlold'))
         .attr('htmlold', '');
-    $('#analysis_' + nAnalysisID)
-        .attr('onclick', $('#analysis_' + nAnalysisID).attr('onclickold'))
+    $('#' + sClassName)
+        .attr('onclick', $('#' + sClassName).attr('onclickold'))
         .attr('onclickold', '');
     return true;
 }
@@ -63,7 +63,7 @@ function lovd_resetAfterFailedRun (nAnalysisID)
 
 
 
-function lovd_runAnalysis (nScreeningID, nAnalysisID)
+function lovd_runAnalysis (nScreeningID, nAnalysisID, nRunID)
 {
     // Starts the analysis of the given screening.
 
@@ -71,23 +71,35 @@ function lovd_runAnalysis (nScreeningID, nAnalysisID)
         alert('Incorrect argument(s) passed to runAnalysis function.');
         return false;
     }
+    if (typeof(nRunID) == 'undefined') {
+        nRunID = 0;
+    }
 
-    $.get('<?php echo lovd_getInstallURL(); ?>ajax/run_analysis.php?screeningid=' + escape(nScreeningID) + '&analysisid=' + escape(nAnalysisID),
+    $.get('<?php echo lovd_getInstallURL(); ?>ajax/run_analysis.php?screeningid=' + escape(nScreeningID) + '&analysisid=' + escape(nAnalysisID) + '&runid=' + escape(nRunID),
         function () {
             // Remove onClick handler and change class of table, to visually show that it's running.
-            $('#analysis_' + nAnalysisID)
-                .attr('onclickold', $('#analysis_' + nAnalysisID).attr('onclick'))
+            // But first check if we're dealing with a modified run or an unmodified analysis.
+            if ($('#run_' + nRunID).length > 0) {
+                // Run was already started (usually a modified run).
+                var sClassName = 'run_' + nRunID;
+            } else {
+                // Analysis started from page.
+                var sClassName = 'analysis_' + nAnalysisID;
+            }
+
+            $('#' + sClassName)
+                .attr('onclickold', $('#' + sClassName).attr('onclick'))
                 .attr('onclick', '');
-            $('#analysis_' + nAnalysisID).attr('class', 'analysis analysis_running');
-            $('#analysis_' + nAnalysisID + '_message td')
-                .attr('htmlold', $('#analysis_' + nAnalysisID + '_message td').html())
+            $('#' + sClassName).attr('class', 'analysis analysis_running');
+            $('#' + sClassName + '_message td')
+                .attr('htmlold', $('#' + sClassName + '_message td').html())
                 .html('Running analysis... <IMG src="gfx/ajax_analysis_running.gif" alt="Running analysis..." width="16" height="11" style="position: relative; top: 2px; right: -10px;">');
         })
         .done(
             function (data) {
                 if (data == '0') {
                     // Failure, reset table.
-                    lovd_resetAfterFailedRun(nAnalysisID);
+                    lovd_resetAfterFailedRun(sClassName);
                     alert('Screening not valid or no authorization to start a new analysis. Refreshing the page...');
                     location.reload();
                     return false;
@@ -98,21 +110,21 @@ function lovd_runAnalysis (nScreeningID, nAnalysisID)
                     return lovd_runNextFilter(nAnalysisID, nRunID);
                 } else if (data == '8') {
                     // Failure, reset table.
-                    lovd_resetAfterFailedRun(nAnalysisID);
+                    lovd_resetAfterFailedRun(sClassName);
                     alert('Lost your session. Please log in again.');
                 } else if (data == '9') {
                     // Failure, reset table.
-                    lovd_resetAfterFailedRun(nAnalysisID);
+                    lovd_resetAfterFailedRun(sClassName);
                     alert('Error while sending data. Please try again.\nIf this error persists, please contact support.');
                 } else {
                     // Some other error.
-                    lovd_resetAfterFailedRun(nAnalysisID);
+                    lovd_resetAfterFailedRun(sClassName);
                     alert(data);
                 }})
         .fail(
             function (data) {
                 // Failure, reset table.
-                lovd_resetAfterFailedRun(nAnalysisID);
+                lovd_resetAfterFailedRun(sClassName);
                 alert('Failed to start analysis. Please try again.\nIf this error persists, please contact support.');
                 return false;
             });
@@ -132,6 +144,14 @@ function lovd_runNextFilter (nAnalysisID, nRunID)
         return false;
     }
 
+    if ($('#run_' + nRunID).length > 0) {
+        // Run was already started (usually a modified run).
+        var sClassName = 'run_' + nRunID;
+    } else {
+        // Analysis started from page.
+        var sClassName = 'analysis_' + nAnalysisID;
+    }
+
     $.get('<?php echo lovd_getInstallURL(); ?>ajax/run_next_filter.php?runid=' + escape(nRunID))
         .done(
             function (data) {
@@ -146,7 +166,7 @@ function lovd_runNextFilter (nAnalysisID, nRunID)
                     var nVariantsLeft = oRegExp[2];
                     var nTime         = oRegExp[3];
                     var bDone         = (typeof(oRegExp[4]) != 'undefined');
-                    oTR = $('#analysis_' + nAnalysisID + '_filter_' + sFilterID);
+                    oTR = $('#' + sClassName + '_filter_' + sFilterID);
                     oTR.attr('class', 'filter_completed');
                     oTR.children('td:eq(1)').html(nTime);
                     oTR.children('td:eq(2)').html(nVariantsLeft);
@@ -156,14 +176,17 @@ function lovd_runNextFilter (nAnalysisID, nRunID)
                     }
 
                     // And also, we're done...
-                    $('#analysis_' + nAnalysisID).attr('class', 'analysis analysis_run');
-                    $('#analysis_' + nAnalysisID + '_message td').html('Click to see results');
+                    $('#' + sClassName).attr('class', 'analysis analysis_run');
+                    $('#' + sClassName + '_message td').html('Click to see results');
 
                     // Table should get a new ID, maybe also the filter lines (although those IDs are not used anymore).
-                    $('#analysis_' + nAnalysisID).attr('id', 'run_' + nRunID);
+                    $('#' + sClassName).attr('id', 'run_' + nRunID);
                     // Also fix onclick.
                     $('#run_' + nRunID).attr('onclick', 'lovd_showAnalysisResults(\'' + nRunID + '\');');
                     $('#run_' + nRunID).attr('onclickold', '');
+                    // Fix link to modify analysis run.
+                    sOnClickLink = $('#run_' + nRunID + ' span.modify').attr('onclick');
+                    $('#run_' + nRunID + ' span.modify').attr('onclick', sOnClickLink.replace('analyses/' + nAnalysisID, 'analyses/run/' + nRunID));
 
                     // Now load the VL.
                     lovd_showAnalysisResults(nRunID);

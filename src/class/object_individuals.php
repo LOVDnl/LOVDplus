@@ -275,7 +275,7 @@ class LOVD_Individual extends LOVD_Custom {
                  array(
                         array('Panel size', '', 'text', 'panel_size', 10),
                         array('', '', 'note', 'Fill in how many individuals this entry represents (default: 1).'),
-                        array('ID of panel this entry belongs to (optional)', 'Fill in LOVD\'s individual ID of the group to which this individual or group of individuals belong to (Optional).', 'text', 'panelid', 10),
+//                        array('ID of panel this entry belongs to (optional)', 'Fill in LOVD\'s individual ID of the group to which this individual or group of individuals belong to (Optional).', 'text', 'panelid', 10),
                         'hr',
                         'skip',
                         array('', '', 'print', '<B>Relation to diseases</B>'),

@@ -4,8 +4,8 @@
  * LEIDEN OPEN VARIATION DATABASE (LOVD)
  *
  * Created     : 2013-11-05
- * Modified    : 2014-01-07
- * For LOVD    : 3.0-09
+ * Modified    : 2014-02-04
+ * For LOVD    : 3.0-10
  *
  * Copyright   : 2004-2014 Leiden University Medical Center; http://www.LUMC.nl/
  * Programmer  : Ing. Ivo F.A.C. Fokkema <I.F.A.C.Fokkema@LUMC.nl>
@@ -38,7 +38,10 @@ if (!$_AUTH || $_AUTH['level'] < LEVEL_COLLABORATOR) {
 }
 
 // Check if the data sent is correct or not.
-if (empty($_GET['screeningid']) || empty($_GET['analysisid']) || !ctype_digit($_GET['screeningid']) || !ctype_digit($_GET['analysisid'])) {
+if (!isset($_GET['runid'])) {
+    $_GET['runid'] = 0;
+}
+if (empty($_GET['screeningid']) || empty($_GET['analysisid']) || !ctype_digit($_GET['screeningid']) || !ctype_digit($_GET['analysisid']) || !ctype_digit($_GET['runid'])) {
     die(AJAX_DATA_ERROR);
 }
 
@@ -50,16 +53,30 @@ if (!$zIndividual) {
     die(AJAX_FALSE);
 }
 
-// Check if analysis exists.
-$zAnalysis = $_DB->query('SELECT id, filters FROM ' . TABLE_ANALYSES . ' WHERE id = ?', array($_GET['analysisid']))->fetchAssoc();
-if (!$zAnalysis || !$zAnalysis['filters']) {
-    die('Analysis not recognized or no filters defined. If the analysis is defined properly, this is an error in the software.');
-}
+if ($_GET['runid']) {
+    // Check if the run exists.
+    $zAnalysisRun = $_DB->query('SELECT id, GROUP_CONCAT(filterid SEPARATOR ";") AS _filters FROM ' . TABLE_ANALYSES_RUN . ' AS ar INNER JOIN ' . TABLE_ANALYSES_RUN_FILTERS . ' AS arf ON (ar.id = arf.runid) WHERE id = ?', array($_GET['runid']))->fetchAssoc();
+    if (!$zAnalysisRun) {
+        die('Analysis run not recognized. If the analysis run is defined properly, this is an error in the software.');
+    }
 
-// Check if this analysis has not been run before. If so, return a specific error. If somehow things don't complete, we should maybe just delete them and run again.
-//   Otherwise, this check needs to be modified.
-if ($_DB->query('SELECT COUNT(*) FROM ' . TABLE_ANALYSES_RUN . ' AS ar WHERE ar.analysisid = ? AND ar.screeningid = ? AND modified = 0', array($zAnalysis['id'], $_GET['screeningid']))->fetchColumn()) {
-    die('This analysis has already been performed on this screening.');
+    // Check if this analysis run has not started before. Can't start twice... (maybe a restart option is needed later?)
+    if ($_DB->query('SELECT COUNT(*), IFNULL(MAX(arf.run_time)>-1, 0) AS analysis_run FROM ' . TABLE_ANALYSES_RUN . ' AS ar INNER JOIN ' . TABLE_ANALYSES_RUN_FILTERS . ' AS arf ON (ar.id = arf.runid) WHERE ar.id = ? GROUP BY ar.id HAVING analysis_run = 1', array($zAnalysisRun['id']))->fetchColumn()) {
+        die('This analysis has already been performed on this screening.');
+    }
+
+} else {
+    // Check if analysis exists.
+    $zAnalysis = $_DB->query('SELECT id, filters FROM ' . TABLE_ANALYSES . ' WHERE id = ?', array($_GET['analysisid']))->fetchAssoc();
+    if (!$zAnalysis || !$zAnalysis['filters']) {
+        die('Analysis not recognized or no filters defined. If the analysis is defined properly, this is an error in the software.');
+    }
+
+    // Check if this analysis has not been run before. If so, return a specific error. If somehow things don't complete, we should maybe just delete them and run again.
+    //   Otherwise, this check needs to be modified.
+    if ($_DB->query('SELECT COUNT(*) FROM ' . TABLE_ANALYSES_RUN . ' AS ar WHERE ar.analysisid = ? AND ar.screeningid = ? AND modified = 0', array($zAnalysis['id'], $_GET['screeningid']))->fetchColumn()) {
+        die('This analysis has already been performed on this screening.');
+    }
 }
 
 
@@ -70,22 +87,27 @@ if ($_DB->query('SELECT COUNT(*) FROM ' . TABLE_ANALYSES_RUN . ' AS ar WHERE ar.
 $_DB->beginTransaction();
 $_DB->query('UPDATE ' . TABLE_INDIVIDUALS . ' SET analysis_statusid = ?, analysis_by = ?, analysis_date = NOW() WHERE id = ? AND (analysis_statusid = ? OR analysis_by IS NULL OR analysis_date IS NULL)', array(ANALYSIS_STATUS_IN_PROGRESS, $_AUTH['id'], $zIndividual['id'], ANALYSIS_STATUS_READY));
 
-// Create analysis in database.
-$q = $_DB->query('INSERT INTO ' . TABLE_ANALYSES_RUN . ' VALUES (NULL, ?, ?, 0, ?, NOW())', array($zAnalysis['id'], $zIndividual['id'], $_AUTH['id']));
-if (!$q) {
-    $_DB->rollBack();
-    die('Failed to create analysis run in the database. If the analysis is defined properly, this is an error in the software.');
-}
-$nRunID = (int) $_DB->lastInsertId(); // (int) is to prevent zerofill from messing things up.
-
-// Insert filters...
-$aFilters = preg_split('/\s+/', $zAnalysis['filters']);
-foreach ($aFilters as $i => $sFilter) {
-    $q = $_DB->query('INSERT INTO ' . TABLE_ANALYSES_RUN_FILTERS . ' (runid, filterid, filter_order) VALUES (?, ?, ?)', array($nRunID, $sFilter, ($i+1)));
+if (!$_GET['runid']) {
+    // Create analysis in database.
+    $q = $_DB->query('INSERT INTO ' . TABLE_ANALYSES_RUN . ' VALUES (NULL, ?, ?, 0, ?, NOW())', array($zAnalysis['id'], $zIndividual['id'], $_AUTH['id']));
     if (!$q) {
         $_DB->rollBack();
-        die('Failed to create analysis run filter in the database. If the analysis is defined properly, this is an error in the software.');
+        die('Failed to create analysis run in the database. If the analysis is defined properly, this is an error in the software.');
     }
+    $nRunID = (int) $_DB->lastInsertId(); // (int) is to prevent zerofill from messing things up.
+
+    // Insert filters...
+    $aFilters = preg_split('/\s+/', $zAnalysis['filters']);
+    foreach ($aFilters as $i => $sFilter) {
+        $q = $_DB->query('INSERT INTO ' . TABLE_ANALYSES_RUN_FILTERS . ' (runid, filterid, filter_order) VALUES (?, ?, ?)', array($nRunID, $sFilter, ($i+1)));
+        if (!$q) {
+            $_DB->rollBack();
+            die('Failed to create analysis run filter in the database. If the analysis is defined properly, this is an error in the software.');
+        }
+    }
+} else {
+    $nRunID = (int) $_GET['runid']; // (int) is to prevent zerofill from messing things up.
+    $aFilters = explode(';', $zAnalysisRun['_filters']);
 }
 $_DB->commit();
 

@@ -157,7 +157,7 @@ if (PATH_COUNT == 3 && $_PE[1] == 'upload' && ctype_digit($_PE[2]) && !ACTION) {
 if (!ACTION && !empty($_PE[1]) && !ctype_digit($_PE[1])) {
     // URL: /variants/DMD
     // URL: /variants/DMD/NM_004006.2
-    // View all entries in a specific gene, affecting a specific trancript.
+    // View all entries in a specific gene, affecting a specific transcript.
 
     if (in_array(rawurldecode($_PE[1]), lovd_getGeneList())) {
         $sGene = rawurldecode($_PE[1]);
@@ -208,7 +208,7 @@ if (!ACTION && !empty($_PE[1]) && !ctype_digit($_PE[1])) {
         $sMessage = 'The variants shown are described using the ' . $sTranscript . ' transcript reference sequence.';
     } else {
         // Create select box.
-        // We would like to be able to link to this list, focussing on a certain transcript but without restricting the viewer, by sending a (numeric) get_transcriptid search term.
+        // We would like to be able to link to this list, focusing on a certain transcript but without restricting the viewer, by sending a (numeric) get_transcriptid search term.
         if (!isset($_GET['search_transcriptid']) || !isset($aTranscripts[$_GET['search_transcriptid']])) {
             $_GET['search_transcriptid'] = $nTranscriptID;
         }
@@ -1879,7 +1879,7 @@ if (PATH_COUNT == 2 && $_PE[1] == 'upload' && ACTION == 'create') {
 
                                 // Find out the protein change.
                                 $sProteinChange = 'p.?';
-                                if (in_array($aVariant['aminoAcids'][$i], array('none', 'unknown')) && $aVariant['functionGVS'][$i] == 'intron' && ctype_digit($aVariant['distanceToSplice'][$i]) && $aVariant['distanceToSplice'][$i] > 10) {
+                                if (in_array($aVariant['aminoAcids'][$i], array('none', 'unknown')) && (in_array($aVariant['functionGVS'][$i], array('utr-5', 'utr-3', 'coding-synonymous')) || ($aVariant['functionGVS'][$i] == 'intron' && ctype_digit($aVariant['distanceToSplice'][$i]) && $aVariant['distanceToSplice'][$i] > 10))) {
                                     $sProteinChange = 'p.(=)';
                                 } elseif (!in_array($aVariant['aminoAcids'][$i], array('none', 'unknown')) && count($aFieldsVariantOnGenome) == 1) {
                                     // Because of the way SeattleSeq reports amino acids, we can only reliably define
@@ -2089,6 +2089,11 @@ if (PATH_COUNT == 2 && $_PE[1] == 'upload' && ACTION == 'create') {
                 }
             }
 
+            // DIAGNOSTICS: Now that we've uploaded the file, update the individual's status, so he can be analyzed.
+            if ($aUploadData['num_variants']) {
+                // But only with at least one successful variant uploaded.
+                $_DB->query('UPDATE ' . TABLE_INDIVIDUALS . ' SET analysis_statusid = ? WHERE id = (SELECT individualid FROM ' . TABLE_SCREENINGS . ' WHERE id = ?) AND analysis_statusid = ?', array(ANALYSIS_STATUS_READY, $_POST['screeningid'], ANALYSIS_STATUS_WAIT));
+            }
 
             // Log it!
             lovd_writeLog('Event', LOG_EVENT, 'Imported ' . $aUploadData['num_variants'] . ' variants from ' . $aUploadData['file_type'] . ' file ' . $aUploadData['file_name']);
