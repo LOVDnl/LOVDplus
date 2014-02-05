@@ -167,6 +167,12 @@ if (PATH_COUNT >= 2 && ctype_digit($_PE[1]) && !ACTION && (PATH_COUNT == 2 || PA
 
     // If we are analyzing a screening, highlight it.
     if ($nScreeningToAnalyze) {
+        // First, let's check if this analysis belongs to this individual.
+        if (!$_DB->query('SELECT COUNT(*) FROM ' . TABLE_SCREENINGS . ' WHERE id = ? AND individualid = ?', array($nScreeningToAnalyze, $nID))->fetchColumn()) {
+            lovd_showInfoTable('No such screening defined for this individual!', 'stop');
+            $_T->printFooter();
+            exit;
+        }
 ?>
       <SCRIPT type="text/javascript">
         var nScreeningID;
@@ -233,7 +239,7 @@ if (PATH_COUNT >= 2 && ctype_digit($_PE[1]) && !ACTION && (PATH_COUNT == 2 || PA
                 // Was run complete?
                 if ($aFiltersRun[$sFilterLastRun][0] == '-') {
                     // It's not done... this is strange... half an analysis should normally not happen.
-                    $sAnalysisClassName = 'analysis_running';
+                    $sAnalysisClassName = 'analysis_running analysis_half_run';
                 } else {
                     $sAnalysisClassName = 'analysis_run';
                 }
@@ -283,7 +289,7 @@ if (PATH_COUNT >= 2 && ctype_digit($_PE[1]) && !ACTION && (PATH_COUNT == 2 || PA
             }
             print('
                 <TR id="' . ($zAnalysis['runid']? 'run_' . $zAnalysis['runid'] : 'analysis_' . $zAnalysis['id']) . '_message" class="message">
-                  <TD colspan="3">' . ($sAnalysisClassName == 'analysis_running'? 'Analysis seems to have been interrupted' : ($sAnalysisClassName == 'analysis_run'? 'Click to see results' : 'Click to run this analysis')) . '</TD>
+                  <TD colspan="3">' . ($sAnalysisClassName == 'analysis_running analysis_half_run'? 'Analysis seems to have been interrupted' : ($sAnalysisClassName == 'analysis_run'? 'Click to see results' : 'Click to run this analysis')) . '</TD>
                 </TR>
               </TABLE>
             </TD>');

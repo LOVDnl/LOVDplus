@@ -4,7 +4,7 @@
  * LEIDEN OPEN VARIATION DATABASE (LOVD)
  *
  * Created     : 2013-11-05
- * Modified    : 2014-02-04
+ * Modified    : 2014-02-05
  * For LOVD    : 3.0-10
  *
  * Copyright   : 2004-2014 Leiden University Medical Center; http://www.LUMC.nl/
@@ -89,7 +89,7 @@ $_DB->query('UPDATE ' . TABLE_INDIVIDUALS . ' SET analysis_statusid = ?, analysi
 
 if (!$_GET['runid']) {
     // Create analysis in database.
-    $q = $_DB->query('INSERT INTO ' . TABLE_ANALYSES_RUN . ' VALUES (NULL, ?, ?, 0, ?, NOW())', array($zAnalysis['id'], $zIndividual['id'], $_AUTH['id']));
+    $q = $_DB->query('INSERT INTO ' . TABLE_ANALYSES_RUN . ' VALUES (NULL, ?, ?, 0, ?, NOW())', array($zAnalysis['id'], $_GET['screeningid'], $_AUTH['id']));
     if (!$q) {
         $_DB->rollBack();
         die('Failed to create analysis run in the database. If the analysis is defined properly, this is an error in the software.');

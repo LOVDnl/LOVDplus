@@ -3,7 +3,7 @@
  * LEIDEN OPEN VARIATION DATABASE (LOVD)
  *
  * Created     : 2013-11-05
- * Modified    : 2014-02-04
+ * Modified    : 2014-02-05
  * For LOVD    : 3.0-10
  *
  * Copyright   : 2004-2014 Leiden University Medical Center; http://www.LUMC.nl/
@@ -71,6 +71,11 @@ table.analysis_running th    {background: #E0B0B0;}
 table.analysis_running td    {background: #EEEEEE;}
 table.analysis_running
   tr.filter_completed td     {background: #E0FFE0;}
+
+table.analysis_half_run th
+  span.remove                {display: inline; cursor: pointer;}
+table.analysis_half_run th
+  span.modify                {display: inline; cursor: pointer;}
 
 /* Color coding the variants */
 table.data tr.colRed td                   {background : #FAD5D5;}
