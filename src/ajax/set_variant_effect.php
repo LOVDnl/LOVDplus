@@ -4,10 +4,10 @@
  * LEIDEN OPEN VARIATION DATABASE (LOVD)
  *
  * Created     : 2013-11-27
- * Modified    : 2013-11-27
- * For LOVD    : 3.0-09
+ * Modified    : 2014-02-05
+ * For LOVD    : 3.0-10
  *
- * Copyright   : 2004-2013 Leiden University Medical Center; http://www.LUMC.nl/
+ * Copyright   : 2004-2014 Leiden University Medical Center; http://www.LUMC.nl/
  * Programmer  : Ing. Ivo F.A.C. Fokkema <I.F.A.C.Fokkema@LUMC.nl>
  *
  *
@@ -35,7 +35,7 @@ require ROOT_PATH . 'inc-init.php';
 if (!empty($_GET['id']) && $_AUTH && ACTION && in_array(ACTION, array_keys($_SETT['var_effect']))) {
     // The easiest thing to do is just run the query, and just dump the result.
     if ($_GET['id'] == 'selected') {
-        $aIDs = $_SESSION['viewlists']['CustomVL_AnalysisRunResults_for_I_VE']['checked'];
+        $aIDs = array_values($_SESSION['viewlists']['CustomVL_AnalysisRunResults_for_I_VE']['checked']);
     } elseif (is_array($_GET['id'])) {
         $aIDs = $_GET['id'];
     } else {

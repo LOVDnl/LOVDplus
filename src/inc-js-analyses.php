@@ -4,7 +4,7 @@
  * LEIDEN OPEN VARIATION DATABASE (LOVD)
  *
  * Created     : 2013-11-05
- * Modified    : 2014-02-04
+ * Modified    : 2014-02-05
  * For LOVD    : 3.0-10
  *
  * Copyright   : 2004-2014 Leiden University Medical Center; http://www.LUMC.nl/
@@ -81,10 +81,10 @@ function lovd_runAnalysis (nScreeningID, nAnalysisID, nRunID)
             // But first check if we're dealing with a modified run or an unmodified analysis.
             if ($('#run_' + nRunID).length > 0) {
                 // Run was already started (usually a modified run).
-                var sClassName = 'run_' + nRunID;
+                sClassName = 'run_' + nRunID;
             } else {
                 // Analysis started from page.
-                var sClassName = 'analysis_' + nAnalysisID;
+                sClassName = 'analysis_' + nAnalysisID;
             }
 
             $('#' + sClassName)
@@ -146,10 +146,10 @@ function lovd_runNextFilter (nAnalysisID, nRunID)
 
     if ($('#run_' + nRunID).length > 0) {
         // Run was already started (usually a modified run).
-        var sClassName = 'run_' + nRunID;
+        sClassName = 'run_' + nRunID;
     } else {
         // Analysis started from page.
-        var sClassName = 'analysis_' + nAnalysisID;
+        sClassName = 'analysis_' + nAnalysisID;
     }
 
     $.get('<?php echo lovd_getInstallURL(); ?>ajax/run_next_filter.php?runid=' + escape(nRunID))
@@ -185,8 +185,8 @@ function lovd_runNextFilter (nAnalysisID, nRunID)
                     $('#run_' + nRunID).attr('onclick', 'lovd_showAnalysisResults(\'' + nRunID + '\');');
                     $('#run_' + nRunID).attr('onclickold', '');
                     // Fix link to modify analysis run.
-                    sOnClickLink = $('#run_' + nRunID + ' span.modify').attr('onclick');
-                    $('#run_' + nRunID + ' span.modify').attr('onclick', sOnClickLink.replace('analyses/' + nAnalysisID, 'analyses/run/' + nRunID));
+                    sOnClickLink = $('#run_' + nRunID + ' img.modify').attr('onclick');
+                    $('#run_' + nRunID + ' img.modify').attr('onclick', sOnClickLink.replace('analyses/' + nAnalysisID, 'analyses/run/' + nRunID));
 
                     // Now load the VL.
                     lovd_showAnalysisResults(nRunID);
