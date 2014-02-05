@@ -38,9 +38,9 @@ table.analysis th            {font-size: 13px; border-bottom: 3px double #000;}
 table.analysis th,
   table.analysis td          {padding: 0px 4px 0px 4px;}
 table.analysis th
-  span.remove                {font-size: 11px; position: absolute; right: 75px; display: none;}
+  img.remove                 {position: absolute; top: -1px; right: 30px; display: none;}
 table.analysis th
-  span.modify                {font-size: 11px; position: absolute; right: 25px; display: none;}
+  img.modify                 {position: absolute; top: -1px; right: 15px; display: none;}
 table.analysis tr.message    {text-align: center; font-weight: bold; display: none;}
 table.analysis tr.message td {border-top: 1px dotted #000;}
 table.analysis
@@ -52,9 +52,9 @@ table.analysis_run:hover
   tr.message                 {display: table-row;}
 table.analysis_run th        {background: #B0E0B0;}
 table.analysis_run th
-  span.remove                {display: inline;}
+  img.remove                 {display: inline;}
 table.analysis_run th
-  span.modify                {display: inline;}
+  img.modify                 {display: inline;}
 table.analysis_run td        {background: #E0FFE0;}
 
 table.analysis_not_run       {cursor: pointer;}
@@ -73,9 +73,9 @@ table.analysis_running
   tr.filter_completed td     {background: #E0FFE0;}
 
 table.analysis_half_run th
-  span.remove                {display: inline; cursor: pointer;}
+  img.remove                 {display: inline; cursor: pointer;}
 table.analysis_half_run th
-  span.modify                {display: inline; cursor: pointer;}
+  img.modify                 {display: inline; cursor: pointer;}
 
 /* Color coding the variants */
 table.data tr.colRed td                   {background : #FAD5D5;}
