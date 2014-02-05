@@ -4,10 +4,10 @@
  * LEIDEN OPEN VARIATION DATABASE (LOVD)
  *
  * Created     : 2013-11-06
- * Modified    : 2013-12-30
- * For LOVD    : 3.0-09
+ * Modified    : 2014-02-05
+ * For LOVD    : 3.0-10
  *
- * Copyright   : 2004-2013 Leiden University Medical Center; http://www.LUMC.nl/
+ * Copyright   : 2004-2014 Leiden University Medical Center; http://www.LUMC.nl/
  * Programmer  : Ing. Ivo F.A.C. Fokkema <I.F.A.C.Fokkema@LUMC.nl>
  *
  *
@@ -51,7 +51,7 @@ if (!$nRunID) {
 }
 
 // Check if session var exists.
-if (empty($_SESSION['analyses'][$nRunID]) || empty($_SESSION['analyses'][$nRunID]['filters']) || empty($_SESSION['analyses'][$nRunID]['IDsLeft'])) {
+if (empty($_SESSION['analyses'][$nRunID]) || empty($_SESSION['analyses'][$nRunID]['filters']) || !isset($_SESSION['analyses'][$nRunID]['IDsLeft'])) {
     die('Analysis run data not found. It\'s either not your analysis run, it\'s already done, or you have been logged out.');
 }
 
@@ -63,6 +63,7 @@ list(,$sFilter) = each($aFilters);
 
 // Run filter, but only if there are variants left.
 $aVariantIDs = &$_SESSION['analyses'][$nRunID]['IDsLeft'];
+//usleep(500000);
 $tStart = microtime(true);
 if ($aVariantIDs) {
     $aVariantIDsFiltered = false;

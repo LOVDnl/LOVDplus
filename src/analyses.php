@@ -4,7 +4,7 @@
  * LEIDEN OPEN VARIATION DATABASE (LOVD)
  *
  * Created     : 2014-01-31
- * Modified    : 2014-02-04
+ * Modified    : 2014-02-05
  * For LOVD    : 3.0-10
  *
  * Copyright   : 2004-2014 Leiden University Medical Center; http://www.LUMC.nl/
@@ -159,10 +159,8 @@ if (PATH_COUNT == 3 && $_PE[1] == 'run' && ctype_digit($_PE[2]) && ACTION == 'mo
         // Should have selected at least one filter.
         if (empty($_POST['remove_filters'])) {
             lovd_errorAdd('target', 'Please select at least one filter to remove from this analysis run.');
-        }
-
-        // But can't select them all.
-        if (count($_POST['remove_filters']) >= $nFilters) {
+        } elseif (count($_POST['remove_filters']) >= $nFilters) {
+            // But can't select them all.
             lovd_errorAdd('target', 'You cannot remove all filters from this analysis run.');
         }
 
