@@ -115,8 +115,8 @@ if (PATH_COUNT >= 2 && ctype_digit($_PE[1]) && !ACTION && (PATH_COUNT == 2 || PA
     // If we're here, analyzing a screening, show the screening VE on the right.
     if ($nScreeningToAnalyze) {
         require_once ROOT_PATH . 'class/object_screenings.mod.php';
-        $_DATA = new LOVD_ScreeningMOD($nID);
-        $_DATA->viewEntry($nID);
+        $_DATA = new LOVD_ScreeningMOD();
+        $_DATA->viewEntry($nScreeningToAnalyze);
     }
     print('
           </TD>
