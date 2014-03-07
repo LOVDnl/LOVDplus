@@ -5,10 +5,10 @@
  * LEIDEN OPEN VARIATION DATABASE (LOVD)
  *
  * Created     : 2010-01-14
- * Modified    : 2013-09-27
- * For LOVD    : 3.0-08
+ * Modified    : 2014-02-28
+ * For LOVD    : 3.0-10
  *
- * Copyright   : 2004-2013 Leiden University Medical Center; http://www.LUMC.nl/
+ * Copyright   : 2004-2014 Leiden University Medical Center; http://www.LUMC.nl/
  * Programmers : Ing. Ivo F.A.C. Fokkema <I.F.A.C.Fokkema@LUMC.nl>
  *               Ing. Ivar C. Lugtenburg <I.C.Lugtenburg@LUMC.NL>
  *
@@ -364,6 +364,19 @@ if ($sCalcVersionFiles != $sCalcVersionDB) {
                  array(
                      'ALTER TABLE ' . TABLE_VARIANTS . ' ADD INDEX (average_frequency)',
                  ),
+                 '3.0-09b' =>
+                 array(
+                     'UPDATE ' . TABLE_COLS . ' SET head_column = REPLACE(head_column, "Exome covered", "Reads on target") WHERE id LIKE "%Reads_on_target%"',
+                 ),
+                 '3.0-09c' =>
+                 array(
+                     // Required to be enabled manually.
+                     'DELETE FROM ' . TABLE_COLS . ' WHERE id IN ("VariantOnGenome/Sequencing/Father/GenoType", "VariantOnGenome/Sequencing/Mother/GenoType")',
+                     'INSERT INTO ' . TABLE_COLS . ' VALUES ("Screening/Trio_check/De_novo",               255, 100, 0, 1, 0, "Trio check: De novo", "", "The number of de novo variants reported by the trio check.", "The number of de novo variants reported by the trio check.", "SMALLINT UNSIGNED", "Trio check: De novo||text|6", "", "", 0, 0, 1, 0, NOW(), NULL, NULL)',
+                     'INSERT INTO ' . TABLE_COLS . ' VALUES ("Screening/Trio_check/Mendelian",             255, 100, 0, 1, 0, "Trio check: Mendelian", "", "The percentage of mendelian inheritance, as reported by the trio check.", "The percentage of mendelian inheritance, as reported by the trio check.", "FLOAT UNSIGNED", "Trio check: Mendelian||text|6", "", "", 0, 0, 1, 0, NOW(), NULL, NULL)',
+                     'INSERT INTO ' . TABLE_COLS . ' VALUES ("VariantOnGenome/Sequencing/Father/GenoType", 255, 100, 0, 1, 0, "Genotype of father", "", "The genotype of the unaffected father.", "The genotype of the unaffected father.", "VARCHAR(3)", "Genotype of father||text|4", "", "", 0, 0, 1, 0, NOW(), NULL, NULL)',
+                     'INSERT INTO ' . TABLE_COLS . ' VALUES ("VariantOnGenome/Sequencing/Mother/GenoType", 255, 100, 0, 1, 0, "Genotype of mother", "", "The genotype of the unaffected mother.", "The genotype of the unaffected mother.", "VARCHAR(3)", "Genotype of mother||text|4", "", "", 0, 0, 1, 0, NOW(), NULL, NULL)',
+                 ),
              );
 
     if ($sCalcVersionDB < lovd_calculateVersion('3.0-alpha-01')) {
@@ -474,7 +487,12 @@ if ($sCalcVersionFiles != $sCalcVersionDB) {
 
     // Try to update the upgrade lock.
     $sQ = 'UPDATE ' . TABLE_STATUS . ' SET lock_update = 1 WHERE lock_update = 0';
-    $nMax = 3; // FIXME; Should be higher, this value is for dev only
+    $nMax = 30;
+    // DMD_SPECIFIC
+    if ($_SERVER['SERVER_ADMIN'] == 'i.f.a.c.fokkema@lumc.nl' && $_SERVER['HTTP_HOST'] == 'localhost') {
+        $nMax = 3;
+    }
+
     for ($i = 0; $i < $nMax; $i ++) {
         $bLocked = !$_DB->exec($sQ);
         if (!$bLocked) {

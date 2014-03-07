@@ -4,7 +4,7 @@
  * LEIDEN OPEN VARIATION DATABASE (LOVD)
  *
  * Created     : 2010-12-21
- * Modified    : 2014-02-25
+ * Modified    : 2014-03-03
  * For LOVD    : 3.0-10
  *
  * Copyright   : 2004-2014 Leiden University Medical Center; http://www.LUMC.nl/
@@ -159,8 +159,8 @@ if (!ACTION && !empty($_PE[1]) && !ctype_digit($_PE[1])) {
     // URL: /variants/DMD/NM_004006.2
     // View all entries in a specific gene, affecting a specific transcript.
 
-    if (in_array(rawurldecode($_PE[1]), lovd_getGeneList())) {
-        $sGene = rawurldecode($_PE[1]);
+    $sGene = $_DB->query('SELECT id FROM ' . TABLE_GENES . ' WHERE id = ?', array(rawurldecode($_PE[1])))->fetchColumn();
+    if ($sGene) {
         lovd_isAuthorized('gene', $sGene); // To show non public entries.
 
         // Curators are allowed to download this list...
@@ -551,8 +551,8 @@ if (PATH_COUNT == 1 && ACTION == 'create') {
 
     if ($_GET['reference'] == 'Transcript') {
         // On purpose not checking for format of $_GET['geneid']. If it's not right, we'll automatically get to the error message below.
-        $sGene = $_GET['geneid'];
-        if (!in_array($sGene, lovd_getGeneList())) {
+        $sGene = $_DB->query('SELECT id FROM ' . TABLE_GENES . ' WHERE id = ?', array($_GET['geneid']))->fetchColumn();
+        if (!$sGene) {
             define('PAGE_TITLE', 'Create a new variant entry');
             $_T->printHeader();
             $_T->printTitle();
@@ -560,7 +560,7 @@ if (PATH_COUNT == 1 && ACTION == 'create') {
             $_T->printFooter();
             exit;
         } else {
-            define('PAGE_TITLE', 'Create a new variant entry for gene ' . $_GET['geneid']);
+            define('PAGE_TITLE', 'Create a new variant entry for gene ' . $sGene);
         }
     } else {
         define('PAGE_TITLE', 'Create a new variant entry');
@@ -868,6 +868,8 @@ if (PATH_COUNT == 2 && $_PE[1] == 'upload' && ACTION == 'create') {
         'DPREF_Child' => 'VariantOnGenome/Sequencing/Depth/Ref',
         'FILTERvcf' => 'VariantOnGenome/Sequencing/Filter',
         'functionGVS' => 'VariantOnTranscript/GVS/Function',
+        'GT_Father' => 'VariantOnGenome/Sequencing/Father/GenoType',
+        'GT_Mother' => 'VariantOnGenome/Sequencing/Mother/GenoType',
         'QUAL' => 'VariantOnGenome/Sequencing/Quality',
         'scorePhastCons' => 'VariantOnGenome/Conservation_score/Phast',
 //        'FAM_UNAFFECTED_genotype_father' => 'VariantOnGenome/Sequencing/Father/Genotype',
@@ -974,6 +976,22 @@ if (PATH_COUNT == 2 && $_PE[1] == 'upload' && ACTION == 'create') {
                 }
                 $aHeaders = explode("\t", ltrim(rtrim($sLine, "\r\n"), '# '));
                 $aHeaders = array_map('trim', $aHeaders, array_fill(0, count($aHeaders), '"'));
+
+                // Diagnostics: Very once more the identity of this file. Some columns are appended by the Miracle ID.
+                // Check the child's Miracle ID with that we have in the database, and remove all the IDs so the headers are recognized normally.
+                global $_DB;
+                $nMiracleID = $_DB->query('SELECT i.id_miracle FROM ' . TABLE_INDIVIDUALS . ' AS i INNER JOIN ' . TABLE_SCREENINGS . ' AS s ON (i.id = s.individualid) WHERE s.id = ?', array($_GET['target']))->fetchColumn();
+
+                foreach ($aHeaders as $key => $sHeader) {
+                    if (preg_match('/(Child|Father|Mother)_(\d+)$/', $sHeader, $aRegs)) {
+                        // If Child, check ID.
+                        if ($nMiracleID && $aRegs[1] == 'Child' && $aRegs[2] != $nMiracleID) {
+                            die('Fatal: Miracle ID of Child (' . $aRegs[2] . ') does not match that from the database (' . $nMiracleID . ')' . "\n");
+                        }
+                        // Clean ID from column.
+                        $aHeaders[$key] = substr($sHeader, 0, -(strlen($aRegs[2])+1));
+                    }
+                }
             }
 
             // If we do have a header line, we keep reading lines until we move to the next variant.
@@ -1152,7 +1170,7 @@ if (PATH_COUNT == 2 && $_PE[1] == 'upload' && ACTION == 'create') {
 
     // If dbSNP custom links are active, find out which columns in TABLE_VARIANTS accept them.
     $aDbSNPColumns = $_DB->query('SELECT ac.colid FROM ' . TABLE_ACTIVE_COLS . ' AS ac JOIN ' . TABLE_COLS2LINKS . ' USING (colid) JOIN ' . TABLE_LINKS . ' ON (linkid = id) WHERE name = "DbSNP" AND ac.colid LIKE "VariantOnGenome/%" AND ac.colid NOT IN ("VariantOnGenome/DBID", "VariantOnGenome/DNA")')->fetchAllColumn();
-    // FIXME: dbSNP wordt dubbel included this way.
+    // FIXME: dbSNP will be included twice this way.
     if ($sDbSNPColumn = $_DB->query('SELECT colid FROM ' . TABLE_ACTIVE_COLS . ' WHERE colid = "VariantOnGenome/dbSNP"')->fetchColumn()) {
         // The dbSNP special column is active, allow to insert dbSNP links in there.
         array_unshift($aDbSNPColumns, $sDbSNPColumn);
@@ -1630,7 +1648,7 @@ if (PATH_COUNT == 2 && $_PE[1] == 'upload' && ACTION == 'create') {
                             $sSymbol = $aAccessionToSymbol[$sAccession];
                         } elseif ($sAccession != 'none') {
                             // We still need to get a gene symbol for this accession.
-                            // First try to get the gene symbol from the database.
+                            // First try to get the gene symbol from the database (ignoring version number).
                             list($sSymbol, $sAccessionInDB) = $_DB->query('SELECT geneid, id_ncbi FROM ' . TABLE_TRANSCRIPTS . ' WHERE id_ncbi LIKE ?', array(substr($sAccession, 0, strpos($sAccession . '.', '.')+1) . '%'))->fetchRow();
                             if ($sSymbol) {
                                 // We've got it in the database already.
@@ -1820,8 +1838,8 @@ if (PATH_COUNT == 2 && $_PE[1] == 'upload' && ACTION == 'create') {
                                 }
 
                                 // We'll try to get it from the database first. If we don't have it, we'll try Mutalyzer.
-                                // FIXME: Should no longer be necessary since we already fetched this info the first time we saw this transcript and wanted to know the gene symbol.
-                                if ($sAccessionDB = $_DB->query('SELECT id_ncbi FROM ' . TABLE_TRANSCRIPTS . ' WHERE id_ncbi LIKE ?', array($sAccessionClean . '.%'))->fetchColumn()) {
+                                // We might have matched a different version before, now find the version we have, preferring the version given by SeattleSeq, otherwise the one added last.
+                                if ($sAccessionDB = $_DB->query('SELECT id_ncbi FROM ' . TABLE_TRANSCRIPTS . ' WHERE id_ncbi LIKE ? ORDER BY (id_ncbi = ?) DESC, id DESC', array($sAccessionClean . '.%', $sAccession))->fetchColumn()) {
                                     // We have this transcript in the database already.
                                     $sAccession = $aAccessionMapping[$sAccession] = $sAccessionDB;
 
@@ -2179,7 +2197,7 @@ if (PATH_COUNT == 2 && $_PE[1] == 'upload' && ACTION == 'create') {
             $_POST['dbSNP_column'] = $nReferenceColumn;
         }
         $_POST['allow_mapping'] = 1;
-        $_POST['autocreate'] = 'gt';
+        //$_POST['autocreate'] = 'gt';
         $_POST['genotype_field'] = 'pl';
     }
 
