@@ -4,8 +4,8 @@
  * LEIDEN OPEN VARIATION DATABASE (LOVD)
  *
  * Created     : 2013-11-07
- * Modified    : 2014-01-03
- * For LOVD    : 3.0-09
+ * Modified    : 2014-03-07
+ * For LOVD    : 3.0-10
  *
  * Copyright   : 2004-2014 Leiden University Medical Center; http://www.LUMC.nl/
  * Programmer  : Ing. Ivo F.A.C. Fokkema <I.F.A.C.Fokkema@LUMC.nl>
@@ -135,6 +135,7 @@ class LOVD_CustomViewListMOD extends LOVD_CustomViewList {
                             'VariantOnGenome/DNA',
                             'VariantOnGenome/Alamut',
                             'VariantOnGenome/Conservation_score/PhyloP',
+                            'VariantOnGenome/Sequencing/Quality',
                         );
                     $aSQL['SELECT'] .= (!$aSQL['SELECT']? '' : ', ') . 'vog.*, a.name AS allele_, eg.name AS vog_effect';
                     if (!$aSQL['FROM']) {
@@ -187,11 +188,12 @@ class LOVD_CustomViewListMOD extends LOVD_CustomViewList {
                             }
                         }
                         // Security checks in this file's prepareData() need geneid to see if the column in question is set to non-public for one of the genes.
-                        $aSQL['SELECT'] .= (!$aSQL['SELECT']? '' : ', ') . 'GROUP_CONCAT(DISTINCT t.geneid SEPARATOR ";") AS _geneid';
+                        $aSQL['SELECT'] .= (!$aSQL['SELECT']? '' : ', ') . 'GROUP_CONCAT(DISTINCT t.geneid SEPARATOR ";") AS _geneid, GROUP_CONCAT(DISTINCT g.id_omim SEPARATOR ";") AS _gene_OMIM';
                         $aSQL['FROM'] .= ' LEFT JOIN ' . TABLE_VARIANTS_ON_TRANSCRIPTS . ' AS vot ON (';
                         // Earlier, VOG was used, join to that.
                         $aSQL['FROM'] .= 'vog.id = vot.id)';
-                        $aSQL['FROM'] .= ' LEFT JOIN ' . TABLE_TRANSCRIPTS . ' AS t ON (vot.transcriptid = t.id)';
+                        // Join to transcripts for the NM number, but also to genes to show the gene's OMIM ID.
+                        $aSQL['FROM'] .= ' LEFT JOIN ' . TABLE_TRANSCRIPTS . ' AS t ON (vot.transcriptid = t.id) LEFT JOIN ' . TABLE_GENES . ' AS g ON (t.geneid = g.id)';
                         // We have no fallback, so we'll easily detect an error if we messed up somewhere.
                     }
                     break;
@@ -287,6 +289,21 @@ class LOVD_CustomViewListMOD extends LOVD_CustomViewList {
                     }
                 }
             }
+
+
+
+            // Some fixed columns are supposed to be shown AFTER this objects's custom columns, so we'll need to go through the objects again.
+            switch ($sObject) {
+                case 'VariantOnTranscript':
+                    // More fixed columns.
+                    $this->aColumnsViewList = array_merge($this->aColumnsViewList,
+                        array(
+                            'gene_OMIM_' => array(
+                                'view' => array('OMIM links', 100),
+                                'db'   => array('g.id_omim', 'ASC', true)),
+                        ));
+                    break;
+            }
         }
 
 
@@ -352,6 +369,12 @@ class LOVD_CustomViewListMOD extends LOVD_CustomViewList {
         }
         if (!empty($zData['VariantOnTranscript/DNA'])) {
             $zData['VariantOnTranscript/DNA'] = preg_replace('/ins([ACTG]{3})([ACTG]{3,})/', 'ins${1}...', $zData['VariantOnTranscript/DNA']);
+        }
+        if (isset($zData['gene_OMIM'])) {
+            $zData['gene_OMIM_'] = '';
+            foreach ($zData['gene_OMIM'] as $key => $nOMIMID) {
+                $zData['gene_OMIM_'] .= (!$zData['gene_OMIM_']? '' : ', ') . '<SPAN class="anchor" onclick="lovd_openWindow(\'' . lovd_getExternalSource('omim', $nOMIMID) . '\', \'GeneOMIMPage\', 1100, 650); cancelParentEvent(event);">' . $zData['geneid'][$key] . '</SPAN>';
+            }
         }
 
         return $zData;

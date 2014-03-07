@@ -4,7 +4,7 @@
  * LEIDEN OPEN VARIATION DATABASE (LOVD)
  *
  * Created     : 2013-11-06
- * Modified    : 2014-02-05
+ * Modified    : 2014-02-28
  * For LOVD    : 3.0-10
  *
  * Copyright   : 2004-2014 Leiden University Medical Center; http://www.LUMC.nl/
@@ -30,6 +30,7 @@
 
 define('ROOT_PATH', '../');
 require ROOT_PATH . 'inc-init.php';
+set_time_limit(0); // Unfortunately, necessary.
 
 // Require collaborator clearance.
 if (!$_AUTH || $_AUTH['level'] < LEVEL_COLLABORATOR) {
@@ -63,7 +64,7 @@ list(,$sFilter) = each($aFilters);
 
 // Run filter, but only if there are variants left.
 $aVariantIDs = &$_SESSION['analyses'][$nRunID]['IDsLeft'];
-//usleep(500000);
+//sleep(2);
 $tStart = microtime(true);
 if ($aVariantIDs) {
     $aVariantIDsFiltered = false;
@@ -86,9 +87,6 @@ if ($aVariantIDs) {
         case 'remove_by_function_coding_synonymous':
             $aVariantIDsFiltered = $_DB->query('SELECT DISTINCT CAST(vot.id AS UNSIGNED) FROM ' . TABLE_VARIANTS_ON_TRANSCRIPTS . ' AS vot INNER JOIN ' . TABLE_VARIANTS . ' AS vog USING (id) WHERE !(vot.`VariantOnTranscript/GVS/Function` = "coding-synonymous") AND vot.id IN (?' . str_repeat(', ?', count($aVariantIDs) - 1) . ')', $aVariantIDs, false)->fetchAllColumn();
             break;
-/*
-remove_homozygous_in_parents
-*/
         case 'remove_intronic_distance_gt_2':
             $aVariantIDsFiltered = $_DB->query('SELECT DISTINCT CAST(vot.id AS UNSIGNED) FROM ' . TABLE_VARIANTS_ON_TRANSCRIPTS . ' AS vot INNER JOIN ' . TABLE_VARIANTS . ' AS vog USING (id) WHERE !(vot.`VariantOnTranscript/GVS/Function` = "intron" AND vot.`VariantOnTranscript/Distance_to_splice_site` > 2) AND vot.id IN (?' . str_repeat(', ?', count($aVariantIDs) - 1) . ')', $aVariantIDs, false)->fetchAllColumn();
             break;

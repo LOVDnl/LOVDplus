@@ -534,9 +534,9 @@ if (POST) {
                 $aLine['statusid'] = STATUS_OK;
             }
             // DIAGNOSTICS: Data analysis status.
-            if (in_array('analysis_status', $aSection['allowed_columns']) && empty($aLine['analysis_status'])) {
+            if (in_array('analysis_statusid', $aSection['allowed_columns']) && empty($aLine['analysis_statusid'])) {
                 // Status not filled in. Set to Public.
-                $aLine['analysis_status'] = ANALYSIS_STATUS_WAIT;
+                $aLine['analysis_statusid'] = ANALYSIS_STATUS_WAIT;
             }
 
             // General checks: required fields defined by import.

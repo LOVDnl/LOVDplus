@@ -4,7 +4,7 @@
  * LEIDEN OPEN VARIATION DATABASE (LOVD)
  *
  * Created     : 2013-11-05
- * Modified    : 2014-02-05
+ * Modified    : 2014-03-07
  * For LOVD    : 3.0-10
  *
  * Copyright   : 2004-2014 Leiden University Medical Center; http://www.LUMC.nl/
@@ -48,7 +48,13 @@ if (empty($_GET['screeningid']) || empty($_GET['analysisid']) || !ctype_digit($_
 
 
 // Find screening data, make sure we have the right to analyze this patient.
-$zIndividual = $_DB->query('SELECT i.id FROM ' . TABLE_INDIVIDUALS . ' AS i INNER JOIN ' . TABLE_SCREENINGS . ' AS s ON (i.id = s.individualid) WHERE s.id = ? AND (i.analysis_statusid = ? OR i.analysis_by = ?)', array($_GET['screeningid'], ANALYSIS_STATUS_READY, $_AUTH['id']))->fetchAssoc();
+// ADMIN can always start an analysis, even when the individual's analysis hasn't been started by him.
+$sSQL = 'SELECT i.id FROM ' . TABLE_INDIVIDUALS . ' AS i INNER JOIN ' . TABLE_SCREENINGS . ' AS s ON (i.id = s.individualid) WHERE s.id = ? AND (i.analysis_statusid = ? OR i.analysis_by ' . ($_AUTH['level'] == LEVEL_ADMIN? 'IS NOT NULL' : '= ?') . ')';
+$aSQL = array($_GET['screeningid'], ANALYSIS_STATUS_READY);
+if ($_AUTH['level'] < LEVEL_ADMIN) {
+    $aSQL[] = $_AUTH['id'];
+}
+$zIndividual = $_DB->query($sSQL, $aSQL)->fetchAssoc();
 if (!$zIndividual) {
     die(AJAX_FALSE);
 }
