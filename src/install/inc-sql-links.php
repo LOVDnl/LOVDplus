@@ -47,7 +47,7 @@ $aLinkSQL =
 
 
 
-                'Alamut' => 'INSERT INTO ' . TABLE_LINKS . ' VALUES (006, "Alamut", "{Alamut:[1]:[2]:[3]}", "<A href=\"http://127.0.0.1:10000/show?request=[1]:[2][3]\" target=\"_blank\">Alamut</A>", "Links directly to the variant in the Alamut software.\r\n[1] = The chromosome letter or number.\r\n[2] = The genomic position.\r\n[3] = The genetic change on DNA level.\r\n\r\nExample:\r\n{Alamut:16:21854780:G>A}", 0, NOW(), NULL, NULL)',
+                'Alamut' => 'INSERT INTO ' . TABLE_LINKS . ' VALUES (006, "Alamut", "{Alamut:[1]:[2]}", "<A href=\"http://127.0.0.1:10000/show?request=[1]:[2]\" target=\"_blank\">Alamut</A>", "Links directly to the variant in the Alamut software.\r\n[1] = The chromosome letter or number.\r\n[2] = The genetic change on genome level.\r\n\r\nExample:\r\n{Alamut:16:21854780G>A}", 0, NOW(), NULL, NULL)',
                 'INSERT INTO ' . TABLE_COLS2LINKS . ' VALUES ("VariantOnGenome/Alamut", 006)',
          );
 ?>

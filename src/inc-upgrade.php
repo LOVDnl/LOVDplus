@@ -377,6 +377,14 @@ if ($sCalcVersionFiles != $sCalcVersionDB) {
                      'INSERT INTO ' . TABLE_COLS . ' VALUES ("VariantOnGenome/Sequencing/Father/GenoType", 255, 100, 0, 1, 0, "Genotype of father", "", "The genotype of the unaffected father.", "The genotype of the unaffected father.", "VARCHAR(3)", "Genotype of father||text|4", "", "", 0, 0, 1, 0, NOW(), NULL, NULL)',
                      'INSERT INTO ' . TABLE_COLS . ' VALUES ("VariantOnGenome/Sequencing/Mother/GenoType", 255, 100, 0, 1, 0, "Genotype of mother", "", "The genotype of the unaffected mother.", "The genotype of the unaffected mother.", "VARCHAR(3)", "Genotype of mother||text|4", "", "", 0, 0, 1, 0, NOW(), NULL, NULL)',
                  ),
+                 '3.0-09d' =>
+                 array(
+                     'UPDATE ' . TABLE_ANALYSES . ' SET filters = REPLACE(filters, "remove_intronic_distance_gt_2", "remove_intronic_distance_gt_2\r\nremove_by_function_utr3\r\nremove_by_function_utr5")',
+                 ),
+                 '3.0-09e' =>
+                 array(
+                     'UPDATE ' . TABLE_LINKS . ' SET pattern_text = "{Alamut:[1]:[2]}", replace_text = "<A href=\"http://127.0.0.1:10000/show?request=[1]:[2]\" target=\"_blank\">Alamut</A>", description = "Links directly to the variant in the Alamut software.\r\n[1] = The chromosome letter or number.\r\n[2] = The genetic change on genome level.\r\n\r\nExample:\r\n{Alamut:16:21854780G>A}" WHERE name = "Alamut"',
+                 ),
              );
 
     if ($sCalcVersionDB < lovd_calculateVersion('3.0-alpha-01')) {

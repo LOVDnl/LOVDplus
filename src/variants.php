@@ -1495,10 +1495,6 @@ if (PATH_COUNT == 2 && $_PE[1] == 'upload' && ACTION == 'create') {
                             $aFieldsVariantOnGenome[0][$sColID] = $Val;
                         }
                     }
-                    // Include Alamut link.
-                    if (in_array('VariantOnGenome/Alamut', $aVOGColumnsAvailable)) {
-                        $aFieldsVariantOnGenome[0]['VariantOnGenome/Alamut'] = '{Alamut:' . $aVariant['chromosome'] . ':' . $aVariant['position'] . ':' . $aVariant['REF'] . '>' . $aVariant['ALT'] . '}';
-                    }
 
                     if ($_POST['dbSNP_column'] > 0 && preg_match('/\d+/', $aVariant['rsID'], $aDbSNP) && $aDbSNP[0] != '0') {
                         // Include custom link to dbSNP if the user wants that and we have an rsID for this variant.

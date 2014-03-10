@@ -4,7 +4,7 @@
  * LEIDEN OPEN VARIATION DATABASE (LOVD)
  *
  * Created     : 2013-11-07
- * Modified    : 2014-03-07
+ * Modified    : 2014-03-10
  * For LOVD    : 3.0-10
  *
  * Copyright   : 2004-2014 Leiden University Medical Center; http://www.LUMC.nl/
@@ -251,6 +251,7 @@ class LOVD_CustomViewListMOD extends LOVD_CustomViewList {
                                         'legend' => array('The variant\'s effect on a protein\'s function, in the format Reported/Curator concluded; ranging from \'+\' (variant affects function) to \'-\' (does not affect function).',
                                                           'The variant\'s affect on a protein\'s function, in the format Reported/Curator concluded; \'+\' indicating the variant affects function, \'+?\' probably affects function, \'-\' does not affect function, \'-?\' probably does not affect function, \'?\' effect unknown.')),
                               ));
+
                     if (!$this->sSortDefault) {
                         // First data table in view.
                         $this->sSortDefault = 'VariantOnGenome/DNA';
@@ -288,6 +289,10 @@ class LOVD_CustomViewListMOD extends LOVD_CustomViewList {
                                   );
                     }
                 }
+            }
+            // Alamut link should not be searchable, because we have nothing in those columns.
+            if (isset($this->aColumnsViewList['VariantOnGenome/Alamut']['db'][2])) {
+                $this->aColumnsViewList['VariantOnGenome/Alamut']['db'][2] = false;
             }
 
 
@@ -334,6 +339,11 @@ class LOVD_CustomViewListMOD extends LOVD_CustomViewList {
     function prepareData ($zData = '', $sView = 'list')
     {
         // Prepares the data by "enriching" the variable received with links, pictures, etc.
+
+        // Needs to be done before the custom links are rendered.
+        if (isset($this->aColumnsViewList['VariantOnGenome/Alamut'])) {
+            $zData['VariantOnGenome/Alamut'] = '{Alamut:' . $zData['chromosome'] . ':' . str_replace('g.', '', $zData['VariantOnGenome/DNA']) . '}';
+        }
 
         // Makes sure it's an array and htmlspecialchars() all the values.
         $zData = parent::prepareData($zData, $sView);
