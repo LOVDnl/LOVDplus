@@ -4,7 +4,7 @@
  * LEIDEN OPEN VARIATION DATABASE (LOVD)
  *
  * Created     : 2014-01-31
- * Modified    : 2014-02-05
+ * Modified    : 2014-03-07
  * For LOVD    : 3.0-10
  *
  * Copyright   : 2004-2014 Leiden University Medical Center; http://www.LUMC.nl/
@@ -254,11 +254,17 @@ if (PATH_COUNT == 3 && $_PE[1] == 'run' && ctype_digit($_PE[2]) && ACTION == 'de
     lovd_isAuthorized('analysisrun', $nID);
     lovd_requireAUTH(LEVEL_CURATOR);
 
-    $zData = $_DB->query('SELECT ar.* FROM ' . TABLE_ANALYSES_RUN . ' AS ar WHERE id = ?', array($nID))->fetchAssoc();
+    // ADMIN can always delete an analysis run, even when the individual's analysis hasn't been started by him.
+    $sSQL = 'SELECT ar.* FROM ' . TABLE_ANALYSES_RUN . ' AS ar WHERE ar.id = ?' . ($_AUTH['level'] == LEVEL_ADMIN? '' : ' AND ar.created_by = ?');
+    $aSQL = array($nID);
+    if ($_AUTH['level'] < LEVEL_ADMIN) {
+        $aSQL[] = $_AUTH['id'];
+    }
+    $zData = $_DB->query($sSQL, $aSQL)->fetchAssoc();
     if (!$zData) {
         $_T->printHeader();
         $_T->printTitle();
-        lovd_showInfoTable('No such ID!', 'stop');
+        lovd_showInfoTable('No such ID or not allowed!', 'stop');
         $_T->printFooter();
         exit;
     }
