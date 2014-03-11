@@ -385,6 +385,15 @@ if ($sCalcVersionFiles != $sCalcVersionDB) {
                  array(
                      'UPDATE ' . TABLE_LINKS . ' SET pattern_text = "{Alamut:[1]:[2]}", replace_text = "<A href=\"http://127.0.0.1:10000/show?request=[1]:[2]\" target=\"_blank\">Alamut</A>", description = "Links directly to the variant in the Alamut software.\r\n[1] = The chromosome letter or number.\r\n[2] = The genetic change on genome level.\r\n\r\nExample:\r\n{Alamut:16:21854780G>A}" WHERE name = "Alamut"',
                  ),
+                 '3.0-09f' =>
+                 array(
+                     'INSERT INTO ' . TABLE_COLS . ' VALUES ("VariantOnGenome/HGMD/Association",      255, 100, 0, 1, 0, "HGMD association", "", "Association with disease according to HGMD.", "Association with disease according to HGMD.", "VARCHAR(255)", "HGMD association||text|20", "", "", 0, 0, 1, 0, NOW(), NULL, NULL)',
+                     'INSERT INTO ' . TABLE_COLS . ' VALUES ("VariantOnGenome/HGMD/Reference",        255, 100, 0, 1, 0, "HGMD reference", "", "Reference for association with disease according to HGMD.", "Reference for association with disease according to HGMD.", "VARCHAR(255)", "HGMD reference||text|20", "", "", 0, 0, 1, 0, NOW(), NULL, NULL)',
+                     'INSERT INTO ' . TABLE_COLS . ' VALUES ("VariantOnGenome/Sequencing/GATKcaller", 255,  80, 0, 1, 0, "GATKcaller", "", "GATKcaller.", "GATKcaller.", "VARCHAR(8)", "GATKcaller||text|10", "", "", 0, 0, 1, 0, NOW(), NULL, NULL)',
+                     'UPDATE ' . TABLE_COLS . ' SET head_column = "Read depth Alt (fraction)" WHERE id = "VariantOnGenome/Sequencing/Depth/Alt/Fraction"',
+                     'UPDATE ' . TABLE_COLS . ' SET head_column = "Read depth father Alt (fraction)" WHERE id = "VariantOnGenome/Sequencing/Father/Depth/Alt/Fraction"',
+                     'UPDATE ' . TABLE_COLS . ' SET head_column = "Read depth mother Alt (fraction)" WHERE id = "VariantOnGenome/Sequencing/Mother/Depth/Alt/Fraction"',
+                 ),
              );
 
     if ($sCalcVersionDB < lovd_calculateVersion('3.0-alpha-01')) {

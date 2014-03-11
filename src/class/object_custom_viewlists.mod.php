@@ -4,7 +4,7 @@
  * LEIDEN OPEN VARIATION DATABASE (LOVD)
  *
  * Created     : 2013-11-07
- * Modified    : 2014-03-10
+ * Modified    : 2014-03-11
  * For LOVD    : 3.0-10
  *
  * Copyright   : 2004-2014 Leiden University Medical Center; http://www.LUMC.nl/
@@ -135,7 +135,10 @@ class LOVD_CustomViewListMOD extends LOVD_CustomViewList {
                             'VariantOnGenome/DNA',
                             'VariantOnGenome/Alamut',
                             'VariantOnGenome/Conservation_score/PhyloP',
+                            'VariantOnGenome/HGMD/Association',
+                            'VariantOnGenome/Sequencing/Depth/Alt/Fraction',
                             'VariantOnGenome/Sequencing/Quality',
+                            'VariantOnGenome/Sequencing/GATKcaller',
                         );
                     $aSQL['SELECT'] .= (!$aSQL['SELECT']? '' : ', ') . 'vog.*, a.name AS allele_, eg.name AS vog_effect';
                     if (!$aSQL['FROM']) {

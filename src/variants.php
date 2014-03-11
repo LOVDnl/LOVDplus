@@ -868,6 +868,7 @@ if (PATH_COUNT == 2 && $_PE[1] == 'upload' && ACTION == 'create') {
         'DPREF_Child' => 'VariantOnGenome/Sequencing/Depth/Ref',
         'FILTERvcf' => 'VariantOnGenome/Sequencing/Filter',
         'functionGVS' => 'VariantOnTranscript/GVS/Function',
+        'GATKCaller' => 'VariantOnGenome/Sequencing/GATKcaller',
         'GT_Father' => 'VariantOnGenome/Sequencing/Father/GenoType',
         'GT_Mother' => 'VariantOnGenome/Sequencing/Mother/GenoType',
         'QUAL' => 'VariantOnGenome/Sequencing/Quality',
@@ -885,6 +886,8 @@ if (PATH_COUNT == 2 && $_PE[1] == 'upload' && ACTION == 'create') {
         'AFGONL' => 'VariantOnGenome/Frequency/GoNL',
         'AFESP5400' => 'VariantOnGenome/Frequency/EVS',
         'SIFT' => 'VariantOnTranscript/Prediction/SIFT',
+        'HGMD_association' => 'VariantOnGenome/HGMD/Association',
+        'HGMD_reference' => 'VariantOnGenome/HGMD/Reference',
         'MutationTaster_pred' => 'VariantOnTranscript/Prediction/MutationTaster',
         'MutationTaster_score' => 'VariantOnTranscript/Prediction/MutationTaster/Score',
         'granthamScore' => 'VariantOnTranscript/Prediction/Grantham',
@@ -1485,9 +1488,9 @@ if (PATH_COUNT == 2 && $_PE[1] == 'upload' && ACTION == 'create') {
                         if (in_array($sColID, $aVOGColumnsAvailable) && isset($aVariant[$sSeattleSeqCol]) && !in_array($aVariant[$sSeattleSeqCol], array('NA', 'unknown', 'none'))) {
                             $Val = $aVariant[$sSeattleSeqCol];
                             switch ($sSeattleSeqCol) {
-                                case 'ALTPERC':
-                                case 'ALTPERC_father':
-                                case 'ALTPERC_mother':
+                                case 'ALTPERC_Child':
+                                case 'ALTPERC_Father':
+                                case 'ALTPERC_Mother':
                                 case 'AFESP5400':
                                     $Val /= 100; // Percentage to fraction.
                                     break;
