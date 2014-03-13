@@ -394,6 +394,16 @@ if ($sCalcVersionFiles != $sCalcVersionDB) {
                      'UPDATE ' . TABLE_COLS . ' SET head_column = "Read depth father Alt (fraction)" WHERE id = "VariantOnGenome/Sequencing/Father/Depth/Alt/Fraction"',
                      'UPDATE ' . TABLE_COLS . ' SET head_column = "Read depth mother Alt (fraction)" WHERE id = "VariantOnGenome/Sequencing/Mother/Depth/Alt/Fraction"',
                  ),
+                 '3.0-09g' =>
+                 array(
+                     'INSERT IGNORE INTO ' . TABLE_COLS . ' VALUES ("VariantOnGenome/InhouseDB/Count/HC", 255, 100, 0, 1, 0, "INDB Count HC", "", "The count of this variant in the Inhouse Database (HC).", "The count of this variant in the Inhouse Database (HC).", "SMALLINT UNSIGNED", "INDB Count HC||text|6", "", "", 0, 0, 1, 0, NOW(), NULL, NULL)',
+                     'INSERT IGNORE INTO ' . TABLE_COLS . ' VALUES ("VariantOnGenome/InhouseDB/Count/UG", 255, 100, 0, 1, 0, "INDB Count UG", "", "The count of this variant in the Inhouse Database (UG).", "The count of this variant in the Inhouse Database (UG).", "SMALLINT UNSIGNED", "INDB Count UG||text|6", "", "", 0, 0, 1, 0, NOW(), NULL, NULL)',
+                     'UPDATE ' . TABLE_ANALYSES . ' SET filters = REPLACE(filters, "remove_not_in_gene_panel", "remove_not_in_gene_panel\r\nremove_by_quality_lte_100\r\nremove_by_indb_count_hc_gte_2\r\nremove_by_indb_count_hc_gte_1\r\nremove_by_indb_count_ug_gte_2\r\nremove_by_indb_count_ug_gte_1")',
+                 ),
+                 '3.0-09h' =>
+                 array(
+                     'UPDATE ' . TABLE_ANALYSES . ' SET filters = REPLACE(filters, "remove_by_indb_count_hc_gte_1\r\nremove_by_indb_count_ug_gte_2", "remove_by_indb_count_ug_gte_2\r\nremove_by_indb_count_hc_gte_1")',
+                 ),
              );
 
     if ($sCalcVersionDB < lovd_calculateVersion('3.0-alpha-01')) {

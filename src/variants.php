@@ -871,6 +871,8 @@ if (PATH_COUNT == 2 && $_PE[1] == 'upload' && ACTION == 'create') {
         'GATKCaller' => 'VariantOnGenome/Sequencing/GATKcaller',
         'GT_Father' => 'VariantOnGenome/Sequencing/Father/GenoType',
         'GT_Mother' => 'VariantOnGenome/Sequencing/Mother/GenoType',
+        'INDB_COUNT_HC' => 'VariantOnGenome/InhouseDB/Count/HC',
+        'INDB_COUNT_UG' => 'VariantOnGenome/InhouseDB/Count/UG',
         'QUAL' => 'VariantOnGenome/Sequencing/Quality',
         'scorePhastCons' => 'VariantOnGenome/Conservation_score/Phast',
 //        'FAM_UNAFFECTED_genotype_father' => 'VariantOnGenome/Sequencing/Father/Genotype',

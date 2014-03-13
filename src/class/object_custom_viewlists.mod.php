@@ -187,7 +187,8 @@ class LOVD_CustomViewListMOD extends LOVD_CustomViewList {
                         $sGCOrderBy = 't.geneid';
                         foreach ($this->aColumns as $sCol => $aCol) {
                             if (substr($sCol, 0, 19) == 'VariantOnTranscript') {
-                                $aSQL['SELECT'] .= (!$aSQL['SELECT']? '' : ', ') . 'GROUP_CONCAT(DISTINCT ' . ($sCol != 'VariantOnTranscript/DNA'? '`' . $sCol . '`' : 'CONCAT(t.geneid, ":", `' . $sCol . '`)') . ' ORDER BY ' . $sGCOrderBy . ' SEPARATOR ", ") AS `' . $sCol . '`';
+                                // DNA should not contain a /, simply because then the search algorithm will always use WHERE instead of HAVING and as such will not allow searching on the gene name in the field.
+                                $aSQL['SELECT'] .= (!$aSQL['SELECT']? '' : ', ') . 'GROUP_CONCAT(DISTINCT ' . ($sCol != 'VariantOnTranscript/DNA'? '`' . $sCol . '`' : 'CONCAT(t.geneid, ":", `' . $sCol . '`)') . ' ORDER BY ' . $sGCOrderBy . ' SEPARATOR ", ") AS `' . ($sCol != 'VariantOnTranscript/DNA'? $sCol : 'VariantOnTranscript_DNA') . '`';
                             }
                         }
                         // Security checks in this file's prepareData() need geneid to see if the column in question is set to non-public for one of the genes.
@@ -297,6 +298,11 @@ class LOVD_CustomViewListMOD extends LOVD_CustomViewList {
             if (isset($this->aColumnsViewList['VariantOnGenome/Alamut']['db'][2])) {
                 $this->aColumnsViewList['VariantOnGenome/Alamut']['db'][2] = false;
             }
+            // The VariantOnTranscript/DNA column here has the gene name there, too, which should be usable for filtering.
+            // Tell the filtering to use HAVING instead of WHERE for this column, using the alias.
+            if (isset($this->aColumnsViewList['VariantOnTranscript/DNA']['db'])) {
+                $this->aColumnsViewList['VariantOnTranscript/DNA']['db'][0] = 'VariantOnTranscript_DNA';
+            }
 
 
 
@@ -380,8 +386,8 @@ class LOVD_CustomViewListMOD extends LOVD_CustomViewList {
         if (!empty($zData['VariantOnGenome/DNA'])) {
             $zData['VariantOnGenome/DNA'] = preg_replace('/ins([ACTG]{3})([ACTG]{3,})/', 'ins${1}...', $zData['VariantOnGenome/DNA']);
         }
-        if (!empty($zData['VariantOnTranscript/DNA'])) {
-            $zData['VariantOnTranscript/DNA'] = preg_replace('/ins([ACTG]{3})([ACTG]{3,})/', 'ins${1}...', $zData['VariantOnTranscript/DNA']);
+        if (!empty($zData['VariantOnTranscript_DNA'])) {
+            $zData['VariantOnTranscript/DNA'] = preg_replace('/ins([ACTG]{3})([ACTG]{3,})/', 'ins${1}...', $zData['VariantOnTranscript_DNA']);
         }
         if (isset($zData['gene_OMIM'])) {
             $zData['gene_OMIM_'] = '';
