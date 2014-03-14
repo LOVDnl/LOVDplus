@@ -4,7 +4,7 @@
  * LEIDEN OPEN VARIATION DATABASE (LOVD)
  *
  * Created     : 2013-11-07
- * Modified    : 2014-03-11
+ * Modified    : 2014-03-14
  * For LOVD    : 3.0-10
  *
  * Copyright   : 2004-2014 Leiden University Medical Center; http://www.LUMC.nl/
@@ -192,7 +192,7 @@ class LOVD_CustomViewListMOD extends LOVD_CustomViewList {
                             }
                         }
                         // Security checks in this file's prepareData() need geneid to see if the column in question is set to non-public for one of the genes.
-                        $aSQL['SELECT'] .= (!$aSQL['SELECT']? '' : ', ') . 'GROUP_CONCAT(DISTINCT t.geneid SEPARATOR ";") AS _geneid, GROUP_CONCAT(DISTINCT g.id_omim SEPARATOR ";") AS _gene_OMIM';
+                        $aSQL['SELECT'] .= (!$aSQL['SELECT']? '' : ', ') . 'GROUP_CONCAT(DISTINCT t.geneid SEPARATOR ";") AS _geneid, GROUP_CONCAT(DISTINCT IF(IFNULL(g.id_omim, 0) = 0, "", CONCAT(g.id, ";", g.id_omim)) SEPARATOR ";;") AS __gene_OMIM';
                         $aSQL['FROM'] .= ' LEFT JOIN ' . TABLE_VARIANTS_ON_TRANSCRIPTS . ' AS vot ON (';
                         // Earlier, VOG was used, join to that.
                         $aSQL['FROM'] .= 'vog.id = vot.id)';
@@ -314,7 +314,7 @@ class LOVD_CustomViewListMOD extends LOVD_CustomViewList {
                         array(
                             'gene_OMIM_' => array(
                                 'view' => array('OMIM links', 100),
-                                'db'   => array('g.id_omim', 'ASC', true)),
+                                'db'   => array('__gene_OMIM', 'ASC', true)),
                         ));
                     break;
             }
@@ -391,8 +391,11 @@ class LOVD_CustomViewListMOD extends LOVD_CustomViewList {
         }
         if (isset($zData['gene_OMIM'])) {
             $zData['gene_OMIM_'] = '';
-            foreach ($zData['gene_OMIM'] as $key => $nOMIMID) {
-                $zData['gene_OMIM_'] .= (!$zData['gene_OMIM_']? '' : ', ') . '<SPAN class="anchor" onclick="lovd_openWindow(\'' . lovd_getExternalSource('omim', $nOMIMID) . '\', \'GeneOMIMPage\', 1100, 650); cancelParentEvent(event);">' . $zData['geneid'][$key] . '</SPAN>';
+            foreach ($zData['gene_OMIM'] as $aGeneOMIM) {
+                if ($aGeneOMIM) {
+                    list($sGene, $nOMIMID) = $aGeneOMIM;
+                    $zData['gene_OMIM_'] .= (!$zData['gene_OMIM_']? '' : ', ') . '<SPAN class="anchor" onclick="lovd_openWindow(\'' . lovd_getExternalSource('omim', $nOMIMID) . '\', \'GeneOMIMPage\', 1100, 650); cancelParentEvent(event);">' . $sGene . '</SPAN>';
+                }
             }
         }
 
