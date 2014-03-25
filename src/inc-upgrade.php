@@ -404,6 +404,11 @@ if ($sCalcVersionFiles != $sCalcVersionDB) {
                  array(
                      'UPDATE ' . TABLE_ANALYSES . ' SET filters = REPLACE(filters, "remove_by_indb_count_hc_gte_1\r\nremove_by_indb_count_ug_gte_2", "remove_by_indb_count_ug_gte_2\r\nremove_by_indb_count_hc_gte_1")',
                  ),
+                 '3.0-09i' =>
+                 array(
+                     'UPDATE ' . TABLE_ANALYSES . ' SET filters = REPLACE(filters, "remove_by_indb_count_hc_gte_2", "remove_by_indb_count_hc_gte_5\r\nremove_by_indb_count_ug_gte_5\r\nremove_by_indb_count_hc_gte_2") WHERE id = 3',
+                     'UPDATE ' . TABLE_ANALYSES . ' SET filters = REPLACE(filters, "remove_by_quality_lte_100", "remove_by_quality_lte_100\r\nselect_filtervcf_dot_or_pass\r\nselect_gatkcaller_ug_hc")',
+                 ),
              );
 
     if ($sCalcVersionDB < lovd_calculateVersion('3.0-alpha-01')) {
