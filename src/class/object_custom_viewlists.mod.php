@@ -4,7 +4,7 @@
  * LEIDEN OPEN VARIATION DATABASE (LOVD)
  *
  * Created     : 2013-11-07
- * Modified    : 2014-03-14
+ * Modified    : 2014-03-21
  * For LOVD    : 3.0-10
  *
  * Copyright   : 2004-2014 Leiden University Medical Center; http://www.LUMC.nl/
@@ -386,7 +386,7 @@ class LOVD_CustomViewListMOD extends LOVD_CustomViewList {
         if (!empty($zData['VariantOnGenome/DNA'])) {
             $zData['VariantOnGenome/DNA'] = preg_replace('/ins([ACTG]{3})([ACTG]{3,})/', 'ins${1}...', $zData['VariantOnGenome/DNA']);
         }
-        if (!empty($zData['VariantOnTranscript_DNA'])) {
+        if (isset($zData['VariantOnTranscript_DNA'])) {
             $zData['VariantOnTranscript/DNA'] = preg_replace('/ins([ACTG]{3})([ACTG]{3,})/', 'ins${1}...', $zData['VariantOnTranscript_DNA']);
         }
         if (isset($zData['gene_OMIM'])) {
