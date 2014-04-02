@@ -4,7 +4,7 @@
  * LEIDEN OPEN VARIATION DATABASE (LOVD)
  *
  * Created     : 2011-02-16
- * Modified    : 2014-03-03
+ * Modified    : 2014-03-31
  * For LOVD    : 3.0-10
  *
  * Copyright   : 2004-2014 Leiden University Medical Center; http://www.LUMC.nl/
@@ -98,13 +98,13 @@ if (PATH_COUNT >= 2 && ctype_digit($_PE[1]) && !ACTION && (PATH_COUNT == 2 || PA
             $aNavigation['screenings?search_individualid=' . $nID] = array('menu_magnifying_glass.png', 'View screenings', 1);
         }
         if ($zData['statusid'] < STATUS_OK && $_AUTH['level'] >= LEVEL_CURATOR) {
-            $aNavigation[CURRENT_PATH . '?publish']              = array('check.png', ($zData['statusid'] == STATUS_MARKED ? 'Removed mark from' : 'Publish (curate)') . ' individual entry', 1);
+            $aNavigation[CURRENT_PATH . '?publish']              = array('check.png', ($zData['statusid'] == STATUS_MARKED ? 'Remove mark from' : 'Publish (curate)') . ' individual entry', 1);
         }
-        $aNavigation['screenings?create&amp;target=' . $nID]     = array('menu_plus.png', 'Add screening to individual', 1);
         // You can only add phenotype information to this individual, when there are phenotype columns enabled.
         if ($_DB->query('SELECT COUNT(*) FROM ' . TABLE_IND2DIS . ' AS i2d INNER JOIN ' . TABLE_SHARED_COLS . ' AS sc USING(diseaseid) WHERE i2d.individualid = ?', array($nID))->fetchColumn()) {
             $aNavigation['phenotypes?create&amp;target=' . $nID] = array('menu_plus.png', 'Add phenotype information to individual', 1);
         }
+        $aNavigation['screenings?create&amp;target=' . $nID]     = array('menu_plus.png', 'Add screening to individual', 1);
         if ($_AUTH['level'] >= LEVEL_CURATOR) {
             $aNavigation[CURRENT_PATH . '?delete']               = array('cross.png', 'Delete individual entry', 1);
         }
@@ -283,7 +283,7 @@ if (PATH_COUNT >= 2 && ctype_digit($_PE[1]) && !ACTION && (PATH_COUNT == 2 || PA
                     }
                 }
                 print('
-                <TR id="' . ($zAnalysis['runid']? 'run_' . $zAnalysis['runid'] : 'analysis_' . $zAnalysis['id']) . '_filter_' . $sFilter . '"' . (!$sFilterClassName? '' : ' class="' . $sFilterClassName . '"') . '>
+                <TR id="' . ($zAnalysis['runid']? 'run_' . $zAnalysis['runid'] : 'analysis_' . $zAnalysis['id']) . '_filter_' . preg_replace('/[^a-z0-9_]/i', '_', $sFilter) . '"' . (!$sFilterClassName? '' : ' class="' . $sFilterClassName . '"') . '>
                   <TD>' . $sFilter . '</TD>
                   <TD>' . ($nTime == '-'? '-' : lovd_convertSecondsToTime($nTime, 1)) . '</TD>
                   <TD>' . ($nTime == '-'? '-' : $nVariantsLeft) . '</TD>
@@ -417,13 +417,13 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && !ACTION) {
     if ($_AUTH && $_AUTH['level'] >= LEVEL_OWNER) {
         $aNavigation[CURRENT_PATH . '?edit']                     = array('menu_edit.png', 'Edit individual entry', 1);
         if ($zData['statusid'] < STATUS_OK && $_AUTH['level'] >= LEVEL_CURATOR) {
-            $aNavigation[CURRENT_PATH . '?publish']              = array('check.png', ($zData['statusid'] == STATUS_MARKED ? 'Removed mark from' : 'Publish (curate)') . ' individual entry', 1);
+            $aNavigation[CURRENT_PATH . '?publish']              = array('check.png', ($zData['statusid'] == STATUS_MARKED ? 'Remove mark from' : 'Publish (curate)') . ' individual entry', 1);
         }
-        $aNavigation['screenings?create&amp;target=' . $nID]     = array('menu_plus.png', 'Add screening to individual', 1);
         // You can only add phenotype information to this individual, when there are phenotype columns enabled.
         if ($_DB->query('SELECT COUNT(*) FROM ' . TABLE_IND2DIS . ' AS i2d INNER JOIN ' . TABLE_SHARED_COLS . ' AS sc USING(diseaseid) WHERE i2d.individualid = ?', array($nID))->fetchColumn()) {
             $aNavigation['phenotypes?create&amp;target=' . $nID] = array('menu_plus.png', 'Add phenotype information to individual', 1);
         }
+        $aNavigation['screenings?create&amp;target=' . $nID]     = array('menu_plus.png', 'Add screening to individual', 1);
         if ($_AUTH['level'] >= LEVEL_CURATOR) {
             $aNavigation[CURRENT_PATH . '?delete']               = array('cross.png', 'Delete individual entry', 1);
         }

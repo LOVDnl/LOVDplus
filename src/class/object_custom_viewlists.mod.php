@@ -4,7 +4,7 @@
  * LEIDEN OPEN VARIATION DATABASE (LOVD)
  *
  * Created     : 2013-11-07
- * Modified    : 2014-03-21
+ * Modified    : 2014-04-02
  * For LOVD    : 3.0-10
  *
  * Copyright   : 2004-2014 Leiden University Medical Center; http://www.LUMC.nl/
@@ -392,7 +392,7 @@ class LOVD_CustomViewListMOD extends LOVD_CustomViewList {
         if (isset($zData['gene_OMIM'])) {
             $zData['gene_OMIM_'] = '';
             foreach ($zData['gene_OMIM'] as $aGeneOMIM) {
-                if ($aGeneOMIM) {
+                if ($aGeneOMIM && count($aGeneOMIM) > 1) {
                     list($sGene, $nOMIMID) = $aGeneOMIM;
                     $zData['gene_OMIM_'] .= (!$zData['gene_OMIM_']? '' : ', ') . '<SPAN class="anchor" onclick="lovd_openWindow(\'' . lovd_getExternalSource('omim', $nOMIMID) . '\', \'GeneOMIMPage\', 1100, 650); cancelParentEvent(event);">' . $sGene . '</SPAN>';
                 }
