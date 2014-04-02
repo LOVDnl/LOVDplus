@@ -409,6 +409,16 @@ if ($sCalcVersionFiles != $sCalcVersionDB) {
                      'UPDATE ' . TABLE_ANALYSES . ' SET filters = REPLACE(filters, "remove_by_indb_count_hc_gte_2", "remove_by_indb_count_hc_gte_5\r\nremove_by_indb_count_ug_gte_5\r\nremove_by_indb_count_hc_gte_2") WHERE id = 3',
                      'UPDATE ' . TABLE_ANALYSES . ' SET filters = REPLACE(filters, "remove_by_quality_lte_100", "remove_by_quality_lte_100\r\nselect_filtervcf_dot_or_pass\r\nselect_gatkcaller_ug_hc")',
                  ),
+                 '3.0-09j' =>
+                 array(
+                     'UPDATE ' . TABLE_ANALYSES . ' SET name = "Recessive (gene panel)" WHERE id = 3 AND name = "Recessive"',
+                     'INSERT INTO ' . TABLE_ANALYSES . ' (name, description, filters, created_by, created_date) (SELECT "Recessive (whole exome)", description, filters, 1, NOW() FROM ' . TABLE_ANALYSES . ' WHERE id = 3)',
+                     'UPDATE ' . TABLE_ANALYSES . ' SET filters = REPLACE(filters, "remove_not_in_gene_panel", "remove_in_gene_blacklist") WHERE id = 4',
+                     'UPDATE ' . TABLE_ANALYSES . ' SET filters = REPLACE(filters, "remove_by_indb_count_hc_gte_1\r\nremove_by_indb_count_ug_gte_1\r\n", "")',
+                     'UPDATE ' . TABLE_ANALYSES . ' SET filters = REPLACE(filters, "select_filtervcf_dot_or_pass\r\n", "")',
+                     'UPDATE ' . TABLE_ANALYSES . ' SET filters = REPLACE(filters, "select_gatkcaller_ug_hc\r\n", "") WHERE id != 4',
+                     'UPDATE ' . TABLE_ANALYSES . ' SET filters = REPLACE(filters, "select_homozygous_or_compound_heterozygous", "remove_missense_with_phylop_lte_2.5\r\nselect_homozygous_or_compound_heterozygous") WHERE id = 4',
+                 ),
              );
 
     if ($sCalcVersionDB < lovd_calculateVersion('3.0-alpha-01')) {
