@@ -301,7 +301,11 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && !ACTION) {
     $aNavigation = array();
     if ($_AUTH && $_AUTH['level'] >= LEVEL_OWNER) {
         // Authorized user is logged in. Provide tools.
+        if ($_AUTH['id'] == 1) {
+            // Just for me... but not on level, since they are all ADMIN as well.
         $aNavigation[CURRENT_PATH . '?edit']       = array('menu_edit.png', 'Edit variant entry', 1);
+        }
+        $aNavigation[CURRENT_PATH . '?edit_remarks'] = array('menu_edit.png', 'Edit remarks', 1);
         if ($zData['statusid'] < STATUS_OK && $_AUTH['level'] >= LEVEL_CURATOR) {
             $aNavigation[CURRENT_PATH . '?publish'] = array('check.png', ($zData['statusid'] == STATUS_MARKED ? 'Remove mark from' : 'Publish (curate)') . ' variant entry', 1);
         }
@@ -2658,6 +2662,90 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && in_array(ACTION, array('edit', 'p
           '          }' . "\n" .
           '        });' . "\n" .
           '      </SCRIPT>' . "\n\n");
+
+    $_T->printFooter();
+    exit;
+}
+
+
+
+
+
+if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && ACTION == 'edit_remarks') {
+    // URL: /variants/0000000001?edit_remarks
+    // Edit the remarks of an entry, hide all other fields.
+
+    $nID = sprintf('%010d', $_PE[1]);
+    define('PAGE_TITLE', 'Edit remarks for variant entry #' . $nID);
+    define('LOG_EVENT', 'VariantRemarksEdit');
+
+//    lovd_isAuthorized('variant', $nID);
+    lovd_requireAUTH(LEVEL_MANAGER);
+
+    require ROOT_PATH . 'class/object_genome_variants.mod.php';
+    $_DATA = array();
+    $_DATA['Genome'] = new LOVD_GenomeVariant();
+    $zData = $_DATA['Genome']->loadEntry($nID);
+
+    require ROOT_PATH . 'inc-lib-form.php';
+
+    if (POST) {
+        lovd_errorClean();
+
+        $_DATA['Genome']->checkFields($_POST);
+
+        if (!lovd_error()) {
+            $aFieldsGenome = $_DATA['Genome']->buildFields();
+
+            $_DB->beginTransaction();
+            $_DATA['Genome']->updateEntry($nID, $_POST, $aFieldsGenome);
+            $_DB->commit();
+
+            // Write to log...
+            lovd_writeLog('Event', LOG_EVENT, 'Edited remarks for variant entry ' . $nID . ' - ' . (!trim($_POST['VariantOnGenome/Remarks'])? '<empty>' : str_replace(array("\r", "\n", "\t"), array('\r', '\n', '\t'), $_POST['VariantOnGenome/Remarks'])));
+
+            // Thank the user...
+            header('Location: ' . lovd_getInstallURL() . CURRENT_PATH);
+            exit;
+
+        } else {
+            // Because we're sending the data back to the form, I need to unset the password field!
+            unset($_POST['password']);
+        }
+
+    } else {
+        // Default values.
+        foreach ($zData as $key => $val) {
+            $_POST[$key] = $val;
+        }
+    }
+
+
+
+
+
+    $_T->printHeader();
+    $_T->printTitle();
+
+    lovd_errorPrint();
+
+    // Tooltip JS code.
+    lovd_includeJS('inc-js-tooltip.php');
+    lovd_includeJS('inc-js-custom_links.php');
+
+    // Hardcoded ACTION because when we're publishing, but we get the form on screen (i.e., something is wrong), we want this to be handled as a normal edit.
+    print('      <FORM id="variantForm" action="' . CURRENT_PATH . '?' . ACTION . '" method="post">' . "\n");
+
+    // Array which will make up the form table.
+    $aForm = array_merge(
+                 $_DATA['Genome']->getForm(),
+                 array(
+                        array('', '', 'print', '<INPUT type="submit" value="Edit variant entry">'),
+                      ));
+    lovd_viewForm($aForm);
+
+    print("\n" .
+          '      </FORM>' . "\n\n");
 
     $_T->printFooter();
     exit;
