@@ -419,6 +419,10 @@ if ($sCalcVersionFiles != $sCalcVersionDB) {
                      'UPDATE ' . TABLE_ANALYSES . ' SET filters = REPLACE(filters, "select_gatkcaller_ug_hc\r\n", "") WHERE id != 4',
                      'UPDATE ' . TABLE_ANALYSES . ' SET filters = REPLACE(filters, "select_homozygous_or_compound_heterozygous", "remove_missense_with_phylop_lte_2.5\r\nselect_homozygous_or_compound_heterozygous") WHERE id = 4',
                  ),
+                 '3.0-09k' =>
+                 array(
+                     'UPDATE ' . TABLE_ANALYSES . ' SET filters = CONCAT(REPLACE(filters, "remove_in_gene_blacklist\r\n", ""), "\r\nremove_in_gene_blacklist") WHERE id = 4',
+                 ),
              );
 
     if ($sCalcVersionDB < lovd_calculateVersion('3.0-alpha-01')) {

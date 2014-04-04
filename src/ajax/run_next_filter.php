@@ -4,7 +4,7 @@
  * LEIDEN OPEN VARIATION DATABASE (LOVD)
  *
  * Created     : 2013-11-06
- * Modified    : 2014-03-21
+ * Modified    : 2014-04-03
  * For LOVD    : 3.0-10
  *
  * Copyright   : 2004-2014 Leiden University Medical Center; http://www.LUMC.nl/
@@ -120,7 +120,7 @@ if ($aVariantIDs) {
             // This query, including the preparation of the arguments, takes <0.1 second. The problem is the fetchAllColumn() which takes 2 minutes.
             //   Limit on 1000 entries max: 2.5s.
             // Problem is directly related to number of results IN COMBINATION WITH the arguments to send.
-            $aVariantIDsFiltered = $_DB->query('SELECT DISTINCT CAST(vog.id AS UNSIGNED) FROM ' . TABLE_VARIANTS . ' AS vog LEFT OUTER JOIN ' . TABLE_VARIANTS_ON_TRANSCRIPTS . ' AS vot USING (id) LEFT OUTER JOIN ' . TABLE_TRANSCRIPTS . ' AS t ON (vot.transcriptid = t.id) LEFT OUTER JOIN ' . TABLE_GEN2DIS . ' AS g2d USING (geneid) WHERE (g2d.diseaseid IS NULL OR !(g2d.diseaseid = ?)) AND vog.id IN (?' . str_repeat(', ?', count($aVariantIDs) - 1) . ')', array_merge(array($nDiseaseID), $aVariantIDs), false)->fetchAllColumn();
+            $aVariantIDsFiltered = $_DB->query('SELECT DISTINCT CAST(vog.id AS UNSIGNED) FROM ' . TABLE_VARIANTS . ' AS vog LEFT OUTER JOIN ' . TABLE_VARIANTS_ON_TRANSCRIPTS . ' AS vot USING (id) LEFT OUTER JOIN ' . TABLE_TRANSCRIPTS . ' AS t ON (vot.transcriptid = t.id) WHERE (t.geneid IS NULL OR NOT EXISTS (SELECT 1 FROM ' . TABLE_GEN2DIS . ' AS g2d WHERE g2d.diseaseid = ? AND g2d.geneid = t.geneid)) AND vog.id IN (?' . str_repeat(', ?', count($aVariantIDs) - 1) . ')', array_merge(array($nDiseaseID), $aVariantIDs), false)->fetchAllColumn();
             break;
 
 
