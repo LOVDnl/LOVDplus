@@ -423,6 +423,10 @@ if ($sCalcVersionFiles != $sCalcVersionDB) {
                  array(
                      'UPDATE ' . TABLE_ANALYSES . ' SET filters = CONCAT(REPLACE(filters, "remove_in_gene_blacklist\r\n", ""), "\r\nremove_in_gene_blacklist") WHERE id = 4',
                  ),
+                 '3.0-10b' =>
+                 array(
+                     'ALTER TABLE ' . TABLE_VARIANTS . ' ADD COLUMN to_be_confirmed BOOLEAN NOT NULL DEFAULT 0 AFTER effectid',
+                 ),
              );
 
     if ($sCalcVersionDB < lovd_calculateVersion('3.0-alpha-01')) {

@@ -4,8 +4,8 @@
  * LEIDEN OPEN VARIATION DATABASE (LOVD)
  *
  * Created     : 2014-01-03
- * Modified    : 2014-01-13
- * For LOVD    : 3.0-09
+ * Modified    : 2014-05-08
+ * For LOVD    : 3.0-11
  *
  * Copyright   : 2004-2014 Leiden University Medical Center; http://www.LUMC.nl/
  * Programmer  : Ing. Ivo F.A.C. Fokkema <I.F.A.C.Fokkema@LUMC.nl>
@@ -100,6 +100,7 @@ class LOVD_ScreeningMOD extends LOVD_Screening {
                  $this->buildViewEntry(),
                  array(
                         'variants_found_' => 'Variants found?',
+                        'variants_to_be_confirmed_' => 'Variants to be confirmed',
                       ));
 
         // List of columns and (default?) order for viewing a list of entries.
@@ -155,7 +156,7 @@ class LOVD_ScreeningMOD extends LOVD_Screening {
     function prepareData ($zData = '', $sView = 'list')
     {
         // Prepares the data by "enriching" the variable received with links, pictures, etc.
-        global $_AUTH, $_PE, $_SETT;
+        global $_AUTH, $_DB, $_PE, $_SETT;
 
         if (!in_array($sView, array('list', 'entry'))) {
             $sView = 'list';
@@ -175,6 +176,11 @@ class LOVD_ScreeningMOD extends LOVD_Screening {
             }
         }
         $zData['variants_found_'] = ($zData['variants_found_'] == -1? 'Not yet submitted' : $zData['variants_found_']);
+        // Just do a separate query for the variants to be confirmed (instead of modifying the VE query).
+        $zData['variants_to_be_confirmed_'] = $_DB->query('SELECT COUNT(*) FROM ' . TABLE_VARIANTS . ' AS vog INNER JOIN ' . TABLE_SCR2VAR . ' AS s2v ON (vog.id = s2v.variantid) WHERE vog.to_be_confirmed = 1 AND s2v.screeningid = ?', array($zData['id']))->fetchColumn();
+        if ($zData['variants_to_be_confirmed_']) {
+            $zData['variants_to_be_confirmed_'] .= ' (<A href="screenings/' . $zData['id'] . '?downloadToBeConfirmed">download</A>) (<A id="export_variants" href="#" onclick="$.get(\'screenings/' . $zData['id'] . '?exportToBeConfirmed\',function(sResponse){if(sResponse.substring(0,1)==\'1\'){alert(\'Successfully exported \'+sResponse.substring(2)+\' lines of variant data.\');$(\'#export_variants\').replaceWith($(\'#export_variants\').html());}else{alert(\'Error while exporting file:\n\'+sResponse);}}).error(function(){alert(\'Error while exporting file.\');});return false;">export to Miracle</A>)';
+        }
 
         return $zData;
     }

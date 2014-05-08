@@ -4,7 +4,7 @@
  * LEIDEN OPEN VARIATION DATABASE (LOVD)
  *
  * Created     : 2013-11-07
- * Modified    : 2014-04-02
+ * Modified    : 2014-05-02
  * For LOVD    : 3.0-10
  *
  * Copyright   : 2004-2014 Leiden University Medical Center; http://www.LUMC.nl/
@@ -381,6 +381,10 @@ class LOVD_CustomViewListMOD extends LOVD_CustomViewList {
                     $zData['class_name'] = 'colRed';
                     break;
             }
+        }
+        // Variants marked as "to be confirmed" are transparent a bit.
+        if ($zData['to_be_confirmed'] && empty($zData['confirmed'])) {
+            $zData['class_name'] = (empty($zData['class_name'])? '' : $zData['class_name'] . ' ') . 'transparent50';
         }
 
         if (!empty($zData['VariantOnGenome/DNA'])) {

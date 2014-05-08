@@ -32,6 +32,128 @@
 define('ROOT_PATH', './');
 require ROOT_PATH . 'inc-init.php';
 
+
+
+
+
+if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && in_array(ACTION, array('downloadToBeConfirmed', 'exportToBeConfirmed'))) {
+    // URL: /screenings/0000000001?downloadToBeConfirmed
+    // URL: /screenings/0000000001?exportToBeConfirmed
+    // Download, or export, the variants to be confirmed in the format for the pipeline.
+
+    $nID = sprintf('%010d', $_PE[1]);
+    define('PAGE_TITLE', 'Download variants to be confirmed for screening #' . $nID);
+
+    // Load appropiate user level for this screening entry.
+    $bAuthorized = lovd_isAuthorized('screening', $nID);
+
+    // Screening ID should be editable by the user.
+    if (ACTION == 'exportToBeConfirmed') {
+        if (!$bAuthorized) {
+            // Either returned false or 0. Both are bad in this case.
+            die('9|No authorization to edit this screening.');
+        }
+    } else {
+        lovd_requireAUTH(LEVEL_MANAGER);
+    }
+
+    // First, let's see if there is something that we need to confirm.
+    $aVariants = $_DB->query('SELECT "' . $_SETT['human_builds'][$_CONF['refseq_build']]['ncbi_name'] . '" AS refseq_build, vog.chromosome, "genomic_id_ncbi", vog.position_g_start, vog.position_g_end, vog.`VariantOnGenome/DNA`, vog.`VariantOnGenome/Sequencing/Father/VarPresent` AS is_present_father, vog.`VariantOnGenome/Sequencing/Mother/VarPresent` AS is_present_mother, g.id AS gene_id, g.name AS gene_name, t.id_ncbi AS transcript_id_ncbi, vot.`VariantOnTranscript/DNA`, vot.`VariantOnTranscript/RNA`, vot.`VariantOnTranscript/Protein`, vog.allele, "VariantOnGenome/Genetic_origin", MAX(IFNULL((i2d.diseaseid = g2d.diseaseid), 0)) AS in_gene_panel
+                              FROM ' . TABLE_VARIANTS . ' AS vog INNER JOIN ' . TABLE_SCR2VAR . ' AS s2v ON (vog.id = s2v.variantid) INNER JOIN ' . TABLE_SCREENINGS . ' AS s ON (s2v.screeningid = s.id) LEFT OUTER JOIN ' . TABLE_IND2DIS . ' AS i2d USING (individualid) LEFT OUTER JOIN ' . TABLE_VARIANTS_ON_TRANSCRIPTS . ' AS vot ON (vog.id = vot.id) LEFT OUTER JOIN ' . TABLE_TRANSCRIPTS . ' t ON (vot.transcriptid = t.id) LEFT OUTER JOIN ' . TABLE_GENES . ' AS g ON (t.geneid = g.id) LEFT OUTER JOIN ' . TABLE_GEN2DIS . ' AS g2d ON (g.id = g2d.geneid)
+                              WHERE vog.to_be_confirmed = 1 AND s2v.screeningid = ?
+                              GROUP BY vog.chromosome, vog.`VariantOnGenome/DNA`, g.id', array($nID))->fetchAllAssoc();
+    if (!$aVariants) {
+        if (ACTION == 'downloadToBeConfirmed') {
+            $_T->printHeader();
+            $_T->printTitle();
+            lovd_showInfoTable('No variants were marked to be confirmed for this screening.', 'stop');
+            $_T->printFooter();
+        } else {
+            die('0|No variants to export.');
+        }
+        exit;
+    }
+
+    // Fetch Miracle ID, we need that for matching the variants with the individual.
+    $nMiracleID = $_DB->query('SELECT id_miracle FROM ' . TABLE_INDIVIDUALS . ' AS i INNER JOIN ' . TABLE_SCREENINGS . ' AS s ON (i.id = s.individualid) WHERE s.id = ?', array($nID))->fetchColumn();
+
+    // Load the gene panel (disease(s)), for the header.
+    // NOTE: We could fetch this earlier, and at the same time change the variant query to not join to the IND2DIS table, but oh, well.
+    $aDiseases = $_DB->query('SELECT d.id, d.symbol, d.edited_date, COUNT(g2d.geneid) AS genes FROM ' . TABLE_DISEASES . ' AS d INNER JOIN ' . TABLE_IND2DIS . ' AS i2d ON (d.id = i2d.diseaseid) INNER JOIN ' . TABLE_SCREENINGS . ' AS s USING (individualid) LEFT OUTER JOIN ' . TABLE_GEN2DIS . ' AS g2d ON (d.id = g2d.diseaseid) WHERE s.id = ? GROUP BY d.id HAVING genes > 0', array($nID))->fetchAllAssoc();
+
+    $sPath = '/data/DIV5/KG/koppelingen/LOVD_PRIMERDESIGN/';
+    $sFile = 'LOVD_VariantsToBeConfirmed_' . $nMiracleID . '_' . date('Y-m-d_H.i.s') . '.txt';
+    header('Content-type: text/plain; charset=UTF-8');
+    if (ACTION == 'downloadToBeConfirmed') {
+        header('Content-Disposition: attachment; filename="' . $sFile . '"');
+        header('Pragma: public');
+    } else {
+        // Collect the file's contents, so we can write it to disk.
+        ob_start();
+    }
+    print('# id_miracle = ' . $nMiracleID . "\r\n");
+    foreach ($aDiseases as $aDisease) {
+        print('# active_gene_panel = (' . $aDisease['id'] . ', ' . $aDisease['symbol'] . ', ' . $aDisease['edited_date'] . ', ' . $aDisease['genes'] . ' genes)' . "\r\n");
+    }
+    print('"{{' . implode('}}"' . "\t" . '"{{', array_keys($aVariants[0])) . '}}"' . "\r\n");
+
+    foreach ($aVariants as $aVariant) {
+        $aVariant['genomic_id_ncbi'] = $_SETT['human_builds'][$_CONF['refseq_build']]['ncbi_sequences'][$aVariant['chromosome']];
+        switch($aVariant['allele']) {
+            case '3':
+                $aVariant['allele'] = 'Homozygous';
+                break;
+            case '10':
+            case '11':
+                $aVariant['allele'] = 'Paternal';
+                break;
+            case '20':
+            case '21':
+                $aVariant['allele'] = 'Maternal';
+                break;
+            default:
+                $aVariant['allele'] = 'Heterozygous';
+        }
+        if ($aVariant['is_present_father'] <= 2 && $aVariant['is_present_mother'] <= 2) {
+            $aVariant['VariantOnGenome/Genetic_origin'] = 'De novo';
+        } elseif ($aVariant['is_present_father'] >= 5 || $aVariant['is_present_mother'] >= 5) {
+            $aVariant['VariantOnGenome/Genetic_origin'] = 'Germline (inherited)';
+        } else {
+            $aVariant['VariantOnGenome/Genetic_origin'] = 'Unknown';
+        }
+        print('"' . implode('"' . "\t" . '"', $aVariant) . "\"\r\n");
+    }
+
+    if (ACTION == 'exportToBeConfirmed') {
+        $sFileContents = ob_get_contents();
+        ob_end_clean();
+
+        if ($sFileContents) {
+            $f = @fopen($sPath . $sFile, 'w');
+            if ($f) {
+                fputs($f, $sFileContents);
+                fclose($f);
+                die('1|' . count($aVariants));
+            }
+
+            die('0|Could not create file ' . $sPath . $sFile);
+        } else {
+            die('0|No output generated.');
+        }
+    }
+
+    exit;
+}
+
+
+
+
+
+
+
+
+
+
 if ($_AUTH) {
     // If authorized, check for updates.
     require ROOT_PATH . 'inc-upgrade.php';
