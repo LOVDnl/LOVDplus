@@ -427,6 +427,10 @@ if ($sCalcVersionFiles != $sCalcVersionDB) {
                  array(
                      'ALTER TABLE ' . TABLE_VARIANTS . ' ADD COLUMN to_be_confirmed BOOLEAN NOT NULL DEFAULT 0 AFTER effectid',
                  ),
+                 '3.0-10c' =>
+                 array(
+                     'UPDATE ' . TABLE_ANALYSES . ' SET filters = REPLACE(filters, "remove_by_function_utr5", "remove_by_function_utr5\r\nremove_by_function_utr_or_intronic")',
+                 ),
              );
 
     if ($sCalcVersionDB < lovd_calculateVersion('3.0-alpha-01')) {
