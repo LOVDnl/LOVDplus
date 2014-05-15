@@ -431,6 +431,10 @@ if ($sCalcVersionFiles != $sCalcVersionDB) {
                  array(
                      'UPDATE ' . TABLE_ANALYSES . ' SET filters = REPLACE(filters, "remove_by_function_utr5", "remove_by_function_utr5\r\nremove_by_function_utr_or_intronic")',
                  ),
+                 '3.0-10d' =>
+                 array(
+                     'INSERT INTO ' . TABLE_EFFECT . ' VALUES("00", "ar/ar"), ("01", "ar/-"), ("03", "ar/-?"), ("05", "ar/?"), ("07", "ar/+?"), ("09", "ar/+"), ("10", "-/ar"), ("30", "-?/ar"), ("50", "?/ar"), ("70", "+?/ar"), ("90", "+/ar")',
+                 ),
              );
 
     if ($sCalcVersionDB < lovd_calculateVersion('3.0-alpha-01')) {

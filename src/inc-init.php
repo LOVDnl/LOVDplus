@@ -127,7 +127,7 @@ $aRequired =
 $_SETT = array(
                 'system' =>
                      array(
-                            'version' => '3.0-10c',
+                            'version' => '3.0-10d',
                           ),
                 'user_levels' =>
                      array(
@@ -147,11 +147,12 @@ $_SETT = array(
                           ),
                 'var_effect' =>
                      array(
-                            5 => 'Effect unknown',
-                            9 => 'Affects function',
-                            7 => 'Probably affects function',
-                            3 => 'Probably does not affect function',
-                            1 => 'Does not affect function',
+                            5 => 'VUS',
+                            9 => 'Pathogenic',
+                            7 => 'Likely pathogenic',
+                            3 => 'Likely benign',
+                            1 => 'Benign',
+                            0 => 'Artefact',
                           ),
                 'data_status' =>
                      array(
