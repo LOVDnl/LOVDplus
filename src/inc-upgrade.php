@@ -435,6 +435,14 @@ if ($sCalcVersionFiles != $sCalcVersionDB) {
                  array(
                      'INSERT INTO ' . TABLE_EFFECT . ' VALUES("00", "ar/ar"), ("01", "ar/-"), ("03", "ar/-?"), ("05", "ar/?"), ("07", "ar/+?"), ("09", "ar/+"), ("10", "-/ar"), ("30", "-?/ar"), ("50", "?/ar"), ("70", "+?/ar"), ("90", "+/ar")',
                  ),
+                 '3.0-10e' =>
+                 array(
+                     'INSERT INTO ' . TABLE_COLS . ' VALUES ("Screening/Panel_coverage/Fraction",                    255, 100, 0, 1, 0, "Panel coverage", "", "The amount of coverage in the panel.", "The amount of coverage in the panel in this sequencing run.", "FLOAT UNSIGNED", "Panel coverage||text|6", "", "", 0, 0, 1, 0, NOW(), NULL, NULL)',
+                     'INSERT INTO ' . TABLE_COLS . ' VALUES ("VariantOnGenome/CADD/Raw",                             255, 100, 0, 1, 0, "CADD Raw", "", "CADD Raw variant effect score.", "CADD Raw variant effect score.", "FLOAT", "CADD Raw||text|6", "", "", 0, 0, 1, 0, NOW(), NULL, NULL)',
+                     'INSERT INTO ' . TABLE_COLS . ' VALUES ("VariantOnGenome/CADD/Phred",                           255, 100, 0, 1, 0, "CADD Phred", "", "CADD Phred variant effect score.", "CADD Phred variant effect score.", "FLOAT UNSIGNED", "CADD Phred||text|6", "", "", 0, 0, 1, 0, NOW(), NULL, NULL)',
+                     'INSERT INTO ' . TABLE_COLS . ' VALUES ("VariantOnTranscript/PolyPhen/HDIV",                      8, 200, 0, 0, 0, "PolyPhen HDIV",  "", "Effect of variant, predicted by PolyPhen, HDIV score.", "Effect of variant, predicted by PolyPhen, HDIV score.", "FLOAT UNSIGNED", "PolyPhen prediction, HDIV score|text|5", "", "", 0, 0, 1, 0, NOW(), NULL, NULL)',
+                     'INSERT INTO ' . TABLE_COLS . ' VALUES ("VariantOnTranscript/PolyPhen/HVAR",                      8, 200, 0, 0, 0, "PolyPhen HVAR",  "", "Effect of variant, predicted by PolyPhen, HVAR score.", "Effect of variant, predicted by PolyPhen, HVAR score.", "FLOAT UNSIGNED", "PolyPhen prediction, HVAR score|text|5", "", "", 0, 0, 1, 0, NOW(), NULL, NULL)',
+                 ),
              );
 
     if ($sCalcVersionDB < lovd_calculateVersion('3.0-alpha-01')) {

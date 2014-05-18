@@ -255,6 +255,7 @@ if (PATH_COUNT == 3 && $_PE[1] == 'run' && ctype_digit($_PE[2]) && ACTION == 'de
     lovd_requireAUTH(LEVEL_CURATOR);
 
     // ADMIN can always delete an analysis run, even when the individual's analysis hasn't been started by him.
+    // FIXME: Shouldn't the owner of the individual's analysis be able to delete the run, when it's created by somebody else?
     $sSQL = 'SELECT ar.* FROM ' . TABLE_ANALYSES_RUN . ' AS ar WHERE ar.id = ?' . ($_AUTH['level'] == LEVEL_ADMIN? '' : ' AND ar.created_by = ?');
     $aSQL = array($nID);
     if ($_AUTH['level'] < LEVEL_ADMIN) {

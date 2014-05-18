@@ -866,6 +866,8 @@ if (PATH_COUNT == 2 && $_PE[1] == 'upload' && ACTION == 'create') {
     $aSeattleSeqCols =
      array(
         'ALTPERC_Child' => 'VariantOnGenome/Sequencing/Depth/Alt/Fraction',
+        'CADD_raw' => 'VariantOnGenome/CADD/Raw',
+        'CADD_phred' => 'VariantOnGenome/CADD/Phred',
         'distanceToSplice' => 'VariantOnTranscript/Distance_to_splice_site',
         'DP_Child' => 'VariantOnGenome/Sequencing/Depth/Total',
         'DPALT_Child' => 'VariantOnGenome/Sequencing/Depth/Alt',
@@ -891,7 +893,9 @@ if (PATH_COUNT == 2 && $_PE[1] == 'upload' && ACTION == 'create') {
         'AF1000G' => 'VariantOnGenome/Frequency/1000G',
         'AFGONL' => 'VariantOnGenome/Frequency/GoNL',
         'AFESP5400' => 'VariantOnGenome/Frequency/EVS',
-        'SIFT' => 'VariantOnTranscript/Prediction/SIFT',
+        'Polyphen2_HDIV_score' => 'VariantOnTranscript/PolyPhen/HDIV',
+        'Polyphen2_HVAR_score' => 'VariantOnTranscript/PolyPhen/HVAR',
+        'SIFT_score' => 'VariantOnTranscript/Prediction/SIFT',
         'HGMD_association' => 'VariantOnGenome/HGMD/Association',
         'HGMD_reference' => 'VariantOnGenome/HGMD/Reference',
         'MutationTaster_pred' => 'VariantOnTranscript/Prediction/MutationTaster',
@@ -1016,7 +1020,7 @@ if (PATH_COUNT == 2 && $_PE[1] == 'upload' && ACTION == 'create') {
                         $aLine[$key] = trim($val, '"');
                     }
 
-                    foreach (array('accession', 'functionGVS', 'functionDBSNP', 'aminoAcids', 'proteinPosition', 'cDNAPosition', 'polyPhen', 'granthamScore', 'proteinSequence', 'distanceToSplice', 'SIFT', 'MutationTaster_pred', 'MutationTaster_score') as $sKey) {
+                    foreach (array('accession', 'functionGVS', 'functionDBSNP', 'aminoAcids', 'proteinPosition', 'cDNAPosition', 'polyPhen', 'Polyphen2_HDIV_score', 'Polyphen2_HVAR_score', 'granthamScore', 'proteinSequence', 'distanceToSplice', 'SIFT_score', 'MutationTaster_pred', 'MutationTaster_score') as $sKey) {
                         // FIXME: You should base this partially on $aSeattleSeqCols.
                         // Making arrays of some transcript-specific columns.
 
@@ -1024,6 +1028,12 @@ if (PATH_COUNT == 2 && $_PE[1] == 'upload' && ACTION == 'create') {
                             // cDNAPosition, polyPhen, granthamScore, proteinSequence and distanceToSplice are optional columns so we should check for their existence.
                             continue;
                         }
+
+                        // DIAGNOSTICS: PolyPhen cols have combined values... take the maximum, says Gijs 2014-05-16.
+                        if (in_array($sKey, array('Polyphen2_HDIV_score', 'Polyphen2_HVAR_score')) && strpos($aLine[$sKey], ';')) {
+                            $aLine[$sKey] = max(explode(';', $aLine[$sKey]));
+                        }
+
                         $aLine[$sKey] = array($aLine[$sKey]);
                     }
                 }
@@ -1042,6 +1052,10 @@ if (PATH_COUNT == 2 && $_PE[1] == 'upload' && ACTION == 'create') {
                     // The variant in $aNextLine is the same as $aLine, but on another transcript. Add the transcript-specific values.
                     foreach ($aLine as $sKey => &$value) {
                         if (is_array($value)) {
+                            // DIAGNOSTICS: PolyPhen cols have combined values... take the maximum, says Gijs 2014-05-16.
+                            if (in_array($sKey, array('Polyphen2_HDIV_score', 'Polyphen2_HVAR_score')) && strpos($aNextLine[$sKey], ';')) {
+                                $aNextLine[$sKey] = max(explode(';', $aNextLine[$sKey]));
+                            }
                             $value[] = $aNextLine[$sKey];
                         }
                     }
@@ -1071,7 +1085,7 @@ if (PATH_COUNT == 2 && $_PE[1] == 'upload' && ACTION == 'create') {
         // Returns the given variant as a string, like it was in the SeattleSeq file.
         // This is used to be able to print a SeattleSeq line to the user in case a variant can't be imported.
 
-        foreach (array('accession', 'functionGVS', 'functionDBSNP', 'aminoAcids', 'proteinPosition', 'cDNAPosition', 'polyPhen', 'granthamScore', 'proteinSequence', 'distanceToSplice', 'SIFT', 'MutationTaster_pred', 'MutationTaster_score') as $sKey) {
+        foreach (array('accession', 'functionGVS', 'functionDBSNP', 'aminoAcids', 'proteinPosition', 'cDNAPosition', 'polyPhen', 'Polyphen2_HDIV_score', 'Polyphen2_HVAR_score', 'granthamScore', 'proteinSequence', 'distanceToSplice', 'SIFT_score', 'MutationTaster_pred', 'MutationTaster_score') as $sKey) {
             // FIXME: You should base this partially on $aSeattleSeqCols.
             // Getting the selected index from the transcript-dependent fields.
 
