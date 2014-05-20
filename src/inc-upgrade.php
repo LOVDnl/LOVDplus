@@ -443,6 +443,11 @@ if ($sCalcVersionFiles != $sCalcVersionDB) {
                      'INSERT INTO ' . TABLE_COLS . ' VALUES ("VariantOnTranscript/PolyPhen/HDIV",                      8, 200, 0, 0, 0, "PolyPhen HDIV",  "", "Effect of variant, predicted by PolyPhen, HDIV score.", "Effect of variant, predicted by PolyPhen, HDIV score.", "FLOAT UNSIGNED", "PolyPhen prediction, HDIV score|text|5", "", "", 0, 0, 1, 0, NOW(), NULL, NULL)',
                      'INSERT INTO ' . TABLE_COLS . ' VALUES ("VariantOnTranscript/PolyPhen/HVAR",                      8, 200, 0, 0, 0, "PolyPhen HVAR",  "", "Effect of variant, predicted by PolyPhen, HVAR score.", "Effect of variant, predicted by PolyPhen, HVAR score.", "FLOAT UNSIGNED", "PolyPhen prediction, HVAR score|text|5", "", "", 0, 0, 1, 0, NOW(), NULL, NULL)',
                  ),
+                 '3.0-10f' =>
+                 array(
+                     'INSERT INTO ' . TABLE_COLS . ' VALUES ("Screening/Father/Panel_coverage/Fraction",             255, 100, 0, 1, 0, "Panel coverage (father)", "", "The amount of coverage in the panel (paternal).", "The amount of coverage in the panel in this sequencing run (paternal).", "FLOAT UNSIGNED", "Panel coverage (father)||text|6", "", "", 0, 0, 1, 0, NOW(), NULL, NULL)',
+                     'INSERT INTO ' . TABLE_COLS . ' VALUES ("Screening/Mother/Panel_coverage/Fraction",             255, 100, 0, 1, 0, "Panel coverage (mother)", "", "The amount of coverage in the panel (maternal).", "The amount of coverage in the panel in this sequencing run (maternal).", "FLOAT UNSIGNED", "Panel coverage (mother)||text|6", "", "", 0, 0, 1, 0, NOW(), NULL, NULL)',
+                 ),
              );
 
     if ($sCalcVersionDB < lovd_calculateVersion('3.0-alpha-01')) {
