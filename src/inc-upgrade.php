@@ -5,8 +5,8 @@
  * LEIDEN OPEN VARIATION DATABASE (LOVD)
  *
  * Created     : 2010-01-14
- * Modified    : 2014-02-28
- * For LOVD    : 3.0-10
+ * Modified    : 2014-06-16
+ * For LOVD    : 3.0-11
  *
  * Copyright   : 2004-2014 Leiden University Medical Center; http://www.LUMC.nl/
  * Programmers : Ing. Ivo F.A.C. Fokkema <I.F.A.C.Fokkema@LUMC.nl>
@@ -447,6 +447,16 @@ if ($sCalcVersionFiles != $sCalcVersionDB) {
                  array(
                      'INSERT INTO ' . TABLE_COLS . ' VALUES ("Screening/Father/Panel_coverage/Fraction",             255, 100, 0, 1, 0, "Panel coverage (father)", "", "The amount of coverage in the panel (paternal).", "The amount of coverage in the panel in this sequencing run (paternal).", "FLOAT UNSIGNED", "Panel coverage (father)||text|6", "", "", 0, 0, 1, 0, NOW(), NULL, NULL)',
                      'INSERT INTO ' . TABLE_COLS . ' VALUES ("Screening/Mother/Panel_coverage/Fraction",             255, 100, 0, 1, 0, "Panel coverage (mother)", "", "The amount of coverage in the panel (maternal).", "The amount of coverage in the panel in this sequencing run (maternal).", "FLOAT UNSIGNED", "Panel coverage (mother)||text|6", "", "", 0, 0, 1, 0, NOW(), NULL, NULL)',
+                 ),
+                 '3.0-11' =>
+                 array(
+                     'UPDATE ' . TABLE_COLS . ' SET preg_pattern = "/^(chr(\\\\d{1,2}|[XYM])|(C(\\\\d{1,2}|[XYM])orf[\\\\d][\\\\dA-Z]*-|[A-Z][A-Z0-9]+-)?(C(\\\\d{1,2}|[XYM])orf[\\\\d][\\\\dA-Z]*|[A-Z][A-Z0-9-]+))_\\\\d{6}$/" WHERE id = "VariantOnGenome/DBID" AND preg_pattern = "/^(chr(\\\\d{1,2}|[XYM])|(C(\\\\d{1,2}|[XYM])orf[\\\\d][\\\\dA-Z]*-|[A-Z][A-Z0-9]+-)?(C(\\\\d{1,2}|[XYM])orf[\\\\d][\\\\dA-Z]*|[A-Z][A-Z0-9]+))_\\\\d{6}$/"',
+                     'UPDATE ' . TABLE_LOGS . ' SET name = "Event" WHERE name = "Error" AND event = "ColEdit" AND log LIKE "Column % reset to new defaults%"',
+                     'ALTER TABLE ' . TABLE_EFFECT . ' MODIFY COLUMN id TINYINT(2) UNSIGNED ZEROFILL NOT NULL',
+                     'ALTER TABLE ' . TABLE_VARIANTS . ' MODIFY COLUMN effectid TINYINT(2) UNSIGNED ZEROFILL',
+                     'ALTER TABLE ' . TABLE_VARIANTS_ON_TRANSCRIPTS . ' MODIFY COLUMN effectid TINYINT(2) UNSIGNED ZEROFILL',
+                     'ALTER TABLE ' . TABLE_CONFIG . ' MODIFY COLUMN mutalyzer_soap_url VARCHAR(100) NOT NULL DEFAULT "https://mutalyzer.nl/services"',
+                     'UPDATE ' . TABLE_CONFIG . ' SET mutalyzer_soap_url = "https://mutalyzer.nl/services" WHERE mutalyzer_soap_url = "http://www.mutalyzer.nl/2.0/services"',
                  ),
              );
 

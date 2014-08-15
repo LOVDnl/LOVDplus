@@ -4,8 +4,8 @@
  * LEIDEN OPEN VARIATION DATABASE (LOVD)
  *
  * Created     : 2009-10-22
- * Modified    : 2014-01-03
- * For LOVD    : 3.0-09
+ * Modified    : 2014-06-16
+ * For LOVD    : 3.0-11
  *
  * Copyright   : 2004-2014 Leiden University Medical Center; http://www.LUMC.nl/
  * Programmers : Ing. Ivo F.A.C. Fokkema <I.F.A.C.Fokkema@LUMC.nl>
@@ -241,7 +241,7 @@ $aTableSQL =
 
          , 'TABLE_EFFECT' =>
    'CREATE TABLE ' . TABLE_EFFECT . ' (
-    id TINYINT(2) UNSIGNED NOT NULL,
+    id TINYINT(2) UNSIGNED ZEROFILL NOT NULL,
     name VARCHAR(5) NOT NULL,
     PRIMARY KEY (id))
     ' . $sSettings
@@ -330,7 +330,7 @@ $aTableSQL =
    'CREATE TABLE ' . TABLE_VARIANTS . ' (
     id INT(10) UNSIGNED ZEROFILL NOT NULL AUTO_INCREMENT,
     allele TINYINT(2) UNSIGNED NOT NULL,
-    effectid TINYINT(2) UNSIGNED,
+    effectid TINYINT(2) UNSIGNED ZEROFILL,
     to_be_confirmed BOOLEAN NOT NULL DEFAULT 0,
     chromosome VARCHAR(2),
     position_g_start INT(10) UNSIGNED,
@@ -398,7 +398,7 @@ $aTableSQL =
    'CREATE TABLE ' . TABLE_VARIANTS_ON_TRANSCRIPTS . ' (
     id INT(10) UNSIGNED ZEROFILL NOT NULL,
     transcriptid SMALLINT(5) UNSIGNED ZEROFILL NOT NULL,
-    effectid TINYINT(2) UNSIGNED,
+    effectid TINYINT(2) UNSIGNED ZEROFILL,
     position_c_start MEDIUMINT,
     position_c_start_intron INT,
     position_c_end MEDIUMINT,
@@ -665,7 +665,7 @@ $aTableSQL =
     proxy_username VARCHAR(255) NOT NULL,
     proxy_password VARCHAR(255) NOT NULL,
     logo_uri VARCHAR(100) NOT NULL DEFAULT "gfx/LOVD3_logo145x50.jpg",
-    mutalyzer_soap_url VARCHAR(100) NOT NULL DEFAULT "http://www.mutalyzer.nl/2.0/services",
+    mutalyzer_soap_url VARCHAR(100) NOT NULL DEFAULT "https://mutalyzer.nl/services",
     omim_apikey VARCHAR(40) NOT NULL,
     send_stats BOOLEAN NOT NULL,
     include_in_listing BOOLEAN NOT NULL,

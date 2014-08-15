@@ -4,8 +4,8 @@
  * LEIDEN OPEN VARIATION DATABASE (LOVD)
  *
  * Created     : 2010-12-15
- * Modified    : 2014-01-13
- * For LOVD    : 3.0-09
+ * Modified    : 2014-08-06
+ * For LOVD    : 3.0-11
  *
  * Copyright   : 2004-2014 Leiden University Medical Center; http://www.LUMC.nl/
  * Programmers : Ing. Ivo F.A.C. Fokkema <I.F.A.C.Fokkema@LUMC.nl>
@@ -143,7 +143,6 @@ if (PATH_COUNT == 1 && ACTION == 'create') {
 
     require ROOT_PATH . 'class/object_genes.php';
     require ROOT_PATH . 'inc-lib-form.php';
-    require ROOT_PATH . 'class/REST2SOAP.php';
     $_DATA = new LOVD_Gene();
 
     $sPath = CURRENT_PATH . '?' . ACTION;
@@ -172,8 +171,9 @@ if (PATH_COUNT == 1 && ACTION == 'create') {
             } else {
                 // Gene Symbol must be unique.
                 // Enforced in the table, but we want to handle this gracefully.
-                $sSQL = 'SELECT COUNT(*) FROM ' . TABLE_GENES . ' WHERE id = ? OR id_hgnc = ?';
-                $aSQL = array($_POST['hgnc_id'], $_POST['hgnc_id']);
+                // When numeric, we search the id_hgnc field. When not, we search the id (gene symbol) field.
+                $sSQL = 'SELECT COUNT(*) FROM ' . TABLE_GENES . ' WHERE id' . (!ctype_digit($_POST['hgnc_id'])? '' : '_hgnc') . ' = ?';
+                $aSQL = array($_POST['hgnc_id']);
 
                 if ($_DB->query($sSQL, $aSQL)->fetchColumn()) {
                     lovd_errorAdd('hgnc_id', 'This gene entry is already present in this LOVD installation.');
@@ -186,7 +186,8 @@ if (PATH_COUNT == 1 && ACTION == 'create') {
                         $sGeneName = $aGeneInfo['name'];
                         $sChromLocation = $aGeneInfo['location'];
                         $sEntrez = $aGeneInfo['entrez_id'];
-                        $nOmim = $aGeneInfo['omim_id'];
+                        // OMIM ID is not always defined.
+                        $nOmim = (!isset($aGeneInfo['omim_id'])? '' : $aGeneInfo['omim_id']);
                         // For now, until NCBI has fixed their API, we can't create MT- genes (Mutalyzer cannot get a proper reference sequence).
                         if (substr($sSymbol, 0, 3) == 'MT-') {
                             lovd_errorAdd('', 'Unfortunately, due to some problems on the side of the NCBI, we are unable to handle variants on the mitochondrial genome at this time. When the NCBI has fixed the problem, we will implement support for MT genes.');
@@ -212,7 +213,8 @@ if (PATH_COUNT == 1 && ACTION == 'create') {
                 // Now we're still in the <BODY> so the progress bar can add <SCRIPT> tags as much as it wants.
                 flush();
 
-                $_MutalyzerWS = new REST2SOAP($_CONF['mutalyzer_soap_url']);
+                require ROOT_PATH . 'class/soap_client.php';
+                $_Mutalyzer = new LOVD_SoapClient();
 
                 // Get LRG if it exists
                 $aRefseqGenomic = array();
@@ -242,46 +244,79 @@ if (PATH_COUNT == 1 && ACTION == 'create') {
                 }
                 $aRefseqGenomic[] = $_SETT['human_builds'][$_CONF['refseq_build']]['ncbi_sequences'][$sChromosome];
 
-                // Get UDID from mutalyzer
                 $_BAR->setMessage('Making a gene slice of the NC...');
                 $_BAR->setProgress(49);
-                $sRefseqUD = $_MutalyzerWS->moduleCall('sliceChromosomeByGene', array('geneSymbol' => $sSymbol, 'organism' => 'Man', 'upStream' => '5000', 'downStream' => '2000'));
-                if (!is_string($sRefseqUD) || empty($sRefseqUD) || !preg_match('/^UD_/', $sRefseqUD)) {
-                    (empty($sRefseqUD)? $sRefseqUD = 'Empty array returned from SOAP' : false);
-                    $_MutalyzerWS->soapError('sliceChromosomeByGene', array('geneSymbol' => $sSymbol, 'organism' => 'Man', 'upStream' => '5000', 'downStream' => '2000'), $sRefseqUD);
+                // 2014-05-23; 3.0-11; Don't bother trying to get an UD for a mitochondrial gene, the NCBI uses different names and you will never get it...
+                if ($sChromosome == 'M') {
+                    // Instead of the UD, we just use the NC, it's small enough.
+                    $sRefseqUD = $_SETT['human_builds'][$_CONF['refseq_build']]['ncbi_sequences'][$sChromosome];
+                } else {
+                    // Get UD from mutalyzer.
+                    try {
+                        $sRefseqUD = $_Mutalyzer->sliceChromosomeByGene(array('geneSymbol' => $sSymbol, 'organism' => 'Man', 'upStream' => '5000', 'downStream' => '2000'))->sliceChromosomeByGeneResult;
+                    } catch (SoapFault $e) {
+                        lovd_soapError($e);
+                    }
                 }
 
-                // Get all transcripts and info
+                // Get all transcripts and info.
+                // FIXME: When changing code here, check in transcripts?create if you need to make changes there, too.
                 $_BAR->setMessage('Collecting all available transcripts...');
                 $_BAR->setProgress(66);
-                $aOutput = $_MutalyzerWS->moduleCall('getTranscriptsAndInfo', array('genomicReference' => $sRefseqUD, 'geneName' => $sSymbol));
-                // FIXME; deze IF-boom kan net wat simpeler denk ik, waardoor je niet twee keer hoeft te checken of $aOutput leeg is. Scheelt een niveau.
-                if (!is_array($aOutput) && !empty($aOutput)) {
-                    $_MutalyzerWS->soapError('getTranscriptsAndInfo', array('genomicReference' => $sRefseqUD, 'geneName' => $sSymbol), $aOutput);
+                // 2014-05-23; 3.0-11; For Mitochondrial genes, we won't be able to get any proper transcript information. Fake one.
+                // FIXME: Actually, using the incorrect gene symbol, we can get some info:
+                // (some info is missing apparently! - chromTransStart, chromTransEnd, ...)
+                if ($sChromosome == 'M') {
+                    $sRefseqNM = $sRefseqUD . '(' . $sSymbol . '_v001)';
+                    $aTranscripts = array($sRefseqNM);
+                    $aTranscriptsMutalyzer = array($sRefseqNM => '001');
+                    $aTranscriptsProtein = array($sRefseqNM => '');
+                    $aTranscriptsName = array($sRefseqNM => 'transcript variant 1'); // FIXME: Perhaps indicate this transcript is a fake one, reconstructed from the CDS?
+                    $aTranscriptsPositions = array($sRefseqNM =>
+                        array(
+                            'chromTransStart' => 0,
+                            'chromTransEnd' => 0,
+                            'cTransStart' => 0, // Should be 1, but because we don't know any of the other values, I will just leave all set to 0.
+                            'cTransEnd' => 0,
+                            'cCDSStop' => 0,
+                        ));
                 } else {
+                    try {
+                        // Can throw notice when TranscriptInfo is not present (when a gene recently has been renamed, for instance).
+                        $aTranscriptInfo = @$_Mutalyzer->getTranscriptsAndInfo(array('genomicReference' => $sRefseqUD, 'geneName' => $sSymbol))->getTranscriptsAndInfoResult->TranscriptInfo;
+                    } catch (SoapFault $e) {
+                        lovd_soapError($e);
+                    }
+                    if (empty($aTranscriptInfo)) {
+                        // No transcripts found.
+                        $aTranscriptInfo = array();
+                    }
+
                     $aTranscripts = array();
-                    if (!empty($aOutput)) {
-                        $aTranscriptsInfo = lovd_getElementFromArray('TranscriptInfo', $aOutput, '');
-                        $aTranscriptsName = array();
-                        $aTranscriptsMutalyzer = array();
-                        $aTranscriptsPositions = array();
-                        $aTranscriptsProtein = array();
-                        $nTranscripts = count($aTranscriptsInfo);
-                        $nProgress = 0.0;
-                        foreach($aTranscriptsInfo as $aTranscriptInfo) {
-                            $nProgress += (34/$nTranscripts);
-                            $aTranscriptInfo = $aTranscriptInfo['c'];
-                            $aTranscriptValues = lovd_getAllValuesFromArray('', $aTranscriptInfo);
-                            $_BAR->setMessage('Collecting ' . $aTranscriptValues['id'] . ' info...');
-                            if ($aTranscriptValues['id']) {
-                                $aTranscripts[] = $aTranscriptValues['id'];
-                                $aTranscriptsName[preg_replace('/\.\d+/', '', $aTranscriptValues['id'])] = str_replace($sGeneName . ', ', '', $aTranscriptValues['product']);
-                                $aTranscriptsMutalyzer[preg_replace('/\.\d+/', '', $aTranscriptValues['id'])] = str_replace($sSymbol . '_v', '', $aTranscriptValues['name']);
-                                $aTranscriptsPositions[$aTranscriptValues['id']] = array('chromTransStart' => $aTranscriptValues['chromTransStart'], 'chromTransEnd' => $aTranscriptValues['chromTransEnd'], 'cTransStart' => $aTranscriptValues['cTransStart'], 'cTransEnd' => $aTranscriptValues['sortableTransEnd'], 'cCDSStop' => $aTranscriptValues['cCDSStop']);
-                                $aTranscriptsProtein[$aTranscriptValues['id']] = lovd_getValueFromElement('proteinTranscript/id', $aTranscriptInfo);
-                            }
-                            $_BAR->setProgress(66 + $nProgress);
+                    $aTranscriptsName = array();
+                    $aTranscriptsMutalyzer = array();
+                    $aTranscriptsPositions = array();
+                    $aTranscriptsProtein = array();
+                    $nTranscripts = count($aTranscriptInfo);
+                    $nProgress = 0.0;
+                    foreach($aTranscriptInfo as $oTranscript) {
+                        $nProgress += (34/$nTranscripts);
+                        $_BAR->setMessage('Collecting ' . $oTranscript->id . ' info...');
+                        if ($oTranscript->id) {
+                            $aTranscripts[] = $oTranscript->id;
+                            $aTranscriptsName[preg_replace('/\.\d+/', '', $oTranscript->id)] = str_replace($sGeneName . ', ', '', $oTranscript->product);
+                            $aTranscriptsMutalyzer[preg_replace('/\.\d+/', '', $oTranscript->id)] = str_replace($sSymbol . '_v', '', $oTranscript->name);
+                            $aTranscriptsPositions[$oTranscript->id] =
+                                array(
+                                    'chromTransStart' => (isset($oTranscript->chromTransStart)? $oTranscript->chromTransStart : 0),
+                                    'chromTransEnd' => (isset($oTranscript->chromTransEnd)? $oTranscript->chromTransEnd : 0),
+                                    'cTransStart' => $oTranscript->cTransStart,
+                                    'cTransEnd' => $oTranscript->sortableTransEnd,
+                                    'cCDSStop' => $oTranscript->cCDSStop,
+                                );
+                            $aTranscriptsProtein[$oTranscript->id] = (!isset($oTranscript->proteinTranscript)? '' : $oTranscript->proteinTranscript->id);
                         }
+                        $_BAR->setProgress(66 + $nProgress);
                     }
                 }
                 $_BAR->setProgress(100);
@@ -415,10 +450,14 @@ if (PATH_COUNT == 1 && ACTION == 'create') {
                 $aSuccessTranscripts = array();
                 if (!empty($_POST['active_transcripts'])) {
                     foreach($_POST['active_transcripts'] as $sTranscript) {
+                        // 2014-06-11; 3.0-11; Add check on $sTranscript to make sure a selected "No transcripts found" doens't cause a lot of errors here.
+                        if (!$sTranscript) {
+                            continue;
+                        }
                         // Gather transcript information from session.
-                        $nMutalyzerID = $zData['transcriptMutalyzer'][preg_replace('/\.\d+/', '', $sTranscript)];
+                        $nMutalyzerID = $zData['transcriptMutalyzer'][preg_replace('/\.\d+$/', '', $sTranscript)];
                         $sTranscriptProtein = $zData['transcriptsProtein'][$sTranscript];
-                        $sTranscriptName = $zData['transcriptNames'][preg_replace('/\.\d+/', '', $sTranscript)];
+                        $sTranscriptName = $zData['transcriptNames'][preg_replace('/\.\d+$/', '', $sTranscript)];
                         $aTranscriptPositions = $zData['transcriptPositions'][$sTranscript];
 
                         // Add transcript to gene.
@@ -531,7 +570,6 @@ if (PATH_COUNT == 2 && preg_match('/^[a-z][a-z0-9#@-]+$/i', rawurldecode($_PE[1]
 
     require ROOT_PATH . 'class/object_genes.php';
     require ROOT_PATH . 'inc-lib-form.php';
-    require ROOT_PATH . 'class/REST2SOAP.php';
     $_DATA = new LOVD_Gene();
     $zData = $_DATA->loadEntry($sID);
 
@@ -580,12 +618,13 @@ if (PATH_COUNT == 2 && preg_match('/^[a-z][a-z0-9#@-]+$/i', rawurldecode($_PE[1]
                             );
 
             if (empty($zData['refseq_UD'])) {
-                $_MutalyzerWS = new REST2SOAP($_CONF['mutalyzer_soap_url']);
-                $sRefseqUD = $_MutalyzerWS->moduleCall('sliceChromosomeByGene', array('geneSymbol' => $sID, 'organism' => 'Man', 'upStream' => '5000', 'downStream' => '2000'));
-                if (is_string($sRefseqUD) && substr($sRefseqUD, 0, 3) == 'UD_') {
-                    $aFields[] = 'refseq_UD';
+                require ROOT_PATH . 'class/soap_client.php';
+                $_Mutalyzer = new LOVD_SoapClient();
+                try {
+                    $sRefseqUD = $_Mutalyzer->sliceChromosomeByGene(array('geneSymbol' => $sID, 'organism' => 'Man', 'upStream' => '5000', 'downStream' => '2000'))->sliceChromosomeByGeneResult;
                     $_POST['refseq_UD'] = $sRefseqUD;
-                }
+                    $aFields[] = 'refseq_UD';
+                } catch (SoapFault $e) {} // Silent error.
             }
 
             // Prepare values.

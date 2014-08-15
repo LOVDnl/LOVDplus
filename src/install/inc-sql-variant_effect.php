@@ -4,11 +4,12 @@
  * LEIDEN OPEN VARIATION DATABASE (LOVD)
  *
  * Created     : 2012-04-13
- * Modified    : 2012-04-13
- * For LOVD    : 3.0-beta-04
+ * Modified    : 2014-06-16
+ * For LOVD    : 3.0-11
  *
- * Copyright   : 2004-2012 Leiden University Medical Center; http://www.LUMC.nl/
- * Programmer  : Ing. Ivar C. Lugtenburg <I.C.Lugtenburg@LUMC.nl>
+ * Copyright   : 2004-2014 Leiden University Medical Center; http://www.LUMC.nl/
+ * Programmers : Ing. Ivar C. Lugtenburg <I.C.Lugtenburg@LUMC.nl>
+ *               Ing. Ivo F.A.C. Fokkema <I.F.A.C.Fokkema@LUMC.nl>
  *
  *
  * This file is part of LOVD.
@@ -30,18 +31,18 @@
 
 $aVariantEffectSQL =
          array(
-                'INSERT INTO ' . TABLE_EFFECT . ' VALUES("11", "-/-"),
-                                                        ("13", "-/-?"),
-                                                        ("15", "-/?"),
-                                                        ("17", "-/+?"),
-                                                        ("19", "-/+"),
-                                                        ("10", "-/ar"),
-                                                        ("00", "ar/ar"),
+                'INSERT INTO ' . TABLE_EFFECT . ' VALUES("00", "ar/ar"),
                                                         ("01", "ar/-"),
                                                         ("03", "ar/-?"),
                                                         ("05", "ar/?"),
                                                         ("07", "ar/+?"),
                                                         ("09", "ar/+"),
+                                                        ("10", "-/ar"),
+                                                        ("11", "-/-"),
+                                                        ("13", "-/-?"),
+                                                        ("15", "-/?"),
+                                                        ("17", "-/+?"),
+                                                        ("19", "-/+"),
                                                         ("30", "-?/ar"),
                                                         ("31", "-?/-"),
                                                         ("33", "-?/-?"),

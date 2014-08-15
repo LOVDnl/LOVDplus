@@ -4,10 +4,10 @@
  * LEIDEN OPEN VARIATION DATABASE (LOVD)
  *
  * Created     : 2011-05-12
- * Modified    : 2012-11-28
- * For LOVD    : 3.0-beta-11
+ * Modified    : 2014-07-15
+ * For LOVD    : 3.0-11
  *
- * Copyright   : 2004-2012 Leiden University Medical Center; http://www.LUMC.nl/
+ * Copyright   : 2004-2014 Leiden University Medical Center; http://www.LUMC.nl/
  * Programmers : Ing. Ivar C. Lugtenburg <I.C.Lugtenburg@LUMC.nl>
  *               Ing. Ivo F.A.C. Fokkema <I.F.A.C.Fokkema@LUMC.nl>
  *
@@ -196,6 +196,9 @@ class LOVD_TranscriptVariant extends LOVD_Custom {
             $this->aCheckMandatory[] = $sPrefix . 'effect_reported';
             if ($_AUTH['level'] >= LEVEL_CURATOR) {
                 $this->aCheckMandatory[] = $sPrefix . 'effect_concluded';
+            } elseif (isset($aData[$sPrefix . 'effect_reported']) && $aData[$sPrefix . 'effect_reported'] === '0') {
+                // Submitters must fill in the variant effect field; '0' is not allowed for them.
+                unset($aData[$sPrefix . 'effect_reported']);
             }
         }
 
@@ -255,7 +258,7 @@ class LOVD_TranscriptVariant extends LOVD_Custom {
 
     function insertAll ($aData, $aFields = array())
     {
-        global $_AUTH;
+        global $_AUTH, $_SETT;
 
         foreach (array_keys($this->aTranscripts) as $nTranscriptID) {
             if (empty($aData['ignore_' . $nTranscriptID])) {
@@ -265,7 +268,7 @@ class LOVD_TranscriptVariant extends LOVD_Custom {
                     }
                 }
                 $aData['transcriptid'] = $nTranscriptID;
-                $aData['effectid'] = $aData[$nTranscriptID . '_effect_reported'] . ($_AUTH['level'] >= LEVEL_CURATOR? $aData[$nTranscriptID . '_effect_concluded'] : '5');
+                $aData['effectid'] = $aData[$nTranscriptID . '_effect_reported'] . ($_AUTH['level'] >= LEVEL_CURATOR? $aData[$nTranscriptID . '_effect_concluded'] : substr($_SETT['var_effect_default'], -1));
                 $aData['position_c_start'] = $aData[$nTranscriptID . '_position_c_start'];
                 $aData['position_c_start_intron'] = $aData[$nTranscriptID . '_position_c_start_intron'];
                 $aData['position_c_end'] = $aData[$nTranscriptID . '_position_c_end'];

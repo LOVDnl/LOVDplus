@@ -5,6 +5,65 @@
  *************/
 
 /**************************
+ * 3.0 Build 12 (r4??)
+ * 2014-??-??
+ *********/
+ * Fixed bug; When manually mapping a variant to a transcript, transcripts on
+   the reverse strand did not display the correctly calculated distance.
+ * Fixed bug; The number of non-public variants, shown on the gene homepage, was
+   always set to 0 for the public users, while it was meant to show the public
+   whether a gene database is really empty or not.
+ * Fixed bug; When no individuals with public variants are stored, the field for
+   this value on the gene homepage was empty, instead of showing a 0.
+
+
+/**************************
+ * 3.0 Build 11 (r463)
+ * 2014-08-07
+ *********/
+ * Checkbox values are now checked properly when importing data.
+ * Fixed bug; DB-IDs created for genes containing a hyphen followed by a number,
+   were rejected by LOVD.
+   (thanks to Efstathios Papachristos, Centogene, Germany, for reporting)
+ * Fixed bug; Due to changes in the ORCID API you could no longer register using
+   an ORCID ID.
+   (thanks to Sanna Matilainen, University of Helsinki, Finland, for reporting)
+ * Fixed bug; Selecting the "No transcripts available" note when creating a gene
+   that has no annotated transcripts, resulted in a fatal error.
+ * Fixed bug; Transcripts created from an NG reference sequence sometimes caused
+   the variant mapper to loop forever.
+ * Fixed bug; Some event log entries related to column edits were marked as er-
+   rors by mistake.
+ * Added "Not classified" as a value for the variant effect option list, which
+   is selected by default but not a valid input for submitters, forcing them to
+   make a conscious choice for a value for this field, and therefore showing the
+   difference between "Effect unknown" and "Not classified".
+ * When users try to reset the password but type in the wrong username, this is
+   now logged, so users can be helpt more easily. Also, it is mentioned that if
+   they do not receive an email, it might be because the username they entered
+   is incorrect.
+ * From 25 diseases or more, the diseases list on the individuals form shows a
+   link to the full disease list which can be searched and browsed in order to
+   find the disease abbreviation needed for the form.
+ * Included version 3.0-11 of the official LOVD Reference Sequence Parser
+   script.
+   - The user can now choose whether the gene-specific NG reference sequence is
+     used, if configured for that specific gene, or the chromosomal NC reference
+     sequence.
+ * The Configuration area is slightly restyled to mirror the view of the Setup
+   area, and includes the names and email addresses of the managers of the LOVD
+   installation, so Curators know who to turn to for help.
+ * Fixed bug; Variants with many genes associated with it could not be edited,
+   because MySQL applied a limit to the length of the gene list.
+ * Fixed bug; The variant mapper sometimes didn't return any RNA or Protein
+   prediction.
+ * Due to the HGNC changing their REST webservice output format, there were pro-
+   blems with creating multiple genes starting from Thursday, July 31th.
+ * Rewrote all communication with Mutalyzer to the new standard, which will be
+   required starting from the next Mutalyzer release, planned in September 2014.
+
+
+/**************************
  * 3.0 Build 10 (r424)
  * 2014-04-28
  *********/
