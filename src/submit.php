@@ -1026,7 +1026,9 @@ if (PATH_COUNT == 4 && $_PE[1] == 'finish' && in_array($_PE[2], array('individua
     }
 
     // Send mail.
-    $bMail = lovd_sendMail($aTo, $sSubject, $sBody, $_SETT['email_headers'], $_CONF['send_admin_submissions'], $aCC);
+    // Diagnostics: Better not send email at this time, users get confused.
+    //$bMail = lovd_sendMail($aTo, $sSubject, $sBody, $_SETT['email_headers'], $_CONF['send_admin_submissions'], $aCC);
+    $bMail = true;
 
     // FIXME; When messaging system is built in, maybe queue message for curators?
     if ($bMail) {

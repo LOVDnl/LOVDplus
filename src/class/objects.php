@@ -1026,7 +1026,7 @@ class LOVD_Object {
             // There is talk about a possible race condition using this technique on the mysql_num_rows man page, but I could find no evidence of it's existence on InnoDB tables.
             // Just to be sure, I'm implementing a serializable transaction, which should lock the table between the two SELECT queries to ensure proper results.
             // Last checked 2010-01-25, by Ivo Fokkema.
-            $_DB->query('SET TRANSACTION ISOLATION LEVEL SERIALIZABLE');
+//            $_DB->query('SET TRANSACTION ISOLATION LEVEL SERIALIZABLE');
             $_DB->beginTransaction();
 
             // Build argument list.

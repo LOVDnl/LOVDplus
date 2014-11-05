@@ -4,8 +4,8 @@
  * LEIDEN OPEN VARIATION DATABASE (LOVD)
  *
  * Created     : 2014-04-03
- * Modified    : 2014-04-03
- * For LOVD    : 3.0-10
+ * Modified    : 2014-08-28
+ * For LOVD    : 3.0-12
  *
  * Copyright   : 2004-2014 Leiden University Medical Center; http://www.LUMC.nl/
  * Programmer  : Ing. Ivo F.A.C. Fokkema <I.F.A.C.Fokkema@LUMC.nl>
@@ -50,7 +50,6 @@ if (!$aIndividuals) {
     exit;
 }
 
-////////////////////////////////////////////////////////////////////////////////
 // Loop through the files in the dir and try and find IDs... It's stupid, but we have to open them all...
 $h = @opendir($sDir);
 if (!$h) {
@@ -86,6 +85,6 @@ while (($sFile = readdir($h)) !== false) {
 // Report what we have left.
 if (count($aIndividuals)) {
     print('The following individual(s) have no ZIS ID yet, and I can\'t locate one:' . "\n" .
-        implode(', ', array_keys($aIndividuals)) . "\n");
+        implode("\n", array_keys($aIndividuals)) . "\n");
 }
 ?>

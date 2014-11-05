@@ -4,8 +4,8 @@
  * LEIDEN OPEN VARIATION DATABASE (LOVD)
  *
  * Created     : 2010-02-18
- * Modified    : 2014-03-13
- * For LOVD    : 3.0-10
+ * Modified    : 2014-09-05
+ * For LOVD    : 3.0-12
  *
  * Copyright   : 2004-2014 Leiden University Medical Center; http://www.LUMC.nl/
  * Programmers : Ing. Ivo F.A.C. Fokkema <I.F.A.C.Fokkema@LUMC.nl>
@@ -52,6 +52,7 @@ $aNeededLevel =
                 'Log' => LEVEL_MANAGER,
                 'Phenotype' => 0,
                 'Screening' => 0,
+                'ScreeningMOD' => 0,
                 'Shared_Column' => LEVEL_CURATOR,
                 'Transcript' => 0,
                 'Transcript_Variant' => 0,
