@@ -4,7 +4,7 @@
  * LEIDEN OPEN VARIATION DATABASE (LOVD)
  *
  * Created     : 2010-12-21
- * Modified    : 2014-08-19
+ * Modified    : 2014-09-12
  * For LOVD    : 3.0-12
  *
  * Copyright   : 2004-2014 Leiden University Medical Center; http://www.LUMC.nl/
@@ -32,11 +32,160 @@
  *************/
 
 define('ROOT_PATH', './');
+define('FORMAT_ALLOW_TEXTPLAIN', true); // DIAGNOSTICS: To allow automatic data loading.
 require ROOT_PATH . 'inc-init.php';
 
 if ($_AUTH) {
     // If authorized, check for updates.
     require ROOT_PATH . 'inc-upgrade.php';
+}
+
+// DIAGNOSTICS: AUTO LOAD VARIANT FILES.
+// Autoload is random string, just an extra requirement, since we're giving away Manager authorization here...
+if (PATH_COUNT == 2 && $_PE[1] == 'upload' && ACTION == 'create' && isset($_GET['autoload']) && $_GET['autoload'] == 'auth9hj9@U' && FORMAT == 'text/plain') {
+    // This script will be called from localhost, and the output will be parsed.
+    // That is the easiest I think, because then at this point I don't need to
+    // change the HTML output to something else. All output that should go
+    // directly through the parser, should be prepended with a colon (:).
+    $sPath = '/data/DIV5/KG/koppelingen/MAGPIE_LOVD';
+
+    // First, check if the database is free, and not currently uploading anything.
+    // The upload does not put a permanent lock that we could detect. By monitoring the database, we will sometimes find a lock active:
+    // show open tables where `In_use` > 0;
+    //+-------------------+---------------------------------+--------+-------------+
+    //| Database          | Table                           | In_use | Name_locked |
+    //+-------------------+---------------------------------+--------+-------------+
+    //| lovd3_diagnostics | lovd_KG_variants_on_transcripts |      1 |           0 |
+    //| lovd3_diagnostics | lovd_KG_transcripts             |      1 |           0 |
+    //| lovd3_diagnostics | lovd_KG_variants                |      1 |           0 |
+    //+-------------------+---------------------------------+--------+-------------+
+    //or
+    //+-------------------+------------------+--------+-------------+
+    //| Database          | Table            | In_use | Name_locked |
+    //+-------------------+------------------+--------+-------------+
+    //| lovd3_diagnostics | lovd_KG_variants |      1 |           0 |
+    //+-------------------+------------------+--------+-------------+
+    //or, unfortunately,
+    //Empty set (0.00 sec)
+    // So instead, we will monitor all connections. If a different connection exists, we will wait for a bit, and check again.
+    // If still that connection persists, we will do nothing, since this server is dedicated anyway...
+    $nMaxSecondsToWait = 10;
+    $nConnectionID = $_DB->query('SELECT CONNECTION_ID()')->fetchColumn();
+    for ($i = 0; $i < $nMaxSecondsToWait; $i ++) {
+        $aConnections = $_DB->query('SHOW FULL PROCESSLIST')->fetchAllAssoc();
+        $nConnections = count($aConnections);
+        if ($nConnections == 1) {
+            // Just me, we can continue.
+            break;
+        } elseif ($nConnections > 2) {
+            // Too many connections; me and at least two others. Quit here.
+            die(':Too many currently open connections to database: ' . ($nConnections - 1) . ".\n");
+        }
+
+        // Let's have a look at that other connection. This code is written assuming we have two connections here (as defined in the code above).
+        $nKey = ($aConnections[0]['Id'] == $nConnectionID? 1 : 0);
+        $aConnection = $aConnections[$nKey];
+        // Only if that other connection sleeps, we'll check again in a second. Otherwise, we conclude the database is busy, and we die.
+        if ($aConnection['Command'] != 'Sleep' && $aConnection['State'] !== '' && $aConnection['Info']) {
+            // This thing seems busy. This might mean there's a current import, so in the future, we might want to die silently here.
+            // But for now, let's see what we see.
+            die(':Currently active concurrent connection to database, stopping:' . "\n:" . implode('|', $aConnection) . "\n");
+        }
+        //print(':Currently active concurrent connection is sleeping???:' . "\n:" . implode('|', $aConnection) . "\n");
+        sleep(1);
+    }
+    if ($i > 0) {
+        print(':Waited ' . $i . ' seconds for sleeping connection, now continuing.' . "\n");
+    }
+
+    // Then, get list of screenings, with Miracle IDs, that still need to get their variant data uploaded.
+    $aScreenings = $_DB->query('SELECT i.id_miracle, s.id FROM ' . TABLE_INDIVIDUALS . ' AS i INNER JOIN ' . TABLE_SCREENINGS . ' AS s ON (i.id = s.individualid) LEFT OUTER JOIN ' . TABLE_SCR2VAR . ' AS s2v ON (s.id = s2v.screeningid) WHERE s2v.variantid IS NULL')->fetchAllCombine();
+    // Nothing to do? Bye...
+    if (!$aScreenings) {
+        exit;
+    }
+
+    // Loop through the files in the dir and try and find IDs... It's stupid, but we have to open them all...
+    $h = @opendir($sPath);
+    if (!$h) {
+        die(':Can\'t open directory.' . "\n");
+    }
+
+    while (($sFile = readdir($h)) !== false) {
+        if ($sFile{0} == '.' || preg_match('/^(hiseq2.+|ingeladen|(Child|Patient)_\d+\.(magpie_report\.pdf|meta\.lovd))$/', $sFile)) {
+            // Current dir, parent dir, hidden files, and files we know to ignore.
+            continue;
+        }
+        if (!preg_match('/^(?:Child|Patient)_(\d+).data.lovd$/', $sFile, $aRegs)) {
+            // Any non-matching file.
+            print(':Ignoring file, does not conform to file name format: ' . $sFile . ".\n");
+            continue;
+        }
+
+        $nMiracleID = $aRegs[1];
+
+        // Check if this Miracle ID has an open submission. Don't bother checking the file, when there's no submission to dump the contents in.
+        if (!isset($aScreenings[$nMiracleID])) {
+            // Silently continue...
+            continue;
+        }
+
+        // Try and open the file, check the first line if it conforms to the standard, and send on to import.
+        $sFileToUpload = $sPath . '/' . $sFile;
+        $f = @fopen($sFileToUpload, 'r');
+        if ($f === false) {
+            die(':Error opening file: ' . $sFile . ".\n");
+        }
+        $sHeader = fgets($f, 29);
+        if ($sHeader != "#chromosome\tposition\tREF\tALT") {
+            // Not a fatal error, because otherwise we will never import anything...
+            print(':Ignoring file, does not conform to format: ' . $sFile . ".\n");
+            continue;
+        }
+        fclose($f);
+
+        // OK, call for upload of this file.
+        $_GET['type'] = 'SeattleSeq';
+        $_GET['target'] = $aScreenings[$nMiracleID];
+
+        // Load necessary authorisation.
+        $_AUTH = $_DB->query('SELECT * FROM ' . TABLE_USERS . ' WHERE id = 0')->fetchAssoc();
+        $_AUTH['curates']      = array();
+        $_AUTH['collaborates'] = array();
+        $_AUTH['level'] = LEVEL_MANAGER; // To pass the authorization check downstream.
+
+        // Fake the POSTing of a file.
+        $_POST = array_merge($_POST,
+            array(
+                'variant_file' => $sFileToUpload,
+                'hg_build' => $_CONF['refseq_build'],
+                'dbSNP_column' => '1',
+                'autocreate' => '',
+                'owned_by' => $_AUTH['id'],
+                'statusid' => STATUS_OK,
+                'submit' => 'Upload SeattleSeq file',
+            ));
+        $_FILES =
+            array(
+                'variant_file' =>
+                    array(
+                        'name' => $sFile,
+                        'tmp_name' => $sFileToUpload,
+                        'size' => filesize($sFileToUpload),
+                        'error' => 0,
+                    )
+            );
+        break;
+    }
+
+    // We succeeded, when we've got LOVD authorization. Otherwise, apparently there's nothing to upload.
+    if ($_AUTH && (int) $_AUTH['id'] === 0) {
+        print(':Preparing to upload ' . $sFileToUpload . ' into screening ' . $aScreenings[$nMiracleID] . ".\n" .
+              ':Current time: ' . date('Y-m-d H:i:s') . ".\n");
+    } else {
+        // Silently die...
+        exit;
+    }
 }
 
 
@@ -1203,7 +1352,7 @@ if (PATH_COUNT == 2 && $_PE[1] == 'upload' && ACTION == 'create') {
     }
     array_unshift($aDbSNPColumns, 'Don\'t import dbSNP links');
 
-    if (POST) {
+    if (POST || $_FILES) { // || $_FILES is in use for the automatic loading of files.
         // The form has been submitted. Detect any errors in the file upload.
         if (empty($_FILES['variant_file']) || ($_FILES['variant_file']['error'] > 0 && $_FILES['variant_file']['error'] < 4)) {
             lovd_errorAdd('', 'There was a problem with the file transfer. Please try again. The file cannot be larger than ' . round($nMaxSize/pow(1024, 2), 1) . ' MB' . ($nMaxSize == $nMaxSizeLOVD? '' : ', due to restrictions on this server') . '.');
@@ -1259,6 +1408,7 @@ if (PATH_COUNT == 2 && $_PE[1] == 'upload' && ACTION == 'create') {
             session_write_close();
 
             $_DB->beginTransaction();
+            $_DB->query('SET foreign_key_checks=0');
 
 
 
@@ -2140,6 +2290,7 @@ if (PATH_COUNT == 2 && $_PE[1] == 'upload' && ACTION == 'create') {
                     }
                 }
 
+                $_DB->query('SET foreign_key_checks=1');
                 if ($_POST['statusid'] >= STATUS_MARKED) {
                     $_BAR->setMessage('Setting last updated dates for affected genes...');
                     lovd_setUpdatedDate(array_keys($aGenesChecked));
