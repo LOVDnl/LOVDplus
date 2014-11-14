@@ -136,8 +136,8 @@ class LOVD_Gene extends LOVD_Object {
                         'created_date_' => 'Date created',
                         'edited_by_' => array('Last edited by', LEVEL_COLLABORATOR),
                         'edited_date_' => array('Date last edited', LEVEL_COLLABORATOR),
-                        'updated_by_' => array('Last updated by', LEVEL_COLLABORATOR),
-                        'updated_date_' => 'Date last updated',
+//                        'updated_by_' => array('Last updated by', LEVEL_COLLABORATOR),
+//                        'updated_date_' => 'Date last updated',
                         'version_' => 'Version',
                         'TableEnd_General' => '',
                         'HR_1' => '',
@@ -190,9 +190,11 @@ class LOVD_Gene extends LOVD_Object {
                 'uniq_variants' => array(
                     'view' => array('Unique variants', 70),
                     'db'   => array('uniq_variants', 'DESC', 'INT_UNSIGNED')),
+/*
                 'updated_date_' => array(
                     'view' => array('Last updated', 110),
                     'db'   => array('g.updated_date', 'DESC', true)),
+*/
                 'diseases_' => array(
                     'view' => array('Associated with diseases', 200),
                     'db'   => array('diseases_', false, 'TEXT')),

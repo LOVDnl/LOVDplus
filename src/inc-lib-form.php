@@ -712,6 +712,8 @@ function lovd_sendMailFormatAddresses ($aRecipients, & $aEmailsUsed)
 function lovd_setUpdatedDate ($aGenes)
 {
     // Updates the updated_date field of the indicated gene.
+    return count($aGenes);
+
     global $_AUTH, $_DB;
 
     if (!$aGenes) {
