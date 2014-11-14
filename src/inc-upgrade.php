@@ -462,6 +462,10 @@ if ($sCalcVersionFiles != $sCalcVersionDB) {
                  array(
                      'INSERT INTO ' . TABLE_SOURCES . ' VALUES ("pubmed_gene", "http://www.ncbi.nlm.nih.gov/pubmed?LinkName=gene_pubmed&from_uid={{ ID }}")',
                  ),
+                 '3.0-11c' =>
+                 array(
+                     'UPDATE ' . TABLE_ANALYSES . ' SET filters = REPLACE(filters, "remove_by_indb_count_ug_gte_2", "remove_by_indb_count_ug_gte_2\r\nremove_with_any_frequency_gt_2") WHERE id = 1',
+                 ),
              );
 
     if ($sCalcVersionDB < lovd_calculateVersion('3.0-alpha-01')) {
