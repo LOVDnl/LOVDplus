@@ -1084,7 +1084,7 @@ if (POST) {
                         if (!$bGeneInDB) {
                             // We're inserting this variant, but the gene does not exist yet, so we're not sure about the exact columns that will be active. For variants, this is fatal.
                             //   Actually, this error will always come with the error that the gene mentioned in the file is not yet inserted and that it can't be inserted by this script, right?
-                            lovd_errorAdd('import', 'Error (' . $sCurrentSection . ', line ' . $nLine . '): The gene this belonging to this variant entry is yet to be inserted into the database. First create the gene and set up the custom columns, then import the variants.');
+                            lovd_errorAdd('import', 'Error (' . $sCurrentSection . ', line ' . $nLine . '): The gene belonging to this variant entry is yet to be inserted into the database. First create the gene and set up the custom columns, then import the variants.');
                         }
 
                         // Entry might still have thrown an error, but because we want to draw out all errors, we will store this one in case it's referenced to.
