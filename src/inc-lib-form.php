@@ -387,11 +387,11 @@ function lovd_fetchDBID ($aData)
                 $sSQL .= ' AND vog.position_g_start = ?';
                 $aArgs = array_merge($aArgs, array($aData['position_g_start']));
             }
-            if (!empty($aTranscriptVariants)) {
+        }
+        if (false && !empty($aTranscriptVariants)) {
+            if (!empty($sGenomeVariant)) {
                 $sSQL .= ' UNION ';
             }
-        }
-        if (!empty($aTranscriptVariants)) {
             // 2013-03-01; 3.0-03; To speed up this query in large databases, it has been optimized and rewritten using INNER JOIN instead of LEFT OUTER JOIN, requiring a UNION.
             $sSQL .= 'SELECT DISTINCT vog.`VariantOnGenome/DBID` ' .
                      'FROM ' . TABLE_VARIANTS . ' AS vog INNER JOIN ' . TABLE_VARIANTS_ON_TRANSCRIPTS . ' AS vot USING (id) ' .
@@ -421,9 +421,11 @@ function lovd_fetchDBID ($aData)
                 // Check this option, if it doesn't pass we'll skip it now.
                 $aDataCopy = $aData;
                 $aDataCopy['VariantOnGenome/DBID'] = $sDBIDoption;
+                /* Diagnostics: Assuming all suggestions are correct.
                 if (!lovd_checkDBID($aDataCopy)) {
                     continue;
                 }
+                */
                 if ($sDBIDoptionSymbol == $sDBIDnewSymbol && $sDBIDoptionNumber < $sDBIDnewNumber && $sDBIDoptionNumber != '000000') {
                     // If the symbol of the option is the same, but the number is lower(not including 000000), take it.
                     $sDBID = $sDBIDoption;
