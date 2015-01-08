@@ -4,8 +4,8 @@
  * LEIDEN OPEN VARIATION DATABASE (LOVD)
  *
  * Created     : 2010-01-15
- * Modified    : 2014-07-31
- * For LOVD    : 3.0-11
+ * Modified    : 2014-12-11
+ * For LOVD    : 3.0-13
  *
  * Copyright   : 2004-2014 Leiden University Medical Center; http://www.LUMC.nl/
  * Programmers : Jerry Hoogenboom <J.Hoogenboom@LUMC.nl>
@@ -345,7 +345,8 @@ if (!empty($aVariants)) {
     $aTranscriptData = array();
 
     try {
-        $aTranscriptsWithinRange = $_Mutalyzer->getTranscriptsMapping(array('build' => $_CONF['refseq_build'], 'chrom' => 'chr' . $sChromosome, 'pos1' => $nStart, 'pos2' => $nEnd, 'method' => 1))->getTranscriptsMappingResult->TranscriptMappingInfo;
+        // Can throw notice when TranscriptMappingInfo is not present (when no transcripts are available, for instance).
+        $aTranscriptsWithinRange = @$_Mutalyzer->getTranscriptsMapping(array('build' => $_CONF['refseq_build'], 'chrom' => 'chr' . $sChromosome, 'pos1' => $nStart, 'pos2' => $nEnd, 'method' => 1))->getTranscriptsMappingResult->TranscriptMappingInfo;
     } catch (SoapFault $e) {
         // Call failed, due to network problems, perhaps? Don't run the mapping script now!
         define('MAPPING_NO_RESTART', true);
@@ -466,8 +467,10 @@ if (!empty($aVariants)) {
 
                                 if (!$sProtein && !empty($aVariantsOnProtein)) {
                                     foreach ($aVariantsOnProtein as $sVariantOnProtein) {
-                                        if (($nPos = strpos($sVariantOnProtein, '_i' . $sTranscriptNum . '):p.')) !== false) {
-                                            $sProtein = substr($sVariantOnProtein, $nPos + strlen('_i' . $sTranscriptNum . '):'));
+                                        // 2014-12-05; 3.0-13; Fixed bug: When multiple genes exist in the UD, make sure we are reading out the right protein change here.
+                                        if (($nPos = strpos($sVariantOnProtein, $aTranscript['gene'] . '_i' . $sTranscriptNum . '):p.')) !== false) {
+                                            // FIXME: Since this code is the same as the code used for transcripts newly created in LOVD, better make a function out of it.
+                                            $sProtein = substr($sVariantOnProtein, $nPos + strlen($aTranscript['gene'] . '_i' . $sTranscriptNum . '):'));
                                             if ($sProtein == 'p.?') {
                                                 $sRNA = 'r.?';
                                             } elseif ($sProtein == 'p.(=)') {
@@ -733,9 +736,10 @@ if (!empty($aVariants)) {
 
                     if (!$sProtein && !empty($aVariantsOnProtein)) {
                         foreach ($aVariantsOnProtein as $sVariantOnProtein) {
-                            if (($nPos = strpos($sVariantOnProtein, '_i' . $aFieldsTranscript['id_mutalyzer'] . '):p.')) !== false) {
+                            // 2014-12-05; 3.0-13; Fixed bug: When multiple genes exist in the UD, make sure we are reading out the right protein change here.
+                            if (($nPos = strpos($sVariantOnProtein, $aTranscript['gene'] . '_i' . $aFieldsTranscript['id_mutalyzer'] . '):p.')) !== false) {
                                 // FIXME: Since this code is the same as the code used for transcripts already in LOVD, better make a function out of it.
-                                $sProtein = substr($sVariantOnProtein, $nPos + strlen('_i' . $aFieldsTranscript['id_mutalyzer'] . '):'));
+                                $sProtein = substr($sVariantOnProtein, $nPos + strlen($aTranscript['gene'] . '_i' . $aFieldsTranscript['id_mutalyzer'] . '):'));
                                 if ($sProtein == 'p.?') {
                                     $sRNA = 'r.?';
                                 } elseif ($sProtein == 'p.(=)') {

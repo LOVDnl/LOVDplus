@@ -1,3 +1,4 @@
+% Requires texlive-latex-recommended and texlive-fonts-recommended packages (Debian, Ubuntu).
 \documentclass[a4paper,oneside,openany,12pt]{memoir}
 \usepackage[T1]{fontenc} % To get different font encoding, thus allow \guillemotright.
 % Undo bad "side effects" of T1 font encoding (ugly font && chapters in small caps).
@@ -210,11 +211,11 @@
 
 
 %%%%% SETTINGS FOR THE TITLE PAGE %%%%%
-\setLOVDversion{3.0-10}
+\setLOVDversion{3.0-12}
 \title{LOVD 3.0 user manual \\\vskip 1cm Build \LOVDversion}
 \author{Ivo F.A.C. Fokkema}
 \institute{Leiden University Medical Center}
-\date{2014-05-06} % I guess it's easier to use this as a "Last modified" column. %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\date{2014-11-17} % I guess it's easier to use this as a "Last modified" column. %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \funding{LOVD has received funding from the European Community's Seventh Framework Programme\\
   (FP7/2007-2013) under grant agreement no 200754 - the GEN2PHEN project.}
 
@@ -402,6 +403,7 @@ For the .htaccess file to work, you need to have ``Limit'' and ``Options'' enabl
 
 Also, make sure you have MultiViews or mod\_rewrite enabled.
 This allows a PHP file like ``/setup.php'' to be accessed as ``/setup''.
+The mod\_rewrite rules in the .htaccess file require ``FileInfo'' enabled in Apache's ``AllowOverride'' setting.
 \vspace{1em} % vspace doesn't introduce new \par, therefore no \noindent is needed
 
 More information about .htaccess files:\\
@@ -2498,14 +2500,15 @@ This way, transcripts are connected to genes.
 "0000000116"	"IVD"
     \end{verbatim}
   \caption{%
-    Example LOVD import format file.
+    Example (partial) LOVD import format file.
     This example file contains information about the IVD gene, its first transcript variant, the IVA disease, the link between the IVD gene and the IVA disease,
      and an individual linked to the IVA disease and screened for variants in the IVD gene.
     Note the \emph{geneid} field in the Transcripts section, which links a transcript to a gene, and the \emph{individualid} field in the Screenings section, which links a screening to an individual.
     The link between genes and diseases and between screenings and genes are in a separate section because
      each gene can be linked to multiple diseases, and each screening can test for variants in multiple genes.
     Please note that a full LOVD download contains many more sections, and more columns.
-    This file has been shortened to fit this page.}
+    This file has been shortened to fit this page.
+    \emph{This example file is therefore not a valid import file.}}
   \end{shaded}
 \end{figure}
 
@@ -2526,9 +2529,9 @@ The following sections are currently recognized:
   \item[Columns] \hfill \\
     Custom columns and their system-wide settings.
   \item[Genes] \hfill \\
-    Genes, including external IDs.
+    Genes, including external IDs. \emph{Can currently not yet be imported.}
   \item[Transcripts] \hfill \\
-    Transcript variants, including external IDs.
+    Transcript variants, including external IDs. \emph{Can currently not yet be imported.}
   \item[Diseases] \hfill \\
     General disease information.
   \item[Genes\_To\_Diseases] \hfill \\
@@ -2646,7 +2649,8 @@ Custom columns are not listed here, since every LOVD installation has different 
 
   A score of 97 means a variant is reported to effect the function of the protein having strong proof, but the curator
    thinks more proof is needed, still accepting there is strong evidence for the variant's effect.
-  All options are:\\
+  All options are:
+  \vskip \baselineskip
 
   \begin{minipage}[t]{3.15cm}
     \begin{tabular}{>{\bfseries}p{0.6cm} p{1.4cm}}
@@ -3182,8 +3186,9 @@ However, for LOVD2 installations, this does not always work, and as such the ext
        c.157 will match c.157+? and c.157\_158 will match c.157+?\_158-?.
        However, c.157 does not match c.157+5.
        Searching on genomic locations can be achieved using g. as a prefix.\\
+       \small{
        \href{http://databases.lovd.nl/shared/api/rest.php/variants/IVD?search_position=g.40699840}
-            {http://databases.lovd.nl/shared/api/rest.php/variants/IVD?search\_position=g.40699840}
+            {http://databases.lovd.nl/shared/api/rest.php/variants/IVD?search\_position=g.40699840}}\\
   \emph{Genomic position only, exclusive match (only match variants completely within this range)}\\
   \href{http://databases.lovd.nl/shared/api/rest.php/variants/IVD?search_position=g.40710300_40710410&position_match=exclusive}
        {http://databases.lovd.nl/shared/api/rest.php/variants/IVD?\\

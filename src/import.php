@@ -4,11 +4,12 @@
  * LEIDEN OPEN VARIATION DATABASE (LOVD)
  *
  * Created     : 2012-09-19
- * Modified    : 2014-07-15
- * For LOVD    : 3.0-11
+ * Modified    : 2014-12-12
+ * For LOVD    : 3.0-13
  *
  * Copyright   : 2004-2014 Leiden University Medical Center; http://www.LUMC.nl/
  * Programmer  : Ing. Ivo F.A.C. Fokkema <I.F.A.C.Fokkema@LUMC.nl>
+ *               Msc. Daan Asscheman <D.Asscheman@LUMC.nl>
  *
  *
  * This file is part of LOVD.
@@ -71,6 +72,13 @@ $aTypes =
     array(
         'Full data download' => 'Full',
         'Custom column download' => 'Col',
+        'Owned data download' => 'Owned',
+    );
+
+// An array with import file types wich are recognized but not accepted for import, with the error message.
+$aExcludedTypes =
+    array(
+        'Owned data download' => 'It is currently not possible to directly import file type "Owned data download" without modifications. Please see the <A href="docs">manual</A> section "Downloading and importing own data set" for details on how to prepare these files for import.',
     );
 
 // Calculate maximum uploadable file size.
@@ -250,10 +258,15 @@ if (POST) {
                         // We did not understand the file type (Full data download, custom columns, genes, etc).
                         lovd_errorAdd('import', 'File type not recognized; type "' . $sFileType . '" unknown.');
                     } else {
-                        $sFileType = $aTypes[$sFileType];
-                        // Clean $aParsed a bit, depending on the file type.
-                        if ($sFileType == 'Col') {
-                            $aParsed = array('Columns' => $aParsed['Columns']);
+                        if (isset($aExcludedTypes[$sFileType])) {
+                            // It is currently not possible to import owned data, see manual for details..
+                            lovd_errorAdd('import', 'File type not allowed; ' . $aExcludedTypes[$sFileType] . ' ');
+                        } else {
+                            $sFileType = $aTypes[$sFileType];
+                            // Clean $aParsed a bit, depending on the file type.
+                            if ($sFileType == 'Col') {
+                                $aParsed = array('Columns' => $aParsed['Columns']);
+                            }
                         }
                     }
                     lovd_endLine();
@@ -367,11 +380,13 @@ if (POST) {
                             break;
                         case 'Phenotypes':
                             $aSection['required_columns'][] = 'diseaseid';
+                            $aSection['required_columns'][] = 'individualid';
                             require_once ROOT_PATH . 'class/object_phenotypes.php';
                             // We don't create an object here, because we need to do that per disease. This means we don't have a general check for mandatory columns, which is not so much a problem I think.
                             $aSection['objects'] = array();
                             break;
                         case 'Screenings':
+                            $aSection['required_columns'][] = 'individualid';
                             require_once ROOT_PATH . 'class/object_screenings.php';
                             $aSection['object'] = new LOVD_Screening();
                             break;
@@ -1210,7 +1225,7 @@ if (POST) {
             // If not found, it will return the given ID.
             global $aParsed;
 
-            if (isset($aParsed[$sSection]['data'][(int) $nID])) {
+            if (isset($aParsed[$sSection]['data'][(int) $nID]['newID'])) {
                 $nID = $aParsed[$sSection]['data'][(int) $nID]['newID'];
             }
             return $nID;

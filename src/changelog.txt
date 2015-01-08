@@ -5,8 +5,33 @@
  *************/
 
 /**************************
- * 3.0 Build 12 (r4??)
+ * 3.0 Build 13 (r???)
  * 2014-??-??
+ *********/
+ * Fixed bug; Given parent IDs were not properly checked during import.
+ * Updated the manual; added detail on installation requirements,  and clarified
+   that some extra fields during import are now optional.
+ * Fixed bug; Importing a file with phenotype or screening data without a given
+   individual ID, caused a fatal query error instead of an error message.
+ * Legend of a form field is available in data entry forms. Legend can now be
+   viewed in via help icons.
+ * Option added in the submission process to add a variant to a screening for
+   when a submitter returned to the individual, or when the submission process
+   is interrupted and continued through "Unfinished Submissions".
+ * Display error message when filetype "Owned data download" is imported.
+ * Fixed bug; When deleting all variants and associated data of a gene,
+   deleting phenotypes while no individuals were found caused an error.
+ * Fixed bug; Solved bug with finding the proper path elements due to spaces in
+   the LOVD installation path.
+ * Added info table which explains the effect of deleting a gene.
+ * Fixed bug; When genes overlap, the protein change prediction predicted by the
+   variant mapper was sometimes incorrect.
+ * Fixed typo in the data importer.
+
+
+/**************************
+ * 3.0 Build 12 (r480)
+ * 2014-10-09
  *********/
  * Fixed bug; When manually mapping a variant to a transcript, transcripts on
    the reverse strand did not display the correctly calculated distance.
@@ -15,6 +40,21 @@
    whether a gene database is really empty or not.
  * Fixed bug; When no individuals with public variants are stored, the field for
    this value on the gene homepage was empty, instead of showing a 0.
+ * When the Entrez Gene ID is available, the Gene homepage now shows a link to
+   PubMed, showing articles manually linked to the gene by the NCBI staff.
+ * Fixed bug; The SeattleSeq importer caused errors and warnings when trying to
+   generate a variant's description by itself, due to the recent changes to the
+   Mutalyzer interface.
+ * Fixed bug; The update checker could in large installations take a few minutes
+   to complete if statistics were shared; greatly improved the speed.
+ * Fixed bug; The custom viewlists didn't align numeric columns to the right.
+ * Updated the country list with information from wikipedia.org/wiki/ISO_3166-1.
+ * Fixed bug; The reference sequence parser couldn't download files from
+   Mutalyzer anymore due to their recent server update.
+ * Included version 3.0-12 of the official LOVD Reference Sequence Parser
+   script.
+ * Fixed bug; New LOVD 3.0-11 installations didn't connect to the correct Muta-
+   lyzer webservice, whereas installations upgraded from 3.0-10, did.
 
 
 /**************************
