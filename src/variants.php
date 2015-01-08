@@ -69,7 +69,7 @@ if (PATH_COUNT == 2 && $_PE[1] == 'upload' && ACTION == 'create' && isset($_GET[
     //Empty set (0.00 sec)
     // So instead, we will monitor all connections. If a different connection exists, we will wait for a bit, and check again.
     // If still that connection persists, we will do nothing, since this server is dedicated anyway...
-    $nMaxSecondsToWait = 10;
+    $nMaxSecondsToWait = 120;
     $nConnectionID = $_DB->query('SELECT CONNECTION_ID()')->fetchColumn();
     for ($i = 0; $i < $nMaxSecondsToWait; $i ++) {
         $aConnections = $_DB->query('SHOW FULL PROCESSLIST')->fetchAllAssoc();
