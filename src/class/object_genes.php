@@ -95,14 +95,16 @@ class LOVD_Gene extends LOVD_Object {
                                           'g.id AS geneid, ' .
                                           // FIXME; Can we get this order correct, such that diseases without abbreviation nicely mix with those with? Right now, the diseases without symbols are in the back.
                                           'GROUP_CONCAT(DISTINCT IF(CASE d.symbol WHEN "-" THEN "" ELSE d.symbol END = "", d.name, d.symbol) ORDER BY (d.symbol != "" AND d.symbol != "-") DESC, d.symbol, d.name SEPARATOR ", ") AS diseases_, ' .
-                                          'COUNT(DISTINCT t.id) AS transcripts, ' .
-                                          'COUNT(DISTINCT vog.id) AS variants, ' .
-                                          'COUNT(DISTINCT vog.`VariantOnGenome/DBID`) AS uniq_variants';
+                                          'COUNT(DISTINCT t.id) AS transcripts';
+// Diagnostics: Removed two below, and modified one up.
+//                                          'COUNT(DISTINCT vog.id) AS variants, ' .
+//                                          'COUNT(DISTINCT vog.`VariantOnGenome/DBID`) AS uniq_variants';
         $this->aSQLViewList['FROM']     = TABLE_GENES . ' AS g ' .
                                           'LEFT OUTER JOIN ' . TABLE_GEN2DIS . ' AS g2d ON (g.id = g2d.geneid) ' .
                                           'LEFT OUTER JOIN ' . TABLE_TRANSCRIPTS . ' AS t ON (g.id = t.geneid) ' .
-                                          'LEFT OUTER JOIN ' . TABLE_VARIANTS_ON_TRANSCRIPTS . ' AS vot ON (t.id = vot.transcriptid) ' .
-                                          'LEFT OUTER JOIN ' . TABLE_VARIANTS . ' AS vog ON (vot.id = vog.id' . ($_AUTH['level'] >= LEVEL_COLLABORATOR? '' : ' AND vog.statusid >= ' . STATUS_MARKED) . ') ' .
+// Diagnostics: Removed two below.
+//                                          'LEFT OUTER JOIN ' . TABLE_VARIANTS_ON_TRANSCRIPTS . ' AS vot ON (t.id = vot.transcriptid) ' .
+//                                          'LEFT OUTER JOIN ' . TABLE_VARIANTS . ' AS vog ON (vot.id = vog.id' . ($_AUTH['level'] >= LEVEL_COLLABORATOR? '' : ' AND vog.statusid >= ' . STATUS_MARKED) . ') ' .
                                           'LEFT OUTER JOIN ' . TABLE_DISEASES . ' AS d ON (g2d.diseaseid = d.id)';
         $this->aSQLViewList['GROUP_BY'] = 'g.id';
 
@@ -136,6 +138,7 @@ class LOVD_Gene extends LOVD_Object {
                         'created_date_' => 'Date created',
                         'edited_by_' => array('Last edited by', LEVEL_COLLABORATOR),
                         'edited_date_' => array('Date last edited', LEVEL_COLLABORATOR),
+// DIAGNOSTICS: Removed the two below.
 //                        'updated_by_' => array('Last updated by', LEVEL_COLLABORATOR),
 //                        'updated_date_' => 'Date last updated',
                         'version_' => 'Version',
@@ -184,13 +187,14 @@ class LOVD_Gene extends LOVD_Object {
                 'transcripts' => array(
                     'view' => array('Transcripts', 90),
                     'db'   => array('transcripts', 'DESC', 'INT_UNSIGNED')),
+/*
+// Diagnostics: Took this block out.
                 'variants' => array(
                     'view' => array('Variants', 70),
                     'db'   => array('variants', 'DESC', 'INT_UNSIGNED')),
                 'uniq_variants' => array(
                     'view' => array('Unique variants', 70),
                     'db'   => array('uniq_variants', 'DESC', 'INT_UNSIGNED')),
-/*
                 'updated_date_' => array(
                     'view' => array('Last updated', 110),
                     'db'   => array('g.updated_date', 'DESC', true)),
