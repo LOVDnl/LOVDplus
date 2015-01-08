@@ -5,7 +5,7 @@
  * LEIDEN OPEN VARIATION DATABASE (LOVD)
  *
  * Created     : 2010-01-14
- * Modified    : 2014-08-26
+ * Modified    : 2014-10-09
  * For LOVD    : 3.0-12
  *
  * Copyright   : 2004-2014 Leiden University Medical Center; http://www.LUMC.nl/
@@ -466,6 +466,13 @@ if ($sCalcVersionFiles != $sCalcVersionDB) {
                  array(
                      'UPDATE ' . TABLE_ANALYSES . ' SET filters = REPLACE(filters, "remove_by_indb_count_ug_gte_2", "remove_by_indb_count_ug_gte_2\r\nremove_with_any_frequency_gt_2") WHERE id = 1',
                  ),
+                 '3.0-11d' =>
+                     array(
+                         'UPDATE ' . TABLE_COUNTRIES . ' SET name = "Libya" WHERE id = "LY" AND name = "Libyan Arab Jamahiriya"',
+                         'UPDATE ' . TABLE_COUNTRIES . ' SET name = "Saint Helena, Ascension and Tristan da Cunha" WHERE id = "SH" AND name = "Saint Helena"',
+                         'INSERT INTO ' . TABLE_COUNTRIES . ' VALUES ("SS", "South Sudan")',
+                         'UPDATE ' . TABLE_CONFIG . ' SET mutalyzer_soap_url = "https://mutalyzer.nl/services" WHERE mutalyzer_soap_url = "http://www.mutalyzer.nl/2.0/services"',
+                     ),
              );
 
     if ($sCalcVersionDB < lovd_calculateVersion('3.0-alpha-01')) {
