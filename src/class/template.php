@@ -4,10 +4,10 @@
  * LEIDEN OPEN VARIATION DATABASE (LOVD)
  *
  * Created     : 2012-03-27
- * Modified    : 2013-11-29
+ * Modified    : 2014-09-17
  * For LOVD    : 3.0-09
  *
- * Copyright   : 2004-2013 Leiden University Medical Center; http://www.LUMC.nl/
+ * Copyright   : 2004-2014 Leiden University Medical Center; http://www.LUMC.nl/
  * Programmers : Ing. Ivo F.A.C. Fokkema <I.F.A.C.Fokkema@LUMC.nl>
  *               Ing. Ivar C. Lugtenburg <I.C.Lugtenburg@LUMC.nl>
  *
@@ -196,7 +196,7 @@ class LOVD_Template {
                     );
 
         // Remove certain menu entries, if the user has no access to them.
-        // FIXME; Can't we foreach() through everything and, if all links from a manu item are removed, then also remove the item itself?
+        // FIXME; Can't we foreach() through everything and, if all links from a menu item are removed, then also remove the item itself?
         if (!$_AUTH || $_AUTH['level'] < LEVEL_MANAGER) {
             unset($this->aMenu['users'], $this->aMenu['users_']); // FIXME; Submitter list should be public.
             unset($this->aMenu['setup'], $this->aMenu['setup_']);
@@ -217,7 +217,7 @@ class LOVD_Template {
             unset($this->aMenu['configuration_']);
         }
 
-        // Unset unneeded tabs for KG.
+        // Unset unneeded tabs for Diagnostics.
         unset($this->aMenu['transcripts'], $this->aMenu['transcripts_']);
         unset($this->aMenu['screenings'], $this->aMenu['screenings_']);
         unset($this->aMenu['submit'], $this->aMenu['submit_']);

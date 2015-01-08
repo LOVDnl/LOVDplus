@@ -40,6 +40,7 @@ if (empty($_GET['id']) || empty($_GET['object']) || !preg_match('/^[A-Z_]+$/i', 
 // To prevent security problems if we forget to set a requirement here, we default to LEVEL_ADMIN.
 $aNeededLevel =
          array(
+// DIAGNOSTICS:
                 'ScreeningMOD' => 0,
                 'Transcript_Variant' => 0,
               );
