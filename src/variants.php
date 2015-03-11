@@ -112,7 +112,7 @@ if (PATH_COUNT == 2 && $_PE[1] == 'upload' && ACTION == 'create' && isset($_GET[
     }
 
     while (($sFile = readdir($h)) !== false) {
-        if ($sFile{0} == '.' || preg_match('/^(hiseq2.+|ingeladen|(Child|Patient)_\d+\.(magpie_report\.pdf|meta\.lovd|(direct)?vep\.data\.lovd))$/', $sFile)) {
+        if ($sFile{0} == '.' || in_array($sFile, array('ingeladen', 'new')) || preg_match('/^(hiseq2.+|(Child|Patient)_\d+\.(magpie_report\.pdf|meta\.lovd|(direct)?vep\.data\.lovd))$/', $sFile)) {
             // Current dir, parent dir, hidden files, and files we know to ignore.
             continue;
         }
@@ -122,7 +122,8 @@ if (PATH_COUNT == 2 && $_PE[1] == 'upload' && ACTION == 'create' && isset($_GET[
             continue;
         }
 
-        $nMiracleID = $aRegs[1];
+        // We need (int) because sometimes they prepend the number with zeros...
+        $nMiracleID = (int) $aRegs[1];
 
         // Check if this Miracle ID has an open submission. Don't bother checking the file, when there's no submission to dump the contents in.
         if (!isset($aScreenings[$nMiracleID])) {
@@ -1018,12 +1019,16 @@ if (PATH_COUNT == 2 && $_PE[1] == 'upload' && ACTION == 'create') {
     $aSeattleSeqCols =
      array(
         'ALTPERC_Child' => 'VariantOnGenome/Sequencing/Depth/Alt/Fraction',
+        'ALTPERC_Patient' => 'VariantOnGenome/Sequencing/Depth/Alt/Fraction', // Dumb, but simple hack.
         'CADD_raw' => 'VariantOnGenome/CADD/Raw',
         'CADD_phred' => 'VariantOnGenome/CADD/Phred',
         'distanceToSplice' => 'VariantOnTranscript/Distance_to_splice_site',
         'DP_Child' => 'VariantOnGenome/Sequencing/Depth/Total',
+        'DP_Patient' => 'VariantOnGenome/Sequencing/Depth/Total', // Dumb, but simple hack.
         'DPALT_Child' => 'VariantOnGenome/Sequencing/Depth/Alt',
+        'DPALT_Patient' => 'VariantOnGenome/Sequencing/Depth/Alt', // Dumb, but simple hack.
         'DPREF_Child' => 'VariantOnGenome/Sequencing/Depth/Ref',
+        'DPREF_Patient' => 'VariantOnGenome/Sequencing/Depth/Ref', // Dumb, but simple hack.
         'FILTERvcf' => 'VariantOnGenome/Sequencing/Filter',
         'functionGVS' => 'VariantOnTranscript/GVS/Function',
         'GATKCaller' => 'VariantOnGenome/Sequencing/GATKcaller',
@@ -1148,10 +1153,10 @@ if (PATH_COUNT == 2 && $_PE[1] == 'upload' && ACTION == 'create') {
                 $nMiracleID = $_DB->query('SELECT i.id_miracle FROM ' . TABLE_INDIVIDUALS . ' AS i INNER JOIN ' . TABLE_SCREENINGS . ' AS s ON (i.id = s.individualid) WHERE s.id = ?', array($_GET['target']))->fetchColumn();
 
                 foreach ($aHeaders as $key => $sHeader) {
-                    if (preg_match('/(Child|Father|Mother)_(\d+)$/', $sHeader, $aRegs)) {
+                    if (preg_match('/(Child|Patient|Father|Mother)_(\d+)$/', $sHeader, $aRegs)) {
                         // If Child, check ID.
-                        if ($nMiracleID && $aRegs[1] == 'Child' && $aRegs[2] != $nMiracleID) {
-                            die('Fatal: Miracle ID of Child (' . $aRegs[2] . ') does not match that from the database (' . $nMiracleID . ')' . "\n");
+                        if ($nMiracleID && in_array($aRegs[1], array('Child', 'Patient')) && $aRegs[2] != $nMiracleID) {
+                            die('Fatal: Miracle ID of ' . $aRegs[1] . ' (' . $aRegs[2] . ') does not match that from the database (' . $nMiracleID . ')' . "\n");
                         }
                         // Clean ID from column.
                         $aHeaders[$key] = substr($sHeader, 0, -(strlen($aRegs[2])+1));
@@ -1662,6 +1667,7 @@ if (PATH_COUNT == 2 && $_PE[1] == 'upload' && ACTION == 'create') {
                             $Val = $aVariant[$sSeattleSeqCol];
                             switch ($sSeattleSeqCol) {
                                 case 'ALTPERC_Child':
+                                case 'ALTPERC_Patient':
                                 case 'ALTPERC_Father':
                                 case 'ALTPERC_Mother':
                                 case 'AFESP5400':

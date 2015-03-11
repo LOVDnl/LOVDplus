@@ -184,7 +184,7 @@ function lovd_getGeneInfoFromHGNC ($sHgncId, $bRecursion = false)
             'immunoglobulin gene',    // From group "other", none of them work (verified).
             'region',                 // From group "other", none of them work (verified).
             'transposable element',   // From group "other", none of them work (verified).
-            'unknown',                // From group "other", none of them work (verified).
+//            'unknown',                // From group "other", none of them work (verified). // 2015-01-19 C1orf195 from this group works for me...
             'virus integration site', // From group "other", none of them work (verified).
             'immunoglobulin pseudogene', // From group "pseudogene", none of them work (verified).
         );
