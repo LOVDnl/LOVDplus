@@ -4,10 +4,10 @@
  * LEIDEN OPEN VARIATION DATABASE (LOVD)
  *
  * Created     : 2010-12-20
- * Modified    : 2014-06-16
- * For LOVD    : 3.0-11
+ * Modified    : 2015-03-05
+ * For LOVD    : 3.0-15
  *
- * Copyright   : 2004-2014 Leiden University Medical Center; http://www.LUMC.nl/
+ * Copyright   : 2004-2015 Leiden University Medical Center; http://www.LUMC.nl/
  * Programmers : Ing. Ivar C. Lugtenburg <I.C.Lugtenburg@LUMC.nl>
  *               Ing. Ivo F.A.C. Fokkema <I.F.A.C.Fokkema@LUMC.nl>
  *
@@ -236,15 +236,15 @@ class LOVD_GenomeVariant extends LOVD_Custom {
         parent::checkFields($aData);
 
         // Checks fields before submission of data.
-        if (isset($aData['effect_reported']) && !array_key_exists($aData['effect_reported'], $_SETT['var_effect'])) {
+        if (isset($aData['effect_reported']) && !isset($_SETT['var_effect'][$aData['effect_reported']])) {
             lovd_errorAdd('effect_reported', 'Please select a proper functional effect from the \'Affects function (reported)\' selection box.');
         }
 
-        if (isset($aData['effect_concluded']) && !array_key_exists($aData['effect_concluded'], $_SETT['var_effect'])) {
+        if (isset($aData['effect_concluded']) && !isset($_SETT['var_effect'][$aData['effect_concluded']])) {
             lovd_errorAdd('effect_concluded', 'Please select a proper functional effect from the \'Affects function (concluded)\' selection box.');
         }
 
-        if (!empty($aData['chromosome']) && !array_key_exists($aData['chromosome'], $_SETT['human_builds'][$_CONF['refseq_build']]['ncbi_sequences'])) {
+        if (!empty($aData['chromosome']) && !isset($_SETT['human_builds'][$_CONF['refseq_build']]['ncbi_sequences'][$aData['chromosome']])) {
             lovd_errorAdd('chromosome', 'Please select a proper chromosome from the \'Chromosome\' selection box.');
         }
 

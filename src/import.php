@@ -4,7 +4,7 @@
  * LEIDEN OPEN VARIATION DATABASE (LOVD)
  *
  * Created     : 2012-09-19
- * Modified    : 2014-12-12
+ * Modified    : 2015-03-11
  * For LOVD    : 3.0-13
  *
  * Copyright   : 2004-2014 Leiden University Medical Center; http://www.LUMC.nl/
@@ -34,6 +34,7 @@ define('TAB_SELECTED', 'setup');
 require ROOT_PATH . 'inc-init.php';
 ini_set('auto_detect_line_endings', true); // So we can work with Mac files also...
 set_time_limit(0); // Disable time limit, parsing may take a long time.
+ini_set('memory_limit', '1536M');
 
 // Require curator clearance.
 //lovd_isAuthorized('gene', $_AUTH['curates']); // Any gene will do.
@@ -350,7 +351,7 @@ if (POST) {
                     $nColumns = &$aSection['nColumns'];
 
                     // Section-specific settings and definitions.
-                    if (!in_array($sCurrentSection, array('Genes_To_Diseases'))) {
+                    if ($sCurrentSection != 'Genes_To_Diseases') {
                         $aSection['required_columns'][] = 'id';
                     }
                     $sTableName = 'TABLE_' . strtoupper($sCurrentSection);
@@ -423,7 +424,13 @@ if (POST) {
                             $aSection['required_columns'] = $aSection['allowed_columns'];
                         } else {
                             // Normal data table, no data links.
-                            $aSection['ids'] = $_DB->query('SELECT id FROM ' . $sTableName)->fetchAllColumn();
+                            if ($sCurrentSection == 'Variants_On_Transcripts' && $aParsed['Variants_On_Genome']['ids']) {
+                                // IDs are not unique, and anyways are already parsed in the VOG section.
+                                // Note: Making this a reference (=& instead of =) slows down the parsing of a VOT line 3x. Don't understand why.
+                                $aSection['ids'] = $aParsed['Variants_On_Genome']['ids'];
+                            } else {
+                                $aSection['ids'] = $_DB->query('SELECT id FROM ' . $sTableName)->fetchAllColumn();
+                            }
                         }
                     }
                     // For custom objects: all mandatory custom columns will be mandatory here, as well.
@@ -588,6 +595,10 @@ if (POST) {
                     $aParsed['Transcripts']['data'][(int) $aLine['transcriptid']] = array('id' => $aLine['transcriptid'], 'geneid' => $sGene, 'todo' => '');
                     $nDataTotal ++; // Otherwise it's messing up our statistics.
                 }
+                // DIAGNOSTICS: Simple method to save a lot of memory and parsing time; since all genes should be equal, I'm creating the VOT object just once.
+                // This will save a lot of memory (each VOT object takes 0.05 MB == 500 MB per 10.000 VOTs, and we often have 40.000 or so) and parsing time.
+                $sGene = '_';
+                // END: DIAGNOSTICS.
                 if (!isset($aSection['objects'][$sGene])) {
                     $aSection['objects'][$sGene] = new LOVD_TranscriptVariant($sGene);
                 }
@@ -625,7 +636,7 @@ if (POST) {
                 }
 
                 // We'll need to split the functional consequence field to have checkFields() function normally.
-                if (in_array($sCurrentSection, array('Variants_On_Genome', 'Variants_On_Transcripts'))) {
+                if ($sCurrentSection == 'Variants_On_Genome' || $sCurrentSection == 'Variants_On_Transcripts') {
                     $aLine['effect_reported'] = substr($_SETT['var_effect_default'], 0, 1); // Default value.
                     $aLine['effect_concluded'] = substr($_SETT['var_effect_default'], -1); // Default value.
                     if (in_array('effectid', $aColumns)) {
@@ -651,7 +662,7 @@ if (POST) {
 
             // General checks: numerical ID, have we seen the ID before, owned_by, created_* and edited_*.
             if (!empty($aLine['id'])) {
-                if (in_array($sCurrentSection, array('Columns', 'Genes'))) {
+                if ($sCurrentSection == 'Columns' || $sCurrentSection == 'Genes') {
                     $ID = $aLine['id'];
                 } else {
                     if (!ctype_digit($aLine['id'])) {
@@ -770,7 +781,7 @@ if (POST) {
                     break;
 
                 case 'Transcripts':
-                    if (!in_array($sFileType, array('Genes', 'Transcripts'))) {
+                    if ($sFileType != 'Genes' && $sFileType != 'Transcripts') {
                         // Not importing genes or transcripts. Allowed are references to existing transcripts only!!!
                         if (!in_array($aLine['id'], $aSection['ids'])) {
                             // Do not allow transcripts that are not in the database, if we're not importing genes or transcripts!
