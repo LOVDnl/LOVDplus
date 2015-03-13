@@ -6,7 +6,7 @@
 
 /**************************
  * 3.0 Build 13 (r???)
- * 2014-??-??
+ * 2015-0?-??
  *********/
  * Fixed bug; Given parent IDs were not properly checked during import.
  * Updated the manual; added detail on installation requirements,  and clarified
@@ -27,6 +27,29 @@
  * Fixed bug; When genes overlap, the protein change prediction predicted by the
    variant mapper was sometimes incorrect.
  * Fixed typo in the data importer.
+ * Fixed bug; Fixed fatal error when a user submits an individual with variants
+   for which is he both curator and submitter.
+ * Fixed bug; Diseases could not be linked to a big number of genes (hundreds).
+ * Fixed bug; The ORCID integration during user registration had to be updated
+   due to a discontinued service.
+ * Updated the year of the copyright notice in the footer.
+ * When rejecting a given DBID, LOVD now reports the incorrect DBID.
+ * Improved import; If a custom column, transcript or disease already exists in
+   the database, the IDs from the database are used and a soft error is set.
+   Custom columns and diseases that exist are not imported and import will
+   continue using the IDs from the database.
+ * The Phenotype/Length column is now no longer enabled by default for healthy
+   controls.
+ * On the system-wide view of gene-specific columns, two menu links were enabled
+   for Curators, which led to non-available actions.
+ * Clarified some text in the Configuration area.
+ * Fixed bug; During phenotype data import, an incorrect warning message could
+   occur, about the disease not being inserted in the database yet.
+ * Improved the way a new disease can be created through a popup window from the
+   individual and gene data entry forms.
+ * Fixed bug; The gene-specific page for listing individuals sometimes showed
+   individuals screened for other genes, if those genes had a symbol partially
+   matching the selected gene.
 
 
 /**************************

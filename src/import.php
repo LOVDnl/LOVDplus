@@ -7,7 +7,7 @@
  * Modified    : 2015-03-11
  * For LOVD    : 3.0-13
  *
- * Copyright   : 2004-2014 Leiden University Medical Center; http://www.LUMC.nl/
+ * Copyright   : 2004-2015 Leiden University Medical Center; http://www.LUMC.nl/
  * Programmer  : Ing. Ivo F.A.C. Fokkema <I.F.A.C.Fokkema@LUMC.nl>
  *               Msc. Daan Asscheman <D.Asscheman@LUMC.nl>
  *
@@ -719,6 +719,13 @@ if (POST) {
             // Per category, verify the data, including precise checks on specific columns.
             switch ($sCurrentSection) {
                 case 'Columns':
+                    // First check if column exist in database. If exists in the database, this column is not imported but import will continue.
+                    if (in_array($aLine['id'], $aSection['ids'])) {
+                        $_BAR[0]->appendMessage('Warning: There is already a ' . $aLine['category'] . ' column with column ID ' . $aLine['colid'] . '. This column is not imported! <BR>', 'done');
+                        $nWarnings ++;
+                        // break: None of the following checks have to be done because column is not imported.
+                        break;
+                    }
                     // Columns normally not on the form, are not checked properly...
                     // Col_order; numeric and 0 <= col_order <= 255.
                     if ($aLine['col_order'] === '') {
@@ -783,20 +790,17 @@ if (POST) {
                 case 'Transcripts':
                     if ($sFileType != 'Genes' && $sFileType != 'Transcripts') {
                         // Not importing genes or transcripts. Allowed are references to existing transcripts only!!!
-                        if (!in_array($aLine['id'], $aSection['ids'])) {
-                            // Do not allow transcripts that are not in the database, if we're not importing genes or transcripts!
-//                            $_BAR[0]->appendMessage('Warning: transcript "' . htmlspecialchars($aLine['id'] . '" (' . $aLine['geneid'] . ', ' . $aLine['name']) . ') does not exist in the database. Currently, it is not possible to import transcripts into LOVD using this file format.<BR>', 'done');
-                            lovd_errorAdd('import', 'Error (' . $sCurrentSection . ', line ' . $nLine . '): Transcript "' . htmlspecialchars($aLine['id'] . '" (' . $aLine['geneid'] . ', ' . $aLine['name']) . ') does not exist in the database. Currently, it is not possible to import transcripts into LOVD using this file format.');
+//                        $_BAR[0]->appendMessage('Warning: transcript "' . htmlspecialchars($aLine['id'] . '" (' . $aLine['geneid'] . ', ' . $aLine['name']) . ') does not exist in the database. Currently, it is not possible to import transcripts into LOVD using this file format.<BR>', 'done');
+                        // FIXME: If we'll allow the creation of transcripts, and we have an object, we can use $zData here.
+                        // Transcript has been found in the database, check if NM and gene are the same. The rest we will ignore.
+                        $nTranscriptid = $_DB->query('SELECT id FROM ' . TABLE_TRANSCRIPTS . ' WHERE geneid = ? AND id_ncbi = ?', array($aLine['geneid'], $aLine['id_ncbi']))->fetchColumn();
+                        if ($nTranscriptid) {
+                            $aLine['newID'] = $nTranscriptid;
+                            $aLine['todo'] = 'map';
                         } else {
-                            // FIXME: If we'll allow the creation of transcripts, and we have an object, we can use $zData here.
-                            // Transcript has been found in the database, check if NM and gene are the same. The rest we will ignore.
-                            $bExists = ($_DB->query('SELECT COUNT(*) FROM ' . TABLE_TRANSCRIPTS . ' WHERE id = ? AND geneid = ? AND id_ncbi = ?', array($aLine['id'], $aLine['geneid'], $aLine['id_ncbi']))->fetchColumn() > 0);
-                            if (!$bExists) {
-                                lovd_errorAdd('import', 'Error (' . $sCurrentSection . ', line ' . $nLine . '): Transcript "' . htmlspecialchars($aLine['id']) . '" does not match the same gene and/or the same NCBI ID as in the database.');
-                            }
+                            lovd_errorAdd('import', 'Error (' . $sCurrentSection . ', line ' . $nLine . '): Transcript "' . htmlspecialchars($aLine['id']) . '" does not match the same gene and/or the same NCBI ID as in the database.');
+                            $aLine['todo'] = '';
                         }
-                        // Just store the data in the $aParsed array, such that VOTs can reference to it.
-                        $aLine['todo'] = '';
                     }
                     break;
 
@@ -823,6 +827,31 @@ if (POST) {
                                 }
                             }
 
+                            $nDiseaseIdOmim = $_DB->query('SELECT id, id_omim FROM ' . TABLE_DISEASES . ' WHERE name = ?', array($aLine['name']))->fetchRow();
+                            if ($nDiseaseIdOmim && !$nDiseaseIdOmim[1] && $aLine['id_omim']) {
+                                lovd_errorAdd('import', 'Error (' . $sCurrentSection . ', line ' . $nLine . '): Import file contains OMIM ID for disease ' . $aLine['name'] . ', while OMIM ID is missing in database.');
+                            }
+                            if (($nDiseaseIdOmim && $nDiseaseIdOmim[1] == $aLine['id_omim']) || ($nDiseaseIdOmim[1] && !$aLine['id_omim']) || ($nDiseaseIdOmim && !$nDiseaseIdOmim[1] && !$aLine['id_omim'])) {
+                                // Some error added in checkfields should be removes and because soft messages are used.
+                                $nKey = array_search('Error (' . $sCurrentSection . ', line ' . $nLine . '): Another disease already exists with the same name!', $_ERROR['messages']);
+                                // when key is false, no errors are set in checkfields.
+                                if ($nKey !== false) {
+                                    unset($_ERROR['messages'][$nKey]);
+                                    $_ERROR['messages'] = array_values($_ERROR['messages']);
+                                }
+
+                                $nKey = array_search('Error (' . $sCurrentSection . ', line ' . $nLine . '): Another disease already exists with this OMIM ID!', $_ERROR['messages']);
+                                // when key is false, no errors are set in checkfields.
+                                if ($nKey !== false) {
+                                    unset($_ERROR['messages'][$nKey]);
+                                    $_ERROR['messages'] = array_values($_ERROR['messages']);
+                                }
+                                $_BAR[0]->appendMessage('Warning: There is already a disease with disease name ' . $aLine['name'] . '. This disease is not imported! <BR>', 'done');
+                                $nWarnings ++;
+                                $aLine['newID'] = $nDiseaseIdOmim[0];
+                                $aLine['todo'] = 'map';
+                                break;
+                            }
                             // Entry might still have thrown an error, but because we want to draw out all errors, we will store this one in case it's referenced to.
                             $aLine['todo'] = 'insert'; // OK, insert.
                         }
@@ -846,19 +875,30 @@ if (POST) {
                         // Gene does not exist.
                         lovd_errorAdd('import', 'Error (' . $sCurrentSection . ', line ' . $nLine . '): Gene "' . htmlspecialchars($aLine['geneid']) . '" does not exist in the database.');
                     }
-                    $bDiseaseInDB = in_array($aLine['diseaseid'], $aParsed['Diseases']['ids']);
+                    $nNewID = (!isset($aParsed['Diseases']['data'][(int) $aLine['diseaseid']]['newID'])? false : $aParsed['Diseases']['data'][(int) $aLine['diseaseid']]['newID']);
+                    if ($nNewID !== false) {
+                        $bDiseaseInDB = in_array($nNewID, $aParsed['Diseases']['ids']);
+                    } else {
+                        $bDiseaseInDB = in_array($aLine['diseaseid'], $aParsed['Diseases']['ids']);
+                    }
                     $bDiseaseInFile = isset($aParsed['Diseases']['data'][(int) $aLine['diseaseid']]);
                     if ($aLine['diseaseid'] && !$bDiseaseInFile && !$bDiseaseInDB) {
                         // Disease does not exist and is not defined in the import file.
                         lovd_errorAdd('import', 'Error (' . $sCurrentSection . ', line ' . $nLine . '): Disease "' . htmlspecialchars($aLine['diseaseid']) . '" does not exist in the database and is not defined in this import file.');
                     } elseif ($bGeneInDB) {
                         // No problems left, just check now if insert is necessary or not.
-                        if (!$bDiseaseInDB || ($sMode == 'insert' && $bDiseaseInFile)) {
+                        if (!$bDiseaseInDB || ($sMode == 'insert' && $nNewID === false && $bDiseaseInFile)) {
                             // Disease is in file (will be inserted, or it has generated errors), so flag this to be inserted!
                             $aLine['todo'] = 'insert';
                         } else {
+                            $aSQL = array($aLine['geneid']);
+                            if (isset($aParsed['Diseases']['data'][(int) $aLine['diseaseid']]['newID'])) {
+                                $aSQL[] = $aParsed['Diseases']['data'][(int) $aLine['diseaseid']]['newID'];
+                            } else {
+                                $aSQL[] = $aLine['diseaseid'];
+                            }
                             // Gene & Disease are already in the DB, check if we can't find this combo in the DB, it needs to be inserted. Otherwise, we'll ignore it.
-                            $bInDB = $_DB->query('SELECT COUNT(*) FROM ' . TABLE_GEN2DIS . ' WHERE geneid = ? AND diseaseid = ?', array($aLine['geneid'], $aLine['diseaseid']))->fetchColumn();
+                            $bInDB = $_DB->query('SELECT COUNT(*) FROM ' . TABLE_GEN2DIS . ' WHERE geneid = ? AND diseaseid = ?', $aSQL)->fetchColumn();
                             if (!$bInDB) {
                                 $aLine['todo'] = 'insert';
                             }
@@ -920,7 +960,12 @@ if (POST) {
                         // Individual does not exist and is not defined in the import file.
                         lovd_errorAdd('import', 'Error (' . $sCurrentSection . ', line ' . $nLine . '): Individual "' . htmlspecialchars($aLine['individualid']) . '" does not exist in the database and is not defined in this import file.');
                     }
-                    $bDiseaseInDB = in_array($aLine['diseaseid'], $aParsed['Diseases']['ids']);
+                    $nNewID = (!isset($aParsed['Diseases']['data'][(int) $aLine['diseaseid']]['newID'])? false : $aParsed['Diseases']['data'][(int) $aLine['diseaseid']]['newID']);
+                    if ($nNewID !== false) {
+                        $bDiseaseInDB = in_array($nNewID, $aParsed['Diseases']['ids']);
+                    } else {
+                        $bDiseaseInDB = in_array($aLine['diseaseid'], $aParsed['Diseases']['ids']);
+                    }
                     $bDiseaseInFile = isset($aParsed['Diseases']['data'][(int) $aLine['diseaseid']]);
                     if ($aLine['diseaseid'] && !$bDiseaseInFile && !$bDiseaseInDB) {
                         // Disease does not exist and is not defined in the import file.
@@ -951,12 +996,17 @@ if (POST) {
                     // FIXME: Check references only if we don't have a $zData OR $zData['referenceid'] is different from now?
                     //   Actually, do we allow references to change during an edit?
                     // Check references.
-                    $bDiseaseInDB = in_array($aLine['diseaseid'], $aParsed['Diseases']['ids']);
+                    $nNewID = (!isset($aParsed['Diseases']['data'][(int) $aLine['diseaseid']]['newID'])? false : $aParsed['Diseases']['data'][(int) $aLine['diseaseid']]['newID']);
+                    if ($nNewID !== false) {
+                        $bDiseaseInDB = in_array($nNewID, $aParsed['Diseases']['ids']);
+                    } else {
+                        $bDiseaseInDB = in_array($aLine['diseaseid'], $aParsed['Diseases']['ids']);
+                    }
                     $bDiseaseInFile = isset($aParsed['Diseases']['data'][(int) $aLine['diseaseid']]);
                     if ($aLine['diseaseid'] && !$bDiseaseInFile && !$bDiseaseInDB) {
                         // Disease does not exist and is not defined in the import file.
                         lovd_errorAdd('import', 'Error (' . $sCurrentSection . ', line ' . $nLine . '): Disease "' . htmlspecialchars($aLine['diseaseid']) . '" does not exist in the database and is not defined in this import file.');
-                    } elseif ((!$bDiseaseInDB || ($sMode == 'insert' && $bDiseaseInFile)) && !in_array($aLine['diseaseid'], $aDiseasesAlreadyWarnedFor)) {
+                    } elseif (!$bDiseaseInDB && $sMode == 'insert' && $bDiseaseInFile && !in_array($aLine['diseaseid'], $aDiseasesAlreadyWarnedFor)) {
                         // We're inserting this disease, so we're not sure about the exact columns that will be active. Issue a warning.
                         $_BAR[0]->appendMessage('Warning (' . $sCurrentSection . ', line ' . $nLine . '): The disease belonging to this phenotype entry is yet to be inserted into the database. Perhaps not all this phenotype entry\'s custom columns will be enabled for this disease!<BR>', 'done');
                         $nWarnings ++;
@@ -1304,6 +1354,9 @@ if (POST) {
                             }
                             if (isset($aData['motherid'])) {
                                 $aData['motherid'] = lovd_findImportedID('Individuals', $aData['motherid']);
+                            }
+                            if (isset($aData['transcriptid'])) {
+                                $aData['transcriptid'] = lovd_findImportedID('Transcripts', $aData['transcriptid']);
                             }
                             if ($sSection == 'Variants_On_Genome') {
                                 // We want the DBID to be generated automatically, but it relies on the database contents, so we have to do it just before inserting the data.
