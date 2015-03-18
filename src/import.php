@@ -4,7 +4,7 @@
  * LEIDEN OPEN VARIATION DATABASE (LOVD)
  *
  * Created     : 2012-09-19
- * Modified    : 2015-03-11
+ * Modified    : 2015-03-18
  * For LOVD    : 3.0-13
  *
  * Copyright   : 2004-2015 Leiden University Medical Center; http://www.LUMC.nl/
@@ -297,6 +297,9 @@ if (POST) {
         require ROOT_PATH . 'class/progress_bar.php';
         $_BAR = array(new ProgressBar('parser', 'Parsing file...'));
         $_BAR[0]->setMessageVisibility('done', true);
+        // DIAGNOSTICS: Find default gene we'll use for all VOTs, since the gene is always the same anyway.
+        $sDefaultGene = $_DB->query('SELECT geneid FROM ' . TABLE_TRANSCRIPTS . ' LIMIT 1')->fetchColumn();
+        // END: DIAGNOSTICS.
 
 
 
@@ -429,7 +432,7 @@ if (POST) {
                                 // Note: Making this a reference (=& instead of =) slows down the parsing of a VOT line 3x. Don't understand why.
                                 $aSection['ids'] = $aParsed['Variants_On_Genome']['ids'];
                             } else {
-                                $aSection['ids'] = $_DB->query('SELECT id FROM ' . $sTableName)->fetchAllColumn();
+                                $aSection['ids'] = array_flip($_DB->query('SELECT id FROM ' . $sTableName)->fetchAllColumn());
                             }
                         }
                     }
@@ -579,7 +582,7 @@ if (POST) {
             if ($sCurrentSection == 'Variants_On_Transcripts' && $aLine['transcriptid']) {
                 // We have to include some checks here instead of below, because we need to verify that we understand the transcriptID and get to the Gene.
                 //   Only then can we open the correct object.
-                $bTranscriptInDB = in_array($aLine['transcriptid'], $aParsed['Transcripts']['ids']);
+                $bTranscriptInDB = isset($aParsed['Transcripts']['ids'][$aLine['transcriptid']]);
                 $bTranscriptInFile = isset($aParsed['Transcripts']['data'][(int) $aLine['transcriptid']]);
                 if (!$bTranscriptInFile && !$bTranscriptInDB) {
                     // Transcript does not exist and is not defined in the import file.
@@ -587,7 +590,7 @@ if (POST) {
                     $bGeneInDB = false;
                 } elseif ($bTranscriptInFile) {
                     $sGene = $aParsed['Transcripts']['data'][(int) $aLine['transcriptid']]['geneid'];
-                    $bGeneInDB = in_array($sGene, $aParsed['Genes']['ids']);
+                    $bGeneInDB = isset($aParsed['Genes']['ids'][$sGene]);
                 } else {
                     $sGene = $_DB->query('SELECT geneid FROM ' . TABLE_TRANSCRIPTS . ' WHERE id = ?', array($aLine['transcriptid']))->fetchColumn();
                     $bGeneInDB = true;
@@ -597,7 +600,8 @@ if (POST) {
                 }
                 // DIAGNOSTICS: Simple method to save a lot of memory and parsing time; since all genes should be equal, I'm creating the VOT object just once.
                 // This will save a lot of memory (each VOT object takes 0.05 MB == 500 MB per 10.000 VOTs, and we often have 40.000 or so) and parsing time.
-                $sGene = '_';
+                // Selecting a gene that exists, so transcripts and columns will be filled (needed to actually make the checkFields() work.)
+                $sGene = $sDefaultGene;
                 // END: DIAGNOSTICS.
                 if (!isset($aSection['objects'][$sGene])) {
                     $aSection['objects'][$sGene] = new LOVD_TranscriptVariant($sGene);
@@ -720,7 +724,7 @@ if (POST) {
             switch ($sCurrentSection) {
                 case 'Columns':
                     // First check if column exist in database. If exists in the database, this column is not imported but import will continue.
-                    if (in_array($aLine['id'], $aSection['ids'])) {
+                    if (isset($aSection['ids'][$aLine['id']])) {
                         $_BAR[0]->appendMessage('Warning: There is already a ' . $aLine['category'] . ' column with column ID ' . $aLine['colid'] . '. This column is not imported! <BR>', 'done');
                         $nWarnings ++;
                         // break: None of the following checks have to be done because column is not imported.
@@ -780,7 +784,7 @@ if (POST) {
                     break;
 
                 case 'Genes':
-                    if ($sFileType != 'Genes' && !in_array($aLine['id'], $aSection['ids'])) {
+                    if ($sFileType != 'Genes' && !isset($aSection['ids'][$aLine['id']])) {
                         // Do not allow genes that are not in the database, if we're not importing genes!
 //                        $_BAR[0]->appendMessage('Warning: gene "' . htmlspecialchars($aLine['id'] . '" (' . $aLine['name']) . ') does not exist in the database. Currently, it is not possible to import genes into LOVD using this file format.<BR>', 'done');
                         lovd_errorAdd('import', 'Error (' . $sCurrentSection . ', line ' . $nLine . '): Gene "' . htmlspecialchars($aLine['id'] . '" (' . $aLine['name']) . ') does not exist in the database. Currently, it is not possible to import genes into LOVD using this file format.');
@@ -870,16 +874,16 @@ if (POST) {
                     }
 
                     // Check references.
-                    $bGeneInDB = in_array($aLine['geneid'], $aParsed['Genes']['ids']);
+                    $bGeneInDB = isset($aParsed['Genes']['ids'][$aLine['geneid']]);
                     if ($aLine['geneid'] && !$bGeneInDB) {
                         // Gene does not exist.
                         lovd_errorAdd('import', 'Error (' . $sCurrentSection . ', line ' . $nLine . '): Gene "' . htmlspecialchars($aLine['geneid']) . '" does not exist in the database.');
                     }
                     $nNewID = (!isset($aParsed['Diseases']['data'][(int) $aLine['diseaseid']]['newID'])? false : $aParsed['Diseases']['data'][(int) $aLine['diseaseid']]['newID']);
                     if ($nNewID !== false) {
-                        $bDiseaseInDB = in_array($nNewID, $aParsed['Diseases']['ids']);
+                        $bDiseaseInDB = isset($aParsed['Diseases']['ids'][$nNewID]);
                     } else {
-                        $bDiseaseInDB = in_array($aLine['diseaseid'], $aParsed['Diseases']['ids']);
+                        $bDiseaseInDB = isset($aParsed['Diseases']['ids'][$aLine['diseaseid']]);
                     }
                     $bDiseaseInFile = isset($aParsed['Diseases']['data'][(int) $aLine['diseaseid']]);
                     if ($aLine['diseaseid'] && !$bDiseaseInFile && !$bDiseaseInDB) {
@@ -954,7 +958,7 @@ if (POST) {
                     }
 
                     // Check references.
-                    $bIndInDB = in_array($aLine['individualid'], $aParsed['Individuals']['ids']);
+                    $bIndInDB = isset($aParsed['Individuals']['ids'][$aLine['individualid']]);
                     $bIndInFile = isset($aParsed['Individuals']['data'][(int) $aLine['individualid']]);
                     if ($aLine['individualid'] && !$bIndInDB && !$bIndInFile) {
                         // Individual does not exist and is not defined in the import file.
@@ -962,9 +966,9 @@ if (POST) {
                     }
                     $nNewID = (!isset($aParsed['Diseases']['data'][(int) $aLine['diseaseid']]['newID'])? false : $aParsed['Diseases']['data'][(int) $aLine['diseaseid']]['newID']);
                     if ($nNewID !== false) {
-                        $bDiseaseInDB = in_array($nNewID, $aParsed['Diseases']['ids']);
+                        $bDiseaseInDB = isset($aParsed['Diseases']['ids'][$nNewID]);
                     } else {
-                        $bDiseaseInDB = in_array($aLine['diseaseid'], $aParsed['Diseases']['ids']);
+                        $bDiseaseInDB = isset($aParsed['Diseases']['ids'][$aLine['diseaseid']]);
                     }
                     $bDiseaseInFile = isset($aParsed['Diseases']['data'][(int) $aLine['diseaseid']]);
                     if ($aLine['diseaseid'] && !$bDiseaseInFile && !$bDiseaseInDB) {
@@ -998,9 +1002,9 @@ if (POST) {
                     // Check references.
                     $nNewID = (!isset($aParsed['Diseases']['data'][(int) $aLine['diseaseid']]['newID'])? false : $aParsed['Diseases']['data'][(int) $aLine['diseaseid']]['newID']);
                     if ($nNewID !== false) {
-                        $bDiseaseInDB = in_array($nNewID, $aParsed['Diseases']['ids']);
+                        $bDiseaseInDB = isset($aParsed['Diseases']['ids'][$nNewID]);
                     } else {
-                        $bDiseaseInDB = in_array($aLine['diseaseid'], $aParsed['Diseases']['ids']);
+                        $bDiseaseInDB = isset($aParsed['Diseases']['ids'][$aLine['diseaseid']]);
                     }
                     $bDiseaseInFile = isset($aParsed['Diseases']['data'][(int) $aLine['diseaseid']]);
                     if ($aLine['diseaseid'] && !$bDiseaseInFile && !$bDiseaseInDB) {
@@ -1012,7 +1016,7 @@ if (POST) {
                         $nWarnings ++;
                         $aDiseasesAlreadyWarnedFor[] = $aLine['diseaseid'];
                     }
-                    $bIndInDB = in_array($aLine['individualid'], $aParsed['Individuals']['ids']);
+                    $bIndInDB = isset($aParsed['Individuals']['ids'][$aLine['individualid']]);
                     $bIndInFile = isset($aParsed['Individuals']['data'][(int) $aLine['individualid']]);
                     if ($aLine['individualid'] && !$bIndInDB && !$bIndInFile) {
                         // Individual does not exist and is not defined in the import file.
@@ -1035,7 +1039,7 @@ if (POST) {
                     // FIXME: Check references only if we don't have a $zData OR $zData['referenceid'] is different from now?
                     //   Actually, do we allow references to change during an edit?
                     // Check references.
-                    $bIndInDB = in_array($aLine['individualid'], $aParsed['Individuals']['ids']);
+                    $bIndInDB = isset($aParsed['Individuals']['ids'][$aLine['individualid']]);
                     $bIndInFile = isset($aParsed['Individuals']['data'][(int) $aLine['individualid']]);
                     if ($aLine['individualid'] && !$bIndInDB && !$bIndInFile) {
                         // Individual does not exist and is not defined in the import file.
@@ -1066,12 +1070,12 @@ if (POST) {
                     }
 
                     // Check references.
-                    $bGeneInDB = in_array($aLine['geneid'], $aParsed['Genes']['ids']);
+                    $bGeneInDB = isset($aParsed['Genes']['ids'][$aLine['geneid']]);
                     if ($aLine['geneid'] && !$bGeneInDB) {
                         // Gene does not exist.
                         lovd_errorAdd('import', 'Error (' . $sCurrentSection . ', line ' . $nLine . '): Gene "' . htmlspecialchars($aLine['geneid']) . '" does not exist in the database.');
                     }
-                    $bScreeningInDB = in_array($aLine['screeningid'], $aParsed['Screenings']['ids']);
+                    $bScreeningInDB = isset($aParsed['Screenings']['ids'][$aLine['screeningid']]);
                     $bScreeningInFile = isset($aParsed['Screenings']['data'][(int) $aLine['screeningid']]);
                     if ($aLine['screeningid'] && !$bScreeningInFile && !$bScreeningInDB) {
                         // Screening does not exist and is not defined in the import file.
@@ -1133,7 +1137,7 @@ if (POST) {
                     //   in the code, because we had to initialize the object using the geneid of the given transcript.
 // FIXME: Check if combination is already known in the database, since this is partially also a linking table!!!
 //   Combi already in DB: then no insert mode allowed, otherwise get $zData? Or do we have that already?
-                    $bVariantInDB = in_array($aLine['variantid'], $aParsed['Variants_On_Genome']['ids']);
+                    $bVariantInDB = isset($aParsed['Variants_On_Genome']['ids'][$aLine['variantid']]);
                     $bVariantInFile = isset($aParsed['Variants_On_Genome']['data'][(int) $aLine['variantid']]);
                     if ($aLine['id'] && !$bVariantInFile && !$bVariantInDB) {
                         // Variant does not exist and is not defined in the import file.
@@ -1189,13 +1193,13 @@ if (POST) {
                     }
 
                     // Check references.
-                    $bScreeningInDB = in_array($aLine['screeningid'], $aParsed['Screenings']['ids']);
+                    $bScreeningInDB = isset($aParsed['Screenings']['ids'][$aLine['screeningid']]);
                     $bScreeningInFile = isset($aParsed['Screenings']['data'][(int) $aLine['screeningid']]);
                     if ($aLine['screeningid'] && !$bScreeningInFile && !$bScreeningInDB) {
                         // Screening does not exist and is not defined in the import file.
                         lovd_errorAdd('import', 'Error (' . $sCurrentSection . ', line ' . $nLine . '): Screening "' . htmlspecialchars($aLine['screeningid']) . '" does not exist in the database and is not defined in this import file.');
                     }
-                    $bVariantInDB = in_array($aLine['variantid'], $aParsed['Variants_On_Genome']['ids']);
+                    $bVariantInDB = isset($aParsed['Variants_On_Genome']['ids'][$aLine['variantid']]);
                     $bVariantInFile = isset($aParsed['Variants_On_Genome']['data'][(int) $aLine['variantid']]);
                     if ($aLine['variantid'] && !$bVariantInFile && !$bVariantInDB) {
                         // Variant does not exist and is not defined in the import file.
@@ -1546,7 +1550,8 @@ if (!lovd_isCurator($_SESSION['currdb'])) {
                     $sMessage = 'new links only';
                 }
                 $aGenes = array_unique($aGenes);
-                lovd_writeLog('Event', LOG_EVENT, 'Imported ' . $sMessage . '; ran ' . $nDone . ' queries' . (!$aGenes? '' : ' (' . implode(', ', $aGenes) . ')') . '.');
+                $nGenes = count($aGenes);
+                lovd_writeLog('Event', LOG_EVENT, 'Imported ' . $sMessage . '; ran ' . $nDone . ' queries' . (!$aGenes? '' : ' (' . ($nGenes > 100? $nGenes . ' genes' : implode(', ', $aGenes)) . ')') . '.');
                 lovd_setUpdatedDate($aGenes); // FIXME; regardless of variant status... oh, well...
             }
             // FIXME: Why is this not empty?

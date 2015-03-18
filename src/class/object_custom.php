@@ -379,7 +379,7 @@ class LOVD_Custom extends LOVD_Object {
 //                }
 //            }
             if (!empty($aData[$sCol])) {
-                $this->checkInputRegExp($sCol, $aData[$sCol]);
+                //$this->checkInputRegExp($sCol, $aData[$sCol]); // Disabled for DIAGNOSTICS, to speed up the import.
                 $this->checkSelectedInput($sCol, $aData[$sCol]);
             }
         }
