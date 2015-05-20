@@ -44,8 +44,10 @@ if ($_AUTH && $_AUTH['level'] >= LEVEL_MANAGER) {
 
 if ($_AUTH && $_AUTH['level'] == LEVEL_ADMIN) {
     $sFile = 'setup';
-} else {
+} elseif ($_AUTH) {
     $sFile = 'individuals';
+} else {
+    $sFile = 'login';
 }
 
 header('Location: ' . lovd_getInstallURL() . $sFile);
