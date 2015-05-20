@@ -4,10 +4,10 @@
  * LEIDEN OPEN VARIATION DATABASE (LOVD)
  *
  * Created     : 2009-10-22
- * Modified    : 2015-03-18
- * For LOVD    : 3.0-13
+ * Modified    : 2015-05-05
+ * For LOVD    : 3.0-14
  *
- * Copyright   : 2004-2014 Leiden University Medical Center; http://www.LUMC.nl/
+ * Copyright   : 2004-2015 Leiden University Medical Center; http://www.LUMC.nl/
  * Programmers : Ing. Ivo F.A.C. Fokkema <I.F.A.C.Fokkema@LUMC.nl>
  *               Ing. Ivar C. Lugtenburg <I.C.Lugtenburg@LUMC.nl>
  *
@@ -132,11 +132,11 @@ $aColSQL =
              'INSERT INTO ' . TABLE_COLS . ' VALUES ("VariantOnGenome/Sequencing/Mother/GenoType",           255, 100, 0, 1, 0, "Genotype of mother", "", "The genotype of the unaffected mother.", "The genotype of the unaffected mother.", "VARCHAR(3)", "Genotype of mother||text|4", "", "", 0, 0, 1, 0, NOW(), NULL, NULL)',
              'INSERT INTO ' . TABLE_COLS . ' VALUES ("VariantOnGenome/Sequencing/Mother/VarPresent",         255, 100, 0, 1, 0, "Variant present in mother", "", "Is the variant present in the unaffected mother? Scores 1-6.", "Is the variant present in the unaffected mother? Scores 1-6. 1 certainly not present, 6 certainly present.", "TINYINT UNSIGNED", "Variant present in mother||select|1|true|false|false", "1=Not present with DP>20\r\n2=Not present with DP 8-20\r\n3=Not present with DP<8\r\n4=Present with <10% of reads\r\n5=Present with >10% of reads\r\n6=Called by pipeline", "", 0, 0, 1, 0, NOW(), NULL, NULL)',
              'INSERT INTO ' . TABLE_COLS . ' VALUES ("VariantOnGenome/Sequencing/Mother/Depth/Alt/Fraction", 255, 100, 0, 1, 0, "Read depth mother Alt (fraction)", "", "Sequencing read depth of Alt allele of unaffected mother as a fraction.", "Sequencing read depth of Alt allele of unaffected mother, as presented in the input file, as the fraction of the total number of reads of Ref and Alt allele together.", "FLOAT UNSIGNED", "Read depth mother Alt (fraction)||text|6", "", "", 0, 0, 1, 0, NOW(), NULL, NULL)',
-             'INSERT INTO ' . TABLE_COLS . ' VALUES ("VariantOnTranscript/PolyPhen/HDIV",                      8, 200, 0, 1, 0, "PolyPhen HDIV",  "", "Effect of variant, predicted by PolyPhen, HDIV score.", "Effect of variant, predicted by PolyPhen, HDIV score.", "FLOAT UNSIGNED", "PolyPhen prediction, HDIV score||text|5", "", "", 0, 0, 1, 0, NOW(), NULL, NULL)',
-             'INSERT INTO ' . TABLE_COLS . ' VALUES ("VariantOnTranscript/PolyPhen/HVAR",                      8, 200, 0, 1, 0, "PolyPhen HVAR",  "", "Effect of variant, predicted by PolyPhen, HVAR score.", "Effect of variant, predicted by PolyPhen, HVAR score.", "FLOAT UNSIGNED", "PolyPhen prediction, HVAR score||text|5", "", "", 0, 0, 1, 0, NOW(), NULL, NULL)',
+             'INSERT INTO ' . TABLE_COLS . ' VALUES ("VariantOnTranscript/PolyPhen/HDIV",                      8, 200, 0, 1, 0, "PolyPhen HDIV",  "", "Effect of variant, predicted by PolyPhen, HDIV score.", "Effect of variant, predicted by PolyPhen, HDIV score.", "VARCHAR(100)", "PolyPhen prediction, HDIV score||text|5", "", "", 0, 0, 1, 0, NOW(), NULL, NULL)',
+             'INSERT INTO ' . TABLE_COLS . ' VALUES ("VariantOnTranscript/PolyPhen/HVAR",                      8, 200, 0, 1, 0, "PolyPhen HVAR",  "", "Effect of variant, predicted by PolyPhen, HVAR score.", "Effect of variant, predicted by PolyPhen, HVAR score.", "VARCHAR(100)", "PolyPhen prediction, HVAR score||text|5", "", "", 0, 0, 1, 0, NOW(), NULL, NULL)',
              'INSERT INTO ' . TABLE_COLS . ' VALUES ("VariantOnTranscript/Prediction/MutationTaster",        255, 100, 0, 1, 0, "MutationTaster prediction", "", "MutationTaster prediction.", "The MutationTaster prediction, predicting the effect of the DNA variant on the function of the protein.", "CHAR(1)", "MutationTaster prediction||select|1|true|false|false", "A\r\nD\r\nN\r\nP", "", 0, 0, 1, 0, NOW(), NULL, NULL)',
              'INSERT INTO ' . TABLE_COLS . ' VALUES ("VariantOnTranscript/Prediction/MutationTaster/Score",  255, 100, 0, 1, 0, "MutationTaster score", "", "MutationTaster score.", "The MutationTaster score, predicting the effect of the DNA variant on the function of the protein.", "FLOAT", "MutationTaster score||text|6", "", "", 0, 0, 1, 0, NOW(), NULL, NULL)',
-             'INSERT INTO ' . TABLE_COLS . ' VALUES ("VariantOnTranscript/Prediction/SIFT",                  255, 100, 0, 1, 0, "SIFT score", "", "SIFT score.", "The SIFT score, predicting the effect of the DNA variant on the function of the protein.", "FLOAT", "SIFT score||text|6", "", "", 0, 0, 1, 0, NOW(), NULL, NULL)',
+             'INSERT INTO ' . TABLE_COLS . ' VALUES ("VariantOnTranscript/Prediction/SIFT",                  255, 100, 0, 1, 0, "SIFT score", "", "SIFT score.", "The SIFT score, predicting the effect of the DNA variant on the function of the protein.", "VARCHAR(50)", "SIFT score||text|6", "", "", 0, 0, 1, 0, NOW(), NULL, NULL)',
              'INSERT INTO ' . TABLE_COLS . ' VALUES ("VariantOnTranscript/Prediction/Grantham",              255, 100, 0, 1, 0, "Grantham score", "", "Grantham score.", "The Grantham score, predicting the effect of the DNA variant on the function of the protein.", "TINYINT UNSIGNED", "Grantham score||text|6", "", "", 0, 0, 1, 0, NOW(), NULL, NULL)',
               );
 
