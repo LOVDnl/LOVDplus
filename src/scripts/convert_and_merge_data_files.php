@@ -4,8 +4,8 @@
  * LEIDEN OPEN VARIATION DATABASE (LOVD)
  *
  * Created     : 2014-11-28
- * Modified    : 2015-03-17
- * For LOVD+   : 3.0-13
+ * Modified    : 2015-05-20
+ * For LOVD+   : 3.0-14
  *
  * Copyright   : 2004-2015 Leiden University Medical Center; http://www.LUMC.nl/
  * Programmer  : Ing. Ivo F.A.C. Fokkema <I.F.A.C.Fokkema@LUMC.nl>
@@ -40,7 +40,7 @@ ignore_user_abort(true);
 
 
 // This script will be called from localhost by a cron job.
-$sPath = '/data/DIV5/KG/koppelingen/MAGPIE_LOVD/new/new/new/new/';
+$sPath = '/data/DIV5/KG/koppelingen/MAGPIE_LOVD_validatie/';
 $aSuffixes = array(
     'meta' => 'meta.lovd',
     'vep' => 'directvep.data.lovd',
@@ -694,7 +694,7 @@ $aColumnMappings = array(
     'INDB_COUNT_HC' => 'VariantOnGenome/InhouseDB/Count/HC',
     'AF1000G' => 'VariantOnGenome/Frequency/1000G',
     'rsID' => 'VariantOnGenome/dbSNP',
-    'AFESP5400' => 'VariantOnGenome/Frequency/EVS',
+    'AFESP5400' => 'VariantOnGenome/Frequency/EVS', // Will be divided by 100 later.
     'AFGONL' => 'VariantOnGenome/Frequency/GoNL',
     'MutationTaster_pred' => 'VariantOnTranscript/Prediction/MutationTaster',
     'MutationTaster_score' => 'VariantOnTranscript/Prediction/MutationTaster/Score',
@@ -711,14 +711,14 @@ $aColumnMappings = array(
     'DP_Child' => 'VariantOnGenome/Sequencing/Depth/Total',
     'DPREF_Child' => 'VariantOnGenome/Sequencing/Depth/Ref',
     'DPALT_Child' => 'VariantOnGenome/Sequencing/Depth/Alt',
-    'ALTPERC_Child' => 'VariantOnGenome/Sequencing/Depth/Alt/Fraction',
+    'ALTPERC_Child' => 'VariantOnGenome/Sequencing/Depth/Alt/Fraction', // Will be divided by 100 later.
     'GT_Father' => 'VariantOnGenome/Sequencing/Father/GenoType',
     'DP_Father' => 'VariantOnGenome/Sequencing/Father/Depth/Total',
-    'ALTPERC_Father' => 'VariantOnGenome/Sequencing/Father/Depth/Alt/Fraction',
+    'ALTPERC_Father' => 'VariantOnGenome/Sequencing/Father/Depth/Alt/Fraction', // Will be divided by 100 later.
     'ISPRESENT_Father' => 'VariantOnGenome/Sequencing/Father/VarPresent',
     'GT_Mother' => 'VariantOnGenome/Sequencing/Mother/GenoType',
     'DP_Mother' => 'VariantOnGenome/Sequencing/Mother/Depth/Total',
-    'ALTPERC_Mother' => 'VariantOnGenome/Sequencing/Mother/Depth/Alt/Fraction',
+    'ALTPERC_Mother' => 'VariantOnGenome/Sequencing/Mother/Depth/Alt/Fraction', // Will be divided by 100 later.
     'ISPRESENT_Mother' => 'VariantOnGenome/Sequencing/Mother/VarPresent',
 //    '' => '',
 //    'distanceToSplice' => 'VariantOnTranscript/Distance_to_splice_site',
@@ -1248,6 +1248,13 @@ foreach ($aFiles as $sID) {
         foreach (array('VariantOnGenome/Sequencing/Father/GenoType', 'VariantOnGenome/Sequencing/Mother/GenoType') as $sCol) {
             if ($aVariant[$sCol] && $aVariant[$sCol] == 'None') {
                 $aVariant[$sCol] = '';
+            }
+        }
+
+        // Some percentages we get need to be turned into decimals before it can be stored.
+        foreach ($aColumnMappings as $sVEPColumn => $sLOVDColumn) {
+            if ($sVEPColumn == 'AFESP5400' || strpos($sVEPColumn, 'ALTPERC_') === 0) {
+                $aVariant[$sLOVDColumn] /= 100;
             }
         }
 
