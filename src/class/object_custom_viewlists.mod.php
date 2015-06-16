@@ -4,10 +4,10 @@
  * LEIDEN OPEN VARIATION DATABASE (LOVD)
  *
  * Created     : 2013-11-07
- * Modified    : 2014-05-18
+ * Modified    : 2015-06-16
  * For LOVD    : 3.0-11
  *
- * Copyright   : 2004-2014 Leiden University Medical Center; http://www.LUMC.nl/
+ * Copyright   : 2004-2015 Leiden University Medical Center; http://www.LUMC.nl/
  * Programmer  : Ing. Ivo F.A.C. Fokkema <I.F.A.C.Fokkema@LUMC.nl>
  *
  *
@@ -377,6 +377,7 @@ class LOVD_CustomViewListMOD extends LOVD_CustomViewList {
                     break;
                 case 'frameshift':
                 case 'frameshift-near-splice':
+                case 'splice':
                 case 'splice-3':
                 case 'splice-5':
                 case 'stop-gained':
