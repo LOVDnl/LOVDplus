@@ -479,6 +479,10 @@ if ($sCalcVersionFiles != $sCalcVersionDB) {
                          'UPDATE ' . TABLE_SHARED_COLS . ' SET select_options = "intergenic\r\nnear-gene-5\r\nutr-5\r\ncoding\r\ncoding-near-splice\r\ncoding-synonymous\r\ncoding-synonymous-near-splice\r\ncodingComplex\r\ncodingComplex-near-splice\r\nframeshift\r\nframeshift-near-splice\r\nmissense\r\nmissense-near-splice\r\nsplice-5\r\nsplice\r\nintron\r\nsplice-3\r\nstop-gained\r\nstop-gained-near-splice\r\nstop-lost\r\nstop-lost-near-splice\r\nutr-3\r\nnear-gene-3" WHERE select_options IN ("intergenic\r\nnear-gene-5\r\nutr-5\r\ncoding\r\ncoding-near-splice\r\ncodingComplex\r\ncodingComplex-near-splice\r\nframeshift\r\nframeshift-near-splice\r\nsplice-5\r\nintron\r\nsplice-3\r\nutr-3\r\nnear-gene-3", "intergenic\r\nnear-gene-5\r\nutr-5\r\ncoding\r\ncoding-near-splice\r\ncoding-synonymous\r\ncoding-synonymous-near-splice\r\ncodingComplex\r\ncodingComplex-near-splice\r\nframeshift\r\nframeshift-near-splice\r\nmissense\r\nmissense-near-splice\r\nsplice-5\r\nintron\r\nsplice-3\r\nstop-gained\r\nstop-gained-near-splice\r\nstop-lost\r\nstop-lost-near-splice\r\nutr-3\r\nnear-gene-3") AND colid = "VariantOnTranscript/GVS/Function"',
                          'UPDATE ' . TABLE_ANALYSES . ' SET filters = REPLACE(filters, "remove_intronic_distance_gt_2", "remove_intronic_distance_gt_8\r\nremove_intronic_distance_gt_2")',
                      ),
+                 '3.0-12c' =>
+                     array(
+                         'UPDATE ' . TABLE_ANALYSES . ' SET filters = REPLACE(filters, "remove_by_function_coding_synonymous", "remove_by_function_coding_synonymous\r\nremove_by_function_utr_or_intronic_or_synonymous")',
+                     ),
              );
 
     if ($sCalcVersionDB < lovd_calculateVersion('3.0-alpha-01')) {
