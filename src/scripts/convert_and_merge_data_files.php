@@ -4,7 +4,7 @@
  * LEIDEN OPEN VARIATION DATABASE (LOVD)
  *
  * Created     : 2014-11-28
- * Modified    : 2015-05-20
+ * Modified    : 2015-06-26
  * For LOVD+   : 3.0-14
  *
  * Copyright   : 2004-2015 Leiden University Medical Center; http://www.LUMC.nl/
@@ -208,7 +208,10 @@ $aGenesToIgnore = array(
     'COA7',
     'NIM1K',
     'ZNF561-AS1',
-    // 2015-03-??; No UD could be loaded.
+    // 2015-06-25; No UD could be loaded.
+    'SCX',
+    'HGH1',
+    // 2015-06-??; No UD could be loaded.
 
 
 
@@ -670,6 +673,8 @@ $aGeneAliases = array(
     'MKI67IP' => 'NIFK',
     'C19orf82' => 'ZNF561-AS1',
     'SPANXB2' => 'SPANXB1',
+    'SCXB' => 'SCX',
+    'FAM203B' => 'HGH1',
 );
 
 
@@ -830,29 +835,30 @@ function lovd_getVariantDescription (&$aVariant, $sRef, $sAlt)
         $sHGVSPrefix = 'm.';
     }
 
+    // Even substitutions are sometimes mentioned as longer Refs and Alts, so we'll always need to isolate the actual difference.
+    $aVariant['position_g_start'] = $aVariant['position'];
+    $aVariant['position_g_end'] = $aVariant['position'] + strlen($sRef) - 1;
+
+    // 'Eat' letters from either end - first left, then right - to isolate the difference.
+    $sAltOriginal = $sAlt;
+    while (strlen($sRef) > 0 && strlen($sAlt) > 0 && $sRef{0} == $sAlt{0}) {
+        $sRef = substr($sRef, 1);
+        $sAlt = substr($sAlt, 1);
+        $aVariant['position_g_start'] ++;
+    }
+    while (strlen($sRef) > 0 && strlen($sAlt) > 0 && $sRef[strlen($sRef) - 1] == $sAlt[strlen($sAlt) - 1]) {
+        $sRef = substr($sRef, 0, -1);
+        $sAlt = substr($sAlt, 0, -1);
+        $aVariant['position_g_end'] --;
+    }
+
     // Substitution, or something else?
     if (strlen($sRef) == 1 && strlen($sAlt) == 1) {
         // Substitutions.
         $aVariant['type'] = 'subst';
-        $aVariant['position_g_start'] = $aVariant['position_g_end'] = $aVariant['position'];
-        $aVariant['VariantOnGenome/DNA'] = $sHGVSPrefix . $aVariant['position'] . $sRef . '>' . $sAlt;
+        $aVariant['VariantOnGenome/DNA'] = $sHGVSPrefix . $aVariant['position_g_start'] . $sRef . '>' . $sAlt;
     } else {
-        // Indels.
-        $aVariant['position_g_start'] = $aVariant['position'];
-        $aVariant['position_g_end'] = $aVariant['position'] + strlen($sRef) - 1;
-
-        // 'Eat' letters from either end - first left, then right - to isolate the difference.
-        $sAltOriginal = $sAlt;
-        while (strlen($sRef) > 0 && strlen($sAlt) > 0 && $sRef{0} == $sAlt{0}) {
-            $sRef = substr($sRef, 1);
-            $sAlt = substr($sAlt, 1);
-            $aVariant['position_g_start'] ++;
-        }
-        while (strlen($sRef) > 0 && strlen($sAlt) > 0 && $sRef[strlen($sRef) - 1] == $sAlt[strlen($sAlt) - 1]) {
-            $sRef = substr($sRef, 0, -1);
-            $sAlt = substr($sAlt, 0, -1);
-            $aVariant['position_g_end'] --;
-        }
+        // Insertions/duplications, deletions, inversions, indels.
 
         // Now find out the variant type.
         if (strlen($sRef) > 0 && strlen($sAlt) == 0) {
@@ -1412,8 +1418,8 @@ $aTranscriptInfo = array(array('id' => 'NO_TRANSCRIPTS')); // Basically, any tex
 
             // Handle the rest of the VOT columns.
             if ($aVariant['VariantOnTranscript/DNA'] && strpos($aVariant['VariantOnTranscript/DNA'], '_') === false) {
-                // We don't trust HGVS descriptions with an _ in it. Because these ****** at VEP don't even understand that when the gene is on reverse, they have to switch the positions.
-                // And I don't feel like parsing everything, and switching everything (and possibly having to reverse compliment insertions).
+                // We don't trust HGVS descriptions with an _ in it. Because at VEP they don't understand that when the gene is on reverse, they have to switch the positions.
+                // Also, sometimes a delins is simply a substitution, when the VCF file is all messed up (ACGT to ACCT for example).
                 $aVariant['VariantOnTranscript/DNA'] = substr($aVariant['VariantOnTranscript/DNA'], strpos($aVariant['VariantOnTranscript/DNA'], ':')+1); // NM_000000.1:c.1del -> c.1del
             } else {
                 // No other option, call Mutalyzer.

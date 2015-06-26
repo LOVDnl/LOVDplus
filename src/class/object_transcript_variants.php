@@ -4,10 +4,10 @@
  * LEIDEN OPEN VARIATION DATABASE (LOVD)
  *
  * Created     : 2011-05-12
- * Modified    : 2014-07-15
- * For LOVD    : 3.0-11
+ * Modified    : 2015-06-26
+ * For LOVD    : 3.0-14
  *
- * Copyright   : 2004-2014 Leiden University Medical Center; http://www.LUMC.nl/
+ * Copyright   : 2004-2015 Leiden University Medical Center; http://www.LUMC.nl/
  * Programmers : Ing. Ivar C. Lugtenburg <I.C.Lugtenburg@LUMC.nl>
  *               Ing. Ivo F.A.C. Fokkema <I.F.A.C.Fokkema@LUMC.nl>
  *
@@ -174,6 +174,10 @@ class LOVD_TranscriptVariant extends LOVD_Custom {
         // Checks fields before submission of data.
         // Loop through all transcripts to have each transcript's set of columns checked.
         global $_AUTH;
+
+        // Reset mandatory fields, because import.php calls checkFields() multiple times
+        // and we don't want this list to grow forever.
+        $this->aCheckMandatory = array();
 
         foreach (array_keys($this->aTranscripts) as $nTranscriptID) {
             if (!empty($aData['ignore_' . $nTranscriptID])) {
