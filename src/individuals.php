@@ -85,6 +85,7 @@ if (PATH_COUNT >= 2 && ctype_digit($_PE[1]) && !ACTION && (PATH_COUNT == 2 || PA
 
     lovd_requireAUTH(LEVEL_COLLABORATOR);
 
+    // FIXME: This means, when the ID does not exist, we have an open table that doesn't close.
     print('      <TABLE cellpadding="0" cellspacing="0" border="0" width="100%">
         <TR>
           <TD valign="top">' . "\n");
@@ -210,7 +211,7 @@ if (PATH_COUNT >= 2 && ctype_digit($_PE[1]) && !ACTION && (PATH_COUNT == 2 || PA
                                         FROM ' . TABLE_ANALYSES . ' AS a
                                         WHERE a.id NOT IN (SELECT ar.analysisid
                                                            FROM ' . TABLE_ANALYSES_RUN . ' AS ar
-                                                           WHERE ar.screeningid = ? AND ar.modified = 0)', array($nScreeningToAnalyze))->fetchAllAssoc();
+                                                           WHERE ar.screeningid = ? AND ar.modified = 0) ORDER BY a.sortid, a.id', array($nScreeningToAnalyze))->fetchAllAssoc();
         $zAnalyses = array_merge($zAnalysesRun, array(''), $zAnalysesNotRun);
         print('
       <DIV id="analyses">

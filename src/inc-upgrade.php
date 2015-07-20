@@ -483,6 +483,13 @@ if ($sCalcVersionFiles != $sCalcVersionDB) {
                      array(
                          'UPDATE ' . TABLE_ANALYSES . ' SET filters = REPLACE(filters, "remove_by_function_coding_synonymous", "remove_by_function_coding_synonymous\r\nremove_by_function_utr_or_intronic_or_synonymous")',
                      ),
+                 '3.0-12d' =>
+                     array(
+                         'ALTER TABLE ' . TABLE_ANALYSES . ' ADD COLUMN sortid TINYINT(3) UNSIGNED NOT NULL AFTER id',
+                         'UPDATE ' . TABLE_ANALYSES . ' SET sortid = id',
+                         'UPDATE ' . TABLE_ANALYSES . ' SET sortid = sortid + 1 WHERE id > 1',
+                         'INSERT INTO ' . TABLE_ANALYSES . ' VALUES (NULL, 2, "Gene panel", "Filters for coding or splice site variants within the gene panel.", "remove_not_in_gene_panel\r\nremove_by_quality_lte_100\r\nremove_by_function_utr_or_intronic", 0, NOW(), NULL, NULL)',
+                     ),
              );
 
     if ($sCalcVersionDB < lovd_calculateVersion('3.0-alpha-01')) {
