@@ -4,10 +4,10 @@
  * LEIDEN OPEN VARIATION DATABASE (LOVD)
  *
  * Created     : 2014-01-31
- * Modified    : 2014-03-07
- * For LOVD    : 3.0-10
+ * Modified    : 2015-07-21
+ * For LOVD    : 3.0-14
  *
- * Copyright   : 2004-2014 Leiden University Medical Center; http://www.LUMC.nl/
+ * Copyright   : 2004-2015 Leiden University Medical Center; http://www.LUMC.nl/
  * Programmer  : Ing. Ivo F.A.C. Fokkema <I.F.A.C.Fokkema@LUMC.nl>
  *
  *
@@ -135,7 +135,7 @@ if (PATH_COUNT == 3 && $_PE[1] == 'run' && ctype_digit($_PE[2]) && ACTION == 'mo
     lovd_isAuthorized('analysisrun', $nID);
     lovd_requireAUTH(LEVEL_CURATOR);
 
-    $zData = $_DB->query('SELECT ar.*, GROUP_CONCAT(filterid SEPARATOR ";") AS _filters FROM ' . TABLE_ANALYSES_RUN . ' AS ar INNER JOIN ' . TABLE_ANALYSES_RUN_FILTERS . ' AS arf ON (ar.id = arf.runid) WHERE id = ?', array($nID))->fetchAssoc();
+    $zData = $_DB->query('SELECT ar.*, s.individualid, a.name, GROUP_CONCAT(arf.filterid ORDER BY arf.filter_order SEPARATOR ";") AS _filters FROM ' . TABLE_ANALYSES_RUN . ' AS ar INNER JOIN ' . TABLE_SCREENINGS . ' AS s ON (ar.screeningid = s.id) INNER JOIN ' . TABLE_ANALYSES . ' AS a ON (ar.analysisid = a.id) INNER JOIN ' . TABLE_ANALYSES_RUN_FILTERS . ' AS arf ON (ar.id = arf.runid) WHERE ar.id = ?', array($nID))->fetchAssoc();
     if (!$zData) {
         $_T->printHeader();
         $_T->printTitle();
@@ -184,7 +184,7 @@ if (PATH_COUNT == 3 && $_PE[1] == 'run' && ctype_digit($_PE[2]) && ACTION == 'mo
             $_DB->commit();
 
             // Write to log...
-            lovd_writeLog('Event', LOG_EVENT, 'Created run ' . str_pad($nNewRunID, 5, '0', STR_PAD_LEFT) . ' based on ' . $nID . ' with filter(s) \'' . implode('\', \'', $_POST['remove_filters']) . '\' removed');
+            lovd_writeLog('Event', LOG_EVENT, 'Created analysis run ' . str_pad($nNewRunID, 5, '0', STR_PAD_LEFT) . ' based on ' . $nID . ' (' . $zData['name'] . ') on individual ' . $zData['individualid'] . ':' . $zData['screeningid'] . ' with filter(s) \'' . implode('\', \'', $_POST['remove_filters']) . '\' removed');
 
             // Thank the user...
             lovd_showInfoTable('Successfully created a new analysis run!', 'success');
@@ -256,7 +256,7 @@ if (PATH_COUNT == 3 && $_PE[1] == 'run' && ctype_digit($_PE[2]) && ACTION == 'de
 
     // ADMIN can always delete an analysis run, even when the individual's analysis hasn't been started by him.
     // FIXME: Shouldn't the owner of the individual's analysis be able to delete the run, when it's created by somebody else?
-    $sSQL = 'SELECT ar.* FROM ' . TABLE_ANALYSES_RUN . ' AS ar WHERE ar.id = ?' . ($_AUTH['level'] == LEVEL_ADMIN? '' : ' AND ar.created_by = ?');
+    $sSQL = 'SELECT ar.*, s.individualid FROM ' . TABLE_ANALYSES_RUN . ' AS ar INNER JOIN ' . TABLE_SCREENINGS . ' AS s ON (ar.screeningid = s.id) WHERE ar.id = ?' . ($_AUTH['level'] == LEVEL_ADMIN? '' : ' AND ar.created_by = ?');
     $aSQL = array($nID);
     if ($_AUTH['level'] < LEVEL_ADMIN) {
         $aSQL[] = $_AUTH['id'];
@@ -274,7 +274,7 @@ if (PATH_COUNT == 3 && $_PE[1] == 'run' && ctype_digit($_PE[2]) && ACTION == 'de
     $_DB->query('DELETE FROM ' . TABLE_ANALYSES_RUN . ' WHERE id = ?', array($nID));
 
     // Write to log...
-    lovd_writeLog('Event', LOG_EVENT, 'Deleted analysis run ' . $nID);
+    lovd_writeLog('Event', LOG_EVENT, 'Deleted analysis run ' . $nID . ' on individual ' . $zData['individualid'] . ':' . $zData['screeningid']);
 
     $_T->printHeader();
     $_T->printTitle();

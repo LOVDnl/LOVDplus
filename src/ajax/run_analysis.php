@@ -4,10 +4,10 @@
  * LEIDEN OPEN VARIATION DATABASE (LOVD)
  *
  * Created     : 2013-11-05
- * Modified    : 2014-03-07
- * For LOVD    : 3.0-10
+ * Modified    : 2015-07-21
+ * For LOVD    : 3.0-14
  *
- * Copyright   : 2004-2014 Leiden University Medical Center; http://www.LUMC.nl/
+ * Copyright   : 2004-2015 Leiden University Medical Center; http://www.LUMC.nl/
  * Programmer  : Ing. Ivo F.A.C. Fokkema <I.F.A.C.Fokkema@LUMC.nl>
  *
  *
@@ -59,9 +59,10 @@ if (!$zIndividual) {
     die(AJAX_FALSE);
 }
 
+$zAnalysis = $zAnalysisRun = false;
 if ($_GET['runid']) {
     // Check if the run exists.
-    $zAnalysisRun = $_DB->query('SELECT id, GROUP_CONCAT(filterid SEPARATOR ";") AS _filters FROM ' . TABLE_ANALYSES_RUN . ' AS ar INNER JOIN ' . TABLE_ANALYSES_RUN_FILTERS . ' AS arf ON (ar.id = arf.runid) WHERE id = ?', array($_GET['runid']))->fetchAssoc();
+    $zAnalysisRun = $_DB->query('SELECT ar.id, ar.analysisid, a.name, GROUP_CONCAT(arf.filterid ORDER BY arf.filter_order SEPARATOR ";") AS _filters FROM ' . TABLE_ANALYSES_RUN . ' AS ar INNER JOIN ' . TABLE_ANALYSES . ' AS a ON (ar.analysisid = a.id) INNER JOIN ' . TABLE_ANALYSES_RUN_FILTERS . ' AS arf ON (ar.id = arf.runid) WHERE ar.id = ?', array($_GET['runid']))->fetchAssoc();
     if (!$zAnalysisRun) {
         die('Analysis run not recognized. If the analysis run is defined properly, this is an error in the software.');
     }
@@ -73,7 +74,7 @@ if ($_GET['runid']) {
 
 } else {
     // Check if analysis exists.
-    $zAnalysis = $_DB->query('SELECT id, filters FROM ' . TABLE_ANALYSES . ' WHERE id = ?', array($_GET['analysisid']))->fetchAssoc();
+    $zAnalysis = $_DB->query('SELECT id, name, filters FROM ' . TABLE_ANALYSES . ' WHERE id = ?', array($_GET['analysisid']))->fetchAssoc();
     if (!$zAnalysis || !$zAnalysis['filters']) {
         die('Analysis not recognized or no filters defined. If the analysis is defined properly, this is an error in the software.');
     }
@@ -90,6 +91,7 @@ if ($_GET['runid']) {
 
 
 // All checked. Update individual. We already have checked that we're allowed to analyze this one. So just update the settings, if not already done before.
+define('LOG_EVENT', 'AnalysisRun');
 $_DB->beginTransaction();
 $_DB->query('UPDATE ' . TABLE_INDIVIDUALS . ' SET analysis_statusid = ?, analysis_by = ?, analysis_date = NOW() WHERE id = ? AND (analysis_statusid = ? OR analysis_by IS NULL OR analysis_date IS NULL)', array(ANALYSIS_STATUS_IN_PROGRESS, $_AUTH['id'], $zIndividual['id'], ANALYSIS_STATUS_READY));
 
@@ -116,6 +118,9 @@ if (!$_GET['runid']) {
     $aFilters = explode(';', $zAnalysisRun['_filters']);
 }
 $_DB->commit();
+
+// Write to log...
+lovd_writeLog('Event', LOG_EVENT, 'Started analysis run ' . str_pad($nRunID, 5, '0', STR_PAD_LEFT) . ($zAnalysis? ' (' . $zAnalysis['name'] : ' based on ' . $zAnalysisRun['analysisid'] . ' (' . $zAnalysisRun['name']) . ') on individual ' . $zIndividual['id'] . ':' . str_pad($_GET['screeningid'], 10, '0', STR_PAD_LEFT) . ' with filter(s) \'' . implode('\', \'', $aFilters) . '\'');
 
 
 

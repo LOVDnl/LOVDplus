@@ -108,6 +108,11 @@ class LOVD_Log extends LOVD_Object {
 
         // 2013-09-30; 3.0-08; Make log entry texts clickable.
         switch ($zData['event']) {
+            case 'AnalysisRun':
+            case 'AnalysisRunModify':
+            case 'AnalysisRunDelete':
+                $zData['entry'] = preg_replace('/(individual) ([0-9]+):([0-9]+)( |$)/', '$1 <A href="individuals/$2/analyze/$3">$2</A> ', $zData['entry']);
+                break;
             case 'ColCreate':
                 $zData['entry'] = preg_replace('/(link) ([0-9]+) /', '$1 <A href="links/$2">$2</A> ', $zData['entry']);
             case 'ColAdd':
