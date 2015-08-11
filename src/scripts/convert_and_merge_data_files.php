@@ -4,7 +4,7 @@
  * LEIDEN OPEN VARIATION DATABASE (LOVD)
  *
  * Created     : 2014-11-28
- * Modified    : 2015-06-26
+ * Modified    : 2015-08-11
  * For LOVD+   : 3.0-14
  *
  * Copyright   : 2004-2015 Leiden University Medical Center; http://www.LUMC.nl/
@@ -41,6 +41,7 @@ ignore_user_abort(true);
 
 // This script will be called from localhost by a cron job.
 $sPath = '/data/DIV5/KG/koppelingen/MAGPIE_LOVD_validatie/';
+$sPath = '/data/DIV5/KG/kg_wes_mr_devel/runs/vep_validatie/';
 $aSuffixes = array(
     'meta' => 'meta.lovd',
     'vep' => 'directvep.data.lovd',
@@ -1491,6 +1492,29 @@ $aTranscriptInfo = array(array('id' => 'NO_TRANSCRIPTS')); // Basically, any tex
                 $aVariant['VariantOnTranscript/Protein'] = 'p.?';
             } else {
                 // OK, too bad, we need to run Mutalyzer anyway.
+
+                // It sometimes happens that we don't have a id_mutalyzer value. Before, we used to create transcripts manually if we couldn't recognize them.
+                // This is now working against us, as we really need this ID now.
+                if ($aTranscripts[$aLine['Feature']]['id_mutalyzer'] == '000') {
+                    // Normally, we would implement a cache here, but we rarely run Mutalyzer, and if we do, we will not likely run it on a variant on the same transcript.
+                    // So, first just check if we still don't have a Mutalyzer ID.
+print('Reloading Mutalyzer ID for ' . $aTranscripts[$aLine['Feature']]['id_ncbi'] . ' in ' . $aGenes[$aLine['SYMBOL']]['refseq_UD'] . ' (' . $aGenes[$aLine['SYMBOL']]['id'] . ')' . "\n");
+                    $sJSONResponse = file_get_contents('https://mutalyzer.nl/json/getTranscriptsAndInfo?genomicReference=' . rawurlencode($aGenes[$aLine['SYMBOL']]['refseq_UD']) . '&geneName=' . rawurlencode($aGenes[$aLine['SYMBOL']]['id']));
+                    if ($sJSONResponse && $aResponse = json_decode($sJSONResponse, true)) {
+                        // Loop transcripts, find the one in question, then isolate Mutalyzer ID.
+                        foreach ($aResponse as $aTranscript) {
+                            if ($aTranscript['id'] == $aTranscripts[$aLine['Feature']]['id_ncbi'] && $aTranscript['name']) {
+                                $sMutalyzerID = str_replace($aGenes[$aLine['SYMBOL']]['id'] . '_v', '', $aTranscript['name']);
+
+                                // Store locally, then store in database.
+                                $aTranscripts[$aLine['Feature']]['id_mutalyzer'] = $sMutalyzerID;
+                                $_DB->query('UPDATE ' . TABLE_TRANSCRIPTS . ' SET id_mutalyzer = ? WHERE id_ncbi = ?', array($sMutalyzerID, $aTranscript['id']));
+                                break;
+                            }
+                        }
+                    }
+                }
+
 print('Running mutalyzer to predict protein change for ' . $aGenes[$aLine['SYMBOL']]['refseq_UD'] . '(' . $aGenes[$aLine['SYMBOL']]['id'] . '_v' . $aTranscripts[$aLine['Feature']]['id_mutalyzer'] . '):' . $aVariant['VariantOnTranscript/DNA'] . "\n");
                 $sJSONResponse = file_get_contents('https://mutalyzer.nl/json/runMutalyzer?variant=' . rawurlencode($aGenes[$aLine['SYMBOL']]['refseq_UD'] . '(' . $aGenes[$aLine['SYMBOL']]['id'] . '_v' . $aTranscripts[$aLine['Feature']]['id_mutalyzer'] . '):' . $aVariant['VariantOnTranscript/DNA']));
 //var_dump('https://mutalyzer.nl/json/runMutalyzer?variant=' . rawurlencode($aGenes[$aLine['SYMBOL']]['refseq_UD'] . '(' . $aGenes[$aLine['SYMBOL']]['id'] . '_v' . $aTranscripts[$aLine['Feature']]['id_mutalyzer'] . '):' . $aVariant['VariantOnTranscript/DNA']));
