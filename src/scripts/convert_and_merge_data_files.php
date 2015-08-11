@@ -684,6 +684,7 @@ $aGeneAliases = array(
     'SPANXB2' => 'SPANXB1',
     'SCXB' => 'SCX',
     'FAM203B' => 'HGH1',
+    'PNMA6C' => 'PNMA6A',
 );
 
 
