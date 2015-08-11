@@ -212,7 +212,9 @@ $aGenesToIgnore = array(
     // 2015-06-25; No UD could be loaded.
     'SCX',
     'HGH1',
-    // 2015-06-??; No UD could be loaded.
+    // 2015-08-??; No UD could be loaded.
+    'ARRDC1-AS1',
+    // 2015-08-??; No UD could be loaded.
 
 
 
@@ -535,7 +537,13 @@ $aGenesToIgnore = array(
     'GDNF-AS1',
     'HOXA10',
     'TCL1A',
-    // 2015-03-??; No transcripts could be found.
+    // 2015-08-??; No transcripts could be found.
+    'ARL6',
+    'CXCL1',
+    'GPER1',
+    'MRPL45',
+    'SRGAP2C',
+    // 2015-08-??; No transcripts could be found.
     // Still needs to be sorted.
 );
 
