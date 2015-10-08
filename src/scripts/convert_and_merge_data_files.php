@@ -4,7 +4,7 @@
  * LEIDEN OPEN VARIATION DATABASE (LOVD)
  *
  * Created     : 2014-11-28
- * Modified    : 2015-08-11
+ * Modified    : 2015-09-18
  * For LOVD+   : 3.0-14
  *
  * Copyright   : 2004-2015 Leiden University Medical Center; http://www.LUMC.nl/
@@ -40,8 +40,7 @@ ignore_user_abort(true);
 
 
 // This script will be called from localhost by a cron job.
-$sPath = '/data/DIV5/KG/koppelingen/MAGPIE_LOVD_validatie/';
-$sPath = '/data/DIV5/KG/kg_wes_mr_devel/runs/vep_validatie/';
+$sPath = '/data/DIV5/KG/koppelingen/MAGPIE_LOVD/';
 $aSuffixes = array(
     'meta' => 'meta.lovd',
     'vep' => 'directvep.data.lovd',
@@ -723,10 +722,15 @@ $aColumnMappings = array(
     'phyloP' => 'VariantOnGenome/Conservation_score/PhyloP',
     'scorePhastCons' => 'VariantOnGenome/Conservation_score/Phast',
     'GT_Child' => 'allele',
+    'GT_Patient' => 'allele',
     'DP_Child' => 'VariantOnGenome/Sequencing/Depth/Total',
+    'DP_Patient' => 'VariantOnGenome/Sequencing/Depth/Total',
     'DPREF_Child' => 'VariantOnGenome/Sequencing/Depth/Ref',
+    'DPREF_Patient' => 'VariantOnGenome/Sequencing/Depth/Ref',
     'DPALT_Child' => 'VariantOnGenome/Sequencing/Depth/Alt',
+    'DPALT_Patient' => 'VariantOnGenome/Sequencing/Depth/Alt',
     'ALTPERC_Child' => 'VariantOnGenome/Sequencing/Depth/Alt/Fraction', // Will be divided by 100 later.
+    'ALTPERC_Patient' => 'VariantOnGenome/Sequencing/Depth/Alt/Fraction', // Will be divided by 100 later.
     'GT_Father' => 'VariantOnGenome/Sequencing/Father/GenoType',
     'DP_Father' => 'VariantOnGenome/Sequencing/Father/Depth/Total',
     'ALTPERC_Father' => 'VariantOnGenome/Sequencing/Father/Depth/Alt/Fraction', // Will be divided by 100 later.
@@ -815,7 +819,9 @@ function lovd_getUDForGene ($sBuild, $sGene)
     $sJSONResponse = @file_get_contents('https://mutalyzer.nl/json/getGeneLocation?build=' . $sBuild . '&gene=' . $sGene);
     if ($sJSONResponse && $aResponse = json_decode($sJSONResponse, true)) {
         $sChromosome = $_SETT['human_builds'][$sBuild]['ncbi_sequences'][substr($aResponse['chromosome_name'], 3)];
-        $sJSONResponse = @file_get_contents('https://mutalyzer.nl/json/sliceChromosome?chromAccNo=' . $sChromosome . '&start=' . $aResponse['start'] . '&end=' . $aResponse['stop'] . '&orientation=' . ($aResponse['orientation'] == 'forward'? 1 : 2));
+        $nStart = $aResponse['start'] - ($aResponse['orientation'] == 'forward'? 5000 : 2000);
+        $nEnd = $aResponse['stop'] + ($aResponse['orientation'] == 'forward'? 2000 : 5000);
+        $sJSONResponse = @file_get_contents('https://mutalyzer.nl/json/sliceChromosome?chromAccNo=' . $sChromosome . '&start=' . $nStart . '&end=' . $nEnd . '&orientation=' . ($aResponse['orientation'] == 'forward'? 1 : 2));
         if ($sJSONResponse && $aResponse = json_decode($sJSONResponse, true)) {
             $sResponse = (!is_array($aResponse)? $aResponse : implode('', $aResponse));
             $sUD = $sResponse;
@@ -1183,11 +1189,11 @@ foreach ($aFiles as $sID) {
     // Verify the identity of this file. Some columns are appended by the Miracle ID.
     // Check the child's Miracle ID with that we have in the meta data file, and remove all the IDs so the headers are recognized normally.
     foreach ($aHeaders as $key => $sHeader) {
-        if (preg_match('/(Child|Father|Mother)_(\d+)$/', $sHeader, $aRegs)) {
+        if (preg_match('/(Child|Patient|Father|Mother)_(\d+)$/', $sHeader, $aRegs)) {
             // If Child, check ID.
-            if ($nMiracleID && $aRegs[1] == 'Child' && $aRegs[2] != $nMiracleID) {
+            if ($nMiracleID && in_array($aRegs[1], array('Child', 'Patient')) && $aRegs[2] != $nMiracleID) {
                 // Here, we won't try and remove the temp file. We need it for diagnostics, and it will save us from running into the same error over and over again.
-                die('Fatal: Miracle ID of Child (' . $aRegs[2] . ') does not match that from the meta file (' . $nMiracleID . ')' . "\n");
+                die('Fatal: Miracle ID of ' . $aRegs[1] . ' (' . $aRegs[2] . ') does not match that from the meta file (' . $nMiracleID . ')' . "\n");
             }
             // Clean ID from column.
             $aHeaders[$key] = substr($sHeader, 0, -(strlen($aRegs[2])+1));
