@@ -4,7 +4,7 @@
  * LEIDEN OPEN VARIATION DATABASE (LOVD)
  *
  * Created     : 2013-11-06
- * Modified    : 2015-06-22
+ * Modified    : 2015-10-12
  * For LOVD    : 3.0-13
  *
  * Copyright   : 2004-2014 Leiden University Medical Center; http://www.LUMC.nl/
@@ -172,6 +172,11 @@ if ($aVariantIDs) {
             //   (voor mezelf: wobble base posities hebben een lagere phyloP score, vandaar de controle)
             // ALS SNPs, en intronisch: phyloP>2.5 bewaren
             $aVariantIDsFiltered = $_DB->query('SELECT DISTINCT CAST(vog.id AS UNSIGNED) FROM ' . TABLE_VARIANTS . ' AS vog LEFT OUTER JOIN ' . TABLE_VARIANTS_ON_TRANSCRIPTS . ' AS vot USING (id) WHERE (vot.`VariantOnTranscript/GVS/Function` IS NULL OR (!(vog.type = "subst" AND vot.`VariantOnTranscript/GVS/Function` = "missense" AND vog.`VariantOnGenome/Conservation_score/PhyloP` <= 2.5 AND vot.position_c_start%3 != 0) AND !(vog.type = "subst" AND vot.`VariantOnTranscript/GVS/Function` = "intron" AND vog.`VariantOnGenome/Conservation_score/PhyloP` <= 2.5))) AND vog.id IN (?' . str_repeat(', ?', count($aVariantIDs) - 1) . ')', $aVariantIDs, false)->fetchAllColumn();
+            break;
+        case 'remove_not_imprinted':
+            // The imprinted list could be looked up, but since the name can change and we know the ID, we'll just use that.
+            $nDiseaseID = 931;
+            $aVariantIDsFiltered = $_DB->query('SELECT DISTINCT CAST(vot.id AS UNSIGNED) FROM ' . TABLE_VARIANTS_ON_TRANSCRIPTS . ' AS vot INNER JOIN ' . TABLE_TRANSCRIPTS . ' AS t ON (vot.transcriptid = t.id) INNER JOIN ' . TABLE_GEN2DIS . ' AS g2d USING (geneid) WHERE g2d.diseaseid = ? AND vot.id IN (?' . str_repeat(', ?', count($aVariantIDs) - 1) . ')', array_merge(array($nDiseaseID), $aVariantIDs), false)->fetchAllColumn();
             break;
         case 'remove_not_in_gene_panel':
             // First, fetch disease ID from current individual. We will get the current individual by querying the database using the first variant.

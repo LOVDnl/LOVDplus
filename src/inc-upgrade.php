@@ -490,6 +490,10 @@ if ($sCalcVersionFiles != $sCalcVersionDB) {
                          'UPDATE ' . TABLE_ANALYSES . ' SET sortid = sortid + 1 WHERE id > 1',
                          'INSERT INTO ' . TABLE_ANALYSES . ' VALUES (NULL, 2, "Gene panel", "Filters for coding or splice site variants within the gene panel.", "remove_not_in_gene_panel\r\nremove_by_quality_lte_100\r\nremove_by_function_utr_or_intronic", 0, NOW(), NULL, NULL)',
                      ),
+                 '3.0-12f' =>
+                     array(
+                         'INSERT INTO ' . TABLE_ANALYSES . ' VALUES (NULL, 6, "Imprinted genes", "Filters for variants found in imprinted genes.", "remove_not_in_gene_panel\r\nremove_by_quality_lte_100\r\nremove_not_imprinted\r\nremove_by_indb_count_hc_gte_2\r\nremove_by_indb_count_ug_gte_2\r\nremove_with_any_frequency_gt_2\r\nremove_with_any_frequency_1000G\r\nremove_with_any_frequency_dbSNP\r\nremove_with_any_frequency_goNL\r\nremove_with_any_frequency_EVS\r\nremove_intronic_distance_gt_8\r\nremove_intronic_distance_gt_2\r\nremove_by_function_utr3\r\nremove_by_function_utr5\r\nremove_by_function_utr_or_intronic\r\nremove_by_function_coding_synonymous\r\nremove_by_function_utr_or_intronic_or_synonymous", 0, NOW(), NULL, NULL)',
+                     ),
              );
 
     if ($sCalcVersionDB < lovd_calculateVersion('3.0-alpha-01')) {
