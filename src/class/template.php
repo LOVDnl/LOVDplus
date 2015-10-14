@@ -186,6 +186,7 @@ class LOVD_Template {
                                 'hr',
                                 '/download/all' => array('menu_save.png', 'Download all data', LEVEL_MANAGER),
                                 '/import' => array('menu_import.png', 'Import data', LEVEL_MANAGER),
+                                '/import?schedule' => array('menu_clock.png', 'Schedule data for import', LEVEL_MANAGER),
                                 'hr',
                                 '/logs' => array('menu_logs.png', 'View system logs', LEVEL_MANAGER),
                               ),

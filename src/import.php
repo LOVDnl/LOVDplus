@@ -42,6 +42,138 @@ ini_set('memory_limit', '1536M');
 lovd_requireAUTH(LEVEL_MANAGER);
 // FIXME: How do we implement authorization? First parse everything, THEN using the parsed data we check if user has rights to insert this data?
 
+
+
+
+
+if (ACTION == 'schedule' && PATH_COUNT == 1) {
+    // Schedule files for import.
+    define('LOG_EVENT', 'ImportSchedule');
+    define('PAGE_TITLE', 'Schedule files for import');
+    $_T->printHeader();
+    $_T->printTitle();
+
+    // Loop through the files in the dir and find importable files.
+    $h = @opendir($_SETT['data_file_location']);
+    if (!$h) {
+        lovd_showInfoTable('Can\'t open directory: ' . $_SETT['data_file_location'], 'stop');
+    }
+
+    // To see if the file has already been imported, fetch a list of imported individuals.
+    $aImportedIDs = $_DB->query('SELECT `Individual/Lab_ID`, 1 FROM ' . TABLE_INDIVIDUALS)->fetchAllCombine();
+
+    $aFiles = array(); // [0/1] indicates imported no/yes, second level [filename] = mod_time.
+    while (($sFile = readdir($h)) !== false) {
+        if (preg_match('/^(Child|Patient)_(\d+).total.data.lovd$/', $sFile, $aRegs)) {
+            // Match!
+            $sFileID = $aRegs[1] . '_' . $aRegs[2];
+
+            // Get mod time.
+            $tFile = filemtime($_SETT['data_file_location'] . '/' . $sFile);
+
+            // Store file in the files array.
+            $aFiles[isset($aImportedIDs[$sFileID])][$sFile] = $tFile;
+        }
+    }
+
+    if (!$aFiles) {
+        // No files found!
+        lovd_showInfoTable('No files found! Normally this might mean trouble; I should find at least some files that are already imported... Right?', 'question');
+    }
+
+
+
+
+
+    // Process POST if present.
+    $nScheduled = 0;
+    if (POST && $_POST) {
+        // Loop through variables, find them in $aFiles[0], mark them in the database as scheduled, reload page.
+        foreach ($_POST as $sFile => $nValue) {
+            // Even though most (all?) browsers just forward the checkboxes that have been checked, I'm checking the value anyways.
+            // I don't really care much about the value, it just needs to resolve to (bool) true.
+            // Because PHP is replacing dots in the variable name (makes sense in a way, but this is a key value, but well), I need to fix the file name:
+            $sFile = preg_replace('/_([a-z])/', ".$1", $sFile); // Put dots only when an underscore is followed by a text character.
+            if ($nValue && isset($aFiles[0][$sFile])) {
+                // Process this file, it's present indeed and not yet imported.
+                if ($_DB->query('INSERT IGNORE INTO ' . TABLE_SCHEDULED_IMPORTS . ' (filename, scheduled_by, scheduled_date) VALUES (?, ?, NOW())', array($sFile, $_AUTH['id']))->rowCount()) {
+                    // Scheduled successfully.
+                    $nScheduled ++;
+                    lovd_writeLog('Event', LOG_EVENT, 'Scheduled ' . $sFile . ' for import');
+                }
+            }
+        }
+    }
+
+
+
+
+
+    arsort($aFiles[0]); // RSort importable files, newest files first, keeping indices.
+    arsort($aFiles[1]); // RSort imported files, newest files first, keeping indices.
+
+    $nFilesImportable = (!isset($aFiles[0])? 0 : count($aFiles[0]));
+    $nFilesTotal = $nFilesImportable + (!isset($aFiles[1])? 0 : count($aFiles[1]));
+
+    lovd_showInfoTable($nFilesImportable . ' file' . ($nFilesImportable == 1? '' : 's') . ' ready for import, ' . $nFilesTotal . ' file' . ($nFilesTotal == 1? '' : 's') . ' in total.', 'information');
+
+    if ($nScheduled) {
+        // We also just scheduled some files.
+        lovd_showInfoTable('Successfully scheduled ' . $nScheduled . ' file' . ($nScheduled == 1? '' : 's') . ' for import.', 'success');
+    }
+
+    // To see which files are already scheduled for import, I need to fetch that list, too.
+    // Using fetchAllCombine() may create a bit of an awkward array, but it's a lot faster using isset() than in_array().
+    $aFilesScheduled = $_DB->query('SELECT filename, 1 FROM ' . TABLE_SCHEDULED_IMPORTS)->fetchAllCombine();
+
+    $tNow = time();
+    print('      <FORM action="' . CURRENT_PATH . '?' . ACTION . '" method="post">
+        <TABLE border="0" cellpadding="10" cellspacing="0">
+          <TR valign="top">' . "\n");
+    foreach (array(1, 0) as $i) {
+        print('            <TD>
+              <TABLE border="0" cellpadding="10" cellspacing="1" width="' . ($i? '350' : '450') . '" class="data" style="font-size : 13px;">
+                <TR>
+                  <TH' . ($i? '' : '></TH><TH') . ' class="S16">' . ($i? 'Files already imported' : 'Files to be imported') . '</TH></TR>');
+        foreach ($aFiles[$i] as $sFile => $tFile) {
+            $bScheduled = false;
+            $nAgeInDays = floor(($tNow - $tFile)/(60*60*24));
+            if ($i) {
+                // Already imported.
+                print("\n" .
+                      '                <TR class="del">');
+            } else {
+                $bScheduled = isset($aFilesScheduled[$sFile]);
+                if ($bScheduled) {
+                    // Not imported yet, but scheduled.
+                    print("\n" .
+                          '                <TR class="del">
+                  <TD width="30" style="text-align : center;"><IMG src="gfx/menu_clock.png" alt="Scheduled" width="16" height="16"></TD>');
+                } else {
+                    // Not imported yet, can be scheduled.
+                    print("\n" .
+                          '                <TR class="data" style="cursor : pointer;" onclick="if ($(this).find(\':checkbox\').prop(\'checked\')) { $(this).find(\':checkbox\').attr(\'checked\', false); $(this).find(\'img\').hide(); $(this).removeClass(\'colGreen\'); } else { $(this).find(\':checkbox\').attr(\'checked\', true);  $(this).find(\'img\').show(); $(this).addClass(\'colGreen\'); }">
+                  <TD width="30" style="text-align : center;"><INPUT type="checkbox" name="' . $sFile . '" value="1" style="display : none;"><IMG src="gfx/check.png" alt="Import" width="16" height="16" style="display : none;"></TD>');
+                }
+            }
+            print('
+                  <TD><SPAN class="S15"><B>' . $sFile . '</B>' . (!$bScheduled? '' : ' <SPAN class="S13">(scheduled for import)</SPAN>') . '</SPAN><BR>
+                    ' . date('Y-m-d H:i:s', $tFile) . ' - Converted ' . $nAgeInDays . ' day' . ($nAgeInDays == 1? '' : 's') . ' ago</TD></TR>');
+        }
+        print('</TABLE></TD>' . "\n");
+    }
+    print('            <TD width="50">
+              <INPUT type="submit" value="Schedule for import &raquo;"></TD></TR></TABLE>
+      </FORM>' . "\n\n");
+
+    $_T->printFooter();
+    exit;
+}
+
+
+
+
+
 require ROOT_PATH . 'inc-lib-form.php';
 // FIXME:
 // When importing individuals, the panelid, fatherid and motherid fields are not properly checked, if the reference exists or not. Object::checkFields() checks only the database, so this check should be disabled for imports and enabled here in the file.

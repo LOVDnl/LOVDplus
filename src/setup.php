@@ -152,6 +152,7 @@ print('            <TABLE border="0" cellpadding="2" cellspacing="0" class="setu
                  array(
                         array('download/all', 'lovd_save.png', 'Download all data', 'Download all data in LOVD import format (custom columns, genes, transcripts, diseases, individuals, phenotypes, screenings &amp; variants).'),
                         array('import', 'lovd_import.png', 'Import data', 'Import data using the LOVD import format (custom columns, diseases, individuals, phenotypes, screenings &amp; variants).'),
+                        array('import?schedule', 'lovd_clock.png', 'Schedule data for import', 'Schedule data files to be imported into LOVD.'),
                       ),
             'System logs' =>
                  array(

@@ -132,7 +132,7 @@ $aRequired =
 $_SETT = array(
                 'system' =>
                      array(
-                            'version' => '3.0-12f',
+                            'version' => '3.0-12g',
                           ),
                 'user_levels' =>
                      array(
@@ -271,6 +271,7 @@ $_SETT = array(
                                                           ),
                                           ),
                           ),
+                'data_file_location' => '/data/DIV5/KG/koppelingen/MAGPIE_LOVD/',
               );
 
 // Complete version info.
@@ -501,6 +502,7 @@ $_TABLES =
                 'TABLE_ANALYSES_RUN' => TABLEPREFIX . '_analyses_run',
                 'TABLE_ANALYSES_RUN_FILTERS' => TABLEPREFIX . '_analyses_run_filters',
                 'TABLE_ANALYSES_RUN_RESULTS' => TABLEPREFIX . '_analyses_run_results',
+                'TABLE_SCHEDULED_IMPORTS' => TABLEPREFIX . '_scheduled_imports',
               );
 
 foreach ($_TABLES as $sConst => $sTable) {

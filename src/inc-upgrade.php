@@ -494,6 +494,10 @@ if ($sCalcVersionFiles != $sCalcVersionDB) {
                      array(
                          'INSERT INTO ' . TABLE_ANALYSES . ' VALUES (NULL, 6, "Imprinted genes", "Filters for variants found in imprinted genes.", "remove_not_in_gene_panel\r\nremove_by_quality_lte_100\r\nremove_not_imprinted\r\nremove_by_indb_count_hc_gte_2\r\nremove_by_indb_count_ug_gte_2\r\nremove_with_any_frequency_gt_2\r\nremove_with_any_frequency_1000G\r\nremove_with_any_frequency_dbSNP\r\nremove_with_any_frequency_goNL\r\nremove_with_any_frequency_EVS\r\nremove_intronic_distance_gt_8\r\nremove_intronic_distance_gt_2\r\nremove_by_function_utr3\r\nremove_by_function_utr5\r\nremove_by_function_utr_or_intronic\r\nremove_by_function_coding_synonymous\r\nremove_by_function_utr_or_intronic_or_synonymous", 0, NOW(), NULL, NULL)',
                      ),
+                 '3.0-12g' =>
+                     array(
+                         'CREATE TABLE ' . TABLE_SCHEDULED_IMPORTS . ' (filename VARCHAR(255) NOT NULL, in_progress BOOLEAN NOT NULL DEFAULT 0, scheduled_by SMALLINT(5) UNSIGNED ZEROFILL, scheduled_date DATETIME NOT NULL, processed_by SMALLINT(5) UNSIGNED ZEROFILL, processed_date DATETIME, PRIMARY KEY (filename), INDEX (scheduled_by), INDEX (processed_by), CONSTRAINT ' . TABLE_SCHEDULED_IMPORTS . '_fk_scheduled_by FOREIGN KEY (scheduled_by) REFERENCES ' . TABLE_USERS . ' (id) ON DELETE SET NULL ON UPDATE CASCADE, CONSTRAINT ' . TABLE_SCHEDULED_IMPORTS . '_fk_processed_by FOREIGN KEY (processed_by) REFERENCES ' . TABLE_USERS . ' (id) ON DELETE SET NULL ON UPDATE CASCADE) ENGINE=InnoDB, DEFAULT CHARACTER SET utf8',
+                     ),
              );
 
     if ($sCalcVersionDB < lovd_calculateVersion('3.0-alpha-01')) {
