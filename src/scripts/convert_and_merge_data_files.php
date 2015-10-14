@@ -4,7 +4,7 @@
  * LEIDEN OPEN VARIATION DATABASE (LOVD)
  *
  * Created     : 2014-11-28
- * Modified    : 2015-09-18
+ * Modified    : 2015-10-14
  * For LOVD+   : 3.0-14
  *
  * Copyright   : 2004-2015 Leiden University Medical Center; http://www.LUMC.nl/
@@ -23,6 +23,16 @@ $_SERVER = array_merge($_SERVER, array(
     'QUERY_STRING' => '',
     'REQUEST_METHOD' => 'GET',
 ));
+// Try and improve HTTP_HOST, since settings may depend on it.
+$aPath = explode('/', trim(dirname($_SERVER['SCRIPT_NAME']), '/'));
+foreach ($aPath as $sDirName) {
+    // Stupid but effective check.
+    if (preg_match('/^((([0-9a-z][-0-9a-z]*[0-9a-z]|[0-9a-z])\.)+[a-z]{2,6})$/', $sDirName)) {
+        // Valid host name.
+        $_SERVER['HTTP_HOST'] = $sDirName;
+        break;
+    }
+}
 require ROOT_PATH . 'inc-init.php';
 require ROOT_PATH . 'inc-lib-genes.php';
 // 128MB was not enough for a 100MB file. We're already no longer using file(), now we're using fgets().
@@ -40,7 +50,7 @@ ignore_user_abort(true);
 
 
 // This script will be called from localhost by a cron job.
-$sPath = '/data/DIV5/KG/koppelingen/MAGPIE_LOVD/';
+$sPath = $_SETT['data_file_location'];
 $aSuffixes = array(
     'meta' => 'meta.lovd',
     'vep' => 'directvep.data.lovd',

@@ -78,6 +78,8 @@ if (ACTION == 'schedule' && PATH_COUNT == 1) {
     if (!$aFiles) {
         // No files found!
         lovd_showInfoTable('No files found! Normally this might mean trouble; I should find at least some files that are already imported... Right?', 'question');
+        $_T->printFooter();
+        exit;
     }
 
 
@@ -1755,8 +1757,13 @@ if (!lovd_isCurator($_SESSION['currdb'])) {
                 }
                 $aGenes = array_unique($aGenes);
                 $nGenes = count($aGenes);
-                lovd_writeLog('Event', LOG_EVENT, 'Imported ' . $sMessage . '; ran ' . $nDone . ' queries' . (!$aGenes? '' : ' (' . ($nGenes > 100? $nGenes . ' genes' : implode(', ', $aGenes)) . ')') . '.');
+                lovd_writeLog('Event', LOG_EVENT, 'Imported ' . $sMessage . '; ran ' . $nDone . ' queries' . (!$aGenes? '' : ' (' . ($nGenes > 100? $nGenes . ' genes' : implode(', ', $aGenes)) . ')') . (ACTION != 'autoupload_scheduled_file' || !$sFile? '' : ' (' . $sFile . ')') . '.');
                 lovd_setUpdatedDate($aGenes); // FIXME; regardless of variant status... oh, well...
+
+                // DIAGNOSTICS: Remove the lock.
+                if (ACTION == 'autoupload_scheduled_file' && $sFile) {
+                    $_DB->query('DELETE FROM ' . TABLE_SCHEDULED_IMPORTS . ' WHERE filename = ? AND in_progress = 1', array($sFile));
+                }
             }
             // FIXME: Why is this not empty?
             //var_dump(implode("\n", $aData));

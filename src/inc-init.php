@@ -271,7 +271,7 @@ $_SETT = array(
                                                           ),
                                           ),
                           ),
-                'data_file_location' => '/data/DIV5/KG/koppelingen/MAGPIE_LOVD/',
+                'data_file_location' => ($_SERVER['HTTP_HOST'] == 'leiden-test.diagnostics.lovd.nl'? '/data/DIV5/KG/koppelingen/MAGPIE_LOVD_testenvironment/' : '/data/DIV5/KG/koppelingen/MAGPIE_LOVD/'),
               );
 
 // Complete version info.
