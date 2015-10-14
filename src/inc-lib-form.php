@@ -273,12 +273,12 @@ function lovd_errorPrint ()
 {
     // Based on a function provided by Ileos.nl in the interest of Open Source.
     // Prints error variable.
-    global $_ERROR;
+    global $_AUTH, $_ERROR;
 
     if (count($_ERROR['messages']) > 1) {
         unset($_ERROR['messages'][0]);
         print('      <DIV class="err">' . "\n" .
-              '        ' . implode('<BR>' . "\n" . '        ', $_ERROR['messages']) . '</DIV><BR>' . "\n\n");
+              ($_AUTH && $_AUTH['id'] === '00000'? ':' : '        ') . implode('<BR>' . "\n" . ($_AUTH && $_AUTH['id'] === '00000'? ':' : '        '), $_ERROR['messages']) . '</DIV><BR>' . "\n\n");
     }
 }
 

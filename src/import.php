@@ -36,10 +36,6 @@ ini_set('auto_detect_line_endings', true); // So we can work with Mac files also
 set_time_limit(0); // Disable time limit, parsing may take a long time.
 ini_set('memory_limit', '1536M');
 
-// Require curator clearance.
-//lovd_isAuthorized('gene', $_AUTH['curates']); // Any gene will do.
-//lovd_requireAUTH(LEVEL_CURATOR);
-lovd_requireAUTH(LEVEL_MANAGER);
 // FIXME: How do we implement authorization? First parse everything, THEN using the parsed data we check if user has rights to insert this data?
 
 
@@ -52,6 +48,9 @@ if (ACTION == 'schedule' && PATH_COUNT == 1) {
     define('PAGE_TITLE', 'Schedule files for import');
     $_T->printHeader();
     $_T->printTitle();
+
+    // Require manager clearance.
+    lovd_requireAUTH(LEVEL_MANAGER);
 
     // Loop through the files in the dir and find importable files.
     $h = @opendir($_SETT['data_file_location']);
@@ -174,6 +173,79 @@ if (ACTION == 'schedule' && PATH_COUNT == 1) {
 
 
 
+if (ACTION == 'autoupload_scheduled_file' && PATH_COUNT == 1 && FORMAT == 'text/plain') {
+    // This script will be called from localhost, and the output will be parsed.
+    // That is the easiest I think, because then at this point I don't need to
+    // change the HTML output to something else. All output that should go
+    // directly through the parser, should be prepended with a colon (:).
+    define('FORMAT_ALLOW_TEXTPLAIN', true); // To allow automatic data loading.
+
+    // If we have nothing to do, let's stop.
+    if (!$_DB->query('SELECT COUNT(*) FROM ' . TABLE_SCHEDULED_IMPORTS)->fetchColumn()) {
+        exit; // Stop silently.
+    }
+
+    // First, check if the database is free, and not currently uploading anything.
+    // Instead of monitoring the number of connections, I really want to check if something is uploading already.
+    // We'll ignore the possibility of a file being manually uploaded. We just check the schedule.
+    // We'll check for active uploads started more than an hour ago.
+    $sMaxDate = date('Y-m-d H:i:s', time() - (60*60));
+    if ($_DB->query('SELECT COUNT(*) FROM ' . TABLE_SCHEDULED_IMPORTS . ' WHERE in_progress = 1 AND processed_date >= ?', array($sMaxDate))->fetchColumn()) {
+        die(':Error: Last file is still being imported...' . "\n");
+    }
+
+    // Begin transaction, take rows from the schedule while write locking them, until we find a scheduled file that we can find.
+    // Should be the first, of course. But I'll check anyway, to nicely handle the error message.
+    $_DB->beginTransaction();
+    $sFile = '';
+    for ($i = 0; $sFile = $_DB->query('SELECT filename FROM ' . TABLE_SCHEDULED_IMPORTS . ' WHERE in_progress = 0 ORDER BY scheduled_date ASC, filename LIMIT ' . $i . ', 1 FOR UPDATE')->fetchColumn(); $i++) {
+        if (!is_readable($_SETT['data_file_location'] . '/' . $sFile)) {
+            print(':Error: ' . $sFile . ' not found...' . "\n");
+        } else {
+            // FIXME: Perhaps here we could try *some* sanity check if the file seems OK. Of course it should be, but you never know.
+            //   Errors downstream are hard to catch, and will block the importing for at least an hour.
+            // Select this file. Since filename is primary key, we don't need more stuff in the WHERE.
+            if (!$_DB->query('UPDATE ' . TABLE_SCHEDULED_IMPORTS . ' SET in_progress = 1, processed_by = 0, processed_date = NOW() WHERE filename = ?', array($sFile))->rowCount()) {
+                die(':Error: Can not obtain processing lock on file ' . $sFile . '.' . "\n");
+            }
+            // We selected our file. Stop going through the list.
+            break;
+        }
+    }
+    $_DB->commit();
+
+    // Load necessary authorisation.
+    $_AUTH = $_DB->query('SELECT * FROM ' . TABLE_USERS . ' WHERE id = 0')->fetchAssoc();
+    $_AUTH['curates']      = array();
+    $_AUTH['collaborates'] = array();
+    $_AUTH['level'] = LEVEL_MANAGER; // To pass the authorization check downstream.
+
+    // Fake the POSTing of a file.
+    $_POST['mode'] = 'insert';
+    $_POST['charset'] = 'auto';
+
+    $_FILES =
+        array(
+            'import' =>
+                array(
+                    'name' => $sFile,
+                    'tmp_name' => $_SETT['data_file_location'] . '/' . $sFile,
+                    'size' => filesize($_SETT['data_file_location'] . '/' . $sFile),
+                    'error' => 0,
+                )
+        );
+
+    print(':Preparing to upload ' . $sFile . ' into database...' . "\n" .
+          ':Current time: ' . date('Y-m-d H:i:s.') . "\n");
+}
+
+
+
+
+
+// Require manager clearance.
+lovd_requireAUTH(LEVEL_MANAGER);
+
 require ROOT_PATH . 'inc-lib-form.php';
 // FIXME:
 // When importing individuals, the panelid, fatherid and motherid fields are not properly checked, if the reference exists or not. Object::checkFields() checks only the database, so this check should be disabled for imports and enabled here in the file.
@@ -283,19 +355,19 @@ function utf8_encode_array ($Data)
 
 
 $nWarnings = 0;
-if (POST) {
+if (POST || $_FILES) { // || $_FILES is in use for the automatic loading of files.
     // Form sent, first check the file itself.
     lovd_errorClean();
 
     // If the file does not arrive (too big), it doesn't exist in $_FILES.
     if (empty($_FILES['import']) || ($_FILES['import']['error'] > 0 && $_FILES['import']['error'] < 4)) {
-        lovd_errorAdd('import', 'There was a problem with the file transfer. Please try again. The file cannot be larger than ' . round($nMaxSize/pow(1024, 2), 1) . ' MB' . ($nMaxSize == $nMaxSizeLOVD? '' : ', due to restrictions on this server.') . '.');
+        lovd_errorAdd('import', 'There was a problem with the file transfer. Please try again. The file cannot be larger than ' . round($nMaxSize/pow(1024, 2), 1) . ' MB' . ($nMaxSize == $nMaxSizeLOVD? '' : ', due to restrictions on this server') . '.');
 
-    } else if ($_FILES['import']['error'] == 4 || !$_FILES['import']['size']) {
+    } elseif ($_FILES['import']['error'] == 4 || !$_FILES['import']['size']) {
         lovd_errorAdd('import', 'Please select a file to upload.');
 
-    } else if ($_FILES['import']['size'] > $nMaxSize) {
-        lovd_errorAdd('import', 'The file cannot be larger than ' . round($nMaxSize/pow(1024, 2), 1) . ' MB' . ($nMaxSize == $nMaxSizeLOVD? '' : ', due to restrictions on this server.') . '.');
+    } elseif ($_FILES['import']['size'] > $nMaxSize) {
+        lovd_errorAdd('import', 'The file cannot be larger than ' . round($nMaxSize/pow(1024, 2), 1) . ' MB' . ($nMaxSize == $nMaxSizeLOVD? '' : ', due to restrictions on this server') . '.');
 
     } elseif ($_FILES['import']['error']) {
         // Various errors available from 4.3.0 or later.
