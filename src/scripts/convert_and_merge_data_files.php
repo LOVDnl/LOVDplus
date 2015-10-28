@@ -4,7 +4,7 @@
  * LEIDEN OPEN VARIATION DATABASE (LOVD)
  *
  * Created     : 2014-11-28
- * Modified    : 2015-10-14
+ * Modified    : 2015-10-28
  * For LOVD+   : 3.0-14
  *
  * Copyright   : 2004-2015 Leiden University Medical Center; http://www.LUMC.nl/
@@ -1237,6 +1237,12 @@ foreach ($aFiles as $sID) {
 
         // Map VEP columns to LOVD columns.
         foreach ($aColumnMappings as $sVEPColumn => $sLOVDColumn) {
+            // 2015-10-28; But don't let columns overwrite each other! Problem because we have double mappings; two MAGPIE columns pointing to the same LOVD column.
+            if (!isset($aLine[$sVEPColumn]) && isset($aVariant[$sLOVDColumn])) {
+                // VEP column doesn't actually exist in the file, but we do already have created the column in the $aVariant array...
+                // Never mind then!
+                continue;
+            }
             if (empty($aLine[$sVEPColumn]) || $aLine[$sVEPColumn] == 'unknown' || $aLine[$sVEPColumn] == '.') {
                 $aVariant[$sLOVDColumn] = '';
             } else {
@@ -1284,7 +1290,9 @@ foreach ($aFiles as $sID) {
         }
 
         // Some percentages we get need to be turned into decimals before it can be stored.
-        foreach ($aColumnMappings as $sVEPColumn => $sLOVDColumn) {
+        // 2015-10-28; Because of the double column mappings, we ended up with values divided twice.
+        // Flipping the array makes sure we get rid of double mappings.
+        foreach (array_flip($aColumnMappings) as $sLOVDColumn => $sVEPColumn) {
             if ($sVEPColumn == 'AFESP5400' || strpos($sVEPColumn, 'ALTPERC_') === 0) {
                 $aVariant[$sLOVDColumn] /= 100;
             }
