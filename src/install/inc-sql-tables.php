@@ -276,7 +276,6 @@ $aTableSQL =
     INDEX (created_by),
     INDEX (edited_by),
 
-    UNIQUE (id_miracle),
     INDEX (analysis_statusid),
     INDEX (analysis_by),
     INDEX (analysis_approved_by),

@@ -245,6 +245,18 @@ class LOVD_Individual extends LOVD_Custom {
             }
         }
 
+        // DIAGNOSTICS: Don't allow individuals with an identical Lab-ID.
+        // Can't enforce this in the table, because it's a custom column that's not active during installation, so I'll just do it like this.
+        if (!empty($aData['Individual/Lab_ID'])) {
+            if ($zData && isset($zData['id']) && isset($zData['Individual/Lab_ID'])) {
+                if ($_DB->query('SELECT id FROM ' . TABLE_INDIVIDUALS . ' WHERE `Individual/Lab_ID` = ? AND id != ?', array($aData['Individual/Lab_ID'], $zData['id']))->fetchColumn()) {
+                    lovd_errorAdd('Individual/Lab_ID', 'Another individual with this Lab ID already exists in the database.');
+                }
+            } elseif ($_DB->query('SELECT id FROM ' . TABLE_INDIVIDUALS . ' WHERE `Individual/Lab_ID` = ?', array($aData['Individual/Lab_ID']))->fetchColumn()) {
+                lovd_errorAdd('Individual/Lab_ID', 'Another individual with this Lab ID already exists in the database.');
+            }
+        }
+
         lovd_checkXSS();
     }
 

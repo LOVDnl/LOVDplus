@@ -617,7 +617,7 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && in_array(ACTION, array('edit', 'p
     define('PAGE_TITLE', 'Edit individual #' . $nID);
     define('LOG_EVENT', 'IndividualEdit');
 
-    // Load appropiate user level for this individual.
+    // Load appropriate user level for this individual.
     lovd_isAuthorized('individual', $nID);
     if (ACTION == 'publish') {
         lovd_requireAUTH(LEVEL_CURATOR);
@@ -647,7 +647,7 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && in_array(ACTION, array('edit', 'p
     if (POST || ACTION == 'publish') {
         lovd_errorClean();
 
-        $_DATA->checkFields($_POST);
+        $_DATA->checkFields($_POST, $zData);
 
         if (!lovd_error()) {
             // Fields to be used.

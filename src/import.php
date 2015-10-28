@@ -1132,21 +1132,6 @@ if (POST || $_FILES) { // || $_FILES is in use for the automatic loading of file
                     } else {
                         // FIXME: Default values of custom columns?
 
-                        // DIAGNOSTICS: Don't allow importing individuals with a Miracle ID or ZIS ID that already exists...
-                        // NOTE: Normally, we would put this code in the checkFields() of the object, but in this case that doesn't work,
-                        // because the field is not active in the form, which makes checkFields() skip the field.
-                        // FIXME: Use code from the Diseases section in this switch() if we decide to also compare to other individuals in this file.
-                        if (!empty($aLine['id_miracle'])) {
-                            if ($_DB->query('SELECT id FROM ' . TABLE_INDIVIDUALS . ' WHERE id_miracle = ?', array($aLine['id_miracle']))->fetchColumn()) {
-                                lovd_errorAdd('import', 'Error (' . $sCurrentSection . ', line ' . $nLine . '): Another individual with this Miracle ID already exists in the database.');
-                            }
-                        }
-                        if (!empty($aLine['id_zis'])) {
-                            if ($_DB->query('SELECT id FROM ' . TABLE_INDIVIDUALS . ' WHERE id_zis = ?', array($aLine['id_zis']))->fetchColumn()) {
-                                lovd_errorAdd('import', 'Error (' . $sCurrentSection . ', line ' . $nLine . '): Another individual with this ZIS ID already exists in the database.');
-                            }
-                        }
-
                         // Entry might still have thrown an error, but because we want to draw out all errors, we will store this one in case it's referenced to.
                         $aLine['todo'] = 'insert'; // OK, insert.
                     }
