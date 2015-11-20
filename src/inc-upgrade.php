@@ -502,6 +502,10 @@ if ($sCalcVersionFiles != $sCalcVersionDB) {
                      array(
                          'ALTER TABLE ' . TABLE_INDIVIDUALS . ' DROP INDEX id_miracle',
                      ),
+                 '3.0-12i' =>
+                     array(
+                         'UPDATE ' . TABLE_ANALYSES . ' SET filters = REPLACE(filters, "remove_by_function_utr_or_intronic", "remove_by_function_utr_or_intronic_gt_20") WHERE id = 5',
+                     ),
              );
 
     if ($sCalcVersionDB < lovd_calculateVersion('3.0-alpha-01')) {
