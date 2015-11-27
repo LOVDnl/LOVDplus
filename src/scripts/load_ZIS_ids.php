@@ -4,10 +4,10 @@
  * LEIDEN OPEN VARIATION DATABASE (LOVD)
  *
  * Created     : 2014-04-03
- * Modified    : 2014-08-28
+ * Modified    : 2015-11-27
  * For LOVD    : 3.0-12
  *
- * Copyright   : 2004-2014 Leiden University Medical Center; http://www.LUMC.nl/
+ * Copyright   : 2004-2015 Leiden University Medical Center; http://www.LUMC.nl/
  * Programmer  : Ing. Ivo F.A.C. Fokkema <I.F.A.C.Fokkema@LUMC.nl>
  *
  *
@@ -62,7 +62,7 @@ while (($sFile = readdir($h)) !== false) {
     }
     // Try and open the file, check the first line if it conforms to the standard, and import.
     $aFile = @file($sDir . '/' . $sFile, FILE_IGNORE_NEW_LINES);
-    if ($sFile === false) {
+    if ($sFile === false || !isset($aFile[0])) {
         die('Error opening file: ' . $sFile . ".\n");
     }
     if (!preg_match('/^\d+\t\d+$/', $aFile[0])) {

@@ -34,7 +34,7 @@ define('TAB_SELECTED', 'setup');
 require ROOT_PATH . 'inc-init.php';
 ini_set('auto_detect_line_endings', true); // So we can work with Mac files also...
 set_time_limit(0); // Disable time limit, parsing may take a long time.
-ini_set('memory_limit', '1536M');
+ini_set('memory_limit', '3072M'); // 3GB.
 
 // FIXME: How do we implement authorization? First parse everything, THEN using the parsed data we check if user has rights to insert this data?
 
@@ -183,7 +183,7 @@ if (ACTION == 'autoupload_scheduled_file' && PATH_COUNT == 1 && FORMAT == 'text/
     define('FORMAT_ALLOW_TEXTPLAIN', true); // To allow automatic data loading.
 
     // If we have nothing to do, let's stop.
-    if (!$_DB->query('SELECT COUNT(*) FROM ' . TABLE_SCHEDULED_IMPORTS)->fetchColumn()) {
+    if (!$_DB->query('SELECT COUNT(*) FROM ' . TABLE_SCHEDULED_IMPORTS . ' WHERE in_progress = 0')->fetchColumn()) {
         exit; // Stop silently.
     }
 
@@ -215,6 +215,11 @@ if (ACTION == 'autoupload_scheduled_file' && PATH_COUNT == 1 && FORMAT == 'text/
         }
     }
     $_DB->commit();
+
+    // This should not happen (we already checked if there was something to do), but just in case...
+    if (!$sFile) {
+        die(':Error: Failed to retrieved filename from database.' . "\n");
+    }
 
     // Load necessary authorisation.
     $_AUTH = $_DB->query('SELECT * FROM ' . TABLE_USERS . ' WHERE id = 0')->fetchAssoc();
