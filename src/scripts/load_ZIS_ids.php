@@ -62,10 +62,10 @@ while (($sFile = readdir($h)) !== false) {
     }
     // Try and open the file, check the first line if it conforms to the standard, and import.
     $aFile = @file($sDir . '/' . $sFile, FILE_IGNORE_NEW_LINES);
-    if ($sFile === false || !isset($aFile[0])) {
+    if ($sFile === false) {
         die('Error opening file: ' . $sFile . ".\n");
     }
-    if (!preg_match('/^\d+\t\d+$/', $aFile[0])) {
+    if (!isset($aFile[0]) || !preg_match('/^\d+\t\d+$/', $aFile[0])) {
         // Not a fatal error...
         print('Ignoring file, does not conform to format: ' . $sFile . ".\n");
         continue;
