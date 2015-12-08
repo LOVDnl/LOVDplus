@@ -120,7 +120,7 @@ $aItems =
                  array(
                         array('columns?create', 'lovd_columns_create.png', 'Create new custom data column', 'Create new custom data column.'),
                         array('columns', 'lovd_columns_view.png', 'Browse all custom data columns', 'Browse all custom data columns already available to enable or disable them, or view or edit their settings.'),
-                        array('download/columns', 'lovd_save.png', 'Download all LOVD custom columns', 'Download all LOVD custom columns in the LOVD import format.'),
+//                        array('download/columns', 'lovd_save.png', 'Download all LOVD custom columns', 'Download all LOVD custom columns in the LOVD import format.'),
 /*
       '              <TR class="pointer" onclick="window.location.href=\'' . lovd_getInstallURL() . 'setup_columns_global_import.php\';">' . "\n" .
       '                <TD align="center" width="40"><IMG src="gfx/lovd_columns_import.png" alt="Import new LOVD custom columns" width="32" height="32"></TD>' . "\n" .
@@ -150,7 +150,7 @@ print('            <TABLE border="0" cellpadding="2" cellspacing="0" class="setu
 */
             'Download & Import' =>
                  array(
-                        array('download/all', 'lovd_save.png', 'Download all data', 'Download all data in LOVD import format (custom columns, genes, transcripts, diseases, individuals, phenotypes, screenings &amp; variants).'),
+//                        array('download/all', 'lovd_save.png', 'Download all data', 'Download all data in LOVD import format (custom columns, genes, transcripts, diseases, individuals, phenotypes, screenings &amp; variants).'),
                         array('import', 'lovd_import.png', 'Import data', 'Import data using the LOVD import format (custom columns, diseases, individuals, phenotypes, screenings &amp; variants).'),
                         array('import?schedule', 'lovd_clock.png', 'Schedule data for import', 'Schedule data files to be imported into LOVD.'),
                       ),

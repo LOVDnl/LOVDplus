@@ -70,7 +70,7 @@ if (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] == 'on' && !empty($_SERVER['S
 }
 
 // Our output formats: text/html by default.
-$aFormats = array('text/html', 'text/plain'); // Key [0] is default. Other values may not always be allowed. It is checked in the Template class' printHeader() and in Objects::viewList().
+$aFormats = array('text/html'); // Disable all downloads. // , 'text/plain'); // Key [0] is default. Other values may not always be allowed. It is checked in the Template class' printHeader() and in Objects::viewList().
 if (lovd_getProjectFile() == '/api.php') {
     $aFormats[] = 'text/bed';
 }

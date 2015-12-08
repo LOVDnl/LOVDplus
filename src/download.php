@@ -28,10 +28,15 @@
  *
  *************/
 
-$_GET['format'] = 'text/plain'; // To make sure all possible error functions output text.
+//$_GET['format'] = 'text/plain'; // To make sure all possible error functions output text.
 define('FORMAT_ALLOW_TEXTPLAIN', true);
 define('ROOT_PATH', './');
 require ROOT_PATH . 'inc-init.php';
+
+$_T->printHeader();
+lovd_showInfoTable('Disabled on request.', 'information');
+$_T->printFooter();
+exit;
 
 //header('Content-type: text/plain; charset=UTF-8');
 
