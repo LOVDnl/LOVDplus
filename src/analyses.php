@@ -4,8 +4,8 @@
  * LEIDEN OPEN VARIATION DATABASE (LOVD)
  *
  * Created     : 2014-01-31
- * Modified    : 2015-07-21
- * For LOVD    : 3.0-14
+ * Modified    : 2015-12-08
+ * For LOVD    : 3.0-15
  *
  * Copyright   : 2004-2015 Leiden University Medical Center; http://www.LUMC.nl/
  * Programmer  : Ing. Ivo F.A.C. Fokkema <I.F.A.C.Fokkema@LUMC.nl>
@@ -132,18 +132,31 @@ if (PATH_COUNT == 3 && $_PE[1] == 'run' && ctype_digit($_PE[2]) && ACTION == 'mo
     require ROOT_PATH . 'inc-lib-form.php';
 
     // Load appropriate user level for this analysis run.
-    lovd_isAuthorized('analysisrun', $nID);
+    lovd_isAuthorized('analysisrun', $nID); // FIXME: Stub...
     lovd_requireAUTH(LEVEL_CURATOR);
 
-    $zData = $_DB->query('SELECT ar.*, s.individualid, a.name, GROUP_CONCAT(arf.filterid ORDER BY arf.filter_order SEPARATOR ";") AS _filters FROM ' . TABLE_ANALYSES_RUN . ' AS ar INNER JOIN ' . TABLE_SCREENINGS . ' AS s ON (ar.screeningid = s.id) INNER JOIN ' . TABLE_ANALYSES . ' AS a ON (ar.analysisid = a.id) INNER JOIN ' . TABLE_ANALYSES_RUN_FILTERS . ' AS arf ON (ar.id = arf.runid) WHERE ar.id = ?', array($nID))->fetchAssoc();
+    // ADMIN can always edit an analysis run, even when the individual's analysis hasn't been started by him.
+    // FIXME: Shouldn't the owner of the individual's analysis be able to edit the run, when it's created by somebody else?
+    // It's a complete mystery to me why this query, having the GROUP_CONCAT() there, always returns a row with only NULL values when there is no match.
+    //   HAVING clauses filtering out NULL values don't work. There *are* values there, you just don't see them and you can't filter on them.
+    //   Changing the created_by filter to an INT also solves the problem. It just makes no sense. So removing the GROUP_CONCAT here, to make sure I don't get results when I don't want them.
+    // $sSQL = 'SELECT ar.*, s.individualid, a.name, GROUP_CONCAT(arf.filterid ORDER BY arf.filter_order SEPARATOR ";") AS _filters FROM ' . TABLE_ANALYSES_RUN . ' AS ar INNER JOIN ' . TABLE_SCREENINGS . ' AS s ON (ar.screeningid = s.id) INNER JOIN ' . TABLE_ANALYSES . ' AS a ON (ar.analysisid = a.id) INNER JOIN ' . TABLE_ANALYSES_RUN_FILTERS . ' AS arf ON (ar.id = arf.runid) WHERE ar.id = ?' . ($_AUTH['level'] >= LEVEL_MANAGER? '' : ' AND ar.created_by = ?');
+    $sSQL = 'SELECT ar.*, s.individualid, a.name FROM ' . TABLE_ANALYSES_RUN . ' AS ar INNER JOIN ' . TABLE_SCREENINGS . ' AS s ON (ar.screeningid = s.id) INNER JOIN ' . TABLE_ANALYSES . ' AS a ON (ar.analysisid = a.id) WHERE ar.id = ?' . ($_AUTH['level'] >= LEVEL_MANAGER? '' : ' AND ar.created_by = ?');
+    $aSQL = array($nID);
+    if ($_AUTH['level'] < LEVEL_MANAGER) {
+        $aSQL[] = $_AUTH['id'];
+    }
+    $zData = $_DB->query($sSQL, $aSQL)->fetchAssoc();
     if (!$zData) {
         $_T->printHeader();
         $_T->printTitle();
-        lovd_showInfoTable('No such ID!', 'stop');
+        lovd_showInfoTable('No such ID or not allowed!', 'stop');
         $_T->printFooter();
         exit;
     }
-    $zData['filters'] = explode(';', $zData['_filters']);
+    // See above, I had to split the queries.
+    // $zData['filters'] = explode(';', $zData['_filters']);
+    $zData['filters'] = $_DB->query('SELECT filterid FROM ' . TABLE_ANALYSES_RUN_FILTERS . ' WHERE runid = ? ORDER BY filter_order', array($nID))->fetchAllColumn();
     $nFilters = count($zData['filters']);
 
     if (count($zData['filters']) <= 1) {
@@ -251,14 +264,14 @@ if (PATH_COUNT == 3 && $_PE[1] == 'run' && ctype_digit($_PE[2]) && ACTION == 'de
     define('LOG_EVENT', 'AnalysisRunDelete');
 
     // Load appropriate user level for this analysis run.
-    lovd_isAuthorized('analysisrun', $nID);
+    lovd_isAuthorized('analysisrun', $nID); // FIXME: Stub...
     lovd_requireAUTH(LEVEL_CURATOR);
 
     // ADMIN can always delete an analysis run, even when the individual's analysis hasn't been started by him.
     // FIXME: Shouldn't the owner of the individual's analysis be able to delete the run, when it's created by somebody else?
-    $sSQL = 'SELECT ar.*, s.individualid FROM ' . TABLE_ANALYSES_RUN . ' AS ar INNER JOIN ' . TABLE_SCREENINGS . ' AS s ON (ar.screeningid = s.id) WHERE ar.id = ?' . ($_AUTH['level'] == LEVEL_ADMIN? '' : ' AND ar.created_by = ?');
+    $sSQL = 'SELECT ar.*, s.individualid FROM ' . TABLE_ANALYSES_RUN . ' AS ar INNER JOIN ' . TABLE_SCREENINGS . ' AS s ON (ar.screeningid = s.id) WHERE ar.id = ?' . ($_AUTH['level'] >= LEVEL_MANAGER? '' : ' AND ar.created_by = ?');
     $aSQL = array($nID);
-    if ($_AUTH['level'] < LEVEL_ADMIN) {
+    if ($_AUTH['level'] < LEVEL_MANAGER) {
         $aSQL[] = $_AUTH['id'];
     }
     $zData = $_DB->query($sSQL, $aSQL)->fetchAssoc();

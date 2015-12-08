@@ -4,8 +4,8 @@
  * LEIDEN OPEN VARIATION DATABASE (LOVD)
  *
  * Created     : 2013-11-05
- * Modified    : 2015-07-21
- * For LOVD    : 3.0-14
+ * Modified    : 2015-12-08
+ * For LOVD    : 3.0-15
  *
  * Copyright   : 2004-2015 Leiden University Medical Center; http://www.LUMC.nl/
  * Programmer  : Ing. Ivo F.A.C. Fokkema <I.F.A.C.Fokkema@LUMC.nl>
@@ -49,9 +49,9 @@ if (empty($_GET['screeningid']) || empty($_GET['analysisid']) || !ctype_digit($_
 
 // Find screening data, make sure we have the right to analyze this patient.
 // ADMIN can always start an analysis, even when the individual's analysis hasn't been started by him.
-$sSQL = 'SELECT i.id FROM ' . TABLE_INDIVIDUALS . ' AS i INNER JOIN ' . TABLE_SCREENINGS . ' AS s ON (i.id = s.individualid) WHERE s.id = ? AND (i.analysis_statusid = ? OR i.analysis_by ' . ($_AUTH['level'] == LEVEL_ADMIN? 'IS NOT NULL' : '= ?') . ')';
+$sSQL = 'SELECT i.id FROM ' . TABLE_INDIVIDUALS . ' AS i INNER JOIN ' . TABLE_SCREENINGS . ' AS s ON (i.id = s.individualid) WHERE s.id = ? AND (i.analysis_statusid = ? OR i.analysis_by ' . ($_AUTH['level'] >= LEVEL_MANAGER? 'IS NOT NULL' : '= ?') . ')';
 $aSQL = array($_GET['screeningid'], ANALYSIS_STATUS_READY);
-if ($_AUTH['level'] < LEVEL_ADMIN) {
+if ($_AUTH['level'] < LEVEL_MANAGER) {
     $aSQL[] = $_AUTH['id'];
 }
 $zIndividual = $_DB->query($sSQL, $aSQL)->fetchAssoc();
