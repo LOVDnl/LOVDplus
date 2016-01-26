@@ -132,7 +132,7 @@ $aRequired =
 $_SETT = array(
                 'system' =>
                      array(
-                            'version' => '3.0-12i',
+                            'version' => '3.0-12j',
                           ),
                 'user_levels' =>
                      array(
