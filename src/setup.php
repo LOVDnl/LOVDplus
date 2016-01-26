@@ -94,7 +94,7 @@ foreach ($aTotalVars as $nStatus => $nVars) {
 print('</TD></TR></TABLE><BR>' . "\n\n");
 
 // Mention that LOVD can be updated!
-if ($_STAT['update_level']) {
+if (false && $_STAT['update_level']) { // Better not, unless we have a separate list for LOVD+.
     $_STAT['update_level'] = 7;
     lovd_showInfoTable('LOVD update available:<BR><B>' . $_STAT['update_version'] . '</B><BR>' . ($_STAT['update_level'] >= 7? ' It is ' . strtolower($_SETT['update_levels'][$_STAT['update_level']]) . ' to upgrade!' : '') . '<BR><A href="#" onclick="lovd_openWindow(\'' . lovd_getInstallURL() . 'check_update\', \'CheckUpdate\', 650, 175); return false;">More information &raquo;</A>', ($_STAT['update_level'] >= 7? 'warning' : 'information'));
 }
