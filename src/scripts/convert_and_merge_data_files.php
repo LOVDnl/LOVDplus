@@ -4,10 +4,10 @@
  * LEIDEN OPEN VARIATION DATABASE (LOVD)
  *
  * Created     : 2014-11-28
- * Modified    : 2015-10-28
+ * Modified    : 2016-01-20
  * For LOVD+   : 3.0-14
  *
- * Copyright   : 2004-2015 Leiden University Medical Center; http://www.LUMC.nl/
+ * Copyright   : 2004-2016 Leiden University Medical Center; http://www.LUMC.nl/
  * Programmer  : Ing. Ivo F.A.C. Fokkema <I.F.A.C.Fokkema@LUMC.nl>
  *
  *************/
@@ -1760,6 +1760,13 @@ if (!$aVariant['VariantOnTranscript/RNA']) {
     if (!rename($sFileTmp, $sFileDone)) {
         // Fatal error, because we're all done actually!
         die('Error moving temp file to target: ' . $sFileDone . ".\n");
+    }
+
+    // OK, so file is done, and can be scheduled now. Just auto-schedule it.
+    if ($_DB->query('INSERT IGNORE INTO ' . TABLE_SCHEDULED_IMPORTS . ' (filename, scheduled_by, scheduled_date) VALUES (?, 0, NOW())', array(basename($sFileDone)))->rowCount()) {
+        print('File scheduled for import.' . "\n");
+    } else {
+        print('Error scheduling file for import!' . "\n");
     }
 
     print('All done, ' . $sFileDone . ' ready for import.' . "\n" . 'Current time: ' . date('Y-m-d H:i:s') . ".\n\n");
