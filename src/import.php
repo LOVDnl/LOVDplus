@@ -34,7 +34,7 @@ define('TAB_SELECTED', 'setup');
 require ROOT_PATH . 'inc-init.php';
 ini_set('auto_detect_line_endings', true); // So we can work with Mac files also...
 set_time_limit(0); // Disable time limit, parsing may take a long time.
-ini_set('memory_limit', '3072M'); // 3GB.
+ini_set('memory_limit', '4096M'); // 4GB.
 
 // FIXME: How do we implement authorization? First parse everything, THEN using the parsed data we check if user has rights to insert this data?
 

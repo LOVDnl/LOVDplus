@@ -70,7 +70,11 @@ if (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] == 'on' && !empty($_SERVER['S
 }
 
 // Our output formats: text/html by default.
-$aFormats = array('text/html'); // Disable all downloads. // , 'text/plain'); // Key [0] is default. Other values may not always be allowed. It is checked in the Template class' printHeader() and in Objects::viewList().
+$aFormats = array('text/html'); // Disable all downloads. // Key [0] is default. Other values may not always be allowed. It is checked in the Template class' printHeader() and in Objects::viewList().
+// Except for when auto-importing, obviously, then we need text/plain...
+if (lovd_getProjectFile() == '/import.php') {
+    $aFormats[] = 'text/plain';
+}
 if (lovd_getProjectFile() == '/api.php') {
     $aFormats[] = 'text/bed';
 }
@@ -132,7 +136,7 @@ $aRequired =
 $_SETT = array(
                 'system' =>
                      array(
-                            'version' => '3.0-12j',
+                            'version' => '3.0-12k',
                           ),
                 'user_levels' =>
                      array(
