@@ -408,6 +408,27 @@ $aConfigValues =
                                                 'pattern'  => '/^[A-Z0-9_]+$/i',
                                               ),
                               ),
+                'paths' =>
+                         array(
+                                'data_files' =>
+                                         array(
+                                                'required' => true,
+                                                'path_is_readable' => true,
+                                                'path_is_writable' => true,
+                                              ),
+                                'alternative_ids' =>
+                                         array(
+                                                'required' => false,
+                                                'path_is_readable' => true,
+                                                'path_is_writable' => false,
+                                              ),
+                                'confirm_variants' =>
+                                         array(
+                                                'required' => false,
+                                                'path_is_readable' => true,
+                                                'path_is_writable' => true,
+                                         ),
+                              ),
               );
 // SQLite doesn't need an username and password...
 if (isset($_INI['database']['driver']) && $_INI['database']['driver'] == 'sqlite') {
@@ -441,6 +462,16 @@ foreach ($aConfigValues as $sSection => $aVars) {
                     // Error: a value list is available, but it doesn't match the input!
                     lovd_displayError('Init', 'Error parsing config file: incorrect value for setting \'' . $sVar . '\' in section [' . $sSection . ']');
                 }
+            }
+
+            // For paths, check readability or writability.
+            if (isset($aVar['path_is_readable']) && !is_readable($_INI[$sSection][$sVar])) {
+                // Error: The path should be readable, but it's not!
+                lovd_displayError('Init', 'Error parsing config file: path for \'' . $sVar . '\' in section [' . $sSection . '] is not readable.');
+            }
+            if (isset($aVar['path_is_writable']) && !is_writable($_INI[$sSection][$sVar])) {
+                // Error: The path should be writable, but it's not!
+                lovd_displayError('Init', 'Error parsing config file: path for \'' . $sVar . '\' in section [' . $sSection . '] is not writable.');
             }
         }
     }
