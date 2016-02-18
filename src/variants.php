@@ -47,7 +47,6 @@ if (PATH_COUNT == 2 && $_PE[1] == 'upload' && ACTION == 'create' && isset($_GET[
     // change the HTML output to something else. All output that should go
     // directly through the parser, should be prepended with a colon (:).
     define('FORMAT_ALLOW_TEXTPLAIN', true); // To allow automatic data loading.
-    $sPath = '/data/DIV5/KG/koppelingen/MAGPIE_LOVD';
 
     // First, check if the database is free, and not currently uploading anything.
     // The upload does not put a permanent lock that we could detect. By monitoring the database, we will sometimes find a lock active:
@@ -106,7 +105,7 @@ if (PATH_COUNT == 2 && $_PE[1] == 'upload' && ACTION == 'create' && isset($_GET[
     }
 
     // Loop through the files in the dir and try and find IDs... It's stupid, but we have to open them all...
-    $h = @opendir($sPath);
+    $h = @opendir($_INI['paths']['data_files']);
     if (!$h) {
         die(':Can\'t open directory.' . "\n");
     }
@@ -132,7 +131,7 @@ if (PATH_COUNT == 2 && $_PE[1] == 'upload' && ACTION == 'create' && isset($_GET[
         }
 
         // Try and open the file, check the first line if it conforms to the standard, and send on to import.
-        $sFileToUpload = $sPath . '/' . $sFile;
+        $sFileToUpload = $_INI['paths']['data_files'] . '/' . $sFile;
         $f = @fopen($sFileToUpload, 'r');
         if ($f === false) {
             die(':Error opening file: ' . $sFile . ".\n");

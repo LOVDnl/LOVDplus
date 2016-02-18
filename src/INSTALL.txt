@@ -68,9 +68,9 @@ itself. For more information, see the LOVD manual.
 LOVD+: AUTOMATIC INPUT FILE CONVERSION AND AUTOMATIC FILE IMPORT
 ================================================================
 In order to use the automatic file conversion feature and the automatic import
-feature, first edit the inc-init.php file, find the line containing
-'data_file_location', and edit its contents to contain the location where the
-data files (meta data and VEP data file) are stored.
+feature, make sure you have configured all the necessary paths in the
+config.ini.php file, specifically set data_files to the folder where the data
+files (meta data and VEP data file) are stored.
 
 Then, for any user with write access to the data directory insert the following
 cronjob to facilitate automatic conversion of meta and data files into LOVD+
