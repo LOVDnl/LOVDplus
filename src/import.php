@@ -53,9 +53,9 @@ if (ACTION == 'schedule' && PATH_COUNT == 1) {
     lovd_requireAUTH(LEVEL_MANAGER);
 
     // Loop through the files in the dir and find importable files.
-    $h = @opendir($_SETT['data_file_location']);
+    $h = @opendir($_INI['paths']['data_files']);
     if (!$h) {
-        lovd_showInfoTable('Can\'t open directory: ' . $_SETT['data_file_location'], 'stop');
+        lovd_showInfoTable('Can\'t open directory: ' . $_INI['paths']['data_files'], 'stop');
     }
 
     // To see if the file has already been imported, fetch a list of imported individuals.
@@ -68,7 +68,7 @@ if (ACTION == 'schedule' && PATH_COUNT == 1) {
             $sFileID = $aRegs[1] . '_' . $aRegs[2];
 
             // Get mod time.
-            $tFile = filemtime($_SETT['data_file_location'] . '/' . $sFile);
+            $tFile = filemtime($_INI['paths']['data_files'] . '/' . $sFile);
 
             // Store file in the files array.
             $aFiles[isset($aImportedIDs[$sFileID])][$sFile] = $tFile;
@@ -201,7 +201,7 @@ if (ACTION == 'autoupload_scheduled_file' && PATH_COUNT == 1 && FORMAT == 'text/
     $_DB->beginTransaction();
     $sFile = '';
     for ($i = 0; $sFile = $_DB->query('SELECT filename FROM ' . TABLE_SCHEDULED_IMPORTS . ' WHERE in_progress = 0 ORDER BY scheduled_date ASC, filename LIMIT ' . $i . ', 1 FOR UPDATE')->fetchColumn(); $i++) {
-        if (!is_readable($_SETT['data_file_location'] . '/' . $sFile)) {
+        if (!is_readable($_INI['paths']['data_files'] . '/' . $sFile)) {
             print(':Error: ' . $sFile . ' not found...' . "\n");
         } else {
             // FIXME: Perhaps here we could try *some* sanity check if the file seems OK. Of course it should be, but you never know.
@@ -236,8 +236,8 @@ if (ACTION == 'autoupload_scheduled_file' && PATH_COUNT == 1 && FORMAT == 'text/
             'import' =>
                 array(
                     'name' => $sFile,
-                    'tmp_name' => $_SETT['data_file_location'] . '/' . $sFile,
-                    'size' => filesize($_SETT['data_file_location'] . '/' . $sFile),
+                    'tmp_name' => $_INI['paths']['data_files'] . '/' . $sFile,
+                    'size' => filesize($_INI['paths']['data_files'] . '/' . $sFile),
                     'error' => 0,
                 )
         );

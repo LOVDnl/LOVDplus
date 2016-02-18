@@ -4,8 +4,8 @@
  * LEIDEN OPEN VARIATION DATABASE (LOVD)
  *
  * Created     : 2014-11-28
- * Modified    : 2016-01-20
- * For LOVD+   : 3.0-14
+ * Modified    : 2016-02-18
+ * For LOVD+   : 3.0-15
  *
  * Copyright   : 2004-2016 Leiden University Medical Center; http://www.LUMC.nl/
  * Programmer  : Ing. Ivo F.A.C. Fokkema <I.F.A.C.Fokkema@LUMC.nl>
@@ -50,7 +50,6 @@ ignore_user_abort(true);
 
 
 // This script will be called from localhost by a cron job.
-$sPath = $_SETT['data_file_location'];
 $aSuffixes = array(
     'meta' => 'meta.lovd',
     'vep' => 'directvep.data.lovd',
@@ -982,7 +981,7 @@ function lovd_getVariantPosition ($sVariant, $aTranscript = array())
 
 
 // Loop through the files in the dir and try and find a meta and data file, that match but have no total data file.
-$h = opendir($sPath);
+$h = opendir($_INI['paths']['data_files']);
 if (!$h) {
     die('Can\'t open directory.' . "\n");
 }
@@ -1072,10 +1071,10 @@ foreach ($aFiles as $sID) {
     // Try and open the file, check the first line if it conforms to the standard, and start converting.
     print('Working on: ' . $sID . "...\n");
     flush();
-    $sFileToConvert = $sPath . '/' . $sID . '.' . $aSuffixes['vep'];
-    $sFileMeta = $sPath . '/' . $sID . '.' . $aSuffixes['meta'];
-    $sFileTmp = $sPath . '/' . $sID . '.' . $aSuffixes['total.tmp'];
-    $sFileDone = $sPath . '/' . $sID . '.' . $aSuffixes['total'];
+    $sFileToConvert = $_INI['paths']['data_files'] . '/' . $sID . '.' . $aSuffixes['vep'];
+    $sFileMeta = $_INI['paths']['data_files'] . '/' . $sID . '.' . $aSuffixes['meta'];
+    $sFileTmp = $_INI['paths']['data_files'] . '/' . $sID . '.' . $aSuffixes['total.tmp'];
+    $sFileDone = $_INI['paths']['data_files'] . '/' . $sID . '.' . $aSuffixes['total'];
 
     $fInput = fopen($sFileToConvert, 'r');
     if ($fInput === false) {

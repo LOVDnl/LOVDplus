@@ -81,7 +81,7 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && in_array(ACTION, array('downloadT
     // NOTE: We could fetch this earlier, and at the same time change the variant query to not join to the IND2DIS table, but oh, well.
     $aDiseases = $_DB->query('SELECT d.id, d.symbol, d.edited_date, COUNT(g2d.geneid) AS genes FROM ' . TABLE_DISEASES . ' AS d INNER JOIN ' . TABLE_IND2DIS . ' AS i2d ON (d.id = i2d.diseaseid) INNER JOIN ' . TABLE_SCREENINGS . ' AS s USING (individualid) LEFT OUTER JOIN ' . TABLE_GEN2DIS . ' AS g2d ON (d.id = g2d.diseaseid) WHERE s.id = ? GROUP BY d.id HAVING genes > 0', array($nID))->fetchAllAssoc();
 
-    $sPath = '/data/DIV5/KG/koppelingen/LOVD_PRIMERDESIGN/';
+    $sPath = rtrim($_INI['paths']['confirm_variants'] . '/', '/');
     $sFile = 'LOVD_VariantsToBeConfirmed_' . $nMiracleID . '_' . date('Y-m-d_H.i.s') . '.txt';
     header('Content-type: text/plain; charset=UTF-8');
     if (ACTION == 'downloadToBeConfirmed') {
