@@ -4,10 +4,10 @@
  * LEIDEN OPEN VARIATION DATABASE (LOVD)
  *
  * Created     : 2014-04-03
- * Modified    : 2015-11-27
- * For LOVD    : 3.0-12
+ * Modified    : 2016-02-18
+ * For LOVD    : 3.0-15
  *
- * Copyright   : 2004-2015 Leiden University Medical Center; http://www.LUMC.nl/
+ * Copyright   : 2004-2016 Leiden University Medical Center; http://www.LUMC.nl/
  * Programmer  : Ing. Ivo F.A.C. Fokkema <I.F.A.C.Fokkema@LUMC.nl>
  *
  *
@@ -40,8 +40,6 @@ session_write_close();
 
 
 
-$sDir = '/data/DIV5/KG/koppelingen/Miracle_LOVD';
-
 // First, get list of individuals that need a ZIS nr.
 $aIndividuals = $_DB->query('SELECT id_miracle, id FROM ' . TABLE_INDIVIDUALS . ' WHERE id_zis IS NULL')->fetchAllCombine();
 
@@ -51,7 +49,7 @@ if (!$aIndividuals) {
 }
 
 // Loop through the files in the dir and try and find IDs... It's stupid, but we have to open them all...
-$h = @opendir($sDir);
+$h = @opendir($_INI['paths']['alternative_ids']);
 if (!$h) {
     die('Can\'t open directory.' . "\n");
 }
@@ -61,7 +59,7 @@ while (($sFile = readdir($h)) !== false) {
         continue;
     }
     // Try and open the file, check the first line if it conforms to the standard, and import.
-    $aFile = @file($sDir . '/' . $sFile, FILE_IGNORE_NEW_LINES);
+    $aFile = @file($_INI['paths']['alternative_ids'] . '/' . $sFile, FILE_IGNORE_NEW_LINES);
     if ($sFile === false) {
         die('Error opening file: ' . $sFile . ".\n");
     }
