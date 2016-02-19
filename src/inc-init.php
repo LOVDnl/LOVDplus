@@ -464,11 +464,11 @@ foreach ($aConfigValues as $sSection => $aVars) {
             }
 
             // For paths, check readability or writability.
-            if (isset($aVar['path_is_readable']) && !is_readable($_INI[$sSection][$sVar])) {
+            if (!empty($aVar['path_is_readable']) && !is_readable($_INI[$sSection][$sVar])) {
                 // Error: The path should be readable, but it's not!
                 lovd_displayError('Init', 'Error parsing config file: path for \'' . $sVar . '\' in section [' . $sSection . '] is not readable.');
             }
-            if (isset($aVar['path_is_writable']) && !is_writable($_INI[$sSection][$sVar])) {
+            if (!empty($aVar['path_is_writable']) && !is_writable($_INI[$sSection][$sVar])) {
                 // Error: The path should be writable, but it's not!
                 lovd_displayError('Init', 'Error parsing config file: path for \'' . $sVar . '\' in section [' . $sSection . '] is not writable.');
             }
