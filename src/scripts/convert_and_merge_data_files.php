@@ -4,7 +4,7 @@
  * LEIDEN OPEN VARIATION DATABASE (LOVD)
  *
  * Created     : 2014-11-28
- * Modified    : 2016-02-18
+ * Modified    : 2016-02-19
  * For LOVD+   : 3.0-15
  *
  * Copyright   : 2004-2016 Leiden University Medical Center; http://www.LUMC.nl/
@@ -222,7 +222,25 @@ $aGenesToIgnore = array(
     'HGH1',
     // 2015-08-??; No UD could be loaded.
     'ARRDC1-AS1',
-    // 2015-08-??; No UD could be loaded.
+    // 2016-02-19; No UD could be loaded.
+    'AZIN2',
+    'ADGRB2',
+    'KDF1',
+    'ERICH3',
+    'LEXM',
+    'CIART',
+    'FAAP20',
+    'ADGRL4',
+    'CPTP',
+    'MFSD14A',
+    'CFAP74',
+    'P3H1',
+    'ADGRL2',
+    'NRDC',
+    'PLPP3',
+    'DISP3',
+    'CFAP57',
+    // 2016-02-19; No UD could be loaded.
 
 
 
@@ -551,8 +569,9 @@ $aGenesToIgnore = array(
     'GPER1',
     'MRPL45',
     'SRGAP2C',
-    // 2015-08-??; No transcripts could be found.
-    // Still needs to be sorted.
+    // 2016-02-19; No transcripts could be found.
+    'NBPF9',
+    // 2016-02-??; No transcripts could be found.
 );
 
 // Define list of gene aliases. Genes not mentioned in here, are searched for in the database. If not found,
@@ -693,6 +712,25 @@ $aGeneAliases = array(
     'SCXB' => 'SCX',
     'FAM203B' => 'HGH1',
     'PNMA6C' => 'PNMA6A',
+    // 2016-02-19; New aliases.
+    'ADC' => 'AZIN2',
+    'BAI2' => 'ADGRB2',
+    'C1orf172' => 'KDF1',
+    'C1orf173' => 'ERICH3',
+    'C1orf177' => 'LEXM',
+    'C1orf51' => 'CIART',
+    'C1orf86' => 'FAAP20',
+    'ELTD1' => 'ADGRL4',
+    'GLTPD1' => 'CPTP',
+    'HIAT1' => 'MFSD14A',
+    'KIAA1751' => 'CFAP74',
+    'LEPRE1' => 'P3H1',
+    'LPHN2' => 'ADGRL2',
+    'NBPF16' => 'NBPF15',
+    'NRD1' => 'NRDC',
+    'PPAP2B' => 'PLPP3',
+    'PTCHD2' => 'DISP3',
+    'WDR65' => 'CFAP57',
 );
 
 
@@ -1560,9 +1598,39 @@ print('Running mutalyzer to predict protein change for ' . $aGenes[$aLine['SYMBO
                     // Predict RNA && Protein change.
                     // 'Intelligent' error handling.
                     foreach ($aResponse['messages'] as $aError) {
-                        // FIXME; We should include ERANGE error handling here too, when we can expect large deletions etc.
                         // Pass other errors on to the users?
-                        if (isset($aError['errorcode']) && $aError['errorcode'] == 'WSPLICE') {
+                        // FIXME: This is implemented as well in inc-lib-variants.php (LOVD3.0-15).
+                        //  When we update LOVD+ to LOVD 3.0-15, use this lib so we don't duplicate code...
+                        if (isset($aError['errorcode']) && $aError['errorcode'] == 'ERANGE') {
+                            // Ignore 'ERANGE' as an actual error, because we can always interpret this as p.(=), p.? or p.0.
+                            $aVariantRange = explode('_', $aVariant['VariantOnTranscript/DNA']);
+                            // Check what the variant looks like and act accordingly.
+                            if (count($aVariantRange) === 2 && preg_match('/-\d+/', $aVariantRange[0]) && preg_match('/-\d+/', $aVariantRange[1])) {
+                                // Variant has 2 positions. Variant has both the start and end positions upstream of the transcript, we can assume that the product will not be affected.
+                                $sPredictR = 'r.(=)';
+                                $sPredictP = 'p.(=)';
+                            } elseif (count($aVariantRange) === 2 && preg_match('/-\d+/', $aVariantRange[0]) && preg_match('/\*\d+/', $aVariantRange[1])) {
+                                // Variant has 2 positions. Variant has an upstream start position and a downstream end position, we can assume that the product will not be expressed.
+                                $sPredictR = 'r.0?';
+                                $sPredictP = 'p.0?';
+                            } elseif (count($aVariantRange) == 2 && preg_match('/\*\d+/', $aVariantRange[0]) && preg_match('/\*\d+/', $aVariantRange[1])) {
+                                // Variant has 2 positions. Variant has both the start and end positions downstream of the transcript, we can assume that the product will not be affected.
+                                $sPredictR = 'r.(=)';
+                                $sPredictP = 'p.(=)';
+                            } elseif (count($aVariantRange) == 1 && preg_match('/-\d+/', $aVariantRange[0]) || preg_match('/\*\d+/', $aVariantRange[0])) {
+                                // Variant has 1 position and is either upstream or downstream from the transcript, we can assume that the product will not be affected.
+                                $sPredictR = 'r.(=)';
+                                $sPredictP = 'p.(=)';
+                            } else {
+                                // One of the positions of the variant falls within the transcript, so we can not make any assumptions based on that.
+                                $sPredictR = 'r.?';
+                                $sPredictP = 'p.?';
+                            }
+                            // Fill in our assumption to forge that this information came from Mutalyzer.
+                            $aVariant['VariantOnTranscript/RNA'] = $sPredictR;
+                            $aVariant['VariantOnTranscript/Protein'] = $sPredictP;
+                            break;
+                        } elseif (isset($aError['errorcode']) && $aError['errorcode'] == 'WSPLICE') {
                             $aVariant['VariantOnTranscript/RNA'] = 'r.spl?';
                             $aVariant['VariantOnTranscript/Protein'] = 'p.?';
                             break;
