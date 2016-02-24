@@ -799,6 +799,31 @@ $aTableSQL =
     CONSTRAINT ' . TABLE_SCHEDULED_IMPORTS . '_fk_scheduled_by FOREIGN KEY (scheduled_by) REFERENCES ' . TABLE_USERS . ' (id) ON DELETE SET NULL ON UPDATE CASCADE,
     CONSTRAINT ' . TABLE_SCHEDULED_IMPORTS . '_fk_processed_by FOREIGN KEY (processed_by) REFERENCES ' . TABLE_USERS . ' (id) ON DELETE SET NULL ON UPDATE CASCADE)
     ' . $sSettings
+
+        , 'TABLE_GENE_STATISTICS' =>
+    'CREATE TABLE ' . TABLE_GENE_STATISTICS . ' (
+    id VARCHAR(25) NOT NULL,
+    vep_annotation TINYINT(1) DEFAULT NULL,
+    nextera_cds_bases INT(10) unsigned DEFAULT NULL,
+    nextera_exon_bases INT(10) unsigned DEFAULT NULL,
+    refseq_cds_bases INT(10) unsigned DEFAULT NULL,
+    refseq_exon_bases INT(10) unsigned DEFAULT NULL,
+    cds_coverage DECIMAL(5,2) DEFAULT NULL,
+    exon_coverage DECIMAL(5,2) DEFAULT NULL,
+    alternative_names VARCHAR(1000) DEFAULT NULL,
+    exon_mean_of_mean_coverage DECIMAL(6,2) DEFAULT NULL,
+    exon_mean_coverage_sd DECIMAL(6,2) DEFAULT NULL,
+    exon_mean_of_median_coverage DECIMAL(6,2) DEFAULT NULL,
+    exon_mean_of_percent_20x DECIMAL(6,2) DEFAULT NULL,
+    exon_mean_percent_sd DECIMAL(6,2) DEFAULT NULL,
+    cds_mean_of_mean_coverage DECIMAL(6,2) DEFAULT NULL,
+    cds_mean_coverage_sd DECIMAL(6,2) DEFAULT NULL,
+    cds_mean_of_median_coverage DECIMAL(6,2) DEFAULT NULL,
+    cds_mean_of_percent_20x DECIMAL(5,2) DEFAULT NULL,
+    cds_mean_percent_sd DECIMAL(5,2) DEFAULT NULL,
+    created_date datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (id))
+' . $sSettings
           );
 
 // DMD_SPECIFIC;

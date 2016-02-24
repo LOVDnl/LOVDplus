@@ -537,6 +537,7 @@ $_TABLES =
                 'TABLE_ANALYSES_RUN_FILTERS' => TABLEPREFIX . '_analyses_run_filters',
                 'TABLE_ANALYSES_RUN_RESULTS' => TABLEPREFIX . '_analyses_run_results',
                 'TABLE_SCHEDULED_IMPORTS' => TABLEPREFIX . '_scheduled_imports',
+                'TABLE_GENE_STATISTICS' => TABLEPREFIX . '_gene_statistics',
               );
 
 foreach ($_TABLES as $sConst => $sTable) {
