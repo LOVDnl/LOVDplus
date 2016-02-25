@@ -44,10 +44,10 @@ class LOVD_GeneStatistic extends LOVD_Object {
     // This class extends the basic Object class and it handles the Link object.
     var $sObject = 'Gene_Statistic';
 
-// TODO MGHA-AM Change the onclick function to go to the gene information rather than post back to itself
-// TODO MGHA-AM Add an option to only show selected genes
-// TODO MGHA-AM Add an option to download the list
+// TODO MGHA-AM Add an option to only show selected genes.
+// TODO MGHA-AM Add an option to download the list.
 // TODO MGHA-AM Add an option to paste in a long list of genes, may have to use POST to enable long gene lists.
+// TODO MGHA-AM Show the gene lists that each gene appears in, need to have new gene list tables created first.
 
     function __construct ()
     {
@@ -55,8 +55,8 @@ class LOVD_GeneStatistic extends LOVD_Object {
         global $_AUTH;
 
         // SQL code for viewing the list of genes
-        $this->aSQLViewList['SELECT']   = 'gs.*, gs.id AS geneid, (CASE gs.vep_annotation WHEN 1 THEN "Yes" ELSE "No" END) AS vepyesno';
-        $this->aSQLViewList['FROM']     = TABLE_GENE_STATISTICS . ' AS gs';
+        $this->aSQLViewList['SELECT']   = 'g.name, gs.*, g.id AS geneid, g.id, (CASE gs.vep_annotation WHEN 1 THEN "Yes" ELSE "No" END) AS vepyesno';
+        $this->aSQLViewList['FROM']     = TABLE_GENES . ' AS g LEFT OUTER JOIN ' . TABLE_GENE_STATISTICS . ' AS gs ON (g.id = gs.id)';
 
         // List of columns and (default?) order for viewing a list of entries.
         $this->aColumnsViewList =
@@ -66,7 +66,10 @@ class LOVD_GeneStatistic extends LOVD_Object {
                     'db'   => array('gs.id', 'ASC', true)),
                 'id_' => array(
                     'view' => array('Symbol<BR><BR>', 80),
-                    'db'   => array('gs.id', 'ASC', true)),
+                    'db'   => array('g.id', 'ASC', true)),
+                'name' => array(
+                    'view' => array('Gene <BR><BR>', 20),
+                    'db'   => array('g.name', 'ASC', true)),
                 'vepyesno' => array(
                     'view' => array('VEP <BR>Annotation<BR>', 20),
                     'db'   => array('vepyesno', 'ASC', true),

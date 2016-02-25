@@ -57,13 +57,24 @@ if (PATH_COUNT == 1 && !ACTION) {
 
     $_T->printFooter();
     exit;
-} else {
-    define('PAGE_TITLE', 'View gene statistics');
-    $_T->printHeader();
-    $_T->printTitle();
-    print ('Incorrect use of the gene statistics page, please <a href="' . ROOT_PATH . 'gene_statistics">click here</a> to view all the gene statistics.<br><br><br><br>');
-    $_T->printFooter();
-    exit;
 }
+
+if (PATH_COUNT == 2 && preg_match('/^[a-z][a-z0-9#@-]+$/i', rawurldecode($_PE[1])) && !ACTION) {
+    // URL: /genes/DMD
+    // View specific entry.
+
+    // Redirect to the gene information page when a gene is clicked in the gene statistics viewlist
+    header('location:' . lovd_getInstallURL() . 'genes/' . $_PE[1]);
+
+}
+
+// Display a message if the gene statistics page has an invalid URL
+define('PAGE_TITLE', 'View gene statistics');
+$_T->printHeader();
+$_T->printTitle();
+print ('Incorrect use of the gene statistics page, please <a href="' . ROOT_PATH . 'gene_statistics">click here</a> to view all the gene statistics.<br><br><br><br>');
+$_T->printFooter();
+exit;
+
 
 ?>
