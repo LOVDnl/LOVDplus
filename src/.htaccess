@@ -46,4 +46,5 @@ php_flag mysql.trace_mode Off
     RewriteRule ^users(.*)$ users.php
     RewriteRule ^variants(.*)$ variants.php
     RewriteRule ^view(.*)$ view.php
+    RewriteRule ^gene_statistics(.*)$ gene_statistics.php
 </IfModule>
