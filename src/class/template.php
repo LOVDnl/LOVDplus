@@ -86,6 +86,7 @@ class LOVD_Template {
                                 '' => array('menu_magnifying_glass.png', 'View all genes', 0),
                                 '/genes/' . $_SESSION['currdb'] => array('menu_magnifying_glass.png', 'View the ' . $_SESSION['currdb'] . ' gene homepage', 0),
                                 '/genes/' . $_SESSION['currdb'] . '/graphs' => array('menu_graphs.png', 'View graphs about the ' . $_SESSION['currdb'] . ' gene database', 0),
+                                '/gene_statistics' => array('menu_magnifying_glass.png', 'View all gene statistics', 0),
                                 'create' => array('plus.png', 'Create a new gene entry', LEVEL_MANAGER),
                               ),
                         'transcripts' => 'View transcripts',
@@ -705,7 +706,10 @@ if ($_SERVER['HTTP_HOST'] == 'leiden-test.diagnostics.lovd.nl') {
             $bSel = (substr(lovd_getProjectFile(), 1, strrpos(lovd_getProjectFile(), '.') - 1) == $sPrefix);
             // Auch! Hard coded exception!
             if (!$bSel && defined('TAB_SELECTED') && TAB_SELECTED == $sPrefix) { $bSel = true; }
+            // MGHA AM - Hard coded exception to show the Genes tab as active when looking at the gene statistics.
+            if ($sPrefix == 'genes' && (substr(lovd_getProjectFile(), 1, strrpos(lovd_getProjectFile(), '.') - 1) == 'gene_statistics')) { $bSel = true; }
             $sFile = 'tab_' . $sPrefix;
+
 
             // Print transition.
             $nTotalTabWidth += 25;

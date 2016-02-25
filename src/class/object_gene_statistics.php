@@ -45,8 +45,9 @@ class LOVD_GeneStatistic extends LOVD_Object {
     var $sObject = 'Gene_Statistic';
 
 // TODO MGHA-AM Change the onclick function to go to the gene information rather than post back to itself
-// TODO MGHA-AM The legend is broken due to the extra BR added to the column titles. Is there a better way to do this?
-
+// TODO MGHA-AM Add an option to only show selected genes
+// TODO MGHA-AM Add an option to download the list
+// TODO MGHA-AM Add an option to paste in a long list of genes, may have to use POST to enable long gene lists.
 
     function __construct ()
     {
@@ -67,31 +68,31 @@ class LOVD_GeneStatistic extends LOVD_Object {
                     'view' => array('Symbol<BR><BR>', 80),
                     'db'   => array('gs.id', 'ASC', true)),
                 'vepyesno' => array(
-                    'view' => array('VEP<BR>Annotation<BR>', 20),
+                    'view' => array('VEP <BR>Annotation<BR>', 20),
                     'db'   => array('vepyesno', 'ASC', true),
                     'legend' => array('Will this gene be annotated within VEP?')),
                 'nextera_cds_bases' => array(
-                    'view' => array('Nextera<BR>CDS<BR>Bases', 65),
+                    'view' => array('Nextera <BR>CDS <BR>Bases', 65),
                     'db'   => array('gs.nextera_cds_bases', 'DESC', 'INT_UNSIGNED'),
                     'legend' => array('How many bases in the capture overlap coding regions of this gene.')),
                 'nextera_exon_bases' => array(
-                    'view' => array('Nextera<BR>Exon<BR>Bases', 65),
+                    'view' => array('Nextera <BR>Exon <BR>Bases', 65),
                     'db'   => array('gs.nextera_exon_bases', 'DESC', 'INT_UNSIGNED'),
                     'legend' => array('How many bases in the capture overlap exons of this gene.')),
                 'refseq_cds_bases' => array(
-                    'view' => array('RefSeq<BR>CDS<BR>Bases', 60),
+                    'view' => array('RefSeq <BR>CDS <BR>Bases', 60),
                     'db'   => array('gs.refseq_cds_bases', 'DESC', 'INT_UNSIGNED'),
                     'legend' => array('How many coding bases are in RefSeq for this gene.')),
                 'refseq_exon_bases' => array(
-                    'view' => array('Refseq<BR>Exon<BR>Bases', 60),
+                    'view' => array('Refseq <BR>Exon <BR>Bases', 60),
                     'db'   => array('gs.refseq_exon_bases', 'DESC', 'INT_UNSIGNED'),
                     'legend' => array('How many exon bases are in RefSeq for this gene.')),
                 'cds_coverage' => array(
-                    'view' => array('CDS<BR>Coverage<BR>', 50),
+                    'view' => array('CDS <BR>Coverage<BR>', 50),
                     'db'   => array('gs.cds_coverage', 'DESC', 'DECIMAL'),
                     'legend' => array('Percentage of coding bases covered by the capture.')),
                 'exon_coverage' => array(
-                    'view' => array('Exon<BR>Coverage<BR>', 50),
+                    'view' => array('Exon <BR>Coverage<BR>', 50),
                     'db'   => array('gs.exon_coverage', 'DESC', 'DECIMAL'),
                     'legend' => array('Percentage of exon bases covered.')),
                 'alternative_names' => array(
@@ -99,43 +100,43 @@ class LOVD_GeneStatistic extends LOVD_Object {
                     'db'   => array('gs.alternative_names', 'DESC', true),
                     'legend' => array('Other known synonyms for this gene.')),
                 'exon_mean_of_mean_coverage' => array(
-                    'view' => array('Exon Mean<BR>of Mean<BR>Coverage', 80),
+                    'view' => array('Exon Mean <BR>of Mean <BR>Coverage', 80),
                     'db'   => array('gs.exon_mean_of_mean_coverage', 'DESC', 'DECIMAL'),
                     'legend' => array('The average coverage across the exons of this gene for one sample, averaged over a number of samples.')),
                 'exon_mean_coverage_sd' => array(
-                    'view' => array('Exon Mean<BR>Coverage<BR>SD', 80),
+                    'view' => array('Exon Mean <BR>Coverage <BR>SD', 80),
                     'db'   => array('gs.exon_mean_coverage_sd', 'DESC', 'DECIMAL'),
                     'legend' => array('The standard deviation of the mean coverage across samples.')),
                 'exon_mean_of_median_coverage' => array(
-                    'view' => array('Exon Mean<BR>of Median<BR>Coverage', 83),
+                    'view' => array('Exon Mean <BR>of Median <BR>Coverage', 83),
                     'db'   => array('gs.exon_mean_of_median_coverage', 'DESC', 'DECIMAL'),
                     'legend' => array('The median coverage across the exons of this gene for one sample, averaged over a number of samples.')),
                 'exon_mean_of_percent_20x' => array(
-                    'view' => array('Exon Mean<BR>of<BR>Percent>20x', 50),
+                    'view' => array('Exon Mean <BR>of <BR>Percent>20x', 50),
                     'db'   => array('gs.exon_mean_of_percent_20x', 'DESC', 'DECIMAL'),
                     'legend' => array('The percentage of this gene\'s exons with coverage greater than 20, averaged over a number of samples.')),
                 'exon_mean_percent_sd' => array(
-                    'view' => array('Exon Mean<BR>Percent<BR>SD', 83),
+                    'view' => array('Exon Mean <BR>Percent <BR>SD', 83),
                     'db'   => array('gs.exon_mean_percent_sd', 'DESC', 'DECIMAL'),
                     'legend' => array('The standard deviation of the mean percentage coverage across samples.')),
                 'cds_mean_of_mean_coverage' => array(
-                    'view' => array('CDS Mean<BR>of Mean<BR>Coverage', 50),
+                    'view' => array('CDS Mean <BR>of Mean <BR>Coverage', 50),
                     'db'   => array('gs.cds_mean_of_mean_coverage', 'DESC', 'DECIMAL'),
                     'legend' => array('The average coverage across the coding regions of this gene for one sample, averaged over a number of samples.')),
                 'cds_mean_coverage_sd' => array(
-                    'view' => array('CDS Mean<BR>Coverage<BR>SD', 77),
+                    'view' => array('CDS Mean <BR>Coverage <BR>SD', 77),
                     'db'   => array('gs.cds_mean_coverage_sd', 'DESC', 'DECIMAL'),
                     'legend' => array('The standard deviation of the mean coverage across samples.')),
                 'cds_mean_of_median_coverage' => array(
-                    'view' => array('CDS Mean<BR>of Median<BR>Coverage', 50),
+                    'view' => array('CDS Mean <BR>of Median <BR>Coverage', 50),
                     'db'   => array('gs.cds_mean_of_median_coverage', 'DESC', 'DECIMAL'),
                     'legend' => array('The median coverage across the coding regions of this gene for one sample, averaged over a number of samples.')),
                 'cds_mean_of_percent_20x' => array(
-                    'view' => array('CDS Mean<BR>of<BR>Percent>20x', 50),
+                    'view' => array('CDS Mean <BR>of <BR>Percent>20x', 50),
                     'db'   => array('gs.cds_mean_of_percent_20x', 'DESC', 'DECIMAL'),
                     'legend' => array('The percentage of this gene\'s coding regions with coverage greater than 20, averaged over a number of samples.')),
                 'cds_mean_percent_sd' => array(
-                    'view' => array('CDS Mean<BR>Percent<BR>SD', 80),
+                    'view' => array('CDS Mean <BR>Percent <BR>SD', 80),
                     'db'   => array('gs.cds_mean_percent_sd', 'DESC', 'DECIMAL'),
                     'legend' => array('The standard deviation of the mean percentage coverage across samples.')),
             );

@@ -1244,7 +1244,7 @@ class LOVD_Object {
                         if (empty($aCol['legend'][1])) {
                             $aCol['legend'][1] = $aCol['legend'][0];
                         }
-                        print('        <B>' . $aCol['view'][0] . '</B>: ' . $aCol['legend'][1]);
+                        print('        <B>' . strip_tags($aCol['view'][0]) . '</B>: ' . $aCol['legend'][1]);
                         if (substr($aCol['legend'][1], -5) == '</UL>') {
                             // No additional breaks, no possible listing of selection options. Column has its own UL already.
                             print("\n\n");
