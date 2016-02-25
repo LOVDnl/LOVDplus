@@ -7,10 +7,8 @@
  * Modified    : 2016-02-25
  * For LOVD    : 3.0-13
  *
- * Copyright   : 2004-2014 Leiden University Medical Center; http://www.LUMC.nl/
- * Programmers : Ing. Ivo F.A.C. Fokkema <I.F.A.C.Fokkema@LUMC.nl>
- *               Ing. Ivar C. Lugtenburg <I.C.Lugtenburg@LUMC.nl>
- *               Msc. Daan Asscheman <D.Asscheman@LUMC.nl>
+ * Copyright   : 2004-2016 Leiden University Medical Center; http://www.LUMC.nl/
+ * Programmers : Anthony Marty <anthony.marty@unimelb.edu.au>
  *
  *
  * This file is part of LOVD.
@@ -32,11 +30,16 @@
 
 define('ROOT_PATH', './');
 require ROOT_PATH . 'inc-init.php';
+define('TAB_SELECTED', 'genes');
 
 if ($_AUTH) {
     // If authorized, check for updates.
     require ROOT_PATH . 'inc-upgrade.php';
 }
+
+
+
+
 
 if (PATH_COUNT == 1 && !ACTION) {
     // URL: /gene_statistics
@@ -53,28 +56,24 @@ if (PATH_COUNT == 1 && !ACTION) {
 
     require ROOT_PATH . 'class/object_gene_statistics.php';
     $_DATA = new LOVD_GeneStatistic();
-    $_DATA->viewList('GeneStatistic', array(), false, false, (bool) ($_AUTH['level'] >= LEVEL_SUBMITTER));
+    $sViewListID = 'GeneStatistic';
+    $_DATA->setRowLink($sViewListID, ROOT_PATH . 'genes/' . $_DATA->sRowID);
+    $_DATA->viewList($sViewListID, array(), false, false, (bool) ($_AUTH['level'] >= LEVEL_SUBMITTER));
 
     $_T->printFooter();
     exit;
 }
 
-if (PATH_COUNT == 2 && preg_match('/^[a-z][a-z0-9#@-]+$/i', rawurldecode($_PE[1])) && !ACTION) {
-    // URL: /genes/DMD
-    // View specific entry.
 
-    // Redirect to the gene information page when a gene is clicked in the gene statistics viewlist
-    header('location:' . lovd_getInstallURL() . 'genes/' . $_PE[1]);
 
-}
+
 
 // Display a message if the gene statistics page has an invalid URL
 define('PAGE_TITLE', 'View gene statistics');
 $_T->printHeader();
 $_T->printTitle();
-print ('Incorrect use of the gene statistics page, please <a href="' . ROOT_PATH . 'gene_statistics">click here</a> to view all the gene statistics.<br><br><br><br>');
+print ('Incorrect use of the gene statistics page, please <a href="' . ROOT_PATH . $_PE[0] . '">click here</a> to view all the gene statistics.<br><br><br><br>');
 $_T->printFooter();
 exit;
-
 
 ?>

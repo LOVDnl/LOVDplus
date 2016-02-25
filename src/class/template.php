@@ -706,8 +706,6 @@ if ($_SERVER['HTTP_HOST'] == 'leiden-test.diagnostics.lovd.nl') {
             $bSel = (substr(lovd_getProjectFile(), 1, strrpos(lovd_getProjectFile(), '.') - 1) == $sPrefix);
             // Auch! Hard coded exception!
             if (!$bSel && defined('TAB_SELECTED') && TAB_SELECTED == $sPrefix) { $bSel = true; }
-            // MGHA AM - Hard coded exception to show the Genes tab as active when looking at the gene statistics.
-            if ($sPrefix == 'genes' && (substr(lovd_getProjectFile(), 1, strrpos(lovd_getProjectFile(), '.') - 1) == 'gene_statistics')) { $bSel = true; }
             $sFile = 'tab_' . $sPrefix;
 
 
