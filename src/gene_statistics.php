@@ -31,6 +31,7 @@
 define('ROOT_PATH', './');
 require ROOT_PATH . 'inc-init.php';
 define('TAB_SELECTED', 'genes');
+$sViewListID = 'GeneStatistic';
 
 if ($_AUTH) {
     // If authorized, check for updates.
@@ -45,10 +46,11 @@ if (PATH_COUNT == 1 && !ACTION) {
     // URL: /gene_statistics
     // View all entries.
 
-    // Managers are allowed to download this list...
-    if ($_AUTH['level'] >= LEVEL_MANAGER) {
+    // Submitters are allowed to download this list...
+    if ($_AUTH['level'] >= LEVEL_SUBMITTER) {
         define('FORMAT_ALLOW_TEXTPLAIN', true);
     }
+    lovd_requireAUTH(LEVEL_SUBMITTER);
 
     define('PAGE_TITLE', 'View gene statistics');
     $_T->printHeader();
@@ -56,7 +58,6 @@ if (PATH_COUNT == 1 && !ACTION) {
 
     require ROOT_PATH . 'class/object_gene_statistics.php';
     $_DATA = new LOVD_GeneStatistic();
-    $sViewListID = 'GeneStatistic';
     // Redirect the link when clicking on genes to the genes info page
     $_DATA->setRowLink($sViewListID, ROOT_PATH . 'genes/' . $_DATA->sRowID);
     // Allow users to download this gene statistics selected gene list
@@ -64,6 +65,36 @@ if (PATH_COUNT == 1 && !ACTION) {
     print('        <LI class="icon"><A click="lovd_AJAX_viewListSubmit(\'' . $sViewListID . '\', function(){lovd_AJAX_viewListDownload(\'' . $sViewListID . '\', false);});"><SPAN class="icon" style="background-image: url(gfx/menu_save.png);"></SPAN>Download selected entries (summary data)</A></LI>' . "\n");
     print('      </UL>' . "\n\n");
     $_DATA->viewList($sViewListID, array(), false, false, (bool) ($_AUTH['level'] >= LEVEL_SUBMITTER));
+
+    $_T->printFooter();
+    exit;
+}
+
+
+
+
+
+if (PATH_COUNT == 1 && ACTION == 'search') {
+// URL: /gene_statistics?search
+// Search on a long list of genes that can be pasted into the page.
+    
+    // TODO Create a popup lovd_openWindow() that will allow the users to paste in the long list of genes
+    // TODO Validate the genes and alert if any of the genes are not within LOVD. Allow to proceed with only the found genes or allow the users to try and locate the correct genes
+    // TODO If we continue the write the genes to the session variable $_SESSION['viewlists'][$sViewListID]['checked'] and refresh the viewlist so as those genes are now checked
+    // TODO Add two new options in the viewlist menu 1. Show only checked 2. Show all
+    // TODO Create a new javascript function in the gene_statistics page that will control the action of these menu items
+    // TODO Use the function to create, update and remove a hidden form value for form id=viewlistForm_GeneStatistic
+    // TODO Modify the object_gene_statistics.php file to detect if there is a value in the hidden form value and if it is set and the option is to show only checked genes then apply a where clause with an IN() with all the genes in there
+
+    lovd_requireAUTH(LEVEL_SUBMITTER);
+    define('PAGE_TITLE', 'Gene statistics - Batch gene upload');
+    $_T->printHeader();
+    $_T->printTitle();
+
+    // This is an example of how you can set the genes to be already checked in the gene statistics viewlist. This will overwrite the existing checked genes so handle with care.
+    // $_SESSION['viewlists'][$sViewListID]['checked'] = array('A1BG','A1CF','A2M-AS1','A2MP1','A4GNT');
+
+    print('Paste in comma separated values to be used for selecting a large number of genes');
 
     $_T->printFooter();
     exit;

@@ -43,9 +43,6 @@ class LOVD_GeneStatistic extends LOVD_Object {
     // This class extends the basic Object class and it handles the Link object.
     var $sObject = 'Gene_Statistic';
 
-// TODO MGHA-AM Add an option to only show selected genes.
-// TODO MGHA-AM Add an option to download the list.
-// TODO MGHA-AM Add an option to paste in a long list of genes, may have to use POST to enable long gene lists.
 // TODO MGHA-AM Show the gene lists that each gene appears in, need to have new gene list tables created first.
 
     function __construct ()
@@ -56,6 +53,11 @@ class LOVD_GeneStatistic extends LOVD_Object {
         // SQL code for viewing the list of genes
         $this->aSQLViewList['SELECT']   = 'g.name, gs.*, g.id, (CASE gs.vep_annotation WHEN 1 THEN "Yes" ELSE "No" END) AS vepyesno';
         $this->aSQLViewList['FROM']     = TABLE_GENES . ' AS g LEFT OUTER JOIN ' . TABLE_GENE_STATISTICS . ' AS gs ON (g.id = gs.id)';
+        // TODO If we detect that the user wants to only show the checked genes and there are genes stored in the session variable then lets add them to the where clause here.
+        // Below is an example of how we can achieve this, just need to replace the list of hard coded genes with those stored in the session variable array $_SESSION['viewlists'][$sViewListID]['checked']
+        //$this->aSQLViewList['WHERE']     = 'g.id in("A1BG","BRCA1","ACTN3","BRCA2","ABCA12")';
+
+
 
         // List of columns and (default?) order for viewing a list of entries.
         $this->aColumnsViewList =
