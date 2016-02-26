@@ -71,8 +71,9 @@ if (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] == 'on' && !empty($_SERVER['S
 
 // Our output formats: text/html by default.
 $aFormats = array('text/html'); // Disable all downloads. // Key [0] is default. Other values may not always be allowed. It is checked in the Template class' printHeader() and in Objects::viewList().
-// Except for when auto-importing, obviously, then we need text/plain...
-if (lovd_getProjectFile() == '/import.php') {
+// Except for when auto-importing or downloading gene statistics, obviously, then we need text/plain...
+$aPlainTextFiles = array('/import.php','/gene_statistics.php','/ajax/viewlist.php');
+if (in_array(lovd_getProjectFile(), $aPlainTextFiles)) {
     $aFormats[] = 'text/plain';
 }
 if (lovd_getProjectFile() == '/api.php') {

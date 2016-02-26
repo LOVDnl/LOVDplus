@@ -708,7 +708,6 @@ if ($_SERVER['HTTP_HOST'] == 'leiden-test.diagnostics.lovd.nl') {
             if (!$bSel && defined('TAB_SELECTED') && TAB_SELECTED == $sPrefix) { $bSel = true; }
             $sFile = 'tab_' . $sPrefix;
 
-
             // Print transition.
             $nTotalTabWidth += 25;
             print('      <IMG src="gfx/tab_' . (!$n? '0' : ($bPrevSel? 'F' : 'B')) . ($bSel? 'F' : 'B') . '.png" alt="" width="25" height="25" align="left">' . "\n");

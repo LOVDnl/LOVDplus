@@ -57,7 +57,12 @@ if (PATH_COUNT == 1 && !ACTION) {
     require ROOT_PATH . 'class/object_gene_statistics.php';
     $_DATA = new LOVD_GeneStatistic();
     $sViewListID = 'GeneStatistic';
+    // Redirect the link when clicking on genes to the genes info page
     $_DATA->setRowLink($sViewListID, ROOT_PATH . 'genes/' . $_DATA->sRowID);
+    // Allow users to download this gene statistics selected gene list
+    print('      <UL id="viewlistMenu_' . $sViewListID . '" class="jeegoocontext jeegooviewlist">' . "\n");
+    print('        <LI class="icon"><A click="lovd_AJAX_viewListSubmit(\'' . $sViewListID . '\', function(){lovd_AJAX_viewListDownload(\'' . $sViewListID . '\', false);});"><SPAN class="icon" style="background-image: url(gfx/menu_save.png);"></SPAN>Download selected entries (summary data)</A></LI>' . "\n");
+    print('      </UL>' . "\n\n");
     $_DATA->viewList($sViewListID, array(), false, false, (bool) ($_AUTH['level'] >= LEVEL_SUBMITTER));
 
     $_T->printFooter();
