@@ -56,13 +56,38 @@ if (PATH_COUNT == 1 && !ACTION) {
     $_T->printHeader();
     $_T->printTitle();
 
+    // TODO BUG 1. Select genes 2. Only show selected genes 3. Sorting is disabled even though there are only a few genes selected 4. Only show selected genes again 5. Sorting is now enabled 6. Show all genes 7. Sorting is still enabled even though too many results are returned
+    // Objects.php, line 1052, I suspect since the setting and removing of the check filter does not change the search criteria it does not bother re counting the rows and as such uses the last record counts to determine if the sort should be enabled. Not sure then why it works if you activate the check filter twice...
+    ?>
+    <script type="text/javascript">
+        // This function toggles the checked filter
+        function lovd_AJAX_viewListCheckedFilter(filterOption)    {
+            // If the hidden element does not yet exist then create it
+            if($('#filterChecked').length == 0) {
+                $('#viewlistForm_<?php print $sViewListID;?>').prepend('<input type="hidden" name="filterChecked" id="filterChecked" value="' + filterOption + '" />');
+            }
+            // Otherwise set the checked filter preference
+            else {
+                $('#filterChecked').val(filterOption);
+            }
+            // If the page number has been set then set it back to page 1
+            if (document.forms['viewlistForm_<?php print $sViewListID;?>'].page) {
+                document.forms['viewlistForm_<?php print $sViewListID;?>'].page.value=1;
+            }
+            // Refresh the viewlist so as it can apply the checked filter
+            setTimeout('lovd_AJAX_viewListSubmit(\'<?php print $sViewListID;?>\')', 0);
+        }
+    </script>
+<?php
     require ROOT_PATH . 'class/object_gene_statistics.php';
     $_DATA = new LOVD_GeneStatistic();
     // Redirect the link when clicking on genes to the genes info page
     $_DATA->setRowLink($sViewListID, ROOT_PATH . 'genes/' . $_DATA->sRowID);
     // Allow users to download this gene statistics selected gene list
     print('      <UL id="viewlistMenu_' . $sViewListID . '" class="jeegoocontext jeegooviewlist">' . "\n");
-    print('        <LI class="icon"><A click="lovd_AJAX_viewListSubmit(\'' . $sViewListID . '\', function(){lovd_AJAX_viewListDownload(\'' . $sViewListID . '\', false);});"><SPAN class="icon" style="background-image: url(gfx/menu_save.png);"></SPAN>Download selected entries (summary data)</A></LI>' . "\n");
+    print('        <LI class="icon"><A click="lovd_AJAX_viewListSubmit(\'' . $sViewListID . '\', function(){lovd_AJAX_viewListCheckedFilter(true);});"><SPAN class="icon" style="background-image: url(gfx/check.png);"></SPAN>Show only checked genes</A></LI>' . "\n");
+    print('        <LI class="icon"><A click="lovd_AJAX_viewListSubmit(\'' . $sViewListID . '\', function(){lovd_AJAX_viewListCheckedFilter(false);});"><SPAN class="icon" style="background-image: url(gfx/cross_disabled.png);"></SPAN>Show all genes</A></LI>' . "\n");
+    print('        <LI class="icon"><A click="lovd_AJAX_viewListSubmit(\'' . $sViewListID . '\', function(){lovd_AJAX_viewListDownload(\'' . $sViewListID . '\', false);});"><SPAN class="icon" style="background-image: url(gfx/menu_save.png);"></SPAN>Download selected genes</A></LI>' . "\n");
     print('      </UL>' . "\n\n");
     $_DATA->viewList($sViewListID, array(), false, false, (bool) ($_AUTH['level'] >= LEVEL_SUBMITTER));
 
@@ -80,11 +105,7 @@ if (PATH_COUNT == 1 && ACTION == 'search') {
     
     // TODO Create a popup lovd_openWindow() that will allow the users to paste in the long list of genes
     // TODO Validate the genes and alert if any of the genes are not within LOVD. Allow to proceed with only the found genes or allow the users to try and locate the correct genes
-    // TODO If we continue the write the genes to the session variable $_SESSION['viewlists'][$sViewListID]['checked'] and refresh the viewlist so as those genes are now checked
-    // TODO Add two new options in the viewlist menu 1. Show only checked 2. Show all
-    // TODO Create a new javascript function in the gene_statistics page that will control the action of these menu items
-    // TODO Use the function to create, update and remove a hidden form value for form id=viewlistForm_GeneStatistic
-    // TODO Modify the object_gene_statistics.php file to detect if there is a value in the hidden form value and if it is set and the option is to show only checked genes then apply a where clause with an IN() with all the genes in there
+    // TODO If we continue then write the genes to the session variable $_SESSION['viewlists'][$sViewListID]['checked'] and refresh the viewlist so as those genes are now checked
 
     lovd_requireAUTH(LEVEL_SUBMITTER);
     define('PAGE_TITLE', 'Gene statistics - Batch gene upload');

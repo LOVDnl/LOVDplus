@@ -53,9 +53,10 @@ class LOVD_GeneStatistic extends LOVD_Object {
         // SQL code for viewing the list of genes
         $this->aSQLViewList['SELECT']   = 'g.name, gs.*, g.id, (CASE gs.vep_annotation WHEN 1 THEN "Yes" ELSE "No" END) AS vepyesno';
         $this->aSQLViewList['FROM']     = TABLE_GENES . ' AS g LEFT OUTER JOIN ' . TABLE_GENE_STATISTICS . ' AS gs ON (g.id = gs.id)';
-        // TODO If we detect that the user wants to only show the checked genes and there are genes stored in the session variable then lets add them to the where clause here.
-        // Below is an example of how we can achieve this, just need to replace the list of hard coded genes with those stored in the session variable array $_SESSION['viewlists'][$sViewListID]['checked']
-        //$this->aSQLViewList['WHERE']     = 'g.id in("A1BG","BRCA1","ACTN3","BRCA2","ABCA12")';
+        // If we detect that the user wants to only show the checked genes and there are genes stored in the session variable then lets add them to the where clause here.
+        if (isset($_GET['filterChecked']) && isset($_GET['viewlistid']) && $_GET['filterChecked'] == "true") {
+            $this->aSQLViewList['WHERE']     = 'g.id in("' . implode('","', $_SESSION['viewlists'][$_GET['viewlistid']]['checked']) . '")';
+        }
 
 
 
