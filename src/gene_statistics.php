@@ -32,6 +32,7 @@ define('ROOT_PATH', './');
 require ROOT_PATH . 'inc-init.php';
 define('TAB_SELECTED', 'genes');
 $sViewListID = 'GeneStatistic';
+$bBadGenes = false;
 
 if ($_AUTH) {
     // If authorized, check for updates.
@@ -56,13 +57,85 @@ if (PATH_COUNT == 1 && !ACTION) {
     $_T->printHeader();
     $_T->printTitle();
 
-    $sGeneNames = '';
-    if (isset($_POST['geneNames'])) {
-        $sGeneNames = $_POST['geneNames'];
+    $sGeneSymbols = '';
+    if (isset($_POST['geneSymbols'])) {
+        $sGeneSymbols = $_POST['geneSymbols'];
+        // Explode the gene symbol string into an array, trim the whitespace, remove duplicates and remove empty array elements
+        // TODO Can we also handle new line separated lists somehow? Replace newlines with commas? The cleaning up of the array should remove any issues this creates.
+        $aGeneSymbols = array_filter(array_unique(array_map('trim',explode(",",$sGeneSymbols))));
+        $aCorrectGeneSymbols = array();
+        $aBadGeneSymbols = array();
+        $sBadGenesHTML = '';
+
+
+        // Check if there are any genes left after cleaning up the gene symbol string
+        if (count($aGeneSymbols) > 0) {
+            // Loop through all the gene symbols in the array and check them for any errors
+            foreach ($aGeneSymbols as $key => $sGeneSymbol) {
+                // Check to see if this gene symbol has been found within the database
+                //$sSQL = 'SELECT id FROM ' . TABLE_GENE_STATISTICS . ' WHERE id = ?';
+                $sSQL = 'SELECT id FROM ' . TABLE_GENE_STATISTICS . ' WHERE id = ?';
+                $sCorrectGeneSymbol = $_DB->query($sSQL, array($sGeneSymbol))->fetchColumn();
+
+                if ($sCorrectGeneSymbol) {
+                    // A correct gene symbol was found so lets use that to remove any case issues
+                    $aGeneSymbols[$key] = $sCorrectGeneSymbol;
+                    $sGeneSymbol = $sCorrectGeneSymbol;
+                    $aCorrectGeneSymbols[] = $sCorrectGeneSymbol;
+                } else {
+                    // This gene symbol was not found in the database
+                    $aBadGeneSymbols[] = $sGeneSymbol;
+                    $bBadGenes = true;
+                }
+            }
+            // Create a table of any bad gene symbols and try to work out if there is a correct gene symbol available
+            if ($bBadGenes) {
+                $sBadGenesHTML .= '<h3>Genes not found!</h3>These genes were not found, please review them and correct your gene list before proceeding.<table  border="0" cellpadding="0" cellspacing="1" class="data">';
+                $sBadGenesHTML .= '<thead><tr><th>Gene Symbol</th><th>Found in Database</th><th>Found in HGNC</th></tr></thead><tbody>';
+                // Loop through the bad genes and check them
+                foreach ($aBadGeneSymbols as $sBadGeneSymbol) {
+                    $sBadGenesHTML .= '<tr class="data"><td>' . $sBadGeneSymbol . '</td>';
+
+                    // Search within the database to see if this gene symbol is in the Alternative Names column
+                    $sSQL = 'SELECT id FROM ' . TABLE_GENE_STATISTICS . ' WHERE alternative_names REGEXP \'[[:<:]]' . $sBadGeneSymbol . '[[:>:]]\'';
+                    $sFoundInDB = $_DB->query($sSQL)->fetchColumn();
+                    if ($sFoundInDB) {
+                        $sBadGenesHTML .= '<td>' . $sFoundInDB . '</td>';
+                    } else {
+                        $sBadGenesHTML .= '<td> - </td>';
+                    }
+
+                    // TODO Search the HGNC database to see if the correct gene name can be found
+                    $sBadGenesHTML .= '<td>To be completed...</td>';
+
+                    $sBadGenesHTML .= '</tr>';
+                }
+
+                $sBadGenesHTML .= '</tbody></table><br>';
+
+
+            }
+
+
+
+
+
+        }
+//        var_dump($aGeneSymbols); // TODO REMOVE IN PRODUCTION
+//        var_dump($aBadGeneSymbols);
+
+
+        // Write back the cleaned up gene symbol list to the form to be displayed to the user
+        $sGeneSymbols = implode(', ', $aGeneSymbols);
+
+        // Mark the correct gene symbols as checked for this viewlist
+        $_SESSION['viewlists'][$sViewListID]['checked'] = $aCorrectGeneSymbols;
+
     }
 
-    // TODO Validate the genes and alert if any of the genes are not within LOVD. Allow to proceed with only the found genes or allow the users to try and locate the correct genes
-    // TODO If we continue then write the genes to the session variable $_SESSION['viewlists'][$sViewListID]['checked'] and refresh the viewlist so as those genes are now checked
+    // TODO Setup an alert to show when you are only viewing checked genes otherwise it may cause some confusion about why genes are not being shown. Turn off the checked filter using this alert?
+    // TODO Provide some screen notification to say you have submitted and selected the genes in the comma separated gene list and explain how to only show those genes.
+
     // TODO BUG 1. Select genes 2. Only show selected genes 3. Sorting is disabled even though there are only a few genes selected 4. Only show selected genes again 5. Sorting is now enabled 6. Show all genes 7. Sorting is still enabled even though too many results are returned
     // TODO BUG Continued Objects.php, line 1052, I suspect since the setting and removing of the check filter does not change the search criteria it does not bother re counting the rows and as such uses the last record counts to determine if the sort should be enabled. Not sure then why it works if you activate the check filter twice...
     ?>
@@ -86,7 +159,8 @@ if (PATH_COUNT == 1 && !ACTION) {
         }
 
         $(document).ready(function() {
-        <?php if (!empty($sGeneNames)) { ?>
+            // When loading this page check to see when to show or hide the gene entry form based on the contents of the form
+        <?php if (!empty($sGeneSymbols)) { ?>
             $('#genesForm').show();
             $('#geneFormShowHide').val('show');
             $('#searchBoxTitle').html('<b>Search for genes:</b>');
@@ -95,7 +169,7 @@ if (PATH_COUNT == 1 && !ACTION) {
             $('#geneFormShowHide').val('hide');
             $('#searchBoxTitle').html('Show gene search box');
         <?php } ?>
-
+            // Function to control how to show or hide the gene entry form
             $("#searchBoxTitle").click(function(){
                 $("#genesForm").toggle('fast');
                 if ($('#geneFormShowHide').val() == 'show') {
@@ -111,12 +185,19 @@ if (PATH_COUNT == 1 && !ACTION) {
 <?php
 
 print('<div id="searchBoxTitle" style="cursor: pointer;text-decoration: underline;font-size : 11px;font-weight: bold"></div>');
-print('<form id="genesForm" method="post" style="display: none;">Enter in you list of gene symbols separated by commas and press search.<BR><input type="hidden" id="geneFormShowHide" value="hide"><textarea rows="5" cols="200" name="geneNames" id="geneNames">' . $sGeneNames . '</textarea><BR><input type="submit" name="submitGenes" id="submitGenes" value=" Search "></form>');
+print('<form id="genesForm" method="post" style="display: none;">Enter in you list of gene symbols separated by commas and press search to automatically select them. Select \'Show only checked genes\' from the menu to hide unselected genes.<BR><input type="hidden" id="geneFormShowHide" value="hide"><textarea rows="5" cols="200" name="geneSymbols" id="geneSymbols">' . htmlentities($sGeneSymbols) . '</textarea><BR><input type="submit" name="submitGenes" id="submitGenes" value=" Search "></form>');
+
+// If genes were not found then display the error
+if ($bBadGenes) {
+    lovd_showInfoTable($sBadGenesHTML,'stop', 760);
+}
 
 require ROOT_PATH . 'class/object_gene_statistics.php';
 $_DATA = new LOVD_GeneStatistic();
 // Redirect the link when clicking on genes to the genes info page
-$_DATA->setRowLink($sViewListID, ROOT_PATH . 'genes/' . $_DATA->sRowID);
+//$_DATA->setRowLink($sViewListID, ROOT_PATH . 'genes/' . $_DATA->sRowID);
+// Bold the row when clicked. Not sure if this is better or going to the gene info is better. It might get annoying going away from this page as you lose the work you have done.
+$_DATA->setRowLink($sViewListID, 'javascript:$(\'#{{id}}\').toggleClass(\'marked\');');
 // Allow users to download this gene statistics selected gene list
 print('      <UL id="viewlistMenu_' . $sViewListID . '" class="jeegoocontext jeegooviewlist">' . "\n");
 print('        <LI class="icon"><A click="lovd_AJAX_viewListSubmit(\'' . $sViewListID . '\', function(){lovd_AJAX_viewListCheckedFilter(true);});"><SPAN class="icon" style="background-image: url(gfx/check.png);"></SPAN>Show only checked genes</A></LI>' . "\n");
