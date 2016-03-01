@@ -60,6 +60,16 @@ class LOVD_GeneList extends LOVD_Object {
                                'WHERE gl.id = ? ' .
                                'GROUP BY gl.id';
 
+        // SQL code for viewing an entry.
+        $this->aSQLViewEntry['SELECT']   = 'gl.*,' .
+            'GROUP_CONCAT(DISTINCT d.id, ";", IFNULL(d.id_omim, 0), ";", IF(CASE d.symbol WHEN "-" THEN "" ELSE d.symbol END = "", d.name, d.symbol), ";", d.name ORDER BY (d.symbol != "" AND d.symbol != "-") DESC, d.symbol, d.name SEPARATOR ";;") AS __diseases, ' .
+            'uc.name AS created_by_';
+        $this->aSQLViewEntry['FROM']     = TABLE_GENE_LISTS . ' AS gl ' .
+            'LEFT OUTER JOIN ' . TABLE_GL2DIS . ' AS gl2d ON (gl.id = gl2d.genelistid) ' .
+            'LEFT OUTER JOIN ' . TABLE_DISEASES . ' AS d ON (gl2d.diseaseid = d.id) ' .
+            'LEFT OUTER JOIN ' . TABLE_USERS . ' AS uc ON (gl.created_by = uc.id) ';
+        $this->aSQLViewEntry['GROUP_BY'] = 'gl.id';
+
         // SQL code for viewing the list of gene lists
         $this->aSQLViewList['SELECT']   = 'gl.*, ' .
                                           'GROUP_CONCAT(DISTINCT IF(CASE d.symbol WHEN "-" THEN "" ELSE d.symbol END = "", d.name, d.symbol) ORDER BY (d.symbol != "" AND d.symbol != "-") DESC, d.symbol, d.name SEPARATOR ", ") AS diseases_, ' .
@@ -69,6 +79,20 @@ class LOVD_GeneList extends LOVD_Object {
                                           'LEFT OUTER JOIN ' . TABLE_GL2GENE . ' AS gl2g ON (gl.id = gl2g.genelistid) ' .
                                           'LEFT OUTER JOIN ' . TABLE_DISEASES . ' AS d ON (gl2d.diseaseid = d.id)';
         $this->aSQLViewList['GROUP_BY'] = 'gl.id';
+
+        // List of columns and (default?) order for viewing an entry.
+        $this->aColumnsViewEntry =
+            array(
+                'TableHeader_General' => 'General information',
+                'name' => 'Gene list name',
+                'description' => 'Description',
+                'type' => 'Type',
+                'cohort' => 'Cohort',
+                'phenotype_group' => 'Phenotype group',
+                'diseases_' => 'Associated with diseases',
+                'created_by_' => 'Created by',
+                'created_date' => 'Created date',
+            );
 
         // List of columns and (default?) order for viewing a list of entries.
         $this->aColumnsViewList =
@@ -92,6 +116,10 @@ class LOVD_GeneList extends LOVD_Object {
                     'view' => array('Cohort', 50),
                     'db'   => array('gl.cohort', 'ASC', true),
                     'legend' => array('The cohort the gene list belongs to.')),
+                'phenotype_group' => array(
+                    'view' => array('Phenotype Group', 50),
+                    'db'   => array('gl.phenotype_group', 'ASC', true),
+                    'legend' => array('The phenotype group this gene list belongs to. These groups are combined to calculate observation counts.')),
                 'genes' => array(
                     'view' => array('Genes', 60),
                     'db'   => array('genes', 'DESC', 'INT_UNSIGNED'),
@@ -111,6 +139,9 @@ class LOVD_GeneList extends LOVD_Object {
     }
 
 
+
+
+
     function prepareData ($zData = '', $sView = 'list')
     {
         // Prepares the data by "enriching" the variable received with links, pictures, etc.
@@ -123,8 +154,28 @@ class LOVD_GeneList extends LOVD_Object {
         // Makes sure it's an array and htmlspecialchars() all the values.
         $zData = parent::prepareData($zData, $sView);
 
-        $zData['type'] = ucwords(str_replace("_", " ", $zData['type']));
-        $zData['created_date'] = substr($zData['created_date'], 0, 10);
+        if ($sView == 'list') {
+            $zData['created_date'] = substr($zData['created_date'], 0, 10);
+            $zData['type'] = ucwords(str_replace("_", " ", $zData['type'])); // TODO This is a repeated change that needs to apply to list and entry, find a better way to do this
+        } else {
+            // TODO searching still works on the original value so if we search for "Gene List" it does not work. Can this be fixed without modifying the SQL?
+            $zData['type'] = ucwords(str_replace("_", " ", $zData['type']));
+
+
+            // Associated with diseases...
+            $zData['diseases_'] = '';
+            $zData['disease_omim_'] = '';
+            foreach($zData['diseases'] as $aDisease) {
+                list($nID, $nOMIMID, $sSymbol, $sName) = $aDisease;
+                // Link to disease entry in LOVD.
+                $zData['diseases_'] .= (!$zData['diseases_']? '' : ', ') . '<A href="diseases/' . $nID . '">' . $sSymbol . '</A>';
+                if ($nOMIMID) {
+                    // Add link to OMIM for each disease that has an OMIM ID.
+                    $zData['disease_omim_'] .= (!$zData['disease_omim_'] ? '' : '<BR>') . '<A href="' . lovd_getExternalSource('omim', $nOMIMID, true) . '" target="_blank">' . $sSymbol . ($sSymbol == $sName? '' : ' (' . $sName . ')') . '</A>';
+                }
+            }
+
+        }
 
         return $zData;
 

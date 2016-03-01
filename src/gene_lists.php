@@ -63,4 +63,37 @@ if (PATH_COUNT == 1 && !ACTION) {
 }
 
 
+
+
+
+if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && !ACTION) {
+    // URL: /genes_lists/1
+    // View specific entry.
+
+    $sID = rawurldecode($_PE[1]);
+    define('PAGE_TITLE', 'View gene list #' . $sID);
+    $_T->printHeader();
+    $_T->printTitle();
+
+    require ROOT_PATH . 'class/object_gene_lists.php';
+    $_DATA = new LOVD_GeneList();
+    $zData = $_DATA->viewEntry($sID);
+
+    $aNavigation = array();
+    if ($_AUTH && $_AUTH['level'] >= LEVEL_CURATOR) {
+        // Authorized user is logged in. Provide tools.
+        $aNavigation[CURRENT_PATH . '?edit']             = array('menu_edit.png', 'Edit gene list information', 1);
+        $aNavigation['transcripts/' . $sID . '?create']  = array('menu_plus.png', 'Add gene(s) to gene list', 1);
+        if ($_AUTH['level'] >= LEVEL_MANAGER) {
+            $aNavigation[CURRENT_PATH . '?delete']       = array('cross.png', 'Delete gene entry', 1);
+        }
+    }
+    lovd_showJGNavigation($aNavigation, 'Genes');
+
+    $_T->printFooter();
+    exit;
+}
+
+print('No condition met using the provided URL.');
+
 ?>
