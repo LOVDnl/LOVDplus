@@ -55,7 +55,9 @@ if (PATH_COUNT == 1 && !ACTION) {
     $_T->printHeader();
     $_T->printTitle();
 
-    lovd_requireAUTH(LEVEL_COLLABORATOR);
+    if (LOVD_plus) {
+        lovd_requireAUTH();
+    }
 
     require ROOT_PATH . 'class/object_individuals.mod.php';
     $_DATA = new LOVD_IndividualMOD();
@@ -83,7 +85,9 @@ if (PATH_COUNT >= 2 && ctype_digit($_PE[1]) && !ACTION && (PATH_COUNT == 2 || PA
     // Load appropiate user level for this individual.
     lovd_isAuthorized('individual', $nID);
 
-    lovd_requireAUTH(LEVEL_COLLABORATOR);
+    if (LOVD_plus) {
+        lovd_requireAUTH();
+    }
 
     // FIXME: This means, when the ID does not exist, we have an open table that doesn't close.
     print('      <TABLE cellpadding="0" cellspacing="0" border="0" width="100%">
