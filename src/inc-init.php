@@ -150,9 +150,7 @@ $_SETT = array(
                             LEVEL_CURATOR      => 'Curator',
                             LEVEL_OWNER        => 'Submitter (data owner)',
                             LEVEL_COLLABORATOR => 'Collaborator',
-                            // Diagnostics: Added one level, and changed the submitter level's name.
-                            LEVEL_ANALYZER     => 'Analyzer',
-                            LEVEL_SUBMITTER    => 'Read-only',
+                            LEVEL_SUBMITTER    => 'Submitter',
                           ),
                 'user_level_settings' =>
                 array(
@@ -311,6 +309,12 @@ $_SETT['analysis_status'] =
         ANALYSIS_STATUS_APPROVED => 'Approved',
         ANALYSIS_STATUS_ARCHIVED => 'Archived',
     );
+if (LOVD_plus) {
+    // Diagnostics: Added one level, and changed the submitter level's name.
+    unset($_SETT['user_levels'][LEVEL_SUBMITTER]); // To make space, we need to rename it anyway.
+    $_SETT['user_levels'][LEVEL_ANALYZER]  = 'Analyzer';
+    $_SETT['user_levels'][LEVEL_SUBMITTER] = 'Read-only';
+}
 
 // Before we have any output, initiate the template class which takes care of headers and such.
 require ROOT_PATH . 'class/template.php';

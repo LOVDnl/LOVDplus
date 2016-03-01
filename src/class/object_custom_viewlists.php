@@ -55,7 +55,7 @@ class LOVD_CustomViewList extends LOVD_Object {
     function __construct ($aObjects = array(), $sOtherID = '')
     {
         // Default constructor.
-        global $_DB, $_AUTH;
+        global $_DB, $_AUTH, $_SETT;
 
         if (!is_array($aObjects)) {
             $aObjects = explode(',', $aObjects);
@@ -191,8 +191,8 @@ class LOVD_CustomViewList extends LOVD_Object {
                         $aSQL['FROM'] .= ' LEFT OUTER JOIN ' . TABLE_USERS . ' AS uo ON (vog.owned_by = uo.id)';
                     }
                     $aSQL['FROM'] .= ' LEFT OUTER JOIN ' . TABLE_DATA_STATUS . ' AS dsg ON (vog.statusid = dsg.id)';
-                    // If no collaborator, hide lines with hidden variants!
-                    if ($_AUTH['level'] < LEVEL_COLLABORATOR) {
+                    // If user level not high enough, hide lines with hidden variants!
+                    if ($_AUTH['level'] < $_SETT['user_level_settings']['see_nonpublic_data']) {
                         $aSQL['WHERE'] .= (!$aSQL['WHERE']? '' : ' AND ') . '(vog.statusid >= ' . STATUS_MARKED . (!$_AUTH? '' : ' OR vog.created_by = "' . $_AUTH['id'] . '" OR vog.owned_by = "' . $_AUTH['id'] . '"') . ')';
                     }
                     break;
@@ -316,8 +316,8 @@ class LOVD_CustomViewList extends LOVD_Object {
                             // We have no fallback, so it won't join if we messed up somewhere!
                         }
                         $aSQL['FROM'] .= ' LEFT JOIN ' . TABLE_INDIVIDUALS . ' AS i ON (s.individualid = i.id';
-                        // If no collaborator, hide hidden individuals (from the join, don't hide the line)!
-                        if ($_AUTH['level'] < LEVEL_COLLABORATOR) {
+                        // If user level not high enough, hide hidden individuals (from the join, don't hide the line)!
+                        if ($_AUTH['level'] < $_SETT['user_level_settings']['see_nonpublic_data']) {
                             $aSQL['FROM'] .= ' AND (i.statusid >= ' . STATUS_MARKED . (!$_AUTH? '' : ' OR i.created_by = "' . $_AUTH['id'] . '" OR i.owned_by = "' . $_AUTH['id'] . '"') . ')';
                         }
                         $aSQL['FROM'] .= ')';
@@ -596,8 +596,8 @@ class LOVD_CustomViewList extends LOVD_Object {
 
         // Mark all statuses from Marked and lower; Marked will be red, all others gray.
         // Diagnostics: We disable this feature in LOVD+.
-        $bVarStatus = (false && !empty($zData['var_statusid']) && $zData['var_statusid'] <= STATUS_MARKED);
-        $bIndStatus = (false && !empty($zData['ind_statusid']) && $zData['ind_statusid'] <= STATUS_MARKED);
+        $bVarStatus = (!LOVD_plus && !empty($zData['var_statusid']) && $zData['var_statusid'] <= STATUS_MARKED);
+        $bIndStatus = (!LOVD_plus && !empty($zData['ind_statusid']) && $zData['ind_statusid'] <= STATUS_MARKED);
 
         if ($bVarStatus && $bIndStatus) {
             $nStatus = min($zData['var_statusid'], $zData['ind_statusid']);

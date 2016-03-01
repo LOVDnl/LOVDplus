@@ -768,7 +768,7 @@ if (POST || $_FILES) { // || $_FILES is in use for the automatic loading of file
             if (in_array('statusid', $aSection['allowed_columns']) && empty($aLine['statusid'])) {
                 // Status not filled in. Set to Public.
                 // Diagnostics: For LOVD+, the default is STATUS_HIDDEN.
-                $aLine['statusid'] = STATUS_HIDDEN;
+                $aLine['statusid'] = (LOVD_plus? STATUS_HIDDEN : STATUS_OK);
             }
             // DIAGNOSTICS: Data analysis status.
             if (in_array('analysis_statusid', $aSection['allowed_columns']) && empty($aLine['analysis_statusid'])) {
