@@ -45,6 +45,7 @@ $aNeededLevel =
                 'Custom_ViewListMOD' => 0,
                 'Disease' => 0,
                 'Gene' => 0,
+                'Gene_List' => 0,
                 'Genome_Variant' => 0,
                 'Individual' => 0,
                 'IndividualMOD' => 0,
