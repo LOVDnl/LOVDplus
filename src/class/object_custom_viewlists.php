@@ -594,9 +594,10 @@ class LOVD_CustomViewList extends LOVD_Object {
         // Makes sure it's an array and htmlspecialchars() all the values.
         $zData = parent::prepareData($zData, $sView);
 
-        // Mark all statusses from Marked and lower; Marked will be red, all others gray.
-        $bVarStatus = (!empty($zData['var_statusid']) && $zData['var_statusid'] <= STATUS_MARKED);
-        $bIndStatus = (!empty($zData['ind_statusid']) && $zData['ind_statusid'] <= STATUS_MARKED);
+        // Mark all statuses from Marked and lower; Marked will be red, all others gray.
+        // Diagnostics: We disable this feature in LOVD+.
+        $bVarStatus = (false && !empty($zData['var_statusid']) && $zData['var_statusid'] <= STATUS_MARKED);
+        $bIndStatus = (false && !empty($zData['ind_statusid']) && $zData['ind_statusid'] <= STATUS_MARKED);
 
         if ($bVarStatus && $bIndStatus) {
             $nStatus = min($zData['var_statusid'], $zData['ind_statusid']);
