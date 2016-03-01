@@ -4,7 +4,7 @@
  * LEIDEN OPEN VARIATION DATABASE (LOVD)
  *
  * Created     : 2014-11-28
- * Modified    : 2016-02-19
+ * Modified    : 2016-03-01
  * For LOVD+   : 3.0-15
  *
  * Copyright   : 2004-2016 Leiden University Medical Center; http://www.LUMC.nl/
@@ -841,42 +841,6 @@ $aDefaultValues = array(
 $nFilesBeingMerged = 0; // We're counting how many files are being merged at the time, because we don't want to stress the system too much.
 $nMaxFilesBeingMerged = 5; // We're allowing only five processes working concurrently on merging files (or so many failed attempts that have not been cleaned up).
 $aFiles = array(); // array(ID => array(files), ...);
-
-
-
-
-
-function lovd_getUDForGene ($sBuild, $sGene)
-{
-    // Retrieves an UD for any given gene and genome build.
-    // In principle, any build is supported, but we'll check against the available builds supported in LOVD.
-    global $_SETT;
-
-    if (!$sBuild || !is_string($sBuild) || !isset($_SETT['human_builds'][$sBuild])) {
-        return false;
-    }
-
-    if (!$sGene || !is_string($sGene)) {
-        return false;
-    }
-
-    $sUD = '';
-
-    // Let's get the mapping information.
-    $sJSONResponse = @file_get_contents('https://mutalyzer.nl/json/getGeneLocation?build=' . $sBuild . '&gene=' . $sGene);
-    if ($sJSONResponse && $aResponse = json_decode($sJSONResponse, true)) {
-        $sChromosome = $_SETT['human_builds'][$sBuild]['ncbi_sequences'][substr($aResponse['chromosome_name'], 3)];
-        $nStart = $aResponse['start'] - ($aResponse['orientation'] == 'forward'? 5000 : 2000);
-        $nEnd = $aResponse['stop'] + ($aResponse['orientation'] == 'forward'? 2000 : 5000);
-        $sJSONResponse = @file_get_contents('https://mutalyzer.nl/json/sliceChromosome?chromAccNo=' . $sChromosome . '&start=' . $nStart . '&end=' . $nEnd . '&orientation=' . ($aResponse['orientation'] == 'forward'? 1 : 2));
-        if ($sJSONResponse && $aResponse = json_decode($sJSONResponse, true)) {
-            $sResponse = (!is_array($aResponse)? $aResponse : implode('', $aResponse));
-            $sUD = $sResponse;
-        }
-    }
-
-    return $sUD;
-}
 
 
 
