@@ -63,11 +63,13 @@ class LOVD_GeneList extends LOVD_Object {
         // SQL code for viewing an entry.
         $this->aSQLViewEntry['SELECT']   = 'gl.*,' .
             'GROUP_CONCAT(DISTINCT d.id, ";", IFNULL(d.id_omim, 0), ";", IF(CASE d.symbol WHEN "-" THEN "" ELSE d.symbol END = "", d.name, d.symbol), ";", d.name ORDER BY (d.symbol != "" AND d.symbol != "-") DESC, d.symbol, d.name SEPARATOR ";;") AS __diseases, ' .
-            'uc.name AS created_by_';
+            'uc.name AS created_by_,' .
+            'ue.name AS edited_by_';
         $this->aSQLViewEntry['FROM']     = TABLE_GENE_LISTS . ' AS gl ' .
             'LEFT OUTER JOIN ' . TABLE_GL2DIS . ' AS gl2d ON (gl.id = gl2d.genelistid) ' .
             'LEFT OUTER JOIN ' . TABLE_DISEASES . ' AS d ON (gl2d.diseaseid = d.id) ' .
-            'LEFT OUTER JOIN ' . TABLE_USERS . ' AS uc ON (gl.created_by = uc.id) ';
+            'LEFT OUTER JOIN ' . TABLE_USERS . ' AS uc ON (gl.created_by = uc.id) ' .
+            'LEFT OUTER JOIN ' . TABLE_USERS . ' AS ue ON (gl.edited_by = ue.id) ';
         $this->aSQLViewEntry['GROUP_BY'] = 'gl.id';
 
         // SQL code for viewing the list of gene lists
@@ -86,12 +88,15 @@ class LOVD_GeneList extends LOVD_Object {
                 'TableHeader_General' => 'General information',
                 'name' => 'Gene list name',
                 'description' => 'Description',
+                'remarks' => 'Remarks',
                 'type' => 'Type',
                 'cohort' => 'Cohort',
                 'phenotype_group' => 'Phenotype group',
                 'diseases_' => 'Associated with diseases',
                 'created_by_' => 'Created by',
                 'created_date' => 'Created date',
+                'edited_by_' => 'Edited by',
+                'edited_date' => 'Edited date',
             );
 
         // List of columns and (default?) order for viewing a list of entries.
