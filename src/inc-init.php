@@ -544,6 +544,7 @@ $_TABLES =
                 'TABLE_GL2GENE' => TABLEPREFIX . '_gene_lists2genes',
                 'TABLE_GL2GENE_REV' => TABLEPREFIX . '_gene_lists2genes_revisions',
                 'TABLE_IND2GENE' => TABLEPREFIX . '_individuals2gene_lists',
+                'TABLE_GL2DIS' => TABLEPREFIX . '_gene_lists2diseases',
               );
 
 foreach ($_TABLES as $sConst => $sTable) {
