@@ -32,7 +32,7 @@ define('ROOT_PATH', '../');
 require ROOT_PATH . 'inc-init.php';
 
 // Require collaborator clearance.
-if (!$_AUTH || $_AUTH['level'] < LEVEL_COLLABORATOR) {
+if (!$_AUTH || $_AUTH['level'] < LEVEL_ANALYZER) {
     // If not authorized, die with error message.
     die(AJAX_NO_AUTH);
 }
