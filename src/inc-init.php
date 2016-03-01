@@ -116,6 +116,10 @@ define('MAPPING_DONE', 32);             // FIXME; Create a button in Setup which
 // Define constant to quickly check if we're on Windows, since sending emails on Windows requires different settings.
 define('ON_WINDOWS', (strtoupper(substr(PHP_OS, 0, 3) == 'WIN')));
 
+// Diagnostics: To later make it easier to share certain code
+// between LOVD and LOVD+, simply define if we're active or not.
+define('LOVD_plus', true);
+
 // For the installation process (and possibly later somewhere else, too).
 $aRequired =
          array(
@@ -150,6 +154,12 @@ $_SETT = array(
                             LEVEL_ANALYZER     => 'Analyzer',
                             LEVEL_SUBMITTER    => 'Read-only',
                           ),
+                'user_level_settings' =>
+                array(
+                    // Checking for LEVEL_COLLABORATOR assumes lovd_isAuthorized()
+                    // has already been called for gene-specific overviews.
+                    'see_nonpublic_data' => (LOVD_plus? LEVEL_SUBMITTER : LEVEL_COLLABORATOR),
+                ),
                 'gene_imprinting' =>
                      array(
                             'unknown'  => 'Unknown',
@@ -410,28 +420,30 @@ $aConfigValues =
                                                 'pattern'  => '/^[A-Z0-9_]+$/i',
                                               ),
                               ),
-                'paths' =>
-                         array(
-                                'data_files' =>
-                                         array(
-                                                'required' => true,
-                                                'path_is_readable' => true,
-                                                'path_is_writable' => true,
-                                              ),
-                                'alternative_ids' =>
-                                         array(
-                                                'required' => false,
-                                                'path_is_readable' => true,
-                                                'path_is_writable' => false,
-                                              ),
-                                'confirm_variants' =>
-                                         array(
-                                                'required' => false,
-                                                'path_is_readable' => true,
-                                                'path_is_writable' => true,
-                                         ),
-                              ),
               );
+if (LOVD_plus) {
+    // Configure data file paths.
+    $aConfigValues['paths'] = array(
+        'data_files' =>
+            array(
+                'required' => true,
+                'path_is_readable' => true,
+                'path_is_writable' => true,
+            ),
+        'alternative_ids' =>
+            array(
+                'required' => false,
+                'path_is_readable' => true,
+                'path_is_writable' => false,
+            ),
+        'confirm_variants' =>
+            array(
+                'required' => false,
+                'path_is_readable' => true,
+                'path_is_writable' => true,
+            ),
+    );
+}
 // SQLite doesn't need an username and password...
 if (isset($_INI['database']['driver']) && $_INI['database']['driver'] == 'sqlite') {
     unset($aConfigValues['database']['username']);
