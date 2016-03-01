@@ -806,7 +806,7 @@ function lovd_requireAUTH ($nLevel = 0)
 
         $sMessage = 'To access this area, you need ' . (!$nLevel? 'to <A href="login">log in</A>.' : ($nLevel == max($aKeys)? '' : 'at least ') . $_SETT['user_levels'][$nLevel] . ' clearance.');
         // FIXME; extend this list?
-        if (lovd_getProjectFile() == '/submit.php') {
+        if (lovd_getProjectFile() == '/submit.php' && !$_AUTH) {
             $sMessage .= '<BR>If you are not registered as a submitter, please <A href="users?register">do so here</A>.';
         }
         lovd_showInfoTable($sMessage, 'stop');

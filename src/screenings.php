@@ -270,7 +270,7 @@ if (PATH_COUNT == 1 && ACTION == 'create' && isset($_GET['target']) && ctype_dig
 
     define('LOG_EVENT', 'ScreeningCreate');
 
-    lovd_requireAUTH(LEVEL_SUBMITTER);
+    lovd_requireAUTH($_SETT['user_level_settings']['submit_new_data']);
 
     $_GET['target'] = sprintf('%08d', $_GET['target']);
     $z = $_DB->query('SELECT id FROM ' . TABLE_INDIVIDUALS . ' WHERE id = ?', array($_GET['target']))->fetchAssoc();

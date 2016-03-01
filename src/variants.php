@@ -573,7 +573,7 @@ if ((empty($_PE[1]) || $_PE[1] == 'upload') && ACTION == 'create') {
     if (!isset($_GET['target']) && !lovd_isAuthorized('gene', $_AUTH['curates'], false)) {
         lovd_requireAUTH(LEVEL_OWNER);
     }
-    lovd_requireAUTH(empty($_PE[1])? LEVEL_SUBMITTER : LEVEL_MANAGER);
+    lovd_requireAUTH(empty($_PE[1])? $_SETT['user_level_settings']['submit_new_data'] : LEVEL_MANAGER);
 
     $bSubmit = false;
     if (isset($_GET['target'])) {
