@@ -807,10 +807,10 @@ $aTableSQL =
         , 'TABLE_GENE_LISTS' =>
     'CREATE TABLE ' . TABLE_GENE_LISTS . ' (
     id SMALLINT(5) UNSIGNED ZEROFILL NOT NULL AUTO_INCREMENT,
+    diseaseid SMALLINT(5) UNSIGNED ZEROFILL,
     name VARCHAR(255) NOT NULL,
     description VARCHAR(255) NOT NULL,
     type VARCHAR(20) NOT NULL,
-    phenotype VARCHAR(255) NOT NULL,
     phenotype_group VARCHAR(255) NOT NULL,
     cohort VARCHAR(255) NOT NULL,
     remarks TEXT NOT NULL,
@@ -821,6 +821,7 @@ $aTableSQL =
     PRIMARY KEY (id),
     INDEX (created_by),
     INDEX (edited_by),
+    CONSTRAINT ' . TABLE_GENE_LISTS . '_fk_diseaseid FOREIGN KEY (diseaseid) REFERENCES ' . TABLE_DISEASES . ' (id) ON DELETE CASCADE ON UPDATE CASCADE,
     CONSTRAINT ' . TABLE_GENE_LISTS . '_fk_created_by FOREIGN KEY (created_by) REFERENCES ' . TABLE_USERS . ' (id) ON DELETE SET NULL ON UPDATE CASCADE,
     CONSTRAINT ' . TABLE_GENE_LISTS . '_fk_edited_by FOREIGN KEY (edited_by) REFERENCES ' . TABLE_USERS . ' (id) ON DELETE SET NULL ON UPDATE CASCADE)
     ' . $sSettings
@@ -828,10 +829,10 @@ $aTableSQL =
         , 'TABLE_GENE_LISTS_REV' =>
     'CREATE TABLE ' . TABLE_GENE_LISTS_REV . ' (
     id SMALLINT(5) UNSIGNED ZEROFILL NOT NULL AUTO_INCREMENT,
+    diseaseid SMALLINT(5) UNSIGNED ZEROFILL,
     name VARCHAR(255) NOT NULL,
     description VARCHAR(255) NOT NULL,
     type VARCHAR(20) NOT NULL,
-    phenotype VARCHAR(255) NOT NULL,
     phenotype_group VARCHAR(255) NOT NULL,
     cohort VARCHAR(255) NOT NULL,
     remarks TEXT NOT NULL,
@@ -846,6 +847,7 @@ $aTableSQL =
     PRIMARY KEY (id),
     INDEX (created_by),
     INDEX (edited_by),
+    CONSTRAINT ' . TABLE_GENE_LISTS_REV . '_fk_diseaseid FOREIGN KEY (diseaseid) REFERENCES ' . TABLE_DISEASES . ' (id) ON DELETE CASCADE ON UPDATE CASCADE,
     CONSTRAINT ' . TABLE_GENE_LISTS_REV . '_fk_created_by FOREIGN KEY (created_by) REFERENCES ' . TABLE_USERS . ' (id) ON DELETE SET NULL ON UPDATE CASCADE,
     CONSTRAINT ' . TABLE_GENE_LISTS_REV . '_fk_edited_by FOREIGN KEY (edited_by) REFERENCES ' . TABLE_USERS . ' (id) ON DELETE SET NULL ON UPDATE CASCADE,
     CONSTRAINT ' . TABLE_GENE_LISTS_REV . '_fk_deleted_by FOREIGN KEY (deleted_by) REFERENCES ' . TABLE_USERS . ' (id) ON DELETE SET NULL ON UPDATE CASCADE)
@@ -856,11 +858,9 @@ $aTableSQL =
     genelistid SMALLINT(5) UNSIGNED ZEROFILL NOT NULL,
     geneid VARCHAR(25) NOT NULL,
     transcriptid SMALLINT(5) UNSIGNED ZEROFILL,
-    phenotype VARCHAR(255) NOT NULL,
-    disease VARCHAR(255) NOT NULL,
     inheritance VARCHAR(50) NOT NULL,
-    omim_ref VARCHAR(50) NOT NULL,
-    pmid VARCHAR(50) NOT NULL,
+    id_omim INT(10) UNSIGNED,
+    pmid INT(10) UNSIGNED,
     remarks TEXT NOT NULL,
 	created_by SMALLINT(5) UNSIGNED ZEROFILL,
     created_date DATETIME NOT NULL,
@@ -883,11 +883,9 @@ $aTableSQL =
     genelistid SMALLINT(5) UNSIGNED ZEROFILL NOT NULL,
     geneid VARCHAR(25) NOT NULL,
     transcriptid SMALLINT(5) UNSIGNED ZEROFILL,
-    phenotype VARCHAR(255) NOT NULL,
-    disease VARCHAR(255) NOT NULL,
     inheritance VARCHAR(50) NOT NULL,
-    omim_ref VARCHAR(50) NOT NULL,
-    pmid VARCHAR(50) NOT NULL,
+    id_omim INT(10) UNSIGNED,
+    pmid INT(10) UNSIGNED,
     remarks TEXT NOT NULL,
 	created_by SMALLINT(5) UNSIGNED ZEROFILL,
     created_date DATETIME NOT NULL,

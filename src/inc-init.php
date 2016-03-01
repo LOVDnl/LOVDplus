@@ -154,12 +154,6 @@ $_SETT = array(
                             'maternal' => 'Imprinted, maternal',
                             'paternal' => 'Imprinted, paternal'
                           ),
-                'gene_list_types' =>
-                     array(
-                            'genelist'   => 'Gene List',
-                            'blacklist'  => 'Blacklist',
-                            'mendeliome' => 'Mendeliome'
-                          ),
                 'var_effect' =>
                      array(
                             0 => 'Artefact',
