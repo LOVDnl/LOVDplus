@@ -86,6 +86,7 @@ if (!empty($_GET['format']) && in_array($_GET['format'], $aFormats)) {
 header('Content-type: ' . FORMAT . '; charset=UTF-8');
 
 define('LEVEL_SUBMITTER', 1);    // Also includes collaborators and curators. Authorization is depending on assignments, not user levels anymore.
+define('LEVEL_ANALYZER', 2);     // Diagnostics: LOVD+ introduced this user level.
 define('LEVEL_COLLABORATOR', 3); // THIS IS NOT A VALID USER LEVEL. Just indicates level of authorization. You can change these numbers, but keep the order!
 define('LEVEL_OWNER', 4);        // THIS IS NOT A VALID USER LEVEL. Just indicates level of authorization. You can change these numbers, but keep the order!
 define('LEVEL_CURATOR', 5);      // THIS IS NOT A VALID USER LEVEL. Just indicates level of authorization. You can change these numbers, but keep the order!
@@ -145,7 +146,9 @@ $_SETT = array(
                             LEVEL_CURATOR      => 'Curator',
                             LEVEL_OWNER        => 'Submitter (data owner)',
                             LEVEL_COLLABORATOR => 'Collaborator',
-                            LEVEL_SUBMITTER    => 'Submitter',
+                            // Diagnostics: Added one level, and changed the submitter level's name.
+                            LEVEL_ANALYZER     => 'Analyzer',
+                            LEVEL_SUBMITTER    => 'Read-only',
                           ),
                 'gene_imprinting' =>
                      array(
