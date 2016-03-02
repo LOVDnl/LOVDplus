@@ -262,11 +262,6 @@ $aTableSQL =
 
     id_miracle BIGINT UNSIGNED,
     id_zis MEDIUMINT UNSIGNED,
-    analysis_statusid TINYINT(1) UNSIGNED DEFAULT 0,
-    analysis_by SMALLINT(5) UNSIGNED ZEROFILL,
-    analysis_date DATETIME,
-    analysis_approved_by SMALLINT(5) UNSIGNED ZEROFILL,
-    analysis_approved_date DATETIME,
 
     PRIMARY KEY (id),
     INDEX (fatherid),
@@ -275,14 +270,6 @@ $aTableSQL =
     INDEX (statusid),
     INDEX (created_by),
     INDEX (edited_by),
-
-    INDEX (analysis_statusid),
-    INDEX (analysis_by),
-    INDEX (analysis_approved_by),
-    CONSTRAINT ' . TABLE_INDIVIDUALS . '_fk_analysis_statusid FOREIGN KEY (analysis_statusid) REFERENCES ' . TABLE_ANALYSIS_STATUS . ' (id) ON DELETE SET NULL ON UPDATE CASCADE,
-    CONSTRAINT ' . TABLE_INDIVIDUALS . '_fk_analysis_by FOREIGN KEY (analysis_by) REFERENCES ' . TABLE_USERS . ' (id) ON DELETE SET NULL ON UPDATE CASCADE,
-    CONSTRAINT ' . TABLE_INDIVIDUALS . '_fk_analysis_approved_by FOREIGN KEY (analysis_approved_by) REFERENCES ' . TABLE_USERS . ' (id) ON DELETE SET NULL ON UPDATE CASCADE,
-
     CONSTRAINT ' . TABLE_INDIVIDUALS . '_fk_fatherid FOREIGN KEY (fatherid) REFERENCES ' . TABLE_INDIVIDUALS . ' (id) ON DELETE SET NULL ON UPDATE CASCADE,
     CONSTRAINT ' . TABLE_INDIVIDUALS . '_fk_motherid FOREIGN KEY (motherid) REFERENCES ' . TABLE_INDIVIDUALS . ' (id) ON DELETE SET NULL ON UPDATE CASCADE,
     CONSTRAINT ' . TABLE_INDIVIDUALS . '_fk_panelid FOREIGN KEY (panelid) REFERENCES ' . TABLE_INDIVIDUALS . ' (id) ON DELETE SET NULL ON UPDATE CASCADE,
@@ -493,11 +480,26 @@ $aTableSQL =
     created_date DATETIME NOT NULL,
     edited_by SMALLINT(5) UNSIGNED ZEROFILL,
     edited_date DATETIME,
+
+    analysis_statusid TINYINT(1) UNSIGNED DEFAULT 0,
+    analysis_by SMALLINT(5) UNSIGNED ZEROFILL,
+    analysis_date DATETIME,
+    analysis_approved_by SMALLINT(5) UNSIGNED ZEROFILL,
+    analysis_approved_date DATETIME,
+
     PRIMARY KEY (id),
     INDEX (individualid),
     INDEX (owned_by),
     INDEX (created_by),
     INDEX (edited_by),
+
+    INDEX (analysis_statusid),
+    INDEX (analysis_by),
+    INDEX (analysis_approved_by),
+    CONSTRAINT ' . TABLE_SCREENINGS . '_fk_analysis_statusid FOREIGN KEY (analysis_statusid) REFERENCES ' . TABLE_ANALYSIS_STATUS . ' (id) ON DELETE SET NULL ON UPDATE CASCADE,
+    CONSTRAINT ' . TABLE_SCREENINGS . '_fk_analysis_by FOREIGN KEY (analysis_by) REFERENCES ' . TABLE_USERS . ' (id) ON DELETE SET NULL ON UPDATE CASCADE,
+    CONSTRAINT ' . TABLE_SCREENINGS . '_fk_analysis_approved_by FOREIGN KEY (analysis_approved_by) REFERENCES ' . TABLE_USERS . ' (id) ON DELETE SET NULL ON UPDATE CASCADE,
+
     CONSTRAINT ' . TABLE_SCREENINGS . '_fk_individualid FOREIGN KEY (individualid) REFERENCES ' . TABLE_INDIVIDUALS . ' (id) ON DELETE CASCADE ON UPDATE CASCADE,
     CONSTRAINT ' . TABLE_SCREENINGS . '_fk_owned_by FOREIGN KEY (owned_by) REFERENCES ' . TABLE_USERS . ' (id) ON DELETE SET NULL ON UPDATE CASCADE,
     CONSTRAINT ' . TABLE_SCREENINGS . '_fk_created_by FOREIGN KEY (created_by) REFERENCES ' . TABLE_USERS . ' (id) ON DELETE SET NULL ON UPDATE CASCADE,

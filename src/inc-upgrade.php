@@ -506,6 +506,32 @@ if ($sCalcVersionFiles != $sCalcVersionDB) {
                      array(
                          'UPDATE ' . TABLE_ANALYSES . ' SET filters = REPLACE(filters, "remove_by_function_utr_or_intronic", "remove_by_function_utr_or_intronic_gt_20") WHERE id = 5',
                      ),
+                 // Big update, moving the status columns to the screening.
+                 '3.0-12m' =>
+                     array(
+                         'ALTER TABLE ' . TABLE_SCREENINGS . '
+                            ADD COLUMN analysis_statusid TINYINT(1) UNSIGNED DEFAULT 0 AFTER edited_date,
+                            ADD COLUMN analysis_by SMALLINT(5) UNSIGNED ZEROFILL AFTER analysis_statusid,
+                            ADD COLUMN analysis_date DATETIME AFTER analysis_by,
+                            ADD COLUMN analysis_approved_by SMALLINT(5) UNSIGNED ZEROFILL AFTER analysis_date,
+                            ADD COLUMN analysis_approved_date DATETIME AFTER analysis_approved_by,
+                            ADD INDEX (analysis_statusid),
+                            ADD INDEX (analysis_by),
+                            ADD INDEX (analysis_approved_by),
+                            ADD CONSTRAINT ' . TABLE_SCREENINGS . '_fk_analysis_statusid FOREIGN KEY (analysis_statusid) REFERENCES ' . TABLE_ANALYSIS_STATUS . ' (id) ON DELETE SET NULL ON UPDATE CASCADE,
+                            ADD CONSTRAINT ' . TABLE_SCREENINGS . '_fk_analysis_by FOREIGN KEY (analysis_by) REFERENCES ' . TABLE_USERS . ' (id) ON DELETE SET NULL ON UPDATE CASCADE,
+                            ADD CONSTRAINT ' . TABLE_SCREENINGS . '_fk_analysis_approved_by FOREIGN KEY (analysis_approved_by) REFERENCES ' . TABLE_USERS . ' (id) ON DELETE SET NULL ON UPDATE CASCADE',
+                         'UPDATE ' . TABLE_SCREENINGS . ' AS s INNER JOIN ' . TABLE_INDIVIDUALS . ' AS i ON (s.individualid = i.id) SET s.analysis_statusid = i.analysis_statusid, s.analysis_by = i.analysis_by, s.analysis_date = i.analysis_date, s.analysis_approved_by = i.analysis_approved_by, s.analysis_approved_date = i.analysis_approved_date',
+                         'ALTER TABLE ' . TABLE_INDIVIDUALS . '
+                            DROP FOREIGN KEY ' . TABLE_INDIVIDUALS . '_fk_analysis_statusid,
+                            DROP FOREIGN KEY ' . TABLE_INDIVIDUALS . '_fk_analysis_by,
+                            DROP FOREIGN KEY ' . TABLE_INDIVIDUALS . '_fk_analysis_approved_by,
+                            DROP COLUMN analysis_statusid,
+                            DROP COLUMN analysis_by,
+                            DROP COLUMN analysis_date,
+                            DROP COLUMN analysis_approved_by,
+                            DROP COLUMN analysis_approved_date',
+                     ),
              );
 
     if ($sCalcVersionDB < lovd_calculateVersion('3.0-alpha-01')) {
