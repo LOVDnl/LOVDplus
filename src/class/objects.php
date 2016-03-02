@@ -514,7 +514,9 @@ class LOVD_Object {
             // Add links to users from *_by fields.
             $aUserColumns = array('owned_by', 'created_by', 'edited_by', 'updated_by', 'deleted_by', 'analysis_by', 'analysis_approved_by');
             foreach($aUserColumns as $sUserColumn) {
-                if (empty($zData[$sUserColumn])) {
+                // A hack because our modified Screenings VE complains about analysis_by existing, but analysis_by_ not.
+                // Apply this change to LOVD3 upstream, and remove this comment.
+                if (empty($zData[$sUserColumn]) || !isset($this->aColumnsViewEntry[$sUserColumn . '_'])) {
                     $zData[$sUserColumn . '_'] = 'N/A';
                 } elseif ($_AUTH && $zData[$sUserColumn] != '00000') {
                     $zData[$sUserColumn . '_'] = '<A href="users/' . $zData[$sUserColumn] . '">' . $zData[$sUserColumn . '_'] . '</A>';
