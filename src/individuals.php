@@ -125,7 +125,7 @@ if (PATH_COUNT >= 2 && ctype_digit($_PE[1]) && !ACTION && (PATH_COUNT == 2 || PA
     if ($nScreeningToAnalyze) {
         require_once ROOT_PATH . 'class/object_screenings.mod.php';
         $_DATA = new LOVD_ScreeningMOD();
-        $_DATA->viewEntry($nScreeningToAnalyze);
+        $zScreening = $_DATA->viewEntry($nScreeningToAnalyze);
     }
     print('
           </TD>
@@ -140,15 +140,11 @@ if (PATH_COUNT >= 2 && ctype_digit($_PE[1]) && !ACTION && (PATH_COUNT == 2 || PA
     lovd_includeJS('inc-js-tooltip.php');
 
     // Show info table about data analysis.
-    if ($zData['analysis_statusid'] == ANALYSIS_STATUS_WAIT || !count($zData['screeningids'])) {
+    if (!$zData['variants']) {
         // Can't start.
         lovd_showInfoTable('Can\'t start analysis, still waiting for variant data to be uploaded.', 'stop', 600);
         $_T->printFooter();
         exit;
-    } elseif ($zData['analysis_statusid'] == ANALYSIS_STATUS_READY && !$nScreeningToAnalyze) {
-        // Not started yet, create notice and allow starting analysis.
-        lovd_showInfoTable('Data analysis ready to start; click here to view your options.', 'information', 600,
-            '$(\'#screenings\').show(); $(this).hide();');
     }
 
 
@@ -156,8 +152,6 @@ if (PATH_COUNT >= 2 && ctype_digit($_PE[1]) && !ACTION && (PATH_COUNT == 2 || PA
 
 
     // Analysis is done per screening; show list of screenings, select one to actually start/view analyses.
-    print('
-      <DIV id="screenings"' . ($zData['analysis_statusid'] > ANALYSIS_STATUS_READY || $nScreeningToAnalyze? '' : ' style="display : none;"') . '>' . "\n");
     $_GET['search_individualid'] = $nID;
     $_T->printTitle('Screenings', 'H4');
     require_once ROOT_PATH . 'class/object_screenings.mod.php';
@@ -167,7 +161,6 @@ if (PATH_COUNT >= 2 && ctype_digit($_PE[1]) && !ACTION && (PATH_COUNT == 2 || PA
     $_DATA->setRowLink('Screenings_for_I_VE', 'javascript:window.location.href=\'' . lovd_getInstallURL() . $_PE[0] . '/' . $nID . '/analyze/{{screeningid}}\'; return false');
     $_DATA->viewList('Screenings_for_I_VE', array(), true, true);
     unset($_GET['search_individualid']);
-    print('      </DIV>' . "\n\n");
 
 
 
@@ -199,6 +192,14 @@ if (PATH_COUNT >= 2 && ctype_digit($_PE[1]) && !ACTION && (PATH_COUNT == 2 || PA
         });
       </SCRIPT>
     <?php
+
+        // Show info table about data analysis.
+        if ($zScreening['analysis_statusid'] == ANALYSIS_STATUS_WAIT || !$zScreening['variants_found_'] || !ctype_digit($zScreening['variants_found_'])) {
+            // Can't start.
+            lovd_showInfoTable('Can\'t start analysis, still waiting for variant data to be uploaded.', 'stop', 600);
+            $_T->printFooter();
+            exit;
+        }
 
 
 

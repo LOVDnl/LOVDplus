@@ -4,10 +4,10 @@
  * LEIDEN OPEN VARIATION DATABASE (LOVD)
  *
  * Created     : 2013-11-05
- * Modified    : 2015-12-08
+ * Modified    : 2016-03-02
  * For LOVD    : 3.0-15
  *
- * Copyright   : 2004-2015 Leiden University Medical Center; http://www.LUMC.nl/
+ * Copyright   : 2004-2016 Leiden University Medical Center; http://www.LUMC.nl/
  * Programmer  : Ing. Ivo F.A.C. Fokkema <I.F.A.C.Fokkema@LUMC.nl>
  *
  *
@@ -48,8 +48,8 @@ if (empty($_GET['screeningid']) || empty($_GET['analysisid']) || !ctype_digit($_
 
 
 // Find screening data, make sure we have the right to analyze this patient.
-// ADMIN can always start an analysis, even when the individual's analysis hasn't been started by him.
-$sSQL = 'SELECT i.id FROM ' . TABLE_INDIVIDUALS . ' AS i INNER JOIN ' . TABLE_SCREENINGS . ' AS s ON (i.id = s.individualid) WHERE s.id = ? AND (i.analysis_statusid = ? OR i.analysis_by ' . ($_AUTH['level'] >= LEVEL_MANAGER? 'IS NOT NULL' : '= ?') . ')';
+// MANAGER can always start an analysis, even when the individual's analysis hasn't been started by him.
+$sSQL = 'SELECT i.id FROM ' . TABLE_INDIVIDUALS . ' AS i INNER JOIN ' . TABLE_SCREENINGS . ' AS s ON (i.id = s.individualid) WHERE s.id = ? AND (s.analysis_statusid = ? OR s.analysis_by ' . ($_AUTH['level'] >= LEVEL_MANAGER? 'IS NOT NULL' : '= ?') . ')';
 $aSQL = array($_GET['screeningid'], ANALYSIS_STATUS_READY);
 if ($_AUTH['level'] < LEVEL_MANAGER) {
     $aSQL[] = $_AUTH['id'];
@@ -93,7 +93,7 @@ if ($_GET['runid']) {
 // All checked. Update individual. We already have checked that we're allowed to analyze this one. So just update the settings, if not already done before.
 define('LOG_EVENT', 'AnalysisRun');
 $_DB->beginTransaction();
-$_DB->query('UPDATE ' . TABLE_INDIVIDUALS . ' SET analysis_statusid = ?, analysis_by = ?, analysis_date = NOW() WHERE id = ? AND (analysis_statusid = ? OR analysis_by IS NULL OR analysis_date IS NULL)', array(ANALYSIS_STATUS_IN_PROGRESS, $_AUTH['id'], $zIndividual['id'], ANALYSIS_STATUS_READY));
+$_DB->query('UPDATE ' . TABLE_SCREENINGS . ' SET analysis_statusid = ?, analysis_by = ?, analysis_date = NOW() WHERE id = ? AND (analysis_statusid = ? OR analysis_by IS NULL OR analysis_date IS NULL)', array(ANALYSIS_STATUS_IN_PROGRESS, $_AUTH['id'], $_GET['screeningid'], ANALYSIS_STATUS_READY));
 
 if (!$_GET['runid']) {
     // Create analysis in database.
