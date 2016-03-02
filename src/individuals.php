@@ -355,7 +355,7 @@ if (PATH_COUNT >= 2 && ctype_digit($_PE[1]) && !ACTION && (PATH_COUNT == 2 || PA
         print('        <LI class="icon"><A click="lovd_AJAX_viewListSubmit(\'CustomVL_AnalysisRunResults_for_I_VE\', function(){$.get(\'ajax/set_to_be_confirmed.php?set&id=selected\', function(sResponse){if(sResponse.substring(0,1) == \'1\'){alert(\'Successfully set \' + sResponse.substring(2) + \' variants to be confirmed.\');lovd_AJAX_viewListSubmit(\'CustomVL_AnalysisRunResults_for_I_VE\');lovd_AJAX_viewEntryLoad();}}).error(function(){alert(\'Error while setting variant status.\');});});"><SPAN class="icon" style="background-image: url(gfx/menu_confirm.png);"></SPAN>Set variant to be confirmed</A></LI>' . "\n" .
               '        <LI class="icon"><A click="lovd_AJAX_viewListSubmit(\'CustomVL_AnalysisRunResults_for_I_VE\', function(){$.get(\'ajax/set_to_be_confirmed.php?unset&id=selected\', function(sResponse){if(sResponse.substring(0,1) == \'1\'){alert(\'Successfully unset \' + sResponse.substring(2) + \' variants to be confirmed.\');lovd_AJAX_viewListSubmit(\'CustomVL_AnalysisRunResults_for_I_VE\');lovd_AJAX_viewEntryLoad();}}).error(function(){alert(\'Error while unsetting variant status.\');});});"><SPAN class="icon" style="background-image: url(gfx/menu_unconfirm.png);"></SPAN>Set variant to <I>not</I> be confirmed</A></LI>' . "\n");
         print('      </UL>' . "\n\n");
-        $_DATA->viewList('CustomVL_AnalysisRunResults_for_I_VE', array(), false, false, true); // Options always on!
+        $_DATA->viewList('CustomVL_AnalysisRunResults_for_I_VE', array(), false, false, ($_AUTH['level'] >= LEVEL_OWNER));
         print('
           </DIV>');
     }

@@ -4,10 +4,10 @@
  * LEIDEN OPEN VARIATION DATABASE (LOVD)
  *
  * Created     : 2013-11-27
- * Modified    : 2014-05-15
- * For LOVD    : 3.0-11
+ * Modified    : 2016-03-02
+ * For LOVD    : 3.0-12
  *
- * Copyright   : 2004-2014 Leiden University Medical Center; http://www.LUMC.nl/
+ * Copyright   : 2004-2016 Leiden University Medical Center; http://www.LUMC.nl/
  * Programmer  : Ing. Ivo F.A.C. Fokkema <I.F.A.C.Fokkema@LUMC.nl>
  *
  *
@@ -44,17 +44,17 @@ if (!empty($_GET['id']) && $_AUTH && ACTION !== false && in_array(ACTION, array_
 
     // Nobody should be able to hack their way through this. We might just assume that the user is authorized for editing the
     // selections in the SESSION array because the interface should have checked, but let's not make any assumptions here.
-    // IDs should lead to only one individual. IDs' individual should be editable by the user.
-    if ($_AUTH['level'] < LEVEL_ADMIN) {
-        $aIndividualIDs = $_DB->query('SELECT DISTINCT s.individualid FROM ' . TABLE_SCREENINGS . ' AS s INNER JOIN ' . TABLE_SCR2VAR . ' AS s2v ON (s.id = s2v.screeningid) WHERE s2v.variantid IN (?' . str_repeat(', ?', count($aIDs) - 1) . ')', $aIDs)->fetchAllColumn();
-        if (count($aIndividualIDs) > 1) {
-            // Somehow the IDs passed are linked to two different individuals. Not allowed.
-            die('9|IDs belong to multiple individuals.');
+    // IDs should lead to only one screening. IDs' screening/analysis should be owned by the user.
+    if ($_AUTH['level'] < LEVEL_MANAGER) {
+        $aScreeningIDs = $_DB->query('SELECT DISTINCT s2v.screeningid FROM ' . TABLE_SCR2VAR . ' AS s2v WHERE s2v.variantid IN (?' . str_repeat(', ?', count($aIDs) - 1) . ')', $aIDs)->fetchAllColumn();
+        if (count($aScreeningIDs) > 1) {
+            // Somehow the IDs passed are linked to two different screenings. Not allowed.
+            die('9|IDs belong to multiple screenings.');
         }
-        // Check rights of user on individual.
-        if (!lovd_isAuthorized('individual', $aIndividualIDs[0])) {
+        // Check rights of user on screening.
+        if (!lovd_isAuthorized('screening_analysis', $aScreeningIDs[0])) {
             // Either returned false or 0. Both are bad in this case.
-            die('9|No authorization to edit this individual.');
+            die('9|No authorization to edit this screening.');
         }
     }
 
