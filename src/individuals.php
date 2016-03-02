@@ -83,11 +83,11 @@ if (PATH_COUNT >= 2 && ctype_digit($_PE[1]) && !ACTION && (PATH_COUNT == 2 || PA
     $_T->printHeader();
     $_T->printTitle();
 
-    // Load appropiate user level for this individual.
-    lovd_isAuthorized('individual', $nID);
-
     if (LOVD_plus) {
         lovd_requireAUTH();
+    } else {
+        // Load appropiate user level for this individual.
+        lovd_isAuthorized('individual', $nID);
     }
 
     // FIXME: This means, when the ID does not exist, we have an open table that doesn't close.
@@ -201,6 +201,11 @@ if (PATH_COUNT >= 2 && ctype_digit($_PE[1]) && !ACTION && (PATH_COUNT == 2 || PA
             $_T->printFooter();
             exit;
         }
+
+        // Authorize the user for this screening, but specifically meant for the analysis.
+        // For LEVEL_ANALYZER, this should activate LEVEL_OWNER for free
+        // screenings or screenings under analysis by this user.
+        lovd_isAuthorized('screening_analysis', $nScreeningToAnalyze);
 
 
 

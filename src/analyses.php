@@ -132,7 +132,7 @@ if (PATH_COUNT == 3 && $_PE[1] == 'run' && ctype_digit($_PE[2]) && ACTION == 'mo
     require ROOT_PATH . 'inc-lib-form.php';
 
     // Load appropriate user level for this analysis run.
-    lovd_isAuthorized('analysisrun', $nID); // FIXME: Stub...
+    lovd_isAuthorized('analysisrun', $nID);
     lovd_requireAUTH(LEVEL_OWNER);
 
     // ADMIN can always edit an analysis run, even when the individual's analysis hasn't been started by him.
@@ -264,7 +264,7 @@ if (PATH_COUNT == 3 && $_PE[1] == 'run' && ctype_digit($_PE[2]) && ACTION == 'de
     define('LOG_EVENT', 'AnalysisRunDelete');
 
     // Load appropriate user level for this analysis run.
-    lovd_isAuthorized('analysisrun', $nID); // FIXME: Stub...
+    lovd_isAuthorized('analysisrun', $nID);
     lovd_requireAUTH(LEVEL_OWNER);
 
     // ADMIN can always delete an analysis run, even when the individual's analysis hasn't been started by him.

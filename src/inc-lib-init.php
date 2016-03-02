@@ -497,7 +497,7 @@ function lovd_isAuthorized ($sType, $Data, $bSetUserLevel = true)
     // Check data type.
     if (!$Data) {
         return false;
-    } elseif (!in_array($sType, array('user', 'gene', 'disease', 'transcript', 'variant', 'individual', 'phenotype', 'screening'))) {
+    } elseif (!in_array($sType, array('analysisrun', 'user', 'gene', 'disease', 'transcript', 'variant', 'individual', 'phenotype', 'screening', 'screening_analysis'))) {
         lovd_writeLog('Error', 'LOVD-Lib', 'lovd_isAuthorized() - Function didn\'t receive a valid datatype (' . $sType . ').');
         return false;
     }
@@ -545,6 +545,44 @@ function lovd_isAuthorized ($sType, $Data, $bSetUserLevel = true)
             }
             return $Auth;
         }
+    }
+
+    if ($sType == 'analysisrun') {
+        // Authorization based on person who started the analysis run.
+        if (is_array($Data)) {
+            // Not supported on this data type.
+            return false;
+        } else {
+            $nCreatorID = $_DB->query('SELECT created_by FROM ' . TABLE_ANALYSES_RUN . ' WHERE id = ?', array($Data))->fetchColumn();
+            if ($_AUTH['level'] >= LEVEL_ANALYZER && $nCreatorID == $_AUTH['id']) {
+                // At least Analyzer (Managers don't get to this point).
+                if ($bSetUserLevel) {
+                    $_AUTH['level'] = LEVEL_OWNER;
+                }
+                return 1;
+            }
+        }
+        return false;
+
+    } elseif ($sType == 'screening_analysis') {
+        // Authorization based on not being analyzed, or analysis being started by $_AUTH['id'].
+        if (is_array($Data)) {
+            // Not supported on this data type.
+            return false;
+        } else {
+            $z = $_DB->query('SELECT analysis_statusid, analysis_by FROM ' . TABLE_SCREENINGS . ' WHERE id = ?', array($Data))->fetchAssoc();
+            if ($_AUTH['level'] >= LEVEL_ANALYZER) {
+                // At least Analyzer (Managers don't get to this point).
+                if ($z['analysis_by'] == $_AUTH['id'] ||
+                    ($z['analysis_by'] === NULL && $z['analysis_statusid'] == ANALYSIS_STATUS_READY)) {
+                    if ($bSetUserLevel) {
+                        $_AUTH['level'] = LEVEL_OWNER;
+                    }
+                    return 1;
+                }
+            }
+        }
+        return false;
     }
 
     // Makes it easier to check the data.
