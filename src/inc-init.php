@@ -543,7 +543,7 @@ $_TABLES =
                 'TABLE_GENE_LISTS_REV' => TABLEPREFIX . '_gene_lists_revisions',
                 'TABLE_GL2GENE' => TABLEPREFIX . '_gene_lists2genes',
                 'TABLE_GL2GENE_REV' => TABLEPREFIX . '_gene_lists2genes_revisions',
-                'TABLE_IND2GENE' => TABLEPREFIX . '_individuals2gene_lists',
+                'TABLE_IND2GL' => TABLEPREFIX . '_individuals2gene_lists',
                 'TABLE_GL2DIS' => TABLEPREFIX . '_gene_lists2diseases',
               );
 
