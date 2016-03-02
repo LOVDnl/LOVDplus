@@ -78,6 +78,7 @@ class LOVD_IndividualMOD extends LOVD_Individual {
         // SQL code for viewing the list of individuals.
         $this->aSQLViewList['SELECT']   = 'i.*, ' .
                                           'i.id AS individualid, ' .
+                                          's.id AS screeningid, ' .
                                           's.analysis_date, ' .
                                           's.analysis_approved_date, ' .
                                         // FIXME; Can we get this order correct, such that diseases without abbreviation nicely mix with those with? Right now, the diseases without symbols are in the back.
