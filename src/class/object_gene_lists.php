@@ -185,5 +185,84 @@ class LOVD_GeneList extends LOVD_Object {
         return $zData;
 
     }
+
+
+
+
+
+    function getForm ()
+    {
+        // Build the form.
+        // If we've built the form before, simply return it. Especially imports will repeatedly call checkFields(), which calls getForm().
+        if (!empty($this->aFormData)) {
+            return parent::getForm();
+        }
+        global $_DB;
+
+        // Get list of diseases.
+        $aDiseasesForm = $_DB->query('SELECT id, IF(CASE symbol WHEN "-" THEN "" ELSE symbol END = "", name, CONCAT(symbol, " (", name, ")")) FROM ' . TABLE_DISEASES . ' WHERE id > 0 ORDER BY (symbol != "" AND symbol != "-") DESC, symbol, name')->fetchAllCombine();
+        $nDiseases = count($aDiseasesForm);
+        if (!$nDiseases) {
+            $aDiseasesForm = array('' => 'No disease entries available');
+            $nDiseasesFormSize = 1;
+        } else {
+            $aDiseasesForm = array_combine(array_keys($aDiseasesForm), array_map('lovd_shortenString', $aDiseasesForm, array_fill(0, $nDiseases, 75)));
+            $nDiseasesFormSize = ($nDiseases < 15? $nDiseases : 15);
+        }
+
+        $aSelectType = array(
+            'gene_list' => 'Gene List',
+            'blacklist' => 'Blacklist',
+            'mendeliome' => 'Mendeliome'
+        );
+
+        $this->aFormData =
+            array(
+                array('POST', '', '', '', '50%', '14', '50%'),
+                array('', '', 'print', '<B>General information</B>'),
+                'hr',
+                array('Name', '', 'text', 'name', 30),
+                array('Description', '', 'text', 'description', 70),
+'gene_list_type' => array('Type', 'Please note:<BR>Gene List - Genes will be included when filtering<BR>Blacklist - Genes will be excluded when filtering<BR>Mendeliome - All genes from all gene lists', 'select', 'type', 1, $aSelectType, '', false, false),
+                array('Remarks', '', 'textarea', 'remarks', 70, 3),
+                array('Cohort', '', 'text', 'cohort', 30),
+                array('Phenotype group', '', 'text', 'phenotype_group', 30),
+                'hr','skip',
+                array('', '', 'print', '<B>Relation to diseases (optional)</B>'),
+                'hr',
+                array('This gene list has been linked to these diseases', 'Listed are all disease entries currently configured in LOVD.', 'select', 'active_diseases', $nDiseasesFormSize, $aDiseasesForm, false, true, false),
+                'hr','skip'
+
+            );
+
+        if (ACTION <> 'create') {
+            // Only allow the setting of the gene list type when it is first created. We do not want to be able to change the gene list type afterwards.
+            unset($this->aFormData['gene_list_type']);
+        }
+
+        return parent::getForm();
+
+    }
+
+
+
+
+
+    function checkFields ($aData, $zData = false)
+    {
+        // Checks fields before submission of data.
+        global $_DB;
+
+        // Mandatory fields.
+        $this->aCheckMandatory =
+            array(
+                'name',
+                'description',
+            );
+
+        parent::checkFields($aData);
+
+    }
+
 }
 ?>
