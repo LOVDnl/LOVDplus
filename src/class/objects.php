@@ -4,10 +4,10 @@
  * LEIDEN OPEN VARIATION DATABASE (LOVD)
  *
  * Created     : 2009-10-21
- * Modified    : 2014-04-28
- * For LOVD    : 3.0-10
+ * Modified    : 2016-03-03
+ * For LOVD    : 3.0-15
  *
- * Copyright   : 2004-2014 Leiden University Medical Center; http://www.LUMC.nl/
+ * Copyright   : 2004-2016 Leiden University Medical Center; http://www.LUMC.nl/
  * Programmers : Ing. Ivo F.A.C. Fokkema <I.F.A.C.Fokkema@LUMC.nl>
  *               Ing. Ivar C. Lugtenburg <I.C.Lugtenburg@LUMC.nl>
  *
@@ -1048,7 +1048,7 @@ class LOVD_Object {
             // 1) If we don't have a count in memory, request count separately, using SQL_CALC_FOUND_ROWS, since it handles all complex queries.
             // Also if last count was >30min ago, request again.
             $bTrueCount = false; // Indicates whether or not we are sure about the number of results.
-            $sFilterMD5 = md5($WHERE . '||' . $HAVING . '||' . implode('|', $aArgs)); // A signature for the filters, NOTE that this depends on the column order!
+            $sFilterMD5 = md5($this->aSQLViewList['WHERE'] . '||' . $this->aSQLViewList['HAVING'] . '||' . implode('|', $aArgs)); // A signature for the filters, NOTE that this depends on the column order!
             if (!isset($aSessionViewList['counts'][$sFilterMD5]['n'])) {
                 $t = microtime(true);
                 if ($_INI['database']['driver'] == 'mysql') {
@@ -1314,7 +1314,7 @@ class LOVD_Object {
             header('Pragma: public');
             print('### LOVD-version ' . lovd_calculateVersion($_SETT['system']['version']) . ' ### ' . $sObject . ' Quick Download format ### This file can not be imported ###' . "\r\n");
             // FIXME: this has to be done better, we can't see what we're filtering for, because it's in the arguments!
-            $sFilter = $WHERE . ($WHERE && $HAVING? ' AND ' : '') . $HAVING;
+            $sFilter = $this->aSQLViewList['WHERE'] . ($this->aSQLViewList['WHERE'] && $this->aSQLViewList['HAVING']? ' AND ' : '') . $this->aSQLViewList['HAVING'];
             $aArgs = array_merge($aArguments['WHERE'], $aArguments['HAVING']);
             if ($sFilter) {
                 if (count($aArgs) == substr_count($sFilter, '?')) {
