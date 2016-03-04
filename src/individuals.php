@@ -283,7 +283,7 @@ if (PATH_COUNT >= 2 && ctype_digit($_PE[1]) && !ACTION && (PATH_COUNT == 2 || PA
                   <TD><B>Time</B></TD>
                   <TD><B>Var left</B></TD>
                 </TR>');
-            $nVariantsLeft = $zData['variants'];
+            $nVariantsLeft = $zScreening['variants_found_'];
             foreach ($aFilters as $sFilter) {
                 $sFilterClassName = '';
                 $nTime = '-';
