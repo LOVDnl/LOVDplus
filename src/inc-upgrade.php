@@ -532,6 +532,14 @@ if ($sCalcVersionFiles != $sCalcVersionDB) {
                             DROP COLUMN analysis_approved_by,
                             DROP COLUMN analysis_approved_date',
                      ),
+                 '3.0-12n' =>
+                     array(
+                         // In order to resize the transcript's ID column, we need to drop the foreign key contraint, otherwise it won't allow us to modify the column.
+                         'ALTER TABLE ' . TABLE_VARIANTS_ON_TRANSCRIPTS . ' DROP FOREIGN KEY ' . TABLE_VARIANTS_ON_TRANSCRIPTS . '_fk_transcriptid',
+                         'ALTER TABLE ' . TABLE_TRANSCRIPTS . ' MODIFY COLUMN id MEDIUMINT(8) UNSIGNED ZEROFILL NOT NULL AUTO_INCREMENT',
+                         'ALTER TABLE ' . TABLE_VARIANTS_ON_TRANSCRIPTS . ' MODIFY COLUMN transcriptid MEDIUMINT(8) UNSIGNED ZEROFILL NOT NULL',
+                         'ALTER TABLE ' . TABLE_VARIANTS_ON_TRANSCRIPTS . ' ADD CONSTRAINT ' . TABLE_VARIANTS_ON_TRANSCRIPTS . '_fk_transcriptid FOREIGN KEY (transcriptid) REFERENCES ' . TABLE_TRANSCRIPTS . ' (id) ON DELETE CASCADE ON UPDATE CASCADE',
+                     ),
              );
 
     if ($sCalcVersionDB < lovd_calculateVersion('3.0-alpha-01')) {
