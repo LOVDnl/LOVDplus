@@ -136,8 +136,6 @@ if (PATH_COUNT == 1 && !ACTION) {
     // TODO Setup an alert to show when you are only viewing checked genes otherwise it may cause some confusion about why genes are not being shown. Turn off the checked filter using this alert?
     // TODO Provide some screen notification to say you have submitted and selected the genes in the comma separated gene list and explain how to only show those genes.
 
-    // TODO BUG 1. Select genes 2. Only show selected genes 3. Sorting is disabled even though there are only a few genes selected 4. Only show selected genes again 5. Sorting is now enabled 6. Show all genes 7. Sorting is still enabled even though too many results are returned
-    // TODO BUG Continued Objects.php, line 1052, I suspect since the setting and removing of the check filter does not change the search criteria it does not bother re counting the rows and as such uses the last record counts to determine if the sort should be enabled. Not sure then why it works if you activate the check filter twice...
     ?>
     <script type="text/javascript">
         // This function toggles the checked filter
@@ -184,8 +182,9 @@ if (PATH_COUNT == 1 && !ACTION) {
     </script>
 <?php
 
-print('<div id="searchBoxTitle" style="cursor: pointer;text-decoration: underline;font-size : 11px;font-weight: bold"></div>');
-print('<form id="genesForm" method="post" style="display: none;">Enter in you list of gene symbols separated by commas and press search to automatically select them. Select \'Show only checked genes\' from the menu to hide unselected genes.<BR><input type="hidden" id="geneFormShowHide" value="hide"><textarea rows="5" cols="200" name="geneSymbols" id="geneSymbols">' . htmlentities($sGeneSymbols) . '</textarea><BR><input type="submit" name="submitGenes" id="submitGenes" value=" Search "></form>');
+//print('<div id="searchBoxTitle" style="cursor: pointer;text-decoration: underline;font-size : 11px;font-weight: bold"></div>');
+print('<div id="searchBoxTitle" style="font-weight : bold; border : 1px solid #224488; cursor : pointer; text-align : center; padding : 2px 5px; font-size : 11px; width: 160px;"></div>');
+print('<form id="genesForm" method="post" style="display: none;">Enter in you list of gene symbols separated by commas and press search to automatically select them. Select \'Show only checked genes\' from the menu to only show the genes entered below.<BR><input type="hidden" id="geneFormShowHide" value="hide"><textarea rows="5" cols="200" name="geneSymbols" id="geneSymbols">' . htmlentities($sGeneSymbols) . '</textarea><BR><input type="submit" name="submitGenes" id="submitGenes" value=" Search "></form>');
 
 // If genes were not found then display the error
 if ($bBadGenes) {
@@ -203,6 +202,7 @@ print('      <UL id="viewlistMenu_' . $sViewListID . '" class="jeegoocontext jee
 print('        <LI class="icon"><A click="lovd_AJAX_viewListSubmit(\'' . $sViewListID . '\', function(){lovd_AJAX_viewListCheckedFilter(true);});"><SPAN class="icon" style="background-image: url(gfx/check.png);"></SPAN>Show only checked genes</A></LI>' . "\n");
 print('        <LI class="icon"><A click="lovd_AJAX_viewListSubmit(\'' . $sViewListID . '\', function(){lovd_AJAX_viewListCheckedFilter(false);});"><SPAN class="icon" style="background-image: url(gfx/cross_disabled.png);"></SPAN>Show all genes</A></LI>' . "\n");
 print('        <LI class="icon"><A click="lovd_AJAX_viewListSubmit(\'' . $sViewListID . '\', function(){lovd_AJAX_viewListDownload(\'' . $sViewListID . '\', false);});"><SPAN class="icon" style="background-image: url(gfx/menu_save.png);"></SPAN>Download selected genes</A></LI>' . "\n");
+print('        <LI class="icon"><A href="' . CURRENT_PATH . '?import"><SPAN class="icon" style="background-image: url(gfx/menu_import.png);"></SPAN>Import gene statistics</A></LI>' . "\n");
 print('      </UL>' . "\n\n");
 $_DATA->viewList($sViewListID, array(), false, false, (bool) ($_AUTH['level'] >= LEVEL_SUBMITTER));
 
@@ -210,6 +210,183 @@ $_T->printFooter();
 exit;
 }
 
+
+
+
+
+if (PATH_COUNT == 1 && ACTION == 'import') {
+// URL: /gene_statistics?import
+// Import new gene statistics
+
+    lovd_requireAUTH(LEVEL_MANAGER);
+
+    require ROOT_PATH . 'inc-lib-form.php';
+
+    // Calculate maximum uploadable file size.
+    $nMaxSizeLOVD = 100*1024*1024; // 100MB LOVD limit.
+    $nMaxSize = min(
+        $nMaxSizeLOVD,
+        lovd_convertIniValueToBytes(ini_get('upload_max_filesize')),
+        lovd_convertIniValueToBytes(ini_get('post_max_size')));
+
+    define('PAGE_TITLE', 'Import gene statistics');
+    $_T->printHeader();
+    $_T->printTitle();
+
+    // Check if the file has been uploaded successfully
+    if (POST || $_FILES) { // || $_FILES is in use for the automatic loading of files.
+        // Form sent, first check the file itself.
+        lovd_errorClean();
+
+        // If the file does not arrive (too big), it doesn't exist in $_FILES.
+        if (empty($_FILES['import']) || ($_FILES['import']['error'] > 0 && $_FILES['import']['error'] < 4)) {
+            lovd_errorAdd('import', 'There was a problem with the file transfer. Please try again. The file cannot be larger than ' . round($nMaxSize/pow(1024, 2), 1) . ' MB' . ($nMaxSize == $nMaxSizeLOVD? '' : ', due to restrictions on this server') . '.');
+
+        } elseif ($_FILES['import']['error'] == 4 || !$_FILES['import']['size']) {
+            lovd_errorAdd('import', 'Please select a file to upload.');
+
+        } elseif ($_FILES['import']['size'] > $nMaxSize) {
+            lovd_errorAdd('import', 'The file cannot be larger than ' . round($nMaxSize/pow(1024, 2), 1) . ' MB' . ($nMaxSize == $nMaxSizeLOVD? '' : ', due to restrictions on this server') . '.');
+
+        } elseif ($_FILES['import']['error']) {
+            // Various errors available from 4.3.0 or later.
+            lovd_errorAdd('import', 'There was an unknown problem with receiving the file properly, possibly because of the current server settings. If the problem persists, please contact the database administrator.');
+        }
+        if (!lovd_error()) {
+            // Find out the MIME-type of the uploaded file. Sometimes mime_content_type() seems to return False. Don't stop processing if that happens.
+            // However, when it does report something different, mention what type was found so we can debug it.
+            $sType = '';
+            if (function_exists('mime_content_type')) {
+                $sType = mime_content_type($_FILES['import']['tmp_name']);
+            }
+            if ($sType && substr($sType, 0, 5) != 'text/') { // Not all systems report the regular files as "text/plain"; also reported was "text/x-pascal; charset=us-ascii".
+                lovd_errorAdd('import', 'The upload file is not a tab-delimited text file and cannot be imported. It seems to be of type "' . htmlspecialchars($sType) . '".');
+            } else {
+                // Read in the header of the file and validate this is the correct file format
+                $aData = lovd_php_file($_FILES['import']['tmp_name']);
+
+                if (!$aData) {
+                    lovd_errorAdd('import', 'Cannot open file after it was received by the server.');
+                } else {
+                    $iGeneFileCount = count($aData);
+
+
+                    // Check each of the headers to make sure that the columns appear within the database, create error msg of missing columns
+                    $aFileColumnNames = explode("\t", $aData[0]);
+                    $aTableColumnNames = lovd_getColumnList(TABLE_GENE_STATISTICS);
+                    $aSQLColumns = array();
+                    $aMissingColumns = array();
+                    $aMissingColumnIDs = array();
+
+                    if ($aFileColumnNames[0] != 'id') {
+                        lovd_errorAdd('import', 'This does not look like a correct gene statistics file as the gene id column is not in the first position. Please check the file and try again.');
+                    }
+
+                    // Look through each of the column names in the file and check if the column exists within LOVD.
+                    foreach ($aFileColumnNames as $i => $sFileColumnName) {
+                        if (!in_array($sFileColumnName, $aTableColumnNames)) {
+                            unset($aFileColumnNames[$i]);
+                            $aMissingColumns[] = $sFileColumnName;
+                            $aMissingColumnIDs[] = $i;
+                        }
+                    }
+
+                    $sSQLColumnNames = implode(', ', $aFileColumnNames);
+                }
+            }
+        }
+        // If no errors then truncate the table before inserting the new statistics data
+        if (!lovd_error()) {
+            require ROOT_PATH . 'class/progress_bar.php';
+            // This already puts the progress bar on the screen.
+            $_BAR = new ProgressBar('', 'Importing Gene Statistics Records');
+            flush();
+
+            $_DB->query('TRUNCATE TABLE ' . TABLE_GENE_STATISTICS);
+            $pdoInsert = $_DB->prepare('INSERT IGNORE INTO ' . TABLE_GENE_STATISTICS . ' (' . $sSQLColumnNames . ') VALUES (?' . str_repeat(', ?', count($aFileColumnNames) - 1) . ')');
+
+
+            $aMissingGenes = array();
+            // Loop through each of the gene symbols and check to see if they exist within LOVD, create an error log. Remove genes that are not within LOVD?
+            foreach ($aData as $i => $sLine) {
+                // Skip the first line with the headers in it
+                if ($i == 0) {
+                    continue;
+                }
+                $sLine = trim($sLine);
+                $aColumns = explode("\t", $sLine);
+
+                $sFileGeneSymbol = $aColumns[0];
+                // Check if the gene symbol exists within LOVD
+                $sDBGeneSymbol = $_DB->query('SELECT id FROM ' . TABLE_GENES . ' WHERE id = ?', array($sFileGeneSymbol))->fetchColumn();
+                if (!$sDBGeneSymbol) {
+                    $aMissingGenes[] = $sFileGeneSymbol;
+                } else {
+                    foreach ($aMissingColumnIDs as $iMissingColumnID) {
+                        unset($aColumns[$iMissingColumnID]);
+                    }
+
+                    $aColumns = array_values($aColumns);
+                    $pdoInsert->execute($aColumns);
+                }
+                // Update the progress bar every 1000 records
+                if ($i % 1000 == 0) {
+                    $_BAR->setProgress(($i / $iGeneFileCount) * 100);
+                    $_BAR->setMessage('Processing record ' . $i . ' of ' . $iGeneFileCount);
+                }
+            }
+
+            $_BAR->setProgress(100);
+            $_BAR->setMessage('Done!');
+            $_BAR->setMessageVisibility('done', true);
+
+            // Print the results of the import
+            if (count($aMissingColumns)) {
+                lovd_showInfoTable('The following columns were ignored as they were not found in LOVD: ' . implode(', ', $aMissingColumns) . '.', 'warning');
+            }
+            if (count($aMissingGenes)) {
+                lovd_showInfoTable('<b>' . count($aMissingGenes) . ' genes in the gene statistics file were not found within LOVD so they were not imported:</b><BR>' .
+                    implode(', ', $aMissingGenes) . '.');
+            }
+
+            print('<BR><a href=' . CURRENT_PATH . '>View gene statistics.</a><BR><BR>');
+
+            $_T->printFooter();
+            exit;
+
+        }
+
+    }
+
+    lovd_errorPrint();
+
+
+    // Create the form to prompt for the gene statistics file.
+
+    print('      <FORM action="' . CURRENT_PATH . '?' . ACTION . '" method="post" enctype="multipart/form-data">' . "\n" .
+        '        <INPUT type="hidden" name="MAX_FILE_SIZE" value="' . $nMaxSize . '">' . "\n");
+
+    $aForm =
+        array(
+            array('POST', '', '', '', '40%', '14', '60%'),
+            array('', '', 'print', '<B>File selection</B> (Gene statistics tab-delimited format only!)'),
+            'hr',
+            array('Select the file to import', '', 'file', 'import', 40),
+            array('', 'Current file size limits:<BR>LOVD: ' . ($nMaxSizeLOVD/(1024*1024)) . 'M<BR>PHP (upload_max_filesize): ' . ini_get('upload_max_filesize') . '<BR>PHP (post_max_size): ' . ini_get('post_max_size'), 'note', 'The maximum file size accepted is ' . round($nMaxSize/pow(1024, 2), 1) . ' MB' . ($nMaxSize == $nMaxSizeLOVD? '' : ', due to restrictions on this server. If you wish to have it increased, contact the server\'s system administrator') . '.'),
+            'hr',
+            'skip',
+            array('', '', 'submit', 'Import file'));
+
+    lovd_viewForm($aForm);
+
+    print('</FORM>' . "\n\n");
+
+
+    $_T->printFooter();
+    exit;
+
+
+}
 
 
 
