@@ -539,12 +539,12 @@ $_TABLES =
                 'TABLE_SCHEDULED_IMPORTS' => TABLEPREFIX . '_scheduled_imports',
 
                 // Gene Lists
-                'TABLE_GENE_LISTS' => TABLEPREFIX . '_gene_lists',
-                'TABLE_GENE_LISTS_REV' => TABLEPREFIX . '_gene_lists_revisions',
-                'TABLE_GL2GENE' => TABLEPREFIX . '_gene_lists2genes',
-                'TABLE_GL2GENE_REV' => TABLEPREFIX . '_gene_lists2genes_revisions',
-                'TABLE_IND2GL' => TABLEPREFIX . '_individuals2gene_lists',
-                'TABLE_GL2DIS' => TABLEPREFIX . '_gene_lists2diseases',
+                'TABLE_GENE_PANELS' => TABLEPREFIX . '_gene_panels',
+                'TABLE_GENE_PANELS_REV' => TABLEPREFIX . '_gene_panels_revisions',
+                'TABLE_GP2GENE' => TABLEPREFIX . '_gene_panels2genes',
+                'TABLE_GP2GENE_REV' => TABLEPREFIX . '_gene_panels2genes_revisions',
+                'TABLE_IND2GP' => TABLEPREFIX . '_individuals2gene_panels',
+                'TABLE_GP2DIS' => TABLEPREFIX . '_gene_panels2diseases',
               );
 
 foreach ($_TABLES as $sConst => $sTable) {

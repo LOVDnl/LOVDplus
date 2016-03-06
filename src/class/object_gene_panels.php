@@ -39,9 +39,9 @@ require_once ROOT_PATH . 'class/objects.php';
 
 
 
-class LOVD_GeneList extends LOVD_Object {
+class LOVD_GenePanel extends LOVD_Object {
     // This class extends the basic Object class and it handles the Link object.
-    var $sObject = 'Gene_List';
+    var $sObject = 'Gene_Panel';
 
 
 
@@ -53,40 +53,40 @@ class LOVD_GeneList extends LOVD_Object {
         global $_AUTH;
 
         // SQL code for loading an entry for an edit form.
-        $this->sSQLLoadEntry = 'SELECT gl.*, ' .
-                               'GROUP_CONCAT(DISTINCT gl2d.diseaseid ORDER BY gl2d.diseaseid SEPARATOR ";") AS _active_diseases ' .
-                               'FROM ' . TABLE_GENE_LISTS . ' AS gl ' .
-                               'LEFT OUTER JOIN ' . TABLE_GL2DIS . ' AS gl2d ON (gl.id = gl2d.genelistid) ' .
-                               'WHERE gl.id = ? ' .
-                               'GROUP BY gl.id';
+        $this->sSQLLoadEntry = 'SELECT gp.*, ' .
+                               'GROUP_CONCAT(DISTINCT gp2d.diseaseid ORDER BY gp2d.diseaseid SEPARATOR ";") AS _active_diseases ' .
+                               'FROM ' . TABLE_GENE_PANELS . ' AS gp ' .
+                               'LEFT OUTER JOIN ' . TABLE_GP2DIS . ' AS gp2d ON (gp.id = gp2d. genepanelid) ' .
+                               'WHERE gp.id = ? ' .
+                               'GROUP BY gp.id';
 
         // SQL code for viewing an entry.
-        $this->aSQLViewEntry['SELECT']   = 'gl.*,' .
+        $this->aSQLViewEntry['SELECT']   = 'gp.*,' .
             'GROUP_CONCAT(DISTINCT d.id, ";", IFNULL(d.id_omim, 0), ";", IF(CASE d.symbol WHEN "-" THEN "" ELSE d.symbol END = "", d.name, d.symbol), ";", d.name ORDER BY (d.symbol != "" AND d.symbol != "-") DESC, d.symbol, d.name SEPARATOR ";;") AS __diseases, ' .
             'uc.name AS created_by_,' .
             'ue.name AS edited_by_';
-        $this->aSQLViewEntry['FROM']     = TABLE_GENE_LISTS . ' AS gl ' .
-            'LEFT OUTER JOIN ' . TABLE_GL2DIS . ' AS gl2d ON (gl.id = gl2d.genelistid) ' .
-            'LEFT OUTER JOIN ' . TABLE_DISEASES . ' AS d ON (gl2d.diseaseid = d.id) ' .
-            'LEFT OUTER JOIN ' . TABLE_USERS . ' AS uc ON (gl.created_by = uc.id) ' .
-            'LEFT OUTER JOIN ' . TABLE_USERS . ' AS ue ON (gl.edited_by = ue.id) ';
-        $this->aSQLViewEntry['GROUP_BY'] = 'gl.id';
+        $this->aSQLViewEntry['FROM']     = TABLE_GENE_PANELS . ' AS gp ' .
+            'LEFT OUTER JOIN ' . TABLE_GP2DIS . ' AS gp2d ON (gp.id = gp2d. genepanelid) ' .
+            'LEFT OUTER JOIN ' . TABLE_DISEASES . ' AS d ON (gp2d.diseaseid = d.id) ' .
+            'LEFT OUTER JOIN ' . TABLE_USERS . ' AS uc ON (gp.created_by = uc.id) ' .
+            'LEFT OUTER JOIN ' . TABLE_USERS . ' AS ue ON (gp.edited_by = ue.id) ';
+        $this->aSQLViewEntry['GROUP_BY'] = 'gp.id';
 
-        // SQL code for viewing the list of gene lists
-        $this->aSQLViewList['SELECT']   = 'gl.*, ' .
+        // SQL code for viewing the list of gene panels
+        $this->aSQLViewList['SELECT']   = 'gp.*, ' .
                                           'GROUP_CONCAT(DISTINCT IF(CASE d.symbol WHEN "-" THEN "" ELSE d.symbol END = "", d.name, d.symbol) ORDER BY (d.symbol != "" AND d.symbol != "-") DESC, d.symbol, d.name SEPARATOR ", ") AS diseases_, ' .
-                                          'COUNT(DISTINCT gl2g.geneid) AS genes';
-        $this->aSQLViewList['FROM']     = TABLE_GENE_LISTS . ' AS gl ' .
-                                          'LEFT OUTER JOIN ' . TABLE_GL2DIS . ' AS gl2d ON (gl.id = gl2d.genelistid) ' .
-                                          'LEFT OUTER JOIN ' . TABLE_GL2GENE . ' AS gl2g ON (gl.id = gl2g.genelistid) ' .
-                                          'LEFT OUTER JOIN ' . TABLE_DISEASES . ' AS d ON (gl2d.diseaseid = d.id)';
-        $this->aSQLViewList['GROUP_BY'] = 'gl.id';
+                                          'COUNT(DISTINCT gp2g.geneid) AS genes';
+        $this->aSQLViewList['FROM']     = TABLE_GENE_PANELS . ' AS gp ' .
+                                          'LEFT OUTER JOIN ' . TABLE_GP2DIS . ' AS gp2d ON (gp.id = gp2d. genepanelid) ' .
+                                          'LEFT OUTER JOIN ' . TABLE_GP2GENE . ' AS gp2g ON (gp.id = gp2g. genepanelid) ' .
+                                          'LEFT OUTER JOIN ' . TABLE_DISEASES . ' AS d ON (gp2d.diseaseid = d.id)';
+        $this->aSQLViewList['GROUP_BY'] = 'gp.id';
 
         // List of columns and (default?) order for viewing an entry.
         $this->aColumnsViewEntry =
             array(
                 'TableHeader_General' => 'General information',
-                'name' => 'Gene list name',
+                'name' => 'Gene panel name',
                 'description' => 'Description',
                 'remarks' => 'Remarks',
                 'type' => 'Type',
@@ -104,39 +104,39 @@ class LOVD_GeneList extends LOVD_Object {
             array(
                 'id_' => array(
                     'view' => array('ID', 60),
-                    'db'   => array('gl.id', 'ASC', true)),
+                    'db'   => array('gp.id', 'ASC', true)),
                 'name' => array(
                     'view' => array('Name', 150),
-                    'db'   => array('gl.name', 'ASC', true),
-                    'legend' => array('The name of the gene list.','')),
+                    'db'   => array('gp.name', 'ASC', true),
+                    'legend' => array('The name of the gene panel.','')),
                 'description' => array(
                     'view' => array('Description', 50),
-                    'db'   => array('gl.description', 'ASC', true),
-                    'legend' => array('The gene list description.')),
+                    'db'   => array('gp.description', 'ASC', true),
+                    'legend' => array('The gene panel description.')),
                 'type' => array(
                     'view' => array('Type', 60),
-                    'db'   => array('gl.type', 'ASC', true),
-                    'legend' => array('The gene list type of Gene List, Blacklist or Mendeliome','The gene list type:<ul><li>Gene List - A list of genes that will include variants during filtering</li><li>Blacklist - A list of genes that will exclude variants during filtering</li><li>Mendeliome - A list of genes with known disease causing variants</li></ul>')),
+                    'db'   => array('gp.type', 'ASC', true),
+                    'legend' => array('The gene panel type of Gene Panel, Blacklist or Mendeliome','The gene panel type:<ul><li>Gene Panel - A panel of genes that will include variants during filtering</li><li>Blacklist - A panel of genes that will exclude variants during filtering</li><li>Mendeliome - A panel of genes with known disease causing variants</li></ul>')),
                 'cohort' => array(
                     'view' => array('Cohort', 50),
-                    'db'   => array('gl.cohort', 'ASC', true),
-                    'legend' => array('The cohort the gene list belongs to.')),
+                    'db'   => array('gp.cohort', 'ASC', true),
+                    'legend' => array('The cohort the gene panel belongs to.')),
                 'phenotype_group' => array(
                     'view' => array('Phenotype Group', 50),
-                    'db'   => array('gl.phenotype_group', 'ASC', true),
-                    'legend' => array('The phenotype group this gene list belongs to. These groups are combined to calculate observation counts.')),
+                    'db'   => array('gp.phenotype_group', 'ASC', true),
+                    'legend' => array('The phenotype group this gene panel belongs to. These groups are combined to calculate observation counts.')),
                 'genes' => array(
                     'view' => array('Genes', 60),
                     'db'   => array('genes', 'DESC', 'INT_UNSIGNED'),
-                    'legend' => array('The number of genes in this gene list.')),
+                    'legend' => array('The number of genes in this gene panel.')),
                 'diseases_' => array(
                     'view' => array('Associated with diseases', 150),
                     'db'   => array('diseases_', false, 'TEXT'),
-                    'legend' => array('The diseases associated with this gene list.')),
+                    'legend' => array('The diseases associated with this gene panel.')),
                 'created_date' => array(
                     'view' => array('Created Date', 110),
-                    'db'   => array('gl.created_date', 'DESC', true),
-                    'legend' => array('The date the gene list was created.')),
+                    'db'   => array('gp.created_date', 'DESC', true),
+                    'legend' => array('The date the gene panel was created.')),
             );
         $this->sSortDefault = 'id_';
 
@@ -163,7 +163,7 @@ class LOVD_GeneList extends LOVD_Object {
             $zData['created_date'] = substr($zData['created_date'], 0, 10);
             $zData['type'] = ucwords(str_replace("_", " ", $zData['type'])); // TODO This is a repeated change that needs to apply to list and entry, find a better way to do this
         } else {
-            // TODO searching still works on the original value so if we search for "Gene List" it does not work. Can this be fixed without modifying the SQL?
+            // TODO searching still works on the original value so if we search for "Gene Panel" it does not work. Can this be fixed without modifying the SQL?
             $zData['type'] = ucwords(str_replace("_", " ", $zData['type']));
 
 
@@ -199,7 +199,7 @@ class LOVD_GeneList extends LOVD_Object {
         }
         global $_DB;
 
-        // Get list of diseases.
+        // Get Panel of diseases.
         $aDiseasesForm = $_DB->query('SELECT id, IF(CASE symbol WHEN "-" THEN "" ELSE symbol END = "", name, CONCAT(symbol, " (", name, ")")) FROM ' . TABLE_DISEASES . ' WHERE id > 0 ORDER BY (symbol != "" AND symbol != "-") DESC, symbol, name')->fetchAllCombine();
         $nDiseases = count($aDiseasesForm);
         if (!$nDiseases) {
@@ -211,7 +211,7 @@ class LOVD_GeneList extends LOVD_Object {
         }
 
         $aSelectType = array(
-            'gene_list' => 'Gene List',
+            'gene_panel' => 'Gene Panel',
             'blacklist' => 'Blacklist',
             'mendeliome' => 'Mendeliome'
         );
@@ -223,21 +223,21 @@ class LOVD_GeneList extends LOVD_Object {
                 'hr',
                 array('Name', '', 'text', 'name', 30),
                 array('Description', '', 'text', 'description', 70),
-'gene_list_type' => array('Type', 'Please note:<BR>Gene List - Genes will be included when filtering<BR>Blacklist - Genes will be excluded when filtering<BR>Mendeliome - All genes from all gene lists', 'select', 'type', 1, $aSelectType, '', false, false),
+'gene_panel_type' => array('Type', 'Please note:<BR>Gene Panel - Genes will be included when filtering<BR>Blacklist - Genes will be excluded when filtering<BR>Mendeliome - All genes from all gene panels', 'select', 'type', 1, $aSelectType, '', false, false),
                 array('Remarks', '', 'textarea', 'remarks', 70, 3),
                 array('Cohort', '', 'text', 'cohort', 30),
                 array('Phenotype group', '', 'text', 'phenotype_group', 30),
                 'hr','skip',
                 array('', '', 'print', '<B>Relation to diseases (optional)</B>'),
                 'hr',
-                array('This gene list has been linked to these diseases', 'Listed are all disease entries currently configured in LOVD.', 'select', 'active_diseases', $nDiseasesFormSize, $aDiseasesForm, false, true, false),
+                array('This gene panel has been linked to these diseases', 'Listed are all disease entries currently configured in LOVD.', 'select', 'active_diseases', $nDiseasesFormSize, $aDiseasesForm, false, true, false),
                 'hr','skip'
 
             );
 
-        if (ACTION <> 'create') {
-            // Only allow the setting of the gene list type when it is first created. We do not want to be able to change the gene list type afterwards.
-            unset($this->aFormData['gene_list_type']);
+        if (ACTION != 'create') {
+            // Only allow the setting of the gene panel type when it is first created. We do not want to be able to change the gene panel type afterwards.
+            unset($this->aFormData['gene_panel_type']);
         }
 
         return parent::getForm();
