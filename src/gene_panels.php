@@ -88,7 +88,18 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && !ACTION) {
             $aNavigation[CURRENT_PATH . '?delete']      = array('cross.png', 'Delete gene panel entry', 1);
         }
     }
-    lovd_showJGNavigation($aNavigation, 'Genes');
+    lovd_showJGNavigation($aNavigation, 'GenePanel');
+
+    // Display the genes in this gene panel
+    print('<BR><BR>' . "\n\n");
+    $_T->printTitle('Genes in gene panel', 'H4');
+    require ROOT_PATH . 'class/object_gene_panel_genes.php';
+    $_DATA = new LOVD_GenePanelGene();
+    // Only show the genes in this gene panel by setting the genepanelid to the current gene panel id
+    $_GET['search_genepanelid'] = $nID;
+    $sGPGViewListID = 'GenePanelGene';
+    $_DATA->setRowLink($sGPGViewListID, CURRENT_PATH . '/{{geneid}}');
+    $_DATA->viewList($sGPGViewListID, array(), false, false, true);
 
     $_T->printFooter();
     exit;
@@ -397,6 +408,56 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && ACTION == 'edit') {
 
     $_T->printFooter();
     exit;
+}
+
+
+
+
+
+if (PATH_COUNT == 3 && preg_match('/^[a-z][a-z0-9#@-]+$/i', rawurldecode($_PE[2])) && !ACTION) {
+    // URL: /genes_panels/00001/BRCA1
+    // View specific gene panel gene entry.
+
+    $nGenePanelID = sprintf('%05d', $_PE[1]);
+    $sGeneID = rawurldecode($_PE[2]);
+    define('PAGE_TITLE', 'View gene ' . $sGeneID . ' in gene panel #' . $nGenePanelID);
+
+    // Require manager clearance.
+    lovd_requireAUTH(LEVEL_CURATOR);
+    $_T->printHeader();
+    $_T->printTitle();
+
+    require ROOT_PATH . 'class/object_gene_panel_genes.php';
+    $_DATA = new LOVD_GenePanelGene();
+    $zData = $_DATA->viewEntry($nGenePanelID . ',' . $sGeneID);
+
+    $_T->printFooter();
+    exit;
+
+}
+
+
+
+
+
+if (PATH_COUNT == 3 && preg_match('/^[a-z][a-z0-9#@-]+$/i', rawurldecode($_PE[2])) && ACTION == 'delete') {
+// URL: /genes_panels/00001/BRCA1?delete
+// Drop specific gene panel gene entry.
+
+    $nID = sprintf('%05d', $_PE[1]);
+    $sID = rawurldecode($_PE[2]);
+    define('PAGE_TITLE', 'Delete gene ' . $sID . ' from gene panel #' . $nID);
+
+    // Require manager clearance.
+    lovd_requireAUTH(LEVEL_CURATOR);
+    $_T->printHeader();
+    $_T->printTitle();
+
+    require ROOT_PATH . 'class/object_gene_panel_genes.php';
+
+    $_T->printFooter();
+    exit;
+
 }
 
 print('No condition met using the provided URL.');
