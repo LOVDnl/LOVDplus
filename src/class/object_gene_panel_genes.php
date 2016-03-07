@@ -165,12 +165,12 @@ class LOVD_GenePanelGene extends LOVD_Object {
         // Makes sure it's an array and htmlspecialchars() all the values.
         $zData = parent::prepareData($zData, $sView);
 
-
-        if ($sView == 'list') {
-
-        } else {
-
-        }
+        // Change the formatting based on the type of view
+//        if ($sView == 'list') {
+//
+//        } else {
+//
+//        }
 
         // Format the pubmed URL
         if ($zData['pmid']) {
@@ -185,8 +185,106 @@ class LOVD_GenePanelGene extends LOVD_Object {
             $zData['transcript_ncbi'] = '<SPAN' . ($sView != 'list'? '' : ' onclick="cancelParentEvent(event);"') . '><A href="transcripts/' . $zData['transcriptid'] . '">' . $zData['transcript_ncbi'] . '</A></SPAN>';
         }
 
+        return $zData;
+    }
 
-//        <SPAN' . ($sView != 'list'? '' : ' onclick="cancelParentEvent(event);"') . '><A href="http://www.ncbi.nlm.nih.gov/SNP/snp_ref.cgi?rs=' . "$1" . '" target="_blank">' . "$1" . '</A></SPAN>'
+
+
+
+
+    function getForm ()
+    {
+        // Build the form.
+        // If we've built the form before, simply return it. Especially imports will repeatedly call checkFields(), which calls getForm().
+        if (!empty($this->aFormData)) {
+            return parent::getForm();
+        }
+        global $_DB;
+
+        // Get the available transcripts.
+//        $aDiseasesForm = $_DB->query('SELECT id, IF(CASE symbol WHEN "-" THEN "" ELSE symbol END = "", name, CONCAT(symbol, " (", name, ")")) FROM ' . TABLE_DISEASES . ' WHERE id > 0 ORDER BY (symbol != "" AND symbol != "-") DESC, symbol, name')->fetchAllCombine();
+//        $nDiseases = count($aDiseasesForm);
+//        if (!$nDiseases) {
+//            $aDiseasesForm = array('' => 'No disease entries available');
+//            $nDiseasesFormSize = 1;
+//        } else {
+//            $aDiseasesForm = array_combine(array_keys($aDiseasesForm), array_map('lovd_shortenString', $aDiseasesForm, array_fill(0, $nDiseases, 75)));
+//            $nDiseasesFormSize = ($nDiseases < 15? $nDiseases : 15);
+//        }
+
+        $aInheritance = array(
+            '' => 'Please Select...',
+            'Autosomal Recessive' => 'Autosomal Recessive',
+            'Dominant ' => 'Dominant ',
+            'X-Linked' => 'X-Linked'
+        );
+
+        $this->aFormData =
+            array(
+                array('POST', '', '', '', '50%', '14', '50%'),
+                array('Symbol', '', 'print', 'geneid', 30),
+                array('Transcript', '', 'print', 'transcript', 70),
+                array('Inheritance', '', 'select', 'type', 1, $aInheritance, '', false, false),
+                array('OMIM ID', '', 'text', 'omim_id', 30),
+                array('PubMed ID', '', 'text', 'pmid', 30),
+                array('Remarks', '', 'textarea', 'remarks', 70, 3),
+                'hr','skip'
+
+            );
+
+        return parent::getForm();
+//        return $this->aFormData;
+
+    }
+
+
+
+
+
+    function loadEntry ($nGenePanelID = false, $sGeneID = false)
+    {
+        // Loads and returns an entry from the database.
+        global $_DB, $_T;
+
+        if (empty($nGenePanelID) || empty($sGeneID)) {
+            // We were called, but the class wasn't initiated with an ID. Fail.
+            lovd_displayError('LOVD-Lib', 'Objects::(' . $this->sObject . ')::loadEntry() - Method didn\'t receive IDs');
+        }
+
+        // Build query.
+        if ($this->sSQLLoadEntry) {
+            $sSQL = $this->sSQLLoadEntry;
+        } else {
+            $sSQL = 'SELECT * FROM ' . TABLE_GP2GENE . ' WHERE genepanelid = ? and geneid = ?';
+        }
+        $q = $_DB->query($sSQL, array($nGenePanelID, $sGeneID), false);
+        if ($q) {
+            $zData = $q->fetchAssoc();
+        }
+        if (!$q || !$zData) {
+            $sError = $_DB->formatError(); // Save the PDO error before it disappears.
+
+            $_T->printHeader();
+            if (defined('PAGE_TITLE')) {
+                $_T->printTitle();
+            }
+
+            if ($sError) {
+                lovd_queryError($this->sObject . '::loadEntry()', $sSQL, $sError);
+            }
+
+            lovd_showInfoTable('No such ID!', 'stop');
+
+            $_T->printFooter();
+            exit;
+
+        }
+        // Not sure if I need this below as we are using two IDs to identify a gene panel gene record
+        else {
+            $this->nID = 1;
+        }
+
+        $zData = $this->autoExplode($zData);
 
         return $zData;
     }
