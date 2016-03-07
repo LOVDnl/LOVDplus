@@ -199,42 +199,39 @@ class LOVD_GenePanelGene extends LOVD_Object {
         if (!empty($this->aFormData)) {
             return parent::getForm();
         }
-        global $_DB;
+        global $_DB, $zData;
 
-        // Get the available transcripts.
-//        $aDiseasesForm = $_DB->query('SELECT id, IF(CASE symbol WHEN "-" THEN "" ELSE symbol END = "", name, CONCAT(symbol, " (", name, ")")) FROM ' . TABLE_DISEASES . ' WHERE id > 0 ORDER BY (symbol != "" AND symbol != "-") DESC, symbol, name')->fetchAllCombine();
-//        $nDiseases = count($aDiseasesForm);
-//        if (!$nDiseases) {
-//            $aDiseasesForm = array('' => 'No disease entries available');
-//            $nDiseasesFormSize = 1;
-//        } else {
-//            $aDiseasesForm = array_combine(array_keys($aDiseasesForm), array_map('lovd_shortenString', $aDiseasesForm, array_fill(0, $nDiseases, 75)));
-//            $nDiseasesFormSize = ($nDiseases < 15? $nDiseases : 15);
-//        }
+        // Get the available transcripts for this gene.
+        $aTranscripts = $_DB->query('SELECT id, id_ncbi FROM ' . TABLE_TRANSCRIPTS . ' WHERE geneid = ?',array($zData['geneid']))->fetchAllCombine();
+
+        // If we have found some transcripts for this gene then show them here otherwise show no transcripts available.
+        if (count($aTranscripts)) {
+            $aTranscriptsForm =  array('' => 'Please select...') + $aTranscripts;
+        } else {
+            $aTranscriptsForm = array('' => 'No transcripts available');
+        }
 
         $aInheritance = array(
             '' => 'Please Select...',
             'Autosomal Recessive' => 'Autosomal Recessive',
-            'Dominant ' => 'Dominant ',
+            'Dominant' => 'Dominant',
             'X-Linked' => 'X-Linked'
         );
 
         $this->aFormData =
             array(
                 array('POST', '', '', '', '50%', '14', '50%'),
-                array('Symbol', '', 'print', 'geneid', 30),
-                array('Transcript', '', 'print', 'transcript', 70),
-                array('Inheritance', '', 'select', 'type', 1, $aInheritance, '', false, false),
-                array('OMIM ID', '', 'text', 'omim_id', 30),
-                array('PubMed ID', '', 'text', 'pmid', 30),
+                array('Symbol', '', 'print', $zData['geneid'], 30),
+                array('Transcript', '', 'select', 'transcriptid', 1, $aTranscriptsForm, '', false, false),
+                array('Inheritance', '', 'select', 'inheritance', 1, $aInheritance, '', false, false),
+                array('OMIM ID', '', 'text', 'id_omim', 20),
+                array('PubMed ID', '', 'text', 'pmid', 20),
                 array('Remarks', '', 'textarea', 'remarks', 70, 3),
                 'hr','skip'
 
             );
 
         return parent::getForm();
-//        return $this->aFormData;
-
     }
 
 
@@ -287,6 +284,24 @@ class LOVD_GenePanelGene extends LOVD_Object {
         $zData = $this->autoExplode($zData);
 
         return $zData;
+    }
+
+
+
+
+
+    function checkFields ($aData, $zData = false)
+    {
+        // Checks fields before submission of data.
+
+        if (!empty($aData['id_omim']) && !preg_match('/^[1-9]\d{5}$/', $aData['id_omim'])) {
+            lovd_errorAdd('id_omim', 'The OMIM ID has to be six digits long and cannot start with a \'0\'.');
+        }
+
+        // TODO Can we validate the pmid field?
+
+        parent::checkFields($aData);
+
     }
 }
 ?>
