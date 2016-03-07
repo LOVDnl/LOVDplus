@@ -203,8 +203,8 @@ if (PATH_COUNT >= 2 && ctype_digit($_PE[1]) && !ACTION && (PATH_COUNT == 2 || PA
         }
 
         // Authorize the user for this screening, but specifically meant for the analysis.
-        // For LEVEL_ANALYZER, this should activate LEVEL_OWNER for free
-        // screenings or screenings under analysis by this user.
+        // For LEVEL_ANALYZER, this should activate LEVEL_OWNER for
+        //   free screenings or screenings under analysis by this user.
         lovd_isAuthorized('screening_analysis', $nScreeningToAnalyze);
 
 
