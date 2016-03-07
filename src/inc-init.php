@@ -141,7 +141,7 @@ $aRequired =
 $_SETT = array(
                 'system' =>
                      array(
-                            'version' => '3.0-12n',
+                            'version' => '3.0-12o',
                           ),
                 'user_levels' =>
                      array(
@@ -294,23 +294,25 @@ list($_SETT['system']['tree'], $_SETT['system']['build']) = explode('-', $_SETT[
 $_SETT['update_URL'] = $_SETT['upstream_URL'] . $_SETT['system']['tree'] . '/package_update.php';
 $_SETT['check_location_URL'] = $_SETT['upstream_URL'] . $_SETT['system']['tree'] . '/check_location.php';
 
-// Additions for KG.
-define('ANALYSIS_STATUS_WAIT', 0);
-define('ANALYSIS_STATUS_READY', 1);
-define('ANALYSIS_STATUS_IN_PROGRESS', 2);
-define('ANALYSIS_STATUS_WAIT_APPROVAL', 4); // Analysis complete, needs to be approved by staff.
-define('ANALYSIS_STATUS_APPROVED', 7);
-define('ANALYSIS_STATUS_ARCHIVED', 9);
-$_SETT['analysis_status'] =
-    array(
-        ANALYSIS_STATUS_WAIT => 'Waiting for data upload',
-        ANALYSIS_STATUS_READY => 'Ready for analysis',
-        ANALYSIS_STATUS_IN_PROGRESS => 'In progress',
-        ANALYSIS_STATUS_WAIT_APPROVAL => 'Awaiting approval',
-        ANALYSIS_STATUS_APPROVED => 'Approved',
-        ANALYSIS_STATUS_ARCHIVED => 'Archived',
-    );
+// Additions for Diagnostics.
 if (LOVD_plus) {
+    define('ANALYSIS_STATUS_WAIT', 0);              // Individual and screening imported, variants not yet (doesn't happen anymore).
+    define('ANALYSIS_STATUS_READY', 1);             // All data imported, waiting for somebody to start analysis.
+    define('ANALYSIS_STATUS_IN_PROGRESS', 2);       // Analysis started.
+    define('ANALYSIS_STATUS_CLOSED', 4);            // Analysis complete, needs to be approved by staff.
+    define('ANALYSIS_STATUS_WAIT_CONFIRMATION', 6); // Staff has checked, now waiting for confirmation of variants in the lab.
+    define('ANALYSIS_STATUS_CONFIRMED', 7);         // Variants were confirmed, analysis is completely done now.
+    define('ANALYSIS_STATUS_ARCHIVED', 9);          // Variants have been taken offline.
+    $_SETT['analysis_status'] =
+        array(
+            ANALYSIS_STATUS_WAIT => 'Waiting for data upload',
+            ANALYSIS_STATUS_READY => 'Ready for analysis',
+            ANALYSIS_STATUS_IN_PROGRESS => 'In progress',
+            ANALYSIS_STATUS_CLOSED => 'Closed',
+            ANALYSIS_STATUS_WAIT_CONFIRMATION => 'Awaiting confirmation',
+            ANALYSIS_STATUS_CONFIRMED => 'Confirmed',
+            ANALYSIS_STATUS_ARCHIVED => 'Archived',
+        );
     // Diagnostics: Added one level, and changed the submitter level's name.
     unset($_SETT['user_levels'][LEVEL_SUBMITTER]); // To make space, we need to rename it anyway.
     $_SETT['user_levels'][LEVEL_ANALYZER]  = 'Analyzer';

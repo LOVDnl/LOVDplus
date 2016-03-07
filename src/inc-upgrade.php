@@ -540,6 +540,12 @@ if ($sCalcVersionFiles != $sCalcVersionDB) {
                          'ALTER TABLE ' . TABLE_VARIANTS_ON_TRANSCRIPTS . ' MODIFY COLUMN transcriptid MEDIUMINT(8) UNSIGNED ZEROFILL NOT NULL',
                          'ALTER TABLE ' . TABLE_VARIANTS_ON_TRANSCRIPTS . ' ADD CONSTRAINT ' . TABLE_VARIANTS_ON_TRANSCRIPTS . '_fk_transcriptid FOREIGN KEY (transcriptid) REFERENCES ' . TABLE_TRANSCRIPTS . ' (id) ON DELETE CASCADE ON UPDATE CASCADE',
                      ),
+                 '3.0-12o' =>
+                     array(
+                         'UPDATE ' . TABLE_ANALYSIS_STATUS . ' SET name = "Closed" WHERE id = ' . ANALYSIS_STATUS_CLOSED,
+                         'INSERT INTO ' . TABLE_ANALYSIS_STATUS . ' VALUES (' . ANALYSIS_STATUS_WAIT_CONFIRMATION . ', "Awaiting confirmation")',
+                         'UPDATE ' . TABLE_ANALYSIS_STATUS . ' SET name = "Confirmed" WHERE id = ' . ANALYSIS_STATUS_CONFIRMED,
+                     ),
              );
 
     if ($sCalcVersionDB < lovd_calculateVersion('3.0-alpha-01')) {

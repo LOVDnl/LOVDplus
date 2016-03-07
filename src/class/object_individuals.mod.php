@@ -4,10 +4,10 @@
  * LEIDEN OPEN VARIATION DATABASE (LOVD)
  *
  * Created     : 2013-10-28
- * Modified    : 2014-01-03
- * For LOVD    : 3.0-09
+ * Modified    : 2016-03-07
+ * For LOVD    : 3.0-12
  *
- * Copyright   : 2004-2014 Leiden University Medical Center; http://www.LUMC.nl/
+ * Copyright   : 2004-2016 Leiden University Medical Center; http://www.LUMC.nl/
  * Programmer  : Ing. Ivo F.A.C. Fokkema <I.F.A.C.Fokkema@LUMC.nl>
  *
  *
@@ -87,7 +87,7 @@ class LOVD_IndividualMOD extends LOVD_Individual {
                                           'ua.name AS analysis_by_, ' .
                                           'uaa.name AS analysis_approved_by_, ' .
                                           'CONCAT_WS(";", ua.id, ua.name, ua.email, ua.institute, ua.department, IFNULL(ua.countryid, "")) AS _analyzer, ' .
-                                          'CASE ds.id WHEN ' . ANALYSIS_STATUS_WAIT . ' THEN "marked" WHEN ' . ANALYSIS_STATUS_APPROVED . ' THEN "del" WHEN ' . ANALYSIS_STATUS_ARCHIVED . ' THEN "del" END AS class_name,' .
+                                          'CASE ds.id WHEN ' . ANALYSIS_STATUS_WAIT . ' THEN "marked" WHEN ' . ANALYSIS_STATUS_CONFIRMED . ' THEN "del" WHEN ' . ANALYSIS_STATUS_ARCHIVED . ' THEN "del" END AS class_name,' .
                                           'ds.name AS analysis_status';
         $this->aSQLViewList['FROM']     = TABLE_INDIVIDUALS . ' AS i ' .
                                           'LEFT OUTER JOIN ' . TABLE_IND2DIS . ' AS i2d ON (i.id = i2d.individualid) ' .
