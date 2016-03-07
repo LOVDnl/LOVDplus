@@ -334,9 +334,16 @@ class LOVD_Object {
     {
         // Returns the number of entries in the database table.
         global $_DB;
-
         if ($nID) {
-            $nCount = $_DB->query('SELECT COUNT(*) FROM ' . constant($this->sTable) . ' WHERE id = ?', array($nID))->fetchColumn();
+            $sIDColumn = 'id';
+            // In case a different column name is used, better use that instead.
+            if (!empty($this->aColumnsViewList['id']['db'][0])) {
+                $sIDColumn = $this->aColumnsViewList['id']['db'][0];
+                // But take the optional table alias off.
+                $sIDColumn = substr(strrchr('.' . $sIDColumn, '.'), 1);
+            }
+
+            $nCount = $_DB->query('SELECT COUNT(*) FROM ' . constant($this->sTable) . ' WHERE ' . $sIDColumn . ' = ?', array($nID))->fetchColumn();
         } else {
             if ($this->nCount !== '') {
                 return $this->nCount;
