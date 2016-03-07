@@ -59,24 +59,26 @@ class LOVD_GenePanelGene extends LOVD_Object {
         }
 
         // SQL code for viewing an entry.
-        $this->aSQLViewEntry['SELECT']   = 'gp2g.*, gp2g.geneid AS id, uc.name AS created_by_, ue.name AS edited_by_ ';
+        $this->aSQLViewEntry['SELECT']   = 'gp2g.*, gp2g.geneid AS id, uc.name AS created_by_, ue.name AS edited_by_, t.id_ncbi AS transcript_ncbi ';
         $this->aSQLViewEntry['FROM']     = TABLE_GP2GENE . ' AS gp2g ' .
         'LEFT OUTER JOIN ' . TABLE_USERS . ' AS uc ON (gp2g.created_by = uc.id) ' .
-        'LEFT OUTER JOIN ' . TABLE_USERS . ' AS ue ON (gp2g.created_by = ue.id) ';
+        'LEFT OUTER JOIN ' . TABLE_USERS . ' AS ue ON (gp2g.created_by = ue.id) ' .
+        'LEFT OUTER JOIN ' . TABLE_TRANSCRIPTS . ' AS t ON (gp2g.transcriptid = t.id)';
 
         // SQL code for viewing the list of gene panel genes
-        $this->aSQLViewList['SELECT']   = 'gp2g.*, gp2g.geneid AS id, uc.name AS created_by_';
+        $this->aSQLViewList['SELECT']   = 'gp2g.*, gp2g.geneid AS id, uc.name AS created_by_, t.id_ncbi AS transcript_ncbi ';
         $this->aSQLViewList['FROM']     = TABLE_GP2GENE . ' AS gp2g ' .
-        'LEFT OUTER JOIN ' . TABLE_USERS . ' AS uc ON (gp2g.created_by = uc.id) ';
+        'LEFT OUTER JOIN ' . TABLE_USERS . ' AS uc ON (gp2g.created_by = uc.id) ' .
+        'LEFT OUTER JOIN ' . TABLE_TRANSCRIPTS . ' AS t ON (gp2g.transcriptid = t.id)';
 
         // List of columns and (default?) order for viewing an entry.
         $this->aColumnsViewEntry =
             array(
                 'geneid' => 'Gene Symbol',
-                'transcriptid' => 'Transcript ID',
+                'transcript_ncbi' => 'Transcript ID',
                 'inheritance' => 'Inheritance',
-                'id_omim' => 'OMIM ID',
-                'pmid' => 'PubMed ID',
+                'id_omim' => 'OMIM',
+                'pmid' => 'PubMed',
                 'remarks' => 'Remarks',
                 'created_by_' => 'Created by',
                 'created_date' => 'Created Date',
@@ -99,21 +101,21 @@ class LOVD_GenePanelGene extends LOVD_Object {
                     'view' => array('Symbol', 100),
                     'db'   => array('gp2g.geneid', 'ASC', true),
                     'legend' => array('The gene symbol.')),
-                'transcriptid' => array(
+                'transcript_ncbi' => array(
                     'view' => array('Transcript', 100),
-                    'db'   => array('gp2g.transcriptid', 'ASC', true),
+                    'db'   => array('transcript_ncbi', 'ASC', true),
                     'legend' => array('The preferred transcript.')),
                 'inheritance' => array(
                     'view' => array('Inheritance', 80),
                     'db'   => array('gp2g.inheritance', 'ASC', true),
                     'legend' => array('The mode of inheritance.')),
                 'id_omim' => array(
-                    'view' => array('OMIM ID', 60),
-                    'db'   => array('gp2g.id_omim', 'ASC', true),
+                    'view' => array('OMIM', 60),
+                    'db'   => array('gp2g.id_omim', 'ASC', false),
                     'legend' => array('OMIM ID.')),
                 'pmid' => array(
-                    'view' => array('PubMed ID', 60),
-                    'db'   => array('gp2g.pmid', 'ASC', true),
+                    'view' => array('PubMed', 60),
+                    'db'   => array('gp2g.pmid', 'ASC', false),
                     'legend' => array('PubMed ID.')),
                 'created_by_' => array(
                     'view' => array('Added By', 110),
@@ -147,6 +149,46 @@ class LOVD_GenePanelGene extends LOVD_Object {
             $sGeneID = -1;
         }
         parent::viewEntry($sGeneID);
+    }
+
+
+
+
+
+    function prepareData ($zData = '', $sView = 'list') {
+        // Prepares the data by "enriching" the variable received with links, pictures, etc.
+
+        if (!in_array($sView, array('list', 'entry'))) {
+            $sView = 'list';
+        }
+
+        // Makes sure it's an array and htmlspecialchars() all the values.
+        $zData = parent::prepareData($zData, $sView);
+
+
+        if ($sView == 'list') {
+
+        } else {
+
+        }
+
+        // Format the pubmed URL
+        if ($zData['pmid']) {
+            $zData['pmid'] = '<SPAN' . ($sView != 'list'? '' : ' onclick="cancelParentEvent(event);"') . '><A href="http://www.ncbi.nlm.nih.gov/pubmed/' . $zData['pmid'] . '" target="_blank">PubMed</A></SPAN>';
+        }
+        // Format the OMIM URL
+        if ($zData['id_omim']) {
+            $zData['id_omim'] = '<SPAN' . ($sView != 'list'? '' : ' onclick="cancelParentEvent(event);"') . '><A href="' . lovd_getExternalSource('omim', $zData['id_omim'], true) . '" target="_blank">OMIM</A></SPAN>';
+        }
+        // Create a link to a transcript
+        if ($zData['transcriptid']) {
+            $zData['transcript_ncbi'] = '<SPAN' . ($sView != 'list'? '' : ' onclick="cancelParentEvent(event);"') . '><A href="transcripts/' . $zData['transcriptid'] . '">' . $zData['transcript_ncbi'] . '</A></SPAN>';
+        }
+
+
+//        <SPAN' . ($sView != 'list'? '' : ' onclick="cancelParentEvent(event);"') . '><A href="http://www.ncbi.nlm.nih.gov/SNP/snp_ref.cgi?rs=' . "$1" . '" target="_blank">' . "$1" . '</A></SPAN>'
+
+        return $zData;
     }
 }
 ?>

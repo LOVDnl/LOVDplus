@@ -53,6 +53,7 @@ if (PATH_COUNT == 1 && !ACTION) {
     define('PAGE_TITLE', 'View all gene panels');
     $_T->printHeader();
     $_T->printTitle();
+    lovd_requireAUTH();
 
     require ROOT_PATH . 'class/object_gene_panels.php';
     $_DATA = new LOVD_GenePanel();
@@ -74,6 +75,7 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && !ACTION) {
     define('PAGE_TITLE', 'View gene panel #' . $nID);
     $_T->printHeader();
     $_T->printTitle();
+    lovd_requireAUTH();
 
     require ROOT_PATH . 'class/object_gene_panels.php';
     $_DATA = new LOVD_GenePanel();
@@ -199,7 +201,7 @@ if (PATH_COUNT == 1 && ACTION == 'create') {
     define('PAGE_TITLE', 'Create a new gene panel entry');
     define('LOG_EVENT', 'GenePanelCreate');
 
-    lovd_requireAUTH(LEVEL_SUBMITTER);
+    lovd_requireAUTH();
 
     require ROOT_PATH . 'class/object_gene_panels.php';
     $_DATA = new LOVD_GenePanel();
@@ -300,8 +302,7 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && ACTION == 'edit') {
     define('PAGE_TITLE', 'Edit gene panel entry #' . $nID);
     define('LOG_EVENT', 'GenePanelEdit');
 
-    // Require manager clearance.
-    lovd_requireAUTH(LEVEL_CURATOR);
+    lovd_requireAUTH();
 
     require ROOT_PATH . 'class/object_gene_panels.php';
     $_DATA = new LOVD_GenePanel();
@@ -422,14 +423,22 @@ if (PATH_COUNT == 3 && preg_match('/^[a-z][a-z0-9#@-]+$/i', rawurldecode($_PE[2]
     $sGeneID = rawurldecode($_PE[2]);
     define('PAGE_TITLE', 'View gene ' . $sGeneID . ' in gene panel #' . $nGenePanelID);
 
-    // Require manager clearance.
-    lovd_requireAUTH(LEVEL_CURATOR);
+    lovd_requireAUTH();
     $_T->printHeader();
     $_T->printTitle();
 
     require ROOT_PATH . 'class/object_gene_panel_genes.php';
     $_DATA = new LOVD_GenePanelGene();
     $zData = $_DATA->viewEntry($nGenePanelID . ',' . $sGeneID);
+
+    $aNavigation = array();
+
+    $aNavigation[CURRENT_PATH . '?edit']            = array('menu_edit.png', 'Edit gene information', 1);
+    if ($_AUTH['level'] >= LEVEL_MANAGER) {
+        $aNavigation[CURRENT_PATH . '?delete']      = array('cross.png', 'Remove gene entry', 1);
+    }
+
+    lovd_showJGNavigation($aNavigation, 'GenePanelGene');
 
     $_T->printFooter();
     exit;
@@ -441,15 +450,122 @@ if (PATH_COUNT == 3 && preg_match('/^[a-z][a-z0-9#@-]+$/i', rawurldecode($_PE[2]
 
 
 if (PATH_COUNT == 3 && preg_match('/^[a-z][a-z0-9#@-]+$/i', rawurldecode($_PE[2])) && ACTION == 'delete') {
-// URL: /genes_panels/00001/BRCA1?delete
-// Drop specific gene panel gene entry.
+    // URL: /genes_panels/00001/BRCA1?delete
+    // Drop specific gene panel gene entry.
+
+    $nGenePanelID = sprintf('%05d', $_PE[1]);
+    $sGeneID = rawurldecode($_PE[2]);
+    define('PAGE_TITLE', 'Remove gene ' . $sGeneID . ' from gene panel #' . $nGenePanelID);
+    define('LOG_EVENT', 'GenePanelGeneDelete');
+
+    lovd_requireAUTH(LEVEL_MANAGER);
+
+    require ROOT_PATH . 'class/object_gene_panel_genes.php';
+    require ROOT_PATH . 'inc-lib-form.php';
+
+    if (!empty($_POST)) {
+        lovd_errorClean();
+
+        // Mandatory fields.
+        if (empty($_POST['password'])) {
+            lovd_errorAdd('password', 'Please fill in the \'Enter your password for authorization\' field.');
+        }
+
+        // User had to enter his/her password for authorization.
+        if ($_POST['password'] && !lovd_verifyPassword($_POST['password'], $_AUTH['password'])) {
+            lovd_errorAdd('password', 'Please enter your correct password for authorization.');
+        }
+
+        if (!lovd_error()) {
+            // Delete the gene
+            $q = $_DB->query('DELETE FROM ' . TABLE_GP2GENE . ' WHERE genepanelid = ? AND geneid = ?', array($nGenePanelID, $sGeneID), false);
+            if (!$q) {
+                // We have failed to delete this gene so throw an error message
+                lovd_writeLog('Error', LOG_EVENT, 'Gene entry ' . $sGeneID . ' in gene panel #' . $nGenePanelID . ' could not be removed');
+                unset($_POST['password']);
+                lovd_errorAdd('error', 'The selected gene could not be removed from this list. Please contact your database administrator.');
+            } else {
+                lovd_writeLog('Event', LOG_EVENT, 'Deleted gene entry ' . $sGeneID . ' from gene panel #' . $nGenePanelID);
+
+                // Thank the user...
+                header('Refresh: 3; url=' . lovd_getInstallURL() . $_PE[0] . '/' . $_PE[1]);
+
+                $_T->printHeader();
+                $_T->printTitle();
+                lovd_showInfoTable('Successfully remove the gene from this gene panel!', 'success');
+                $_T->printFooter();
+                exit;
+            }
+
+        } else {
+            // Because we're sending the data back to the form, I need to unset the password fields!
+            unset($_POST['password']);
+        }
+    }
+
+    $_T->printHeader();
+    $_T->printTitle();
+
+    lovd_showInfoTable('This will remove the <B>' . $sGeneID . '</B> gene from gene panel #' . $nGenePanelID . '. It will not delete the gene from LOVD, only unlink it from this gene panel and remove any extra data you have stored here. This action cannot be undone.', 'warning');
+
+    lovd_errorPrint();
+
+    // Table.
+    print('      <FORM action="' . CURRENT_PATH . '?' . ACTION . '" method="post">' . "\n");
+
+    // Array which will make up the form table.
+    $aForm = array_merge(
+        array(
+            array('POST', '', '', '', '40%', '14', '60%'),
+            array('Removing gene entry', '', 'print', $sGeneID . ' from gene panel #' . $nGenePanelID ),
+            'skip',
+            array('Enter your password for authorization', '', 'password', 'password', 20),
+            array('', '', 'submit', 'Remove gene entry'),
+        ));
+    lovd_viewForm($aForm);
+
+    print('</FORM>' . "\n\n");
+    $_T->printFooter();
+    exit;
+
+}
+
+
+
+
+
+if (PATH_COUNT == 3 && preg_match('/^[a-z][a-z0-9#@-]+$/i', rawurldecode($_PE[2])) && ACTION == 'edit') {
+// URL: /genes_panels/00001/BRCA1?edit
+// Edit specific gene panel gene entry.
 
     $nID = sprintf('%05d', $_PE[1]);
     $sID = rawurldecode($_PE[2]);
-    define('PAGE_TITLE', 'Delete gene ' . $sID . ' from gene panel #' . $nID);
+    define('PAGE_TITLE', 'Edit gene ' . $sID . ' in gene panel #' . $nID);
 
-    // Require manager clearance.
-    lovd_requireAUTH(LEVEL_CURATOR);
+    lovd_requireAUTH();
+    $_T->printHeader();
+    $_T->printTitle();
+
+    require ROOT_PATH . 'class/object_gene_panel_genes.php';
+
+    $_T->printFooter();
+    exit;
+
+}
+
+
+
+
+
+if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && ACTION == 'create') {
+    // URL: /gene_panels/00001?create
+    // Add genes to a gene panel
+
+    $nID = sprintf('%05d', $_PE[1]);
+    define('PAGE_TITLE', 'Add genes to gene panel entry #' . $nID);
+    define('LOG_EVENT', 'GenePanelGeneAdd');
+
+    lovd_requireAUTH();
     $_T->printHeader();
     $_T->printTitle();
 

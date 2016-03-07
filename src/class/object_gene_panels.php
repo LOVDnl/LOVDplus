@@ -62,7 +62,7 @@ class LOVD_GenePanel extends LOVD_Object {
 
         // SQL code for viewing an entry.
         $this->aSQLViewEntry['SELECT']   = 'gp.*,' .
-            'GROUP_CONCAT(DISTINCT d.id, ";", IFNULL(d.id_omim, 0), ";", IF(CASE d.symbol WHEN "-" THEN "" ELSE d.symbol END = "", d.name, d.symbol), ";", d.name ORDER BY (d.symbol != "" AND d.symbol != "-") DESC, d.symbol, d.name SEPARATOR ";;") AS __diseases, ' .
+            'GROUP_CONCAT(DISTINCT d.id, ";", d.symbol ORDER BY (d.symbol != "" AND d.symbol != "-") DESC, d.symbol, d.name SEPARATOR ";;") AS __diseases, ' .
             'uc.name AS created_by_,' .
             'ue.name AS edited_by_';
         $this->aSQLViewEntry['FROM']     = TABLE_GENE_PANELS . ' AS gp ' .
@@ -150,7 +150,6 @@ class LOVD_GenePanel extends LOVD_Object {
     function prepareData ($zData = '', $sView = 'list')
     {
         // Prepares the data by "enriching" the variable received with links, pictures, etc.
-        global $_AUTH, $_CONF, $_DB, $_SETT;
 
         if (!in_array($sView, array('list', 'entry'))) {
             $sView = 'list';
@@ -171,13 +170,9 @@ class LOVD_GenePanel extends LOVD_Object {
             $zData['diseases_'] = '';
             $zData['disease_omim_'] = '';
             foreach($zData['diseases'] as $aDisease) {
-                list($nID, $nOMIMID, $sSymbol, $sName) = $aDisease;
+                list($nID, $sSymbol) = $aDisease;
                 // Link to disease entry in LOVD.
                 $zData['diseases_'] .= (!$zData['diseases_']? '' : ', ') . '<A href="diseases/' . $nID . '">' . $sSymbol . '</A>';
-                if ($nOMIMID) {
-                    // Add link to OMIM for each disease that has an OMIM ID.
-                    $zData['disease_omim_'] .= (!$zData['disease_omim_'] ? '' : '<BR>') . '<A href="' . lovd_getExternalSource('omim', $nOMIMID, true) . '" target="_blank">' . $sSymbol . ($sSymbol == $sName? '' : ' (' . $sName . ')') . '</A>';
-                }
             }
 
         }
