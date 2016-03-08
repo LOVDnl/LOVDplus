@@ -4,10 +4,10 @@
  * LEIDEN OPEN VARIATION DATABASE (LOVD)
  *
  * Created     : 2014-01-03
- * Modified    : 2014-05-08
- * For LOVD    : 3.0-11
+ * Modified    : 2016-03-07
+ * For LOVD    : 3.0-12
  *
- * Copyright   : 2004-2014 Leiden University Medical Center; http://www.LUMC.nl/
+ * Copyright   : 2004-2016 Leiden University Medical Center; http://www.LUMC.nl/
  * Programmer  : Ing. Ivo F.A.C. Fokkema <I.F.A.C.Fokkema@LUMC.nl>
  *
  *
@@ -49,7 +49,7 @@ class LOVD_ScreeningMOD extends LOVD_Screening {
     function __construct ()
     {
         // Default constructor.
-        global $_AUTH;
+        global $_AUTH, $_SETT;
 
         // Run parent constructor to find out about the custom columns.
         parent::__construct();
@@ -62,17 +62,21 @@ class LOVD_ScreeningMOD extends LOVD_Screening {
         $this->aSQLViewEntry['SELECT']   = 's.*, ' .
                                            'i.statusid AS individual_statusid, ' .
                                            'GROUP_CONCAT(DISTINCT "=\"", s2g.geneid, "\"" SEPARATOR "|") AS search_geneid, ' .
-                                           'IF(s.variants_found = 1 AND COUNT(s2v.variantid) = 0, -1, COUNT(DISTINCT ' . ($_AUTH['level'] >= LEVEL_COLLABORATOR? 's2v.variantid' : 'vog.id') . ')) AS variants_found_, ' .
+                                           'IF(s.variants_found = 1 AND COUNT(s2v.variantid) = 0, -1, COUNT(DISTINCT ' . ($_AUTH['level'] >= $_SETT['user_level_settings']['see_nonpublic_data']? 's2v.variantid' : 'vog.id') . ')) AS variants_found_, ' .
                                            'uo.name AS owned_by_, ' .
+                                           'ua.name AS analysis_by_, ' .
+                                           'uaa.name AS analysis_approved_by_, ' .
                                            'uc.name AS created_by_, ' .
                                            'ue.name AS edited_by_';
         $this->aSQLViewEntry['FROM']     = TABLE_SCREENINGS . ' AS s ' .
                                            'LEFT OUTER JOIN ' . TABLE_SCR2GENE . ' AS s2g ON (s.id = s2g.screeningid) ' .
                                            'LEFT OUTER JOIN ' . TABLE_SCR2VAR . ' AS s2v ON (s.id = s2v.screeningid) ' .
-                                           ($_AUTH['level'] >= LEVEL_COLLABORATOR? '' :
+                                           ($_AUTH['level'] >= $_SETT['user_level_settings']['see_nonpublic_data']? '' :
                                                'LEFT OUTER JOIN ' . TABLE_VARIANTS . ' AS vog ON (s2v.variantid = vog.id AND (vog.statusid >= ' . STATUS_MARKED . (!$_AUTH? '' : ' OR vog.created_by = "' . $_AUTH['id'] . '" OR vog.owned_by = "' . $_AUTH['id'] . '"') . ')) ') .
                                            'LEFT OUTER JOIN ' . TABLE_USERS . ' AS uo ON (s.owned_by = uo.id) ' .
                                            'LEFT OUTER JOIN ' . TABLE_INDIVIDUALS . ' AS i ON (s.individualid = i.id) ' .
+                                           'LEFT OUTER JOIN ' . TABLE_USERS . ' AS ua ON (s.analysis_by = ua.id) ' .
+                                           'LEFT OUTER JOIN ' . TABLE_USERS . ' AS uaa ON (s.analysis_approved_by = uaa.id) ' .
                                            'LEFT OUTER JOIN ' . TABLE_USERS . ' AS uc ON (s.created_by = uc.id) ' .
                                            'LEFT OUTER JOIN ' . TABLE_USERS . ' AS ue ON (s.edited_by = ue.id)';
         $this->aSQLViewEntry['GROUP_BY'] = 's.id';
@@ -80,26 +84,37 @@ class LOVD_ScreeningMOD extends LOVD_Screening {
         // SQL code for viewing the list of screenings
         $this->aSQLViewList['SELECT']   = 's.*, ' .
                                           's.id AS screeningid, ' .
-                                          'IF(s.variants_found = 1 AND COUNT(s2v.variantid) = 0, -1, COUNT(DISTINCT ' . ($_AUTH['level'] >= LEVEL_COLLABORATOR? 's2v.variantid' : 'vog.id') . ')) AS variants_found_, ' .
+                                          'IF(s.variants_found = 1 AND COUNT(s2v.variantid) = 0, -1, COUNT(DISTINCT ' . ($_AUTH['level'] >= $_SETT['user_level_settings']['see_nonpublic_data']? 's2v.variantid' : 'vog.id') . ')) AS variants_found_, ' .
                                           'GROUP_CONCAT(DISTINCT s2g.geneid SEPARATOR ", ") AS genes, ' .
-                                          ($_AUTH['level'] < LEVEL_COLLABORATOR? '' :
+                                          ($_AUTH['level'] < $_SETT['user_level_settings']['see_nonpublic_data']? '' :
                                               'CASE i.statusid WHEN ' . STATUS_MARKED . ' THEN "marked" WHEN ' . STATUS_HIDDEN .' THEN "del" END AS class_name, ') .
                                           'uo.name AS owned_by_, ' .
+                                          'ua.name AS analysis_by_, ' .
+                                          'uaa.name AS analysis_approved_by_, ' .
+                                          'ds.name AS analysis_status, ' .
                                           'CONCAT_WS(";", uo.id, uo.name, uo.email, uo.institute, uo.department, IFNULL(uo.countryid, "")) AS _owner';
         $this->aSQLViewList['FROM']     = TABLE_SCREENINGS . ' AS s ' .
                                           'LEFT OUTER JOIN ' . TABLE_SCR2VAR . ' AS s2v ON (s.id = s2v.screeningid) ' .
-                                          ($_AUTH['level'] >= LEVEL_COLLABORATOR? '' :
+                                          ($_AUTH['level'] >= $_SETT['user_level_settings']['see_nonpublic_data']? '' :
                                               'LEFT OUTER JOIN ' . TABLE_VARIANTS . ' AS vog ON (s2v.variantid = vog.id AND (vog.statusid >= ' . STATUS_MARKED . (!$_AUTH? '' : ' OR vog.created_by = "' . $_AUTH['id'] . '" OR vog.owned_by = "' . $_AUTH['id'] . '"') . ')) ') .
                                           'LEFT OUTER JOIN ' . TABLE_SCR2GENE . ' AS s2g ON (s.id = s2g.screeningid) ' .
                                           'LEFT OUTER JOIN ' . TABLE_INDIVIDUALS . ' AS i ON (s.individualid = i.id) ' .
-                                          'LEFT OUTER JOIN ' . TABLE_USERS . ' AS uo ON (s.owned_by = uo.id)';
+                                          'LEFT OUTER JOIN ' . TABLE_USERS . ' AS ua ON (s.analysis_by = ua.id) ' .
+                                          'LEFT OUTER JOIN ' . TABLE_USERS . ' AS uaa ON (s.analysis_approved_by = uaa.id) ' .
+                                          'LEFT OUTER JOIN ' . TABLE_USERS . ' AS uo ON (s.owned_by = uo.id)
+                                           LEFT OUTER JOIN ' . TABLE_ANALYSIS_STATUS . ' AS ds ON (s.analysis_statusid = ds.id)';
         $this->aSQLViewList['GROUP_BY'] = 's.id';
 
         // List of columns and (default?) order for viewing an entry.
         $this->aColumnsViewEntry = array_merge(
                  $this->buildViewEntry(),
                  array(
-                        'variants_found_' => 'Variants found?',
+                     'analysis_status' => 'Analysis status',
+                     'analysis_by_' => 'Analysis by',
+                     'analysis_date' => 'Analysis started',
+                     'analysis_approved_by' => 'Analysis approved by',
+                     'analysis_approved_date' => 'Analysis approved',
+                        'variants_found_link' => 'Variants found?',
                         'variants_to_be_confirmed_' => 'Variants to be confirmed',
                       ));
 
@@ -117,15 +132,29 @@ class LOVD_ScreeningMOD extends LOVD_Screening {
                  array(
                         'variants_found_' => array(
                                     'view' => array('Variants found', 100),
-//                                    'db'   => array('variants_found_', 'ASC', 'INT_UNSIGNED')),
-                                    'db'   => array('variants_found_', 'ASC')), // Do not allow search, the search boxes are all narrow because the table is not displayed when the JS is run.
-                        'created_date' => array(
-                                    'view' => array('Date created', 130),
-                                    'db'   => array('s.created_date', 'ASC')),
+                                    'db'   => array('variants_found_', 'ASC', 'INT_UNSIGNED')),
+                     'analysis_status' => array(
+                         'view' => array('Analysis status', 120),
+                         'db'   => array('ds.name', false, true)),
+                     'analysis_by_' => array(
+                         'view' => array('Analysis by', 160),
+                         'db'   => array('ua.name', 'ASC', true)),
+                     'analysis_date_' => array(
+                         'view' => array('Analysis started', 110),
+                         'db'   => array('s.analysis_date', 'DESC', true)),
+                     'analysis_approved_by_' => array(
+                         'view' => array('Analysis approved by', 160),
+                         'db'   => array('uaa.name', 'ASC', true)),
+                     'analysis_approved_date_' => array(
+                         'view' => array('Analysis approved', 110),
+                         'db'   => array('s.analysis_approved_date', 'DESC', true)),
                       ));
         $this->sSortDefault = 'id';
 
         // Hide some custom columns from view.
+        // FIXME: Better would be perhaps a positive selection instead?
+        unset($this->aColumnsViewList['Screening/Template']);
+        unset($this->aColumnsViewList['Screening/Technique']);
         unset($this->aColumnsViewList['Screening/SNP_overlap']);
         unset($this->aColumnsViewList['Screening/Derived_gender']);
         unset($this->aColumnsViewList['Screening/Covered_exome/Fraction']);
@@ -165,21 +194,29 @@ class LOVD_ScreeningMOD extends LOVD_Screening {
         // Makes sure it's an array and htmlspecialchars() all the values.
         $zData = parent::prepareData($zData, $sView);
 
-        if ($sView == 'entry') {
+        if ($sView == 'list') {
+            $zData['analysis_date_'] = substr($zData['analysis_date'], 0, 10);
+            $zData['analysis_approved_date_'] = substr($zData['analysis_approved_date'], 0, 10);
+        } else {
             $zData['individualid_'] = '<A href="individuals/' . $zData['individualid'] . '">' . $zData['individualid'] . '</A>';
             if ($_AUTH['level'] >= LEVEL_COLLABORATOR) {
                 $zData['individualid_'] .= ' <SPAN style="color : #' . $this->getStatusColor($zData['individual_statusid']) . '">(' . $_SETT['data_status'][$zData['individual_statusid']] . ')</SPAN>';
             }
-            if ($_PE[0] == 'individuals') {
+            $zData['variants_found_link'] = $zData['variants_found_'];
+            if ($_PE[0] == 'individuals' && $zData['variants_found_'] > 0) {
                 // Screenings VE op Individuals VE.
-                $zData['variants_found_'] .= ' (<A href="screenings/' . $zData['id'] . '">See all</A>)';
+                $zData['variants_found_link'] .= ' (<A href="screenings/' . $zData['id'] . '">See all</A>)';
             }
+            $zData['analysis_status'] = $_SETT['analysis_status'][$zData['analysis_statusid']];
         }
-        $zData['variants_found_'] = ($zData['variants_found_'] == -1? 'Not yet submitted' : $zData['variants_found_']);
         // Just do a separate query for the variants to be confirmed (instead of modifying the VE query).
         $zData['variants_to_be_confirmed_'] = $_DB->query('SELECT COUNT(*) FROM ' . TABLE_VARIANTS . ' AS vog INNER JOIN ' . TABLE_SCR2VAR . ' AS s2v ON (vog.id = s2v.variantid) WHERE vog.to_be_confirmed = 1 AND s2v.screeningid = ?', array($zData['id']))->fetchColumn();
         if ($zData['variants_to_be_confirmed_']) {
-            $zData['variants_to_be_confirmed_'] .= ' (<A href="screenings/' . $zData['id'] . '?downloadToBeConfirmed">download</A>) (<A id="export_variants" href="#" onclick="$.get(\'screenings/' . $zData['id'] . '?exportToBeConfirmed\',function(sResponse){if(sResponse.substring(0,1)==\'1\'){alert(\'Successfully exported \'+sResponse.substring(2)+\' lines of variant data.\');$(\'#export_variants\').replaceWith($(\'#export_variants\').html());}else{alert(\'Error while exporting file:\n\'+sResponse);}}).error(function(){alert(\'Error while exporting file.\');});return false;">export to Miracle</A>)';
+            $zData['variants_to_be_confirmed_'] .= ' (<A href="screenings/' . $zData['id'] . '?downloadToBeConfirmed">download</A>)';
+            if ($_AUTH['level'] >= LEVEL_MANAGER) {
+                // Managers are allowed to export the variants as well.
+                $zData['variants_to_be_confirmed_'] .= ' (<A id="export_variants" href="#" onclick="$.get(\'screenings/' . $zData['id'] . '?exportToBeConfirmed\',function(sResponse){if(sResponse.substring(0,1)==\'1\'){alert(\'Successfully exported \'+sResponse.substring(2)+\' lines of variant data.\');$(\'#export_variants\').replaceWith($(\'#export_variants\').html());}else{alert(\'Error while exporting file:\n\'+sResponse);}}).error(function(){alert(\'Error while exporting file.\');});return false;">export to Miracle</A>)';
+            }
         }
 
         return $zData;

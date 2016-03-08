@@ -4,10 +4,10 @@
  * LEIDEN OPEN VARIATION DATABASE (LOVD)
  *
  * Created     : 2009-10-21
- * Modified    : 2015-03-05
- * For LOVD    : 3.0-13
+ * Modified    : 2016-03-03
+ * For LOVD    : 3.0-15
  *
- * Copyright   : 2004-2015 Leiden University Medical Center; http://www.LUMC.nl/
+ * Copyright   : 2004-2016 Leiden University Medical Center; http://www.LUMC.nl/
  * Programmers : Ing. Ivo F.A.C. Fokkema <I.F.A.C.Fokkema@LUMC.nl>
  *               Ing. Ivar C. Lugtenburg <I.C.Lugtenburg@LUMC.nl>
  *
@@ -277,8 +277,12 @@ function lovd_errorPrint ()
 
     if (count($_ERROR['messages']) > 1) {
         unset($_ERROR['messages'][0]);
-        print('      <DIV class="err">' . "\n" .
-              ($_AUTH && $_AUTH['id'] === '00000'? ':' : '        ') . implode('<BR>' . "\n" . ($_AUTH && $_AUTH['id'] === '00000'? ':' : '        '), $_ERROR['messages']) . '</DIV><BR>' . "\n\n");
+        if (FORMAT == 'text/html') {
+            print('      <DIV class="err">' . "\n" .
+                  '        ' . implode('<BR>' . "\n" . '        ', $_ERROR['messages']) . '</DIV><BR>' . "\n\n");
+        } elseif (FORMAT == 'text/plain') {
+            print(':' . implode("\n" . ':', array_map('strip_tags', $_ERROR['messages'])) . "\n\n");
+        }
     }
 }
 

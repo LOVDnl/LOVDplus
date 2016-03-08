@@ -4,10 +4,10 @@
  * LEIDEN OPEN VARIATION DATABASE (LOVD)
  *
  * Created     : 2013-10-28
- * Modified    : 2014-01-03
- * For LOVD    : 3.0-09
+ * Modified    : 2016-03-07
+ * For LOVD    : 3.0-12
  *
- * Copyright   : 2004-2014 Leiden University Medical Center; http://www.LUMC.nl/
+ * Copyright   : 2004-2016 Leiden University Medical Center; http://www.LUMC.nl/
  * Programmer  : Ing. Ivo F.A.C. Fokkema <I.F.A.C.Fokkema@LUMC.nl>
  *
  *
@@ -64,8 +64,6 @@ class LOVD_IndividualMOD extends LOVD_Individual {
                                            'GROUP_CONCAT(DISTINCT d.id, ";", IF(CASE d.symbol WHEN "-" THEN "" ELSE d.symbol END = "", d.name, d.symbol), ";", d.name ORDER BY (d.symbol != "" AND d.symbol != "-") DESC, d.symbol, d.name SEPARATOR ";;") AS __diseases, ' .
                                            'GROUP_CONCAT(DISTINCT s.id SEPARATOR ";") AS _screeningids, ' .
                                            'COUNT(DISTINCT s2v.variantid) AS variants, ' .
-                                           'ua.name AS analysis_by_, ' .
-                                           'uaa.name AS analysis_approved_by_, ' .
                                            'uc.name AS created_by_, ' .
                                            'ue.name AS edited_by_';
         $this->aSQLViewEntry['FROM']     = TABLE_INDIVIDUALS . ' AS i ' .
@@ -73,34 +71,35 @@ class LOVD_IndividualMOD extends LOVD_Individual {
                                            'LEFT OUTER JOIN ' . TABLE_SCR2VAR . ' AS s2v ON (s2v.screeningid = s.id) ' .
                                            'LEFT OUTER JOIN ' . TABLE_IND2DIS . ' AS i2d ON (i.id = i2d.individualid) ' .
                                            'LEFT OUTER JOIN ' . TABLE_DISEASES . ' AS d ON (i2d.diseaseid = d.id) ' .
-                                           'LEFT OUTER JOIN ' . TABLE_USERS . ' AS ua ON (i.analysis_by = ua.id) ' .
-                                           'LEFT OUTER JOIN ' . TABLE_USERS . ' AS uaa ON (i.analysis_approved_by = uaa.id) ' .
                                            'LEFT OUTER JOIN ' . TABLE_USERS . ' AS uc ON (i.created_by = uc.id) ' .
                                            'LEFT OUTER JOIN ' . TABLE_USERS . ' AS ue ON (i.edited_by = ue.id)';
         $this->aSQLViewEntry['GROUP_BY'] = 'i.id';
 
-        // SQL code for viewing the list of individuals
+        // SQL code for viewing the list of individuals.
         $this->aSQLViewList['SELECT']   = 'i.*, ' .
                                           'i.id AS individualid, ' .
+                                          's.id AS screeningid, ' .
+                                          's.analysis_date, ' .
+                                          's.analysis_approved_date, ' .
                                         // FIXME; Can we get this order correct, such that diseases without abbreviation nicely mix with those with? Right now, the diseases without symbols are in the back.
                                           'GROUP_CONCAT(DISTINCT IF(CASE d.symbol WHEN "-" THEN "" ELSE d.symbol END = "", d.name, d.symbol) ORDER BY (d.symbol != "" AND d.symbol != "-") DESC, d.symbol, d.name SEPARATOR ", ") AS diseases_, ' .
 //                                          'COUNT(DISTINCT ' . ($_AUTH['level'] >= LEVEL_COLLABORATOR? 's2v.variantid' : 'vog.id') . ') AS variants_, ' . // Counting s2v.variantid will not include the limit opposed to vog in the join's ON() clause.
                                           'ua.name AS analysis_by_, ' .
                                           'uaa.name AS analysis_approved_by_, ' .
                                           'CONCAT_WS(";", ua.id, ua.name, ua.email, ua.institute, ua.department, IFNULL(ua.countryid, "")) AS _analyzer, ' .
-                                          'CASE ds.id WHEN ' . ANALYSIS_STATUS_WAIT . ' THEN "marked" WHEN ' . ANALYSIS_STATUS_APPROVED . ' THEN "del" WHEN ' . ANALYSIS_STATUS_ARCHIVED . ' THEN "del" END AS class_name,' .
+                                          'CASE ds.id WHEN ' . ANALYSIS_STATUS_WAIT . ' THEN "marked" WHEN ' . ANALYSIS_STATUS_CONFIRMED . ' THEN "del" WHEN ' . ANALYSIS_STATUS_ARCHIVED . ' THEN "del" END AS class_name,' .
                                           'ds.name AS analysis_status';
         $this->aSQLViewList['FROM']     = TABLE_INDIVIDUALS . ' AS i ' .
                                           'LEFT OUTER JOIN ' . TABLE_IND2DIS . ' AS i2d ON (i.id = i2d.individualid) ' .
                                           'LEFT OUTER JOIN ' . TABLE_DISEASES . ' AS d ON (i2d.diseaseid = d.id) ' .
-//                                          'LEFT OUTER JOIN ' . TABLE_SCREENINGS . ' AS s ON (i.id = s.individualid) ' .
+                                          'LEFT OUTER JOIN ' . TABLE_SCREENINGS . ' AS s ON (i.id = s.individualid) ' .
 //                                          'LEFT OUTER JOIN ' . TABLE_SCR2VAR . ' AS s2v ON (s2v.screeningid = s.id) ' .
 //                                          ($_AUTH['level'] >= LEVEL_COLLABORATOR? '' :
 //                                              'LEFT OUTER JOIN ' . TABLE_VARIANTS . ' AS vog ON (s2v.variantid = vog.id AND (vog.statusid >= ' . STATUS_MARKED . (!$_AUTH? '' : ' OR vog.created_by = "' . $_AUTH['id'] . '" OR vog.owned_by = "' . $_AUTH['id'] . '"') . ')) ') .
-                                          'LEFT OUTER JOIN ' . TABLE_USERS . ' AS ua ON (i.analysis_by = ua.id) ' .
-                                          'LEFT OUTER JOIN ' . TABLE_USERS . ' AS uaa ON (i.analysis_approved_by = uaa.id) ' .
-                                          'LEFT OUTER JOIN ' . TABLE_ANALYSIS_STATUS . ' AS ds ON (i.analysis_statusid = ds.id)';
-        $this->aSQLViewList['GROUP_BY'] = 'i.id';
+                                          'LEFT OUTER JOIN ' . TABLE_USERS . ' AS ua ON (s.analysis_by = ua.id) ' .
+                                          'LEFT OUTER JOIN ' . TABLE_USERS . ' AS uaa ON (s.analysis_approved_by = uaa.id) ' .
+                                          'LEFT OUTER JOIN ' . TABLE_ANALYSIS_STATUS . ' AS ds ON (s.analysis_statusid = ds.id)';
+        $this->aSQLViewList['GROUP_BY'] = 's.id';
 
         // List of columns and (default?) order for viewing an entry.
         $this->aColumnsViewEntry = array_merge(
@@ -117,11 +116,6 @@ class LOVD_IndividualMOD extends LOVD_Individual {
                         'created_date_' => array('Date created', LEVEL_COLLABORATOR),
                         'edited_by_' => array('Last edited by', LEVEL_COLLABORATOR),
                         'edited_date_' => array('Date last edited', LEVEL_COLLABORATOR),
-                        'analysis_status' => 'Analysis status',
-                        'analysis_by_' => 'Analysis by',
-                        'analysis_date' => 'Analysis started',
-                        'analysis_approved_by' => 'Analysis approved by',
-                        'analysis_approved_date' => 'Analysis approved',
                       ));
 
         // List of columns and (default?) order for viewing a list of entries.
@@ -153,13 +147,13 @@ class LOVD_IndividualMOD extends LOVD_Individual {
                          'db'   => array('ua.name', 'ASC', true)),
                      'analysis_date_' => array(
                          'view' => array('Analysis started', 110),
-                         'db'   => array('i.analysis_date', 'DESC', true)),
+                         'db'   => array('s.analysis_date', 'DESC', true)),
                      'analysis_approved_by_' => array(
                          'view' => array('Analysis approved by', 160),
                          'db'   => array('uaa.name', 'ASC', true)),
                      'analysis_approved_date_' => array(
                          'view' => array('Analysis approved', 110),
-                         'db'   => array('i.analysis_approved_date', 'DESC', true)),
+                         'db'   => array('s.analysis_approved_date', 'DESC', true)),
 
                       ));
         $this->sSortDefault = 'id';
@@ -185,8 +179,6 @@ class LOVD_IndividualMOD extends LOVD_Individual {
         if ($sView == 'list') {
             $zData['analysis_date_'] = substr($zData['analysis_date'], 0, 10);
             $zData['analysis_approved_date_'] = substr($zData['analysis_approved_date'], 0, 10);
-        } else {
-            $zData['analysis_status'] = $_SETT['analysis_status'][$zData['analysis_statusid']];
         }
 
         return $zData;
