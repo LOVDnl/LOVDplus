@@ -426,22 +426,215 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && ACTION == 'manage_genes') {
     define('LOG_EVENT', 'GenePanelManage');
 
     lovd_requireAUTH(LEVEL_ADMIN);
+
+    if (!$_DB->query('SELECT COUNT(*) FROM ' . TABLE_GENE_PANELS . ' WHERE id = ?', array($nID))->fetchColumn()) {
+        $_T->printHeader();
+        $_T->printTitle();
+        lovd_showInfoTable('No such ID!', 'stop');
+        $_T->printFooter();
+        exit;
+    }
+
+    require ROOT_PATH . 'inc-lib-form.php';
+
+    if (POST) {
+        lovd_errorClean();
+
+/*******************************************************************************************************************
+        // Preventing notices...
+        // $_POST['curators'] stores the IDs of the users that are supposed to go in TABLE_CURATES.
+        if (empty($_POST['curators']) || !is_array($_POST['curators'])) {
+            $_POST['curators'] = array();
+        }
+        // $_POST['allow_edit'] stores the IDs of the users that are allowed to edit variants in this gene (the curators).
+        if (empty($_POST['allow_edit']) || !is_array($_POST['allow_edit'])) {
+            $_POST['allow_edit'] = array();
+        }
+        // $_POST['shown'] stores whether or not the curator is shown on the screen.
+        if (empty($_POST['shown']) || !is_array($_POST['shown'])) {
+            $_POST['shown'] = array();
+        }
+
+        // MUST select at least one curator!
+        if (empty($_POST['curators']) || empty($_POST['allow_edit']) || empty($_POST['shown'])) {
+            lovd_errorAdd('', 'Please select at least one curator that is allowed to edit <I>and</I> is shown on the gene home page!');
+        } else {
+            // Of the selected persons, at least one should be shown AND able to edit!
+            $bCurator = false;
+            foreach($_POST['curators'] as $nUserID) {
+                if (in_array($nUserID, $_POST['allow_edit']) && in_array($nUserID, $_POST['shown'])) {
+                    $bCurator = true;
+                    break;
+                }
+            }
+            if (!$bCurator) {
+                lovd_errorAdd('', 'Please select at least one curator that is allowed to edit <I>and</I> is shown on the gene home page!');
+            }
+        }
+
+        // Mandatory fields.
+        if (empty($_POST['password'])) {
+            lovd_errorAdd('password', 'Please fill in the \'Enter your password for authorization\' field.');
+        } elseif ($_POST['password'] && !lovd_verifyPassword($_POST['password'], $_AUTH['password'])) {
+            // User had to enter his/her password for authorization.
+            lovd_errorAdd('password', 'Please enter your correct password for authorization.');
+        }
+
+
+
+        if (!lovd_error()) {
+            // What's by far the most efficient code-wise is just insert/update all we've got and delete everything else.
+            $_DB->beginTransaction();
+
+            foreach ($_POST['curators'] as $nOrder => $nUserID) {
+                $nOrder ++; // Since 0 is the first key in the array.
+                // FIXME; Managers are authorized to add other managers or higher as curators, but should not be able to restrict other manager's editing rights, or hide these users as curators.
+                //   Implementing this check on this level means we need to query the database to get all user levels again, defeating this optimalisation below.
+                //   Taking away the editing rights/visibility of managers or the admin by a manager is restricted in the interface, so it's not critical to solve now.
+                //   I'm being lazy, I'm not implementing the check here now. However, it *is* a bug and should be fixed later.
+                if (ACTION == 'authorize') {
+                    // FIXME; Is using REPLACE not a lot easier?
+                    $_DB->query('INSERT INTO ' . TABLE_CURATES . ' VALUES (?, ?, ?, ?) ON DUPLICATE KEY UPDATE allow_edit = VALUES(allow_edit), show_order = VALUES(show_order)', array($nUserID, $sID, (int) in_array($nUserID, $_POST['allow_edit']), (in_array($nUserID, $_POST['shown'])? $nOrder : 0)));
+                    // FIXME; Without detailed user info we can't include elaborate logging. Would we want that anyway?
+                    //   We could rapport things here more specifically because mysql_affected_rows() tells us if there has been an update (2) or an insert (1) or nothing changed (0).
+                } else {
+                    // Just sort and update visibility!
+                    $_DB->query('UPDATE ' . TABLE_CURATES . ' SET show_order = ? WHERE geneid = ? AND userid = ?', array((in_array($nUserID, $_POST['shown'])? $nOrder : 0), $sID, $nUserID));
+                }
+            }
+
+            // Now everybody should be updated. Remove whoever should no longer be in there.
+            $_DB->query('DELETE FROM c USING ' . TABLE_CURATES . ' AS c, ' . TABLE_USERS . ' AS u WHERE c.userid = u.id AND c.geneid = ? AND c.userid NOT IN (?' . str_repeat(', ?', count($_POST['curators']) - 1) . ') AND (u.level < ? OR u.id = ?)', array_merge(array($sID), $_POST['curators'], array($_AUTH['level'], $_AUTH['id'])));
+
+            // If we get here, it all succeeded.
+            $_DB->commit();
+
+            // Write to log...
+            $sMessage = 'Updated curator list for the ' . $sID . ' gene';
+            lovd_writeLog('Event', LOG_EVENT, $sMessage);
+
+            // Thank the user...
+            header('Refresh: 3; url=' . lovd_getInstallURL() . CURRENT_PATH);
+
+            $_T->printHeader();
+            $_T->printTitle();
+            lovd_showInfoTable('Successfully updated the curator list!', 'success');
+
+            $_T->printFooter();
+            exit;
+
+        } else {
+            // Because we're sending the data back to the form, I need to unset the password fields!
+            unset($_POST['password']);
+        }
+*///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    }
+
+
+
+
+
     $_T->printHeader();
     $_T->printTitle();
 
+    // Now, build $aGenes, which contains info about the genes currently selected (from DB or, if available, POST!).
+    $aGenes = array();
+    if (!empty($_POST['genes'])) {
+        // Form has already been sent. We're here because of errors. Use $_POST.
+        // Retrieve data for selected genes.
+        // FIXME; Do we need to change all IDs to integers because of possibly loosing the prepended zero's? Cross-browser check to verify?
+        $zGenes = $_DB->query('SELECT g.id FROM ' . TABLE_GENES . ' AS g WHERE g.id IN (?' . str_repeat(', ?', count($_POST['genes'])-1) . ')', $_POST['genes'])->fetchAllColumn();
+        // Get the order right and add more information.
+        foreach ($_POST['genes'] as $sID) {
+            $aGenes[$sID] =
+                array(
+                    'name' => $sID, // More doesn't fit...
+                    'transcriptid' => (!isset($_POST['transcriptids'][$sID])? '' : $_POST['transcriptids'][$sID]),
+                    'inheritance' => (!isset($_POST['inheritances'][$sID])? '' : $_POST['inheritances'][$sID]),
+                    'id_omim' => (!isset($_POST['id_omims'][$sID])? '' : $_POST['id_omims'][$sID]), // Simplicity over grammar...
+                    'pmid' => (!isset($_POST['pmids'][$sID])? '' : $_POST['pmids'][$sID]),
+                    'remarks' => (!isset($_POST['remarkses'][$sID])? '' : $_POST['remarkses'][$sID]), // Some LOTR here just for fun...
+                );
+        }
+        ksort($aGenes); // So it will be resorted on a page reload.
+
+    } else {
+        // First time on form. Use current database contents.
+
+        // Retrieve current genes, alphabetically ordered (makes it a bit easier to work with new forms).
+        // FIXME: This is where the new fetchAllCombine() will make sense...
+        $qGenes = $_DB->query(
+            'SELECT gp2g.geneid, gp2g.transcriptid, gp2g.inheritance, gp2g.id_omim, gp2g.pmid, gp2g.remarks
+             FROM ' . TABLE_GP2GENE . ' AS gp2g
+             WHERE gp2g.genepanelid = ? ORDER BY gp2g.geneid', array($nID));
+        while ($z = $qGenes->fetchAssoc()) {
+            $aGenes[$z['geneid']] = $z;
+        }
+    }
 
 
 
+    lovd_errorPrint();
+
+    // Show viewList() of gene panel genes. We'd like to remove all genes that are already selected,
+    //  but we can't properly do that. GET has a limit, and IE only allows some 2KB in there.
+    // So after some 200 genes, the negative selection filter will fail.
+    require ROOT_PATH . 'class/object_genes.php';
+    $_DATA = new LOVD_Gene();
+    lovd_showInfoTable('The following genes are configured in this LOVD. Click on one to add it to this gene panel.', 'information');
+    $_GET['page_size'] = 10;
+    $sViewListID = 'GenePanels_ManageGenes'; // Create known viewListID for the JS functions().
+    $_DATA->setRowLink($sViewListID, 'javascript:lovd_addGene(\'{{ViewListID}}\', \'{{ID}}\', \'{{zData_transcripts}}\'); return false;');
+    $_DATA->viewList($sViewListID, array(), true);
 
 
 
+    // Show curators, to sort and to select whether or not they can edit.
+    print('      <BR><BR>' . "\n\n");
 
+    lovd_showInfoTable('All genes below have been selected for this gene panel.<BR>To remove a gene from this list, click the red cross on the far right of the line.', 'information');
 
+    // Form & table.
+    print('
+      <FORM action="' . CURRENT_PATH . '?' . ACTION . '" method="post">
+        <TABLE id="gene_list" class="data" border="0" cellpadding="0" cellspacing="1" width="800">
+          <TR>
+            <TH>Symbol</TH>
+            <TH>Transcript</TH>
+            <TH>Inheritance</TH>
+            <TH>OMIM ID</TH>
+            <TH>PMID</TH>
+            <TH>Remarks</TH>
+            <TH width="30">&nbsp;</TH></TR>');
+    // Now loop the items in the order given.
+    foreach ($aGenes as $sID => $aGene) {
+        print('
+          <TR id="tr_' . $sID . '">
+            <TD>
+              <INPUT type="hidden" name="genes[]" value="' . $sID . '">
+              ' . $aGene['name'] . '</TD>
+            <TD><SELECT name="transcriptids[]"><OPTION value="">test</OPTION></TD>
+            <TD><SELECT name="inheritances[]"><OPTION value="">test</OPTION></TD>
+            <TD><INPUT type="text" name="id_omims[]" value="' . $aGene['id_omim'] . '" size="10"></TD>
+            <TD><INPUT type="text" name="pmids[]" value="' . $aGene['pmid'] . '" size="10"></TD>
+            <TD><INPUT type="text" name="remarkses[]" value="' . str_replace(array("\r", "\n", '  '), ' ', $aGene['remarks']) . '" size="30"></TD>
+            <TD width="30" align="right"><A href="#" onclick="lovd_removeGene(\'' . $sViewListID . '\', \'' . $sID . '\'); return false;"><IMG src="gfx/mark_0.png" alt="Remove" width="11" height="11" border="0"></A></TD></TR>');
+    }
+    print('
+        </TABLE><BR>' . "\n");
 
+    // Array which will make up the form table.
+    $aForm = array(
+        array('POST', '', '', '', '0%', '0', '100%'),
+        array('', '', 'print', 'Enter your password for authorization'),
+        array('', '', 'password', 'password', 20),
+        array('', '', 'print', '<INPUT type="submit" value="Save gene panel">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<INPUT type="submit" value="Cancel" onclick="window.location.href=\'' . lovd_getInstallURL() . CURRENT_PATH . '\'; return false;" style="border : 1px solid #FF4422;">'),
+    );
+    lovd_viewForm($aForm);
+    print("\n" .
+          '      </FORM>' . "\n\n");
 
-
-
-
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
     $_T->printFooter();
     exit;
