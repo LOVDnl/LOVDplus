@@ -296,6 +296,32 @@ if (PATH_COUNT == 1 && ACTION == 'create') {
 
 
 
+if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && ACTION == 'changelog') { 
+    // URL: /gene_panels/00001?changelog
+    // Drop specific entry.
+	
+
+    $nID = sprintf('%05d', $_PE[1]);
+    define('PAGE_TITLE', 'View changelog for gene panel #' . $nID);
+
+    lovd_requireAUTH();
+
+	$_T->printHeader();
+    $_T->printTitle();
+
+	
+	
+	
+	
+	$_T->printFooter();
+    exit;
+	
+}
+
+
+
+
+
 if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && ACTION == 'edit') {
     // URL: /gene_panels/00001?edit
     // Drop specific entry.
