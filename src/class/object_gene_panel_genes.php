@@ -74,6 +74,7 @@ class LOVD_GenePanelGene extends LOVD_Object {
         // List of columns and (default?) order for viewing an entry.
         $this->aColumnsViewEntry =
             array(
+                'genepanelid' => 'Gene Panel ID',
                 'geneid' => 'Gene Symbol',
                 'transcript_ncbi' => 'Transcript ID',
                 'inheritance' => 'Inheritance',
@@ -166,11 +167,11 @@ class LOVD_GenePanelGene extends LOVD_Object {
         $zData = parent::prepareData($zData, $sView);
 
         // Change the formatting based on the type of view
-//        if ($sView == 'list') {
-//
-//        } else {
-//
-//        }
+        if ($sView == 'list') {
+
+        } else {
+            $zData['genepanelid'] = '<A href="gene_panels/' . $zData['genepanelid'] . '">' . $zData['genepanelid'] . '</A>';
+        }
 
         // Format the pubmed URL
         if ($zData['pmid']) {

@@ -31,7 +31,7 @@
 define('ROOT_PATH', './');
 require ROOT_PATH . 'inc-init.php';
 $sViewListID = 'GenePanel';
-
+define('TAB_SELECTED', 'genes');
 // TODO Modify the log entries to include URLS to the affected records
 
 if ($_AUTH) {
@@ -441,8 +441,6 @@ if (PATH_COUNT == 3 && preg_match('/^[a-z][a-z0-9#@-]+$/i', rawurldecode($_PE[2]
     }
 
     lovd_showJGNavigation($aNavigation, 'GenePanelGene');
-
-
 
     $_T->printFooter();
     exit;

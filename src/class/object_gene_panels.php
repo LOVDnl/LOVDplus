@@ -160,12 +160,7 @@ class LOVD_GenePanel extends LOVD_Object {
 
         if ($sView == 'list') {
             $zData['created_date'] = substr($zData['created_date'], 0, 10);
-            $zData['type'] = ucwords(str_replace("_", " ", $zData['type'])); // TODO This is a repeated change that needs to apply to list and entry, find a better way to do this
         } else {
-            // TODO searching still works on the original value so if we search for "Gene Panel" it does not work. Can this be fixed without modifying the SQL?
-            $zData['type'] = ucwords(str_replace("_", " ", $zData['type']));
-
-
             // Associated with diseases...
             $zData['diseases_'] = '';
             $zData['disease_omim_'] = '';
@@ -174,8 +169,10 @@ class LOVD_GenePanel extends LOVD_Object {
                 // Link to disease entry in LOVD.
                 $zData['diseases_'] .= (!$zData['diseases_']? '' : ', ') . '<A href="diseases/' . $nID . '">' . $sSymbol . '</A>';
             }
-
         }
+
+        // TODO searching still works on the original value so if we search for "Gene Panel" it does not work. Can this be fixed without modifying the SQL?
+        $zData['type'] = ucwords(str_replace("_", " ", $zData['type']));
 
         return $zData;
 
