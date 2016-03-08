@@ -868,7 +868,7 @@ $aTableSQL =
     'CREATE TABLE ' . TABLE_GP2GENE . ' (
     genepanelid SMALLINT(5) UNSIGNED ZEROFILL NOT NULL,
     geneid VARCHAR(25) NOT NULL,
-    transcriptid SMALLINT(5) UNSIGNED ZEROFILL,
+    transcriptid MEDIUMINT(8) UNSIGNED ZEROFILL,
     inheritance VARCHAR(50) NOT NULL,
     id_omim INT(10) UNSIGNED,
     pmid INT(10) UNSIGNED,
@@ -893,7 +893,7 @@ $aTableSQL =
     'CREATE TABLE ' . TABLE_GP2GENE_REV . ' (
     genepanelid SMALLINT(5) UNSIGNED ZEROFILL NOT NULL,
     geneid VARCHAR(25) NOT NULL,
-    transcriptid SMALLINT(5) UNSIGNED ZEROFILL,
+    transcriptid MEDIUMINT(8) UNSIGNED ZEROFILL,
     inheritance VARCHAR(50) NOT NULL,
     id_omim INT(10) UNSIGNED,
     pmid INT(10) UNSIGNED,

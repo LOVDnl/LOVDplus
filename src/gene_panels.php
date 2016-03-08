@@ -9,6 +9,7 @@
  *
  * Copyright   : 2004-2016 Leiden University Medical Center; http://www.LUMC.nl/
  * Programmers : Anthony Marty <anthony.marty@unimelb.edu.au>
+ *               Ivo F.A.C. Fokkema <I.F.A.C.Fokkema@LUMC.nl>
  *
  *
  * This file is part of LOVD.
@@ -44,7 +45,7 @@ if ($_AUTH) {
 
 
 if (PATH_COUNT == 1 && !ACTION) {
-    // URL: /genes_panels
+    // URL: /gene_panels
     // View all entries.
 
     // Submitters are allowed to download this panel...
@@ -70,7 +71,7 @@ if (PATH_COUNT == 1 && !ACTION) {
 
 
 if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && !ACTION) {
-    // URL: /genes_panels/00001
+    // URL: /gene_panels/00001
     // View specific entry.
 
     $nID = sprintf('%05d', $_PE[1]);
@@ -250,15 +251,14 @@ if (PATH_COUNT == 1 && ACTION == 'create') {
             }
 
             // Thank the user...
+            header('Refresh: 3; url=' . lovd_getInstallURL() . CURRENT_PATH . '/' . $nID . '?manage_genes');
+
             $_T->printHeader();
             $_T->printTitle();
             lovd_showInfoTable('Successfully created the gene panel entry!', 'success');
-            print('      <SCRIPT type="text/javascript">setTimeout(\'window.location.href=\\\'' . lovd_getInstallURL() . CURRENT_PATH . '/' . $nID . '\\\';\', 3000);</SCRIPT>' . "\n\n");
             $_T->printFooter();
             exit;
-
         }
-
     }
 
     $_T->printHeader();
@@ -298,7 +298,7 @@ if (PATH_COUNT == 1 && ACTION == 'create') {
 
 if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && ACTION == 'edit') {
     // URL: /gene_panels/00001?edit
-    // Drop specific entry.
+    // Edit a specific entry.
 
     $nID = sprintf('%05d', $_PE[1]);
     define('PAGE_TITLE', 'Edit gene panel entry #' . $nID);
@@ -417,8 +417,42 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && ACTION == 'edit') {
 
 
 
+if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && ACTION == 'manage_genes') {
+    // URL: /gene_panels/00001?manage_genes
+    // Manage genes in a gene panel.
+
+    $nID = sprintf('%05d', $_PE[1]);
+    define('PAGE_TITLE', 'Manage genes for gene panel entry #' . $nID);
+    define('LOG_EVENT', 'GenePanelManage');
+
+    lovd_requireAUTH(LEVEL_ADMIN);
+    $_T->printHeader();
+    $_T->printTitle();
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+    $_T->printFooter();
+    exit;
+}
+
+
+
+
+
 if (PATH_COUNT == 3 && preg_match('/^[a-z][a-z0-9#@-]+$/i', rawurldecode($_PE[2])) && !ACTION) {
-    // URL: /genes_panels/00001/BRCA1
+    // URL: /gene_panels/00001/BRCA1
     // View specific gene panel gene entry.
 
     $nGenePanelID = sprintf('%05d', $_PE[1]);
@@ -454,7 +488,7 @@ if (PATH_COUNT == 3 && preg_match('/^[a-z][a-z0-9#@-]+$/i', rawurldecode($_PE[2]
 
 
 if (PATH_COUNT == 3 && preg_match('/^[a-z][a-z0-9#@-]+$/i', rawurldecode($_PE[2])) && ACTION == 'delete') {
-    // URL: /genes_panels/00001/BRCA1?delete
+    // URL: /gene_panels/00001/BRCA1?delete
     // Drop specific gene panel gene entry.
 
     $nGenePanelID = sprintf('%05d', $_PE[1]);
@@ -539,7 +573,7 @@ if (PATH_COUNT == 3 && preg_match('/^[a-z][a-z0-9#@-]+$/i', rawurldecode($_PE[2]
 
 
 if (PATH_COUNT == 3 && preg_match('/^[a-z][a-z0-9#@-]+$/i', rawurldecode($_PE[2])) && ACTION == 'edit') {
-// URL: /genes_panels/00001/BRCA1?edit
+// URL: /gene_panels/00001/BRCA1?edit
 // Edit specific gene panel gene entry.
 
     $nGenePanelID = sprintf('%05d', $_PE[1]);
@@ -618,27 +652,5 @@ if (PATH_COUNT == 3 && preg_match('/^[a-z][a-z0-9#@-]+$/i', rawurldecode($_PE[2]
 
 
 
-if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && ACTION == 'create') {
-    // URL: /gene_panels/00001?create
-    // Add genes to a gene panel
-
-    $nID = sprintf('%05d', $_PE[1]);
-    define('PAGE_TITLE', 'Add genes to gene panel entry #' . $nID);
-    define('LOG_EVENT', 'GenePanelGeneAdd');
-
-    lovd_requireAUTH();
-    $_T->printHeader();
-    $_T->printTitle();
-
-    require ROOT_PATH . 'class/object_gene_panel_genes.php';
-
-
-
-    $_T->printFooter();
-    exit;
-
-}
-
 print('No condition met using the provided URL.');
-
 ?>
