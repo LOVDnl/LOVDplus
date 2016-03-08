@@ -368,6 +368,103 @@ if (PATH_COUNT >= 2 && ctype_digit($_PE[1]) && !ACTION && (PATH_COUNT == 2 || PA
 
 
 
+if (PATH_COUNT == 4 && ctype_digit($_PE[1]) && $_PE[2] == 'analyze' && ctype_digit($_PE[3]) && ACTION == 'close') {
+    // URL: /individuals/00000001/analyze/0000000001?close
+    // Close specific analysis.
+
+    $nIndividualID = sprintf('%08d', $_PE[1]);
+    $nScreeningID = sprintf('%010d', $_PE[3]);
+    define('PAGE_TITLE', 'Close analysis #' . $nScreeningID . ' of individual #' . $nIndividualID);
+    define('LOG_EVENT', 'AnalysisClose');
+    $_T->printHeader();
+    $_T->printTitle();
+
+    // Load appropiate user level.
+    lovd_isAuthorized('screening_analysis', $nScreeningID); // Not actually needed, when we require manager anyway.
+    lovd_requireAUTH(LEVEL_MANAGER); // Minimal level needed.
+
+
+
+    // This code is for all levels of closing, since the work is so very similar.
+    $zData = $_DB->query('SELECT s.analysis_statusid
+                          FROM ' . TABLE_SCREENINGS . ' AS s
+                          WHERE id = ? AND individualid = ?', array($nScreeningID, $nIndividualID))->fetchAssoc();
+    if (!$zData) {
+        lovd_showInfoTable('No such screening defined for this individual!', 'stop');
+        $_T->printFooter();
+        exit;
+    }
+
+
+
+    if ($zData['analysis_statusid'] < ANALYSIS_STATUS_IN_PROGRESS) {
+        lovd_showInfoTable('Analysis has not started yet, can not close analysis!', 'stop');
+        $_T->printFooter();
+        exit;
+    } elseif ($zData['analysis_statusid'] >= ANALYSIS_STATUS_CONFIRMED) {
+        lovd_showInfoTable('Analysis has already fully been closed.', 'stop');
+        $_T->printFooter();
+        exit;
+    } else {
+        // Analysis can be closed.
+        $aStatuses = array_keys($_SETT['analysis_status']);
+        $iCurrentStatus = array_search($zData['analysis_statusid'], $aStatuses);
+        if (!isset($aStatuses[$iCurrentStatus + 1])) {
+            lovd_displayError(LOG_EVENT, 'Error: Next status not available, current status is ' . $zData['analysis_statusid']);
+        }
+        $nNextStatus = $aStatuses[$iCurrentStatus + 1];
+
+        // Several final checks.
+        if ($zData['analysis_statusid'] >= ANALYSIS_STATUS_WAIT_CONFIRMATION) {
+            // Analysis was awaiting confirmation, and will now be set to confirmed.
+            // This requires Admin access.
+            lovd_requireAUTH(LEVEL_ADMIN);
+        }
+
+        // All good, let's process the closure.
+        // The next few queries should all be run, or non should be run.
+        $_DB->beginTransaction();
+        if ($_DB->query('UPDATE ' . TABLE_SCREENINGS . ' SET analysis_statusid = ?, analysis_approved_by = ?, analysis_approved_date = NOW() WHERE id = ?',
+            array($nNextStatus, $_AUTH['id']))) {
+            $bLog = lovd_writeLog('Event', LOG_EVENT, 'Successfully set analysis status to "' . $_SETT['analysis_status'][$nNextStatus] . '" for individual ' . $nIndividualID . ':' . $nScreeningID);
+            if ($bLog) {
+                $_DB->commit();
+            }
+        }
+    }
+/////////////////////////////////////////////////////////////////////////////////////////////
+
+/*
+    ANALYSIS_STATUS_WAIT => 'Waiting for data upload',
+    ANALYSIS_STATUS_READY => 'Ready for analysis',
+    ANALYSIS_STATUS_IN_PROGRESS => 'In progress',
+    ANALYSIS_STATUS_CLOSED => 'Closed',
+    ANALYSIS_STATUS_WAIT_CONFIRMATION => 'Awaiting confirmation',
+    ANALYSIS_STATUS_CONFIRMED => 'Confirmed',
+    ANALYSIS_STATUS_ARCHIVED => 'Archived',
+*/
+
+/////////////////////////////////////////////////////////////////////////////////////////////
+    print('      <BR><BR>' . "\n\n");
+    }
+    lovd_includeJS('inc-js-tooltip.php');
+
+    // Show info table about data analysis.
+    if (!$zData['variants']) {
+        // Can't start.
+        lovd_showInfoTable('Can\'t start analysis, still waiting for variant data to be uploaded.', 'stop', 600);
+        $_T->printFooter();
+        exit;
+    }
+
+    $_T->printFooter();
+    exit;
+}
+
+
+
+
+
 
 
 
