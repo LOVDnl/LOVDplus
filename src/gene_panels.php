@@ -564,7 +564,7 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && ACTION == 'manage_genes') {
         // Retrieve current genes, alphabetically ordered (makes it a bit easier to work with new forms).
         // FIXME: This is where the new fetchAllCombine() will make sense...
         $qGenes = $_DB->query(
-            'SELECT gp2g.geneid, gp2g.transcriptid, gp2g.inheritance, gp2g.id_omim, gp2g.pmid, gp2g.remarks
+            'SELECT gp2g.geneid, gp2g.geneid AS name, gp2g.transcriptid, gp2g.inheritance, gp2g.id_omim, gp2g.pmid, gp2g.remarks
              FROM ' . TABLE_GP2GENE . ' AS gp2g
              WHERE gp2g.genepanelid = ? ORDER BY gp2g.geneid', array($nID));
         while ($z = $qGenes->fetchAssoc()) {
