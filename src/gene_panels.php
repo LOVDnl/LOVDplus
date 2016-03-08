@@ -587,17 +587,62 @@ if (PATH_COUNT == 3 && preg_match('/^[a-z][a-z0-9#@-]+$/i', rawurldecode($_PE[2]
         if (!lovd_error()) {
 
             global $_DB;
-
+            $_DB->beginTransaction();
             // Query text.
+            // FIXME: Instead of worrying about this, we'd like to use updateEntry() here, but that can't handle linking tables with two ID fields yet.
+            $sSQLDate = date('Y-m-d H:i:s');
+            $_POST['id_omim'] = $_POST['id_omim']?$_POST['id_omim']:null;
+            $_POST['pmid'] = $_POST['pmid']?$_POST['pmid']:null;
+            $_POST['transcriptid'] = $_POST['transcriptid']?$_POST['transcriptid']:null;
+            $_POST['edited_by'] = $_AUTH['id'];
+
             $sSQL = 'UPDATE ' . TABLE_GP2GENE . ' SET transcriptid = ?, inheritance = ?, id_omim = ?, pmid = ?, remarks = ?, edited_by = ?, edited_date = ? WHERE genepanelid = ? and geneid = ?';
-            $aSQL = array($_POST['transcriptid'], $_POST['inheritance'], $_POST['id_omim']?$_POST['id_omim']:null, $_POST['pmid']?$_POST['pmid']:null, $_POST['remarks'], $_AUTH['id'], date('Y-m-d H:i:s'), $nGenePanelID, $sGeneID);
+            $aSQL = array($_POST['transcriptid'], $_POST['inheritance'], $_POST['id_omim'], $_POST['pmid'], $_POST['remarks'], $_POST['edited_by'], $sSQLDate, $nGenePanelID, $sGeneID);
             $q = $_DB->query($sSQL, $aSQL, true, true);
+
             if (!$q) {
-                // We have failed to edit this gene so throw an error message
                 lovd_writeLog('Error', LOG_EVENT, 'Gene entry ' . $sGeneID . ' in gene panel #' . $nGenePanelID . ' could not be edited');
                 lovd_errorAdd('error', 'The selected gene could not be edited. Please contact your database administrator.');
-            } else {
+            }
 
+            // Update the record with the newest date which should  be 9999-12-31
+            $sSQLExistingRev = 'UPDATE ' . TABLE_GP2GENE_REV . ' SET valid_to = ? WHERE genepanelid = ? and geneid = ? ORDER BY valid_to DESC LIMIT 1';
+            $aSQLExistingRev = array($sSQLDate, $nGenePanelID, $sGeneID);
+            $qu = $_DB->query($sSQLExistingRev, $aSQLExistingRev, true, true);
+            if (!$qu) {
+                lovd_writeLog('Error', LOG_EVENT, 'Gene entry ' . $sGeneID . ' in gene panel #' . $nGenePanelID . ' could not be updated in the revision table');
+                lovd_errorAdd('error', 'The selected gene could not be edited. Please contact your database administrator.');
+            }
+
+            $sReason = 'Record was updated'; // TODO Need to make this message more informative, eg show the data that was changed.
+            $aSQLInsertRev = array (
+                'genepanelid' => $nGenePanelID,
+                'geneid' => $sGeneID,
+                'transcriptid' => $_POST['transcriptid'],
+                'inheritance' => $_POST['inheritance'],
+                'id_omim' => $_POST['id_omim'],
+                'pmid' => $_POST['pmid'],
+                'remarks' => $_POST['remarks'],
+                'created_by' => $zData['created_by'],
+                'created_date' => $zData['created_date'],
+                'edited_by' => $_POST['edited_by'],
+                'edited_date' => $sSQLDate,
+                'valid_from' => $sSQLDate,
+                'reason' => $sReason,
+            );
+            $sSQLInsertRev = 'INSERT INTO ' . TABLE_GP2GENE_REV . ' (' . implode(', ', array_keys($aSQLInsertRev)) . ') VALUES (?' . str_repeat(', ?', count($aSQLInsertRev) - 1) . ')';
+            $qi = $_DB->query($sSQLInsertRev, array_values($aSQLInsertRev), true, true);
+            if (!$qi) {
+                lovd_writeLog('Error', LOG_EVENT, 'Gene entry ' . $sGeneID . ' in gene panel #' . $nGenePanelID . ' could not be added to the revision table');
+                lovd_errorAdd('error', 'The selected gene could not be edited. Please contact your database administrator.');
+            }
+
+            if (lovd_error()) {
+                // We have failed to edit this gene so throw an error message
+                $_DB->rollBack();
+            } else {
+                // All looks OK so lets commit these changes to the DB.
+                $_DB->commit();
                 header('Refresh: 3; url=' . lovd_getInstallURL() . CURRENT_PATH);
 
                 $_T->printHeader();
