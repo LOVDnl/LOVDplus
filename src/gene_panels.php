@@ -498,6 +498,9 @@ if (PATH_COUNT == 3 && preg_match('/^[a-z][a-z0-9#@-]+$/i', rawurldecode($_PE[2]
         if (empty($_POST['password'])) {
             lovd_errorAdd('password', 'Please fill in the \'Enter your password for authorization\' field.');
         }
+        if (empty(trim($_POST['reason']))) {
+            lovd_errorAdd('reason', 'Please fill in the \'Reason for removing this gene\' field.');
+        }
 
         // User had to enter his/her password for authorization.
         if ($_POST['password'] && !lovd_verifyPassword($_POST['password'], $_AUTH['password'])) {
@@ -506,13 +509,30 @@ if (PATH_COUNT == 3 && preg_match('/^[a-z][a-z0-9#@-]+$/i', rawurldecode($_PE[2]
 
         if (!lovd_error()) {
             // Delete the gene
+            $_DB->beginTransaction();
+
             $q = $_DB->query('DELETE FROM ' . TABLE_GP2GENE . ' WHERE genepanelid = ? AND geneid = ?', array($nGenePanelID, $sGeneID), false);
             if (!$q) {
                 // We have failed to delete this gene so throw an error message
                 lovd_writeLog('Error', LOG_EVENT, 'Gene entry ' . $sGeneID . ' in gene panel #' . $nGenePanelID . ' could not be removed');
                 unset($_POST['password']);
                 lovd_errorAdd('error', 'The selected gene could not be removed from this list. Please contact your database administrator.');
+            }
+            $sReason = 'Reason for deletion: ' . ($_POST['reason']?$_POST['reason']:'None provided');
+            $sSQLExistingRev = 'UPDATE ' . TABLE_GP2GENE_REV . ' SET valid_to = ?, deleted = 1, deleted_by = ?, reason = CONCAT(reason,\'\\n\', ?) WHERE genepanelid = ? and geneid = ? ORDER BY valid_to DESC LIMIT 1';
+            $aSQLExistingRev = array(date('Y-m-d H:i:s'), $_AUTH['id'], $sReason, $nGenePanelID, $sGeneID);
+            $qu = $_DB->query($sSQLExistingRev, $aSQLExistingRev, true, true);
+            if (!$qu) {
+                // We have failed to update this gene in the revision table so throw an error message
+                lovd_writeLog('Error', LOG_EVENT, 'Gene entry ' . $sGeneID . ' in gene panel #' . $nGenePanelID . ' could not be updated in the revision table');
+                unset($_POST['password']);
+                lovd_errorAdd('error', 'The selected gene could not be updated in the revision table. Please contact your database administrator.');
+            }
+            if (lovd_error()) {
+                // We have failed to delete this gene so roll back the committ
+                $_DB->rollBack();
             } else {
+                $_DB->commit();
                 lovd_writeLog('Event', LOG_EVENT, 'Deleted gene entry ' . $sGeneID . ' from gene panel #' . $nGenePanelID);
 
                 // Thank the user...
@@ -547,8 +567,9 @@ if (PATH_COUNT == 3 && preg_match('/^[a-z][a-z0-9#@-]+$/i', rawurldecode($_PE[2]
             array('POST', '', '', '', '40%', '14', '60%'),
             array('Removing gene entry', '', 'print', $sGeneID . ' from gene panel #' . $nGenePanelID ),
             'skip',
+            array('Reason for removing this gene', '', 'text', 'reason', 40),
             array('Enter your password for authorization', '', 'password', 'password', 20),
-            array('', '', 'submit', 'Remove gene entry'),
+            array('', '', 'submit', ' Remove gene entry '),
         ));
     lovd_viewForm($aForm);
 

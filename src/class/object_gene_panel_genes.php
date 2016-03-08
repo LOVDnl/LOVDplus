@@ -223,11 +223,11 @@ class LOVD_GenePanelGene extends LOVD_Object {
             array(
                 array('POST', '', '', '', '50%', '14', '50%'),
                 array('Symbol', '', 'print', $zData['geneid'], 30),
-                array('Transcript', '', 'select', 'transcriptid', 1, $aTranscriptsForm, '', false, false),
-                array('Inheritance', '', 'select', 'inheritance', 1, $aInheritance, '', false, false),
-                array('OMIM ID', '', 'text', 'id_omim', 20),
-                array('PubMed ID', '', 'text', 'pmid', 20),
-                array('Remarks', '', 'textarea', 'remarks', 70, 3),
+                array('Transcript (optional)', '', 'select', 'transcriptid', 1, $aTranscriptsForm, '', false, false),
+                array('Inheritance (optional)', '', 'select', 'inheritance', 1, $aInheritance, '', false, false),
+                array('OMIM ID (optional)', '', 'text', 'id_omim', 20),
+                array('PubMed ID (optional)', '', 'text', 'pmid', 20),
+                array('Remarks (optional)', '', 'textarea', 'remarks', 70, 3),
                 'hr','skip'
 
             );
