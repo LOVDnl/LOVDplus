@@ -33,6 +33,7 @@ require ROOT_PATH . 'inc-init.php';
 $sViewListID = 'GenePanel';
 define('TAB_SELECTED', 'genes');
 // TODO Modify the log entries to include URLS to the affected records
+// TODO Reorder the code blocks so as they are in the correct order (see existing files for example)
 
 if ($_AUTH) {
     // If authorized, check for updates.
@@ -136,6 +137,9 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && ACTION == 'delete') {
         if (empty($_POST['password'])) {
             lovd_errorAdd('password', 'Please fill in the \'Enter your password for authorization\' field.');
         }
+        if (empty(trim($_POST['reason']))) {
+            lovd_errorAdd('reason', 'Please fill in the \'Reason for removing this gene panel\' field.');
+        }
 
         // User had to enter his/her password for authorization.
         if ($_POST['password'] && !lovd_verifyPassword($_POST['password'], $_AUTH['password'])) {
@@ -144,7 +148,7 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && ACTION == 'delete') {
 
         if (!lovd_error()) {
             // This also deletes the entries in gp2dis and gp2gene.
-            $_DATA->deleteEntry($nID);
+            $_DATA->deleteEntry($nID, $_POST['reason']);
 
             // Write to log...
             lovd_writeLog('Event', LOG_EVENT, 'Deleted gene panel entry ' . $nID . ' - ' . $zData['id'] . ' (' . $zData['name'] . ')');
@@ -181,6 +185,7 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && ACTION == 'delete') {
             array('POST', '', '', '', '40%', '14', '60%'),
             array('Deleting gene panel entry', '', 'print', $zData['id'] . ' (' . $zData['name'] . ')'),
             'skip',
+            array('Reason for removing this gene panel', '', 'text', 'reason', 40),
             array('Enter your password for authorization', '', 'password', 'password', 20),
             array('', '', 'submit', 'Delete gene panel entry'),
         ));
@@ -198,7 +203,7 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && ACTION == 'delete') {
 
 if (PATH_COUNT == 1 && ACTION == 'create') {
     // URL: /gene_panels?create
-    // Create a new entry.
+    // Create a new gene panel entry.
 
     define('PAGE_TITLE', 'Create a new gene panel entry');
     define('LOG_EVENT', 'GenePanelCreate');
@@ -222,6 +227,7 @@ if (PATH_COUNT == 1 && ACTION == 'create') {
             // Prepare values.
             $_POST['created_by'] = $_AUTH['id'];
             $_POST['created_date'] = date('Y-m-d H:i:s');
+            $_POST['reason'] = 'Gene panel created';
 
             $nID = $_DATA->insertEntry($_POST, $aFields);
 
@@ -519,7 +525,7 @@ if (PATH_COUNT == 3 && preg_match('/^[a-z][a-z0-9#@-]+$/i', rawurldecode($_PE[2]
                 lovd_errorAdd('error', 'The selected gene could not be removed from this list. Please contact your database administrator.');
             }
             $sReason = 'Reason for deletion: ' . ($_POST['reason']?$_POST['reason']:'None provided');
-            $sSQLExistingRev = 'UPDATE ' . TABLE_GP2GENE_REV . ' SET valid_to = ?, deleted = 1, deleted_by = ?, reason = CONCAT(reason,\'\\n\', ?) WHERE genepanelid = ? and geneid = ? ORDER BY valid_to DESC LIMIT 1';
+            $sSQLExistingRev = 'UPDATE ' . TABLE_GP2GENE_REV . ' SET valid_to = ?, deleted = 1, deleted_by = ?, reason = CONCAT(reason,"\r\n", ?) WHERE genepanelid = ? and geneid = ? ORDER BY valid_to DESC LIMIT 1';
             $aSQLExistingRev = array(date('Y-m-d H:i:s'), $_AUTH['id'], $sReason, $nGenePanelID, $sGeneID);
             $qu = $_DB->query($sSQLExistingRev, $aSQLExistingRev, true, true);
             if (!$qu) {

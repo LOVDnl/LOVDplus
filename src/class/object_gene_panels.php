@@ -28,6 +28,8 @@
  *
  *************/
 
+// TODO Reorder the code blocks so as they are in the correct order (see existing files for example)
+
 // Don't allow direct access.
 if (!defined('ROOT_PATH')) {
     exit;
