@@ -424,6 +424,7 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && ACTION == 'manage_genes') {
     $nID = sprintf('%05d', $_PE[1]);
     define('PAGE_TITLE', 'Manage genes for gene panel entry #' . $nID);
     define('LOG_EVENT', 'GenePanelManage');
+    define('TAB_SELECTED', 'genes');
 
     lovd_requireAUTH(LEVEL_ADMIN);
 
@@ -543,17 +544,22 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && ACTION == 'manage_genes') {
         // Form has already been sent. We're here because of errors. Use $_POST.
         // Retrieve data for selected genes.
         // FIXME; Do we need to change all IDs to integers because of possibly loosing the prepended zero's? Cross-browser check to verify?
-        $zGenes = $_DB->query('SELECT g.id FROM ' . TABLE_GENES . ' AS g WHERE g.id IN (?' . str_repeat(', ?', count($_POST['genes'])-1) . ')', $_POST['genes'])->fetchAllColumn();
+        $zGenes = $_DB->query('SELECT g.id, GROUP_CONCAT(CONCAT(t.id, ";", t.id_ncbi) ORDER BY t.id_ncbi SEPARATOR ";;") AS transcripts FROM ' . TABLE_GENES . ' AS g LEFT OUTER JOIN ' . TABLE_TRANSCRIPTS . ' AS t ON (g.id = t.geneid) WHERE g.id IN (?' . str_repeat(', ?', count($_POST['genes'])-1) . ') GROUP BY g.id', $_POST['genes'])->fetchAllCombine();
         // Get the order right and add more information.
-        foreach ($_POST['genes'] as $sID) {
+        foreach ($_POST['genes'] as $nKey => $sID) {
+            if (!isset($zGenes[$sID])) {
+                // Gene does not exist in the database. We're not even bothering to complain here.
+                continue;
+            }
             $aGenes[$sID] =
                 array(
                     'name' => $sID, // More doesn't fit...
-                    'transcriptid' => (!isset($_POST['transcriptids'][$sID])? '' : $_POST['transcriptids'][$sID]),
-                    'inheritance' => (!isset($_POST['inheritances'][$sID])? '' : $_POST['inheritances'][$sID]),
-                    'id_omim' => (!isset($_POST['id_omims'][$sID])? '' : $_POST['id_omims'][$sID]), // Simplicity over grammar...
-                    'pmid' => (!isset($_POST['pmids'][$sID])? '' : $_POST['pmids'][$sID]),
-                    'remarks' => (!isset($_POST['remarkses'][$sID])? '' : $_POST['remarkses'][$sID]), // Some LOTR here just for fun...
+                    'transcriptid' => (!isset($_POST['transcriptids'][$nKey])? '' : $_POST['transcriptids'][$nKey]),
+                    'transcripts' => explode(';;', $zGenes[$sID]),
+                    'inheritance' => (!isset($_POST['inheritances'][$nKey])? '' : $_POST['inheritances'][$nKey]),
+                    'id_omim' => (!isset($_POST['id_omims'][$nKey])? '' : $_POST['id_omims'][$nKey]), // Simplicity over grammar...
+                    'pmid' => (!isset($_POST['pmids'][$nKey])? '' : $_POST['pmids'][$nKey]),
+                    'remarks' => (!isset($_POST['remarkses'][$nKey])? '' : $_POST['remarkses'][$nKey]), // Some LOTR here just for fun...
                 );
         }
         ksort($aGenes); // So it will be resorted on a page reload.
@@ -594,10 +600,16 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && ACTION == 'manage_genes') {
 
     lovd_showInfoTable('All genes below have been selected for this gene panel.<BR>To remove a gene from this list, click the red cross on the far right of the line.', 'information');
 
+    $aInheritances =
+        array(
+            'Autosomal Recessive',
+            'Dominant',
+            'X-Linked',
+        );
     // Form & table.
     print('
       <FORM action="' . CURRENT_PATH . '?' . ACTION . '" method="post">
-        <TABLE id="gene_list" class="data" border="0" cellpadding="0" cellspacing="1" width="800">
+        <TABLE id="gene_list" class="data" border="0" cellpadding="0" cellspacing="1" width="900">
           <TR>
             <TH>Symbol</TH>
             <TH>Transcript</TH>
@@ -613,8 +625,17 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && ACTION == 'manage_genes') {
             <TD>
               <INPUT type="hidden" name="genes[]" value="' . $sID . '">
               ' . $aGene['name'] . '</TD>
-            <TD><SELECT name="transcriptids[]"><OPTION value="">test</OPTION></TD>
-            <TD><SELECT name="inheritances[]"><OPTION value="">test</OPTION></TD>
+            <TD><SELECT name="transcriptids[]" style="width : 100%;"><OPTION value="">-- select --</OPTION>');
+        $aTranscripts = array_map('explode', array_fill(0, count($aGene['transcripts']), ';'), $aGene['transcripts']);
+        foreach ($aTranscripts as $aTranscript) {
+            print('<OPTION value="' . $aTranscript[0] . '"' . ($aGene['transcriptid'] != $aTranscript[0]? '' : ' selected') . '>' . $aTranscript[1] . '</OPTION>');
+        }
+        print('</TD>
+            <TD><SELECT name="inheritances[]"><OPTION value="">-- select --</OPTION>');
+        foreach ($aInheritances as $sInheritance) {
+            print('<OPTION value="' . $sInheritance . '"' . ($aGene['inheritance'] != $sInheritance? '' : ' selected') . '>' . $sInheritance . '</OPTION>');
+        }
+        print('</TD>
             <TD><INPUT type="text" name="id_omims[]" value="' . $aGene['id_omim'] . '" size="10"></TD>
             <TD><INPUT type="text" name="pmids[]" value="' . $aGene['pmid'] . '" size="10"></TD>
             <TD><INPUT type="text" name="remarkses[]" value="' . str_replace(array("\r", "\n", '  '), ' ', $aGene['remarks']) . '" size="30"></TD>
@@ -634,8 +655,54 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && ACTION == 'manage_genes') {
     print("\n" .
           '      </FORM>' . "\n\n");
 
-////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+?>
+<SCRIPT type='text/javascript'>
+    function lovd_addGene (sViewListID, sID, sTranscripts)
+    {
+        // Verify that entry doesn't already exist.
+        if (document.getElementById('tr_' + sID)) {
+            alert('This gene has already been added to this panel.');
+            return false;
+        }
 
+        // Copies the gene to the selected block.
+        objViewListF = document.getElementById('viewlistForm_' + sViewListID);
+        objElement = document.getElementById(sID);
+        objElement.style.cursor = 'progress';
+
+        objGenes = document.getElementById('gene_list');
+        oTR = document.createElement('TR');
+        oTR.id = 'tr_' + sID;
+        oTR.innerHTML =
+            '<TD><INPUT type="hidden" name="genes[]" value="' + sID + '">' + sID + '</TD>' +
+            '<TD><SELECT name="transcriptids[]"><OPTION value="">test</OPTION></TD>' +
+            '<TD><SELECT name="inheritances[]"><OPTION value="">test</OPTION></TD>' +
+            '<TD><INPUT type="text" name="id_omims[]" value="" size="10"></TD>' +
+            '<TD><INPUT type="text" name="pmids[]" value="" size="10"></TD>' +
+            '<TD><INPUT type="text" name="remarkses[]" value="" size="30"></TD>' +
+            '<TD width="30" align="right"><A href="#" onclick="lovd_removeGene(\'' + sViewListID + '\', \'' + sID + '\'); return false;"><IMG src="gfx/mark_0.png" alt="Remove" width="11" height="11" border="0"></A></TD>';
+        objGenes.appendChild(oTR);
+        objElement.style.cursor = '';
+
+        return true;
+    }
+
+
+
+    function lovd_removeGene (sViewListID, sID)
+    {
+        // Removes the gene from the block of selected entries.
+        objViewListF = document.getElementById('viewlistForm_' + sViewListID);
+        objTR = document.getElementById('tr_' + sID);
+
+        // Remove from block, simply done (no fancy animation).
+        objTR.parentNode.removeChild(objTR);
+
+        return true;
+    }
+</SCRIPT>
+
+    <?php
     $_T->printFooter();
     exit;
 }
