@@ -227,7 +227,6 @@ if (PATH_COUNT == 1 && ACTION == 'create') {
             // Prepare values.
             $_POST['created_by'] = $_AUTH['id'];
             $_POST['created_date'] = date('Y-m-d H:i:s');
-            $_POST['reason'] = 'Gene panel created';
 
             $nID = $_DATA->insertEntry($_POST, $aFields);
 
