@@ -28,6 +28,8 @@
  *
  *************/
 
+// TODO Reorder the code blocks so as they are in the correct order (see existing files for example)
+
 // Don't allow direct access.
 if (!defined('ROOT_PATH')) {
     exit;
@@ -74,6 +76,7 @@ class LOVD_GenePanelGene extends LOVD_Object {
         // List of columns and (default?) order for viewing an entry.
         $this->aColumnsViewEntry =
             array(
+                'genepanelid' => 'Gene Panel ID',
                 'geneid' => 'Gene Symbol',
                 'transcript_ncbi' => 'Transcript ID',
                 'inheritance' => 'Inheritance',
@@ -129,6 +132,14 @@ class LOVD_GenePanelGene extends LOVD_Object {
         $this->sSortDefault = 'geneid';
         $this->nID = $nID;
 
+        // If we are downloading a plain text viewlist then lets include the extra columns
+        if (FORMAT == 'text/plain') {
+            $this->aColumnsViewList['remarks'] = array(
+                'view' => array('Remarks', 80),
+                'db' => array('gp2g.remarks', 'ASC', true)
+            );
+        }
+
         parent::__construct();
     }
 
@@ -157,7 +168,6 @@ class LOVD_GenePanelGene extends LOVD_Object {
 
     function prepareData ($zData = '', $sView = 'list') {
         // Prepares the data by "enriching" the variable received with links, pictures, etc.
-
         if (!in_array($sView, array('list', 'entry'))) {
             $sView = 'list';
         }
@@ -166,25 +176,27 @@ class LOVD_GenePanelGene extends LOVD_Object {
         $zData = parent::prepareData($zData, $sView);
 
         // Change the formatting based on the type of view
-//        if ($sView == 'list') {
-//
-//        } else {
-//
-//        }
+        if ($sView == 'list') {
 
-        // Format the pubmed URL
-        if ($zData['pmid']) {
-            $zData['pmid'] = '<SPAN' . ($sView != 'list'? '' : ' onclick="cancelParentEvent(event);"') . '><A href="http://www.ncbi.nlm.nih.gov/pubmed/' . $zData['pmid'] . '" target="_blank">PubMed</A></SPAN>';
+        } else {
+            $zData['genepanelid'] = '<A href="gene_panels/' . $zData['genepanelid'] . '">' . $zData['genepanelid'] . '</A>';
         }
-        // Format the OMIM URL
-        if ($zData['id_omim']) {
-            $zData['id_omim'] = '<SPAN' . ($sView != 'list'? '' : ' onclick="cancelParentEvent(event);"') . '><A href="' . lovd_getExternalSource('omim', $zData['id_omim'], true) . '" target="_blank">OMIM</A></SPAN>';
-        }
-        // Create a link to a transcript
-        if ($zData['transcriptid']) {
-            $zData['transcript_ncbi'] = '<SPAN' . ($sView != 'list'? '' : ' onclick="cancelParentEvent(event);"') . '><A href="transcripts/' . $zData['transcriptid'] . '">' . $zData['transcript_ncbi'] . '</A></SPAN>';
-        }
+        // Only format this viewlist if we are not downloading it
+        if (FORMAT != 'text/plain') {
 
+            // Format the pubmed URL
+            if ($zData['pmid']) {
+                $zData['pmid'] = '<SPAN' . ($sView != 'list' ? '' : ' onclick="cancelParentEvent(event);"') . '><A href="http://www.ncbi.nlm.nih.gov/pubmed/' . $zData['pmid'] . '" target="_blank">PubMed</A></SPAN>';
+            }
+            // Format the OMIM URL
+            if ($zData['id_omim']) {
+                $zData['id_omim'] = '<SPAN' . ($sView != 'list' ? '' : ' onclick="cancelParentEvent(event);"') . '><A href="' . lovd_getExternalSource('omim', $zData['id_omim'], true) . '" target="_blank">OMIM</A></SPAN>';
+            }
+            // Create a link to a transcript
+            if ($zData['transcriptid']) {
+                $zData['transcript_ncbi'] = '<SPAN' . ($sView != 'list' ? '' : ' onclick="cancelParentEvent(event);"') . '><A href="transcripts/' . $zData['transcriptid'] . '">' . $zData['transcript_ncbi'] . '</A></SPAN>';
+            }
+        }
         return $zData;
     }
 
@@ -223,11 +235,11 @@ class LOVD_GenePanelGene extends LOVD_Object {
             array(
                 array('POST', '', '', '', '50%', '14', '50%'),
                 array('Symbol', '', 'print', $zData['geneid'], 30),
-                array('Transcript', '', 'select', 'transcriptid', 1, $aTranscriptsForm, '', false, false),
-                array('Inheritance', '', 'select', 'inheritance', 1, $aInheritance, '', false, false),
-                array('OMIM ID', '', 'text', 'id_omim', 20),
-                array('PubMed ID', '', 'text', 'pmid', 20),
-                array('Remarks', '', 'textarea', 'remarks', 70, 3),
+                array('Transcript (optional)', '', 'select', 'transcriptid', 1, $aTranscriptsForm, '', false, false),
+                array('Inheritance (optional)', '', 'select', 'inheritance', 1, $aInheritance, '', false, false),
+                array('OMIM ID (optional)', '', 'text', 'id_omim', 20),
+                array('PubMed ID (optional)', '', 'text', 'pmid', 20),
+                array('Remarks (optional)', '', 'textarea', 'remarks', 70, 3),
                 'hr','skip'
             );
 
