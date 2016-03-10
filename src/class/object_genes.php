@@ -187,8 +187,6 @@ class LOVD_Gene extends LOVD_Object {
                 'transcripts' => array(
                     'view' => array('Transcripts', 90),
                     'db'   => array('transcripts', 'DESC', 'INT_UNSIGNED')),
-/*
-// Diagnostics: Took this block out.
                 'variants' => array(
                     'view' => array('Variants', 70),
                     'db'   => array('variants', 'DESC', 'INT_UNSIGNED')),
@@ -198,12 +196,28 @@ class LOVD_Gene extends LOVD_Object {
                 'updated_date_' => array(
                     'view' => array('Last updated', 110),
                     'db'   => array('g.updated_date', 'DESC', true)),
-*/
                 'diseases_' => array(
                     'view' => array('Associated with diseases', 200),
                     'db'   => array('diseases_', false, 'TEXT')),
             );
         $this->sSortDefault = 'id_';
+
+        if (LOVD_plus) {
+            // Diagnostics: Remove some columns, and add one.
+            unset($this->aColumnsViewList['variants']);
+            unset($this->aColumnsViewList['uniq_variants']);
+            unset($this->aColumnsViewList['updated_date_']);
+            // Add transcript information for the gene panel viewlist.
+            if (lovd_getProjectFile() == '/gene_panels.php') {
+                $this->aSQLViewList['SELECT'] .= ', IFNULL(CONCAT("<OPTION value=&quot;&quot;>-- select --</OPTION>", GROUP_CONCAT(CONCAT("<OPTION value=&quot;", t.id, "&quot;>", t.id_ncbi, "</OPTION>") ORDER BY t.id_ncbi SEPARATOR "")), "<OPTION value=&quot;&quot;>-- no transcripts available --</OPTION>") AS transcripts_HTML';
+                $this->aColumnsViewList +=
+                    array(
+                        'transcripts_HTML' => array(
+                            'view' => false,
+                        ),
+                    );
+            }
+        }
 
         // Because the gene information is publicly available, remove some columns for the public.
         $this->unsetColsByAuthLevel();

@@ -544,7 +544,11 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && ACTION == 'manage_genes') {
         // Form has already been sent. We're here because of errors. Use $_POST.
         // Retrieve data for selected genes.
         // FIXME; Do we need to change all IDs to integers because of possibly loosing the prepended zero's? Cross-browser check to verify?
-        $zGenes = $_DB->query('SELECT g.id, GROUP_CONCAT(CONCAT(t.id, ";", t.id_ncbi) ORDER BY t.id_ncbi SEPARATOR ";;") AS transcripts FROM ' . TABLE_GENES . ' AS g LEFT OUTER JOIN ' . TABLE_TRANSCRIPTS . ' AS t ON (g.id = t.geneid) WHERE g.id IN (?' . str_repeat(', ?', count($_POST['genes'])-1) . ') GROUP BY g.id', $_POST['genes'])->fetchAllCombine();
+        $zGenes = $_DB->query(
+            'SELECT g.id, IFNULL(CONCAT("<OPTION value=\"\">-- select --</OPTION>", GROUP_CONCAT(CONCAT("<OPTION value=\"", t.id, "\">", t.id_ncbi, "</OPTION>") ORDER BY t.id_ncbi SEPARATOR "")), "<OPTION value=\"\">-- no transcripts available --</OPTION>") AS transcripts_HTML
+             FROM ' . TABLE_GENES . ' AS g LEFT OUTER JOIN ' . TABLE_TRANSCRIPTS . ' AS t ON (g.id = t.geneid)
+             WHERE g.id IN (?' . str_repeat(', ?', count($_POST['genes'])-1) . ')
+             GROUP BY g.id', $_POST['genes'])->fetchAllCombine();
         // Get the order right and add more information.
         foreach ($_POST['genes'] as $nKey => $sID) {
             if (!isset($zGenes[$sID])) {
@@ -555,7 +559,7 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && ACTION == 'manage_genes') {
                 array(
                     'name' => $sID, // More doesn't fit...
                     'transcriptid' => (!isset($_POST['transcriptids'][$nKey])? '' : $_POST['transcriptids'][$nKey]),
-                    'transcripts' => explode(';;', $zGenes[$sID]),
+                    'transcripts_HTML' => $zGenes[$sID],
                     'inheritance' => (!isset($_POST['inheritances'][$nKey])? '' : $_POST['inheritances'][$nKey]),
                     'id_omim' => (!isset($_POST['id_omims'][$nKey])? '' : $_POST['id_omims'][$nKey]), // Simplicity over grammar...
                     'pmid' => (!isset($_POST['pmids'][$nKey])? '' : $_POST['pmids'][$nKey]),
@@ -570,11 +574,10 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && ACTION == 'manage_genes') {
         // Retrieve current genes, alphabetically ordered (makes it a bit easier to work with new forms).
         // FIXME: This is where the new fetchAllCombine() will make sense...
         $qGenes = $_DB->query(
-            'SELECT gp2g.geneid, gp2g.geneid AS name, gp2g.transcriptid, gp2g.inheritance, gp2g.id_omim, gp2g.pmid, REPLACE(gp2g.remarks, "\r\n", " ") AS remarks, GROUP_CONCAT(CONCAT(t.id, ";", t.id_ncbi) ORDER BY t.id_ncbi SEPARATOR ";;") AS transcripts
+            'SELECT gp2g.geneid, gp2g.geneid AS name, gp2g.transcriptid, gp2g.inheritance, gp2g.id_omim, gp2g.pmid, REPLACE(gp2g.remarks, "\r\n", " ") AS remarks, IFNULL(CONCAT("<OPTION value=\"\">-- select --</OPTION>", GROUP_CONCAT(CONCAT("<OPTION value=\"", t.id, "\">", t.id_ncbi, "</OPTION>") ORDER BY t.id_ncbi SEPARATOR "")), "<OPTION value=\"\">-- no transcripts available --</OPTION>") AS transcripts_HTML
              FROM ' . TABLE_GP2GENE . ' AS gp2g LEFT OUTER JOIN ' . TABLE_TRANSCRIPTS . ' AS t ON (gp2g.geneid = t.geneid)
              WHERE gp2g.genepanelid = ? ORDER BY gp2g.geneid', array($nID));
         while ($z = $qGenes->fetchAssoc()) {
-            $z['transcripts'] = explode(';;', $z['transcripts']);
             $aGenes[$z['geneid']] = $z;
         }
     }
@@ -591,7 +594,7 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && ACTION == 'manage_genes') {
     lovd_showInfoTable('The following genes are configured in this LOVD. Click on one to add it to this gene panel.', 'information');
     $_GET['page_size'] = 10;
     $sViewListID = 'GenePanels_ManageGenes'; // Create known viewListID for the JS functions().
-    $_DATA->setRowLink($sViewListID, 'javascript:lovd_addGene(\'{{ViewListID}}\', \'{{ID}}\', \'{{zData_transcripts}}\'); return false;');
+    $_DATA->setRowLink($sViewListID, 'javascript:lovd_addGene(\'{{ViewListID}}\', \'{{ID}}\', \'{{zData_transcripts_HTML}}\'); return false;');
     $_DATA->viewList($sViewListID, array(), true);
 
 
@@ -607,6 +610,11 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && ACTION == 'manage_genes') {
             'Dominant',
             'X-Linked',
         );
+    // Define the inheritance options list HTML string. Will be used in two places; in the HTML and the JS.
+    $sInheritanceOptions = '<OPTION value="">-- select --</OPTION>';
+    foreach ($aInheritances as $sInheritance) {
+        $sInheritanceOptions .= '<OPTION value="' . $sInheritance . '">' . $sInheritance . '</OPTION>';
+    }
     // Form & table.
     print('
       <FORM action="' . CURRENT_PATH . '?' . ACTION . '" method="post">
@@ -626,17 +634,8 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && ACTION == 'manage_genes') {
             <TD>
               <INPUT type="hidden" name="genes[]" value="' . $sID . '">
               ' . $aGene['name'] . '</TD>
-            <TD><SELECT name="transcriptids[]" style="width : 100%;"><OPTION value="">-- select --</OPTION>');
-        $aTranscripts = array_map('explode', array_fill(0, count($aGene['transcripts']), ';'), $aGene['transcripts']);
-        foreach ($aTranscripts as $aTranscript) {
-            print('<OPTION value="' . $aTranscript[0] . '"' . ($aGene['transcriptid'] != $aTranscript[0]? '' : ' selected') . '>' . $aTranscript[1] . '</OPTION>');
-        }
-        print('</TD>
-            <TD><SELECT name="inheritances[]"><OPTION value="">-- select --</OPTION>');
-        foreach ($aInheritances as $sInheritance) {
-            print('<OPTION value="' . $sInheritance . '"' . ($aGene['inheritance'] != $sInheritance? '' : ' selected') . '>' . $sInheritance . '</OPTION>');
-        }
-        print('</TD>
+            <TD><SELECT name="transcriptids[]" style="width : 100%;">' . str_replace('"' . $aGene['transcriptid'] . '">', '"' . $aGene['transcriptid'] . '" selected>', $aGene['transcripts_HTML']) . '</TD>
+            <TD><SELECT name="inheritances[]">' . str_replace('"' . $aGene['inheritance'] . '">', '"' . $aGene['inheritance'] . '" selected>', $sInheritanceOptions) . '</TD>
             <TD><INPUT type="text" name="id_omims[]" value="' . $aGene['id_omim'] . '" size="10"></TD>
             <TD><INPUT type="text" name="pmids[]" value="' . $aGene['pmid'] . '" size="10"></TD>
             <TD><INPUT type="text" name="remarkses[]" value="' . $aGene['remarks'] . '" size="30"></TD>
@@ -670,14 +669,19 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && ACTION == 'manage_genes') {
         objViewListF = document.getElementById('viewlistForm_' + sViewListID);
         objElement = document.getElementById(sID);
         objElement.style.cursor = 'progress';
+        // Mark gene somewhat as selected. Whatever I tried with delays and animations, it doesn't work.
+        // This is hardly functional (it isn't kept obviously), but it's something.
+        // If we'd have a function that's run at the end of each VL load, then we can have them marked again.
+        // Build this, maybe, if it's not too slow with a large number of genes?
+        $(objElement).addClass('del');
 
         objGenes = document.getElementById('gene_list');
         oTR = document.createElement('TR');
         oTR.id = 'tr_' + sID;
         oTR.innerHTML =
             '<TD><INPUT type="hidden" name="genes[]" value="' + sID + '">' + sID + '</TD>' +
-            '<TD><SELECT name="transcriptids[]"><OPTION value="">test</OPTION></TD>' +
-            '<TD><SELECT name="inheritances[]"><OPTION value="">test</OPTION></TD>' +
+            '<TD><SELECT name="transcriptids[]" style="width : 100%;">' + sTranscripts + '</TD>' +
+            '<TD><SELECT name="inheritances[]"><?php echo $sInheritanceOptions; ?></TD>' +
             '<TD><INPUT type="text" name="id_omims[]" value="" size="10"></TD>' +
             '<TD><INPUT type="text" name="pmids[]" value="" size="10"></TD>' +
             '<TD><INPUT type="text" name="remarkses[]" value="" size="30"></TD>' +
