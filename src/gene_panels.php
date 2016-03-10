@@ -441,36 +441,30 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && ACTION == 'manage_genes') {
     if (POST) {
         lovd_errorClean();
 
-/*******************************************************************************************************************
         // Preventing notices...
-        // $_POST['curators'] stores the IDs of the users that are supposed to go in TABLE_CURATES.
-        if (empty($_POST['curators']) || !is_array($_POST['curators'])) {
-            $_POST['curators'] = array();
+        // $_POST['genes'] stores the IDs of the genes that are supposed to go in TABLE_GENE_PANELS2GENES.
+        if (empty($_POST['genes']) || !is_array($_POST['genes'])) {
+            $_POST['genes'] = array();
         }
-        // $_POST['allow_edit'] stores the IDs of the users that are allowed to edit variants in this gene (the curators).
-        if (empty($_POST['allow_edit']) || !is_array($_POST['allow_edit'])) {
-            $_POST['allow_edit'] = array();
+        // $_POST['transcriptids'] stores the IDs of the transcripts associated with the selected genes.
+        if (empty($_POST['transcriptids']) || !is_array($_POST['transcriptids'])) {
+            $_POST['transcriptids'] = array();
         }
-        // $_POST['shown'] stores whether or not the curator is shown on the screen.
-        if (empty($_POST['shown']) || !is_array($_POST['shown'])) {
-            $_POST['shown'] = array();
+        // $_POST['inheritances'] stores the inheritance values of the selected genes.
+        if (empty($_POST['inheritances']) || !is_array($_POST['inheritances'])) {
+            $_POST['inheritances'] = array();
         }
-
-        // MUST select at least one curator!
-        if (empty($_POST['curators']) || empty($_POST['allow_edit']) || empty($_POST['shown'])) {
-            lovd_errorAdd('', 'Please select at least one curator that is allowed to edit <I>and</I> is shown on the gene home page!');
-        } else {
-            // Of the selected persons, at least one should be shown AND able to edit!
-            $bCurator = false;
-            foreach($_POST['curators'] as $nUserID) {
-                if (in_array($nUserID, $_POST['allow_edit']) && in_array($nUserID, $_POST['shown'])) {
-                    $bCurator = true;
-                    break;
-                }
-            }
-            if (!$bCurator) {
-                lovd_errorAdd('', 'Please select at least one curator that is allowed to edit <I>and</I> is shown on the gene home page!');
-            }
+        // $_POST['id_omims'] stores the OMIM IDs selected as relevant for the selected genes.
+        if (empty($_POST['id_omims']) || !is_array($_POST['id_omims'])) {
+            $_POST['id_omims'] = array();
+        }
+        // $_POST['pmids'] stores the PMIDs selected as relevant for the selected genes.
+        if (empty($_POST['transcriptids']) || !is_array($_POST['pmids'])) {
+            $_POST['pmids'] = array();
+        }
+        // $_POST['remarkses'] stores the remarks associated with the selected genes.
+        if (empty($_POST['remarkses']) || !is_array($_POST['remarkses'])) {
+            $_POST['remarkses'] = array();
         }
 
         // Mandatory fields.
@@ -484,6 +478,7 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && ACTION == 'manage_genes') {
 
 
         if (!lovd_error()) {
+/*******************************************************************************************************************
             // What's by far the most efficient code-wise is just insert/update all we've got and delete everything else.
             $_DB->beginTransaction();
 
@@ -513,13 +508,14 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && ACTION == 'manage_genes') {
             // Write to log...
             $sMessage = 'Updated curator list for the ' . $sID . ' gene';
             lovd_writeLog('Event', LOG_EVENT, $sMessage);
+*///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
             // Thank the user...
             header('Refresh: 3; url=' . lovd_getInstallURL() . CURRENT_PATH);
 
             $_T->printHeader();
             $_T->printTitle();
-            lovd_showInfoTable('Successfully updated the curator list!', 'success');
+            lovd_showInfoTable('Successfully updated the gene panel gene list!', 'success');
 
             $_T->printFooter();
             exit;
@@ -528,7 +524,6 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && ACTION == 'manage_genes') {
             // Because we're sending the data back to the form, I need to unset the password fields!
             unset($_POST['password']);
         }
-*///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     }
 
 
