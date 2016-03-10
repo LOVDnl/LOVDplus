@@ -463,7 +463,6 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && ACTION == 'manage_genes') {
     $nID = sprintf('%05d', $_PE[1]);
     define('PAGE_TITLE', 'Manage genes for gene panel entry #' . $nID);
     define('LOG_EVENT', 'GenePanelManage');
-    define('TAB_SELECTED', 'genes');
 
     lovd_requireAUTH(LEVEL_ADMIN);
 
@@ -517,37 +516,41 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && ACTION == 'manage_genes') {
 
 
         if (!lovd_error()) {
-/*******************************************************************************************************************
-            // What's by far the most efficient code-wise is just insert/update all we've got and delete everything else.
-            $_DB->beginTransaction();
+            // We'll need to run inserts for what's new, updates for what's already there, and deletes for what's removed.
+            // However, the insertEntry(), updateEntry() and deleteEntry() functions have their own transactions, which break this part here.
+            // FIXME: For now, we'll just work *directly* in the data table, instead of considering the history.
+            // This is just to get a working example, mergable with the other branches. From there on, we'll fix things.
+            // FIXME: Should we make a summary of what's created or deleted before we process the edit?
+            //  Or do we consider the chance of mistakes too little?
 
-            foreach ($_POST['curators'] as $nOrder => $nUserID) {
-                $nOrder ++; // Since 0 is the first key in the array.
-                // FIXME; Managers are authorized to add other managers or higher as curators, but should not be able to restrict other manager's editing rights, or hide these users as curators.
-                //   Implementing this check on this level means we need to query the database to get all user levels again, defeating this optimalisation below.
-                //   Taking away the editing rights/visibility of managers or the admin by a manager is restricted in the interface, so it's not critical to solve now.
-                //   I'm being lazy, I'm not implementing the check here now. However, it *is* a bug and should be fixed later.
-                if (ACTION == 'authorize') {
-                    // FIXME; Is using REPLACE not a lot easier?
-                    $_DB->query('INSERT INTO ' . TABLE_CURATES . ' VALUES (?, ?, ?, ?) ON DUPLICATE KEY UPDATE allow_edit = VALUES(allow_edit), show_order = VALUES(show_order)', array($nUserID, $sID, (int) in_array($nUserID, $_POST['allow_edit']), (in_array($nUserID, $_POST['shown'])? $nOrder : 0)));
-                    // FIXME; Without detailed user info we can't include elaborate logging. Would we want that anyway?
-                    //   We could rapport things here more specifically because mysql_affected_rows() tells us if there has been an update (2) or an insert (1) or nothing changed (0).
+            $_DB->beginTransaction();
+            // Get list of currently associated genes. Note that the genes are keys, to speed things up.
+            $aGenesCurrentlyAssociated = $_DB->query('SELECT geneid, 1 FROM ' . TABLE_GP2GENE . ' WHERE genepanelid = ?', array($nID))->fetchAllCombine();
+            foreach ($_POST['genes'] as $nKey => $sGeneID) {
+                if (!isset($aGenesCurrentlyAssociated[$sGeneID])) {
+                    // Needs an insert.
+                    $_DB->query('INSERT INTO ' . TABLE_GP2GENE . ' (genepanelid, geneid, transcriptid, inheritance, id_omim, pmid, remarks, created_by, created_date) VALUES (?, ?, ?, ?, ?, ?, ?, ?, NOW())',
+                        array($nID, $sGeneID, (empty($_POST['transcriptids'][$nKey])? NULL : $_POST['transcriptids'][$nKey]), $_POST['inheritances'][$nKey], $_POST['id_omims'][$nKey], $_POST['pmids'][$nKey], $_POST['remarkses'][$nKey], $_AUTH['id']));
                 } else {
-                    // Just sort and update visibility!
-                    $_DB->query('UPDATE ' . TABLE_CURATES . ' SET show_order = ? WHERE geneid = ? AND userid = ?', array((in_array($nUserID, $_POST['shown'])? $nOrder : 0), $sID, $nUserID));
+                    // Needs an update.
+                    $_DB->query('UPDATE ' . TABLE_GP2GENE . ' SET transcriptid = ?, inheritance = ?, id_omim = ?, pmid = ?, remarks = ?, edited_by = ?, edited_date = NOW() WHERE genepanelid = ? AND geneid = ?',
+                        array((empty($_POST['transcriptids'][$nKey])? NULL : $_POST['transcriptids'][$nKey]), $_POST['inheritances'][$nKey], $_POST['id_omims'][$nKey], $_POST['pmids'][$nKey], $_POST['remarkses'][$nKey], $_AUTH['id'], $nID, $sGeneID));
+                    // Mark gene as done, so we don't delete it after this loop.
+                    unset($aGenesCurrentlyAssociated[$sGeneID]);
                 }
             }
 
-            // Now everybody should be updated. Remove whoever should no longer be in there.
-            $_DB->query('DELETE FROM c USING ' . TABLE_CURATES . ' AS c, ' . TABLE_USERS . ' AS u WHERE c.userid = u.id AND c.geneid = ? AND c.userid NOT IN (?' . str_repeat(', ?', count($_POST['curators']) - 1) . ') AND (u.level < ? OR u.id = ?)', array_merge(array($sID), $_POST['curators'], array($_AUTH['level'], $_AUTH['id'])));
+            // Now delete what was no longer selected.
+            if ($aGenesCurrentlyAssociated) {
+                $_DB->query('DELETE FROM ' . TABLE_GP2GENE . ' WHERE genepanelid = ? AND geneid IN (?' . str_repeat(', ?', count($aGenesCurrentlyAssociated) - 1) . ')',
+                    array_merge(array($nID), array_keys($aGenesCurrentlyAssociated)));
+            }
 
             // If we get here, it all succeeded.
             $_DB->commit();
 
             // Write to log...
-            $sMessage = 'Updated curator list for the ' . $sID . ' gene';
-            lovd_writeLog('Event', LOG_EVENT, $sMessage);
-*///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+            lovd_writeLog('Event', LOG_EVENT, 'Updated gene list for the gene panel #' . $nID);
 
             // Thank the user...
             header('Refresh: 3; url=' . lovd_getInstallURL() . CURRENT_PATH);
@@ -610,7 +613,7 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && ACTION == 'manage_genes') {
         $qGenes = $_DB->query(
             'SELECT gp2g.geneid, gp2g.geneid AS name, gp2g.transcriptid, gp2g.inheritance, gp2g.id_omim, gp2g.pmid, REPLACE(gp2g.remarks, "\r\n", " ") AS remarks, IFNULL(CONCAT("<OPTION value=\"\">-- select --</OPTION>", GROUP_CONCAT(CONCAT("<OPTION value=\"", t.id, "\">", t.id_ncbi, "</OPTION>") ORDER BY t.id_ncbi SEPARATOR "")), "<OPTION value=\"\">-- no transcripts available --</OPTION>") AS transcripts_HTML
              FROM ' . TABLE_GP2GENE . ' AS gp2g LEFT OUTER JOIN ' . TABLE_TRANSCRIPTS . ' AS t ON (gp2g.geneid = t.geneid)
-             WHERE gp2g.genepanelid = ? ORDER BY gp2g.geneid', array($nID));
+             WHERE gp2g.genepanelid = ? GROUP BY gp2g.geneid ORDER BY gp2g.geneid', array($nID));
         while ($z = $qGenes->fetchAssoc()) {
             $aGenes[$z['geneid']] = $z;
         }
@@ -708,6 +711,7 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && ACTION == 'manage_genes') {
         // If we'd have a function that's run at the end of each VL load, then we can have them marked again.
         // Build this, maybe, if it's not too slow with a large number of genes?
         $(objElement).addClass('del');
+        // FIXME: Perhaps, if we detect positive selection on the gene symbol, remove it from the list?
 
         objGenes = document.getElementById('gene_list');
         oTR = document.createElement('TR');
