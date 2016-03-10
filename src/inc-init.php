@@ -72,7 +72,8 @@ if (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] == 'on' && !empty($_SERVER['S
 // Our output formats: text/html by default.
 $aFormats = array('text/html'); // Disable all downloads. // Key [0] is default. Other values may not always be allowed. It is checked in the Template class' printHeader() and in Objects::viewList().
 // Except for when auto-importing, obviously, then we need text/plain...
-if (lovd_getProjectFile() == '/import.php') {
+$aPlainTextFiles = array('/import.php','/gene_statistics.php','/ajax/viewlist.php','/gene_panels.php');
+if (in_array(lovd_getProjectFile(), $aPlainTextFiles)) {
     $aFormats[] = 'text/plain';
 }
 if (lovd_getProjectFile() == '/api.php') {
@@ -559,6 +560,14 @@ $_TABLES =
                 'TABLE_ANALYSES_RUN_FILTERS' => TABLEPREFIX . '_analyses_run_filters',
                 'TABLE_ANALYSES_RUN_RESULTS' => TABLEPREFIX . '_analyses_run_results',
                 'TABLE_SCHEDULED_IMPORTS' => TABLEPREFIX . '_scheduled_imports',
+
+                // Gene Lists
+                'TABLE_GENE_PANELS' => TABLEPREFIX . '_gene_panels',
+                'TABLE_GENE_PANELS_REV' => TABLEPREFIX . '_gene_panels_revisions',
+                'TABLE_GP2GENE' => TABLEPREFIX . '_gene_panels2genes',
+                'TABLE_GP2GENE_REV' => TABLEPREFIX . '_gene_panels2genes_revisions',
+                'TABLE_IND2GP' => TABLEPREFIX . '_individuals2gene_panels',
+                'TABLE_GP2DIS' => TABLEPREFIX . '_gene_panels2diseases',
               );
 
 foreach ($_TABLES as $sConst => $sTable) {
