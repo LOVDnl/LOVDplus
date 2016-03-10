@@ -74,6 +74,10 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && !ACTION) {
     // URL: /genes_panels/00001
     // View specific entry.
 
+    if ($_AUTH['level'] >= LEVEL_SUBMITTER) {
+        define('FORMAT_ALLOW_TEXTPLAIN', true);
+    }
+
     $nID = sprintf('%05d', $_PE[1]);
     define('PAGE_TITLE', 'View gene panel #' . $nID);
     $_T->printHeader();
@@ -103,6 +107,10 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && !ACTION) {
     // Only show the genes in this gene panel by setting the genepanelid to the current gene panel id
     $_GET['search_genepanelid'] = $nID;
     $sGPGViewListID = 'GenePanelGene';
+    // Add a menu item to allow the user to download the whole gene panel
+    print('      <UL id="viewlistMenu_' . $sGPGViewListID . '" class="jeegoocontext jeegooviewlist">' . "\n");
+    print('        <LI class="icon"><A click="lovd_AJAX_viewListSubmit(\'' . $sGPGViewListID . '\', function(){lovd_AJAX_viewListDownload(\'' . $sGPGViewListID . '\', true);});"><SPAN class="icon" style="background-image: url(gfx/menu_save.png);"></SPAN>Download gene panel</A></LI>' . "\n");
+    print('      </UL>' . "\n\n");
     $_DATA->setRowLink($sGPGViewListID, CURRENT_PATH . '/{{geneid}}');
     $_DATA->viewList($sGPGViewListID, array(), false, false, true);
 
