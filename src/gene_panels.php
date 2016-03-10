@@ -570,10 +570,11 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && ACTION == 'manage_genes') {
         // Retrieve current genes, alphabetically ordered (makes it a bit easier to work with new forms).
         // FIXME: This is where the new fetchAllCombine() will make sense...
         $qGenes = $_DB->query(
-            'SELECT gp2g.geneid, gp2g.geneid AS name, gp2g.transcriptid, gp2g.inheritance, gp2g.id_omim, gp2g.pmid, gp2g.remarks
-             FROM ' . TABLE_GP2GENE . ' AS gp2g
+            'SELECT gp2g.geneid, gp2g.geneid AS name, gp2g.transcriptid, gp2g.inheritance, gp2g.id_omim, gp2g.pmid, REPLACE(gp2g.remarks, "\r\n", " ") AS remarks, GROUP_CONCAT(CONCAT(t.id, ";", t.id_ncbi) ORDER BY t.id_ncbi SEPARATOR ";;") AS transcripts
+             FROM ' . TABLE_GP2GENE . ' AS gp2g LEFT OUTER JOIN ' . TABLE_TRANSCRIPTS . ' AS t ON (gp2g.geneid = t.geneid)
              WHERE gp2g.genepanelid = ? ORDER BY gp2g.geneid', array($nID));
         while ($z = $qGenes->fetchAssoc()) {
+            $z['transcripts'] = explode(';;', $z['transcripts']);
             $aGenes[$z['geneid']] = $z;
         }
     }
@@ -638,7 +639,7 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && ACTION == 'manage_genes') {
         print('</TD>
             <TD><INPUT type="text" name="id_omims[]" value="' . $aGene['id_omim'] . '" size="10"></TD>
             <TD><INPUT type="text" name="pmids[]" value="' . $aGene['pmid'] . '" size="10"></TD>
-            <TD><INPUT type="text" name="remarkses[]" value="' . str_replace(array("\r", "\n", '  '), ' ', $aGene['remarks']) . '" size="30"></TD>
+            <TD><INPUT type="text" name="remarkses[]" value="' . $aGene['remarks'] . '" size="30"></TD>
             <TD width="30" align="right"><A href="#" onclick="lovd_removeGene(\'' . $sViewListID . '\', \'' . $sID . '\'); return false;"><IMG src="gfx/mark_0.png" alt="Remove" width="11" height="11" border="0"></A></TD></TR>');
     }
     print('
