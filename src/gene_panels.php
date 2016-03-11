@@ -4,7 +4,7 @@
  * LEIDEN OPEN VARIATION DATABASE (LOVD)
  *
  * Created     : 2016-03-01
- * Modified    : 2016-03-01
+ * Modified    : 2016-03-11
  * For LOVD    : 3.0-13
  *
  * Copyright   : 2004-2016 Leiden University Medical Center; http://www.LUMC.nl/
@@ -655,31 +655,34 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && ACTION == 'manage_genes') {
     // Form & table.
     print('
       <FORM action="' . CURRENT_PATH . '?' . ACTION . '" method="post">
+        <DIV style="width : 950px; height : 250px; overflow : auto;">
         <TABLE id="gene_list" class="data" border="0" cellpadding="0" cellspacing="1" width="900">
-          <TR>
-            <TH>Symbol</TH>
-            <TH>Transcript</TH>
-            <TH>Inheritance</TH>
-            <TH>OMIM ID</TH>
-            <TH>PMID</TH>
-            <TH>Remarks</TH>
-            <TH width="30">&nbsp;</TH></TR>');
+          <THEAD>
+            <TR>
+              <TH>Symbol</TH>
+              <TH>Transcript</TH>
+              <TH>Inheritance</TH>
+              <TH>OMIM ID</TH>
+              <TH>PMID</TH>
+              <TH>Remarks</TH>
+              <TH width="30">&nbsp;</TH></TR></THEAD>
+          <TBODY>');
     // Now loop the items in the order given.
     foreach ($aGenes as $sID => $aGene) {
         print('
-          <TR id="tr_' . $sID . '">
-            <TD>
-              <INPUT type="hidden" name="genes[]" value="' . $sID . '">
+            <TR id="tr_' . $sID . '">
+              <TD>
+                <INPUT type="hidden" name="genes[]" value="' . $sID . '">
               ' . $aGene['name'] . '</TD>
-            <TD><SELECT name="transcriptids[]" style="width : 100%;">' . str_replace('"' . $aGene['transcriptid'] . '">', '"' . $aGene['transcriptid'] . '" selected>', $aGene['transcripts_HTML']) . '</TD>
-            <TD><SELECT name="inheritances[]">' . str_replace('"' . $aGene['inheritance'] . '">', '"' . $aGene['inheritance'] . '" selected>', $sInheritanceOptions) . '</TD>
-            <TD><INPUT type="text" name="id_omims[]" value="' . $aGene['id_omim'] . '" size="10"></TD>
-            <TD><INPUT type="text" name="pmids[]" value="' . $aGene['pmid'] . '" size="10"></TD>
-            <TD><INPUT type="text" name="remarkses[]" value="' . $aGene['remarks'] . '" size="30"></TD>
-            <TD width="30" align="right"><A href="#" onclick="lovd_removeGene(\'' . $sViewListID . '\', \'' . $sID . '\'); return false;"><IMG src="gfx/mark_0.png" alt="Remove" width="11" height="11" border="0"></A></TD></TR>');
+              <TD><SELECT name="transcriptids[]" style="width : 100%;">' . str_replace('"' . $aGene['transcriptid'] . '">', '"' . $aGene['transcriptid'] . '" selected>', $aGene['transcripts_HTML']) . '</TD>
+              <TD><SELECT name="inheritances[]">' . str_replace('"' . $aGene['inheritance'] . '">', '"' . $aGene['inheritance'] . '" selected>', $sInheritanceOptions) . '</TD>
+              <TD><INPUT type="text" name="id_omims[]" value="' . $aGene['id_omim'] . '" size="10"></TD>
+              <TD><INPUT type="text" name="pmids[]" value="' . $aGene['pmid'] . '" size="10"></TD>
+              <TD><INPUT type="text" name="remarkses[]" value="' . $aGene['remarks'] . '" size="30"></TD>
+              <TD width="30" align="right"><A href="#" onclick="lovd_removeGene(\'' . $sViewListID . '\', \'' . $sID . '\'); return false;"><IMG src="gfx/mark_0.png" alt="Remove" width="11" height="11" border="0"></A></TD></TR>');
     }
     print('
-        </TABLE><BR>' . "\n");
+          </TBODY></TABLE></DIV><BR>' . "\n");
 
     // Array which will make up the form table.
     $aForm = array(
@@ -708,10 +711,9 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && ACTION == 'manage_genes') {
         objElement.style.cursor = 'progress';
         // Mark gene somewhat as selected. Whatever I tried with delays and animations, it doesn't work.
         // This is hardly functional (it isn't kept obviously), but it's something.
-        // If we'd have a function that's run at the end of each VL load, then we can have them marked again.
-        // Build this, maybe, if it's not too slow with a large number of genes?
+        // FIXME: If we'd have a function that's run at the end of each VL load, then we can have them marked again.
+        //   Build this, maybe, if it's not too slow with a large number of genes?
         $(objElement).addClass('del');
-        // FIXME: Perhaps, if we detect positive selection on the gene symbol, remove it from the list?
 
         objGenes = document.getElementById('gene_list');
         oTR = document.createElement('TR');
@@ -724,7 +726,8 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && ACTION == 'manage_genes') {
             '<TD><INPUT type="text" name="pmids[]" value="" size="10"></TD>' +
             '<TD><INPUT type="text" name="remarkses[]" value="" size="30"></TD>' +
             '<TD width="30" align="right"><A href="#" onclick="lovd_removeGene(\'' + sViewListID + '\', \'' + sID + '\'); return false;"><IMG src="gfx/mark_0.png" alt="Remove" width="11" height="11" border="0"></A></TD>';
-        objGenes.appendChild(oTR);
+        $(objGenes).select('tbody').prepend(oTR);
+        $(objGenes).parent().scrollTop(0);
         objElement.style.cursor = '';
 
         return true;
