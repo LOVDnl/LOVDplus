@@ -404,14 +404,20 @@ class LOVD_Object {
     function insertEntry ($aData, $aFields = array())
     {
         // Inserts data in $aData into the database, using only fields defined in $aFields.
+        // $aData = Associative array with values to be inserted. Keys should equal database column names.
+        // $aFields = The keys of the associative array that will actually get inserted.
         global $_DB;
 
-        // Check to see if this table uses revisions
-        $bRev = false;
-        if (defined($this->sTable . '_REV')) {
-            $bRev = true;
+        // Check to see if this table uses revisions.
+        $bRev = defined($this->sTable . '_REV');
+        // Check if maybe we already were in a transaction when we started this function.
+        // If so, we won't create a new transaction, nor run a commit() in the end.
+        $bWasAlreadyInTransaction = (method_exists($_DB, 'inTransaction') && $_DB->inTransaction());
+        if ($bRev) {
             $sRevSQL = '';
-            $_DB->beginTransaction();
+            if (!$bWasAlreadyInTransaction) {
+                $_DB->beginTransaction();
+            }
         }
 
         if (!is_array($aData) || !count($aData)) {
@@ -438,8 +444,10 @@ class LOVD_Object {
             }
             $aSQL[] = $aData[$sField];
         }
-        // If this is a revision table then get a copy of the field names being inserted as this should be the same
-        if ($bRev) {$sRevSQL = $sSQL;}
+        // If this is a revision table, we mostly use the same query.
+        if ($bRev) {
+            $sRevSQL = $sSQL;
+        }
         $sSQL .= ') VALUES (?' . str_repeat(', ?', count($aFields) - 1) . ')';
 
         if (!defined('LOG_EVENT')) {
@@ -447,35 +455,45 @@ class LOVD_Object {
         }
         $q = $_DB->query($sSQL, $aSQL, true, true);
 
-        $nID = $_DB->lastInsertId();
-        if (substr(lovd_getColumnType(constant($this->sTable), 'id'), 0, 3) == 'INT') {
+        $nID = $_DB->lastInsertId(); // Will not return an ID for linking tables.
+        if ($nID && substr(lovd_getColumnType(constant($this->sTable), 'id'), 0, 3) == 'INT') {
             $nID = sprintf('%0' . lovd_getColumnLength(constant($this->sTable), 'id') . 'd', $nID);
         }
 
-        // Setup and run the revision table SQL
+        // Setup and run the revision table SQL.
         if ($bRev) {
             // Replace the table name with the revision table name
-            $sRevSQL = preg_replace('/^INSERT INTO ' . constant($this->sTable) . '/i', 'INSERT INTO ' . constant($this->sTable . '_REV'), $sRevSQL);
-            // These are the extra columns that are required for inserting a record into the revision table
-            $sRevSQL.= ', `id`, `valid_from`, `reason`';
-            // Use the ID returned from the last insert ID
-            $aSQL[] = $nID;
-            // Use the created by date if provided otherwise use the current date
-            $aSQL[] = (empty($aData['created_date'])?date('Y-m-d H:i:s'):$aData['created_date']);
-            // Use the reason if provided in the $aData array
-            $aSQL[] = (empty($aData['reason'])?'Record created':'Record created: ' . $aData['reason']);
+            $sRevSQL = preg_replace('/^(INSERT INTO ' . constant($this->sTable) . ')/i', 'INSERT INTO ' . constant($this->sTable . '_REV'), $sRevSQL);
+            // For tables that don't have an AUTO_INCREMENT column, the ID must have already been provided in the SQL.
+            // For other tables, we add the field here. We're assuming it's "id".
+            if ($nID) {
+                // Auto-increment column in place, assuming the name is "id".
+                $sRevSQL .= ', id';
+            }
+            // These are the extra columns that are required for inserting a record into the revision table.
+            $sRevSQL .= ', valid_from, reason';
+            // Add the ID to the SQL's arguments as well, for auto-incremented tables.
+            if ($nID) {
+                $aSQL[] = $nID;
+            }
+            // Use the created_date if provided, otherwise use the current date.
+            $aSQL[] = (empty($aData['created_date'])? date('Y-m-d H:i:s') : $aData['created_date']);
+            // Use the reason, if provided in the $aData array.
+            $aSQL[] = 'Record created' . (empty($aData['reason'])? '' : ': ' . $aData['reason']);
             $sRevSQL .= ') VALUES (?' . str_repeat(', ?', count($aSQL) - 1) . ')';
             $qi = $_DB->query($sRevSQL, $aSQL, true, true);
 
-            // If any of the queries fail then rollback and return false otherwise commit
+            // If any of the queries fail, then rollback and return false. Otherwise, commit.
             if (!$q || !$qi) {
                 $_DB->rollBack();
                 return false;
             } else {
-                $_DB->commit();
+                if (!$bWasAlreadyInTransaction) {
+                    $_DB->commit();
+                }
             }
         }
-        return $nID;
+        return ($nID? $nID : true);
     }
 
 

@@ -278,7 +278,7 @@ if (PATH_COUNT == 1 && ACTION == 'create') {
     $_T->printTitle();
 
         print('      To create a new gene panel entry, please fill out the form below.<BR>' . "\n" .
-            '      <BR>' . "\n\n");
+              '      <BR>' . "\n\n");
 
     lovd_errorPrint();
 
@@ -312,7 +312,7 @@ if (PATH_COUNT == 1 && ACTION == 'create') {
 if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && ACTION == 'changelog') { 
     // URL: /gene_panels/00001?changelog
     // Drop specific entry.
-	
+
 
     $nID = sprintf('%05d', $_PE[1]);
     define('PAGE_TITLE', 'View changelog for gene panel #' . $nID);
@@ -519,14 +519,27 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && ACTION == 'manage_genes') {
             // FIXME: Should we make a summary of what's created or deleted before we process the edit?
             //  Or do we consider the chance of mistakes too little?
 
+            require ROOT_PATH . 'class/object_gene_panel_genes.php';
+            $_DATA = new LOVD_GenePanelGene();
             $_DB->beginTransaction();
             // Get list of currently associated genes. Note that the genes are keys, to speed things up.
             $aGenesCurrentlyAssociated = $_DB->query('SELECT geneid, 1 FROM ' . TABLE_GP2GENE . ' WHERE genepanelid = ?', array($nID))->fetchAllCombine();
+            $sCreatedDate = date('Y-m-d H:i:s');
             foreach ($_POST['genes'] as $nKey => $sGeneID) {
+                // Build up array for insertEntry() and updateEntry();
+                $aData = array(
+                    'genepanelid' => $nID,
+                    'geneid' => $sGeneID,
+                    'transcriptid' => (empty($_POST['transcriptids'][$nKey])? NULL : $_POST['transcriptids'][$nKey]),
+                    'inheritance' => $_POST['inheritances'][$nKey],
+                    'pmid' => $_POST['pmids'][$nKey],
+                    'remarks' => $_POST['remarkses'][$nKey],
+                    'created_by' => $_AUTH['id'],
+                    'created_date' => $sCreatedDate,
+                );
                 if (!isset($aGenesCurrentlyAssociated[$sGeneID])) {
-                    // Needs an insert.
-                    $_DB->query('INSERT INTO ' . TABLE_GP2GENE . ' (genepanelid, geneid, transcriptid, inheritance, pmid, remarks, created_by, created_date) VALUES (?, ?, ?, ?, ?, ?, ?, NOW())',
-                        array($nID, $sGeneID, (empty($_POST['transcriptids'][$nKey])? NULL : $_POST['transcriptids'][$nKey]), $_POST['inheritances'][$nKey], $_POST['pmids'][$nKey], $_POST['remarkses'][$nKey], $_AUTH['id']));
+                    // Needs an insert. This will also take care of the revision table.
+                    $_DATA->insertEntry($aData, array_keys($aData));
                 } else {
                     // Needs an update.
                     $_DB->query('UPDATE ' . TABLE_GP2GENE . ' SET transcriptid = ?, inheritance = ?, pmid = ?, remarks = ?, edited_by = ?, edited_date = NOW() WHERE genepanelid = ? AND geneid = ?',
