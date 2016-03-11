@@ -492,10 +492,6 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && ACTION == 'manage_genes') {
         if (empty($_POST['inheritances']) || !is_array($_POST['inheritances'])) {
             $_POST['inheritances'] = array();
         }
-        // $_POST['id_omims'] stores the OMIM IDs selected as relevant for the selected genes.
-        if (empty($_POST['id_omims']) || !is_array($_POST['id_omims'])) {
-            $_POST['id_omims'] = array();
-        }
         // $_POST['pmids'] stores the PMIDs selected as relevant for the selected genes.
         if (empty($_POST['transcriptids']) || !is_array($_POST['pmids'])) {
             $_POST['pmids'] = array();
@@ -529,12 +525,12 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && ACTION == 'manage_genes') {
             foreach ($_POST['genes'] as $nKey => $sGeneID) {
                 if (!isset($aGenesCurrentlyAssociated[$sGeneID])) {
                     // Needs an insert.
-                    $_DB->query('INSERT INTO ' . TABLE_GP2GENE . ' (genepanelid, geneid, transcriptid, inheritance, id_omim, pmid, remarks, created_by, created_date) VALUES (?, ?, ?, ?, ?, ?, ?, ?, NOW())',
-                        array($nID, $sGeneID, (empty($_POST['transcriptids'][$nKey])? NULL : $_POST['transcriptids'][$nKey]), $_POST['inheritances'][$nKey], $_POST['id_omims'][$nKey], $_POST['pmids'][$nKey], $_POST['remarkses'][$nKey], $_AUTH['id']));
+                    $_DB->query('INSERT INTO ' . TABLE_GP2GENE . ' (genepanelid, geneid, transcriptid, inheritance, pmid, remarks, created_by, created_date) VALUES (?, ?, ?, ?, ?, ?, ?, NOW())',
+                        array($nID, $sGeneID, (empty($_POST['transcriptids'][$nKey])? NULL : $_POST['transcriptids'][$nKey]), $_POST['inheritances'][$nKey], $_POST['pmids'][$nKey], $_POST['remarkses'][$nKey], $_AUTH['id']));
                 } else {
                     // Needs an update.
-                    $_DB->query('UPDATE ' . TABLE_GP2GENE . ' SET transcriptid = ?, inheritance = ?, id_omim = ?, pmid = ?, remarks = ?, edited_by = ?, edited_date = NOW() WHERE genepanelid = ? AND geneid = ?',
-                        array((empty($_POST['transcriptids'][$nKey])? NULL : $_POST['transcriptids'][$nKey]), $_POST['inheritances'][$nKey], $_POST['id_omims'][$nKey], $_POST['pmids'][$nKey], $_POST['remarkses'][$nKey], $_AUTH['id'], $nID, $sGeneID));
+                    $_DB->query('UPDATE ' . TABLE_GP2GENE . ' SET transcriptid = ?, inheritance = ?, pmid = ?, remarks = ?, edited_by = ?, edited_date = NOW() WHERE genepanelid = ? AND geneid = ?',
+                        array((empty($_POST['transcriptids'][$nKey])? NULL : $_POST['transcriptids'][$nKey]), $_POST['inheritances'][$nKey], $_POST['pmids'][$nKey], $_POST['remarkses'][$nKey], $_AUTH['id'], $nID, $sGeneID));
                     // Mark gene as done, so we don't delete it after this loop.
                     unset($aGenesCurrentlyAssociated[$sGeneID]);
                 }
@@ -598,7 +594,6 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && ACTION == 'manage_genes') {
                     'transcriptid' => (!isset($_POST['transcriptids'][$nKey])? '' : $_POST['transcriptids'][$nKey]),
                     'transcripts_HTML' => $zGenes[$sID],
                     'inheritance' => (!isset($_POST['inheritances'][$nKey])? '' : $_POST['inheritances'][$nKey]),
-                    'id_omim' => (!isset($_POST['id_omims'][$nKey])? '' : $_POST['id_omims'][$nKey]), // Simplicity over grammar...
                     'pmid' => (!isset($_POST['pmids'][$nKey])? '' : $_POST['pmids'][$nKey]),
                     'remarks' => (!isset($_POST['remarkses'][$nKey])? '' : $_POST['remarkses'][$nKey]), // Some LOTR here just for fun...
                 );
@@ -611,7 +606,7 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && ACTION == 'manage_genes') {
         // Retrieve current genes, alphabetically ordered (makes it a bit easier to work with new forms).
         // FIXME: This is where the new fetchAllCombine() will make sense...
         $qGenes = $_DB->query(
-            'SELECT gp2g.geneid, gp2g.geneid AS name, gp2g.transcriptid, gp2g.inheritance, gp2g.id_omim, gp2g.pmid, REPLACE(gp2g.remarks, "\r\n", " ") AS remarks, IFNULL(CONCAT("<OPTION value=\"\">-- select --</OPTION>", GROUP_CONCAT(CONCAT("<OPTION value=\"", t.id, "\">", t.id_ncbi, "</OPTION>") ORDER BY t.id_ncbi SEPARATOR "")), "<OPTION value=\"\">-- no transcripts available --</OPTION>") AS transcripts_HTML
+            'SELECT gp2g.geneid, gp2g.geneid AS name, gp2g.transcriptid, gp2g.inheritance, gp2g.pmid, REPLACE(gp2g.remarks, "\r\n", " ") AS remarks, IFNULL(CONCAT("<OPTION value=\"\">-- select --</OPTION>", GROUP_CONCAT(CONCAT("<OPTION value=\"", t.id, "\">", t.id_ncbi, "</OPTION>") ORDER BY t.id_ncbi SEPARATOR "")), "<OPTION value=\"\">-- no transcripts available --</OPTION>") AS transcripts_HTML
              FROM ' . TABLE_GP2GENE . ' AS gp2g LEFT OUTER JOIN ' . TABLE_TRANSCRIPTS . ' AS t ON (gp2g.geneid = t.geneid)
              WHERE gp2g.genepanelid = ? GROUP BY gp2g.geneid ORDER BY gp2g.geneid', array($nID));
         while ($z = $qGenes->fetchAssoc()) {
@@ -662,7 +657,6 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && ACTION == 'manage_genes') {
               <TH>Symbol</TH>
               <TH>Transcript</TH>
               <TH>Inheritance</TH>
-              <TH>OMIM ID</TH>
               <TH>PMID</TH>
               <TH>Remarks</TH>
               <TH width="30">&nbsp;</TH></TR></THEAD>
@@ -676,9 +670,8 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && ACTION == 'manage_genes') {
               ' . $aGene['name'] . '</TD>
               <TD><SELECT name="transcriptids[]" style="width : 100%;">' . str_replace('"' . $aGene['transcriptid'] . '">', '"' . $aGene['transcriptid'] . '" selected>', $aGene['transcripts_HTML']) . '</TD>
               <TD><SELECT name="inheritances[]">' . str_replace('"' . $aGene['inheritance'] . '">', '"' . $aGene['inheritance'] . '" selected>', $sInheritanceOptions) . '</TD>
-              <TD><INPUT type="text" name="id_omims[]" value="' . $aGene['id_omim'] . '" size="10"></TD>
               <TD><INPUT type="text" name="pmids[]" value="' . $aGene['pmid'] . '" size="10"></TD>
-              <TD><INPUT type="text" name="remarkses[]" value="' . $aGene['remarks'] . '" size="30"></TD>
+              <TD><INPUT type="text" name="remarkses[]" value="' . $aGene['remarks'] . '" size="40"></TD>
               <TD width="30" align="right"><A href="#" onclick="lovd_removeGene(\'' . $sViewListID . '\', \'' . $sID . '\'); return false;"><IMG src="gfx/mark_0.png" alt="Remove" width="11" height="11" border="0"></A></TD></TR>');
     }
     print('
@@ -722,9 +715,8 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && ACTION == 'manage_genes') {
             '<TD><INPUT type="hidden" name="genes[]" value="' + sID + '">' + sID + '</TD>' +
             '<TD><SELECT name="transcriptids[]" style="width : 100%;">' + sTranscripts + '</TD>' +
             '<TD><SELECT name="inheritances[]"><?php echo $sInheritanceOptions; ?></TD>' +
-            '<TD><INPUT type="text" name="id_omims[]" value="" size="10"></TD>' +
             '<TD><INPUT type="text" name="pmids[]" value="" size="10"></TD>' +
-            '<TD><INPUT type="text" name="remarkses[]" value="" size="30"></TD>' +
+            '<TD><INPUT type="text" name="remarkses[]" value="" size="40"></TD>' +
             '<TD width="30" align="right"><A href="#" onclick="lovd_removeGene(\'' + sViewListID + '\', \'' + sID + '\'); return false;"><IMG src="gfx/mark_0.png" alt="Remove" width="11" height="11" border="0"></A></TD>';
         $(objGenes).select('tbody').prepend(oTR);
         $(objGenes).parent().scrollTop(0);
