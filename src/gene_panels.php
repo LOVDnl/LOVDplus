@@ -524,7 +524,7 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && ACTION == 'manage_genes') {
             $_DB->beginTransaction();
             // Get list of currently associated genes. Note that the genes are keys, to speed things up.
             $aGenesCurrentlyAssociated = $_DB->query('SELECT geneid, 1 FROM ' . TABLE_GP2GENE . ' WHERE genepanelid = ?', array($nID))->fetchAllCombine();
-            $sCreatedDate = date('Y-m-d H:i:s');
+            $sDateNow = date('Y-m-d H:i:s');
             foreach ($_POST['genes'] as $nKey => $sGeneID) {
                 // Build up array for insertEntry() and updateEntry();
                 $aData = array(
@@ -534,16 +534,23 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && ACTION == 'manage_genes') {
                     'inheritance' => $_POST['inheritances'][$nKey],
                     'pmid' => $_POST['pmids'][$nKey],
                     'remarks' => $_POST['remarkses'][$nKey],
-                    'created_by' => $_AUTH['id'],
-                    'created_date' => $sCreatedDate,
                 );
                 if (!isset($aGenesCurrentlyAssociated[$sGeneID])) {
                     // Needs an insert. This will also take care of the revision table.
+                    $aData += array(
+                        'created_by' => $_AUTH['id'],
+                        'created_date' => $sDateNow,
+                    );
                     $_DATA->insertEntry($aData, array_keys($aData));
                 } else {
-                    // Needs an update.
-                    $_DB->query('UPDATE ' . TABLE_GP2GENE . ' SET transcriptid = ?, inheritance = ?, pmid = ?, remarks = ?, edited_by = ?, edited_date = NOW() WHERE genepanelid = ? AND geneid = ?',
-                        array((empty($_POST['transcriptids'][$nKey])? NULL : $_POST['transcriptids'][$nKey]), $_POST['inheritances'][$nKey], $_POST['pmids'][$nKey], $_POST['remarkses'][$nKey], $_AUTH['id'], $nID, $sGeneID));
+                    // Needs an update, maybe. Only if something changed.
+                    // updateEntry() will figure out if we actually need a query or not.
+                    // Since we're versioned and many genes may be involved, we want to be sure.
+                    $aData += array(
+                        'edited_by' => $_AUTH['id'],
+                        'edited_date' => $sDateNow,
+                    );
+                    $_DATA->updateEntry(array('genepanelid' => $nID, 'geneid' => $sGeneID), $aData, array_keys($aData));
                     // Mark gene as done, so we don't delete it after this loop.
                     unset($aGenesCurrentlyAssociated[$sGeneID]);
                 }
@@ -925,8 +932,6 @@ if (PATH_COUNT == 3 && preg_match('/^[a-z][a-z0-9#@-]+$/i', rawurldecode($_PE[2]
         $_DATA->checkFields($_POST, $zData);
 
         if (!lovd_error()) {
-
-            global $_DB;
             $_DB->beginTransaction();
             // Query text.
             // FIXME: Instead of worrying about this, we'd like to use updateEntry() here, but that can't handle linking tables with two ID fields yet.
