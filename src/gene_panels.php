@@ -558,8 +558,13 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && ACTION == 'manage_genes') {
 
             // Now delete what was no longer selected.
             if ($aGenesCurrentlyAssociated) {
-                $_DB->query('DELETE FROM ' . TABLE_GP2GENE . ' WHERE genepanelid = ? AND geneid IN (?' . str_repeat(', ?', count($aGenesCurrentlyAssociated) - 1) . ')',
-                    array_merge(array($nID), array_keys($aGenesCurrentlyAssociated)));
+                // When not using deleteEntry(), we could simply run one query for all genes that were dropped.
+                // However, for that we'd need to duplicate code handling the revision history.
+                // So we're going to keep the code simple, in expense of some speed on large deletions.
+                foreach (array_keys($aGenesCurrentlyAssociated) as $sGeneID) {
+                    // FIXME: No reason passed. Should we demand one from our users?
+                    $_DATA->deleteEntry(array('genepanelid' => $nID, 'geneid' => $sGeneID));
+                }
             }
 
             // If we get here, it all succeeded.
