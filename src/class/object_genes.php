@@ -208,15 +208,10 @@ class LOVD_Gene extends LOVD_Object {
             unset($this->aColumnsViewList['uniq_variants']);
             unset($this->aColumnsViewList['updated_date_']);
             // Add transcript information for the gene panel viewlist.
-            if (lovd_getProjectFile() == '/gene_panels.php') {
-                $this->aSQLViewList['SELECT'] .= ', IFNULL(CONCAT("<OPTION value=&quot;&quot;>-- select --</OPTION>", GROUP_CONCAT(CONCAT("<OPTION value=&quot;", t.id, "&quot;>", t.id_ncbi, "</OPTION>") ORDER BY t.id_ncbi SEPARATOR "")), "<OPTION value=&quot;&quot;>-- no transcripts available --</OPTION>") AS transcripts_HTML';
-                $this->aColumnsViewList +=
-                    array(
-                        'transcripts_HTML' => array(
-                            'view' => false,
-                        ),
-                    );
-            }
+            // Unfortunately, we can't limit this for the genes VL on the gene panel page,
+            //  because we also want it to work on the AJAX viewlist, so we can't use lovd_getProjectFile(),
+            //  but neither can we use the sViewListID, because we're in the constructor.
+            $this->aSQLViewList['SELECT'] .= ', IFNULL(CONCAT("<OPTION value=&quot;&quot;>-- select --</OPTION>", GROUP_CONCAT(CONCAT("<OPTION value=&quot;", t.id, "&quot;>", t.id_ncbi, "</OPTION>") ORDER BY t.id_ncbi SEPARATOR "")), "<OPTION value=&quot;&quot;>-- no transcripts available --</OPTION>") AS transcripts_HTML';
         }
 
         // Because the gene information is publicly available, remove some columns for the public.
