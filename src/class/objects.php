@@ -678,6 +678,7 @@ class LOVD_Object {
             $sRevSQL = '';
             $sReason = '';
             // Read in the existing record from the revision table to be used to compare against the changes
+            // TODO What if we do not find any records in the revision table? Currently it will crasy with an error.
             $aDataOld = $_DB->query('SELECT * FROM ' . constant($this->sTable . '_REV') . ' WHERE id = ? ORDER BY valid_to DESC LIMIT 1', array($nID))->fetchAssoc();
             $_DB->beginTransaction();
         }

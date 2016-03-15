@@ -813,6 +813,7 @@ $aTableSQL =
     phenotype_group VARCHAR(255) NOT NULL,
     cohort VARCHAR(255) NOT NULL,
     remarks TEXT NOT NULL,
+    pmid_mandatory BOOLEAN NOT NULL DEFAULT 1,
     created_by SMALLINT(5) UNSIGNED ZEROFILL,
     created_date DATETIME NOT NULL,
     edited_by SMALLINT(5) UNSIGNED ZEROFILL,
@@ -833,6 +834,7 @@ $aTableSQL =
     phenotype_group VARCHAR(255) NOT NULL,
     cohort VARCHAR(255) NOT NULL,
     remarks TEXT NOT NULL,
+    pmid_mandatory BOOLEAN NOT NULL DEFAULT 1,
     created_by SMALLINT(5) UNSIGNED ZEROFILL,
     created_date DATETIME NOT NULL,
     edited_by SMALLINT(5) UNSIGNED ZEROFILL,
@@ -901,8 +903,8 @@ $aTableSQL =
     INDEX (created_by),
     INDEX (edited_by),
     INDEX (deleted_by),
-    CONSTRAINT ' . TABLE_GP2GENE_REV . '_fk_genepanelid FOREIGN KEY (genepanelid) REFERENCES ' . TABLE_GENE_PANELS . ' (id) ON DELETE SET NULL ON UPDATE CASCADE,
-    CONSTRAINT ' . TABLE_GP2GENE_REV . '_fk_geneid FOREIGN KEY (geneid) REFERENCES ' . TABLE_GENES . ' (id) ON DELETE SET NULL ON UPDATE CASCADE,
+    CONSTRAINT ' . TABLE_GP2GENE_REV . '_fk_genepanelid FOREIGN KEY (genepanelid) REFERENCES ' . TABLE_GENE_PANELS_REV . ' (id) ON DELETE CASCADE ON UPDATE CASCADE,
+    CONSTRAINT ' . TABLE_GP2GENE_REV . '_fk_geneid FOREIGN KEY (geneid) REFERENCES ' . TABLE_GENES . ' (id) ON DELETE CASCADE ON UPDATE CASCADE,
     CONSTRAINT ' . TABLE_GP2GENE_REV . '_fk_transcriptid FOREIGN KEY (transcriptid) REFERENCES ' . TABLE_TRANSCRIPTS . ' (id) ON DELETE SET NULL ON UPDATE CASCADE,
     CONSTRAINT ' . TABLE_GP2GENE_REV . '_fk_created_by FOREIGN KEY (created_by) REFERENCES ' . TABLE_USERS . ' (id) ON DELETE SET NULL ON UPDATE CASCADE,
     CONSTRAINT ' . TABLE_GP2GENE_REV . '_fk_edited_by FOREIGN KEY (edited_by) REFERENCES ' . TABLE_USERS . ' (id) ON DELETE SET NULL ON UPDATE CASCADE,
@@ -938,6 +940,9 @@ $aTableSQL =
 // DMD_SPECIFIC;
 if (lovd_getProjectFile() == '/install/inc-sql-tables.php') {
     header('Content-type: text/plain; charset=UTF-8');
-    var_dump($aTableSQL);
+    print('<pre>');
+    print_r($aTableSQL);
+    print('<pre>');
+//    var_dump($aTableSQL);
 }
 ?>

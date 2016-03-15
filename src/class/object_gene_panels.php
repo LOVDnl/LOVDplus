@@ -63,8 +63,9 @@ class LOVD_GenePanel extends LOVD_Object {
                                'GROUP BY gp.id';
 
         // SQL code for viewing an entry.
-        $this->aSQLViewEntry['SELECT']   = 'gp.*,' .
-            'GROUP_CONCAT(DISTINCT d.id, ";", d.symbol ORDER BY (d.symbol != "" AND d.symbol != "-") DESC, d.symbol, d.name SEPARATOR ";;") AS __diseases, ' .
+        $this->aSQLViewEntry['SELECT']   = 'gp.*, ' .
+//            'GROUP_CONCAT(DISTINCT d.id, ";", d.symbol ORDER BY (d.symbol != "" AND d.symbol != "-") DESC, d.symbol, d.name SEPARATOR ";;") AS __diseases, ' .
+            'GROUP_CONCAT(DISTINCT d.id, ";", IFNULL(d.id_omim, 0), ";", IF(CASE d.symbol WHEN "-" THEN "" ELSE d.symbol END = "", d.name, d.symbol), ";", d.name ORDER BY (d.symbol != "" AND d.symbol != "-") DESC, d.symbol, d.name SEPARATOR ";;") AS __diseases, ' .
             'uc.name AS created_by_,' .
             'ue.name AS edited_by_';
         $this->aSQLViewEntry['FROM']     = TABLE_GENE_PANELS . ' AS gp ' .
@@ -94,6 +95,7 @@ class LOVD_GenePanel extends LOVD_Object {
                 'type' => 'Type',
                 'cohort' => 'Cohort',
                 'phenotype_group' => 'Phenotype group',
+                'pmid_mandatory' => 'PMID Mandatory',
                 'diseases_' => 'Associated with diseases',
                 'created_by_' => 'Created by',
                 'created_date' => 'Created date',
@@ -156,7 +158,6 @@ class LOVD_GenePanel extends LOVD_Object {
         if (!in_array($sView, array('list', 'entry'))) {
             $sView = 'list';
         }
-
         // Makes sure it's an array and htmlspecialchars() all the values.
         $zData = parent::prepareData($zData, $sView);
 
@@ -167,11 +168,16 @@ class LOVD_GenePanel extends LOVD_Object {
             $zData['diseases_'] = '';
             $zData['disease_omim_'] = '';
             foreach($zData['diseases'] as $aDisease) {
-                list($nID, $sSymbol) = $aDisease;
+                list($nID, $nOMIMID, $sSymbol, $sName) = $aDisease;
                 // Link to disease entry in LOVD.
                 $zData['diseases_'] .= (!$zData['diseases_']? '' : ', ') . '<A href="diseases/' . $nID . '">' . $sSymbol . '</A>';
+                if ($nOMIMID) {
+                    // Add link to OMIM for each disease that has an OMIM ID.
+                    $zData['disease_omim_'] .= (!$zData['disease_omim_'] ? '' : '<BR>') . '<A href="' . lovd_getExternalSource('omim', $nOMIMID, true) . '" target="_blank">' . $sSymbol . ($sSymbol == $sName? '' : ' (' . $sName . ')') . '</A>';
+                }
             }
         }
+        $zData['pmid_mandatory'] = ($zData['pmid_mandatory']? 'Yes' : 'No');
 
         // TODO searching still works on the original value so if we search for "Gene Panel" it does not work. Can this be fixed without modifying the SQL?
         $zData['type'] = ucwords(str_replace("_", " ", $zData['type']));
@@ -191,7 +197,7 @@ class LOVD_GenePanel extends LOVD_Object {
         if (!empty($this->aFormData)) {
             return parent::getForm();
         }
-        global $_DB;
+        global $_DB, $_AUTH;
 
         // Get Panel of diseases.
         $aDiseasesForm = $_DB->query('SELECT id, IF(CASE symbol WHEN "-" THEN "" ELSE symbol END = "", name, CONCAT(symbol, " (", name, ")")) FROM ' . TABLE_DISEASES . ' WHERE id > 0 ORDER BY (symbol != "" AND symbol != "-") DESC, symbol, name')->fetchAllCombine();
@@ -221,6 +227,7 @@ class LOVD_GenePanel extends LOVD_Object {
                 array('Remarks (optional)', '', 'textarea', 'remarks', 70, 3),
                 array('Cohort (optional)', '', 'text', 'cohort', 30),
                 array('Phenotype group (optional)', '', 'text', 'phenotype_group', 30),
+'pmid_mandatory' => array('PMID Mandatory', 'Require every gene added to have a supporting PubMed article', 'checkbox', 'pmid_mandatory', 1),
                 'hr','skip',
                 array('', '', 'print', '<B>Relation to diseases (optional)</B>'),
                 'hr',
@@ -232,6 +239,10 @@ class LOVD_GenePanel extends LOVD_Object {
         if (ACTION != 'create') {
             // Only allow the setting of the gene panel type when it is first created. We do not want to be able to change the gene panel type afterwards.
             unset($this->aFormData['gene_panel_type']);
+        }
+
+        if ($_AUTH['level'] < LEVEL_MANAGER) {
+            unset($this->aFormData['pmid_mandatory']);
         }
 
         return parent::getForm();
@@ -256,6 +267,16 @@ class LOVD_GenePanel extends LOVD_Object {
 
         parent::checkFields($aData);
 
+    }
+
+
+
+
+
+    function setDefaultValues ()
+    {
+        $_POST['pmid_mandatory'] = 1;
+        return true;
     }
 
 }

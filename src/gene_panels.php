@@ -33,7 +33,6 @@ require ROOT_PATH . 'inc-init.php';
 $sViewListID = 'GenePanel';
 define('TAB_SELECTED', 'genes');
 // TODO Modify the log entries to include URLS to the affected records
-// TODO Reorder the code blocks so as they are in the correct order (see existing files for example)
 
 if ($_AUTH) {
     // If authorized, check for updates.
@@ -230,7 +229,12 @@ if (PATH_COUNT == 1 && ACTION == 'create') {
 
         if (!lovd_error()) {
             // Fields to be used.
+
             $aFields = array('name', 'description', 'type', 'remarks', 'cohort', 'phenotype_group', 'created_by', 'created_date');
+            // If we are a manager then we can update the PMID mandatory field
+            if ($_AUTH['level'] >= LEVEL_MANAGER) {
+                $aFields[] = 'pmid_mandatory';
+            }
 
             // Prepare values.
             $_POST['created_by'] = $_AUTH['id'];
@@ -272,6 +276,8 @@ if (PATH_COUNT == 1 && ACTION == 'create') {
 
         }
 
+    } else {
+        $_DATA->setDefaultValues();
     }
 
     $_T->printHeader();
@@ -359,7 +365,10 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && ACTION == 'edit') {
 
             // Fields to be used.
             $aFields = array('name', 'description', 'remarks', 'cohort', 'phenotype_group', 'edited_by', 'edited_date');
-
+            // If we are a manager then we can update the PMID mandatory field
+            if ($_AUTH['level'] >= LEVEL_MANAGER) {
+                $aFields[] = 'pmid_mandatory';
+            }
             // Prepare values.
             $_POST['edited_by'] = $_AUTH['id'];
             $_POST['edited_date'] = date('Y-m-d H:i:s');
