@@ -162,7 +162,6 @@ class LOVD_GenePanel extends LOVD_Object {
             );
 
         parent::checkFields($aData);
-
     }
 
 
@@ -225,7 +224,6 @@ class LOVD_GenePanel extends LOVD_Object {
         }
 
         return parent::getForm();
-
     }
 
 
@@ -264,7 +262,6 @@ class LOVD_GenePanel extends LOVD_Object {
         $zData['type'] = ucwords(str_replace("_", " ", $zData['type']));
 
         return $zData;
-
     }
 
 

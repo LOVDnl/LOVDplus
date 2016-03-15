@@ -135,8 +135,6 @@ if (PATH_COUNT == 1 && ACTION == 'create') {
 
     if (!empty($_POST)) {
         lovd_errorClean();
-
-
         $_DATA->checkFields($_POST);
 
         if (!lovd_error()) {
@@ -185,12 +183,13 @@ if (PATH_COUNT == 1 && ACTION == 'create') {
             print('      <SCRIPT type="text/javascript">setTimeout(\'window.location.href=\\\'' . lovd_getInstallURL() . CURRENT_PATH . '/' . $nID . '\\\';\', 3000);</SCRIPT>' . "\n\n");
             $_T->printFooter();
             exit;
-
         }
 
     } else {
         $_DATA->setDefaultValues();
     }
+
+
 
     $_T->printHeader();
     $_T->printTitle();
@@ -319,6 +318,8 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && ACTION == 'edit') {
         $_POST = array_merge($_POST, $zData);
     }
 
+
+
     $_T->printHeader();
     $_T->printTitle();
 
@@ -403,6 +404,8 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && ACTION == 'delete') {
         }
     }
 
+
+
     $_T->printHeader();
     $_T->printTitle();
 
@@ -462,7 +465,6 @@ if (PATH_COUNT == 3 && preg_match('/^[a-z][a-z0-9#@-]+$/i', rawurldecode($_PE[2]
 
     $_T->printFooter();
     exit;
-
 }
 
 
@@ -577,6 +579,8 @@ if (PATH_COUNT == 3 && preg_match('/^[a-z][a-z0-9#@-]+$/i', rawurldecode($_PE[2]
         $_POST = array_merge($_POST, $zData);
     }
 
+
+
     $_T->printHeader();
     $_T->printTitle();
 
@@ -599,7 +603,6 @@ if (PATH_COUNT == 3 && preg_match('/^[a-z][a-z0-9#@-]+$/i', rawurldecode($_PE[2]
 
     $_T->printFooter();
     exit;
-
 }
 
 
@@ -680,6 +683,8 @@ if (PATH_COUNT == 3 && preg_match('/^[a-z][a-z0-9#@-]+$/i', rawurldecode($_PE[2]
         }
     }
 
+
+
     $_T->printHeader();
     $_T->printTitle();
 
@@ -705,7 +710,6 @@ if (PATH_COUNT == 3 && preg_match('/^[a-z][a-z0-9#@-]+$/i', rawurldecode($_PE[2]
     print('</FORM>' . "\n\n");
     $_T->printFooter();
     exit;
-
 }
 
 
@@ -715,7 +719,6 @@ if (PATH_COUNT == 3 && preg_match('/^[a-z][a-z0-9#@-]+$/i', rawurldecode($_PE[2]
 if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && ACTION == 'changelog') {
     // URL: /gene_panels/00001?changelog
     // Drop specific entry.
-
 
     $nID = sprintf('%05d', $_PE[1]);
     define('PAGE_TITLE', 'View changelog for gene panel #' . $nID);
@@ -731,7 +734,6 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && ACTION == 'changelog') {
 
     $_T->printFooter();
     exit;
-
 }
 
 print('No condition met using the provided URL.');
