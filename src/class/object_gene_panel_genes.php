@@ -80,7 +80,6 @@ class LOVD_GenePanelGene extends LOVD_Object {
                 'geneid' => 'Gene Symbol',
                 'transcript_ncbi' => 'Transcript ID',
                 'inheritance' => 'Inheritance',
-                'id_omim' => 'OMIM',
                 'pmid' => 'PubMed',
                 'remarks' => 'Remarks',
                 'created_by_' => 'Created by',
@@ -112,10 +111,6 @@ class LOVD_GenePanelGene extends LOVD_Object {
                     'view' => array('Inheritance', 80),
                     'db'   => array('gp2g.inheritance', 'ASC', true),
                     'legend' => array('The mode of inheritance.')),
-                'id_omim' => array(
-                    'view' => array('OMIM', 60),
-                    'db'   => array('gp2g.id_omim', 'ASC', false),
-                    'legend' => array('OMIM ID.')),
                 'pmid' => array(
                     'view' => array('PubMed', 60),
                     'db'   => array('gp2g.pmid', 'ASC', false),
@@ -188,10 +183,6 @@ class LOVD_GenePanelGene extends LOVD_Object {
             if ($zData['pmid']) {
                 $zData['pmid'] = '<SPAN' . ($sView != 'list' ? '' : ' onclick="cancelParentEvent(event);"') . '><A href="http://www.ncbi.nlm.nih.gov/pubmed/' . $zData['pmid'] . '" target="_blank">PubMed</A></SPAN>';
             }
-            // Format the OMIM URL
-            if ($zData['id_omim']) {
-                $zData['id_omim'] = '<SPAN' . ($sView != 'list' ? '' : ' onclick="cancelParentEvent(event);"') . '><A href="' . lovd_getExternalSource('omim', $zData['id_omim'], true) . '" target="_blank">OMIM</A></SPAN>';
-            }
             // Create a link to a transcript
             if ($zData['transcriptid']) {
                 $zData['transcript_ncbi'] = '<SPAN' . ($sView != 'list' ? '' : ' onclick="cancelParentEvent(event);"') . '><A href="transcripts/' . $zData['transcriptid'] . '">' . $zData['transcript_ncbi'] . '</A></SPAN>';
@@ -236,7 +227,6 @@ class LOVD_GenePanelGene extends LOVD_Object {
                 array('Symbol', '', 'print', $zData['geneid'], 30),
                 array('Transcript (optional)', '', 'select', 'transcriptid', 1, $aTranscriptsForm, '', false, false),
                 array('Inheritance (optional)', '', 'select', 'inheritance', 1, $aInheritance, '', false, false),
-                array('OMIM ID (optional)', '', 'text', 'id_omim', 20),
                 array('PubMed ID (optional)', '', 'text', 'pmid', 20),
                 array('Remarks (optional)', '', 'textarea', 'remarks', 70, 3),
                 'hr','skip'
@@ -305,10 +295,6 @@ class LOVD_GenePanelGene extends LOVD_Object {
     function checkFields ($aData, $zData = false)
     {
         // Checks fields before submission of data.
-
-        if (!empty($aData['id_omim']) && !preg_match('/^[1-9]\d{5}$/', $aData['id_omim'])) {
-            lovd_errorAdd('id_omim', 'The OMIM ID has to be six digits long and cannot start with a \'0\'.');
-        }
 
         // TODO Can we validate the pmid field?
 

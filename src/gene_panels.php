@@ -625,13 +625,12 @@ if (PATH_COUNT == 3 && preg_match('/^[a-z][a-z0-9#@-]+$/i', rawurldecode($_PE[2]
             // Query text.
             // FIXME: Instead of worrying about this, we'd like to use updateEntry() here, but that can't handle linking tables with two ID fields yet.
             $sSQLDate = date('Y-m-d H:i:s');
-            $_POST['id_omim'] = $_POST['id_omim']?$_POST['id_omim']:null;
             $_POST['pmid'] = $_POST['pmid']?$_POST['pmid']:null;
             $_POST['transcriptid'] = $_POST['transcriptid']?$_POST['transcriptid']:null;
             $_POST['edited_by'] = $_AUTH['id'];
 
-            $sSQL = 'UPDATE ' . TABLE_GP2GENE . ' SET transcriptid = ?, inheritance = ?, id_omim = ?, pmid = ?, remarks = ?, edited_by = ?, edited_date = ? WHERE genepanelid = ? and geneid = ?';
-            $aSQL = array($_POST['transcriptid'], $_POST['inheritance'], $_POST['id_omim'], $_POST['pmid'], $_POST['remarks'], $_POST['edited_by'], $sSQLDate, $nGenePanelID, $sGeneID);
+            $sSQL = 'UPDATE ' . TABLE_GP2GENE . ' SET transcriptid = ?, inheritance = ?, pmid = ?, remarks = ?, edited_by = ?, edited_date = ? WHERE genepanelid = ? and geneid = ?';
+            $aSQL = array($_POST['transcriptid'], $_POST['inheritance'], $_POST['pmid'], $_POST['remarks'], $_POST['edited_by'], $sSQLDate, $nGenePanelID, $sGeneID);
             $q = $_DB->query($sSQL, $aSQL, true, true);
             // Get the data from the existing record in the revision table so as we can compare it against the changes
             $aDataOld = $_DB->query('SELECT * FROM ' . TABLE_GP2GENE_REV . ' WHERE genepanelid = ? and geneid = ? ORDER BY valid_to DESC LIMIT 1', array($nGenePanelID, $sGeneID))->fetchAssoc();
@@ -652,7 +651,6 @@ if (PATH_COUNT == 3 && preg_match('/^[a-z][a-z0-9#@-]+$/i', rawurldecode($_PE[2]
                 'geneid' => $sGeneID,
                 'transcriptid' => $_POST['transcriptid'],
                 'inheritance' => $_POST['inheritance'],
-                'id_omim' => $_POST['id_omim'],
                 'pmid' => $_POST['pmid'],
                 'remarks' => $_POST['remarks'],
                 'created_by' => $zData['created_by'],
