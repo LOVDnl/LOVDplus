@@ -4,7 +4,7 @@
  * LEIDEN OPEN VARIATION DATABASE (LOVD)
  *
  * Created     : 2016-03-01
- * Modified    : 2016-03-01
+ * Modified    : 2016-03-15
  * For LOVD    : 3.0-13
  *
  * Copyright   : 2004-2016 Leiden University Medical Center; http://www.LUMC.nl/
@@ -27,8 +27,6 @@
  * along with LOVD.  If not, see <http://www.gnu.org/licenses/>.
  *
  *************/
-
-// TODO Reorder the code blocks so as they are in the correct order (see existing files for example)
 
 // Don't allow direct access.
 if (!defined('ROOT_PATH')) {
@@ -151,38 +149,19 @@ class LOVD_GenePanel extends LOVD_Object {
 
 
 
-    function prepareData ($zData = '', $sView = 'list')
+    function checkFields ($aData, $zData = false)
     {
-        // Prepares the data by "enriching" the variable received with links, pictures, etc.
+        // Checks fields before submission of data.
+        global $_DB;
 
-        if (!in_array($sView, array('list', 'entry'))) {
-            $sView = 'list';
-        }
-        // Makes sure it's an array and htmlspecialchars() all the values.
-        $zData = parent::prepareData($zData, $sView);
+        // Mandatory fields.
+        $this->aCheckMandatory =
+            array(
+                'name',
+                'description',
+            );
 
-        if ($sView == 'list') {
-            $zData['created_date'] = substr($zData['created_date'], 0, 10);
-        } else {
-            // Associated with diseases...
-            $zData['diseases_'] = '';
-            $zData['disease_omim_'] = '';
-            foreach($zData['diseases'] as $aDisease) {
-                list($nID, $nOMIMID, $sSymbol, $sName) = $aDisease;
-                // Link to disease entry in LOVD.
-                $zData['diseases_'] .= (!$zData['diseases_']? '' : ', ') . '<A href="diseases/' . $nID . '">' . $sSymbol . '</A>';
-                if ($nOMIMID) {
-                    // Add link to OMIM for each disease that has an OMIM ID.
-                    $zData['disease_omim_'] .= (!$zData['disease_omim_'] ? '' : '<BR>') . '<A href="' . lovd_getExternalSource('omim', $nOMIMID, true) . '" target="_blank">' . $sSymbol . ($sSymbol == $sName? '' : ' (' . $sName . ')') . '</A>';
-                }
-            }
-        }
-        $zData['pmid_mandatory'] = ($zData['pmid_mandatory']? 'Yes' : 'No');
-
-        // TODO searching still works on the original value so if we search for "Gene Panel" it does not work. Can this be fixed without modifying the SQL?
-        $zData['type'] = ucwords(str_replace("_", " ", $zData['type']));
-
-        return $zData;
+        parent::checkFields($aData);
 
     }
 
@@ -253,19 +232,38 @@ class LOVD_GenePanel extends LOVD_Object {
 
 
 
-    function checkFields ($aData, $zData = false)
+    function prepareData ($zData = '', $sView = 'list')
     {
-        // Checks fields before submission of data.
-        global $_DB;
+        // Prepares the data by "enriching" the variable received with links, pictures, etc.
 
-        // Mandatory fields.
-        $this->aCheckMandatory =
-            array(
-                'name',
-                'description',
-            );
+        if (!in_array($sView, array('list', 'entry'))) {
+            $sView = 'list';
+        }
+        // Makes sure it's an array and htmlspecialchars() all the values.
+        $zData = parent::prepareData($zData, $sView);
 
-        parent::checkFields($aData);
+        if ($sView == 'list') {
+            $zData['created_date'] = substr($zData['created_date'], 0, 10);
+        } else {
+            // Associated with diseases...
+            $zData['diseases_'] = '';
+            $zData['disease_omim_'] = '';
+            foreach($zData['diseases'] as $aDisease) {
+                list($nID, $nOMIMID, $sSymbol, $sName) = $aDisease;
+                // Link to disease entry in LOVD.
+                $zData['diseases_'] .= (!$zData['diseases_']? '' : ', ') . '<A href="diseases/' . $nID . '">' . $sSymbol . '</A>';
+                if ($nOMIMID) {
+                    // Add link to OMIM for each disease that has an OMIM ID.
+                    $zData['disease_omim_'] .= (!$zData['disease_omim_'] ? '' : '<BR>') . '<A href="' . lovd_getExternalSource('omim', $nOMIMID, true) . '" target="_blank">' . $sSymbol . ($sSymbol == $sName? '' : ' (' . $sName . ')') . '</A>';
+                }
+            }
+        }
+        $zData['pmid_mandatory'] = ($zData['pmid_mandatory']? 'Yes' : 'No');
+
+        // TODO searching still works on the original value so if we search for "Gene Panel" it does not work. Can this be fixed without modifying the SQL?
+        $zData['type'] = ucwords(str_replace("_", " ", $zData['type']));
+
+        return $zData;
 
     }
 

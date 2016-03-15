@@ -4,7 +4,7 @@
  * LEIDEN OPEN VARIATION DATABASE (LOVD)
  *
  * Created     : 2016-03-07
- * Modified    : 2016-03-07
+ * Modified    : 2016-03-15
  * For LOVD    : 3.0-13
  *
  * Copyright   : 2004-2016 Leiden University Medical Center; http://www.LUMC.nl/
@@ -27,8 +27,6 @@
  * along with LOVD.  If not, see <http://www.gnu.org/licenses/>.
  *
  *************/
-
-// TODO Reorder the code blocks so as they are in the correct order (see existing files for example)
 
 // Don't allow direct access.
 if (!defined('ROOT_PATH')) {
@@ -142,53 +140,12 @@ class LOVD_GenePanelGene extends LOVD_Object {
 
 
 
-    function viewEntry ($nID = false) {
-        global $_DB;
+    function checkFields ($aData, $zData = false)
+    {
+        // Checks fields before submission of data.
+        // TODO Can we validate the pmid field?
+        parent::checkFields($aData);
 
-        list($nGenePanelID, $sGeneID) = explode(',', $nID);
-        $this->aSQLViewEntry['WHERE'] .= (empty($this->aSQLViewEntry['WHERE'])? '' : ' AND ') . 'gp2g.genepanelid = \'' . $nGenePanelID . '\'';
-
-        // Before passing this on to parent::viewEntry(), perform a standard getCount() check on the genepanel ID,
-        // to make sure that we won't get a query error when the combination of GeneID/GenePanelID does not yield
-        // any results. Easiest is then to fake a wrong $nID such that parent::viewEntry() will complain.
-        if (!$_DB->query('SELECT COUNT(*) FROM ' . TABLE_GP2GENE . ' WHERE geneid = ? AND genepanelid = ?', array($sGeneID, $nGenePanelID))->fetchColumn()) {
-            $sGeneID = -1;
-        }
-        parent::viewEntry($sGeneID);
-    }
-
-
-
-
-
-    function prepareData ($zData = '', $sView = 'list') {
-        // Prepares the data by "enriching" the variable received with links, pictures, etc.
-        if (!in_array($sView, array('list', 'entry'))) {
-            $sView = 'list';
-        }
-
-        // Makes sure it's an array and htmlspecialchars() all the values.
-        $zData = parent::prepareData($zData, $sView);
-
-        // Change the formatting based on the type of view
-        if ($sView == 'list') {
-
-        } else {
-            $zData['genepanelid'] = '<A href="gene_panels/' . $zData['genepanelid'] . '">' . $zData['genepanelid'] . '</A>';
-        }
-        // Only format this viewlist if we are not downloading it
-        if (FORMAT != 'text/plain') {
-
-            // Format the pubmed URL
-            if ($zData['pmid']) {
-                $zData['pmid'] = '<SPAN' . ($sView != 'list' ? '' : ' onclick="cancelParentEvent(event);"') . '><A href="http://www.ncbi.nlm.nih.gov/pubmed/' . $zData['pmid'] . '" target="_blank">PubMed</A></SPAN>';
-            }
-            // Create a link to a transcript
-            if ($zData['transcriptid']) {
-                $zData['transcript_ncbi'] = '<SPAN' . ($sView != 'list' ? '' : ' onclick="cancelParentEvent(event);"') . '><A href="transcripts/' . $zData['transcriptid'] . '">' . $zData['transcript_ncbi'] . '</A></SPAN>';
-            }
-        }
-        return $zData;
     }
 
 
@@ -292,14 +249,53 @@ class LOVD_GenePanelGene extends LOVD_Object {
 
 
 
-    function checkFields ($aData, $zData = false)
-    {
-        // Checks fields before submission of data.
+    function prepareData ($zData = '', $sView = 'list') {
+        // Prepares the data by "enriching" the variable received with links, pictures, etc.
+        if (!in_array($sView, array('list', 'entry'))) {
+            $sView = 'list';
+        }
 
-        // TODO Can we validate the pmid field?
+        // Makes sure it's an array and htmlspecialchars() all the values.
+        $zData = parent::prepareData($zData, $sView);
 
-        parent::checkFields($aData);
+        // Change the formatting based on the type of view
+        if ($sView == 'list') {
 
+        } else {
+            $zData['genepanelid'] = '<A href="gene_panels/' . $zData['genepanelid'] . '">' . $zData['genepanelid'] . '</A>';
+        }
+        // Only format this viewlist if we are not downloading it
+        if (FORMAT != 'text/plain') {
+
+            // Format the pubmed URL
+            if ($zData['pmid']) {
+                $zData['pmid'] = '<SPAN' . ($sView != 'list' ? '' : ' onclick="cancelParentEvent(event);"') . '><A href="http://www.ncbi.nlm.nih.gov/pubmed/' . $zData['pmid'] . '" target="_blank">PubMed</A></SPAN>';
+            }
+            // Create a link to a transcript
+            if ($zData['transcriptid']) {
+                $zData['transcript_ncbi'] = '<SPAN' . ($sView != 'list' ? '' : ' onclick="cancelParentEvent(event);"') . '><A href="transcripts/' . $zData['transcriptid'] . '">' . $zData['transcript_ncbi'] . '</A></SPAN>';
+            }
+        }
+        return $zData;
+    }
+
+
+
+
+
+    function viewEntry ($nID = false) {
+        global $_DB;
+
+        list($nGenePanelID, $sGeneID) = explode(',', $nID);
+        $this->aSQLViewEntry['WHERE'] .= (empty($this->aSQLViewEntry['WHERE'])? '' : ' AND ') . 'gp2g.genepanelid = \'' . $nGenePanelID . '\'';
+
+        // Before passing this on to parent::viewEntry(), perform a standard getCount() check on the genepanel ID,
+        // to make sure that we won't get a query error when the combination of GeneID/GenePanelID does not yield
+        // any results. Easiest is then to fake a wrong $nID such that parent::viewEntry() will complain.
+        if (!$_DB->query('SELECT COUNT(*) FROM ' . TABLE_GP2GENE . ' WHERE geneid = ? AND genepanelid = ?', array($sGeneID, $nGenePanelID))->fetchColumn()) {
+            $sGeneID = -1;
+        }
+        parent::viewEntry($sGeneID);
     }
 }
 ?>
