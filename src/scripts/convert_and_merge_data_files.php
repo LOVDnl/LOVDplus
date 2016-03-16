@@ -947,7 +947,7 @@ function lovd_getVariantPosition ($sVariant, $aTranscript = array())
         'end_intron' => 0,
     );
 
-    if (preg_match('/^[cgmn]\.((?:\-|\*)?\d+)([-+]\d+)?(?:[ACGT]>[ACGT]|(?:_((?:\-|\*)?\d+)([-+]\d+)?)?(?:d(?:el(?:ins)?|up)|inv|ins)(?:[ACGT])*)$/', $sVariant, $aRegs)) {
+    if (preg_match('/^[cgmn]\.((?:\-|\*)?\d+)([-+]\d+)?(?:[ACGT]>[ACGT]|(?:_((?:\-|\*)?\d+)([-+]\d+)?)?(?:d(?:el(?:ins)?|up)|inv|ins)(?:[ACGT])*|\[[0-9]+\])$/', $sVariant, $aRegs)) {
         foreach (array(1, 3) as $i) {
             if (isset($aRegs[$i]) && $aRegs[$i]{0} == '*') {
                 // Position in 3'UTR. Add CDS offset.
