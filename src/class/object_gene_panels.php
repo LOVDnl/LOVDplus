@@ -78,15 +78,14 @@ class LOVD_GenePanel extends LOVD_Object {
                                           'GROUP_CONCAT(DISTINCT IF(CASE d.symbol WHEN "-" THEN "" ELSE d.symbol END = "", d.name, d.symbol) ORDER BY (d.symbol != "" AND d.symbol != "-") DESC, d.symbol, d.name SEPARATOR ", ") AS diseases_, ' .
                                           'COUNT(DISTINCT gp2g.geneid) AS genes';
         $this->aSQLViewList['FROM']     = TABLE_GENE_PANELS . ' AS gp ' .
-                                          'LEFT OUTER JOIN ' . TABLE_GP2DIS . ' AS gp2d ON (gp.id = gp2d. genepanelid) ' .
-                                          'LEFT OUTER JOIN ' . TABLE_GP2GENE . ' AS gp2g ON (gp.id = gp2g. genepanelid) ' .
+                                          'LEFT OUTER JOIN ' . TABLE_GP2DIS . ' AS gp2d ON (gp.id = gp2d.genepanelid) ' .
+                                          'LEFT OUTER JOIN ' . TABLE_GP2GENE . ' AS gp2g ON (gp.id = gp2g.genepanelid) ' .
                                           'LEFT OUTER JOIN ' . TABLE_DISEASES . ' AS d ON (gp2d.diseaseid = d.id)';
         $this->aSQLViewList['GROUP_BY'] = 'gp.id';
 
         // List of columns and (default?) order for viewing an entry.
         $this->aColumnsViewEntry =
             array(
-                'TableHeader_General' => 'General information',
                 'name' => 'Gene panel name',
                 'description' => 'Description',
                 'remarks' => 'Remarks',
@@ -258,7 +257,6 @@ class LOVD_GenePanel extends LOVD_Object {
         }
         $zData['pmid_mandatory'] = ($zData['pmid_mandatory']? 'Yes' : 'No');
 
-        // TODO searching still works on the original value so if we search for "Gene Panel" it does not work. Can this be fixed without modifying the SQL?
         $zData['type'] = ucwords(str_replace("_", " ", $zData['type']));
 
         return $zData;

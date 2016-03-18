@@ -30,7 +30,6 @@
 
 define('ROOT_PATH', './');
 require ROOT_PATH . 'inc-init.php';
-$sViewListID = 'GenePanel';
 define('TAB_SELECTED', 'genes');
 
 if ($_AUTH) {
@@ -58,7 +57,7 @@ if (PATH_COUNT == 1 && !ACTION) {
 
     require ROOT_PATH . 'class/object_gene_panels.php';
     $_DATA = new LOVD_GenePanel();
-    $_DATA->viewList($sViewListID, array(), false, false, (bool) ($_AUTH['level'] >= LEVEL_SUBMITTER));
+    $_DATA->viewList('GenePanel', array(), false, false, (bool) ($_AUTH['level'] >= LEVEL_SUBMITTER));
 
     $_T->printFooter();
     exit;
@@ -716,12 +715,12 @@ if (PATH_COUNT == 3 && preg_match('/^[a-z][a-z0-9#@-]+$/i', rawurldecode($_PE[2]
 
 
 
-if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && ACTION == 'changelog') {
-    // URL: /gene_panels/00001?changelog
-    // Drop specific entry.
+if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && ACTION == 'history') {
+    // URL: /gene_panels/00001?history
+    // Show the history for this gene panel.
 
     $nID = sprintf('%05d', $_PE[1]);
-    define('PAGE_TITLE', 'View changelog for gene panel #' . $nID);
+    define('PAGE_TITLE', 'View history for gene panel #' . $nID);
 
     lovd_requireAUTH();
 

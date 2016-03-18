@@ -72,8 +72,7 @@ if (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] == 'on' && !empty($_SERVER['S
 // Our output formats: text/html by default.
 $aFormats = array('text/html'); // Disable all downloads. // Key [0] is default. Other values may not always be allowed. It is checked in the Template class' printHeader() and in Objects::viewList().
 // Except for when auto-importing, obviously, then we need text/plain...
-$aPlainTextFiles = array('/import.php','/gene_statistics.php','/ajax/viewlist.php','/gene_panels.php');
-if (in_array(lovd_getProjectFile(), $aPlainTextFiles)) {
+if (lovd_getProjectFile() == '/import.php') {
     $aFormats[] = 'text/plain';
 }
 if (lovd_getProjectFile() == '/api.php') {
@@ -115,6 +114,10 @@ define('MAPPING_DONE', 32);             // FIXME; Create a button in Setup which
 
 // Define constant to quickly check if we're on Windows, since sending emails on Windows requires different settings.
 define('ON_WINDOWS', (strtoupper(substr(PHP_OS, 0, 3) == 'WIN')));
+
+// Diagnostics: To later make it easier to share certain code
+// between LOVD and LOVD+, simply define if we're active or not.
+define('LOVD_plus', true);
 
 // For the installation process (and possibly later somewhere else, too).
 $aRequired =

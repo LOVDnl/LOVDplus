@@ -53,11 +53,6 @@ class LOVD_GenePanelGene extends LOVD_Object {
         global $_AUTH;
         $this->sTable  = 'TABLE_GP2GENE';
 
-        // Check to see if the gene panel ID is stored in a form coming from AJAX otherwise use the value passed to the constructor
-        if (isset($_GET['id'])) {
-            $nID = $_GET['id'];
-        }
-
         // SQL code for viewing an entry.
         $this->aSQLViewEntry['SELECT']   = 'gp2g.*, gp2g.geneid AS id, uc.name AS created_by_, ue.name AS edited_by_, t.id_ncbi AS transcript_ncbi ';
         $this->aSQLViewEntry['FROM']     = TABLE_GP2GENE . ' AS gp2g ' .
@@ -166,13 +161,13 @@ class LOVD_GenePanelGene extends LOVD_Object {
 
         // If we have found some transcripts for this gene then show them here otherwise show no transcripts available.
         if (count($aTranscripts)) {
-            $aTranscriptsForm =  array('' => 'Please select...') + $aTranscripts;
+            $aTranscriptsForm =  array('' => '-- select --') + $aTranscripts;
         } else {
-            $aTranscriptsForm = array('' => 'No transcripts available');
+            $aTranscriptsForm = array('' => '-- no transcripts available --');
         }
 
         $aInheritance = array(
-            '' => 'Please Select...',
+            '' => '-- select --',
             'Autosomal Recessive' => 'Autosomal Recessive',
             'Dominant' => 'Dominant',
             'X-Linked' => 'X-Linked'
@@ -199,6 +194,7 @@ class LOVD_GenePanelGene extends LOVD_Object {
 
     function loadEntry ($nGenePanelID = false, $sGeneID = false)
     {
+        // TODO Modify the LOVD_Objects::loadEntry() function to handle records with multiple keys
         // Loads and returns an entry from the database.
         global $_DB, $_T;
 
@@ -259,17 +255,16 @@ class LOVD_GenePanelGene extends LOVD_Object {
         $zData = parent::prepareData($zData, $sView);
 
         // Change the formatting based on the type of view
-        if ($sView == 'list') {
-
-        } else {
+        if ($sView != 'list') {
             $zData['genepanelid'] = '<A href="gene_panels/' . $zData['genepanelid'] . '">' . $zData['genepanelid'] . '</A>';
         }
         // Only format this viewlist if we are not downloading it
-        if (FORMAT != 'text/plain') {
+        if (FORMAT == 'text/html') {
 
             // Format the pubmed URL
             if ($zData['pmid']) {
-                $zData['pmid'] = '<SPAN' . ($sView != 'list' ? '' : ' onclick="cancelParentEvent(event);"') . '><A href="http://www.ncbi.nlm.nih.gov/pubmed/' . $zData['pmid'] . '" target="_blank">PubMed</A></SPAN>';
+                $zData['pmid'] = '<SPAN' . ($sView != 'list' ? '' : ' onclick="cancelParentEvent(event);"') . '><A href="' . lovd_getExternalSource('pubmed_article', $zData['pmid'], true) . '" target="_blank">PubMed</A></SPAN>';
+//                $zData['pmid'] = '<SPAN' . ($sView != 'list' ? '' : ' onclick="cancelParentEvent(event);"') . '><A href="http://www.ncbi.nlm.nih.gov/pubmed/' . $zData['pmid'] . '" target="_blank">PubMed</A></SPAN>';
             }
             // Create a link to a transcript
             if ($zData['transcriptid']) {
@@ -284,6 +279,7 @@ class LOVD_GenePanelGene extends LOVD_Object {
 
 
     function viewEntry ($nID = false) {
+        // TODO adapt the LOVD_Object::viewEntry() function to handle linking tables
         global $_DB;
 
         list($nGenePanelID, $sGeneID) = explode(',', $nID);
