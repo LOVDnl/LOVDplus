@@ -4,10 +4,10 @@
  * LEIDEN OPEN VARIATION DATABASE (LOVD)
  *
  * Created     : 2009-10-22
- * Modified    : 2014-06-16
- * For LOVD    : 3.0-11
+ * Modified    : 2015-12-03
+ * For LOVD    : 3.0-15
  *
- * Copyright   : 2004-2014 Leiden University Medical Center; http://www.LUMC.nl/
+ * Copyright   : 2004-2015 Leiden University Medical Center; http://www.LUMC.nl/
  * Programmers : Ing. Ivo F.A.C. Fokkema <I.F.A.C.Fokkema@LUMC.nl>
  *               Ing. Ivar C. Lugtenburg <I.C.Lugtenburg@LUMC.nl>
  *
@@ -32,6 +32,19 @@
 // STILL TODO:
 // variant <-> pathogenicity <-> disease? Link pathogenicity specifically to one of the phenotypes or diseases?
 // Functional assays / computer predictions, hoe toevoegen??? Aan variant én aan individual???
+
+// IDs:
+// WARNING: If editing any of these, also edit $_SETT['objectid_length']!
+// userid SMALLINT(5) UNSIGNED (65K)
+// geneid VARCHAR(25) (25 characters)
+// transcriptid MEDIUMINT(8) UNSIGNED (16M)
+// diseaseid SMALLINT(5) UNSIGNED (65K)
+// individualid MEDIUMINT(8) UNSIGNED (16M)
+// variantid INT(10) UNSIGNED (4294M)
+// phenotypeid INT(10) UNSIGNED (4294M)
+// screeningid INT(10) UNSIGNED (4294M)
+// colid VARCHAR(100) (100 characters)
+// linkid TINYINT(3) UNSIGNED (255)
 
 // DMD_SPECIFIC
 if (!defined('ROOT_PATH')) {
@@ -161,7 +174,7 @@ $aTableSQL =
 
          , 'TABLE_TRANSCRIPTS' =>
    'CREATE TABLE ' . TABLE_TRANSCRIPTS . ' (
-    id SMALLINT(5) UNSIGNED ZEROFILL NOT NULL AUTO_INCREMENT,
+    id MEDIUMINT(8) UNSIGNED ZEROFILL NOT NULL AUTO_INCREMENT,
     geneid VARCHAR(25) NOT NULL,
     name VARCHAR(255) NOT NULL,
     id_mutalyzer TINYINT(3) UNSIGNED ZEROFILL,
@@ -262,11 +275,6 @@ $aTableSQL =
 
     id_miracle BIGINT UNSIGNED,
     id_zis MEDIUMINT UNSIGNED,
-    analysis_statusid TINYINT(1) UNSIGNED DEFAULT 0,
-    analysis_by SMALLINT(5) UNSIGNED ZEROFILL,
-    analysis_date DATETIME,
-    analysis_approved_by SMALLINT(5) UNSIGNED ZEROFILL,
-    analysis_approved_date DATETIME,
 
     PRIMARY KEY (id),
     INDEX (fatherid),
@@ -275,14 +283,6 @@ $aTableSQL =
     INDEX (statusid),
     INDEX (created_by),
     INDEX (edited_by),
-
-    INDEX (analysis_statusid),
-    INDEX (analysis_by),
-    INDEX (analysis_approved_by),
-    CONSTRAINT ' . TABLE_INDIVIDUALS . '_fk_analysis_statusid FOREIGN KEY (analysis_statusid) REFERENCES ' . TABLE_ANALYSIS_STATUS . ' (id) ON DELETE SET NULL ON UPDATE CASCADE,
-    CONSTRAINT ' . TABLE_INDIVIDUALS . '_fk_analysis_by FOREIGN KEY (analysis_by) REFERENCES ' . TABLE_USERS . ' (id) ON DELETE SET NULL ON UPDATE CASCADE,
-    CONSTRAINT ' . TABLE_INDIVIDUALS . '_fk_analysis_approved_by FOREIGN KEY (analysis_approved_by) REFERENCES ' . TABLE_USERS . ' (id) ON DELETE SET NULL ON UPDATE CASCADE,
-
     CONSTRAINT ' . TABLE_INDIVIDUALS . '_fk_fatherid FOREIGN KEY (fatherid) REFERENCES ' . TABLE_INDIVIDUALS . ' (id) ON DELETE SET NULL ON UPDATE CASCADE,
     CONSTRAINT ' . TABLE_INDIVIDUALS . '_fk_motherid FOREIGN KEY (motherid) REFERENCES ' . TABLE_INDIVIDUALS . ' (id) ON DELETE SET NULL ON UPDATE CASCADE,
     CONSTRAINT ' . TABLE_INDIVIDUALS . '_fk_panelid FOREIGN KEY (panelid) REFERENCES ' . TABLE_INDIVIDUALS . ' (id) ON DELETE SET NULL ON UPDATE CASCADE,
@@ -395,7 +395,7 @@ $aTableSQL =
          , 'TABLE_VARIANTS_ON_TRANSCRIPTS' =>
    'CREATE TABLE ' . TABLE_VARIANTS_ON_TRANSCRIPTS . ' (
     id INT(10) UNSIGNED ZEROFILL NOT NULL,
-    transcriptid SMALLINT(5) UNSIGNED ZEROFILL NOT NULL,
+    transcriptid MEDIUMINT(8) UNSIGNED ZEROFILL NOT NULL,
     effectid TINYINT(2) UNSIGNED ZEROFILL,
     position_c_start MEDIUMINT,
     position_c_start_intron INT,
@@ -493,11 +493,26 @@ $aTableSQL =
     created_date DATETIME NOT NULL,
     edited_by SMALLINT(5) UNSIGNED ZEROFILL,
     edited_date DATETIME,
+
+    analysis_statusid TINYINT(1) UNSIGNED DEFAULT 0,
+    analysis_by SMALLINT(5) UNSIGNED ZEROFILL,
+    analysis_date DATETIME,
+    analysis_approved_by SMALLINT(5) UNSIGNED ZEROFILL,
+    analysis_approved_date DATETIME,
+
     PRIMARY KEY (id),
     INDEX (individualid),
     INDEX (owned_by),
     INDEX (created_by),
     INDEX (edited_by),
+
+    INDEX (analysis_statusid),
+    INDEX (analysis_by),
+    INDEX (analysis_approved_by),
+    CONSTRAINT ' . TABLE_SCREENINGS . '_fk_analysis_statusid FOREIGN KEY (analysis_statusid) REFERENCES ' . TABLE_ANALYSIS_STATUS . ' (id) ON DELETE SET NULL ON UPDATE CASCADE,
+    CONSTRAINT ' . TABLE_SCREENINGS . '_fk_analysis_by FOREIGN KEY (analysis_by) REFERENCES ' . TABLE_USERS . ' (id) ON DELETE SET NULL ON UPDATE CASCADE,
+    CONSTRAINT ' . TABLE_SCREENINGS . '_fk_analysis_approved_by FOREIGN KEY (analysis_approved_by) REFERENCES ' . TABLE_USERS . ' (id) ON DELETE SET NULL ON UPDATE CASCADE,
+
     CONSTRAINT ' . TABLE_SCREENINGS . '_fk_individualid FOREIGN KEY (individualid) REFERENCES ' . TABLE_INDIVIDUALS . ' (id) ON DELETE CASCADE ON UPDATE CASCADE,
     CONSTRAINT ' . TABLE_SCREENINGS . '_fk_owned_by FOREIGN KEY (owned_by) REFERENCES ' . TABLE_USERS . ' (id) ON DELETE SET NULL ON UPDATE CASCADE,
     CONSTRAINT ' . TABLE_SCREENINGS . '_fk_created_by FOREIGN KEY (created_by) REFERENCES ' . TABLE_USERS . ' (id) ON DELETE SET NULL ON UPDATE CASCADE,
@@ -860,9 +875,9 @@ $aTableSQL =
     genepanelid SMALLINT(5) UNSIGNED ZEROFILL NOT NULL,
     geneid VARCHAR(25) NOT NULL,
     transcriptid MEDIUMINT(8) UNSIGNED ZEROFILL,
-    inheritance VARCHAR(50),
+    inheritance VARCHAR(50) NOT NULL,
     pmid INT(10) UNSIGNED,
-    remarks TEXT,
+    remarks TEXT NOT NULL,
     created_by SMALLINT(5) UNSIGNED ZEROFILL,
     created_date DATETIME NOT NULL,
     edited_by SMALLINT(5) UNSIGNED ZEROFILL,
@@ -884,9 +899,9 @@ $aTableSQL =
     genepanelid SMALLINT(5) UNSIGNED ZEROFILL NOT NULL,
     geneid VARCHAR(25) NOT NULL,
     transcriptid MEDIUMINT(8) UNSIGNED ZEROFILL,
-    inheritance VARCHAR(50),
+    inheritance VARCHAR(50) NOT NULL,
     pmid INT(10) UNSIGNED,
-    remarks TEXT,
+    remarks TEXT NOT NULL,
     created_by SMALLINT(5) UNSIGNED ZEROFILL,
     created_date DATETIME NOT NULL,
     edited_by SMALLINT(5) UNSIGNED ZEROFILL,

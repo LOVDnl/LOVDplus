@@ -166,6 +166,7 @@ class LOVD_GenePanelGene extends LOVD_Object {
             $aTranscriptsForm = array('' => '-- no transcripts available --');
         }
 
+        // If updating this, also update the code in gene_panels.php.
         $aInheritance = array(
             '' => '-- select --',
             'Autosomal Recessive' => 'Autosomal Recessive',
@@ -183,7 +184,6 @@ class LOVD_GenePanelGene extends LOVD_Object {
                 array('Remarks (optional)', '', 'textarea', 'remarks', 70, 3),
                 'hr',
                 'skip'
-
             );
 
         return parent::getForm();

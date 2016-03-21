@@ -4,7 +4,7 @@
  * LEIDEN OPEN VARIATION DATABASE (LOVD)
  *
  * Created     : 2014-11-28
- * Modified    : 2016-02-19
+ * Modified    : 2016-03-04
  * For LOVD+   : 3.0-15
  *
  * Copyright   : 2004-2016 Leiden University Medical Center; http://www.LUMC.nl/
@@ -179,7 +179,9 @@ $aGenesToIgnore = array(
     'PER4',
     'UQCRHL',
     'LPPR4',
-    // 2015-03-??; Not recognized by HGNC, BUT NOT CONFIRMED AT HGNC WEBSITE (because it might be a different class)!
+    // 2016-03-04; Not recognized by HGNC, BUT NOT CONFIRMED AT HGNC WEBSITE (because it might be a different class)!
+    'SGK494',
+    // 2016-03-04; Not recognized by HGNC, BUT NOT CONFIRMED AT HGNC WEBSITE (because it might be a different class)!
 
 
 
@@ -240,7 +242,10 @@ $aGenesToIgnore = array(
     'PLPP3',
     'DISP3',
     'CFAP57',
-    // 2016-02-19; No UD could be loaded.
+    // 2016-03-04; No UD could be loaded.
+    'ADGRD2',
+    'ADGRE5',
+    // 2016-03-04; No UD could be loaded.
 
 
 
@@ -571,7 +576,63 @@ $aGenesToIgnore = array(
     'SRGAP2C',
     // 2016-02-19; No transcripts could be found.
     'NBPF9',
-    // 2016-02-??; No transcripts could be found.
+    // 2016-03-04; No transcripts could be found.
+    'ADGRA1',
+    'ADGRA2',
+    'ADGRE2',
+    'ADGRG5',
+    'ADGRV1',
+    'C1R',
+    'CCAR2',
+    'CCDC191',
+    'CEP126',
+    'CEP131',
+    'CEP295',
+    'CFAP100',
+    'CFAP20',
+    'CFAP43',
+    'CFAP45',
+    'CFAP47',
+    'CRACR2A',
+    'CRACR2B',
+    'CRAMP1',
+    'DOCK1',
+    'EEF2KMT',
+    'ERC1',
+    'EXOC3-AS1',
+    'GAREM2',
+    'HEATR9',
+    'ICE1',
+    'IKZF1',
+    'KIF5C',
+    'LRRC75A',
+    'MIR1-1HG',
+    'MTCL1',
+    'MUC19',
+    'NECTIN1',
+    'NWD2',
+    'P3H3',
+    'PCNX1',
+    'PCNX3',
+    'PIDD1',
+    'PLPP6',
+    'POMGNT2',
+    'PRELID3A',
+    'PRELID3B',
+    'PRR35',
+    'SHTN1',
+    'SLF1',
+    'SMIM11A',
+    'STKLD1',
+    'SUSD6',
+    'TMEM247',
+    'TMEM94',
+    'TYMSOS',
+    'USF3',
+    'WAPL',
+    'ZNF812P',
+    'ZPR1',
+    // 2016-03-04; No transcripts could be found.
 );
 
 // Define list of gene aliases. Genes not mentioned in here, are searched for in the database. If not found,
@@ -731,6 +792,60 @@ $aGeneAliases = array(
     'PPAP2B' => 'PLPP3',
     'PTCHD2' => 'DISP3',
     'WDR65' => 'CFAP57',
+    // 2016-03-04; New aliases.
+    'ANKRD32' => 'SLF1',
+    'AZI1' => 'CEP131',
+    'C16orf11' => 'PRR35',
+    'C16orf80' => 'CFAP20',
+    'C17orf66' => 'HEATR9',
+    'C18orf56' => 'TYMSOS',
+    'C20orf166' => 'MIR1-1HG',
+    'C5orf55' => 'EXOC3-AS1',
+    'C9orf117' => 'CFAP157',
+    'C9orf96' => 'STKLD1',
+    'CCDC19' => 'CFAP45',
+    'CCDC37' => 'CFAP100',
+    'CD97' => 'ADGRE5',
+    'CRAMP1L' => 'CRAMP1',
+    'CXorf30' => 'CFAP47',
+    'EFCAB4A' => 'CRACR2B',
+    'EFCAB4B' => 'CRACR2A',
+    'EMR2' => 'ADGRE2',
+    'FAM211A' => 'LRRC75A',
+    'FAM86A' => 'EEF2KMT',
+    'GAREML' => 'GAREM2',
+    'GPR114' => 'ADGRG5',
+    'GPR123' => 'ADGRA1',
+    'GPR124' => 'ADGRA2',
+    'GPR144' => 'ADGRD2',
+    'GPR98' => 'ADGRV1',
+    'HIATL1' => 'MFSD14B',
+    'IGJ' => 'JCHAIN',
+    'KIAA0195' => 'TMEM94',
+    'KIAA0247' => 'SUSD6',
+    'KIAA0947' => 'ICE1',
+    'KIAA1239' => 'NWD2',
+    'KIAA1377' => 'CEP126',
+    'KIAA1407' => 'CCDC191',
+    'KIAA1598' => 'SHTN1',
+    'KIAA1731' => 'CEP295',
+    'KIAA2018' => 'USF3',
+    'LEPREL2' => 'P3H3',
+    'NARG2' => 'ICE2',
+    'PCNXL3' => 'PCNX3',
+    'PCNX' => 'PCNX1',
+    'PIDD' => 'PIDD1',
+    'PPAPDC2' => 'PLPP6',
+    'PVRL1' => 'NECTIN1',
+    'SLMO1' => 'PRELID3A',
+    'SLMO2' => 'PRELID3B',
+    'SMIM11' => 'SMIM11A',
+    'SOGA2' => 'MTCL1',
+    'WAPAL' => 'WAPL',
+    'WDR96' => 'CFAP43',
+    'ZNF259' => 'ZPR1',
+    'ZNF812' => 'ZNF812P',
+    // 2016-03-04; New aliases.
 );
 
 
@@ -826,7 +941,7 @@ $aDefaultValues = array(
     'effectid' => '55',
     'mapping_flags' => '0',
 //    'owned_by' => 0, // '0' is not a valid value, because "LOVD" is removed from the selection list. When left empty, it will default to the user running LOVD, though.
-    'statusid' => STATUS_OK,
+    'statusid' => STATUS_HIDDEN,
     'to_be_confirmed' => 0,
     'created_by' => 0,
     'created_date' => date('Y-m-d H:i:s'),
@@ -841,42 +956,6 @@ $aDefaultValues = array(
 $nFilesBeingMerged = 0; // We're counting how many files are being merged at the time, because we don't want to stress the system too much.
 $nMaxFilesBeingMerged = 5; // We're allowing only five processes working concurrently on merging files (or so many failed attempts that have not been cleaned up).
 $aFiles = array(); // array(ID => array(files), ...);
-
-
-
-
-
-function lovd_getUDForGene ($sBuild, $sGene)
-{
-    // Retrieves an UD for any given gene and genome build.
-    // In principle, any build is supported, but we'll check against the available builds supported in LOVD.
-    global $_SETT;
-
-    if (!$sBuild || !is_string($sBuild) || !isset($_SETT['human_builds'][$sBuild])) {
-        return false;
-    }
-
-    if (!$sGene || !is_string($sGene)) {
-        return false;
-    }
-
-    $sUD = '';
-
-    // Let's get the mapping information.
-    $sJSONResponse = @file_get_contents('https://mutalyzer.nl/json/getGeneLocation?build=' . $sBuild . '&gene=' . $sGene);
-    if ($sJSONResponse && $aResponse = json_decode($sJSONResponse, true)) {
-        $sChromosome = $_SETT['human_builds'][$sBuild]['ncbi_sequences'][substr($aResponse['chromosome_name'], 3)];
-        $nStart = $aResponse['start'] - ($aResponse['orientation'] == 'forward'? 5000 : 2000);
-        $nEnd = $aResponse['stop'] + ($aResponse['orientation'] == 'forward'? 2000 : 5000);
-        $sJSONResponse = @file_get_contents('https://mutalyzer.nl/json/sliceChromosome?chromAccNo=' . $sChromosome . '&start=' . $nStart . '&end=' . $nEnd . '&orientation=' . ($aResponse['orientation'] == 'forward'? 1 : 2));
-        if ($sJSONResponse && $aResponse = json_decode($sJSONResponse, true)) {
-            $sResponse = (!is_array($aResponse)? $aResponse : implode('', $aResponse));
-            $sUD = $sResponse;
-        }
-    }
-
-    return $sUD;
-}
 
 
 
@@ -1381,7 +1460,7 @@ print('Gene ' . $aLine['SYMBOL'] . ' can\'t be identified by the HGNC.' . "\n");
                     $sRefseqUD = lovd_getUDForGene($_CONF['refseq_build'], $aGeneInfo['symbol']);
                     if (!$sRefseqUD) {
 //                        die('Can\'t load UD for gene ' . $aLine['SYMBOL'] . '.' . "\n");
-print('Can\'t load UD for gene ' . $aLine['SYMBOL'] . '.' . "\n");
+print('Can\'t load UD for gene ' . $aGeneInfo['symbol'] . '.' . "\n");
                     }
 
                     // Not getting an UD no longer kills the script, so...
@@ -1419,7 +1498,7 @@ print('Can\'t load UD for gene ' . $aLine['SYMBOL'] . '.' . "\n");
                 // We've got it in the database.
                 $aTranscripts[$aLine['Feature']] = $aTranscript;
 
-            } else {
+            } elseif ($aGenes[$aLine['SYMBOL']]['refseq_UD']) {
                 // To prevent us from having to check the available transcripts all the time, we store the available transcripts, but only insert those we need.
                 if ($aGenes[$aLine['SYMBOL']]['transcripts_in_UD']) {
                     $aTranscriptInfo = $aGenes[$aLine['SYMBOL']]['transcripts_in_UD'];
@@ -1437,7 +1516,7 @@ print('Loading transcript information for ' . $aGenes[$aLine['SYMBOL']]['id'] . 
                     if (empty($aTranscriptInfo)) {
 //                        die('Can\'t load available transcripts for gene ' . $aLine['SYMBOL'] . '.' . "\n");
 //print('Can\'t load available transcripts for gene ' . $aLine['SYMBOL'] . '.' . "\n");
-print('No available transcripts for gene ' . $aLine['SYMBOL'] . ' found.' . "\n"); // Usually this is the case. Not always an error. We might get an error, but that will show now.
+print('No available transcripts for gene ' . $aGenes[$aLine['SYMBOL']]['id'] . ' found.' . "\n"); // Usually this is the case. Not always an error. We might get an error, but that will show now.
 $aTranscripts[$aLine['Feature']] = false; // Ignore transcript.
 $aTranscriptInfo = array(array('id' => 'NO_TRANSCRIPTS')); // Basically, any text will do. Just stop searching for other transcripts for this gene.
                     }

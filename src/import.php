@@ -4,10 +4,10 @@
  * LEIDEN OPEN VARIATION DATABASE (LOVD)
  *
  * Created     : 2012-09-19
- * Modified    : 2015-03-18
- * For LOVD    : 3.0-13
+ * Modified    : 2016-03-03
+ * For LOVD    : 3.0-15
  *
- * Copyright   : 2004-2015 Leiden University Medical Center; http://www.LUMC.nl/
+ * Copyright   : 2004-2016 Leiden University Medical Center; http://www.LUMC.nl/
  * Programmer  : Ing. Ivo F.A.C. Fokkema <I.F.A.C.Fokkema@LUMC.nl>
  *               Msc. Daan Asscheman <D.Asscheman@LUMC.nl>
  *
@@ -61,7 +61,11 @@ if (ACTION == 'schedule' && PATH_COUNT == 1) {
     // To see if the file has already been imported, fetch a list of imported individuals.
     $aImportedIDs = $_DB->query('SELECT `Individual/Lab_ID`, 1 FROM ' . TABLE_INDIVIDUALS)->fetchAllCombine();
 
-    $aFiles = array(); // [0/1] indicates imported no/yes, second level [filename] = mod_time.
+    // [0/1] indicates imported no/yes, second level [filename] = mod_time.
+    $aFiles = array(
+        array(),
+        array(),
+    );
     while (($sFile = readdir($h)) !== false) {
         if (preg_match('/^(Child|Patient)_(\d+).total.data.lovd$/', $sFile, $aRegs)) {
             // Match!
@@ -767,12 +771,8 @@ if (POST || $_FILES) { // || $_FILES is in use for the automatic loading of file
             // Data status.
             if (in_array('statusid', $aSection['allowed_columns']) && empty($aLine['statusid'])) {
                 // Status not filled in. Set to Public.
-                $aLine['statusid'] = STATUS_OK;
-            }
-            // DIAGNOSTICS: Data analysis status.
-            if (in_array('analysis_statusid', $aSection['allowed_columns']) && empty($aLine['analysis_statusid'])) {
-                // Status not filled in. Set to Public.
-                $aLine['analysis_statusid'] = ANALYSIS_STATUS_WAIT;
+                // Diagnostics: For LOVD+, the default is STATUS_HIDDEN.
+                $aLine['statusid'] = (LOVD_plus? STATUS_HIDDEN : STATUS_OK);
             }
 
             // General checks: required fields defined by import.
@@ -1795,7 +1795,7 @@ lovd_showInfoTable('If you\'re looking for importing data files containing varia
 lovd_showInfoTable('In some cases importing big files or importing files into big databases can cause LOVD to run out of available memory. In case this server hides these errors, LOVD would return a blank screen. If this happens, split your import file into smaller chunks or ask your system administrator to allow PHP to use more memory (currently allowed: ' . ini_get('memory_limit') . 'B).', 'warning', 760);
 
 // Warnings were shown in the progress bar, but I'd like to have them here too. They are still in the source, so we can use JS.
-if ($nWarnings) {
+if ($nWarnings && FORMAT == 'text/html') {
     lovd_errorAdd('', '<A href="#" onclick="$(\'#warnings\').toggle(); if ($(\'#warnings_action\').html() == \'Show\') { $(\'#warnings_action\').html(\'Hide\'); } else { $(\'#warnings_action\').html(\'Show\') } return false;"><SPAN id="warnings_action">Show</SPAN> ' . $nWarnings . ' warning' . ($nWarnings == 1? '' : 's') . '</A><DIV id="warnings"></DIV><SCRIPT type="text/javascript">$("#warnings").hide();$("#warnings").html($("#lovd_parser_progress_message_done").html());</SCRIPT>');
 }
 

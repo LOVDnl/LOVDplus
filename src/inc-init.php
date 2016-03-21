@@ -86,6 +86,7 @@ if (!empty($_GET['format']) && in_array($_GET['format'], $aFormats)) {
 header('Content-type: ' . FORMAT . '; charset=UTF-8');
 
 define('LEVEL_SUBMITTER', 1);    // Also includes collaborators and curators. Authorization is depending on assignments, not user levels anymore.
+define('LEVEL_ANALYZER', 2);     // Diagnostics: LOVD+ introduced this user level.
 define('LEVEL_COLLABORATOR', 3); // THIS IS NOT A VALID USER LEVEL. Just indicates level of authorization. You can change these numbers, but keep the order!
 define('LEVEL_OWNER', 4);        // THIS IS NOT A VALID USER LEVEL. Just indicates level of authorization. You can change these numbers, but keep the order!
 define('LEVEL_CURATOR', 5);      // THIS IS NOT A VALID USER LEVEL. Just indicates level of authorization. You can change these numbers, but keep the order!
@@ -140,7 +141,7 @@ $aRequired =
 $_SETT = array(
                 'system' =>
                      array(
-                            'version' => '3.0-12l',
+                            'version' => '3.0-12o',
                           ),
                 'user_levels' =>
                      array(
@@ -151,6 +152,13 @@ $_SETT = array(
                             LEVEL_COLLABORATOR => 'Collaborator',
                             LEVEL_SUBMITTER    => 'Submitter',
                           ),
+                'user_level_settings' =>
+                array(
+                    // Checking for LEVEL_COLLABORATOR assumes lovd_isAuthorized()
+                    // has already been called for gene-specific overviews.
+                    'see_nonpublic_data' => (LOVD_plus? LEVEL_SUBMITTER : LEVEL_COLLABORATOR),
+                    'submit_new_data' => (LOVD_plus? LEVEL_MANAGER : LEVEL_SUBMITTER),
+                ),
                 'gene_imprinting' =>
                      array(
                             'unknown'  => 'Unknown',
@@ -286,22 +294,30 @@ list($_SETT['system']['tree'], $_SETT['system']['build']) = explode('-', $_SETT[
 $_SETT['update_URL'] = $_SETT['upstream_URL'] . $_SETT['system']['tree'] . '/package_update.php';
 $_SETT['check_location_URL'] = $_SETT['upstream_URL'] . $_SETT['system']['tree'] . '/check_location.php';
 
-// Additions for KG.
-define('ANALYSIS_STATUS_WAIT', 0);
-define('ANALYSIS_STATUS_READY', 1);
-define('ANALYSIS_STATUS_IN_PROGRESS', 2);
-define('ANALYSIS_STATUS_WAIT_APPROVAL', 4); // Analysis complete, needs to be approved by staff.
-define('ANALYSIS_STATUS_APPROVED', 7);
-define('ANALYSIS_STATUS_ARCHIVED', 9);
-$_SETT['analysis_status'] =
-    array(
-        ANALYSIS_STATUS_WAIT => 'Waiting for data upload',
-        ANALYSIS_STATUS_READY => 'Ready for analysis',
-        ANALYSIS_STATUS_IN_PROGRESS => 'In progress',
-        ANALYSIS_STATUS_WAIT_APPROVAL => 'Awaiting approval',
-        ANALYSIS_STATUS_APPROVED => 'Approved',
-        ANALYSIS_STATUS_ARCHIVED => 'Archived',
-    );
+// Additions for Diagnostics.
+if (LOVD_plus) {
+    define('ANALYSIS_STATUS_WAIT', 0);              // Individual and screening imported, variants not yet (doesn't happen anymore).
+    define('ANALYSIS_STATUS_READY', 1);             // All data imported, waiting for somebody to start analysis.
+    define('ANALYSIS_STATUS_IN_PROGRESS', 2);       // Analysis started.
+    define('ANALYSIS_STATUS_CLOSED', 4);            // Analysis complete, needs to be approved by staff.
+    define('ANALYSIS_STATUS_WAIT_CONFIRMATION', 6); // Staff has checked, now waiting for confirmation of variants in the lab.
+    define('ANALYSIS_STATUS_CONFIRMED', 7);         // Variants were confirmed, analysis is completely done now.
+    define('ANALYSIS_STATUS_ARCHIVED', 9);          // Variants have been taken offline.
+    $_SETT['analysis_status'] =
+        array(
+            ANALYSIS_STATUS_WAIT => 'Waiting for data upload',
+            ANALYSIS_STATUS_READY => 'Ready for analysis',
+            ANALYSIS_STATUS_IN_PROGRESS => 'In progress',
+            ANALYSIS_STATUS_CLOSED => 'Closed',
+            ANALYSIS_STATUS_WAIT_CONFIRMATION => 'Awaiting confirmation',
+            ANALYSIS_STATUS_CONFIRMED => 'Confirmed',
+            ANALYSIS_STATUS_ARCHIVED => 'Archived',
+        );
+    // Diagnostics: Added one level, and changed the submitter level's name.
+    unset($_SETT['user_levels'][LEVEL_SUBMITTER]); // To make space, we need to rename it anyway.
+    $_SETT['user_levels'][LEVEL_ANALYZER]  = 'Analyzer';
+    $_SETT['user_levels'][LEVEL_SUBMITTER] = 'Read-only';
+}
 
 // Before we have any output, initiate the template class which takes care of headers and such.
 require ROOT_PATH . 'class/template.php';
@@ -411,28 +427,30 @@ $aConfigValues =
                                                 'pattern'  => '/^[A-Z0-9_]+$/i',
                                               ),
                               ),
-                'paths' =>
-                         array(
-                                'data_files' =>
-                                         array(
-                                                'required' => true,
-                                                'path_is_readable' => true,
-                                                'path_is_writable' => true,
-                                              ),
-                                'alternative_ids' =>
-                                         array(
-                                                'required' => false,
-                                                'path_is_readable' => true,
-                                                'path_is_writable' => false,
-                                              ),
-                                'confirm_variants' =>
-                                         array(
-                                                'required' => false,
-                                                'path_is_readable' => true,
-                                                'path_is_writable' => true,
-                                         ),
-                              ),
               );
+if (LOVD_plus) {
+    // Configure data file paths.
+    $aConfigValues['paths'] = array(
+        'data_files' =>
+            array(
+                'required' => true,
+                'path_is_readable' => true,
+                'path_is_writable' => true,
+            ),
+        'alternative_ids' =>
+            array(
+                'required' => false,
+                'path_is_readable' => true,
+                'path_is_writable' => false,
+            ),
+        'confirm_variants' =>
+            array(
+                'required' => false,
+                'path_is_readable' => true,
+                'path_is_writable' => true,
+            ),
+    );
+}
 // SQLite doesn't need an username and password...
 if (isset($_INI['database']['driver']) && $_INI['database']['driver'] == 'sqlite') {
     unset($aConfigValues['database']['username']);
