@@ -852,7 +852,6 @@ class LOVD_Object {
         // If the user has no rights based on the statusid column, we don't have a $zData.
         if (!$zData) {
             // Don't give away information about the ID: just pretend the entry does not exist.
-            global $_SETT, $_STAT, $_AUTH;
             lovd_showInfoTable('No such ID!', 'stop');
             $_T->printFooter();
             exit;
