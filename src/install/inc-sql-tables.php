@@ -799,6 +799,142 @@ $aTableSQL =
     CONSTRAINT ' . TABLE_SCHEDULED_IMPORTS . '_fk_scheduled_by FOREIGN KEY (scheduled_by) REFERENCES ' . TABLE_USERS . ' (id) ON DELETE SET NULL ON UPDATE CASCADE,
     CONSTRAINT ' . TABLE_SCHEDULED_IMPORTS . '_fk_processed_by FOREIGN KEY (processed_by) REFERENCES ' . TABLE_USERS . ' (id) ON DELETE SET NULL ON UPDATE CASCADE)
     ' . $sSettings
+
+
+
+
+
+        , 'TABLE_GENE_PANELS' =>
+    'CREATE TABLE ' . TABLE_GENE_PANELS . ' (
+    id SMALLINT(5) UNSIGNED ZEROFILL NOT NULL AUTO_INCREMENT,
+    name VARCHAR(255) NOT NULL,
+    description VARCHAR(255) NOT NULL,
+    type VARCHAR(20) NOT NULL,
+    phenotype_group VARCHAR(255) NOT NULL,
+    cohort VARCHAR(255) NOT NULL,
+    remarks TEXT NOT NULL,
+    pmid_mandatory BOOLEAN NOT NULL DEFAULT 1,
+    created_by SMALLINT(5) UNSIGNED ZEROFILL,
+    created_date DATETIME NOT NULL,
+    edited_by SMALLINT(5) UNSIGNED ZEROFILL,
+    edited_date DATETIME,
+    PRIMARY KEY (id),
+    INDEX (created_by),
+    INDEX (edited_by),
+    CONSTRAINT ' . TABLE_GENE_PANELS . '_fk_created_by FOREIGN KEY (created_by) REFERENCES ' . TABLE_USERS . ' (id) ON DELETE SET NULL ON UPDATE CASCADE,
+    CONSTRAINT ' . TABLE_GENE_PANELS . '_fk_edited_by FOREIGN KEY (edited_by) REFERENCES ' . TABLE_USERS . ' (id) ON DELETE SET NULL ON UPDATE CASCADE)
+    ' . $sSettings
+
+        , 'TABLE_GENE_PANELS_REV' =>
+    'CREATE TABLE ' . TABLE_GENE_PANELS_REV . ' (
+    id SMALLINT(5) UNSIGNED ZEROFILL NOT NULL,
+    name VARCHAR(255) NOT NULL,
+    description VARCHAR(255) NOT NULL,
+    type VARCHAR(20) NOT NULL,
+    phenotype_group VARCHAR(255) NOT NULL,
+    cohort VARCHAR(255) NOT NULL,
+    remarks TEXT NOT NULL,
+    pmid_mandatory BOOLEAN NOT NULL DEFAULT 1,
+    created_by SMALLINT(5) UNSIGNED ZEROFILL,
+    created_date DATETIME NOT NULL,
+    edited_by SMALLINT(5) UNSIGNED ZEROFILL,
+    edited_date DATETIME,
+    valid_from DATETIME NOT NULL,
+    valid_to DATETIME NOT NULL DEFAULT "9999-12-31",
+    deleted BOOLEAN NOT NULL,
+    deleted_by SMALLINT(5) UNSIGNED ZEROFILL,
+    reason TEXT,
+    PRIMARY KEY (id, valid_from),
+    INDEX (id),
+    INDEX (valid_to),
+    INDEX (created_by),
+    INDEX (edited_by),
+    INDEX (deleted_by),
+    CONSTRAINT ' . TABLE_GENE_PANELS_REV . '_fk_created_by FOREIGN KEY (created_by) REFERENCES ' . TABLE_USERS . ' (id) ON DELETE SET NULL ON UPDATE CASCADE,
+    CONSTRAINT ' . TABLE_GENE_PANELS_REV . '_fk_edited_by FOREIGN KEY (edited_by) REFERENCES ' . TABLE_USERS . ' (id) ON DELETE SET NULL ON UPDATE CASCADE,
+    CONSTRAINT ' . TABLE_GENE_PANELS_REV . '_fk_deleted_by FOREIGN KEY (deleted_by) REFERENCES ' . TABLE_USERS . ' (id) ON DELETE SET NULL ON UPDATE CASCADE)
+    ' . $sSettings
+
+        , 'TABLE_GP2GENE' =>
+    'CREATE TABLE ' . TABLE_GP2GENE . ' (
+    genepanelid SMALLINT(5) UNSIGNED ZEROFILL NOT NULL,
+    geneid VARCHAR(25) NOT NULL,
+    transcriptid MEDIUMINT(8) UNSIGNED ZEROFILL,
+    inheritance VARCHAR(50),
+    pmid INT(10) UNSIGNED,
+    remarks TEXT,
+    created_by SMALLINT(5) UNSIGNED ZEROFILL,
+    created_date DATETIME NOT NULL,
+    edited_by SMALLINT(5) UNSIGNED ZEROFILL,
+    edited_date DATETIME,
+    PRIMARY KEY (genepanelid, geneid),
+    INDEX (geneid),
+    INDEX (transcriptid),
+    INDEX (created_by),
+    INDEX (edited_by),
+    CONSTRAINT ' . TABLE_GP2GENE . '_fk_genepanelid FOREIGN KEY (genepanelid) REFERENCES ' . TABLE_GENE_PANELS . ' (id) ON DELETE CASCADE ON UPDATE CASCADE,
+    CONSTRAINT ' . TABLE_GP2GENE . '_fk_geneid FOREIGN KEY (geneid) REFERENCES ' . TABLE_GENES . ' (id) ON DELETE CASCADE ON UPDATE CASCADE,
+    CONSTRAINT ' . TABLE_GP2GENE . '_fk_transcriptid FOREIGN KEY (transcriptid) REFERENCES ' . TABLE_TRANSCRIPTS . ' (id) ON DELETE SET NULL ON UPDATE CASCADE,
+    CONSTRAINT ' . TABLE_GP2GENE . '_fk_created_by FOREIGN KEY (created_by) REFERENCES ' . TABLE_USERS . ' (id) ON DELETE SET NULL ON UPDATE CASCADE,
+    CONSTRAINT ' . TABLE_GP2GENE . '_fk_edited_by FOREIGN KEY (edited_by) REFERENCES ' . TABLE_USERS . ' (id) ON DELETE SET NULL ON UPDATE CASCADE)
+    ' . $sSettings
+
+        , 'TABLE_GP2GENE_REV' =>
+    'CREATE TABLE ' . TABLE_GP2GENE_REV . ' (
+    genepanelid SMALLINT(5) UNSIGNED ZEROFILL NOT NULL,
+    geneid VARCHAR(25) NOT NULL,
+    transcriptid MEDIUMINT(8) UNSIGNED ZEROFILL,
+    inheritance VARCHAR(50),
+    pmid INT(10) UNSIGNED,
+    remarks TEXT,
+    created_by SMALLINT(5) UNSIGNED ZEROFILL,
+    created_date DATETIME NOT NULL,
+    edited_by SMALLINT(5) UNSIGNED ZEROFILL,
+    edited_date DATETIME,
+    valid_from DATETIME NOT NULL,
+    valid_to DATETIME NOT NULL DEFAULT "9999-12-31",
+    deleted BOOLEAN NOT NULL,
+    deleted_by SMALLINT(5) UNSIGNED ZEROFILL,
+    reason TEXT,
+    PRIMARY KEY (genepanelid, geneid, valid_from),
+    INDEX (valid_to),
+    INDEX (geneid),
+    INDEX (transcriptid),
+    INDEX (created_by),
+    INDEX (edited_by),
+    INDEX (deleted_by),
+    CONSTRAINT ' . TABLE_GP2GENE_REV . '_fk_genepanelid FOREIGN KEY (genepanelid) REFERENCES ' . TABLE_GENE_PANELS_REV . ' (id) ON DELETE CASCADE ON UPDATE CASCADE,
+    CONSTRAINT ' . TABLE_GP2GENE_REV . '_fk_geneid FOREIGN KEY (geneid) REFERENCES ' . TABLE_GENES . ' (id) ON DELETE CASCADE ON UPDATE CASCADE,
+    CONSTRAINT ' . TABLE_GP2GENE_REV . '_fk_transcriptid FOREIGN KEY (transcriptid) REFERENCES ' . TABLE_TRANSCRIPTS . ' (id) ON DELETE SET NULL ON UPDATE CASCADE,
+    CONSTRAINT ' . TABLE_GP2GENE_REV . '_fk_created_by FOREIGN KEY (created_by) REFERENCES ' . TABLE_USERS . ' (id) ON DELETE SET NULL ON UPDATE CASCADE,
+    CONSTRAINT ' . TABLE_GP2GENE_REV . '_fk_edited_by FOREIGN KEY (edited_by) REFERENCES ' . TABLE_USERS . ' (id) ON DELETE SET NULL ON UPDATE CASCADE,
+    CONSTRAINT ' . TABLE_GP2GENE_REV . '_fk_deleted_by FOREIGN KEY (deleted_by) REFERENCES ' . TABLE_USERS . ' (id) ON DELETE SET NULL ON UPDATE CASCADE)
+    ' . $sSettings
+
+        , 'TABLE_IND2GP' =>
+    'CREATE TABLE ' . TABLE_IND2GP . ' (
+    individualid MEDIUMINT(8) UNSIGNED ZEROFILL NOT NULL,
+    genepanelid SMALLINT(5) UNSIGNED ZEROFILL NOT NULL,
+    priority TINYINT(2) UNSIGNED NOT NULL DEFAULT 1,
+    created_by SMALLINT(5) UNSIGNED ZEROFILL,
+    created_date DATETIME NOT NULL,
+    PRIMARY KEY (individualid, genepanelid),
+    INDEX (genepanelid),
+    INDEX (created_by),
+    CONSTRAINT ' . TABLE_IND2GP . '_fk_individualid FOREIGN KEY (individualid) REFERENCES ' . TABLE_INDIVIDUALS . ' (id) ON DELETE CASCADE ON UPDATE CASCADE,
+    CONSTRAINT ' . TABLE_IND2GP . '_fk_genepanelid FOREIGN KEY (genepanelid) REFERENCES ' . TABLE_GENE_PANELS . ' (id) ON DELETE CASCADE ON UPDATE CASCADE,
+    CONSTRAINT ' . TABLE_IND2GP . '_fk_created_by FOREIGN KEY (created_by) REFERENCES ' . TABLE_USERS . ' (id) ON DELETE SET NULL ON UPDATE CASCADE)
+    ' . $sSettings
+
+        , 'TABLE_GP2DIS' =>
+    'CREATE TABLE ' . TABLE_GP2DIS . ' (
+    genepanelid SMALLINT(5) UNSIGNED ZEROFILL NOT NULL,
+    diseaseid SMALLINT(5) UNSIGNED ZEROFILL NOT NULL,
+    PRIMARY KEY (genepanelid, diseaseid),
+    INDEX (diseaseid),
+    CONSTRAINT ' . TABLE_GP2DIS . '_fk_genepanelid FOREIGN KEY (genepanelid) REFERENCES ' . TABLE_GENE_PANELS . ' (id) ON DELETE CASCADE ON UPDATE CASCADE,
+    CONSTRAINT ' . TABLE_GP2DIS . '_fk_diseaseid FOREIGN KEY (diseaseid) REFERENCES ' . TABLE_DISEASES . ' (id) ON DELETE CASCADE ON UPDATE CASCADE)
+    ' . $sSettings
           );
 
 // DMD_SPECIFIC;

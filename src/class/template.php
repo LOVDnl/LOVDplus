@@ -83,10 +83,13 @@ class LOVD_Template {
                         'genes' => (!empty($_SESSION['currdb'])? $_SESSION['currdb'] . ' homepage' : 'View all genes'),
                         'genes_' =>
                          array(
-                                '' => array('menu_magnifying_glass.png', 'View all genes', 0),
-                                '/genes/' . $_SESSION['currdb'] => array('menu_magnifying_glass.png', 'View the ' . $_SESSION['currdb'] . ' gene homepage', 0),
-                                '/genes/' . $_SESSION['currdb'] . '/graphs' => array('menu_graphs.png', 'View graphs about the ' . $_SESSION['currdb'] . ' gene database', 0),
-                                'create' => array('plus.png', 'Create a new gene entry', LEVEL_MANAGER),
+                             '/gene_panels' => array('menu_magnifying_glass.png', 'View all gene panels', 0),
+                             '/gene_panels?create' => array('plus.png', 'Create a new gene panel', LEVEL_SUBMITTER),
+                             'hr',
+                             '' => array('menu_magnifying_glass.png', 'View all genes', 0),
+                             '/genes/' . $_SESSION['currdb'] => array('menu_magnifying_glass.png', 'View the ' . $_SESSION['currdb'] . ' gene homepage', 0),
+                             '/genes/' . $_SESSION['currdb'] . '/graphs' => array('menu_graphs.png', 'View graphs about the ' . $_SESSION['currdb'] . ' gene database', 0),
+                             'create' => array('plus.png', 'Create a new gene entry', LEVEL_MANAGER),
                               ),
                         'transcripts' => 'View transcripts',
                         'transcripts_' =>

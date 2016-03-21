@@ -115,6 +115,10 @@ define('MAPPING_DONE', 32);             // FIXME; Create a button in Setup which
 // Define constant to quickly check if we're on Windows, since sending emails on Windows requires different settings.
 define('ON_WINDOWS', (strtoupper(substr(PHP_OS, 0, 3) == 'WIN')));
 
+// Diagnostics: To later make it easier to share certain code
+// between LOVD and LOVD+, simply define if we're active or not.
+define('LOVD_plus', true);
+
 // For the installation process (and possibly later somewhere else, too).
 $aRequired =
          array(
@@ -537,6 +541,14 @@ $_TABLES =
                 'TABLE_ANALYSES_RUN_FILTERS' => TABLEPREFIX . '_analyses_run_filters',
                 'TABLE_ANALYSES_RUN_RESULTS' => TABLEPREFIX . '_analyses_run_results',
                 'TABLE_SCHEDULED_IMPORTS' => TABLEPREFIX . '_scheduled_imports',
+
+                // Gene Lists
+                'TABLE_GENE_PANELS' => TABLEPREFIX . '_gene_panels',
+                'TABLE_GENE_PANELS_REV' => TABLEPREFIX . '_gene_panels_revisions',
+                'TABLE_GP2GENE' => TABLEPREFIX . '_gene_panels2genes',
+                'TABLE_GP2GENE_REV' => TABLEPREFIX . '_gene_panels2genes_revisions',
+                'TABLE_IND2GP' => TABLEPREFIX . '_individuals2gene_panels',
+                'TABLE_GP2DIS' => TABLEPREFIX . '_gene_panels2diseases',
               );
 
 foreach ($_TABLES as $sConst => $sTable) {
