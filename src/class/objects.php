@@ -4,12 +4,13 @@
  * LEIDEN OPEN VARIATION DATABASE (LOVD)
  *
  * Created     : 2009-10-21
- * Modified    : 2014-04-28
- * For LOVD    : 3.0-10
+ * Modified    : 2016-03-21
+ * For LOVD    : 3.0-15
  *
- * Copyright   : 2004-2014 Leiden University Medical Center; http://www.LUMC.nl/
+ * Copyright   : 2004-2016 Leiden University Medical Center; http://www.LUMC.nl/
  * Programmers : Ing. Ivo F.A.C. Fokkema <I.F.A.C.Fokkema@LUMC.nl>
  *               Ing. Ivar C. Lugtenburg <I.C.Lugtenburg@LUMC.nl>
+ *               Anthony Marty <anthony.marty@unimelb.edu.au>
  *
  *
  * This file is part of LOVD.
@@ -357,7 +358,7 @@ class LOVD_Object {
     function getCount ($ID = false)
     {
         // Returns the number of entries in the database table.
-        // $ID = Can be an integer/numeric string, or an array. If an integer/numeric string: ID to change.
+        // $ID = Can be an integer/numeric string, or an array. If an integer/numeric string: ID to check for existance.
         //   If an associative array (for linking tables), use array('geneid' => 'IVD', 'userid' => 1).
         global $_DB;
 
@@ -365,15 +366,14 @@ class LOVD_Object {
             // Prepare ID variable, to always be in the array('id' => 1) format.
             $aIDs = $ID;
             if (!is_array($ID)) {
+                $sIDColumn = 'id';
                 // In case a different column name is used, better use that instead.
                 if (!empty($this->aColumnsViewList['id']['db'][0])) {
                     $sIDColumn = $this->aColumnsViewList['id']['db'][0];
                     // But take the optional table alias off.
                     $sIDColumn = substr(strrchr('.' . $sIDColumn, '.'), 1);
-                    $aIDs = array($sIDColumn => $ID);
-                } else {
-                    $aIDs = array('id' => $ID);
                 }
+                $aIDs = array($sIDColumn => $ID);
             }
 
             $nCount = $_DB->query('SELECT COUNT(*) FROM ' . constant($this->sTable) . ' WHERE ' . implode(' = ? AND ', array_keys($aIDs)) . ' = ?', array_values($aIDs))->fetchColumn();
@@ -494,7 +494,7 @@ class LOVD_Object {
     function loadEntry ($ID)
     {
         // Loads and returns an entry from the database.
-        // $ID = Can be an integer/numeric string, or an array. If an integer/numeric string: ID to change.
+        // $ID = Can be an integer/numeric string, or an array. If an integer/numeric string: ID to load.
         //   If an associative array (for linking tables), use array('geneid' => 'IVD', 'userid' => 1).
         global $_DB, $_T;
 
@@ -507,6 +507,8 @@ class LOVD_Object {
         // Prepare ID variable, to always be in the array('id' => 1) format.
         $aIDs = $ID;
         if (!is_array($ID)) {
+            // FIXME: Other methods of this class try something intelligent to figure out if it's 'id' indeed.
+            //  Put that code in a function perhaps?
             $aIDs = array('id' => $ID);
         }
 
@@ -538,9 +540,11 @@ class LOVD_Object {
             exit;
 
         } else {
-//            $this->nID = $nID;
-            // TODO Need to confirm what to do here. We can not set $nID to an array and it is used later so currently this code will not work with linking tables. Do we change the way that $nID works throughout all the code that uses objects.php or just set it to 1 and know it won't matter?
-            $this->nID = (is_array($ID)? 1 : $ID);
+            // FIXME: Need to confirm what to do here. $this->nID is used throughout the code,
+            //  sometimes passed to constructors that do nothing with it. Sometimes as a parent ID (object ID),
+            //  sometimes as the object's own ID. Sometimes an integer, sometimes an array.
+            // Here it's assigned and we don't even know why. We need to standardize all of those usages.
+//            $this->nID = $aIDs;
         }
 
         $zData = $this->autoExplode($zData);
@@ -797,7 +801,6 @@ class LOVD_Object {
         // Check existence of entry.
         $n = $this->getCount($ID);
         if (!$n) {
-            global $_SETT, $_STAT, $_AUTH;
             lovd_showInfoTable('No such ID!', 'stop');
             if (!$bAjax) {
                 $_T->printFooter();
@@ -809,33 +812,34 @@ class LOVD_Object {
             define('LOG_EVENT', $this->sObject . '::viewEntry()');
         }
 
-        // Manipulate WHERE to include ID, and build query.
-        $sTableName = constant($this->sTable);
-        // Try to get the name of the ID column in MySQL. I'd rather not do it this way, but even worse would be to have yet another variable.
-        if (!empty($this->aColumnsViewList['id']['db'][0]) && !is_array($ID)) {
-            $sIDColumn = $this->aColumnsViewList['id']['db'][0];
+        // Because a ViewEntry query often contains many tables, find out the table's alias, if used.
+        if (preg_match('/' . constant($this->sTable) . ' AS ([a-z0-9]+)( .+)?$/', $this->aSQLViewEntry['FROM'], $aRegs)) {
+            // An alias was defined. Use it.
+            $sTableAlias = $aRegs[1];
         } else {
-            if (preg_match('/' . constant($this->sTable) . ' AS ([a-z0-9]+)( .+)?$/', $this->aSQLViewEntry['FROM'], $aRegs)) {
-                // An alias was defined. Use it.
-                $sTableName = $aRegs[1];
-                $sIDColumn = $sTableName . '.id';
-            } else {
-                // Use the normal table name.
-                $sTableName = constant($this->sTable);
-                $sIDColumn = $sTableName . '.id';
-            }
+            // Use the normal table name.
+            $sTableAlias = constant($this->sTable);
         }
 
         // Prepare ID variable, to always be in the array('id' => 1) format.
         if (!is_array($ID)) {
-            $aIDs = array($sIDColumn => $ID);
+            $sIDColumn = 'id';
+            // In case a different column name is used, better use that instead.
+            if (!empty($this->aColumnsViewList['id']['db'][0])) {
+                $sIDColumn = $this->aColumnsViewList['id']['db'][0];
+                // But take the optional table alias off.
+                $sIDColumn = substr(strrchr('.' . $sIDColumn, '.'), 1);
+            }
+            $aIDs = array($sTableAlias . '.' . $sIDColumn => $ID);
         } else {
-            // Apply the table name to each of the IDs
+            // Apply the table's alias to each of the IDs.
+            $aIDs = array();
             foreach ($ID as $sKey => $sValue) {
-                $aIDs[$sTableName . '.' . $sKey] = $sValue;
+                $aIDs[$sTableAlias . '.' . $sKey] = $sValue;
             }
         }
 
+        // Manipulate WHERE to include ID, and build query.
         $this->aSQLViewEntry['WHERE'] = implode(' = ? AND ', array_keys($aIDs)) . ' = ?' . (!$this->aSQLViewEntry['WHERE']? '' : ' AND ' . $this->aSQLViewEntry['WHERE']);
         $sSQL = 'SELECT ' . $this->aSQLViewEntry['SELECT'] .
                ' FROM ' . $this->aSQLViewEntry['FROM'] .
