@@ -4,11 +4,12 @@
  * LEIDEN OPEN VARIATION DATABASE (LOVD)
  *
  * Created     : 2016-03-01
- * Modified    : 2016-03-15
+ * Modified    : 2016-03-21
  * For LOVD    : 3.0-13
  *
  * Copyright   : 2004-2016 Leiden University Medical Center; http://www.LUMC.nl/
  * Programmers : Anthony Marty <anthony.marty@unimelb.edu.au>
+ *               Ing. Ivo F.A.C. Fokkema <I.F.A.C.Fokkema@LUMC.nl>
  *
  *
  * This file is part of LOVD.
@@ -40,7 +41,7 @@ require_once ROOT_PATH . 'class/objects.php';
 
 
 class LOVD_GenePanel extends LOVD_Object {
-    // This class extends the basic Object class and it handles the Link object.
+    // This class extends the basic Object class and it handles the GenePanel object.
     var $sObject = 'Gene_Panel';
 
 
@@ -50,7 +51,6 @@ class LOVD_GenePanel extends LOVD_Object {
     function __construct ()
     {
         // Default constructor.
-        global $_AUTH;
 
         // SQL code for loading an entry for an edit form.
         $this->sSQLLoadEntry = 'SELECT gp.*, ' .
@@ -89,10 +89,10 @@ class LOVD_GenePanel extends LOVD_Object {
                 'name' => 'Gene panel name',
                 'description' => 'Description',
                 'remarks' => 'Remarks',
-                'type' => 'Type',
+                'type_' => 'Type',
                 'cohort' => 'Cohort',
                 'phenotype_group' => 'Phenotype group',
-                'pmid_mandatory' => 'PMID Mandatory',
+                'pmid_mandatory_' => 'PMID Mandatory',
                 'diseases_' => 'Associated with diseases',
                 'created_by_' => 'Created by',
                 'created_date' => 'Created date',
@@ -114,7 +114,7 @@ class LOVD_GenePanel extends LOVD_Object {
                     'view' => array('Description', 50),
                     'db'   => array('gp.description', 'ASC', true),
                     'legend' => array('The gene panel description.')),
-                'type' => array(
+                'type_' => array(
                     'view' => array('Type', 60),
                     'db'   => array('gp.type', 'ASC', true),
                     'legend' => array('The gene panel type of Gene Panel, Blacklist or Mendeliome','The gene panel type:<ul><li>Gene Panel - A panel of genes that will include variants during filtering</li><li>Blacklist - A panel of genes that will exclude variants during filtering</li><li>Mendeliome - A panel of genes with known disease causing variants</li></ul>')),
@@ -209,8 +209,8 @@ class LOVD_GenePanel extends LOVD_Object {
                 array('', '', 'print', '<B>Relation to diseases (optional)</B>'),
                 'hr',
                 array('This gene panel has been linked to these diseases', 'Listed are all disease entries currently configured in LOVD.', 'select', 'active_diseases', $nDiseasesFormSize, $aDiseasesForm, false, true, false),
-                'hr','skip'
-
+                'hr',
+                'skip'
             );
 
         if (ACTION != 'create') {
@@ -254,10 +254,9 @@ class LOVD_GenePanel extends LOVD_Object {
                     $zData['disease_omim_'] .= (!$zData['disease_omim_'] ? '' : '<BR>') . '<A href="' . lovd_getExternalSource('omim', $nOMIMID, true) . '" target="_blank">' . $sSymbol . ($sSymbol == $sName? '' : ' (' . $sName . ')') . '</A>';
                 }
             }
+            $zData['pmid_mandatory_'] = ($zData['pmid_mandatory']? 'Yes' : 'No');
         }
-        $zData['pmid_mandatory'] = ($zData['pmid_mandatory']? 'Yes' : 'No');
-
-        $zData['type'] = ucwords(str_replace("_", " ", $zData['type']));
+        $zData['type_'] = ucwords(str_replace('_', ' ', $zData['type']));
 
         return $zData;
     }
@@ -271,6 +270,5 @@ class LOVD_GenePanel extends LOVD_Object {
         $_POST['pmid_mandatory'] = 1;
         return true;
     }
-
 }
 ?>

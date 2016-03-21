@@ -4,11 +4,12 @@
  * LEIDEN OPEN VARIATION DATABASE (LOVD)
  *
  * Created     : 2016-03-07
- * Modified    : 2016-03-15
+ * Modified    : 2016-03-21
  * For LOVD    : 3.0-13
  *
  * Copyright   : 2004-2016 Leiden University Medical Center; http://www.LUMC.nl/
  * Programmers : Anthony Marty <anthony.marty@unimelb.edu.au>
+ *               Ing. Ivo F.A.C. Fokkema <I.F.A.C.Fokkema@LUMC.nl>
  *
  *
  * This file is part of LOVD.
@@ -40,7 +41,7 @@ require_once ROOT_PATH . 'class/objects.php';
 
 
 class LOVD_GenePanelGene extends LOVD_Object {
-    // This class extends the basic Object class and it handles the Link object.
+    // This class extends the basic Object class and it handles the GenePanelGene object.
     var $sObject = 'Gene_Panel_Gene';
 
 
@@ -50,7 +51,6 @@ class LOVD_GenePanelGene extends LOVD_Object {
     function __construct ($nID = '')
     {
         // Default constructor.
-        global $_AUTH;
         $this->sTable  = 'TABLE_GP2GENE';
 
         // SQL code for viewing an entry.
@@ -71,7 +71,7 @@ class LOVD_GenePanelGene extends LOVD_Object {
             array(
                 'genepanelid' => 'Gene Panel ID',
                 'geneid' => 'Gene Symbol',
-                'transcript_ncbi' => 'Transcript ID',
+                'transcript_ncbi_' => 'Transcript ID',
                 'inheritance' => 'Inheritance',
                 'pmid' => 'PubMed',
                 'remarks' => 'Remarks',
@@ -96,9 +96,9 @@ class LOVD_GenePanelGene extends LOVD_Object {
                     'view' => array('Symbol', 100),
                     'db'   => array('gp2g.geneid', 'ASC', true),
                     'legend' => array('The gene symbol.')),
-                'transcript_ncbi' => array(
+                'transcript_ncbi_' => array(
                     'view' => array('Transcript', 100),
-                    'db'   => array('transcript_ncbi', 'ASC', true),
+                    'db'   => array('t.id_ncbi', 'ASC', true),
                     'legend' => array('The preferred transcript.')),
                 'inheritance' => array(
                     'view' => array('Inheritance', 80),
@@ -110,7 +110,7 @@ class LOVD_GenePanelGene extends LOVD_Object {
                     'legend' => array('PubMed ID.')),
                 'created_by_' => array(
                     'view' => array('Added By', 110),
-                    'db'   => array('created_by_', 'DESC', true),
+                    'db'   => array('uc.name', 'DESC', true),
                     'legend' => array('The user added this gene to this gene panel.')),
                 'created_date' => array(
                     'view' => array('Added Date', 110),
@@ -157,7 +157,7 @@ class LOVD_GenePanelGene extends LOVD_Object {
         global $_DB, $zData;
 
         // Get the available transcripts for this gene.
-        $aTranscripts = $_DB->query('SELECT id, id_ncbi FROM ' . TABLE_TRANSCRIPTS . ' WHERE geneid = ?',array($zData['geneid']))->fetchAllCombine();
+        $aTranscripts = $_DB->query('SELECT id, id_ncbi FROM ' . TABLE_TRANSCRIPTS . ' WHERE geneid = ?', array($zData['geneid']))->fetchAllCombine();
 
         // If we have found some transcripts for this gene then show them here otherwise show no transcripts available.
         if (count($aTranscripts)) {
@@ -181,7 +181,8 @@ class LOVD_GenePanelGene extends LOVD_Object {
                 array('Inheritance (optional)', '', 'select', 'inheritance', 1, $aInheritance, '', false, false),
                 array('PubMed ID (optional)', '', 'text', 'pmid', 20),
                 array('Remarks (optional)', '', 'textarea', 'remarks', 70, 3),
-                'hr','skip'
+                'hr',
+                'skip'
 
             );
 
@@ -207,15 +208,14 @@ class LOVD_GenePanelGene extends LOVD_Object {
         }
         // Only format this viewlist if we are not downloading it
         if (FORMAT == 'text/html') {
-
-            // Format the pubmed URL
+            // Format the pubmed URL.
             if ($zData['pmid']) {
                 $zData['pmid'] = '<SPAN' . ($sView != 'list' ? '' : ' onclick="cancelParentEvent(event);"') . '><A href="' . lovd_getExternalSource('pubmed_article', $zData['pmid'], true) . '" target="_blank">PubMed</A></SPAN>';
-//                $zData['pmid'] = '<SPAN' . ($sView != 'list' ? '' : ' onclick="cancelParentEvent(event);"') . '><A href="http://www.ncbi.nlm.nih.gov/pubmed/' . $zData['pmid'] . '" target="_blank">PubMed</A></SPAN>';
             }
-            // Create a link to a transcript
+            // Create a link to a transcript.
+            $zData['transcript_ncbi_'] = '';
             if ($zData['transcriptid']) {
-                $zData['transcript_ncbi'] = '<SPAN' . ($sView != 'list' ? '' : ' onclick="cancelParentEvent(event);"') . '><A href="transcripts/' . $zData['transcriptid'] . '">' . $zData['transcript_ncbi'] . '</A></SPAN>';
+                $zData['transcript_ncbi_'] = '<SPAN' . ($sView != 'list' ? '' : ' onclick="cancelParentEvent(event);"') . '><A href="transcripts/' . $zData['transcriptid'] . '">' . $zData['transcript_ncbi'] . '</A></SPAN>';
             }
         }
         return $zData;
