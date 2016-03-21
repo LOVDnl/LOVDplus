@@ -43,7 +43,9 @@ class LOVD_GeneStatistic extends LOVD_Object {
     // This class extends the basic Object class and it handles the Link object.
     var $sObject = 'Gene_Statistic';
 
-// TODO MGHA-AM Show the gene lists that each gene appears in, need to have new gene list tables created first.
+
+
+
 
     function __construct ()
     {
@@ -51,8 +53,12 @@ class LOVD_GeneStatistic extends LOVD_Object {
         global $_AUTH;
 
         // SQL code for viewing the list of genes
-        $this->aSQLViewList['SELECT']   = 'g.name, gs.*, g.id, (CASE gs.vep_annotation WHEN 1 THEN "Yes" ELSE "No" END) AS vepyesno';
-        $this->aSQLViewList['FROM']     = TABLE_GENES . ' AS g LEFT OUTER JOIN ' . TABLE_GENE_STATISTICS . ' AS gs ON (g.id = gs.id)';
+        $this->aSQLViewList['SELECT']   = 'g.name, gs.*, g.id, (CASE gs.vep_annotation WHEN 1 THEN "Yes" ELSE "No" END) AS vepyesno, ' .
+                                            'GROUP_CONCAT(DISTINCT gp.name ORDER BY gp.name DESC SEPARATOR ", ") AS gene_panels_ ';
+        $this->aSQLViewList['FROM']     = TABLE_GENES . ' AS g LEFT OUTER JOIN ' . TABLE_GENE_STATISTICS . ' AS gs ON (g.id = gs.id) ' .
+                                            'LEFT OUTER JOIN ' . TABLE_GP2GENE . ' AS gp2g ON (g.id = gp2g.geneid) ' .
+                                            'LEFT OUTER JOIN ' . TABLE_GENE_PANELS . ' AS gp ON (gp2g.genepanelid = gp.id)';
+        $this->aSQLViewList['GROUP_BY'] = 'g.id';
         // If we detect that the user wants to only show the checked genes and there are genes stored in the session variable then lets add them to the where clause here.
         if (isset($_GET['filterChecked']) && isset($_GET['viewlistid']) && $_GET['filterChecked'] == "true") {
             $this->aSQLViewList['WHERE']     = 'g.id in("' . implode('","', $_SESSION['viewlists'][$_GET['viewlistid']]['checked']) . '")';
@@ -69,6 +75,10 @@ class LOVD_GeneStatistic extends LOVD_Object {
                 'name' => array(
                     'view' => array('Gene <BR><BR>', 100),
                     'db'   => array('g.name', 'ASC', true)),
+                'gene_panels_' => array(
+                    'view' => array('Gene Panels<BR><BR>', 100),
+                    'db'   => array('gene_panels_', false, 'TEXT'),
+                    'legend' => array('The gene panels that this gene is found in.')),
                 'vepyesno' => array(
                     'view' => array('VEP <BR>Annotation<BR>', 20),
                     'db'   => array('vepyesno', 'ASC', true),
