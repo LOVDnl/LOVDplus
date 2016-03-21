@@ -91,7 +91,7 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && !ACTION) {
     if ($_AUTH && $_AUTH['level'] >= LEVEL_CURATOR) {
         // Authorized user is logged in. Provide tools.
         $aNavigation[CURRENT_PATH . '?edit']            = array('menu_edit.png', 'Edit gene panel information', 1);
-        $aNavigation[CURRENT_PATH . '?create']          = array('menu_plus.png', 'Add gene(s) to gene panel', 1);
+        $aNavigation[CURRENT_PATH . '?manage_genes']    = array('menu_plus.png', 'Add gene(s) to gene panel', 1);
         if ($_AUTH['level'] >= LEVEL_MANAGER) {
             $aNavigation[CURRENT_PATH . '?delete']      = array('cross.png', 'Delete gene panel entry', 1);
         }
