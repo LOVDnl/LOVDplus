@@ -451,7 +451,7 @@ if (PATH_COUNT == 3 && preg_match('/^[a-z][a-z0-9#@-]+$/i', rawurldecode($_PE[2]
 
     require ROOT_PATH . 'class/object_gene_panel_genes.php';
     $_DATA = new LOVD_GenePanelGene();
-    $zData = $_DATA->viewEntry($nGenePanelID . ',' . $sGeneID);
+    $zData = $_DATA->viewEntry(array('genepanelid' => $nGenePanelID, 'geneid' => $sGeneID));
 
     $aNavigation = array();
 
@@ -485,7 +485,7 @@ if (PATH_COUNT == 3 && preg_match('/^[a-z][a-z0-9#@-]+$/i', rawurldecode($_PE[2]
     require ROOT_PATH . 'inc-lib-form.php';
     $_DATA = new LOVD_GenePanelGene();
 
-    $zData = $_DATA->loadEntry($nGenePanelID, $sGeneID);
+    $zData = $_DATA->loadEntry(array('genepanelid' => $nGenePanelID, 'geneid' => $sGeneID));
 
     if (!empty($_POST)) {
         lovd_errorClean();

@@ -192,59 +192,6 @@ class LOVD_GenePanelGene extends LOVD_Object {
 
 
 
-    function loadEntry ($nGenePanelID = false, $sGeneID = false)
-    {
-        // TODO Modify the LOVD_Objects::loadEntry() function to handle records with multiple keys
-        // Loads and returns an entry from the database.
-        global $_DB, $_T;
-
-        if (empty($nGenePanelID) || empty($sGeneID)) {
-            // We were called, but the class wasn't initiated with an ID. Fail.
-            lovd_displayError('LOVD-Lib', 'Objects::(' . $this->sObject . ')::loadEntry() - Method didn\'t receive IDs');
-        }
-
-        // Build query.
-        if ($this->sSQLLoadEntry) {
-            $sSQL = $this->sSQLLoadEntry;
-        } else {
-            $sSQL = 'SELECT * FROM ' . TABLE_GP2GENE . ' WHERE genepanelid = ? and geneid = ?';
-        }
-        $q = $_DB->query($sSQL, array($nGenePanelID, $sGeneID), false);
-        if ($q) {
-            $zData = $q->fetchAssoc();
-        }
-        if (!$q || !$zData) {
-            $sError = $_DB->formatError(); // Save the PDO error before it disappears.
-
-            $_T->printHeader();
-            if (defined('PAGE_TITLE')) {
-                $_T->printTitle();
-            }
-
-            if ($sError) {
-                lovd_queryError($this->sObject . '::loadEntry()', $sSQL, $sError);
-            }
-
-            lovd_showInfoTable('No such ID!', 'stop');
-
-            $_T->printFooter();
-            exit;
-
-        }
-        // Not sure if I need this below as we are using two IDs to identify a gene panel gene record
-        else {
-            $this->nID = 1;
-        }
-
-        $zData = $this->autoExplode($zData);
-
-        return $zData;
-    }
-
-
-
-
-
     function prepareData ($zData = '', $sView = 'list') {
         // Prepares the data by "enriching" the variable received with links, pictures, etc.
         if (!in_array($sView, array('list', 'entry'))) {
@@ -272,26 +219,6 @@ class LOVD_GenePanelGene extends LOVD_Object {
             }
         }
         return $zData;
-    }
-
-
-
-
-
-    function viewEntry ($nID = false) {
-        // TODO adapt the LOVD_Object::viewEntry() function to handle linking tables
-        global $_DB;
-
-        list($nGenePanelID, $sGeneID) = explode(',', $nID);
-        $this->aSQLViewEntry['WHERE'] .= (empty($this->aSQLViewEntry['WHERE'])? '' : ' AND ') . 'gp2g.genepanelid = \'' . $nGenePanelID . '\'';
-
-        // Before passing this on to parent::viewEntry(), perform a standard getCount() check on the genepanel ID,
-        // to make sure that we won't get a query error when the combination of GeneID/GenePanelID does not yield
-        // any results. Easiest is then to fake a wrong $nID such that parent::viewEntry() will complain.
-        if (!$_DB->query('SELECT COUNT(*) FROM ' . TABLE_GP2GENE . ' WHERE geneid = ? AND genepanelid = ?', array($sGeneID, $nGenePanelID))->fetchColumn()) {
-            $sGeneID = -1;
-        }
-        parent::viewEntry($sGeneID);
     }
 }
 ?>

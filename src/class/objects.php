@@ -354,20 +354,29 @@ class LOVD_Object {
 
 
 
-    function getCount ($nID = false)
+    function getCount ($ID = false)
     {
         // Returns the number of entries in the database table.
+        // $ID = Can be an integer/numeric string, or an array. If an integer/numeric string: ID to change.
+        //   If an associative array (for linking tables), use array('geneid' => 'IVD', 'userid' => 1).
         global $_DB;
-        if ($nID) {
-            $sIDColumn = 'id';
-            // In case a different column name is used, better use that instead.
-            if (!empty($this->aColumnsViewList['id']['db'][0])) {
-                $sIDColumn = $this->aColumnsViewList['id']['db'][0];
-                // But take the optional table alias off.
-                $sIDColumn = substr(strrchr('.' . $sIDColumn, '.'), 1);
+
+        if ($ID) {
+            // Prepare ID variable, to always be in the array('id' => 1) format.
+            $aIDs = $ID;
+            if (!is_array($ID)) {
+                // In case a different column name is used, better use that instead.
+                if (!empty($this->aColumnsViewList['id']['db'][0])) {
+                    $sIDColumn = $this->aColumnsViewList['id']['db'][0];
+                    // But take the optional table alias off.
+                    $sIDColumn = substr(strrchr('.' . $sIDColumn, '.'), 1);
+                    $aIDs = array($sIDColumn => $ID);
+                } else {
+                    $aIDs = array('id' => $ID);
+                }
             }
 
-            $nCount = $_DB->query('SELECT COUNT(*) FROM ' . constant($this->sTable) . ' WHERE ' . $sIDColumn . ' = ?', array($nID))->fetchColumn();
+            $nCount = $_DB->query('SELECT COUNT(*) FROM ' . constant($this->sTable) . ' WHERE ' . implode(' = ? AND ', array_keys($aIDs)) . ' = ?', array_values($aIDs))->fetchColumn();
         } else {
             if ($this->nCount !== '') {
                 return $this->nCount;
@@ -482,23 +491,32 @@ class LOVD_Object {
 
 
 
-    function loadEntry ($nID = false)
+    function loadEntry ($ID)
     {
         // Loads and returns an entry from the database.
+        // $ID = Can be an integer/numeric string, or an array. If an integer/numeric string: ID to change.
+        //   If an associative array (for linking tables), use array('geneid' => 'IVD', 'userid' => 1).
         global $_DB, $_T;
 
-        if (empty($nID)) {
+        // Check to see if an ID has been passed and there is data to process.
+        if ((!is_array($ID) && !trim($ID)) || (is_array($ID) && (!$ID || in_array('', array_map('trim', $ID))))) {
             // We were called, but the class wasn't initiated with an ID. Fail.
             lovd_displayError('LOVD-Lib', 'Objects::(' . $this->sObject . ')::loadEntry() - Method didn\'t receive ID');
+        }
+
+        // Prepare ID variable, to always be in the array('id' => 1) format.
+        $aIDs = $ID;
+        if (!is_array($ID)) {
+            $aIDs = array('id' => $ID);
         }
 
         // Build query.
         if ($this->sSQLLoadEntry) {
             $sSQL = $this->sSQLLoadEntry;
         } else {
-            $sSQL = 'SELECT * FROM ' . constant($this->sTable) . ' WHERE id = ?';
+            $sSQL = 'SELECT * FROM ' . constant($this->sTable) . ' WHERE ' . implode(' = ? AND ', array_keys($aIDs)) . ' = ?';
         }
-        $q = $_DB->query($sSQL, array($nID), false);
+        $q = $_DB->query($sSQL, array_values($aIDs), false);
         if ($q) {
             $zData = $q->fetchAssoc();
         }
@@ -520,7 +538,9 @@ class LOVD_Object {
             exit;
 
         } else {
-            $this->nID = $nID;
+//            $this->nID = $nID;
+            // TODO Need to confirm what to do here. We can not set $nID to an array and it is used later so currently this code will not work with linking tables. Do we change the way that $nID works throughout all the code that uses objects.php or just set it to 1 and know it won't matter?
+            $this->nID = (is_array($ID)? 1 : $ID);
         }
 
         $zData = $this->autoExplode($zData);
@@ -760,20 +780,22 @@ class LOVD_Object {
 
 
 
-    function viewEntry ($nID = false)
+    function viewEntry ($ID)
     {
         // Views just one entry from the database.
+        // $ID = Can be an integer/numeric string, or an array. If an integer/numeric string: ID to change.
+        //   If an associative array (for linking tables), use array('geneid' => 'IVD', 'userid' => 1).
         global $_DB, $_T;
 
-        if (empty($nID)) {
-            // We were called, but the class wasn't initiated with an ID. Fail.
+        // Check to see if an ID has been passed and there is data to process.
+        if ((!is_array($ID) && !trim($ID)) || (is_array($ID) && (!$ID || in_array('', array_map('trim', $ID))))) {
             lovd_displayError('LOVD-Lib', 'Objects::(' . $this->sObject . ')::viewEntry() - Method didn\'t receive ID');
         }
 
         $bAjax = (substr(lovd_getProjectFile(), 0, 6) == '/ajax/');
 
         // Check existence of entry.
-        $n = $this->getCount($nID);
+        $n = $this->getCount($ID);
         if (!$n) {
             global $_SETT, $_STAT, $_AUTH;
             lovd_showInfoTable('No such ID!', 'stop');
@@ -790,18 +812,31 @@ class LOVD_Object {
         // Manipulate WHERE to include ID, and build query.
         $sTableName = constant($this->sTable);
         // Try to get the name of the ID column in MySQL. I'd rather not do it this way, but even worse would be to have yet another variable.
-        if (!empty($this->aColumnsViewList['id']['db'][0])) {
+        if (!empty($this->aColumnsViewList['id']['db'][0]) && !is_array($ID)) {
             $sIDColumn = $this->aColumnsViewList['id']['db'][0];
         } else {
-            if (preg_match('/' . constant($this->sTable) . ' AS ([a-z]+)( .+)?$/', $this->aSQLViewEntry['FROM'], $aRegs)) {
+            if (preg_match('/' . constant($this->sTable) . ' AS ([a-z0-9]+)( .+)?$/', $this->aSQLViewEntry['FROM'], $aRegs)) {
                 // An alias was defined. Use it.
-                $sIDColumn = $aRegs[1] . '.id';
+                $sTableName = $aRegs[1];
+                $sIDColumn = $sTableName . '.id';
             } else {
                 // Use the normal table name.
-                $sIDColumn = constant($this->sTable) . '.id';
+                $sTableName = constant($this->sTable);
+                $sIDColumn = $sTableName . '.id';
             }
         }
-        $this->aSQLViewEntry['WHERE'] = $sIDColumn . ' = ?' . (!$this->aSQLViewEntry['WHERE']? '' : ' AND ' . $this->aSQLViewEntry['WHERE']);
+
+        // Prepare ID variable, to always be in the array('id' => 1) format.
+        if (!is_array($ID)) {
+            $aIDs = array($sIDColumn => $ID);
+        } else {
+            // Apply the table name to each of the IDs
+            foreach ($ID as $sKey => $sValue) {
+                $aIDs[$sTableName . '.' . $sKey] = $sValue;
+            }
+        }
+
+        $this->aSQLViewEntry['WHERE'] = implode(' = ? AND ', array_keys($aIDs)) . ' = ?' . (!$this->aSQLViewEntry['WHERE']? '' : ' AND ' . $this->aSQLViewEntry['WHERE']);
         $sSQL = 'SELECT ' . $this->aSQLViewEntry['SELECT'] .
                ' FROM ' . $this->aSQLViewEntry['FROM'] .
                ' WHERE ' . $this->aSQLViewEntry['WHERE'] .
@@ -809,7 +844,7 @@ class LOVD_Object {
                ' GROUP BY ' . $this->aSQLViewEntry['GROUP_BY']);
 
         // Run the actual query.
-        $zData = $_DB->query($sSQL, array($nID))->fetchAssoc();
+        $zData = $_DB->query($sSQL, array_values($aIDs))->fetchAssoc();
         // If the user has no rights based on the statusid column, we don't have a $zData.
         if (!$zData) {
             // Don't give away information about the ID: just pretend the entry does not exist.
