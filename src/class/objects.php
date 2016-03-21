@@ -278,50 +278,65 @@ class LOVD_Object {
 
 
 
-    function deleteEntry ($nID = false, $sReason = '-')
+    function deleteEntry ($ID, $sReason = '-')
     {
-        // Delete an entry from the database.
+        // Deletes an entry from the database, handles revisions as well.
+        // $ID = Can be an integer/numeric string, or an array. If an integer/numeric string: ID to change.
+        //   If an associative array (for linking tables), use array('geneid' => 'IVD', 'userid' => 1).
+        // $sReason = The reason the entry as deleted, as given by the user.
         global $_DB, $_AUTH;
 
-        // Check to see if this table uses revisions
-        $bRev = false;
-        if (defined($this->sTable . '_REV')) {
-            $bRev = true;
-            $sRevSQL = '';
-            $aRevSQL = array();
-            $_DB->beginTransaction();
+        // Check to see if an ID has been passed and there is data to process.
+        if ((!is_array($ID) && !trim($ID)) || (is_array($ID) && (!$ID || in_array('', array_map('trim', $ID))))) {
+            lovd_displayError('LOVD-Lib', 'Objects::(' . $this->sObject . ')::deleteEntry() - Method didn\'t receive ID');
         }
 
-        if (!$nID) {
-            // We were called, but the class wasn't initiated with an ID. Fail.
-            lovd_displayError('LOVD-Lib', 'Objects::(' . $this->sObject . ')::deleteEntry() - Method didn\'t receive ID');
-        } else {
-            if ($this->getCount($nID)) {
-                $sSQL = 'DELETE FROM ' . constant($this->sTable) . ' WHERE id = ?';
-                if (!defined('LOG_EVENT')) {
-                    define('LOG_EVENT', $this->sObject . '::deleteEntry()');
-                }
-                $q = $_DB->query($sSQL, array($nID));
+        // Prepare ID variable, to always be in the array('id' => 1) format.
+        $aIDs = $ID;
+        if (!is_array($ID)) {
+            $aIDs = array('id' => $ID);
+        }
 
-                // Setup the SQL if this is a revision table
-                if ($bRev) {
-                    $sReason = 'Record deleted: ' . $sReason;
-                    $sRevSQL = 'UPDATE ' . constant($this->sTable . '_REV') . ' SET valid_to = ?, deleted = 1, deleted_by = ?, reason = CONCAT(reason,"\r\n", ?) WHERE id = ? ORDER BY valid_to DESC LIMIT 1';
-                    $aRevSQL = array(date('Y-m-d H:i:s'), $_AUTH['id'], $sReason, $nID);
-                    $qu = $_DB->query($sRevSQL, $aRevSQL, true, true);
-                    // Check if any of the queries failed, if so then rollback and return false otherwise commit
-                    if (!$q || !$qu) {
-                        $_DB->rollBack();
-                        return false;
-                    } else {
-                        $_DB->commit();
-                    }
-                }
-                return true;
-            } else {
-                return false;
+        // Check to see if this table uses revisions.
+        $bRev = defined($this->sTable . '_REV');
+        // Check if maybe we already were in a transaction when we started this function.
+        // If so, we won't create a new transaction, nor run a commit() in the end.
+        $bWasAlreadyInTransaction = (method_exists($_DB, 'inTransaction') && $_DB->inTransaction());
+        if ($bRev) {
+            if (!$bWasAlreadyInTransaction) {
+                $_DB->beginTransaction();
             }
         }
+
+        $sSQL = 'DELETE FROM ' . constant($this->sTable) . ' WHERE ' . implode(' = ? AND ', array_keys($aIDs)) . ' = ?';
+        if (!defined('LOG_EVENT')) {
+            define('LOG_EVENT', $this->sObject . '::deleteEntry()');
+        }
+        $q = $_DB->query($sSQL, array_values($aIDs));
+
+        // Setup and run the revision table SQL.
+        if ($bRev) {
+            $sReason = 'Record deleted: ' . $sReason;
+            // Update the existing revision record.
+            // We could just check for a valid_to of 9999-12-31, but this
+            //  is more flexible if we choose a different format.
+            $qRevisionUpdate = $_DB->query(
+                'UPDATE ' . constant($this->sTable . '_REV') . '
+                 SET valid_to = NOW(), deleted = 1, deleted_by = ?, reason = CONCAT(reason, "\r\n", ?)
+                 WHERE ' . implode(' = ? AND ', array_keys($aIDs)) . ' = ? AND valid_to >= NOW()
+                 ORDER BY valid_to DESC LIMIT 1',
+                array_merge(array($_AUTH['id'], $sReason), array_values($aIDs)), true, true);
+            // If any of the queries failed, then rollback and return false. Otherwise, commit.
+            if (!$q || !$qRevisionUpdate) {
+                $_DB->rollBack();
+                return false;
+            } else {
+                if (!$bWasAlreadyInTransaction) {
+                    $_DB->commit();
+                }
+            }
+        }
+        return $q->rowCount();
     }
 
 
@@ -404,14 +419,19 @@ class LOVD_Object {
     function insertEntry ($aData, $aFields = array())
     {
         // Inserts data in $aData into the database, using only fields defined in $aFields.
+        // $aData = Associative array with values to be inserted. Keys should equal database column names.
+        // $aFields = The keys of the associative array that will actually get inserted.
         global $_DB;
 
-        // Check to see if this table uses revisions
-        $bRev = false;
-        if (defined($this->sTable . '_REV')) {
-            $bRev = true;
-            $sRevSQL = '';
-            $_DB->beginTransaction();
+        // Check to see if this table uses revisions.
+        $bRev = defined($this->sTable . '_REV');
+        // Check if maybe we already were in a transaction when we started this function.
+        // If so, we won't create a new transaction, nor run a commit() in the end.
+        $bWasAlreadyInTransaction = (method_exists($_DB, 'inTransaction') && $_DB->inTransaction());
+        if ($bRev) {
+            if (!$bWasAlreadyInTransaction) {
+                $_DB->beginTransaction();
+            }
         }
 
         if (!is_array($aData) || !count($aData)) {
@@ -438,8 +458,10 @@ class LOVD_Object {
             }
             $aSQL[] = $aData[$sField];
         }
-        // If this is a revision table then get a copy of the field names being inserted as this should be the same
-        if ($bRev) {$sRevSQL = $sSQL;}
+        // If this is a revision table, we mostly use the same query.
+        if ($bRev) {
+            $sRevSQL = $sSQL;
+        }
         $sSQL .= ') VALUES (?' . str_repeat(', ?', count($aFields) - 1) . ')';
 
         if (!defined('LOG_EVENT')) {
@@ -447,35 +469,45 @@ class LOVD_Object {
         }
         $q = $_DB->query($sSQL, $aSQL, true, true);
 
-        $nID = $_DB->lastInsertId();
-        if (substr(lovd_getColumnType(constant($this->sTable), 'id'), 0, 3) == 'INT') {
+        $nID = $_DB->lastInsertId(); // Will not return an ID for linking tables.
+        if ($nID && substr(lovd_getColumnType(constant($this->sTable), 'id'), 0, 3) == 'INT') {
             $nID = sprintf('%0' . lovd_getColumnLength(constant($this->sTable), 'id') . 'd', $nID);
         }
 
-        // Setup and run the revision table SQL
+        // Setup and run the revision table SQL.
         if ($bRev) {
             // Replace the table name with the revision table name
-            $sRevSQL = preg_replace('/^INSERT INTO ' . constant($this->sTable) . '/i', 'INSERT INTO ' . constant($this->sTable . '_REV'), $sRevSQL);
-            // These are the extra columns that are required for inserting a record into the revision table
-            $sRevSQL.= ', `id`, `valid_from`, `reason`';
-            // Use the ID returned from the last insert ID
-            $aSQL[] = $nID;
-            // Use the created by date if provided otherwise use the current date
-            $aSQL[] = (empty($aData['created_date'])?date('Y-m-d H:i:s'):$aData['created_date']);
-            // Use the reason if provided in the $aData array
-            $aSQL[] = (empty($aData['reason'])?'Record created':'Record created: ' . $aData['reason']);
+            $sRevSQL = preg_replace('/^(INSERT INTO ' . constant($this->sTable) . ')/i', 'INSERT INTO ' . constant($this->sTable . '_REV'), $sRevSQL);
+            // For tables that don't have an AUTO_INCREMENT column, the ID must have already been provided in the SQL.
+            // For other tables, we add the field here. We're assuming it's "id".
+            if ($nID) {
+                // Auto-increment column in place, assuming the name is "id".
+                $sRevSQL .= ', id';
+            }
+            // These are the extra columns that are required for inserting a record into the revision table.
+            $sRevSQL .= ', valid_from, reason';
+            // Add the ID to the SQL's arguments as well, for auto-incremented tables.
+            if ($nID) {
+                $aSQL[] = $nID;
+            }
+            // Use the created_date if provided, otherwise use the current date.
+            $aSQL[] = (empty($aData['created_date'])? date('Y-m-d H:i:s') : $aData['created_date']);
+            // Use the reason, if provided in the $aData array.
+            $aSQL[] = 'Record created' . (empty($aData['reason'])? '' : ': ' . $aData['reason']);
             $sRevSQL .= ') VALUES (?' . str_repeat(', ?', count($aSQL) - 1) . ')';
-            $qi = $_DB->query($sRevSQL, $aSQL, true, true);
+            $qRevisionInsert = $_DB->query($sRevSQL, $aSQL, true, true);
 
-            // If any of the queries fail then rollback and return false otherwise commit
-            if (!$q || !$qi) {
+            // If any of the queries fail, then rollback and return false. Otherwise, commit.
+            if (!$q || !$qRevisionInsert) {
                 $_DB->rollBack();
                 return false;
             } else {
-                $_DB->commit();
+                if (!$bWasAlreadyInTransaction) {
+                    $_DB->commit();
+                }
             }
         }
-        return $nID;
+        return ($nID? $nID : true);
     }
 
 
@@ -671,24 +703,17 @@ class LOVD_Object {
 
 
 
-    function updateEntry ($nID, $aData, $aFields = array())
+    function updateEntry ($ID, $aData, $aFields = array())
     {
-        // Updates entry $nID with data from $aData in the database, changing only fields defined in $aFields.
+        // Updates entry $ID with data from $aData in the database, changing only fields defined in $aFields.
+        // $ID = Can be an integer/numeric string, or an array. If an integer/numeric string: ID to change.
+        //   If an associative array (for linking tables), use array('geneid' => 'IVD', 'userid' => 1).
+        // $aData = Associative array with values to be inserted. Keys should equal database column names.
+        // $aFields = The keys of the associative array that will actually get inserted.
         global $_DB;
 
-        // Check to see if this table uses revisions, an ID has been passed and there is data to process
-        $bRev = false;
-        $aDataOld = array();
-        if (defined($this->sTable . '_REV') && trim($nID) && count($aData)) {
-            $bRev = true;
-            $sRevSQL = '';
-            $sReason = '';
-            // Read in the existing record from the revision table to be used to compare against the changes
-            $aDataOld = $_DB->query('SELECT * FROM ' . constant($this->sTable . '_REV') . ' WHERE id = ? ORDER BY valid_to DESC LIMIT 1', array($nID))->fetchAssoc();
-            $_DB->beginTransaction();
-        }
-
-        if (!trim($nID)) {
+        // Check to see if an ID has been passed and there is data to process.
+        if ((!is_array($ID) && !trim($ID)) || (is_array($ID) && (!$ID || in_array('', array_map('trim', $ID))))) {
             lovd_displayError('LOVD-Lib', 'Objects::(' . $this->sObject . ')::updateEntry() - Method didn\'t receive ID');
         } elseif (!is_array($aData) || !count($aData)) {
             lovd_displayError('LOVD-Lib', 'Objects::(' . $this->sObject . ')::updateEntry() - Method didn\'t receive data array');
@@ -696,11 +721,38 @@ class LOVD_Object {
             $aFields = array_keys($aData);
         }
 
+        // Prepare ID variable, to always be in the array('id' => 1) format.
+        $aIDs = $ID;
+        if (!is_array($ID)) {
+            $aIDs = array('id' => $ID);
+        }
+
+        // Check to see if this table uses revisions.
+        $bRev = defined($this->sTable . '_REV');
+        $aDataOld = array(); // Will contain the current data, to compare with what we receive now.
+        // Check if maybe we already were in a transaction when we started this function.
+        // If so, we won't create a new transaction, nor run a commit() in the end.
+        $bWasAlreadyInTransaction = (method_exists($_DB, 'inTransaction') && $_DB->inTransaction());
+        if ($bRev) {
+            if (!$bWasAlreadyInTransaction) {
+                $_DB->beginTransaction();
+            }
+            // Read in the existing record from the revision table to be used to compare against the changes.
+            $aDataOld = $_DB->query('SELECT * FROM ' . constant($this->sTable) . ' WHERE ' . implode(' = ? AND ', array_keys($aIDs)) . ' = ?',
+                array_values($aIDs))->fetchAssoc();
+        }
+
         // Query text.
         $sSQL = 'UPDATE ' . constant($this->sTable) . ' SET ';
         $aSQL = array();
-        foreach ($aFields as $key => $sField) {
-            $sSQL .= (!$key? '' : ', ') . '`' . $sField . '` = ?';
+        $i = 0;
+        foreach ($aFields as $sField) {
+            // But skip the IDs that may be in the list.
+            if (isset($aIDs[$sField])) {
+                continue;
+            }
+            $sSQL .= (!$i? '' : ', ') . '`' . $sField . '` = ?';
+            $i ++;
             if (!isset($aData[$sField])) {
                 // Field may be not set, make sure it is (happens in very rare cases).
                 $aData[$sField] = '';
@@ -710,52 +762,72 @@ class LOVD_Object {
             }
             $aSQL[$sField] = $aData[$sField];
         }
-        $sSQL .= ' WHERE id = ?';
-        $aSQL['id'] = $nID;
+        $sSQL .= ' WHERE ' . implode(' = ? AND ', array_keys($aIDs)) . ' = ?';
+        $aSQL += $aIDs;
+
+        // Calculate diff with past entry. We do this, to see if we need to run at all.
+        // If we don't run, we don't run on any table (to prevent mismatch in edited_date between data and REV).
+        // Fill the columns that are not available in $aSQL (non-updatable fields).
+        $aSQLTotal = $aSQL + $aDataOld; // Doesn't overwrite existing values like array_merge() does (good in this case).
+        // Find the differences between the old and new records
+        $aDiff = array_diff_assoc($aSQLTotal, $aDataOld);
+        // Remove the columns we are not interested in.
+        unset($aDiff['edited_by'], $aDiff['edited_date']);
+
+        // No diff? Do nothing. Don't return false, though.
+        if (!$aDiff) {
+            if ($bRev && !$bWasAlreadyInTransaction) {
+                $_DB->commit(); // Or a rollback()? We only did a select...
+            }
+            return -1; // Doesn't evaluate to false, but can serve as a specific value that you can check for.
+        }
 
         if (!defined('LOG_EVENT')) {
             define('LOG_EVENT', $this->sObject . '::updateEntry()');
         }
         $q = $_DB->query($sSQL, array_values($aSQL), true, true);
 
-        // Setup and run the revision table SQL
+        // Setup and run the revision table SQL.
         if ($bRev) {
-            // Fill all the columns that are not available in the new record
-            $aSQL = $aSQL + $aDataOld;
-            // Find the differences between the old and new records
-            $aDiff = array_diff_assoc($aSQL, $aDataOld);
-            // Remove the columns we are not interested in
-            unset($aDiff['edited_by'], $aDiff['edited_date'], $aDiff['reason'], $aDiff['valid_to'], $aDiff['valid_from'], $aSQL['deleted'], $aSQL['deleted_by']);
-            $sReason = (empty($aData['reason'])?'Record modified' . "\r\n":'Record modified: ' . $aData['reason'] . "\r\n");
+            // If we have passed a reason then use this as the first line otherwise just say the record was modified.
+            $sReason = 'Record modified' . (empty($aData['reason'])? '' : ': ' . $aData['reason']);
             // Have we detected any differences?
-            if (count($aDiff)){
-                // If we have passed a reason then use this as the first line otherwise just say the record was modified
-                // Loop through each of these differences and create a reason string
+            // (we could remove this check now since we returned already, but just in case we change that behavior)
+            if (count($aDiff)) {
+                // Loop through each of these differences and create a reason string.
                 foreach ($aDiff as $sKey => $sValue) {
-                    $sReason .= $sKey . ': "' . $aDataOld[$sKey] . '" => "' . $sValue . '"' . "\r\n";
+                    $sReason .= "\r\n" . $sKey . ': "' . $aDataOld[$sKey] . '" => "' . $sValue . '"';
                 }
             } else {
-                $sReason .= 'Nothing of importance changed';
+                $sReason .= ', no changes detected.';
             }
 
-            // Modify the columns relevant to the revision table
-            $aSQL['reason'] = $sReason;
-            $aSQL['valid_from'] = (!empty($aSQL['edited_date'])?$aSQL['edited_date']:date('Y-m-d H:i:s'));
-            unset($aSQL['valid_to'], $aSQL['deleted'], $aSQL['deleted_by']);
+            // Modify the columns relevant to the revision table.
+            $aSQLTotal['reason'] = $sReason;
+            $aSQLTotal['valid_from'] = (!empty($aSQLTotal['edited_date'])? $aSQLTotal['edited_date'] : date('Y-m-d H:i:s'));
 
-            // Update the existing revision record
-            $qu = $_DB->query('UPDATE ' . constant($this->sTable . '_REV') . ' SET valid_to = ? WHERE id = ? ORDER BY valid_to DESC LIMIT 1', array($aSQL['valid_from'], $nID), true, true);
+            // Update the existing revision record.
+            // We could just check for a valid_to of 9999-12-31, but this
+            //  is more flexible if we choose a different format.
+            $qRevisionUpdate = $_DB->query('
+                UPDATE ' . constant($this->sTable . '_REV') . '
+                SET valid_to = ?
+                WHERE ' . implode(' = ? AND ', array_keys($aIDs)) . ' = ? AND valid_to >= NOW()
+                ORDER BY valid_to DESC LIMIT 1',
+                    array_merge(array($aSQLTotal['valid_from']), array_values($aIDs)), true, true);
 
-            // Create the SQL for inserting a new revision record
-            $sRevSQL .= 'INSERT INTO ' . constant($this->sTable . '_REV') . ' (`' . implode('`, `', array_keys($aSQL)) . '`) VALUES (?' . str_repeat(', ?', count($aSQL) - 1) . ')';
-            $qi = $_DB->query($sRevSQL, array_values($aSQL), true, true);
+            // Create the SQL for inserting a new revision record.
+            $sRevSQL = 'INSERT INTO ' . constant($this->sTable . '_REV') . ' (`' . implode('`, `', array_keys($aSQLTotal)) . '`) VALUES (?' . str_repeat(', ?', count($aSQLTotal) - 1) . ')';
+            $qRevisionInsert = $_DB->query($sRevSQL, array_values($aSQLTotal), true, true);
 
-            // If any of the queries fail then rollback and return false otherwise commit
-            if (!$q || !$qi || !$qu) {
+            // If any of the queries fail, then rollback and return false. Otherwise, commit.
+            if (!$q || !$qRevisionInsert || !$qRevisionUpdate) {
                 $_DB->rollBack();
                 return false;
             } else {
-                $_DB->commit();
+                if (!$bWasAlreadyInTransaction) {
+                    $_DB->commit();
+                }
             }
         }
         return $q->rowCount();
