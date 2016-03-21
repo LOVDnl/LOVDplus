@@ -9,6 +9,7 @@
  *
  * Copyright   : 2004-2016 Leiden University Medical Center; http://www.LUMC.nl/
  * Programmers : Anthony Marty <anthony.marty@unimelb.edu.au>
+ *               Ivo F.A.C. Fokkema <I.F.A.C.Fokkema@LUMC.nl>
  *
  *
  * This file is part of LOVD.
@@ -45,7 +46,7 @@ if ($_AUTH) {
 
 
 if (PATH_COUNT == 1 && !ACTION) {
-    // URL: /genes_panels
+    // URL: /gene_panels
     // View all entries.
 
     // Submitters are allowed to download this panel...
@@ -71,7 +72,7 @@ if (PATH_COUNT == 1 && !ACTION) {
 
 
 if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && !ACTION) {
-    // URL: /genes_panels/00001
+    // URL: /gene_panels/00001
     // View specific entry.
 
     if ($_AUTH['level'] >= LEVEL_SUBMITTER) {
@@ -263,15 +264,14 @@ if (PATH_COUNT == 1 && ACTION == 'create') {
             }
 
             // Thank the user...
+            header('Refresh: 3; url=' . lovd_getInstallURL() . CURRENT_PATH . '/' . $nID . '?manage_genes');
+
             $_T->printHeader();
             $_T->printTitle();
             lovd_showInfoTable('Successfully created the gene panel entry!', 'success');
-            print('      <SCRIPT type="text/javascript">setTimeout(\'window.location.href=\\\'' . lovd_getInstallURL() . CURRENT_PATH . '/' . $nID . '\\\';\', 3000);</SCRIPT>' . "\n\n");
             $_T->printFooter();
             exit;
-
         }
-
     }
 
     $_T->printHeader();
@@ -337,7 +337,7 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && ACTION == 'changelog') {
 
 if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && ACTION == 'edit') {
     // URL: /gene_panels/00001?edit
-    // Drop specific entry.
+    // Edit a specific entry.
 
     $nID = sprintf('%05d', $_PE[1]);
     define('PAGE_TITLE', 'Edit gene panel entry #' . $nID);
@@ -456,8 +456,306 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && ACTION == 'edit') {
 
 
 
+if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && ACTION == 'manage_genes') {
+    // URL: /gene_panels/00001?manage_genes
+    // Manage genes in a gene panel.
+
+    $nID = sprintf('%05d', $_PE[1]);
+    define('PAGE_TITLE', 'Manage genes for gene panel entry #' . $nID);
+    define('LOG_EVENT', 'GenePanelManage');
+
+    lovd_requireAUTH(LEVEL_ADMIN);
+
+    if (!$_DB->query('SELECT COUNT(*) FROM ' . TABLE_GENE_PANELS . ' WHERE id = ?', array($nID))->fetchColumn()) {
+        $_T->printHeader();
+        $_T->printTitle();
+        lovd_showInfoTable('No such ID!', 'stop');
+        $_T->printFooter();
+        exit;
+    }
+
+    require ROOT_PATH . 'inc-lib-form.php';
+
+    if (POST) {
+        lovd_errorClean();
+
+        // Preventing notices...
+        // $_POST['genes'] stores the IDs of the genes that are supposed to go in TABLE_GENE_PANELS2GENES.
+        if (empty($_POST['genes']) || !is_array($_POST['genes'])) {
+            $_POST['genes'] = array();
+        }
+        // $_POST['transcriptids'] stores the IDs of the transcripts associated with the selected genes.
+        if (empty($_POST['transcriptids']) || !is_array($_POST['transcriptids'])) {
+            $_POST['transcriptids'] = array();
+        }
+        // $_POST['inheritances'] stores the inheritance values of the selected genes.
+        if (empty($_POST['inheritances']) || !is_array($_POST['inheritances'])) {
+            $_POST['inheritances'] = array();
+        }
+        // $_POST['id_omims'] stores the OMIM IDs selected as relevant for the selected genes.
+        if (empty($_POST['id_omims']) || !is_array($_POST['id_omims'])) {
+            $_POST['id_omims'] = array();
+        }
+        // $_POST['pmids'] stores the PMIDs selected as relevant for the selected genes.
+        if (empty($_POST['transcriptids']) || !is_array($_POST['pmids'])) {
+            $_POST['pmids'] = array();
+        }
+        // $_POST['remarkses'] stores the remarks associated with the selected genes.
+        if (empty($_POST['remarkses']) || !is_array($_POST['remarkses'])) {
+            $_POST['remarkses'] = array();
+        }
+
+        // Mandatory fields.
+        if (empty($_POST['password'])) {
+            lovd_errorAdd('password', 'Please fill in the \'Enter your password for authorization\' field.');
+        } elseif ($_POST['password'] && !lovd_verifyPassword($_POST['password'], $_AUTH['password'])) {
+            // User had to enter his/her password for authorization.
+            lovd_errorAdd('password', 'Please enter your correct password for authorization.');
+        }
+
+
+
+        if (!lovd_error()) {
+            // We'll need to run inserts for what's new, updates for what's already there, and deletes for what's removed.
+            // However, the insertEntry(), updateEntry() and deleteEntry() functions have their own transactions, which break this part here.
+            // FIXME: For now, we'll just work *directly* in the data table, instead of considering the history.
+            // This is just to get a working example, mergable with the other branches. From there on, we'll fix things.
+            // FIXME: Should we make a summary of what's created or deleted before we process the edit?
+            //  Or do we consider the chance of mistakes too little?
+
+            $_DB->beginTransaction();
+            // Get list of currently associated genes. Note that the genes are keys, to speed things up.
+            $aGenesCurrentlyAssociated = $_DB->query('SELECT geneid, 1 FROM ' . TABLE_GP2GENE . ' WHERE genepanelid = ?', array($nID))->fetchAllCombine();
+            foreach ($_POST['genes'] as $nKey => $sGeneID) {
+                if (!isset($aGenesCurrentlyAssociated[$sGeneID])) {
+                    // Needs an insert.
+                    $_DB->query('INSERT INTO ' . TABLE_GP2GENE . ' (genepanelid, geneid, transcriptid, inheritance, id_omim, pmid, remarks, created_by, created_date) VALUES (?, ?, ?, ?, ?, ?, ?, ?, NOW())',
+                        array($nID, $sGeneID, (empty($_POST['transcriptids'][$nKey])? NULL : $_POST['transcriptids'][$nKey]), $_POST['inheritances'][$nKey], $_POST['id_omims'][$nKey], $_POST['pmids'][$nKey], $_POST['remarkses'][$nKey], $_AUTH['id']));
+                } else {
+                    // Needs an update.
+                    $_DB->query('UPDATE ' . TABLE_GP2GENE . ' SET transcriptid = ?, inheritance = ?, id_omim = ?, pmid = ?, remarks = ?, edited_by = ?, edited_date = NOW() WHERE genepanelid = ? AND geneid = ?',
+                        array((empty($_POST['transcriptids'][$nKey])? NULL : $_POST['transcriptids'][$nKey]), $_POST['inheritances'][$nKey], $_POST['id_omims'][$nKey], $_POST['pmids'][$nKey], $_POST['remarkses'][$nKey], $_AUTH['id'], $nID, $sGeneID));
+                    // Mark gene as done, so we don't delete it after this loop.
+                    unset($aGenesCurrentlyAssociated[$sGeneID]);
+                }
+            }
+
+            // Now delete what was no longer selected.
+            if ($aGenesCurrentlyAssociated) {
+                $_DB->query('DELETE FROM ' . TABLE_GP2GENE . ' WHERE genepanelid = ? AND geneid IN (?' . str_repeat(', ?', count($aGenesCurrentlyAssociated) - 1) . ')',
+                    array_merge(array($nID), array_keys($aGenesCurrentlyAssociated)));
+            }
+
+            // If we get here, it all succeeded.
+            $_DB->commit();
+
+            // Write to log...
+            lovd_writeLog('Event', LOG_EVENT, 'Updated gene list for the gene panel #' . $nID);
+
+            // Thank the user...
+            header('Refresh: 3; url=' . lovd_getInstallURL() . CURRENT_PATH);
+
+            $_T->printHeader();
+            $_T->printTitle();
+            lovd_showInfoTable('Successfully updated the gene panel gene list!', 'success');
+
+            $_T->printFooter();
+            exit;
+
+        } else {
+            // Because we're sending the data back to the form, I need to unset the password fields!
+            unset($_POST['password']);
+        }
+    }
+
+
+
+
+
+    $_T->printHeader();
+    $_T->printTitle();
+
+    // Now, build $aGenes, which contains info about the genes currently selected (from DB or, if available, POST!).
+    $aGenes = array();
+    if (!empty($_POST['genes'])) {
+        // Form has already been sent. We're here because of errors. Use $_POST.
+        // Retrieve data for selected genes.
+        // FIXME; Do we need to change all IDs to integers because of possibly loosing the prepended zero's? Cross-browser check to verify?
+        $zGenes = $_DB->query(
+            'SELECT g.id, IFNULL(CONCAT("<OPTION value=\"\">-- select --</OPTION>", GROUP_CONCAT(CONCAT("<OPTION value=\"", t.id, "\">", t.id_ncbi, "</OPTION>") ORDER BY t.id_ncbi SEPARATOR "")), "<OPTION value=\"\">-- no transcripts available --</OPTION>") AS transcripts_HTML
+             FROM ' . TABLE_GENES . ' AS g LEFT OUTER JOIN ' . TABLE_TRANSCRIPTS . ' AS t ON (g.id = t.geneid)
+             WHERE g.id IN (?' . str_repeat(', ?', count($_POST['genes'])-1) . ')
+             GROUP BY g.id', $_POST['genes'])->fetchAllCombine();
+        // Get the order right and add more information.
+        foreach ($_POST['genes'] as $nKey => $sID) {
+            if (!isset($zGenes[$sID])) {
+                // Gene does not exist in the database. We're not even bothering to complain here.
+                continue;
+            }
+            $aGenes[$sID] =
+                array(
+                    'name' => $sID, // More doesn't fit...
+                    'transcriptid' => (!isset($_POST['transcriptids'][$nKey])? '' : $_POST['transcriptids'][$nKey]),
+                    'transcripts_HTML' => $zGenes[$sID],
+                    'inheritance' => (!isset($_POST['inheritances'][$nKey])? '' : $_POST['inheritances'][$nKey]),
+                    'id_omim' => (!isset($_POST['id_omims'][$nKey])? '' : $_POST['id_omims'][$nKey]), // Simplicity over grammar...
+                    'pmid' => (!isset($_POST['pmids'][$nKey])? '' : $_POST['pmids'][$nKey]),
+                    'remarks' => (!isset($_POST['remarkses'][$nKey])? '' : $_POST['remarkses'][$nKey]), // Some LOTR here just for fun...
+                );
+        }
+        ksort($aGenes); // So it will be resorted on a page reload.
+
+    } else {
+        // First time on form. Use current database contents.
+
+        // Retrieve current genes, alphabetically ordered (makes it a bit easier to work with new forms).
+        // FIXME: This is where the new fetchAllCombine() will make sense...
+        $qGenes = $_DB->query(
+            'SELECT gp2g.geneid, gp2g.geneid AS name, gp2g.transcriptid, gp2g.inheritance, gp2g.id_omim, gp2g.pmid, REPLACE(gp2g.remarks, "\r\n", " ") AS remarks, IFNULL(CONCAT("<OPTION value=\"\">-- select --</OPTION>", GROUP_CONCAT(CONCAT("<OPTION value=\"", t.id, "\">", t.id_ncbi, "</OPTION>") ORDER BY t.id_ncbi SEPARATOR "")), "<OPTION value=\"\">-- no transcripts available --</OPTION>") AS transcripts_HTML
+             FROM ' . TABLE_GP2GENE . ' AS gp2g LEFT OUTER JOIN ' . TABLE_TRANSCRIPTS . ' AS t ON (gp2g.geneid = t.geneid)
+             WHERE gp2g.genepanelid = ? GROUP BY gp2g.geneid ORDER BY gp2g.geneid', array($nID));
+        while ($z = $qGenes->fetchAssoc()) {
+            $aGenes[$z['geneid']] = $z;
+        }
+    }
+
+
+
+    lovd_errorPrint();
+
+    // Show viewList() of gene panel genes. We'd like to remove all genes that are already selected,
+    //  but we can't properly do that. GET has a limit, and IE only allows some 2KB in there.
+    // So after some 200 genes, the negative selection filter will fail.
+    require ROOT_PATH . 'class/object_genes.php';
+    $_DATA = new LOVD_Gene();
+    lovd_showInfoTable('The following genes are configured in this LOVD. Click on one to add it to this gene panel.', 'information');
+    $_GET['page_size'] = 10;
+    $sViewListID = 'GenePanels_ManageGenes'; // Create known viewListID for the JS functions().
+    $_DATA->setRowLink($sViewListID, 'javascript:lovd_addGene(\'{{ViewListID}}\', \'{{ID}}\', \'{{zData_transcripts_HTML}}\'); return false;');
+    $_DATA->viewList($sViewListID, array(), true);
+
+
+
+    // Show curators, to sort and to select whether or not they can edit.
+    print('      <BR><BR>' . "\n\n");
+
+    lovd_showInfoTable('All genes below have been selected for this gene panel.<BR>To remove a gene from this list, click the red cross on the far right of the line.', 'information');
+
+    $aInheritances =
+        array(
+            'Autosomal Recessive',
+            'Dominant',
+            'X-Linked',
+        );
+    // Define the inheritance options list HTML string. Will be used in two places; in the HTML and the JS.
+    $sInheritanceOptions = '<OPTION value="">-- select --</OPTION>';
+    foreach ($aInheritances as $sInheritance) {
+        $sInheritanceOptions .= '<OPTION value="' . $sInheritance . '">' . $sInheritance . '</OPTION>';
+    }
+    // Form & table.
+    print('
+      <FORM action="' . CURRENT_PATH . '?' . ACTION . '" method="post">
+        <TABLE id="gene_list" class="data" border="0" cellpadding="0" cellspacing="1" width="900">
+          <TR>
+            <TH>Symbol</TH>
+            <TH>Transcript</TH>
+            <TH>Inheritance</TH>
+            <TH>OMIM ID</TH>
+            <TH>PMID</TH>
+            <TH>Remarks</TH>
+            <TH width="30">&nbsp;</TH></TR>');
+    // Now loop the items in the order given.
+    foreach ($aGenes as $sID => $aGene) {
+        print('
+          <TR id="tr_' . $sID . '">
+            <TD>
+              <INPUT type="hidden" name="genes[]" value="' . $sID . '">
+              ' . $aGene['name'] . '</TD>
+            <TD><SELECT name="transcriptids[]" style="width : 100%;">' . str_replace('"' . $aGene['transcriptid'] . '">', '"' . $aGene['transcriptid'] . '" selected>', $aGene['transcripts_HTML']) . '</TD>
+            <TD><SELECT name="inheritances[]">' . str_replace('"' . $aGene['inheritance'] . '">', '"' . $aGene['inheritance'] . '" selected>', $sInheritanceOptions) . '</TD>
+            <TD><INPUT type="text" name="id_omims[]" value="' . $aGene['id_omim'] . '" size="10"></TD>
+            <TD><INPUT type="text" name="pmids[]" value="' . $aGene['pmid'] . '" size="10"></TD>
+            <TD><INPUT type="text" name="remarkses[]" value="' . $aGene['remarks'] . '" size="30"></TD>
+            <TD width="30" align="right"><A href="#" onclick="lovd_removeGene(\'' . $sViewListID . '\', \'' . $sID . '\'); return false;"><IMG src="gfx/mark_0.png" alt="Remove" width="11" height="11" border="0"></A></TD></TR>');
+    }
+    print('
+        </TABLE><BR>' . "\n");
+
+    // Array which will make up the form table.
+    $aForm = array(
+        array('POST', '', '', '', '0%', '0', '100%'),
+        array('', '', 'print', 'Enter your password for authorization'),
+        array('', '', 'password', 'password', 20),
+        array('', '', 'print', '<INPUT type="submit" value="Save gene panel">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<INPUT type="submit" value="Cancel" onclick="window.location.href=\'' . lovd_getInstallURL() . CURRENT_PATH . '\'; return false;" style="border : 1px solid #FF4422;">'),
+    );
+    lovd_viewForm($aForm);
+    print("\n" .
+          '      </FORM>' . "\n\n");
+
+?>
+<SCRIPT type='text/javascript'>
+    function lovd_addGene (sViewListID, sID, sTranscripts)
+    {
+        // Verify that entry doesn't already exist.
+        if (document.getElementById('tr_' + sID)) {
+            alert('This gene has already been added to this panel.');
+            return false;
+        }
+
+        // Copies the gene to the selected block.
+        objViewListF = document.getElementById('viewlistForm_' + sViewListID);
+        objElement = document.getElementById(sID);
+        objElement.style.cursor = 'progress';
+        // Mark gene somewhat as selected. Whatever I tried with delays and animations, it doesn't work.
+        // This is hardly functional (it isn't kept obviously), but it's something.
+        // If we'd have a function that's run at the end of each VL load, then we can have them marked again.
+        // Build this, maybe, if it's not too slow with a large number of genes?
+        $(objElement).addClass('del');
+        // FIXME: Perhaps, if we detect positive selection on the gene symbol, remove it from the list?
+
+        objGenes = document.getElementById('gene_list');
+        oTR = document.createElement('TR');
+        oTR.id = 'tr_' + sID;
+        oTR.innerHTML =
+            '<TD><INPUT type="hidden" name="genes[]" value="' + sID + '">' + sID + '</TD>' +
+            '<TD><SELECT name="transcriptids[]" style="width : 100%;">' + sTranscripts + '</TD>' +
+            '<TD><SELECT name="inheritances[]"><?php echo $sInheritanceOptions; ?></TD>' +
+            '<TD><INPUT type="text" name="id_omims[]" value="" size="10"></TD>' +
+            '<TD><INPUT type="text" name="pmids[]" value="" size="10"></TD>' +
+            '<TD><INPUT type="text" name="remarkses[]" value="" size="30"></TD>' +
+            '<TD width="30" align="right"><A href="#" onclick="lovd_removeGene(\'' + sViewListID + '\', \'' + sID + '\'); return false;"><IMG src="gfx/mark_0.png" alt="Remove" width="11" height="11" border="0"></A></TD>';
+        objGenes.appendChild(oTR);
+        objElement.style.cursor = '';
+
+        return true;
+    }
+
+
+
+    function lovd_removeGene (sViewListID, sID)
+    {
+        // Removes the gene from the block of selected entries.
+        objViewListF = document.getElementById('viewlistForm_' + sViewListID);
+        objTR = document.getElementById('tr_' + sID);
+
+        // Remove from block, simply done (no fancy animation).
+        objTR.parentNode.removeChild(objTR);
+
+        return true;
+    }
+</SCRIPT>
+
+    <?php
+    $_T->printFooter();
+    exit;
+}
+
+
+
+
+
 if (PATH_COUNT == 3 && preg_match('/^[a-z][a-z0-9#@-]+$/i', rawurldecode($_PE[2])) && !ACTION) {
-    // URL: /genes_panels/00001/BRCA1
+    // URL: /gene_panels/00001/BRCA1
     // View specific gene panel gene entry.
 
     $nGenePanelID = sprintf('%05d', $_PE[1]);
@@ -491,7 +789,7 @@ if (PATH_COUNT == 3 && preg_match('/^[a-z][a-z0-9#@-]+$/i', rawurldecode($_PE[2]
 
 
 if (PATH_COUNT == 3 && preg_match('/^[a-z][a-z0-9#@-]+$/i', rawurldecode($_PE[2])) && ACTION == 'delete') {
-    // URL: /genes_panels/00001/BRCA1?delete
+    // URL: /gene_panels/00001/BRCA1?delete
     // Drop specific gene panel gene entry.
 
     $nGenePanelID = sprintf('%05d', $_PE[1]);
@@ -597,7 +895,7 @@ if (PATH_COUNT == 3 && preg_match('/^[a-z][a-z0-9#@-]+$/i', rawurldecode($_PE[2]
 
 
 if (PATH_COUNT == 3 && preg_match('/^[a-z][a-z0-9#@-]+$/i', rawurldecode($_PE[2])) && ACTION == 'edit') {
-// URL: /genes_panels/00001/BRCA1?edit
+// URL: /gene_panels/00001/BRCA1?edit
 // Edit specific gene panel gene entry.
 
     $nGenePanelID = sprintf('%05d', $_PE[1]);
@@ -735,27 +1033,5 @@ if (PATH_COUNT == 3 && preg_match('/^[a-z][a-z0-9#@-]+$/i', rawurldecode($_PE[2]
 
 
 
-if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && ACTION == 'create') {
-    // URL: /gene_panels/00001?create
-    // Add genes to a gene panel
-
-    $nID = sprintf('%05d', $_PE[1]);
-    define('PAGE_TITLE', 'Add genes to gene panel entry #' . $nID);
-    define('LOG_EVENT', 'GenePanelGeneAdd');
-
-    lovd_requireAUTH();
-    $_T->printHeader();
-    $_T->printTitle();
-
-    require ROOT_PATH . 'class/object_gene_panel_genes.php';
-
-
-
-    $_T->printFooter();
-    exit;
-
-}
-
 print('No condition met using the provided URL.');
-
 ?>
