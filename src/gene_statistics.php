@@ -287,7 +287,7 @@ if (PATH_COUNT == 1 && ACTION == 'import') {
                             $aMissingColumnIDs[] = $i;
                         }
                     }
-
+                    $aFileColumnNames[] = 'created_date';
                     $sSQLColumnNames = implode(', ', $aFileColumnNames);
                 }
             }
@@ -322,8 +322,8 @@ if (PATH_COUNT == 1 && ACTION == 'import') {
                     foreach ($aMissingColumnIDs as $iMissingColumnID) {
                         unset($aColumns[$iMissingColumnID]);
                     }
-
                     $aColumns = array_values($aColumns);
+                    $aColumns[] = date('Y-m-d H:i:s');
                     $pdoInsert->execute($aColumns);
                 }
                 // Update the progress bar every 1000 records
