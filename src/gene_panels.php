@@ -477,10 +477,6 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && ACTION == 'manage_genes') {
         if (empty($_POST['inheritances']) || !is_array($_POST['inheritances'])) {
             $_POST['inheritances'] = array();
         }
-        // $_POST['id_omims'] stores the OMIM IDs selected as relevant for the selected genes.
-        if (empty($_POST['id_omims']) || !is_array($_POST['id_omims'])) {
-            $_POST['id_omims'] = array();
-        }
         // $_POST['pmids'] stores the PMIDs selected as relevant for the selected genes.
         if (empty($_POST['transcriptids']) || !is_array($_POST['pmids'])) {
             $_POST['pmids'] = array();
@@ -508,18 +504,38 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && ACTION == 'manage_genes') {
             // FIXME: Should we make a summary of what's created or deleted before we process the edit?
             //  Or do we consider the chance of mistakes too little?
 
+            require ROOT_PATH . 'class/object_gene_panel_genes.php';
+            $_DATA = new LOVD_GenePanelGene();
             $_DB->beginTransaction();
             // Get list of currently associated genes. Note that the genes are keys, to speed things up.
             $aGenesCurrentlyAssociated = $_DB->query('SELECT geneid, 1 FROM ' . TABLE_GP2GENE . ' WHERE genepanelid = ?', array($nID))->fetchAllCombine();
+            $sDateNow = date('Y-m-d H:i:s');
             foreach ($_POST['genes'] as $nKey => $sGeneID) {
+                // Build up array for insertEntry() and updateEntry();
+                $aData = array(
+                    'genepanelid' => $nID,
+                    'geneid' => $sGeneID,
+                    'transcriptid' => (empty($_POST['transcriptids'][$nKey])? NULL : $_POST['transcriptids'][$nKey]),
+                    'inheritance' => $_POST['inheritances'][$nKey],
+                    'pmid' => $_POST['pmids'][$nKey],
+                    'remarks' => $_POST['remarkses'][$nKey],
+                );
                 if (!isset($aGenesCurrentlyAssociated[$sGeneID])) {
-                    // Needs an insert.
-                    $_DB->query('INSERT INTO ' . TABLE_GP2GENE . ' (genepanelid, geneid, transcriptid, inheritance, id_omim, pmid, remarks, created_by, created_date) VALUES (?, ?, ?, ?, ?, ?, ?, ?, NOW())',
-                        array($nID, $sGeneID, (empty($_POST['transcriptids'][$nKey])? NULL : $_POST['transcriptids'][$nKey]), $_POST['inheritances'][$nKey], $_POST['id_omims'][$nKey], $_POST['pmids'][$nKey], $_POST['remarkses'][$nKey], $_AUTH['id']));
+                    // Needs an insert. This will also take care of the revision table.
+                    $aData += array(
+                        'created_by' => $_AUTH['id'],
+                        'created_date' => $sDateNow,
+                    );
+                    $_DATA->insertEntry($aData, array_keys($aData));
                 } else {
-                    // Needs an update.
-                    $_DB->query('UPDATE ' . TABLE_GP2GENE . ' SET transcriptid = ?, inheritance = ?, id_omim = ?, pmid = ?, remarks = ?, edited_by = ?, edited_date = NOW() WHERE genepanelid = ? AND geneid = ?',
-                        array((empty($_POST['transcriptids'][$nKey])? NULL : $_POST['transcriptids'][$nKey]), $_POST['inheritances'][$nKey], $_POST['id_omims'][$nKey], $_POST['pmids'][$nKey], $_POST['remarkses'][$nKey], $_AUTH['id'], $nID, $sGeneID));
+                    // Needs an update, maybe. Only if something changed.
+                    // updateEntry() will figure out if we actually need a query or not.
+                    // Since we're versioned and many genes may be involved, we want to be sure.
+                    $aData += array(
+                        'edited_by' => $_AUTH['id'],
+                        'edited_date' => $sDateNow,
+                    );
+                    $_DATA->updateEntry(array('genepanelid' => $nID, 'geneid' => $sGeneID), $aData, array_keys($aData));
                     // Mark gene as done, so we don't delete it after this loop.
                     unset($aGenesCurrentlyAssociated[$sGeneID]);
                 }
@@ -527,8 +543,13 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && ACTION == 'manage_genes') {
 
             // Now delete what was no longer selected.
             if ($aGenesCurrentlyAssociated) {
-                $_DB->query('DELETE FROM ' . TABLE_GP2GENE . ' WHERE genepanelid = ? AND geneid IN (?' . str_repeat(', ?', count($aGenesCurrentlyAssociated) - 1) . ')',
-                    array_merge(array($nID), array_keys($aGenesCurrentlyAssociated)));
+                // When not using deleteEntry(), we could simply run one query for all genes that were dropped.
+                // However, for that we'd need to duplicate code handling the revision history.
+                // So we're going to keep the code simple, in expense of some speed on large deletions.
+                foreach (array_keys($aGenesCurrentlyAssociated) as $sGeneID) {
+                    // FIXME: No reason passed. Should we demand one from our users?
+                    $_DATA->deleteEntry(array('genepanelid' => $nID, 'geneid' => $sGeneID));
+                }
             }
 
             // If we get here, it all succeeded.
@@ -583,7 +604,6 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && ACTION == 'manage_genes') {
                     'transcriptid' => (!isset($_POST['transcriptids'][$nKey])? '' : $_POST['transcriptids'][$nKey]),
                     'transcripts_HTML' => $zGenes[$sID],
                     'inheritance' => (!isset($_POST['inheritances'][$nKey])? '' : $_POST['inheritances'][$nKey]),
-                    'id_omim' => (!isset($_POST['id_omims'][$nKey])? '' : $_POST['id_omims'][$nKey]), // Simplicity over grammar...
                     'pmid' => (!isset($_POST['pmids'][$nKey])? '' : $_POST['pmids'][$nKey]),
                     'remarks' => (!isset($_POST['remarkses'][$nKey])? '' : $_POST['remarkses'][$nKey]), // Some LOTR here just for fun...
                 );
@@ -596,7 +616,7 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && ACTION == 'manage_genes') {
         // Retrieve current genes, alphabetically ordered (makes it a bit easier to work with new forms).
         // FIXME: This is where the new fetchAllCombine() will make sense...
         $qGenes = $_DB->query(
-            'SELECT gp2g.geneid, gp2g.geneid AS name, gp2g.transcriptid, gp2g.inheritance, gp2g.id_omim, gp2g.pmid, REPLACE(gp2g.remarks, "\r\n", " ") AS remarks, IFNULL(CONCAT("<OPTION value=\"\">-- select --</OPTION>", GROUP_CONCAT(CONCAT("<OPTION value=\"", t.id, "\">", t.id_ncbi, "</OPTION>") ORDER BY t.id_ncbi SEPARATOR "")), "<OPTION value=\"\">-- no transcripts available --</OPTION>") AS transcripts_HTML
+            'SELECT gp2g.geneid, gp2g.geneid AS name, gp2g.transcriptid, gp2g.inheritance, gp2g.pmid, REPLACE(gp2g.remarks, "\r\n", " ") AS remarks, IFNULL(CONCAT("<OPTION value=\"\">-- select --</OPTION>", GROUP_CONCAT(CONCAT("<OPTION value=\"", t.id, "\">", t.id_ncbi, "</OPTION>") ORDER BY t.id_ncbi SEPARATOR "")), "<OPTION value=\"\">-- no transcripts available --</OPTION>") AS transcripts_HTML
              FROM ' . TABLE_GP2GENE . ' AS gp2g LEFT OUTER JOIN ' . TABLE_TRANSCRIPTS . ' AS t ON (gp2g.geneid = t.geneid)
              WHERE gp2g.genepanelid = ? GROUP BY gp2g.geneid ORDER BY gp2g.geneid', array($nID));
         while ($z = $qGenes->fetchAssoc()) {
@@ -640,31 +660,32 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && ACTION == 'manage_genes') {
     // Form & table.
     print('
       <FORM action="' . CURRENT_PATH . '?' . ACTION . '" method="post">
+        <DIV style="width : 950px; height : 250px; overflow : auto;">
         <TABLE id="gene_list" class="data" border="0" cellpadding="0" cellspacing="1" width="900">
-          <TR>
-            <TH>Symbol</TH>
-            <TH>Transcript</TH>
-            <TH>Inheritance</TH>
-            <TH>OMIM ID</TH>
-            <TH>PMID</TH>
-            <TH>Remarks</TH>
-            <TH width="30">&nbsp;</TH></TR>');
+          <THEAD>
+            <TR>
+              <TH>Symbol</TH>
+              <TH>Transcript</TH>
+              <TH>Inheritance</TH>
+              <TH>PMID</TH>
+              <TH>Remarks</TH>
+              <TH width="30">&nbsp;</TH></TR></THEAD>
+          <TBODY>');
     // Now loop the items in the order given.
     foreach ($aGenes as $sID => $aGene) {
         print('
-          <TR id="tr_' . $sID . '">
-            <TD>
-              <INPUT type="hidden" name="genes[]" value="' . $sID . '">
+            <TR id="tr_' . $sID . '">
+              <TD>
+                <INPUT type="hidden" name="genes[]" value="' . $sID . '">
               ' . $aGene['name'] . '</TD>
-            <TD><SELECT name="transcriptids[]" style="width : 100%;">' . str_replace('"' . $aGene['transcriptid'] . '">', '"' . $aGene['transcriptid'] . '" selected>', $aGene['transcripts_HTML']) . '</TD>
-            <TD><SELECT name="inheritances[]">' . str_replace('"' . $aGene['inheritance'] . '">', '"' . $aGene['inheritance'] . '" selected>', $sInheritanceOptions) . '</TD>
-            <TD><INPUT type="text" name="id_omims[]" value="' . $aGene['id_omim'] . '" size="10"></TD>
-            <TD><INPUT type="text" name="pmids[]" value="' . $aGene['pmid'] . '" size="10"></TD>
-            <TD><INPUT type="text" name="remarkses[]" value="' . $aGene['remarks'] . '" size="30"></TD>
-            <TD width="30" align="right"><A href="#" onclick="lovd_removeGene(\'' . $sViewListID . '\', \'' . $sID . '\'); return false;"><IMG src="gfx/mark_0.png" alt="Remove" width="11" height="11" border="0"></A></TD></TR>');
+              <TD><SELECT name="transcriptids[]" style="width : 100%;">' . str_replace('"' . $aGene['transcriptid'] . '">', '"' . $aGene['transcriptid'] . '" selected>', $aGene['transcripts_HTML']) . '</TD>
+              <TD><SELECT name="inheritances[]">' . str_replace('"' . $aGene['inheritance'] . '">', '"' . $aGene['inheritance'] . '" selected>', $sInheritanceOptions) . '</TD>
+              <TD><INPUT type="text" name="pmids[]" value="' . $aGene['pmid'] . '" size="10"></TD>
+              <TD><INPUT type="text" name="remarkses[]" value="' . $aGene['remarks'] . '" size="40"></TD>
+              <TD width="30" align="right"><A href="#" onclick="lovd_removeGene(\'' . $sViewListID . '\', \'' . $sID . '\'); return false;"><IMG src="gfx/mark_0.png" alt="Remove" width="11" height="11" border="0"></A></TD></TR>');
     }
     print('
-        </TABLE><BR>' . "\n");
+          </TBODY></TABLE></DIV><BR>' . "\n");
 
     // Array which will make up the form table.
     $aForm = array(
@@ -693,10 +714,9 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && ACTION == 'manage_genes') {
         objElement.style.cursor = 'progress';
         // Mark gene somewhat as selected. Whatever I tried with delays and animations, it doesn't work.
         // This is hardly functional (it isn't kept obviously), but it's something.
-        // If we'd have a function that's run at the end of each VL load, then we can have them marked again.
-        // Build this, maybe, if it's not too slow with a large number of genes?
+        // FIXME: If we'd have a function that's run at the end of each VL load, then we can have them marked again.
+        //   Build this, maybe, if it's not too slow with a large number of genes?
         $(objElement).addClass('del');
-        // FIXME: Perhaps, if we detect positive selection on the gene symbol, remove it from the list?
 
         objGenes = document.getElementById('gene_list');
         oTR = document.createElement('TR');
@@ -705,11 +725,11 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && ACTION == 'manage_genes') {
             '<TD><INPUT type="hidden" name="genes[]" value="' + sID + '">' + sID + '</TD>' +
             '<TD><SELECT name="transcriptids[]" style="width : 100%;">' + sTranscripts + '</TD>' +
             '<TD><SELECT name="inheritances[]"><?php echo $sInheritanceOptions; ?></TD>' +
-            '<TD><INPUT type="text" name="id_omims[]" value="" size="10"></TD>' +
             '<TD><INPUT type="text" name="pmids[]" value="" size="10"></TD>' +
-            '<TD><INPUT type="text" name="remarkses[]" value="" size="30"></TD>' +
+            '<TD><INPUT type="text" name="remarkses[]" value="" size="40"></TD>' +
             '<TD width="30" align="right"><A href="#" onclick="lovd_removeGene(\'' + sViewListID + '\', \'' + sID + '\'); return false;"><IMG src="gfx/mark_0.png" alt="Remove" width="11" height="11" border="0"></A></TD>';
-        objGenes.appendChild(oTR);
+        $(objGenes).select('tbody').prepend(oTR);
+        $(objGenes).parent().scrollTop(0);
         objElement.style.cursor = '';
 
         return true;

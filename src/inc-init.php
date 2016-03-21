@@ -209,7 +209,7 @@ $_SETT = array(
                           ),
                 'lists' =>
                     array(
-                        'max_sortable_rows' => 25000,
+                        'max_sortable_rows' => 50000,
                     ),
                 'notes_align' =>
                      array(
