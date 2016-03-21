@@ -821,7 +821,7 @@ $aTableSQL =
     cds_mean_of_median_coverage DECIMAL(6,2) DEFAULT NULL,
     cds_mean_of_percent_20x DECIMAL(5,2) DEFAULT NULL,
     cds_mean_percent_sd DECIMAL(5,2) DEFAULT NULL,
-    created_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    created_date datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
     PRIMARY KEY (id))
 ' . $sSettings
           );
