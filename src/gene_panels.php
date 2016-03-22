@@ -527,6 +527,7 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && ACTION == 'manage_genes') {
                         'created_date' => $sDateNow,
                     );
                     $_DATA->insertEntry($aData, array_keys($aData));
+                    lovd_writeLog('Event', 'GenePanelGeneCreate', 'Created gene entry ' . $sGeneID . ' in gene panel #' . $nID);
                 } else {
                     // Needs an update, maybe. Only if something changed.
                     // updateEntry() will figure out if we actually need a query or not.
@@ -536,6 +537,7 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && ACTION == 'manage_genes') {
                         'edited_date' => $sDateNow,
                     );
                     $_DATA->updateEntry(array('genepanelid' => $nID, 'geneid' => $sGeneID), $aData, array_keys($aData));
+                    lovd_writeLog('Event', 'GenePanelGeneEdit', 'Edited gene entry ' . $sGeneID . ' in gene panel #' . $nID);
                     // Mark gene as done, so we don't delete it after this loop.
                     unset($aGenesCurrentlyAssociated[$sGeneID]);
                 }
@@ -549,6 +551,7 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && ACTION == 'manage_genes') {
                 foreach (array_keys($aGenesCurrentlyAssociated) as $sGeneID) {
                     // FIXME: No reason passed. Should we demand one from our users?
                     $_DATA->deleteEntry(array('genepanelid' => $nID, 'geneid' => $sGeneID));
+                    lovd_writeLog('Event', 'GenePanelGeneDelete', 'Deleted gene entry ' . $sGeneID . ' from gene panel #' . $nID);
                 }
             }
 
@@ -829,6 +832,8 @@ if (PATH_COUNT == 3 && preg_match('/^[a-z][a-z0-9#@-]+$/i', rawurldecode($_PE[2]
             );
 
             $_DATA->updateEntry(array('genepanelid' => $nID, 'geneid' => $sGeneID), $aData, array_keys($aData));
+
+            lovd_writeLog('Event', LOG_EVENT, 'Edited gene entry ' . $sGeneID . ' in gene panel #' . $nID);
 
             header('Refresh: 3; url=' . lovd_getInstallURL() . CURRENT_PATH);
 
