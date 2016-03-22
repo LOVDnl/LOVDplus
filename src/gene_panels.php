@@ -536,8 +536,9 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && ACTION == 'manage_genes') {
                         'edited_by' => $_AUTH['id'],
                         'edited_date' => $sDateNow,
                     );
-                    $_DATA->updateEntry(array('genepanelid' => $nID, 'geneid' => $sGeneID), $aData, array_keys($aData));
-                    lovd_writeLog('Event', 'GenePanelGeneEdit', 'Edited gene entry ' . $sGeneID . ' in gene panel #' . $nID);
+                    $bUpdated = $_DATA->updateEntry(array('genepanelid' => $nID, 'geneid' => $sGeneID), $aData, array_keys($aData));
+                    // Only create a log if something was updated, the updateEntry will return -1 if nothing was updated.
+                    if ($bUpdated != -1) { lovd_writeLog('Event', 'GenePanelGeneEdit', 'Edited gene entry ' . $sGeneID . ' in gene panel #' . $nID); };
                     // Mark gene as done, so we don't delete it after this loop.
                     unset($aGenesCurrentlyAssociated[$sGeneID]);
                 }
