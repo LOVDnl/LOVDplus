@@ -9,6 +9,7 @@
  *
  * Copyright   : 2004-2016 Leiden University Medical Center; http://www.LUMC.nl/
  * Programmers : Anthony Marty <anthony.marty@unimelb.edu.au>
+ *               Ivo F.A.C. Fokkema <I.F.A.C.Fokkema@LUMC.nl>
  *
  *
  * This file is part of LOVD.
@@ -31,8 +32,6 @@
 define('ROOT_PATH', './');
 require ROOT_PATH . 'inc-init.php';
 define('TAB_SELECTED', 'genes');
-$sViewListID = 'GeneStatistic';
-$bBadGenes = false;
 
 if ($_AUTH) {
     // If authorized, check for updates.
@@ -56,56 +55,55 @@ if (PATH_COUNT == 1 && !ACTION) {
     define('PAGE_TITLE', 'View gene statistics');
     $_T->printHeader();
     $_T->printTitle();
+    $sViewListID = 'GeneStatistic';
 
-    $sGeneSymbols = '';
+    // FIXME: Better put comments everywhere to clarify what these variables are used for,
+    //  especially because they have such similar names. (I cleaned it up a bit)
+    $aGeneSymbols = array();
+    $aCorrectGeneSymbols = array();
+    $aBadGeneSymbols = array();
+    $sBadGenesHTML = '';
     if (isset($_POST['geneSymbols'])) {
-        $sGeneSymbols = $_POST['geneSymbols'];
-        // Handle new line separated lists. If extra commas are entered then this is cleaned up later.
-        $sGeneSymbols = str_replace(array("\r\n","\r","\n"),',',$sGeneSymbols);
-        // Explode the gene symbol string into an array, trim the whitespace, remove duplicates and remove empty array elements
-        $aGeneSymbols = array_filter(array_unique(array_map('trim',explode(",",$sGeneSymbols))));
-        $aCorrectGeneSymbols = array();
-        $aBadGeneSymbols = array();
-        $sBadGenesHTML = '';
+        // Handle lists separated by new lines, spaces, commas and semicolons.
+        // Trim the whitespace, remove duplicates and remove empty array elements.
+        $aGeneSymbols = array_filter(array_unique(array_map('trim', preg_split('/(\s|[,;])+/', $_POST['geneSymbols']))));
 
-        // Check if there are any genes left after cleaning up the gene symbol string
+        // Check if there are any genes left after cleaning up the gene symbol string.
         if (count($aGeneSymbols) > 0) {
-            // Loop through all the gene symbols in the array and check them for any errors
+            // Loop through all the gene symbols in the array and check them for any errors.
             foreach ($aGeneSymbols as $key => $sGeneSymbol) {
-                // Check to see if this gene symbol has been found within the database
-                //$sSQL = 'SELECT id FROM ' . TABLE_GENE_STATISTICS . ' WHERE id = ?';
-                $sSQL = 'SELECT id FROM ' . TABLE_GENE_STATISTICS . ' WHERE id = ?';
-                $sCorrectGeneSymbol = $_DB->query($sSQL, array($sGeneSymbol))->fetchColumn();
+                // Check to see if this gene symbol has been found within the database.
+                // FIXME: How can you do this in one query?
+                $sCorrectGeneSymbol = $_DB->query('SELECT id FROM ' . TABLE_GENE_STATISTICS . ' WHERE id = ?',
+                    array($sGeneSymbol))->fetchColumn();
 
                 if ($sCorrectGeneSymbol) {
-                    // A correct gene symbol was found so lets use that to remove any case issues
+                    // A correct gene symbol was found, so lets use that to remove any case issues.
                     $aGeneSymbols[$key] = $sCorrectGeneSymbol;
-                    $sGeneSymbol = $sCorrectGeneSymbol;
                     $aCorrectGeneSymbols[] = $sCorrectGeneSymbol;
                 } else {
                     // This gene symbol was not found in the database
                     $aBadGeneSymbols[] = $sGeneSymbol;
-                    $bBadGenes = true;
                 }
             }
-            // Create a table of any bad gene symbols and try to work out if there is a correct gene symbol available
-            if ($bBadGenes) {
+            // Create a table of any bad gene symbols and try to work out if there is a correct gene symbol available.
+            if ($aBadGeneSymbols) {
                 $sBadGenesHTML .= '<h3>Genes not found!</h3>These genes were not found, please review them and correct your gene list before proceeding.<table  border="0" cellpadding="0" cellspacing="1" class="data">';
                 $sBadGenesHTML .= '<thead><tr><th>Gene Symbol</th><th>Found in Database</th><th>Found in HGNC</th></tr></thead><tbody>';
-                // Loop through the bad genes and check them
+                // Loop through the bad genes and check them.
                 foreach ($aBadGeneSymbols as $sBadGeneSymbol) {
                     $sBadGenesHTML .= '<tr class="data"><td>' . $sBadGeneSymbol . '</td>';
 
-                    // Search within the database to see if this gene symbol is in the Alternative Names column
-                    $sSQL = 'SELECT id FROM ' . TABLE_GENE_STATISTICS . ' WHERE alternative_names REGEXP \'[[:<:]]' . $sBadGeneSymbol . '[[:>:]]\'';
-                    $sFoundInDB = $_DB->query($sSQL)->fetchColumn();
+                    // Search within the database to see if this gene symbol is in the Alternative Names column.
+                    $sFoundInDB = $_DB->query('SELECT id FROM ' . TABLE_GENE_STATISTICS . ' WHERE alternative_names REGEXP \'[[:<:]]' . $sBadGeneSymbol . '[[:>:]]\'')->fetchColumn();
                     if ($sFoundInDB) {
                         $sBadGenesHTML .= '<td>' . $sFoundInDB . '</td>';
                     } else {
                         $sBadGenesHTML .= '<td> - </td>';
                     }
 
-                    // TODO Search the HGNC database to see if the correct gene name can be found
+                    // TODO Search the HGNC database to see if the correct gene name can be found.
+                    // If you'd like to implement this, look into lovd_getGeneInfoFromHGNC().
                     $sBadGenesHTML .= '<td>To be completed...</td>';
 
                     $sBadGenesHTML .= '</tr>';
@@ -115,22 +113,20 @@ if (PATH_COUNT == 1 && !ACTION) {
             }
         }
 
-        // Write back the cleaned up gene symbol list to the form to be displayed to the user
-        $sGeneSymbols = implode(', ', $aGeneSymbols);
-
         // Mark the correct gene symbols as checked for this viewlist
         $_SESSION['viewlists'][$sViewListID]['checked'] = $aCorrectGeneSymbols;
     }
 
     ?>
-    <script type="text/javascript">
-        // This function toggles the checked filter
-        function lovd_AJAX_viewListCheckedFilter(filterOption)    {
-            // If the hidden element does not yet exist then create it
-            if($('#filterChecked').length == 0) {
-                $('#viewlistForm_<?php print $sViewListID;?>').prepend('<input type="hidden" name="filterChecked" id="filterChecked" value="' + filterOption + '" />');
+    <SCRIPT type="text/javascript">
+        // This function toggles the checked filter.
+        function lovd_AJAX_viewListCheckedFilter(filterOption)
+        {
+            // If the hidden element does not yet exist, then create it.
+            if ($('#filterChecked').length == 0) {
+                $('#viewlistForm_<?php print $sViewListID; ?>').prepend('<INPUT type="hidden" name="filterChecked" id="filterChecked" value="' + filterOption + '" />');
             }
-            // Otherwise set the checked filter preference
+            // Otherwise, set the checked filter preference.
             else {
                 $('#filterChecked').val(filterOption);
             }
@@ -142,17 +138,17 @@ if (PATH_COUNT == 1 && !ACTION) {
                 $('#searchChecked').hide();
                 $('#searchInfo').show();
             }
-            // If the page number has been set then set it back to page 1
+            // If the page number has been set, then set it back to page 1.
             if (document.forms['viewlistForm_<?php print $sViewListID;?>'].page) {
                 document.forms['viewlistForm_<?php print $sViewListID;?>'].page.value=1;
             }
-            // Refresh the viewlist so as it can apply the checked filter
+            // Refresh the viewlist so as it can apply the checked filter.
             setTimeout('lovd_AJAX_viewListSubmit(\'<?php print $sViewListID;?>\')', 0);
         }
 
         $(document).ready(function() {
             // When loading this page check to see when to show or hide the gene entry form based on the contents of the form
-        <?php if (!empty($sGeneSymbols)) { ?>
+        <?php if ($aGeneSymbols) { ?>
             $('#genesForm').show();
             $('#geneFormShowHide').val('show');
         <?php } else { ?>
@@ -160,7 +156,7 @@ if (PATH_COUNT == 1 && !ACTION) {
             $('#geneFormShowHide').val('hide');
         <?php } ?>
             // Function to control how to show or hide the gene entry form
-            $("#searchBoxTitle").click(function(){
+            $("#searchBoxTitle").click(function() {
                 $("#genesForm").toggle('fast');
                 if ($('#geneFormShowHide').val() == 'show') {
                     $('#geneFormShowHide').val('hide');
@@ -169,12 +165,12 @@ if (PATH_COUNT == 1 && !ACTION) {
                 }
             });
         });
-    </script>
+    </SCRIPT>
 <?php
 
     print('<div id="searchBoxTitle" style="font-weight : bold; border : 1px solid #224488; cursor : pointer; text-align : center; padding : 2px 5px; font-size : 11px; width: 160px;">Search for genes</div>');
-    print('<form id="genesForm" method="post" style="display: none;">Enter in you list of gene symbols separated by commas and press search to automatically select them. This will overwrite any previously selected genes. Select \'Show only selected genes\' from the menu to only show the genes entered below.<BR><input type="hidden" id="geneFormShowHide" value="hide"><textarea rows="5" cols="200" name="geneSymbols" id="geneSymbols">' . htmlentities($sGeneSymbols) . '</textarea><BR><input type="submit" name="submitGenes" id="submitGenes" value=" Search "></form>');
-    // Show an info box if the gene lists are limited by the search
+    print('<form id="genesForm" method="post" style="display: none;">Enter in you list of gene symbols separated by commas and press search to automatically select them. This will overwrite any previously selected genes. Select \'Show only selected genes\' from the menu to only show the genes entered below.<BR><input type="hidden" id="geneFormShowHide" value="hide"><textarea rows="5" cols="200" name="geneSymbols" id="geneSymbols">' . htmlentities(implode(', ', $aGeneSymbols)) . '</textarea><BR><input type="submit" name="submitGenes" id="submitGenes" value=" Search "></form>');
+    // Show an info box if the gene lists are limited by the search.
     if (isset($aGeneSymbols) && count($aGeneSymbols) > 0) {
         print('<div id="searchInfo">');
         lovd_showInfoTable('Genes from the search above have been selected in the list below. <A href="javascript:lovd_AJAX_viewListSubmit(\'' . $sViewListID . '\', function(){lovd_AJAX_viewListCheckedFilter(true);});">Click here</A> to limit the list to only those genes.');
@@ -185,17 +181,17 @@ if (PATH_COUNT == 1 && !ACTION) {
     print('</div>');
 
     // If genes were not found then display the error
-    if ($bBadGenes) {
+    if ($aBadGeneSymbols) {
         lovd_showInfoTable($sBadGenesHTML,'stop', 760);
     }
 
     require ROOT_PATH . 'class/object_gene_statistics.php';
     $_DATA = new LOVD_GeneStatistic();
-    // Redirect the link when clicking on genes to the genes info page
+    // Redirect the link when clicking on genes to the genes info page.
     //$_DATA->setRowLink($sViewListID, ROOT_PATH . 'genes/' . $_DATA->sRowID);
     // Bold the row when clicked. Not sure if this is better or going to the gene info is better. It might get annoying going away from this page as you lose the work you have done.
     $_DATA->setRowLink($sViewListID, 'javascript:$(\'#{{id}}\').toggleClass(\'marked\');');
-    // Allow users to download this gene statistics selected gene list
+    // Allow users to download this gene statistics selected gene list.
     print('      <UL id="viewlistMenu_' . $sViewListID . '" class="jeegoocontext jeegooviewlist">' . "\n");
     print('        <LI class="icon"><A click="lovd_AJAX_viewListSubmit(\'' . $sViewListID . '\', function(){lovd_AJAX_viewListCheckedFilter(true);});"><SPAN class="icon" style="background-image: url(gfx/check.png);"></SPAN>Show only selected genes</A></LI>' . "\n");
     print('        <LI class="icon"><A click="lovd_AJAX_viewListSubmit(\'' . $sViewListID . '\', function(){lovd_AJAX_viewListCheckedFilter(false);});"><SPAN class="icon" style="background-image: url(gfx/cross_disabled.png);"></SPAN>Show all genes</A></LI>' . "\n");
@@ -213,9 +209,11 @@ if (PATH_COUNT == 1 && !ACTION) {
 
 
 if (PATH_COUNT == 1 && ACTION == 'import') {
-// URL: /gene_statistics?import
-// Import new gene statistics
+    // URL: /gene_statistics?import
+    // Import new gene statistics
 
+    // FIXME: For later: This code is mostly duplicated from import.php.
+    //  If we're somehow standardizing this feature, then integrate this into import.php.
     lovd_requireAUTH(LEVEL_MANAGER);
 
     require ROOT_PATH . 'inc-lib-form.php';
@@ -303,11 +301,11 @@ if (PATH_COUNT == 1 && ACTION == 'import') {
             $pdoInsert = $_DB->prepare('INSERT IGNORE INTO ' . TABLE_GENE_STATISTICS . ' (' . $sSQLColumnNames . ') VALUES (?' . str_repeat(', ?', count($aFileColumnNames) - 1) . ')');
 
             $aMissingGenes = array();
-            // Get all the current gene symbols in LOVD
+            // Get all the current gene symbols in LOVD.
             $aGenesInLOVD = $_DB->query('SELECT UPPER(id), id FROM ' . TABLE_GENES)->fetchAllCombine();
             // Loop through each of the gene symbols and check to see if they exist within LOVD, create an error log. Remove genes that are not within LOVD?
             foreach ($aData as $i => $sLine) {
-                // Skip the first line with the headers in it
+                // Skip the first line with the headers in it.
                 if ($i == 0) {
                     continue;
                 }
@@ -315,7 +313,7 @@ if (PATH_COUNT == 1 && ACTION == 'import') {
                 $aColumns = explode("\t", $sLine);
 
                 $sFileGeneSymbol = $aColumns[0];
-                // Check if the gene symbol exists within LOVD
+                // Check if the gene symbol exists within LOVD.
                 if (!isset($aGenesInLOVD[strtoupper($sFileGeneSymbol)])) {
                     $aMissingGenes[] = $sFileGeneSymbol;
                 } else {
@@ -326,7 +324,7 @@ if (PATH_COUNT == 1 && ACTION == 'import') {
                     $aColumns[] = date('Y-m-d H:i:s');
                     $pdoInsert->execute($aColumns);
                 }
-                // Update the progress bar every 1000 records
+                // Update the progress bar every 1000 records.
                 $_BAR->setProgress(($i / $iGeneFileCount) * 100);
                 if ($i % 1000 == 0) {
                     $_BAR->setMessage('Processing record ' . $i . ' of ' . $iGeneFileCount);
@@ -337,7 +335,7 @@ if (PATH_COUNT == 1 && ACTION == 'import') {
             $_BAR->setMessage('Done!');
             $_BAR->setMessageVisibility('done', true);
 
-            // Print the results of the import
+            // Print the results of the import.
             if (count($aMissingColumns)) {
                 lovd_showInfoTable('The following columns were ignored as they were not found in LOVD: ' . implode(', ', $aMissingColumns) . '.', 'warning');
             }
@@ -346,7 +344,7 @@ if (PATH_COUNT == 1 && ACTION == 'import') {
                     implode(', ', $aMissingGenes) . '.');
             }
 
-            print('<BR><a href=' . CURRENT_PATH . '>View gene statistics.</a><BR><BR>');
+            print('<BR><A href=' . CURRENT_PATH . '>View gene statistics.</A><BR><BR>');
 
             $_T->printFooter();
             exit;
@@ -380,12 +378,12 @@ if (PATH_COUNT == 1 && ACTION == 'import') {
 
 
 
-// Display a message if the gene statistics page has an invalid URL
+
+// Display a message if the gene statistics page has an invalid URL.
 define('PAGE_TITLE', 'View gene statistics');
 $_T->printHeader();
 $_T->printTitle();
-print ('Incorrect use of the gene statistics page, please <a href="' . $_PE[0] . '">click here</a> to view all the gene statistics.<br><br><br><br>');
+print ('Incorrect use of the gene statistics page, please <A href="' . $_PE[0] . '">click here</A> to view all the gene statistics.<BR><BR><BR><BR>');
 $_T->printFooter();
 exit;
-
 ?>

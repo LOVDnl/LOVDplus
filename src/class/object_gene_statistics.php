@@ -4,7 +4,7 @@
  * LEIDEN OPEN VARIATION DATABASE (LOVD)
  *
  * Created     : 2016-02-25
- * Modified    : 2016-02-25
+ * Modified    : 2016-03-23
  * For LOVD    : 3.0-13
  *
  * Copyright   : 2004-2016 Leiden University Medical Center; http://www.LUMC.nl/
@@ -50,7 +50,6 @@ class LOVD_GeneStatistic extends LOVD_Object {
     function __construct ()
     {
         // Default constructor.
-        global $_AUTH;
 
         // SQL code for viewing the list of genes
         $this->aSQLViewList['SELECT']   = 'g.name, gs.*, g.id, (CASE gs.vep_annotation WHEN 1 THEN "Yes" ELSE "No" END) AS vepyesno, ' .
@@ -60,8 +59,10 @@ class LOVD_GeneStatistic extends LOVD_Object {
                                             'LEFT OUTER JOIN ' . TABLE_GENE_PANELS . ' AS gp ON (gp2g.genepanelid = gp.id)';
         $this->aSQLViewList['GROUP_BY'] = 'g.id';
         // If we detect that the user wants to only show the checked genes and there are genes stored in the session variable then lets add them to the where clause here.
-        if (isset($_GET['filterChecked']) && isset($_GET['viewlistid']) && $_GET['filterChecked'] == "true") {
-            $this->aSQLViewList['WHERE']     = 'g.id in("' . implode('","', $_SESSION['viewlists'][$_GET['viewlistid']]['checked']) . '")';
+        if (isset($_GET['viewlistid']) && isset($_GET['filterChecked']) && $_GET['filterChecked'] == 'true') {
+            // FIXME: This is actually a security issue, putting strings directly into the SQL that we received from the user...
+            //  Since we can't access the array with SQL arguments from here, we'll need to sanitize these values before they get sent into the SQL.
+            $this->aSQLViewList['WHERE']     = 'g.id IN ("' . implode('","', $_SESSION['viewlists'][$_GET['viewlistid']]['checked']) . '")';
         }
 
 
