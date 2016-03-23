@@ -4,7 +4,7 @@
  * LEIDEN OPEN VARIATION DATABASE (LOVD)
  *
  * Created     : 2016-03-07
- * Modified    : 2016-03-21
+ * Modified    : 2016-03-22
  * For LOVD    : 3.0-13
  *
  * Copyright   : 2004-2016 Leiden University Medical Center; http://www.LUMC.nl/
@@ -57,7 +57,7 @@ class LOVD_GenePanelGene extends LOVD_Object {
         $this->aSQLViewEntry['SELECT']   = 'gp2g.*, gp2g.geneid AS id, uc.name AS created_by_, ue.name AS edited_by_, t.id_ncbi AS transcript_ncbi ';
         $this->aSQLViewEntry['FROM']     = TABLE_GP2GENE . ' AS gp2g ' .
         'LEFT OUTER JOIN ' . TABLE_USERS . ' AS uc ON (gp2g.created_by = uc.id) ' .
-        'LEFT OUTER JOIN ' . TABLE_USERS . ' AS ue ON (gp2g.created_by = ue.id) ' .
+        'LEFT OUTER JOIN ' . TABLE_USERS . ' AS ue ON (gp2g.edited_by = ue.id) ' .
         'LEFT OUTER JOIN ' . TABLE_TRANSCRIPTS . ' AS t ON (gp2g.transcriptid = t.id)';
 
         // SQL code for viewing the list of gene panel genes

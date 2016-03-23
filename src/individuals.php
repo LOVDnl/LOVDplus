@@ -446,7 +446,7 @@ if (PATH_COUNT == 4 && ctype_digit($_PE[1]) && $_PE[2] == 'analyze' && ctype_dig
 
 /////////////////////////////////////////////////////////////////////////////////////////////
     print('      <BR><BR>' . "\n\n");
-    }
+    
     lovd_includeJS('inc-js-tooltip.php');
 
     // Show info table about data analysis.
