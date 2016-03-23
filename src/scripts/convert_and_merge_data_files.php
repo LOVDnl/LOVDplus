@@ -4,7 +4,7 @@
  * LEIDEN OPEN VARIATION DATABASE (LOVD)
  *
  * Created     : 2014-11-28
- * Modified    : 2016-03-04
+ * Modified    : 2016-03-16
  * For LOVD+   : 3.0-15
  *
  * Copyright   : 2004-2016 Leiden University Medical Center; http://www.LUMC.nl/
@@ -1062,7 +1062,7 @@ function lovd_getVariantPosition ($sVariant, $aTranscript = array())
         'end_intron' => 0,
     );
 
-    if (preg_match('/^[cgmn]\.((?:\-|\*)?\d+)([-+]\d+)?(?:[ACGT]>[ACGT]|(?:_((?:\-|\*)?\d+)([-+]\d+)?)?(?:d(?:el(?:ins)?|up)|inv|ins)(?:[ACGT])*)$/', $sVariant, $aRegs)) {
+    if (preg_match('/^[cgmn]\.((?:\-|\*)?\d+)([-+]\d+)?(?:[ACGT]>[ACGT]|(?:_((?:\-|\*)?\d+)([-+]\d+)?)?(?:d(?:el(?:ins)?|up)|inv|ins)(?:[ACGT])*|\[[0-9]+\])$/', $sVariant, $aRegs)) {
         foreach (array(1, 3) as $i) {
             if (isset($aRegs[$i]) && $aRegs[$i]{0} == '*') {
                 // Position in 3'UTR. Add CDS offset.
@@ -1567,15 +1567,16 @@ $aTranscriptInfo = array(array('id' => 'NO_TRANSCRIPTS')); // Basically, any tex
             $aVariant['transcriptid'] = $aTranscripts[$aLine['Feature']]['id'];
 
             // Handle the rest of the VOT columns.
-            if ($aVariant['VariantOnTranscript/DNA'] && strpos($aVariant['VariantOnTranscript/DNA'], '_') === false) {
+            // First, take off the transcript name, so we can easily check for a del/ins checking for an underscore.
+            $aVariant['VariantOnTranscript/DNA'] = substr($aVariant['VariantOnTranscript/DNA'], strpos($aVariant['VariantOnTranscript/DNA'], ':')+1); // NM_000000.1:c.1del -> c.1del
+            if (!$aVariant['VariantOnTranscript/DNA'] || strpos($aVariant['VariantOnTranscript/DNA'], '_') !== false) {
                 // We don't trust HGVS descriptions with an _ in it. Because at VEP they don't understand that when the gene is on reverse, they have to switch the positions.
                 // Also, sometimes a delins is simply a substitution, when the VCF file is all messed up (ACGT to ACCT for example).
-                $aVariant['VariantOnTranscript/DNA'] = substr($aVariant['VariantOnTranscript/DNA'], strpos($aVariant['VariantOnTranscript/DNA'], ':')+1); // NM_000000.1:c.1del -> c.1del
-            } else {
                 // No other option, call Mutalyzer.
                 // But first check if I did that before.
                 if (!isset($aMappings[$aVariant['chromosome'] . ':' . $aVariant['VariantOnGenome/DNA']])) {
                     $aMappings[$aVariant['chromosome'] . ':' . $aVariant['VariantOnGenome/DNA']] = array();
+//print('Running position converter, DNA was: "' . $aVariant['VariantOnTranscript/DNA'] . '"' . "\n");
                     $sJSONResponse = file_get_contents('https://mutalyzer.nl/json/numberConversion?build=' . $_CONF['refseq_build'] . '&variant=' . $_SETT['human_builds'][$_CONF['refseq_build']]['ncbi_sequences'][$aVariant['chromosome']] . ':' . $aVariant['VariantOnGenome/DNA']);
                     if ($sJSONResponse && $aResponse = json_decode($sJSONResponse, true)) {
                         // Before we had to go two layers deep; through the result, then read out the string.
@@ -1793,8 +1794,8 @@ if (!$aVariant['VariantOnTranscript/RNA']) {
         }
 
         // Some reporting of where we are...
-        if (!($nLine % 2000)) {
-            print('------- Line ' . $nLine . ' -------' . "\n");
+        if (!($nLine % 500)) {
+            print('------- Line ' . $nLine . ' -------' . str_repeat(' ', 7-strlen($nLine)) . date('Y-m-d H:i:s') . "\n");
             flush();
         }
     }
