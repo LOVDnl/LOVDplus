@@ -4,7 +4,7 @@
  * LEIDEN OPEN VARIATION DATABASE (LOVD)
  *
  * Created     : 2016-03-01
- * Modified    : 2016-03-21
+ * Modified    : 2016-03-24
  * For LOVD    : 3.0-13
  *
  * Copyright   : 2004-2016 Leiden University Medical Center; http://www.LUMC.nl/
@@ -375,7 +375,7 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && ACTION == 'delete') {
         if (empty($_POST['password'])) {
             lovd_errorAdd('password', 'Please fill in the \'Enter your password for authorization\' field.');
         }
-        if (empty(trim($_POST['reason']))) {
+        if (!isset($_POST['reason']) || !trim($_POST['reason'])) {
             lovd_errorAdd('reason', 'Please fill in the \'Reason for removing this gene panel\' field.');
         }
 
@@ -950,7 +950,7 @@ if (PATH_COUNT == 3 && preg_match('/^[a-z][a-z0-9#@-]+$/i', rawurldecode($_PE[2]
         if (empty($_POST['password'])) {
             lovd_errorAdd('password', 'Please fill in the \'Enter your password for authorization\' field.');
         }
-        if (empty(trim($_POST['reason']))) {
+        if (!isset($_POST['reason']) || !trim($_POST['reason'])) {
             lovd_errorAdd('reason', 'Please fill in the \'Reason for removing this gene\' field.');
         }
 
