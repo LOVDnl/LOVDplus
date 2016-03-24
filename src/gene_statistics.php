@@ -4,7 +4,7 @@
  * LEIDEN OPEN VARIATION DATABASE (LOVD)
  *
  * Created     : 2016-02-25
- * Modified    : 2016-02-25
+ * Modified    : 2016-03-24
  * For LOVD    : 3.0-13
  *
  * Copyright   : 2004-2016 Leiden University Medical Center; http://www.LUMC.nl/
@@ -120,11 +120,11 @@ if (PATH_COUNT == 1 && !ACTION) {
     ?>
     <SCRIPT type="text/javascript">
         // This function toggles the checked filter.
-        function lovd_AJAX_viewListCheckedFilter(filterOption)
+        function lovd_AJAX_viewListCheckedFilter(ViewListID, filterOption)
         {
             // If the hidden element does not yet exist, then create it.
             if ($('#filterChecked').length == 0) {
-                $('#viewlistForm_<?php print $sViewListID; ?>').prepend('<INPUT type="hidden" name="filterChecked" id="filterChecked" value="' + filterOption + '" />');
+                $('#viewlistForm_' + ViewListID).prepend('<INPUT type="hidden" name="filterChecked" id="filterChecked" value="' + filterOption + '" />');
             }
             // Otherwise, set the checked filter preference.
             else {
@@ -138,23 +138,21 @@ if (PATH_COUNT == 1 && !ACTION) {
                 $('#searchChecked').hide();
                 $('#searchInfo').show();
             }
-            // If the page number has been set, then set it back to page 1.
-            if (document.forms['viewlistForm_<?php print $sViewListID;?>'].page) {
-                document.forms['viewlistForm_<?php print $sViewListID;?>'].page.value=1;
-            }
+            // Set the page number to 1.
+                document.forms['viewlistForm_' + ViewListID].page.value=1;
             // Refresh the viewlist so as it can apply the checked filter.
-            setTimeout('lovd_AJAX_viewListSubmit(\'<?php print $sViewListID;?>\')', 0);
+            setTimeout('lovd_AJAX_viewListSubmit(\'' + ViewListID + '\')', 0);
         }
 
         $(document).ready(function() {
             // When loading this page check to see when to show or hide the gene entry form based on the contents of the form
-        <?php if ($aGeneSymbols) { ?>
+        if ($('#geneSymbols').val()) {
             $('#genesForm').show();
             $('#geneFormShowHide').val('show');
-        <?php } else { ?>
+        } else {
             $('#genesForm').hide();
             $('#geneFormShowHide').val('hide');
-        <?php } ?>
+        }
             // Function to control how to show or hide the gene entry form
             $("#searchBoxTitle").click(function() {
                 $("#genesForm").toggle('fast');
@@ -168,17 +166,25 @@ if (PATH_COUNT == 1 && !ACTION) {
     </SCRIPT>
 <?php
 
-    print('<div id="searchBoxTitle" style="font-weight : bold; border : 1px solid #224488; cursor : pointer; text-align : center; padding : 2px 5px; font-size : 11px; width: 160px;">Search for genes</div>');
-    print('<form id="genesForm" method="post" style="display: none;">Enter in you list of gene symbols separated by commas and press search to automatically select them. This will overwrite any previously selected genes. Select \'Show only selected genes\' from the menu to only show the genes entered below.<BR><input type="hidden" id="geneFormShowHide" value="hide"><textarea rows="5" cols="200" name="geneSymbols" id="geneSymbols">' . htmlentities(implode(', ', $aGeneSymbols)) . '</textarea><BR><input type="submit" name="submitGenes" id="submitGenes" value=" Search "></form>');
+    print('    <DIV id="searchBoxTitle" style="font-weight : bold; border : 1px solid #224488; cursor : pointer; text-align : center; padding : 2px 5px; font-size : 11px; width: 160px;">' . "\n" .
+          '       Search for genes' . "\n" .
+          '   </DIV>' . "\n" .
+          '   <FORM id="genesForm" method="post" style="display: none;">' .
+          '       Enter in you list of gene symbols separated by commas and press search to automatically select them. This will overwrite any previously selected genes. ' . "\n" .
+          '       Select \'Show only selected genes\' from the menu to only show the genes entered below.<BR>' . "\n" .
+          '       <INPUT type="hidden" id="geneFormShowHide" value="hide">' . "\n" .
+          '       <TEXTAREA rows="5" cols="200" name="geneSymbols" id="geneSymbols">' . htmlentities(implode(', ', $aGeneSymbols)) . '</TEXTAREA><BR>' . "\n" .
+          '       <INPUT type="submit" name="submitGenes" id="submitGenes" value=" Search ">' . "\n" .
+          '   </FORM>' . "\n");
     // Show an info box if the gene lists are limited by the search.
     if (isset($aGeneSymbols) && count($aGeneSymbols) > 0) {
-        print('<div id="searchInfo">');
-        lovd_showInfoTable('Genes from the search above have been selected in the list below. <A href="javascript:lovd_AJAX_viewListSubmit(\'' . $sViewListID . '\', function(){lovd_AJAX_viewListCheckedFilter(true);});">Click here</A> to limit the list to only those genes.');
-        print('</div>');
+        print('    <DIV id="searchInfo">');
+        lovd_showInfoTable('Genes from the search above have been selected in the list below. <A href="javascript:lovd_AJAX_viewListSubmit(\'' . $sViewListID . '\', function(){lovd_AJAX_viewListCheckedFilter(\'' . $sViewListID . '\', true);});">Click here</A> to limit the list to only those genes.');
+        print('    </DIV>' . "\n");
     }
-    print('<div id="searchChecked" style="display: none;">');
-    lovd_showInfoTable('Currently only showing selected genes below. <A href="javascript:lovd_AJAX_viewListSubmit(\'' . $sViewListID . '\', function(){lovd_AJAX_viewListCheckedFilter(false);});">Show all genes</A>.');
-    print('</div>');
+    print('    <DIV id="searchChecked" style="display: none;">');
+    lovd_showInfoTable('Currently only showing selected genes below. <A href="javascript:lovd_AJAX_viewListSubmit(\'' . $sViewListID . '\', function(){lovd_AJAX_viewListCheckedFilter(\'' . $sViewListID . '\', false);});">Show all genes</A>.');
+    print('    </DIV>' . "\n");
 
     // If genes were not found then display the error
     if ($aBadGeneSymbols) {
@@ -193,8 +199,8 @@ if (PATH_COUNT == 1 && !ACTION) {
     $_DATA->setRowLink($sViewListID, 'javascript:$(\'#{{id}}\').toggleClass(\'marked\');');
     // Allow users to download this gene statistics selected gene list.
     print('      <UL id="viewlistMenu_' . $sViewListID . '" class="jeegoocontext jeegooviewlist">' . "\n");
-    print('        <LI class="icon"><A click="lovd_AJAX_viewListSubmit(\'' . $sViewListID . '\', function(){lovd_AJAX_viewListCheckedFilter(true);});"><SPAN class="icon" style="background-image: url(gfx/check.png);"></SPAN>Show only selected genes</A></LI>' . "\n");
-    print('        <LI class="icon"><A click="lovd_AJAX_viewListSubmit(\'' . $sViewListID . '\', function(){lovd_AJAX_viewListCheckedFilter(false);});"><SPAN class="icon" style="background-image: url(gfx/cross_disabled.png);"></SPAN>Show all genes</A></LI>' . "\n");
+    print('        <LI class="icon"><A click="lovd_AJAX_viewListSubmit(\'' . $sViewListID . '\', function(){lovd_AJAX_viewListCheckedFilter(\'' . $sViewListID . '\', true);});"><SPAN class="icon" style="background-image: url(gfx/check.png);"></SPAN>Show only selected genes</A></LI>' . "\n");
+    print('        <LI class="icon"><A click="lovd_AJAX_viewListSubmit(\'' . $sViewListID . '\', function(){lovd_AJAX_viewListCheckedFilter(\'' . $sViewListID . '\', false);});"><SPAN class="icon" style="background-image: url(gfx/cross_disabled.png);"></SPAN>Show all genes</A></LI>' . "\n");
     print('        <LI class="icon"><A click="lovd_AJAX_viewListSubmit(\'' . $sViewListID . '\', function(){lovd_AJAX_viewListDownload(\'' . $sViewListID . '\', false);});"><SPAN class="icon" style="background-image: url(gfx/menu_save.png);"></SPAN>Download selected genes</A></LI>' . "\n");
     print('        <LI class="icon"><A href="' . CURRENT_PATH . '?import"><SPAN class="icon" style="background-image: url(gfx/menu_import.png);"></SPAN>Import gene statistics</A></LI>' . "\n");
     print('      </UL>' . "\n\n");
@@ -303,6 +309,7 @@ if (PATH_COUNT == 1 && ACTION == 'import') {
             $aMissingGenes = array();
             // Get all the current gene symbols in LOVD.
             $aGenesInLOVD = $_DB->query('SELECT UPPER(id), id FROM ' . TABLE_GENES)->fetchAllCombine();
+            $sDateNow = date('Y-m-d H:i:s');
             // Loop through each of the gene symbols and check to see if they exist within LOVD, create an error log. Remove genes that are not within LOVD?
             foreach ($aData as $i => $sLine) {
                 // Skip the first line with the headers in it.
@@ -321,7 +328,7 @@ if (PATH_COUNT == 1 && ACTION == 'import') {
                         unset($aColumns[$iMissingColumnID]);
                     }
                     $aColumns = array_values($aColumns);
-                    $aColumns[] = date('Y-m-d H:i:s');
+                    $aColumns[] = $sDateNow;
                     $pdoInsert->execute($aColumns);
                 }
                 // Update the progress bar every 1000 records.
