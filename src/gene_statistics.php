@@ -150,13 +150,13 @@ if (PATH_COUNT == 1 && !ACTION) {
 
         $(document).ready(function() {
             // When loading this page check to see when to show or hide the gene entry form based on the contents of the form
-        if ($('#geneSymbols').val()) {
-            $('#genesForm').show();
-            $('#geneFormShowHide').val('show');
-        } else {
-            $('#genesForm').hide();
-            $('#geneFormShowHide').val('hide');
-        }
+            if ($('#geneSymbols').val()) {
+                $('#genesForm').show();
+                $('#geneFormShowHide').val('show');
+            } else {
+                $('#genesForm').hide();
+                $('#geneFormShowHide').val('hide');
+            }
             // Function to control how to show or hide the gene entry form
             $("#searchBoxTitle").click(function() {
                 $("#genesForm").toggle('fast');
