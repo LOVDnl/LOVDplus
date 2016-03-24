@@ -4,7 +4,7 @@
  * LEIDEN OPEN VARIATION DATABASE (LOVD)
  *
  * Created     : 2016-03-22
- * Modified    : 2016-03-22
+ * Modified    : 2016-03-24
  * For LOVD    : 3.0-13
  *
  * Copyright   : 2004-2016 Leiden University Medical Center; http://www.LUMC.nl/
@@ -152,6 +152,7 @@ class LOVD_GenePanelGeneREV extends LOVD_GenePanelGene {
         $zData = parent::prepareData($zData, $sView);
 
         $zData['reason'] = str_replace("\r\n", '<BR>', $zData['reason']);
+        $zData['deleted_'] = '';
 
         // Changes dependent on version.
         if ($zData['valid_to'] == '9999-12-31 00:00:00') {
