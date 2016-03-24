@@ -4,7 +4,7 @@
  * LEIDEN OPEN VARIATION DATABASE (LOVD)
  *
  * Created     : 2016-03-01
- * Modified    : 2016-03-21
+ * Modified    : 2016-03-24
  * For LOVD    : 3.0-13
  *
  * Copyright   : 2004-2016 Leiden University Medical Center; http://www.LUMC.nl/
@@ -199,12 +199,12 @@ class LOVD_GenePanel extends LOVD_Object {
                 array('', '', 'print', '<B>General information</B>'),
                 'hr',
                 array('Name', '', 'text', 'name', 30),
-                array('Description', '', 'text', 'description', 70),
+                array('Description', '', 'text', 'description', 50),
 'gene_panel_type' => array('Type', 'Please note:<BR>Gene Panel - Genes will be included when filtering<BR>Blacklist - Genes will be excluded when filtering<BR>Mendeliome - All genes from all gene panels', 'select', 'type', 1, $aSelectType, '', false, false),
-                array('Remarks (optional)', '', 'textarea', 'remarks', 70, 3),
+                array('Remarks (optional)', '', 'textarea', 'remarks', 50, 3),
                 array('Cohort (optional)', '', 'text', 'cohort', 30),
                 array('Phenotype group (optional)', '', 'text', 'phenotype_group', 30),
-'pmid_mandatory' => array('PMID Mandatory', 'Require every gene added to have a supporting PubMed article', 'checkbox', 'pmid_mandatory', 1),
+'pmid_mandatory' => array('Are PMIDs mandatory?', 'If set, this requires every gene added to this gene panel to have a supporting PubMed ID filled in.', 'checkbox', 'pmid_mandatory', 1),
                 'hr','skip',
                 array('', '', 'print', '<B>Relation to diseases (optional)</B>'),
                 'hr',
