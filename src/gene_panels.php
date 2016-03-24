@@ -583,6 +583,7 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && ACTION == 'manage_genes') {
 
     // Now, build $aGenes, which contains info about the genes currently selected (from DB or, if available, POST!).
     $aGenes = array();
+    $_DB->query('SET group_concat_max_len = 10240'); // Make sure you can deal with long transcript lists.
     if (!empty($_POST['genes'])) {
         // Form has already been sent. We're here because of errors. Use $_POST.
         // Retrieve data for selected genes.
@@ -678,8 +679,8 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && ACTION == 'manage_genes') {
               <TD>
                 <INPUT type="hidden" name="genes[]" value="' . $sID . '">
               ' . $aGene['name'] . '</TD>
-              <TD><SELECT name="transcriptids[]" style="width : 100%;">' . str_replace('"' . $aGene['transcriptid'] . '">', '"' . $aGene['transcriptid'] . '" selected>', $aGene['transcripts_HTML']) . '</TD>
-              <TD><SELECT name="inheritances[]">' . str_replace('"' . $aGene['inheritance'] . '">', '"' . $aGene['inheritance'] . '" selected>', $sInheritanceOptions) . '</TD>
+              <TD><SELECT name="transcriptids[]" style="width : 100%;">' . str_replace('"' . $aGene['transcriptid'] . '">', '"' . $aGene['transcriptid'] . '" selected>', $aGene['transcripts_HTML']) . '</SELECT></TD>
+              <TD><SELECT name="inheritances[]">' . str_replace('"' . $aGene['inheritance'] . '">', '"' . $aGene['inheritance'] . '" selected>', $sInheritanceOptions) . '</SELECT></TD>
               <TD><INPUT type="text" name="pmids[]" value="' . $aGene['pmid'] . '" size="10"></TD>
               <TD><INPUT type="text" name="remarkses[]" value="' . $aGene['remarks'] . '" size="40"></TD>
               <TD width="30" align="right"><A href="#" onclick="lovd_removeGene(\'' . $sViewListID . '\', \'' . $sID . '\'); return false;"><IMG src="gfx/mark_0.png" alt="Remove" width="11" height="11" border="0"></A></TD></TR>');
@@ -723,8 +724,8 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && ACTION == 'manage_genes') {
         oTR.id = 'tr_' + sID;
         oTR.innerHTML =
             '<TD><INPUT type="hidden" name="genes[]" value="' + sID + '">' + sID + '</TD>' +
-            '<TD><SELECT name="transcriptids[]" style="width : 100%;">' + sTranscripts + '</TD>' +
-            '<TD><SELECT name="inheritances[]"><?php echo $sInheritanceOptions; ?></TD>' +
+            '<TD><SELECT name="transcriptids[]" style="width : 100%;">' + sTranscripts + '</SELECT></TD>' +
+            '<TD><SELECT name="inheritances[]"><?php echo $sInheritanceOptions; ?></SELECT></TD>' +
             '<TD><INPUT type="text" name="pmids[]" value="" size="10"></TD>' +
             '<TD><INPUT type="text" name="remarkses[]" value="" size="40"></TD>' +
             '<TD width="30" align="right"><A href="#" onclick="lovd_removeGene(\'' + sViewListID + '\', \'' + sID + '\'); return false;"><IMG src="gfx/mark_0.png" alt="Remove" width="11" height="11" border="0"></A></TD>';
