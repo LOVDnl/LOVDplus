@@ -57,12 +57,10 @@ if (PATH_COUNT == 1 && !ACTION) {
     $_T->printTitle();
     $sViewListID = 'GeneStatistic';
 
-    // FIXME: Better put comments everywhere to clarify what these variables are used for,
-    //  especially because they have such similar names. (I cleaned it up a bit)
-    $aGeneSymbols = array();
-    $aCorrectGeneSymbols = array();
-    $aBadGeneSymbols = array();
-    $sBadGenesHTML = '';
+    $aGeneSymbols = array();        // The array of gene symbols that a user enters into the form to search for within the database.
+    $aCorrectGeneSymbols = array(); // The array of gene symbols that were found within the database after the search.
+    $aBadGeneSymbols = array();     // The array of gene symbols that were not found within the database.
+    $sBadGenesHTML = '';            // The HTML that is generated to display the gene symbols that were not found within the database.
     if (isset($_POST['geneSymbols'])) {
         // Handle lists separated by new lines, spaces, commas and semicolons.
         // Trim the whitespace, remove duplicates and remove empty array elements.
@@ -70,17 +68,16 @@ if (PATH_COUNT == 1 && !ACTION) {
 
         // Check if there are any genes left after cleaning up the gene symbol string.
         if (count($aGeneSymbols) > 0) {
+            // Load the genes and alternative names into an array.
+            $aGenesInLOVD = $_DB->query('SELECT UPPER(id), id FROM ' . TABLE_GENES)->fetchAllCombine();
             // Loop through all the gene symbols in the array and check them for any errors.
             foreach ($aGeneSymbols as $key => $sGeneSymbol) {
+                $sGeneSymbol = strtoupper($sGeneSymbol);
                 // Check to see if this gene symbol has been found within the database.
-                // FIXME: How can you do this in one query?
-                $sCorrectGeneSymbol = $_DB->query('SELECT id FROM ' . TABLE_GENE_STATISTICS . ' WHERE id = ?',
-                    array($sGeneSymbol))->fetchColumn();
-
-                if ($sCorrectGeneSymbol) {
+                if (isset($aGenesInLOVD[$sGeneSymbol])) {
                     // A correct gene symbol was found, so lets use that to remove any case issues.
-                    $aGeneSymbols[$key] = $sCorrectGeneSymbol;
-                    $aCorrectGeneSymbols[] = $sCorrectGeneSymbol;
+                    $aGeneSymbols[$key] = $aGenesInLOVD[$sGeneSymbol];
+                    $aCorrectGeneSymbols[] = $aGenesInLOVD[$sGeneSymbol];
                 } else {
                     // This gene symbol was not found in the database
                     $aBadGeneSymbols[] = $sGeneSymbol;
@@ -88,28 +85,35 @@ if (PATH_COUNT == 1 && !ACTION) {
             }
             // Create a table of any bad gene symbols and try to work out if there is a correct gene symbol available.
             if ($aBadGeneSymbols) {
-                $sBadGenesHTML .= '<h3>Genes not found!</h3>These genes were not found, please review them and correct your gene list before proceeding.<table  border="0" cellpadding="0" cellspacing="1" class="data">';
-                $sBadGenesHTML .= '<thead><tr><th>Gene Symbol</th><th>Found in Database</th><th>Found in HGNC</th></tr></thead><tbody>';
+                $sBadGenesHTML .= '    <H3>Genes not found!</H3>' . "\n" .
+                                  '    These genes were not found, please review them and correct your gene list before proceeding' . "\n" .
+                                  '    <TABLE  border="0" cellpadding="0" cellspacing="1" class="data">' . "\n" .
+                                  '      <TR>' . "\n" .
+                                  '        <TH>Gene Symbol</TH>' . "\n" .
+                                  '        <TH>Found in Database</TH>' . "\n" .
+                                  '        <TH>Found in HGNC</TH>' . "\n" .
+                                  '      </TR>' . "\n";
                 // Loop through the bad genes and check them.
                 foreach ($aBadGeneSymbols as $sBadGeneSymbol) {
-                    $sBadGenesHTML .= '<tr class="data"><td>' . $sBadGeneSymbol . '</td>';
+                    $sBadGenesHTML .= '      <TR class="data">' . "\n" .
+                                      '        <TD>' . $sBadGeneSymbol . '</TD>' . "\n";
 
                     // Search within the database to see if this gene symbol is in the Alternative Names column.
-                    $sFoundInDB = $_DB->query('SELECT id FROM ' . TABLE_GENE_STATISTICS . ' WHERE alternative_names REGEXP \'[[:<:]]' . $sBadGeneSymbol . '[[:>:]]\'')->fetchColumn();
+                    $sFoundInDB = $_DB->query('SELECT id FROM ' . TABLE_GENE_STATISTICS . ' WHERE CONCAT(" ", alternative_names, ",") LIKE ?', array('% ' . $sBadGeneSymbol . ',%'))->fetchColumn();
                     if ($sFoundInDB) {
-                        $sBadGenesHTML .= '<td>' . $sFoundInDB . '</td>';
+                        $sBadGenesHTML .= '        <TD>' . $sFoundInDB . '</TD>' . "\n";
                     } else {
-                        $sBadGenesHTML .= '<td> - </td>';
+                        $sBadGenesHTML .= '        <TD> - </TD>' . "\n";
                     }
 
                     // TODO Search the HGNC database to see if the correct gene name can be found.
                     // If you'd like to implement this, look into lovd_getGeneInfoFromHGNC().
-                    $sBadGenesHTML .= '<td>To be completed...</td>';
+                    $sBadGenesHTML .= '        <TD>To be completed...</TD>' . "\n";
 
-                    $sBadGenesHTML .= '</tr>';
+                    $sBadGenesHTML .= '      </TR>' . "\n";
                 }
 
-                $sBadGenesHTML .= '</tbody></table><br>';
+                $sBadGenesHTML .= '    </TABLE><BR>' . "\n";
             }
         }
 
@@ -167,14 +171,14 @@ if (PATH_COUNT == 1 && !ACTION) {
 <?php
 
     print('    <DIV id="searchBoxTitle" style="font-weight : bold; border : 1px solid #224488; cursor : pointer; text-align : center; padding : 2px 5px; font-size : 11px; width: 160px;">' . "\n" .
-          '       Search for genes' . "\n" .
+          '     Search for genes' . "\n" .
           '   </DIV>' . "\n" .
           '   <FORM id="genesForm" method="post" style="display: none;">' .
-          '       Enter in you list of gene symbols separated by commas and press search to automatically select them. This will overwrite any previously selected genes. ' . "\n" .
-          '       Select \'Show only selected genes\' from the menu to only show the genes entered below.<BR>' . "\n" .
-          '       <INPUT type="hidden" id="geneFormShowHide" value="hide">' . "\n" .
-          '       <TEXTAREA rows="5" cols="200" name="geneSymbols" id="geneSymbols">' . htmlentities(implode(', ', $aGeneSymbols)) . '</TEXTAREA><BR>' . "\n" .
-          '       <INPUT type="submit" name="submitGenes" id="submitGenes" value=" Search ">' . "\n" .
+          '     Enter in you list of gene symbols separated by commas and press search to automatically select them. This will overwrite any previously selected genes. ' . "\n" .
+          '     Select \'Show only selected genes\' from the menu to only show the genes entered below.<BR>' . "\n" .
+          '     <INPUT type="hidden" id="geneFormShowHide" value="hide">' . "\n" .
+          '     <TEXTAREA rows="5" cols="200" name="geneSymbols" id="geneSymbols">' . htmlentities(implode(', ', $aGeneSymbols)) . '</TEXTAREA><BR>' . "\n" .
+          '     <INPUT type="submit" name="submitGenes" id="submitGenes" value=" Search ">' . "\n" .
           '   </FORM>' . "\n");
     // Show an info box if the gene lists are limited by the search.
     if (isset($aGeneSymbols) && count($aGeneSymbols) > 0) {
