@@ -4,10 +4,10 @@
  * LEIDEN OPEN VARIATION DATABASE (LOVD)
  *
  * Created     : 2014-01-31
- * Modified    : 2015-12-08
+ * Modified    : 2016-03-02
  * For LOVD    : 3.0-15
  *
- * Copyright   : 2004-2015 Leiden University Medical Center; http://www.LUMC.nl/
+ * Copyright   : 2004-2016 Leiden University Medical Center; http://www.LUMC.nl/
  * Programmer  : Ing. Ivo F.A.C. Fokkema <I.F.A.C.Fokkema@LUMC.nl>
  *
  *
@@ -132,8 +132,8 @@ if (PATH_COUNT == 3 && $_PE[1] == 'run' && ctype_digit($_PE[2]) && ACTION == 'mo
     require ROOT_PATH . 'inc-lib-form.php';
 
     // Load appropriate user level for this analysis run.
-    lovd_isAuthorized('analysisrun', $nID); // FIXME: Stub...
-    lovd_requireAUTH(LEVEL_CURATOR);
+    lovd_isAuthorized('analysisrun', $nID);
+    lovd_requireAUTH(LEVEL_OWNER);
 
     // ADMIN can always edit an analysis run, even when the individual's analysis hasn't been started by him.
     // FIXME: Shouldn't the owner of the individual's analysis be able to edit the run, when it's created by somebody else?
@@ -264,8 +264,8 @@ if (PATH_COUNT == 3 && $_PE[1] == 'run' && ctype_digit($_PE[2]) && ACTION == 'de
     define('LOG_EVENT', 'AnalysisRunDelete');
 
     // Load appropriate user level for this analysis run.
-    lovd_isAuthorized('analysisrun', $nID); // FIXME: Stub...
-    lovd_requireAUTH(LEVEL_CURATOR);
+    lovd_isAuthorized('analysisrun', $nID);
+    lovd_requireAUTH(LEVEL_OWNER);
 
     // ADMIN can always delete an analysis run, even when the individual's analysis hasn't been started by him.
     // FIXME: Shouldn't the owner of the individual's analysis be able to delete the run, when it's created by somebody else?

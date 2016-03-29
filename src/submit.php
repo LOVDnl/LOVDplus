@@ -39,8 +39,8 @@ if ($_AUTH) {
     require ROOT_PATH . 'inc-upgrade.php';
 }
 
-// Require any user level.
-lovd_requireAUTH(LEVEL_SUBMITTER);
+// Require proper user level.
+lovd_requireAUTH($_SETT['user_level_settings']['submit_new_data']);
 
 function lovd_prepareSubmitData ($sDataType, $aData) {
     // Prepares the data for presentation in the mail to the users.

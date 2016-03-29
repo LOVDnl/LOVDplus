@@ -83,11 +83,14 @@ class LOVD_Template {
                         'genes' => (!empty($_SESSION['currdb'])? $_SESSION['currdb'] . ' homepage' : 'View all genes'),
                         'genes_' =>
                          array(
-                                '' => array('menu_magnifying_glass.png', 'View all genes', 0),
-                                '/genes/' . $_SESSION['currdb'] => array('menu_magnifying_glass.png', 'View the ' . $_SESSION['currdb'] . ' gene homepage', 0),
-                                '/genes/' . $_SESSION['currdb'] . '/graphs' => array('menu_graphs.png', 'View graphs about the ' . $_SESSION['currdb'] . ' gene database', 0),
-                                '/gene_statistics' => array('menu_magnifying_glass.png', 'View all gene statistics', 0),
-                                'create' => array('plus.png', 'Create a new gene entry', LEVEL_MANAGER),
+                             '/gene_panels' => array('menu_magnifying_glass.png', 'View all gene panels', 0),
+                             '/gene_panels?create' => array('plus.png', 'Create a new gene panel', LEVEL_SUBMITTER),
+                             'hr',
+                             '' => array('menu_magnifying_glass.png', 'View all genes', 0),
+                             '/gene_statistics' => array('menu_magnifying_glass.png', 'View all gene statistics', 0),
+                             '/genes/' . $_SESSION['currdb'] => array('menu_magnifying_glass.png', 'View the ' . $_SESSION['currdb'] . ' gene homepage', 0),
+                             '/genes/' . $_SESSION['currdb'] . '/graphs' => array('menu_graphs.png', 'View graphs about the ' . $_SESSION['currdb'] . ' gene database', 0),
+                             'create' => array('plus.png', 'Create a new gene entry', LEVEL_MANAGER),
                               ),
                         'transcripts' => 'View transcripts',
                         'transcripts_' =>
@@ -603,8 +606,11 @@ if ($_SERVER['HTTP_HOST'] == 'leiden-test.diagnostics.lovd.nl') {
             if ($_AUTH) {
                 print('      <B>Welcome, ' . $_AUTH['name'] . '</B><BR>' . "\n" .
                       '      <A href="users/' . $_AUTH['id'] . '"><B>Your account</B></A> | ' . (false && $_AUTH['level'] == LEVEL_SUBMITTER && $_CONF['allow_submitter_mods']? '<A href="variants?search_created_by=' . $_AUTH['id'] . '"><B>Your submissions</B></A> | ' : '') . (!empty($_AUTH['saved_work']['submissions']['individual']) || !empty($_AUTH['saved_work']['submissions']['screening'])? '<A href="users/' . $_AUTH['id'] . '?submissions"><B>Unfinished submissions</B></A> | ' : '') . '<A href="logout"><B>Log out</B></A>' . "\n");
-            } else {
+            } elseif (!LOVD_plus) {
                 print('      <A href="users?register"><B>Register as submitter</B></A> | <A href="login"><B>Log in</B></A>' . "\n");
+            } else {
+                // LOVD+ doesn't allow for submitter registrations, because submitters already achieve rights.
+                print('      <A href="login"><B>Log in</B></A>' . "\n");
             }
         }
 

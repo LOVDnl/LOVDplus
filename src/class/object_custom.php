@@ -56,7 +56,7 @@ class LOVD_Custom extends LOVD_Object {
     function __construct ()
     {
         // Default constructor.
-        global $_AUTH, $_DB;
+        global $_AUTH, $_DB, $_SETT;
 
         $aArgs = array();
 
@@ -154,7 +154,7 @@ class LOVD_Custom extends LOVD_Object {
         parent::__construct();
 
         // Hide entries that are not marked or public.
-        if ($_AUTH['level'] < LEVEL_COLLABORATOR) { // This check assumes lovd_isAuthorized() has already been called for gene-specific overviews.
+        if ($_AUTH['level'] < $_SETT['user_level_settings']['see_nonpublic_data']) {
             if (in_array($this->sCategory, array('VariantOnGenome', 'VariantOnTranscript'))) {
                 $sAlias = 'vog';
             } else {

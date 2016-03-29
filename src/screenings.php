@@ -45,17 +45,18 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && in_array(ACTION, array('downloadT
     define('PAGE_TITLE', 'Download variants to be confirmed for screening #' . $nID);
 
     // Load appropiate user level for this screening entry.
-    $bAuthorized = lovd_isAuthorized('screening', $nID);
+    $bAuthorized = lovd_isAuthorized('screening_analysis', $nID);
 
-    // Screening ID should be editable by the user.
+    // Only managers can export variants, though.
     if (ACTION == 'exportToBeConfirmed') {
         if (!$bAuthorized) {
             // Either returned false or 0. Both are bad in this case.
-            die('9|No authorization to edit this screening.');
+            die('9|No authorization on this screening.');
+        } elseif ($_AUTH['level'] < LEVEL_MANAGER) {
+            die('9|To export the variants to be confirmed, Manager level is required.');
         }
-    } else {
-        lovd_requireAUTH(LEVEL_MANAGER);
     }
+    lovd_requireAUTH(LEVEL_OWNER);
 
     // First, let's see if there is something that we need to confirm.
     $aVariants = $_DB->query('SELECT "' . $_SETT['human_builds'][$_CONF['refseq_build']]['ncbi_name'] . '" AS refseq_build, vog.chromosome, "genomic_id_ncbi", vog.position_g_start, vog.position_g_end, vog.`VariantOnGenome/DNA`, vog.`VariantOnGenome/Sequencing/Father/VarPresent` AS is_present_father, vog.`VariantOnGenome/Sequencing/Mother/VarPresent` AS is_present_mother, g.id AS gene_id, g.name AS gene_name, t.id_ncbi AS transcript_id_ncbi, vot.`VariantOnTranscript/DNA`, vot.`VariantOnTranscript/RNA`, vot.`VariantOnTranscript/Protein`, vog.allele, "VariantOnGenome/Genetic_origin", MAX(IFNULL((i2d.diseaseid = g2d.diseaseid), 0)) AS in_gene_panel
@@ -270,7 +271,7 @@ if (PATH_COUNT == 1 && ACTION == 'create' && isset($_GET['target']) && ctype_dig
 
     define('LOG_EVENT', 'ScreeningCreate');
 
-    lovd_requireAUTH(LEVEL_SUBMITTER);
+    lovd_requireAUTH($_SETT['user_level_settings']['submit_new_data']);
 
     $_GET['target'] = sprintf('%08d', $_GET['target']);
     $z = $_DB->query('SELECT id FROM ' . TABLE_INDIVIDUALS . ' WHERE id = ?', array($_GET['target']))->fetchAssoc();

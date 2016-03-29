@@ -171,6 +171,13 @@ if (PATH_COUNT == 1 && in_array(ACTION, array('create', 'register'))) {
             lovd_showInfoTable('You are already a registered user.', 'stop');
             $_T->printFooter();
             exit;
+        } elseif (LOVD_plus) {
+            // LOVD+ doesn't allow user registrations.
+            $_T->printHeader();
+            $_T->printTitle();
+            lovd_showInfoTable('You can not register as a submitter at this LOVD+ installation. Ask the Manager or Administrator for an account.', 'stop');
+            $_T->printFooter();
+            exit;
         }
     }
 

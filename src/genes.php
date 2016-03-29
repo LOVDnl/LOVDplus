@@ -916,7 +916,7 @@ if (PATH_COUNT == 2 && preg_match('/^[a-z][a-z0-9#@-]+$/i', rawurldecode($_PE[1]
     define('LOG_EVENT', 'GeneDelete');
 
     // Require manager clearance.
-    lovd_requireAUTH(LEVEL_MANAGER);
+    lovd_requireAUTH((LOVD_plus? LEVEL_ADMIN : LEVEL_MANAGER));
 
     require ROOT_PATH . 'class/object_genes.php';
     $_DATA = new LOVD_Gene();
