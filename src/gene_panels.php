@@ -92,6 +92,7 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && !ACTION) {
         // Authorized user is logged in. Provide tools.
         $aNavigation[CURRENT_PATH . '?edit']            = array('menu_edit.png', 'Edit gene panel information', 1);
         $aNavigation[CURRENT_PATH . '?manage_genes']    = array('menu_plus.png', 'Manage gene panel\'s genes', 1);
+        $aNavigation[CURRENT_PATH . '?history']         = array('menu_clock.png', 'View history of genes in this gene panel', 1);
         if ($_AUTH['level'] >= LEVEL_MANAGER) {
             $aNavigation[CURRENT_PATH . '?delete']      = array('cross.png', 'Delete gene panel entry', 1);
         }
@@ -1072,9 +1073,10 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && ACTION == 'history') {
     $_T->printHeader();
     $_T->printTitle();
 
-
-
-
+    require ROOT_PATH . 'class/object_gene_panel_genes.rev.php';
+    $_DATA = new LOVD_GenePanelGeneREV();
+    $_GET['search_genepanelid'] = $nID;
+    $_DATA->viewList('GenePanelGeneREV');
 
     $_T->printFooter();
     exit;
