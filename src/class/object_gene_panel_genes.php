@@ -4,7 +4,7 @@
  * LEIDEN OPEN VARIATION DATABASE (LOVD)
  *
  * Created     : 2016-03-07
- * Modified    : 2016-03-22
+ * Modified    : 2016-03-24
  * For LOVD    : 3.0-13
  *
  * Copyright   : 2004-2016 Leiden University Medical Center; http://www.LUMC.nl/
@@ -52,6 +52,11 @@ class LOVD_GenePanelGene extends LOVD_Object {
     {
         // Default constructor.
         $this->sTable  = 'TABLE_GP2GENE';
+
+        // SQL code for loading an entry for an edit form.
+        $this->sSQLLoadEntry = 'SELECT gp2g.*, gp.pmid_mandatory
+            FROM ' . TABLE_GP2GENE . ' AS gp2g INNER JOIN ' . TABLE_GENE_PANELS . ' AS gp ON (gp2g.genepanelid = gp.id)
+            WHERE gp2g.genepanelid = ? AND gp2g.geneid = ?';
 
         // SQL code for viewing an entry.
         $this->aSQLViewEntry['SELECT']   = 'gp2g.*, gp2g.geneid AS id, uc.name AS created_by_, ue.name AS edited_by_, t.id_ncbi AS transcript_ncbi ';
@@ -138,9 +143,21 @@ class LOVD_GenePanelGene extends LOVD_Object {
     function checkFields ($aData, $zData = false)
     {
         // Checks fields before submission of data.
-        // TODO Can we validate the pmid field?
+
+        if ($zData['pmid_mandatory']) {
+            // This gene panel has the option set that the PMID field may not be empty.
+            $this->aCheckMandatory[] = 'pmid';
+        }
+
         parent::checkFields($aData);
 
+        // If the PMID ID has been filled in, but it's just a zero, complain as well.
+        // We won't check if it actually exists, but it has to be a bit meaningful.
+        if (isset($aData['pmid']) && !preg_match('/^[1-9]\d{6,}$/', $aData['pmid'])) {
+            // The PMIDs of the last 25 years all are 8 digits, but just
+            // in case we're referring to something really, really old...
+            lovd_errorAdd('pmid', 'The PubMed ID has to be at least seven digits long and cannot start with a \'0\'.');
+        }
     }
 
 
@@ -180,7 +197,9 @@ class LOVD_GenePanelGene extends LOVD_Object {
                 array('Symbol', '', 'print', $zData['geneid'], 30),
                 array('Transcript (optional)', '', 'select', 'transcriptid', 1, $aTranscriptsForm, '', false, false),
                 array('Inheritance (optional)', '', 'select', 'inheritance', 1, $aInheritance, '', false, false),
-                array('PubMed ID (optional)', '', 'text', 'pmid', 20),
+                // Unfortunately, without the ID of the gene panel, we can not see whether or not the PMID field is mandatory or not.
+                // I guess it's better to have it suggest that it's mandatory, but it's not, then to actually say it's optional but it's not.
+                array('PubMed ID', '', 'text', 'pmid', 20),
                 array('Remarks (optional)', '', 'textarea', 'remarks', 70, 3),
                 'hr',
                 'skip'

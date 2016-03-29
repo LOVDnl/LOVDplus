@@ -4,7 +4,7 @@
  * LEIDEN OPEN VARIATION DATABASE (LOVD)
  *
  * Created     : 2016-03-01
- * Modified    : 2016-03-22
+ * Modified    : 2016-03-24
  * For LOVD    : 3.0-13
  *
  * Copyright   : 2004-2016 Leiden University Medical Center; http://www.LUMC.nl/
@@ -91,7 +91,7 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && !ACTION) {
     if ($_AUTH && $_AUTH['level'] >= LEVEL_CURATOR) {
         // Authorized user is logged in. Provide tools.
         $aNavigation[CURRENT_PATH . '?edit']            = array('menu_edit.png', 'Edit gene panel information', 1);
-        $aNavigation[CURRENT_PATH . '?manage_genes']    = array('menu_plus.png', 'Add gene(s) to gene panel', 1);
+        $aNavigation[CURRENT_PATH . '?manage_genes']    = array('menu_plus.png', 'Manage gene panel\'s genes', 1);
         $aNavigation[CURRENT_PATH . '?history']         = array('menu_clock', 'View history of genes in this gene panel', 1);
         if ($_AUTH['level'] >= LEVEL_MANAGER) {
             $aNavigation[CURRENT_PATH . '?delete']      = array('cross.png', 'Delete gene panel entry', 1);
@@ -376,7 +376,7 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && ACTION == 'delete') {
         if (empty($_POST['password'])) {
             lovd_errorAdd('password', 'Please fill in the \'Enter your password for authorization\' field.');
         }
-        if (empty(trim($_POST['reason']))) {
+        if (!isset($_POST['reason']) || !trim($_POST['reason'])) {
             lovd_errorAdd('reason', 'Please fill in the \'Reason for removing this gene panel\' field.');
         }
 
@@ -452,7 +452,8 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && ACTION == 'manage_genes') {
 
     lovd_requireAUTH(LEVEL_ADMIN);
 
-    if (!$_DB->query('SELECT COUNT(*) FROM ' . TABLE_GENE_PANELS . ' WHERE id = ?', array($nID))->fetchColumn()) {
+    $zData = $_DB->query('SELECT * FROM ' . TABLE_GENE_PANELS . ' WHERE id = ?', array($nID))->fetchAssoc();
+    if (!$zData) {
         $_T->printHeader();
         $_T->printTitle();
         lovd_showInfoTable('No such ID!', 'stop');
@@ -488,6 +489,28 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && ACTION == 'manage_genes') {
         }
 
         // Mandatory fields.
+        // Check if this gene panel has the option set that the PMID field may not be empty.
+        if ($zData['pmid_mandatory']) {
+            // PMIDs are mandatory. Check if every gene has one.
+            $nGenes = count($_POST['genes']);
+            for ($i = 0; $i < $nGenes; $i ++) {
+                if (empty($_POST['pmids'][$i])) {
+                    lovd_errorAdd('', 'Please fill in all of the \'PMID\' fields.');
+                }
+            }
+        }
+
+        // If the PMID ID has been filled in, but it's just a zero, complain as well.
+        // We won't check if it actually exists, but it has to be a bit meaningful.
+        foreach ($_POST['pmids'] as $nPMID) {
+            if ($nPMID !== '' && !preg_match('/^[1-9]\d{6,}$/', $nPMID)) {
+                // The PMIDs of the last 25 years all are 8 digits, but just
+                // in case we're referring to something really, really old...
+                lovd_errorAdd('', 'The PubMed ID has to be at least seven digits long and cannot start with a \'0\'.');
+            }
+        }
+
+        // Password is always mandatory.
         if (empty($_POST['password'])) {
             lovd_errorAdd('password', 'Please fill in the \'Enter your password for authorization\' field.');
         } elseif ($_POST['password'] && !lovd_verifyPassword($_POST['password'], $_AUTH['password'])) {
@@ -584,6 +607,7 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && ACTION == 'manage_genes') {
 
     // Now, build $aGenes, which contains info about the genes currently selected (from DB or, if available, POST!).
     $aGenes = array();
+    $_DB->query('SET group_concat_max_len = 10240'); // Make sure you can deal with long transcript lists.
     if (!empty($_POST['genes'])) {
         // Form has already been sent. We're here because of errors. Use $_POST.
         // Retrieve data for selected genes.
@@ -634,7 +658,7 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && ACTION == 'manage_genes') {
     // So after some 200 genes, the negative selection filter will fail.
     require ROOT_PATH . 'class/object_genes.php';
     $_DATA = new LOVD_Gene();
-    lovd_showInfoTable('The following genes are configured in this LOVD. Click on one to add it to this gene panel.', 'information');
+    lovd_showInfoTable('The following genes are configured in this LOVD. Click on one to add it to this gene panel.', 'information', 950);
     $_GET['page_size'] = 10;
     $sViewListID = 'GenePanels_ManageGenes'; // Create known viewListID for the JS functions().
     $_DATA->setRowLink($sViewListID, 'javascript:lovd_addGene(\'{{ViewListID}}\', \'{{ID}}\', \'{{zData_transcripts_HTML}}\'); return false;');
@@ -645,7 +669,7 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && ACTION == 'manage_genes') {
     // Show curators, to sort and to select whether or not they can edit.
     print('      <BR><BR>' . "\n\n");
 
-    lovd_showInfoTable('All genes below have been selected for this gene panel.<BR>To remove a gene from this list, click the red cross on the far right of the line.', 'information');
+    lovd_showInfoTable('All genes below have been selected for this gene panel.<BR>To remove a gene from this list, click the red cross on the far right of the line.', 'information', 950);
 
     $aInheritances =
         array(
@@ -679,8 +703,8 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && ACTION == 'manage_genes') {
               <TD>
                 <INPUT type="hidden" name="genes[]" value="' . $sID . '">
               ' . $aGene['name'] . '</TD>
-              <TD><SELECT name="transcriptids[]" style="width : 100%;">' . str_replace('"' . $aGene['transcriptid'] . '">', '"' . $aGene['transcriptid'] . '" selected>', $aGene['transcripts_HTML']) . '</TD>
-              <TD><SELECT name="inheritances[]">' . str_replace('"' . $aGene['inheritance'] . '">', '"' . $aGene['inheritance'] . '" selected>', $sInheritanceOptions) . '</TD>
+              <TD><SELECT name="transcriptids[]" style="width : 100%;">' . str_replace('"' . $aGene['transcriptid'] . '">', '"' . $aGene['transcriptid'] . '" selected>', $aGene['transcripts_HTML']) . '</SELECT></TD>
+              <TD><SELECT name="inheritances[]">' . str_replace('"' . $aGene['inheritance'] . '">', '"' . $aGene['inheritance'] . '" selected>', $sInheritanceOptions) . '</SELECT></TD>
               <TD><INPUT type="text" name="pmids[]" value="' . $aGene['pmid'] . '" size="10"></TD>
               <TD><INPUT type="text" name="remarkses[]" value="' . $aGene['remarks'] . '" size="40"></TD>
               <TD width="30" align="right"><A href="#" onclick="lovd_removeGene(\'' . $sViewListID . '\', \'' . $sID . '\'); return false;"><IMG src="gfx/mark_0.png" alt="Remove" width="11" height="11" border="0"></A></TD></TR>');
@@ -724,8 +748,8 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && ACTION == 'manage_genes') {
         oTR.id = 'tr_' + sID;
         oTR.innerHTML =
             '<TD><INPUT type="hidden" name="genes[]" value="' + sID + '">' + sID + '</TD>' +
-            '<TD><SELECT name="transcriptids[]" style="width : 100%;">' + sTranscripts + '</TD>' +
-            '<TD><SELECT name="inheritances[]"><?php echo $sInheritanceOptions; ?></TD>' +
+            '<TD><SELECT name="transcriptids[]" style="width : 100%;">' + sTranscripts + '</SELECT></TD>' +
+            '<TD><SELECT name="inheritances[]"><?php echo $sInheritanceOptions; ?></SELECT></TD>' +
             '<TD><INPUT type="text" name="pmids[]" value="" size="10"></TD>' +
             '<TD><INPUT type="text" name="remarkses[]" value="" size="40"></TD>' +
             '<TD width="30" align="right"><A href="#" onclick="lovd_removeGene(\'' + sViewListID + '\', \'' + sID + '\'); return false;"><IMG src="gfx/mark_0.png" alt="Remove" width="11" height="11" border="0"></A></TD>';
@@ -951,7 +975,7 @@ if (PATH_COUNT == 3 && preg_match('/^[a-z][a-z0-9#@-]+$/i', rawurldecode($_PE[2]
         if (empty($_POST['password'])) {
             lovd_errorAdd('password', 'Please fill in the \'Enter your password for authorization\' field.');
         }
-        if (empty(trim($_POST['reason']))) {
+        if (!isset($_POST['reason']) || !trim($_POST['reason'])) {
             lovd_errorAdd('reason', 'Please fill in the \'Reason for removing this gene\' field.');
         }
 
