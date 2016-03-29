@@ -91,7 +91,7 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && !ACTION) {
     if ($_AUTH && $_AUTH['level'] >= LEVEL_CURATOR) {
         // Authorized user is logged in. Provide tools.
         $aNavigation[CURRENT_PATH . '?edit']            = array('menu_edit.png', 'Edit gene panel information', 1);
-        $aNavigation[CURRENT_PATH . '?manage_genes']    = array('menu_plus.png', 'Add gene(s) to gene panel', 1);
+        $aNavigation[CURRENT_PATH . '?manage_genes']    = array('menu_plus.png', 'Manage gene panel\'s genes', 1);
         if ($_AUTH['level'] >= LEVEL_MANAGER) {
             $aNavigation[CURRENT_PATH . '?delete']      = array('cross.png', 'Delete gene panel entry', 1);
         }
@@ -451,7 +451,8 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && ACTION == 'manage_genes') {
 
     lovd_requireAUTH(LEVEL_ADMIN);
 
-    if (!$_DB->query('SELECT COUNT(*) FROM ' . TABLE_GENE_PANELS . ' WHERE id = ?', array($nID))->fetchColumn()) {
+    $zData = $_DB->query('SELECT * FROM ' . TABLE_GENE_PANELS . ' WHERE id = ?', array($nID))->fetchAssoc();
+    if (!$zData) {
         $_T->printHeader();
         $_T->printTitle();
         lovd_showInfoTable('No such ID!', 'stop');
@@ -487,6 +488,28 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && ACTION == 'manage_genes') {
         }
 
         // Mandatory fields.
+        // Check if this gene panel has the option set that the PMID field may not be empty.
+        if ($zData['pmid_mandatory']) {
+            // PMIDs are mandatory. Check if every gene has one.
+            $nGenes = count($_POST['genes']);
+            for ($i = 0; $i < $nGenes; $i ++) {
+                if (empty($_POST['pmids'][$i])) {
+                    lovd_errorAdd('', 'Please fill in all of the \'PMID\' fields.');
+                }
+            }
+        }
+
+        // If the PMID ID has been filled in, but it's just a zero, complain as well.
+        // We won't check if it actually exists, but it has to be a bit meaningful.
+        foreach ($_POST['pmids'] as $nPMID) {
+            if ($nPMID !== '' && !preg_match('/^[1-9]\d{6,}$/', $nPMID)) {
+                // The PMIDs of the last 25 years all are 8 digits, but just
+                // in case we're referring to something really, really old...
+                lovd_errorAdd('', 'The PubMed ID has to be at least seven digits long and cannot start with a \'0\'.');
+            }
+        }
+
+        // Password is always mandatory.
         if (empty($_POST['password'])) {
             lovd_errorAdd('password', 'Please fill in the \'Enter your password for authorization\' field.');
         } elseif ($_POST['password'] && !lovd_verifyPassword($_POST['password'], $_AUTH['password'])) {
@@ -634,7 +657,7 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && ACTION == 'manage_genes') {
     // So after some 200 genes, the negative selection filter will fail.
     require ROOT_PATH . 'class/object_genes.php';
     $_DATA = new LOVD_Gene();
-    lovd_showInfoTable('The following genes are configured in this LOVD. Click on one to add it to this gene panel.', 'information');
+    lovd_showInfoTable('The following genes are configured in this LOVD. Click on one to add it to this gene panel.', 'information', 950);
     $_GET['page_size'] = 10;
     $sViewListID = 'GenePanels_ManageGenes'; // Create known viewListID for the JS functions().
     $_DATA->setRowLink($sViewListID, 'javascript:lovd_addGene(\'{{ViewListID}}\', \'{{ID}}\', \'{{zData_transcripts_HTML}}\'); return false;');
@@ -645,7 +668,7 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && ACTION == 'manage_genes') {
     // Show curators, to sort and to select whether or not they can edit.
     print('      <BR><BR>' . "\n\n");
 
-    lovd_showInfoTable('All genes below have been selected for this gene panel.<BR>To remove a gene from this list, click the red cross on the far right of the line.', 'information');
+    lovd_showInfoTable('All genes below have been selected for this gene panel.<BR>To remove a gene from this list, click the red cross on the far right of the line.', 'information', 950);
 
     $aInheritances =
         array(
