@@ -536,9 +536,11 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && ACTION == 'manage_genes') {
                         'edited_by' => $_AUTH['id'],
                         'edited_date' => $sDateNow,
                     );
-                    $bUpdated = $_DATA->updateEntry(array('genepanelid' => $nID, 'geneid' => $sGeneID), $aData, array_keys($aData));
+                    $nUpdated = $_DATA->updateEntry(array('genepanelid' => $nID, 'geneid' => $sGeneID), $aData, array_keys($aData));
                     // Only create a log if something was updated, the updateEntry will return -1 if nothing was updated.
-                    if ($bUpdated != -1) { lovd_writeLog('Event', 'GenePanelGeneEdit', 'Edited gene entry ' . $sGeneID . ' in gene panel #' . $nID); };
+                    if ($nUpdated != -1) {
+                        lovd_writeLog('Event', 'GenePanelGeneEdit', 'Edited gene entry ' . $sGeneID . ' in gene panel #' . $nID);
+                    };
                     // Mark gene as done, so we don't delete it after this loop.
                     unset($aGenesCurrentlyAssociated[$sGeneID]);
                 }
@@ -767,9 +769,9 @@ if (PATH_COUNT == 3 && preg_match('/^[a-z][a-z0-9#@-]+$/i', rawurldecode($_PE[2]
     // URL: /gene_panels/00001/BRCA1
     // View specific gene panel gene entry.
 
-    $nID = sprintf('%05d', $_PE[1]);
+    $nGenePanelID = sprintf('%05d', $_PE[1]);
     $sGeneID = rawurldecode($_PE[2]);
-    define('PAGE_TITLE', 'View gene ' . $sGeneID . ' in gene panel #' . $nID);
+    define('PAGE_TITLE', 'View gene ' . $sGeneID . ' in gene panel #' . $nGenePanelID);
 
     lovd_requireAUTH();
     $_T->printHeader();
@@ -777,7 +779,7 @@ if (PATH_COUNT == 3 && preg_match('/^[a-z][a-z0-9#@-]+$/i', rawurldecode($_PE[2]
 
     require ROOT_PATH . 'class/object_gene_panel_genes.php';
     $_DATA = new LOVD_GenePanelGene();
-    $zData = $_DATA->viewEntry(array('genepanelid' => $nID, 'geneid' => $sGeneID));
+    $zData = $_DATA->viewEntry(array('genepanelid' => $nGenePanelID, 'geneid' => $sGeneID));
 
     $aNavigation = array();
 
@@ -800,9 +802,9 @@ if (PATH_COUNT == 3 && preg_match('/^[a-z][a-z0-9#@-]+$/i', rawurldecode($_PE[2]
     // URL: /gene_panels/00001/BRCA1?edit
     // Edit specific gene panel gene entry.
 
-    $nID = sprintf('%05d', $_PE[1]);
+    $nGenePanelID = sprintf('%05d', $_PE[1]);
     $sGeneID = rawurldecode($_PE[2]);
-    define('PAGE_TITLE', 'Edit gene ' . $sGeneID . ' in gene panel #' . $nID);
+    define('PAGE_TITLE', 'Edit gene ' . $sGeneID . ' in gene panel #' . $nGenePanelID);
     define('LOG_EVENT', 'GenePanelGeneEdit');
 
     lovd_requireAUTH();
@@ -811,7 +813,7 @@ if (PATH_COUNT == 3 && preg_match('/^[a-z][a-z0-9#@-]+$/i', rawurldecode($_PE[2]
     require ROOT_PATH . 'inc-lib-form.php';
     $_DATA = new LOVD_GenePanelGene();
 
-    $zData = $_DATA->loadEntry(array('genepanelid' => $nID, 'geneid' => $sGeneID));
+    $zData = $_DATA->loadEntry(array('genepanelid' => $nGenePanelID, 'geneid' => $sGeneID));
 
     if (!empty($_POST)) {
         lovd_errorClean();
@@ -822,7 +824,7 @@ if (PATH_COUNT == 3 && preg_match('/^[a-z][a-z0-9#@-]+$/i', rawurldecode($_PE[2]
             $sDateNow = date('Y-m-d H:i:s');
             // Build up array for updateEntry();
             $aData = array(
-                'genepanelid' => $nID,
+                'genepanelid' => $nGenePanelID,
                 'geneid' => $sGeneID,
                 'transcriptid' => (empty($_POST['transcriptid'])? NULL : $_POST['transcriptid']),
                 'inheritance' => $_POST['inheritance'],
@@ -832,9 +834,9 @@ if (PATH_COUNT == 3 && preg_match('/^[a-z][a-z0-9#@-]+$/i', rawurldecode($_PE[2]
                 'edited_date' => $sDateNow,
             );
 
-            $_DATA->updateEntry(array('genepanelid' => $nID, 'geneid' => $sGeneID), $aData, array_keys($aData));
+            $_DATA->updateEntry(array('genepanelid' => $nGenePanelID, 'geneid' => $sGeneID), $aData, array_keys($aData));
 
-            lovd_writeLog('Event', LOG_EVENT, 'Edited gene entry ' . $sGeneID . ' in gene panel #' . $nID);
+            lovd_writeLog('Event', LOG_EVENT, 'Edited gene entry ' . $sGeneID . ' in gene panel #' . $nGenePanelID);
 
             header('Refresh: 3; url=' . lovd_getInstallURL() . CURRENT_PATH);
 
@@ -884,9 +886,9 @@ if (PATH_COUNT == 3 && preg_match('/^[a-z][a-z0-9#@-]+$/i', rawurldecode($_PE[2]
     // URL: /gene_panels/00001/BRCA1?delete
     // Drop specific gene panel gene entry.
 
-    $nID = sprintf('%05d', $_PE[1]);
+    $nGenePanelID = sprintf('%05d', $_PE[1]);
     $sGeneID = rawurldecode($_PE[2]);
-    define('PAGE_TITLE', 'Remove gene ' . $sGeneID . ' from gene panel #' . $nID);
+    define('PAGE_TITLE', 'Remove gene ' . $sGeneID . ' from gene panel #' . $nGenePanelID);
     define('LOG_EVENT', 'GenePanelGeneDelete');
 
     lovd_requireAUTH(LEVEL_MANAGER);
@@ -913,9 +915,9 @@ if (PATH_COUNT == 3 && preg_match('/^[a-z][a-z0-9#@-]+$/i', rawurldecode($_PE[2]
         if (!lovd_error()) {
             // Delete the gene.
             $_DATA = new LOVD_GenePanelGene();
-            $_DATA->deleteEntry(array('genepanelid' => $nID, 'geneid' => $sGeneID), $_POST['reason']);
+            $_DATA->deleteEntry(array('genepanelid' => $nGenePanelID, 'geneid' => $sGeneID), $_POST['reason']);
 
-            lovd_writeLog('Event', LOG_EVENT, 'Deleted gene entry ' . $sGeneID . ' from gene panel #' . $nID);
+            lovd_writeLog('Event', LOG_EVENT, 'Deleted gene entry ' . $sGeneID . ' from gene panel #' . $nGenePanelID);
 
             // Thank the user...
             header('Refresh: 3; url=' . lovd_getInstallURL() . $_PE[0] . '/' . $_PE[1]);
@@ -936,7 +938,7 @@ if (PATH_COUNT == 3 && preg_match('/^[a-z][a-z0-9#@-]+$/i', rawurldecode($_PE[2]
     $_T->printHeader();
     $_T->printTitle();
 
-    lovd_showInfoTable('This will remove the <B>' . $sGeneID . '</B> gene from gene panel #' . $nID . '. It will not delete the gene from LOVD, only unlink it from this gene panel and remove any extra data you have stored here. This action cannot be undone.', 'warning');
+    lovd_showInfoTable('This will remove the <B>' . $sGeneID . '</B> gene from gene panel #' . $nGenePanelID . '. It will not delete the gene from LOVD, only unlink it from this gene panel and remove any extra data you have stored here. This action cannot be undone.', 'warning');
 
     lovd_errorPrint();
 
@@ -947,7 +949,7 @@ if (PATH_COUNT == 3 && preg_match('/^[a-z][a-z0-9#@-]+$/i', rawurldecode($_PE[2]
     $aForm = array_merge(
         array(
             array('POST', '', '', '', '40%', '14', '60%'),
-            array('Removing gene entry', '', 'print', $sGeneID . ' from gene panel #' . $nID ),
+            array('Removing gene entry', '', 'print', $sGeneID . ' from gene panel #' . $nGenePanelID ),
             'skip',
             array('Reason for removing this gene', '', 'text', 'reason', 40),
             array('Enter your password for authorization', '', 'password', 'password', 20),
