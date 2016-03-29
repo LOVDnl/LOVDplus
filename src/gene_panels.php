@@ -92,6 +92,7 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && !ACTION) {
         // Authorized user is logged in. Provide tools.
         $aNavigation[CURRENT_PATH . '?edit']            = array('menu_edit.png', 'Edit gene panel information', 1);
         $aNavigation[CURRENT_PATH . '?manage_genes']    = array('menu_plus.png', 'Manage gene panel\'s genes', 1);
+        $aNavigation[CURRENT_PATH . '?history']         = array('menu_clock.png', 'View history of genes in this gene panel', 1);
         if ($_AUTH['level'] >= LEVEL_MANAGER) {
             $aNavigation[CURRENT_PATH . '?delete']      = array('cross.png', 'Delete gene panel entry', 1);
         }
@@ -550,6 +551,7 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && ACTION == 'manage_genes') {
                         'created_date' => $sDateNow,
                     );
                     $_DATA->insertEntry($aData, array_keys($aData));
+                    lovd_writeLog('Event', 'GenePanelGeneCreate', 'Created gene entry ' . $sGeneID . ' in gene panel #' . $nID);
                 } else {
                     // Needs an update, maybe. Only if something changed.
                     // updateEntry() will figure out if we actually need a query or not.
@@ -558,7 +560,11 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && ACTION == 'manage_genes') {
                         'edited_by' => $_AUTH['id'],
                         'edited_date' => $sDateNow,
                     );
-                    $_DATA->updateEntry(array('genepanelid' => $nID, 'geneid' => $sGeneID), $aData, array_keys($aData));
+                    $nUpdated = $_DATA->updateEntry(array('genepanelid' => $nID, 'geneid' => $sGeneID), $aData, array_keys($aData));
+                    // Only create a log if something was updated, the updateEntry will return -1 if nothing was updated.
+                    if ($nUpdated != -1) {
+                        lovd_writeLog('Event', 'GenePanelGeneEdit', 'Edited gene entry ' . $sGeneID . ' in gene panel #' . $nID);
+                    };
                     // Mark gene as done, so we don't delete it after this loop.
                     unset($aGenesCurrentlyAssociated[$sGeneID]);
                 }
@@ -572,6 +578,7 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && ACTION == 'manage_genes') {
                 foreach (array_keys($aGenesCurrentlyAssociated) as $sGeneID) {
                     // FIXME: No reason passed. Should we demand one from our users?
                     $_DATA->deleteEntry(array('genepanelid' => $nID, 'geneid' => $sGeneID));
+                    lovd_writeLog('Event', 'GenePanelGeneDelete', 'Deleted gene entry ' . $sGeneID . ' from gene panel #' . $nID);
                 }
             }
 
@@ -839,84 +846,31 @@ if (PATH_COUNT == 3 && preg_match('/^[a-z][a-z0-9#@-]+$/i', rawurldecode($_PE[2]
         $_DATA->checkFields($_POST, $zData);
 
         if (!lovd_error()) {
-            $_DB->beginTransaction();
-
-            // Query text.
-            // FIXME: Instead of worrying about this, we'd like to use updateEntry() here, but that can't handle linking tables with two ID fields yet.
-            $sSQLDate = date('Y-m-d H:i:s');
-            $_POST['pmid'] = ($_POST['pmid']? $_POST['pmid'] : null);
-            $_POST['transcriptid'] = ($_POST['transcriptid']? $_POST['transcriptid'] : null);
-            $_POST['edited_by'] = $_AUTH['id'];
-
-            $sSQL = 'UPDATE ' . TABLE_GP2GENE . ' SET transcriptid = ?, inheritance = ?, pmid = ?, remarks = ?, edited_by = ?, edited_date = ? WHERE genepanelid = ? and geneid = ?';
-            $aSQL = array($_POST['transcriptid'], $_POST['inheritance'], $_POST['pmid'], $_POST['remarks'], $_POST['edited_by'], $sSQLDate, $nGenePanelID, $sGeneID);
-            $q = $_DB->query($sSQL, $aSQL, true, true);
-            // Get the data from the existing record in the revision table so as we can compare it against the changes.
-            $aDataOld = $_DB->query('SELECT * FROM ' . TABLE_GP2GENE_REV . ' WHERE genepanelid = ? and geneid = ? ORDER BY valid_to DESC LIMIT 1', array($nGenePanelID, $sGeneID))->fetchAssoc();
-            if (!$q) {
-                lovd_writeLog('Error', LOG_EVENT, 'Gene entry ' . $sGeneID . ' in gene panel #' . $nGenePanelID . ' could not be edited');
-                lovd_errorAdd('error', 'The selected gene could not be edited. Please contact your database administrator.');
-            }
-            // Update the record with the newest date which should  be 9999-12-31.
-            $sSQLExistingRev = 'UPDATE ' . TABLE_GP2GENE_REV . ' SET valid_to = ? WHERE genepanelid = ? and geneid = ? ORDER BY valid_to DESC LIMIT 1';
-            $aSQLExistingRev = array($sSQLDate, $nGenePanelID, $sGeneID);
-            $qu = $_DB->query($sSQLExistingRev, $aSQLExistingRev, true, true);
-            if (!$qu) {
-                lovd_writeLog('Error', LOG_EVENT, 'Gene entry ' . $sGeneID . ' in gene panel #' . $nGenePanelID . ' could not be updated in the revision table');
-                lovd_errorAdd('error', 'The selected gene could not be edited. Please contact your database administrator.');
-            }
-            $aSQLInsertRev = array (
+            $sDateNow = date('Y-m-d H:i:s');
+            // Build up array for updateEntry();
+            $aData = array(
                 'genepanelid' => $nGenePanelID,
                 'geneid' => $sGeneID,
-                'transcriptid' => $_POST['transcriptid'],
+                'transcriptid' => (empty($_POST['transcriptid'])? NULL : $_POST['transcriptid']),
                 'inheritance' => $_POST['inheritance'],
                 'pmid' => $_POST['pmid'],
                 'remarks' => $_POST['remarks'],
-                'created_by' => $zData['created_by'],
-                'created_date' => $zData['created_date'],
-                'edited_by' => $_POST['edited_by'],
-                'edited_date' => $sSQLDate,
-                'valid_from' => $sSQLDate,
+                'edited_by' => $_AUTH['id'],
+                'edited_date' => $sDateNow,
             );
-            // Find the differences between the old and new records.
-            $aDiff = array_diff_assoc($aSQLInsertRev, $aDataOld);
-            // Remove the columns we are not interested in.
-            unset($aDiff['edited_by'], $aDiff['edited_date'], $aDiff['reason'], $aDiff['valid_to'], $aDiff['valid_from'], $aSQL['deleted'], $aSQL['deleted_by']);
-            $sReason = (empty($aData['reason'])?'Record modified' . "\r\n":'Record modified: ' . $aData['reason'] . "\r\n");
-            // Have we detected any differences?
-            if (count($aDiff)){
-                // If we have passed a reason then use this as the first line otherwise just say the record was modified
-                // Loop through each of these differences and create a reason string
-                foreach ($aDiff as $sKey => $sValue) {
-                    $sReason .= $sKey . ': "' . $aDataOld[$sKey] . '" => "' . $sValue . '"' . "\r\n";
-                }
-            } else {
-                $sReason .= '-';
-            }
-            $aSQLInsertRev['reason'] = $sReason;
 
-            $sSQLInsertRev = 'INSERT INTO ' . TABLE_GP2GENE_REV . ' (' . implode(', ', array_keys($aSQLInsertRev)) . ') VALUES (?' . str_repeat(', ?', count($aSQLInsertRev) - 1) . ')';
-            $qi = $_DB->query($sSQLInsertRev, array_values($aSQLInsertRev), true, true);
-            if (!$qi) {
-                lovd_writeLog('Error', LOG_EVENT, 'Gene entry ' . $sGeneID . ' in gene panel #' . $nGenePanelID . ' could not be added to the revision table');
-                lovd_errorAdd('error', 'The selected gene could not be edited. Please contact your database administrator.');
-            }
+            $_DATA->updateEntry(array('genepanelid' => $nGenePanelID, 'geneid' => $sGeneID), $aData, array_keys($aData));
 
-            if (lovd_error()) {
-                // We have failed to edit this gene so throw an error message.
-                $_DB->rollBack();
-            } else {
-                // All looks OK so lets commit these changes to the DB.
-                $_DB->commit();
-                header('Refresh: 3; url=' . lovd_getInstallURL() . CURRENT_PATH);
+            lovd_writeLog('Event', LOG_EVENT, 'Edited gene entry ' . $sGeneID . ' in gene panel #' . $nGenePanelID);
 
-                $_T->printHeader();
-                $_T->printTitle();
-                lovd_showInfoTable('Successfully edited the gene entry!', 'success');
+            header('Refresh: 3; url=' . lovd_getInstallURL() . CURRENT_PATH);
 
-                $_T->printFooter();
-                exit;
-            }
+            $_T->printHeader();
+            $_T->printTitle();
+            lovd_showInfoTable('Successfully edited the gene entry!', 'success');
+
+            $_T->printFooter();
+            exit;
         }
     } else {
         // Load current values.
@@ -985,42 +939,19 @@ if (PATH_COUNT == 3 && preg_match('/^[a-z][a-z0-9#@-]+$/i', rawurldecode($_PE[2]
 
         if (!lovd_error()) {
             // Delete the gene.
-            $_DB->beginTransaction();
+            $_DATA = new LOVD_GenePanelGene();
+            $_DATA->deleteEntry(array('genepanelid' => $nGenePanelID, 'geneid' => $sGeneID), $_POST['reason']);
 
-            $q = $_DB->query('DELETE FROM ' . TABLE_GP2GENE . ' WHERE genepanelid = ? AND geneid = ?', array($nGenePanelID, $sGeneID), false);
-            if (!$q) {
-                // We have failed to delete this gene so throw an error message
-                lovd_writeLog('Error', LOG_EVENT, 'Gene entry ' . $sGeneID . ' in gene panel #' . $nGenePanelID . ' could not be removed');
-                unset($_POST['password']);
-                lovd_errorAdd('error', 'The selected gene could not be removed from this list. Please contact your database administrator.');
-            }
-            $sReason = 'Record deleted: ' . ($_POST['reason']? $_POST['reason'] : '-');
-            $sSQLExistingRev = 'UPDATE ' . TABLE_GP2GENE_REV . ' SET valid_to = ?, deleted = 1, deleted_by = ?, reason = CONCAT(reason,"\r\n", ?) WHERE genepanelid = ? and geneid = ? ORDER BY valid_to DESC LIMIT 1';
-            $aSQLExistingRev = array(date('Y-m-d H:i:s'), $_AUTH['id'], $sReason, $nGenePanelID, $sGeneID);
-            $qu = $_DB->query($sSQLExistingRev, $aSQLExistingRev, true, true);
-            if (!$qu) {
-                // We have failed to update this gene in the revision table so throw an error message
-                lovd_writeLog('Error', LOG_EVENT, 'Gene entry ' . $sGeneID . ' in gene panel #' . $nGenePanelID . ' could not be updated in the revision table');
-                unset($_POST['password']);
-                lovd_errorAdd('error', 'The selected gene could not be updated in the revision table. Please contact your database administrator.');
-            }
-            if (lovd_error()) {
-                // We have failed to delete this gene so roll back the committ
-                $_DB->rollBack();
-            } else {
-                $_DB->commit();
-                lovd_writeLog('Event', LOG_EVENT, 'Deleted gene entry ' . $sGeneID . ' from gene panel #' . $nGenePanelID);
+            lovd_writeLog('Event', LOG_EVENT, 'Deleted gene entry ' . $sGeneID . ' from gene panel #' . $nGenePanelID);
 
-                // Thank the user...
-                header('Refresh: 3; url=' . lovd_getInstallURL() . $_PE[0] . '/' . $_PE[1]);
+            // Thank the user...
+            header('Refresh: 3; url=' . lovd_getInstallURL() . $_PE[0] . '/' . $_PE[1]);
 
-                $_T->printHeader();
-                $_T->printTitle();
-                lovd_showInfoTable('Successfully remove the gene from this gene panel!', 'success');
-                $_T->printFooter();
-                exit;
-            }
-
+            $_T->printHeader();
+            $_T->printTitle();
+            lovd_showInfoTable('Successfully remove the gene from this gene panel!', 'success');
+            $_T->printFooter();
+            exit;
         } else {
             // Because we're sending the data back to the form, I need to unset the password fields!
             unset($_POST['password']);
@@ -1072,9 +1003,10 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && ACTION == 'history') {
     $_T->printHeader();
     $_T->printTitle();
 
-
-
-
+    require ROOT_PATH . 'class/object_gene_panel_genes.rev.php';
+    $_DATA = new LOVD_GenePanelGeneREV();
+    $_GET['search_genepanelid'] = $nID;
+    $_DATA->viewList('GenePanelGeneREV');
 
     $_T->printFooter();
     exit;

@@ -46,7 +46,8 @@ $aNeededLevel =
                 'Disease' => 0,
                 'Gene' => 0,
                 'Gene_Panel' => LEVEL_SUBMITTER,
-                'Gene_Statistic' => LEVEL_SUBMITTER,
+                'Gene_Panel_Gene_REV' => LEVEL_MANAGER,
+                'Gene_Statistic' => LEVEL_MANAGER,
                 'Genome_Variant' => 0,
                 'Individual' => 0,
                 'IndividualMOD' => 0,
@@ -121,6 +122,7 @@ if (FORMAT == 'text/plain' && !defined('FORMAT_ALLOW_TEXTPLAIN')) {
 }
 
 $sFile = ROOT_PATH . 'class/object_' . strtolower($_GET['object']) . 's.php';
+$sFile = str_replace('_revs.php', 's.rev.php', $sFile);
 // FOR DIAGNOSIS
 if ($_GET['object'] == 'Custom_ViewListMOD' && $_GET['object_id'] == 'AnalysisRunResults,VariantOnGenome,VariantOnTranscript') {
     $sFile = '../class/object_custom_viewlists.mod.php';
