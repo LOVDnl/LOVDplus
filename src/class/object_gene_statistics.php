@@ -40,7 +40,7 @@ require_once ROOT_PATH . 'class/objects.php';
 
 
 class LOVD_GeneStatistic extends LOVD_Object {
-    // This class extends the basic Object class and it handles the Link object.
+    // This class extends the basic Object class and it handles the GeneStatistic object.
     var $sObject = 'Gene_Statistic';
 
 

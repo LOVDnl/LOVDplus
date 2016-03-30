@@ -79,14 +79,15 @@ if (PATH_COUNT == 1 && !ACTION) {
                     $aGeneSymbols[$key] = $aGenesInLOVD[$sGeneSymbol];
                     $aCorrectGeneSymbols[] = $aGenesInLOVD[$sGeneSymbol];
                 } else {
-                    // This gene symbol was not found in the database
+                    // This gene symbol was not found in the database.
+                    // It got uppercased by us, but we assume that will be OK.
                     $aBadGeneSymbols[] = $sGeneSymbol;
                 }
             }
             // Create a table of any bad gene symbols and try to work out if there is a correct gene symbol available.
             if ($aBadGeneSymbols) {
                 $sBadGenesHTML .= '    <H3>Genes not found!</H3>' . "\n" .
-                                  '    These genes were not found, please review them and correct your gene list before proceeding' . "\n" .
+                                  '    These genes were not found, please review them and correct your gene list before proceeding.' . "\n" .
                                   '    <TABLE  border="0" cellpadding="0" cellspacing="1" class="data">' . "\n" .
                                   '      <TR>' . "\n" .
                                   '        <TH>Gene Symbol</TH>' . "\n" .
@@ -117,7 +118,7 @@ if (PATH_COUNT == 1 && !ACTION) {
             }
         }
 
-        // Mark the correct gene symbols as checked for this viewlist
+        // Mark the correct gene symbols as checked for this viewlist.
         $_SESSION['viewlists'][$sViewListID]['checked'] = $aCorrectGeneSymbols;
     }
 
@@ -149,7 +150,7 @@ if (PATH_COUNT == 1 && !ACTION) {
         }
 
         $(document).ready(function() {
-            // When loading this page check to see when to show or hide the gene entry form based on the contents of the form
+            // When loading this page check to see when to show or hide the gene entry form based on the contents of the form.
             if ($('#geneSymbols').val()) {
                 $('#genesForm').show();
                 $('#geneFormShowHide').val('show');
@@ -157,7 +158,7 @@ if (PATH_COUNT == 1 && !ACTION) {
                 $('#genesForm').hide();
                 $('#geneFormShowHide').val('hide');
             }
-            // Function to control how to show or hide the gene entry form
+            // Function to control how to show or hide the gene entry form.
             $("#searchBoxTitle").click(function() {
                 $("#genesForm").toggle('fast');
                 if ($('#geneFormShowHide').val() == 'show') {
@@ -171,22 +172,21 @@ if (PATH_COUNT == 1 && !ACTION) {
 <?php
 
     print('    <DIV id="searchBoxTitle" style="font-weight : bold; border : 1px solid #224488; cursor : pointer; text-align : center; padding : 2px 5px; font-size : 11px; width: 160px;">' . "\n" .
-          '     Search for genes' . "\n" .
-          '   </DIV>' . "\n" .
-          '   <FORM id="genesForm" method="post" style="display: none;">' .
-          '     Enter in you list of gene symbols separated by commas and press search to automatically select them. This will overwrite any previously selected genes. ' . "\n" .
-          '     Select \'Show only selected genes\' from the menu to only show the genes entered below.<BR>' . "\n" .
-          '     <INPUT type="hidden" id="geneFormShowHide" value="hide">' . "\n" .
-          '     <TEXTAREA rows="5" cols="200" name="geneSymbols" id="geneSymbols">' . htmlentities(implode(', ', $aGeneSymbols)) . '</TEXTAREA><BR>' . "\n" .
-          '     <INPUT type="submit" name="submitGenes" id="submitGenes" value=" Search ">' . "\n" .
-          '   </FORM>' . "\n");
+          '      Search for genes' . "\n" .
+          '    </DIV>' . "\n" .
+          '    <FORM id="genesForm" method="post" style="display: none;">' . "\n" .
+          '      Enter in your list of gene symbols one per line or separated by commas, semicolons or spaces, and press &quot;search&quot; to automatically select them. This will overwrite any previously selected genes.<BR>' . "\n" .
+          '      <INPUT type="hidden" id="geneFormShowHide" value="hide">' . "\n" .
+          '      <TEXTAREA rows="5" cols="200" name="geneSymbols" id="geneSymbols">' . htmlentities(implode(', ', $aGeneSymbols)) . '</TEXTAREA><BR>' . "\n" .
+          '      <INPUT type="submit" name="submitGenes" id="submitGenes" value="Search">' . "\n" .
+          '    </FORM>' . "\n");
     // Show an info box if the gene lists are limited by the search.
     if (isset($aGeneSymbols) && count($aGeneSymbols) > 0) {
-        print('    <DIV id="searchInfo">');
+        print('    <DIV id="searchInfo">' . "\n");
         lovd_showInfoTable('Genes from the search above have been selected in the list below. <A href="javascript:lovd_AJAX_viewListSubmit(\'' . $sViewListID . '\', function(){lovd_AJAX_viewListCheckedFilter(\'' . $sViewListID . '\', true);});">Click here</A> to limit the list to only those genes.');
         print('    </DIV>' . "\n");
     }
-    print('    <DIV id="searchChecked" style="display: none;">');
+    print('    <DIV id="searchChecked" style="display: none;">' . "\n");
     lovd_showInfoTable('Currently only showing selected genes below. <A href="javascript:lovd_AJAX_viewListSubmit(\'' . $sViewListID . '\', function(){lovd_AJAX_viewListCheckedFilter(\'' . $sViewListID . '\', false);});">Show all genes</A>.');
     print('    </DIV>' . "\n");
 
@@ -202,12 +202,12 @@ if (PATH_COUNT == 1 && !ACTION) {
     // Bold the row when clicked. Not sure if this is better or going to the gene info is better. It might get annoying going away from this page as you lose the work you have done.
     $_DATA->setRowLink($sViewListID, 'javascript:$(\'#{{id}}\').toggleClass(\'marked\');');
     // Allow users to download this gene statistics selected gene list.
-    print('      <UL id="viewlistMenu_' . $sViewListID . '" class="jeegoocontext jeegooviewlist">' . "\n");
-    print('        <LI class="icon"><A click="lovd_AJAX_viewListSubmit(\'' . $sViewListID . '\', function(){lovd_AJAX_viewListCheckedFilter(\'' . $sViewListID . '\', true);});"><SPAN class="icon" style="background-image: url(gfx/check.png);"></SPAN>Show only selected genes</A></LI>' . "\n");
-    print('        <LI class="icon"><A click="lovd_AJAX_viewListSubmit(\'' . $sViewListID . '\', function(){lovd_AJAX_viewListCheckedFilter(\'' . $sViewListID . '\', false);});"><SPAN class="icon" style="background-image: url(gfx/cross_disabled.png);"></SPAN>Show all genes</A></LI>' . "\n");
-    print('        <LI class="icon"><A click="lovd_AJAX_viewListSubmit(\'' . $sViewListID . '\', function(){lovd_AJAX_viewListDownload(\'' . $sViewListID . '\', false);});"><SPAN class="icon" style="background-image: url(gfx/menu_save.png);"></SPAN>Download selected genes</A></LI>' . "\n");
-    print('        <LI class="icon"><A href="' . CURRENT_PATH . '?import"><SPAN class="icon" style="background-image: url(gfx/menu_import.png);"></SPAN>Import gene statistics</A></LI>' . "\n");
-    print('      </UL>' . "\n\n");
+    print('      <UL id="viewlistMenu_' . $sViewListID . '" class="jeegoocontext jeegooviewlist">
+        <LI class="icon"><A click="lovd_AJAX_viewListSubmit(\'' . $sViewListID . '\', function(){lovd_AJAX_viewListCheckedFilter(\'' . $sViewListID . '\', true);});"><SPAN class="icon" style="background-image: url(gfx/check.png);"></SPAN>Show only selected genes</A></LI>
+        <LI class="icon"><A click="lovd_AJAX_viewListSubmit(\'' . $sViewListID . '\', function(){lovd_AJAX_viewListCheckedFilter(\'' . $sViewListID . '\', false);});"><SPAN class="icon" style="background-image: url(gfx/cross_disabled.png);"></SPAN>Show all genes</A></LI>
+        <LI class="icon"><A click="lovd_AJAX_viewListSubmit(\'' . $sViewListID . '\', function(){lovd_AJAX_viewListDownload(\'' . $sViewListID . '\', false);});"><SPAN class="icon" style="background-image: url(gfx/menu_save.png);"></SPAN>Download selected genes</A></LI>
+        <LI class="icon"><A href="' . CURRENT_PATH . '?import"><SPAN class="icon" style="background-image: url(gfx/menu_import.png);"></SPAN>Import gene statistics</A></LI>
+      </UL>' . "\n\n");
     $_DATA->viewList($sViewListID, array(), false, false, (bool) ($_AUTH['level'] >= LEVEL_SUBMITTER));
 
     $_T->printFooter();
@@ -220,7 +220,7 @@ if (PATH_COUNT == 1 && !ACTION) {
 
 if (PATH_COUNT == 1 && ACTION == 'import') {
     // URL: /gene_statistics?import
-    // Import new gene statistics
+    // Import new gene statistics.
 
     // FIXME: For later: This code is mostly duplicated from import.php.
     //  If we're somehow standardizing this feature, then integrate this into import.php.
@@ -276,7 +276,7 @@ if (PATH_COUNT == 1 && ACTION == 'import') {
                 } else {
                     $iGeneFileCount = count($aData);
 
-                    // Check each of the headers to make sure that the columns appear within the database, create error msg of missing columns
+                    // Check each of the headers to make sure that the columns appear within the database, create error message of missing columns.
                     $aFileColumnNames = explode("\t", $aData[0]);
                     $aTableColumnNames = lovd_getColumnList(TABLE_GENE_STATISTICS);
                     $aSQLColumns = array();
@@ -394,7 +394,7 @@ if (PATH_COUNT == 1 && ACTION == 'import') {
 define('PAGE_TITLE', 'View gene statistics');
 $_T->printHeader();
 $_T->printTitle();
-print ('Incorrect use of the gene statistics page, please <A href="' . $_PE[0] . '">click here</A> to view all the gene statistics.<BR><BR><BR><BR>');
+print('Incorrect use of the gene statistics page, please <A href="' . $_PE[0] . '">click here</A> to view all the gene statistics.<BR><BR>' . "\n");
 $_T->printFooter();
 exit;
 ?>
