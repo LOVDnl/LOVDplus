@@ -66,10 +66,11 @@ class LOVD_GenePanelGene extends LOVD_Object {
         'LEFT OUTER JOIN ' . TABLE_TRANSCRIPTS . ' AS t ON (gp2g.transcriptid = t.id)';
 
         // SQL code for viewing the list of gene panel genes
-        $this->aSQLViewList['SELECT']   = 'gp2g.*, gp2g.geneid AS id, uc.name AS created_by_, t.id_ncbi AS transcript_ncbi ';
+        $this->aSQLViewList['SELECT']   = 'gp2g.*, gp2g.geneid AS id, uc.name AS created_by_, t.id_ncbi AS transcript_ncbi, g.id_omim ';
         $this->aSQLViewList['FROM']     = TABLE_GP2GENE . ' AS gp2g ' .
         'LEFT OUTER JOIN ' . TABLE_USERS . ' AS uc ON (gp2g.created_by = uc.id) ' .
-        'LEFT OUTER JOIN ' . TABLE_TRANSCRIPTS . ' AS t ON (gp2g.transcriptid = t.id)';
+        'LEFT OUTER JOIN ' . TABLE_TRANSCRIPTS . ' AS t ON (gp2g.transcriptid = t.id) ' .
+        'LEFT OUTER JOIN ' . TABLE_GENES . ' AS g ON (gp2g.geneid = g.id)';
 
         // List of columns and (default?) order for viewing an entry.
         $this->aColumnsViewEntry =
@@ -113,6 +114,10 @@ class LOVD_GenePanelGene extends LOVD_Object {
                     'view' => array('PubMed', 60),
                     'db'   => array('gp2g.pmid', 'ASC', false),
                     'legend' => array('PubMed ID.')),
+                'id_omim' => array(
+                    'view' => array('OMIM', 60),
+                    'db'   => array('g.id_omim', 'ASC', false),
+                    'legend' => array('OMIM ID.')),
                 'created_by_' => array(
                     'view' => array('Added By', 110),
                     'db'   => array('uc.name', 'DESC', true),
@@ -229,7 +234,11 @@ class LOVD_GenePanelGene extends LOVD_Object {
         if (FORMAT == 'text/html') {
             // Format the pubmed URL.
             if ($zData['pmid']) {
-                $zData['pmid'] = '<SPAN' . ($sView != 'list' ? '' : ' onclick="cancelParentEvent(event);"') . '><A href="' . lovd_getExternalSource('pubmed_article', $zData['pmid'], true) . '" target="_blank">PubMed</A></SPAN>';
+                $zData['pmid'] = '<SPAN' . ($sView != 'list' ? '' : ' onclick="cancelParentEvent(event);"') . '><A href="' . lovd_getExternalSource('pubmed_article', $zData['pmid'], true) . '" target="_blank">' . $zData['pmid'] . '</A></SPAN>';
+            }
+            // Format the OMIM URL.
+            if ($zData['id_omim']) {
+                $zData['id_omim'] = '<SPAN' . ($sView != 'list' ? '' : ' onclick="cancelParentEvent(event);"') . '><A href="' . lovd_getExternalSource('omim', $zData['id_omim'], true) . '" target="_blank">' . $zData['id_omim'] . '</A></SPAN>';
             }
             // Create a link to a transcript.
             $zData['transcript_ncbi_'] = '';
