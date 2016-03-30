@@ -4,7 +4,7 @@
  * LEIDEN OPEN VARIATION DATABASE (LOVD)
  *
  * Created     : 2009-10-21
- * Modified    : 2016-03-21
+ * Modified    : 2016-03-30
  * For LOVD    : 3.0-15
  *
  * Copyright   : 2004-2016 Leiden University Medical Center; http://www.LUMC.nl/
@@ -891,7 +891,7 @@ class LOVD_Object {
         }
 
         // Because a ViewEntry query often contains many tables, find out the table's alias, if used.
-        if (preg_match('/' . constant($this->sTable) . ' AS ([a-z0-9]+)( .+)?$/', $this->aSQLViewEntry['FROM'], $aRegs)) {
+        if (preg_match('/' . constant($this->sTable) . ' AS ([a-z0-9]+)\b/', $this->aSQLViewEntry['FROM'], $aRegs)) {
             // An alias was defined. Use it.
             $sTableAlias = $aRegs[1];
         } else {
