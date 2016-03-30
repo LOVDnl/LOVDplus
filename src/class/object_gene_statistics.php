@@ -50,6 +50,7 @@ class LOVD_GeneStatistic extends LOVD_Object {
     function __construct ()
     {
         // Default constructor.
+        global $_DB;
 
         // SQL code for viewing the list of genes
         $this->aSQLViewList['SELECT']   = 'g.name, gs.*, g.id, (CASE gs.vep_annotation WHEN 1 THEN "Yes" ELSE "No" END) AS vepyesno, ' .
@@ -60,9 +61,8 @@ class LOVD_GeneStatistic extends LOVD_Object {
         $this->aSQLViewList['GROUP_BY'] = 'g.id';
         // If we detect that the user wants to only show the checked genes and there are genes stored in the session variable then lets add them to the where clause here.
         if (isset($_GET['viewlistid']) && isset($_GET['filterChecked']) && $_GET['filterChecked'] == 'true') {
-            // FIXME: This is actually a security issue, putting strings directly into the SQL that we received from the user...
-            //  Since we can't access the array with SQL arguments from here, we'll need to sanitize these values before they get sent into the SQL.
-            $this->aSQLViewList['WHERE']     = 'g.id IN ("' . implode('","', $_SESSION['viewlists'][$_GET['viewlistid']]['checked']) . '")';
+            // Run the PDO:quote function over all the gene IDs to sanitize them
+            $this->aSQLViewList['WHERE']     = 'g.id IN (' . implode(',', array_map(array($_DB, 'quote'),$_SESSION['viewlists'][$_GET['viewlistid']]['checked'])) . ')';
         }
 
 
