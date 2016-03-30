@@ -143,9 +143,9 @@ if (PATH_COUNT == 1 && !ACTION) {
                 $('#searchInfo').show();
             }
             // Set the page number to 1.
-                document.forms['viewlistForm_' + ViewListID].page.value=1;
+            document.forms['viewlistForm_' + ViewListID].page.value=1;
             // Refresh the viewlist so as it can apply the checked filter.
-            setTimeout('lovd_AJAX_viewListSubmit(\'' + ViewListID + '\')', 0);
+            lovd_AJAX_viewListSubmit(ViewListID);
         }
 
         $(document).ready(function() {
