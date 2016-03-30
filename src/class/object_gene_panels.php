@@ -76,10 +76,12 @@ class LOVD_GenePanel extends LOVD_Object {
         // SQL code for viewing the list of gene panels
         $this->aSQLViewList['SELECT']   = 'gp.*, ' .
                                           'GROUP_CONCAT(DISTINCT IF(CASE d.symbol WHEN "-" THEN "" ELSE d.symbol END = "", d.name, d.symbol) ORDER BY (d.symbol != "" AND d.symbol != "-") DESC, d.symbol, d.name SEPARATOR ", ") AS diseases_, ' .
+                                          'uc.name AS created_by_,' .
                                           'COUNT(DISTINCT gp2g.geneid) AS genes';
         $this->aSQLViewList['FROM']     = TABLE_GENE_PANELS . ' AS gp ' .
                                           'LEFT OUTER JOIN ' . TABLE_GP2DIS . ' AS gp2d ON (gp.id = gp2d.genepanelid) ' .
                                           'LEFT OUTER JOIN ' . TABLE_GP2GENE . ' AS gp2g ON (gp.id = gp2g.genepanelid) ' .
+                                          'LEFT OUTER JOIN ' . TABLE_USERS . ' AS uc ON (gp.created_by = uc.id) ' .
                                           'LEFT OUTER JOIN ' . TABLE_DISEASES . ' AS d ON (gp2d.diseaseid = d.id)';
         $this->aSQLViewList['GROUP_BY'] = 'gp.id';
 
@@ -90,8 +92,6 @@ class LOVD_GenePanel extends LOVD_Object {
                 'description' => 'Description',
                 'remarks' => 'Remarks',
                 'type_' => 'Type',
-                'cohort' => 'Cohort',
-                'phenotype_group' => 'Phenotype group',
                 'pmid_mandatory_' => 'PMID Mandatory',
                 'diseases_' => 'Associated with diseases',
                 'created_by_' => 'Created by',
@@ -118,18 +118,14 @@ class LOVD_GenePanel extends LOVD_Object {
                     'view' => array('Type', 60),
                     'db'   => array('gp.type', 'ASC', true),
                     'legend' => array('The gene panel type of Gene Panel, Blacklist or Mendeliome','The gene panel type:<ul><li>Gene Panel - A panel of genes that will include variants during filtering</li><li>Blacklist - A panel of genes that will exclude variants during filtering</li><li>Mendeliome - A panel of genes with known disease causing variants</li></ul>')),
-                'cohort' => array(
-                    'view' => array('Cohort', 50),
-                    'db'   => array('gp.cohort', 'ASC', true),
-                    'legend' => array('The cohort the gene panel belongs to.')),
-                'phenotype_group' => array(
-                    'view' => array('Phenotype Group', 50),
-                    'db'   => array('gp.phenotype_group', 'ASC', true),
-                    'legend' => array('The phenotype group this gene panel belongs to. These groups are combined to calculate observation counts.')),
                 'genes' => array(
                     'view' => array('Genes', 60),
                     'db'   => array('genes', 'DESC', 'INT_UNSIGNED'),
                     'legend' => array('The number of genes in this gene panel.')),
+                'created_by_' => array(
+                    'view' => array('Created By', 80),
+                    'db'   => array('created_by_', 'ASC', true),
+                    'legend' => array('The user who created this gene panel.')),
                 'diseases_' => array(
                     'view' => array('Associated with diseases', 150),
                     'db'   => array('diseases_', false, 'TEXT'),
@@ -202,8 +198,6 @@ class LOVD_GenePanel extends LOVD_Object {
                 array('Description', '', 'text', 'description', 50),
 'gene_panel_type' => array('Type', 'Please note:<BR>Gene Panel - Genes will be included when filtering<BR>Blacklist - Genes will be excluded when filtering<BR>Mendeliome - All genes from all gene panels', 'select', 'type', 1, $aSelectType, '', false, false),
                 array('Remarks (optional)', '', 'textarea', 'remarks', 50, 3),
-                array('Cohort (optional)', '', 'text', 'cohort', 30),
-                array('Phenotype group (optional)', '', 'text', 'phenotype_group', 30),
 'pmid_mandatory' => array('Are PMIDs mandatory?', 'If set, this requires every gene added to this gene panel to have a supporting PubMed ID filled in.', 'checkbox', 'pmid_mandatory', 1),
                 'hr','skip',
                 array('', '', 'print', '<B>Relation to diseases (optional)</B>'),

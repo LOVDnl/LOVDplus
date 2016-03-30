@@ -141,7 +141,7 @@ if (PATH_COUNT == 1 && ACTION == 'create') {
 
         if (!lovd_error()) {
             // Fields to be used.
-            $aFields = array('name', 'description', 'type', 'remarks', 'cohort', 'phenotype_group', 'created_by', 'created_date');
+            $aFields = array('name', 'description', 'type', 'remarks', 'created_by', 'created_date');
 
             // If we are a manager then we can update the PMID mandatory field
             if ($_AUTH['level'] >= LEVEL_MANAGER) {
@@ -248,7 +248,7 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && ACTION == 'edit') {
         $_DATA->checkFields($_POST, $zData);
         if (!lovd_error()) {
             // Fields to be used.
-            $aFields = array('name', 'description', 'remarks', 'cohort', 'phenotype_group', 'edited_by', 'edited_date');
+            $aFields = array('name', 'description', 'remarks', 'edited_by', 'edited_date');
 
             // If we are a manager then we can update the PMID mandatory field.
             if ($_AUTH['level'] >= LEVEL_MANAGER) {
