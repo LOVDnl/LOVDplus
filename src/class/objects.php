@@ -4,7 +4,7 @@
  * LEIDEN OPEN VARIATION DATABASE (LOVD)
  *
  * Created     : 2009-10-21
- * Modified    : 2016-03-30
+ * Modified    : 2016-03-31
  * For LOVD    : 3.0-15
  *
  * Copyright   : 2004-2016 Leiden University Medical Center; http://www.LUMC.nl/
@@ -1027,7 +1027,7 @@ class LOVD_Object {
                     // Column type of an alias is given by LOVD.
                     $sColType = $aCol['db'][2];
                 } else {
-                    if (preg_match('/^[a-z0-9]{1,3}\.[a-z_]+$/i', $aCol['db'][0])) {
+                    if (preg_match('/^[a-z0-9]+\.[a-z_]+$/i', $aCol['db'][0])) {
                         list($sAlias, $sColName) = explode('.', $aCol['db'][0]);
                         if (preg_match('/(' . TABLEPREFIX . '_[a-z0-9_]+) AS ' . $sAlias . '\b/', $this->aSQLViewList['FROM'], $aMatches)) {
                             $sTable = $aMatches[1];

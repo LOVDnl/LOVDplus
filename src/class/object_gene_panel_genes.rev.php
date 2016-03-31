@@ -127,10 +127,6 @@ class LOVD_GenePanelGeneREV extends LOVD_GenePanelGene {
                     'view' => array('Deleted by', 110),
                     'db'   => array('ud.name', 'ASC', true),
                     'legend' => array('The user that deleted this gene from this gene panel.')),
-
-
-
-
             );
         $this->sSortDefault = 'geneid';
         // And, since SortDefault can handle only one column:
