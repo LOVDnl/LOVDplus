@@ -376,12 +376,13 @@ if (PATH_COUNT == 4 && ctype_digit($_PE[1]) && $_PE[2] == 'analyze' && ctype_dig
     $nScreeningID = sprintf('%010d', $_PE[3]);
     define('PAGE_TITLE', 'Close analysis #' . $nScreeningID . ' of individual #' . $nIndividualID);
     define('LOG_EVENT', 'AnalysisClose');
-    $_T->printHeader();
-    $_T->printTitle();
 
-    // Load appropiate user level.
-    lovd_isAuthorized('screening_analysis', $nScreeningID); // Not actually needed, when we require manager anyway.
-    lovd_requireAUTH(LEVEL_MANAGER); // Minimal level needed.
+    // If all is well, we have no output, and we redirect the user back.
+    // Only in case of an error, we create some output here.
+
+    // Load appropriate user level.
+    lovd_isAuthorized('screening_analysis', $nScreeningID);
+    lovd_requireAUTH(LEVEL_ANALYZER); // Minimal level needed.
 
 
 
@@ -398,10 +399,14 @@ if (PATH_COUNT == 4 && ctype_digit($_PE[1]) && $_PE[2] == 'analyze' && ctype_dig
 
 
     if ($zData['analysis_statusid'] < ANALYSIS_STATUS_IN_PROGRESS) {
+        $_T->printHeader();
+        $_T->printTitle();
         lovd_showInfoTable('Analysis has not started yet, can not close analysis!', 'stop');
         $_T->printFooter();
         exit;
     } elseif ($zData['analysis_statusid'] >= ANALYSIS_STATUS_CONFIRMED) {
+        $_T->printHeader();
+        $_T->printTitle();
         lovd_showInfoTable('Analysis has already fully been closed.', 'stop');
         $_T->printFooter();
         exit;
@@ -419,44 +424,35 @@ if (PATH_COUNT == 4 && ctype_digit($_PE[1]) && $_PE[2] == 'analyze' && ctype_dig
             // Analysis was awaiting confirmation, and will now be set to confirmed.
             // This requires Admin access.
             lovd_requireAUTH(LEVEL_ADMIN);
+        } elseif ($zData['analysis_statusid'] >= ANALYSIS_STATUS_CLOSED) {
+            // Analysis was closed (or higher), and will now be set to awaiting confirmation (or higher).
+            // This requires Manager access.
+            lovd_requireAUTH(LEVEL_MANAGER);
         }
 
         // All good, let's process the closure.
         // The next few queries should all be run, or non should be run.
         $_DB->beginTransaction();
         if ($_DB->query('UPDATE ' . TABLE_SCREENINGS . ' SET analysis_statusid = ?, analysis_approved_by = ?, analysis_approved_date = NOW() WHERE id = ?',
-            array($nNextStatus, $_AUTH['id']))) {
+            array($nNextStatus, $_AUTH['id'], $nScreeningID))) {
             $bLog = lovd_writeLog('Event', LOG_EVENT, 'Successfully set analysis status to "' . $_SETT['analysis_status'][$nNextStatus] . '" for individual ' . $nIndividualID . ':' . $nScreeningID);
             if ($bLog) {
                 $_DB->commit();
+
+                // All good, we send the user back.
+                header('Location: ' . lovd_getInstallURL() . CURRENT_PATH);
+                exit;
             }
         }
-    }
-/////////////////////////////////////////////////////////////////////////////////////////////
-
-/*
-    ANALYSIS_STATUS_WAIT => 'Waiting for data upload',
-    ANALYSIS_STATUS_READY => 'Ready for analysis',
-    ANALYSIS_STATUS_IN_PROGRESS => 'In progress',
-    ANALYSIS_STATUS_CLOSED => 'Closed',
-    ANALYSIS_STATUS_WAIT_CONFIRMATION => 'Awaiting confirmation',
-    ANALYSIS_STATUS_CONFIRMED => 'Confirmed',
-    ANALYSIS_STATUS_ARCHIVED => 'Archived',
-*/
-
-/////////////////////////////////////////////////////////////////////////////////////////////
-    print('      <BR><BR>' . "\n\n");
-
-    lovd_includeJS('inc-js-tooltip.php');
-
-    // Show info table about data analysis.
-    if (!$zData['variants']) {
-        // Can't start.
-        lovd_showInfoTable('Can\'t start analysis, still waiting for variant data to be uploaded.', 'stop', 600);
-        $_T->printFooter();
-        exit;
+        $_DB->rollBack();
     }
 
+
+
+    // If we get here, there's been an issue...
+    $_T->printHeader();
+    $_T->printTitle();
+    lovd_showInfoTable('Failed to close analysis.', 'stop', 600);
     $_T->printFooter();
     exit;
 }
