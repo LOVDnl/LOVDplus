@@ -164,6 +164,12 @@ class LOVD_ScreeningMOD extends LOVD_Screening {
         unset($this->aColumnsViewList['Screening/Father/Reads_on_target/Fraction']);
         unset($this->aColumnsViewList['Screening/Mother/Reads_on_target/Fraction']);
         unset($this->aColumnsViewList['Screening/Analysis_restricted']);
+        unset($this->aColumnsViewList['Screening/Trio_check/De_novo']);
+        unset($this->aColumnsViewList['Screening/Trio_check/Mendelian']);
+        unset($this->aColumnsViewList['analysis_by_']);
+        unset($this->aColumnsViewList['analysis_date_']);
+        unset($this->aColumnsViewList['analysis_approved_by_']);
+        unset($this->aColumnsViewList['analysis_approved_date_']);
 
         // Also make sure the custom cols are not searchable, if they're visible.
         // (we need the invisible individualid column to be searchable)
