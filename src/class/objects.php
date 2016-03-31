@@ -1283,7 +1283,7 @@ class LOVD_Object {
             // 1) If we don't have a count in memory, request count separately, using SQL_CALC_FOUND_ROWS, since it handles all complex queries.
             // Also if last count was >30min ago, request again.
             $bTrueCount = false; // Indicates whether or not we are sure about the number of results.
-            $sFilterMD5 = md5($WHERE . '||' . $HAVING . '||' . implode('|', $aArgs)); // A signature for the filters, NOTE that this depends on the column order!
+            $sFilterMD5 = md5($this->aSQLViewList['WHERE'] . '||' . $this->aSQLViewList['HAVING'] . '||' . implode('|', $aArgs)); // A signature for the filters, NOTE that this depends on the column order!
             if (!isset($aSessionViewList['counts'][$sFilterMD5]['n'])) {
                 $t = microtime(true);
                 if ($_INI['database']['driver'] == 'mysql') {
@@ -1479,7 +1479,7 @@ class LOVD_Object {
                         if (empty($aCol['legend'][1])) {
                             $aCol['legend'][1] = $aCol['legend'][0];
                         }
-                        print('        <B>' . $aCol['view'][0] . '</B>: ' . $aCol['legend'][1]);
+                        print('        <B>' . strip_tags($aCol['view'][0]) . '</B>: ' . $aCol['legend'][1]);
                         if (substr($aCol['legend'][1], -5) == '</UL>') {
                             // No additional breaks, no possible listing of selection options. Column has its own UL already.
                             print("\n\n");
@@ -1535,7 +1535,7 @@ class LOVD_Object {
                             (!$bSearchable? '' :
                                  "\n" .
                                  // SetTimeOut() is necessary because if the function gets executed right away, selecting a previously used value from a *browser-generated* list in one of the fields, gets aborted and it just sends whatever is typed in at that moment.
-                                 '            <INPUT type="text" name="search_' . $sField . '" value="' . (!isset($_GET['search_' . $sField])? '' : htmlspecialchars($_GET['search_' . $sField])) . '" title="' . $aCol['view'][0] . ' field should contain...' . (!empty($_GET['search_' . $sField])? "\nCurrent search:\n\n" . htmlspecialchars(lovd_formatSearchExpression($_GET['search_' . $sField], $aColTypes[$sField])) : '') .'" style="width : ' . ($aCol['view'][1] - 6) . 'px; font-weight : normal;" onkeydown="if (event.keyCode == 13) { if (document.forms[\'viewlistForm_' . $sViewListID . '\'].page) { document.forms[\'viewlistForm_' . $sViewListID . '\'].page.value=1; } setTimeout(\'lovd_AJAX_viewListSubmit(\\\'' . $sViewListID . '\\\')\', 0); }">') .
+                                 '            <INPUT type="text" name="search_' . $sField . '" value="' . (!isset($_GET['search_' . $sField])? '' : htmlspecialchars($_GET['search_' . $sField])) . '" title="' . strip_tags($aCol['view'][0]) . ' field should contain...' . (!empty($_GET['search_' . $sField])? "\nCurrent search:\n\n" . htmlspecialchars(lovd_formatSearchExpression($_GET['search_' . $sField], $aColTypes[$sField])) : '') .'" style="width : ' . ($aCol['view'][1] - 6) . 'px; font-weight : normal;" onkeydown="if (event.keyCode == 13) { if (document.forms[\'viewlistForm_' . $sViewListID . '\'].page) { document.forms[\'viewlistForm_' . $sViewListID . '\'].page.value=1; } setTimeout(\'lovd_AJAX_viewListSubmit(\\\'' . $sViewListID . '\\\')\', 0); }">') .
                           '</TH>');
                 }
                 print('</TR></THEAD>');
@@ -1549,7 +1549,7 @@ class LOVD_Object {
             header('Pragma: public');
             print('### LOVD-version ' . lovd_calculateVersion($_SETT['system']['version']) . ' ### ' . $sObject . ' Quick Download format ### This file can not be imported ###' . "\r\n");
             // FIXME: this has to be done better, we can't see what we're filtering for, because it's in the arguments!
-            $sFilter = $WHERE . ($WHERE && $HAVING? ' AND ' : '') . $HAVING;
+            $sFilter = $this->aSQLViewList['WHERE'] . ($this->aSQLViewList['WHERE'] && $this->aSQLViewList['HAVING']? ' AND ' : '') . $this->aSQLViewList['HAVING'];
             $aArgs = array_merge($aArguments['WHERE'], $aArguments['HAVING']);
             if ($sFilter) {
                 if (count($aArgs) == substr_count($sFilter, '?')) {

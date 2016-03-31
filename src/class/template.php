@@ -87,6 +87,7 @@ class LOVD_Template {
                              '/gene_panels?create' => array('plus.png', 'Create a new gene panel', LEVEL_SUBMITTER),
                              'hr',
                              '' => array('menu_magnifying_glass.png', 'View all genes', 0),
+                             '/gene_statistics' => array('menu_magnifying_glass.png', 'View all gene statistics', 0),
                              '/genes/' . $_SESSION['currdb'] => array('menu_magnifying_glass.png', 'View the ' . $_SESSION['currdb'] . ' gene homepage', 0),
                              '/genes/' . $_SESSION['currdb'] . '/graphs' => array('menu_graphs.png', 'View graphs about the ' . $_SESSION['currdb'] . ' gene database', 0),
                              'create' => array('plus.png', 'Create a new gene entry', LEVEL_MANAGER),
