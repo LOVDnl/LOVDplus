@@ -935,6 +935,18 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && ACTION == 'edit_panels') {
     lovd_includeJS('inc-js-tooltip.php');
     lovd_includeJS('inc-js-custom_links.php');
 
+    // Get list of gene panels.
+    $aGenePanelsForm = $_DB->query('SELECT id, name FROM ' . TABLE_GENE_PANELS . ' ORDER BY name ASC')->fetchAllCombine();
+    $nGenePanels = count($aGenePanelsForm);
+    foreach ($aGenePanelsForm as $nID => $sGenePanel) {
+        $aGenePanelsForm[$nID] = lovd_shortenString($sGenePanel, 75);
+    }
+    $nGPFieldSize = ($nGenePanels < 10? $nGenePanels : 10);
+    if (!$nGenePanels) {
+        $aGenePanelsForm = array('' => 'No disease entries available');
+        $nGPFieldSize = 1;
+    }
+
     // This gives the user one chance to add in the correct details and then posts to the normal edit screen.
     print('      <FORM action="' . CURRENT_PATH . '?edit" method="post">' . "\n");
     // Array which will make up the form table.
@@ -942,6 +954,7 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && ACTION == 'edit_panels') {
         array(
             array('POST', '', '', '', '50%', '14', '50%'),
             array('Custom gene panel', '', 'textarea', 'custom_panel', 50, 2),
+            array('Assigned gene panels', '', 'select', 'gene_panels', $nGPFieldSize, $aGenePanelsForm, false, true, false),
             array('Enter your password for authorization', '', 'password', 'password', 20),
             array('', '', 'print', '<INPUT type="submit" value="Edit gene panels">'),
         );

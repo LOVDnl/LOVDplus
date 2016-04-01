@@ -315,6 +315,18 @@ class LOVD_Individual extends LOVD_Custom {
             $nFieldSize = 1;
         }
 
+        // Get list of gene panels.
+        $aGenePanelsForm = $_DB->query('SELECT id, name FROM ' . TABLE_GENE_PANELS . ' ORDER BY name ASC')->fetchAllCombine();
+        $nGenePanels = count($aGenePanelsForm);
+        foreach ($aGenePanelsForm as $nID => $sGenePanel) {
+            $aGenePanelsForm[$nID] = lovd_shortenString($sGenePanel, 75);
+        }
+        $nGPFieldSize = ($nGenePanels < 10? $nGenePanels : 10);
+        if (!$nGenePanels) {
+            $aGenePanelsForm = array('' => 'No disease entries available');
+            $nGPFieldSize = 1;
+        }
+
         if ($_AUTH['level'] >= LEVEL_CURATOR) {
             $aSelectOwner = $_DB->query('SELECT id, name FROM ' . TABLE_USERS .
                 (ACTION == 'edit' && (int) $_POST['owned_by'] === 0 || true? '' : ' WHERE id > 0') .
@@ -347,6 +359,7 @@ class LOVD_Individual extends LOVD_Custom {
                         array('', '', 'print', '<B>Gene panels</B>'),
                         'hr',
       'custom_panel' => array('Custom gene panel', '', 'textarea', 'custom_panel', 50, 2),
+       'aGenePanels' => array('Assigned gene panels', '', 'select', 'gene_panels', $nGPFieldSize, $aGenePanelsForm, false, true, false),
                         'hr',
                         'skip',
                         array('', '', 'print', '<B>Relation to diseases</B>'),
