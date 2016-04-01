@@ -109,6 +109,7 @@ class LOVD_IndividualMOD extends LOVD_Individual {
             ),
                  $this->buildViewEntry(),
                  array(
+                        'custom_panel' => 'Custom gene panel',
                         'diseases_' => 'Diseases',
                         'parents_' => 'Parent(s)',
                         'variants' => 'Total variants imported',

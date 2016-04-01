@@ -101,6 +101,7 @@ if (PATH_COUNT >= 2 && ctype_digit($_PE[1]) && !ACTION && (PATH_COUNT == 2 || PA
     $aNavigation = array();
     if ($_AUTH && $_AUTH['level'] == LEVEL_ADMIN) {
         $aNavigation[$_PE[0] . '/' . $_PE[1] . '?edit']                     = array('menu_edit.png', 'Edit individual entry', 1);
+        $aNavigation[$_PE[0] . '/' . $_PE[1] . '?edit_panels']              = array('menu_edit.png', 'Edit gene panels', 1);
         if ($_AUTH['level'] >= LEVEL_MANAGER) {
             $aNavigation['screenings?search_individualid=' . $nID] = array('menu_magnifying_glass.png', 'View screenings', 1);
         }
@@ -761,7 +762,7 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && in_array(ACTION, array('edit', 'p
         if (!lovd_error()) {
             // Fields to be used.
             $aFields = array_merge(
-                            array('panelid', 'panel_size'),
+                            array('panelid', 'panel_size', 'custom_panel'),
                             (!$bSubmit || !empty($zData['edited_by'])? array('edited_by', 'edited_date') : array()),
                             $_DATA->buildFields());
 
@@ -892,6 +893,73 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && in_array(ACTION, array('edit', 'p
     lovd_viewForm($aForm);
 
     print('</FORM>' . "\n\n");
+
+    $_T->printFooter();
+    exit;
+}
+
+
+
+
+// TODO AM I am not happy with how this works. It relies on writing all the current data to hidden form elements in order to re use the existing ?edit code.
+//      I tried to implement this using the existing code for edit remarks on a variant but the individual object was setup differently so I would have to re
+//      write a lot of code to get it to work that way. Need to work out the best way to proceed with this.
+if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && ACTION == 'edit_panels') {
+    // URL: /individuals/00000001?edit_panels
+    // Edit an individuals gene panels.
+
+    $nID = sprintf('%08d', $_PE[1]);
+    define('PAGE_TITLE', 'Edit gene panels for individual #' . $nID);
+    define('LOG_EVENT', 'IndividualEditPanels');
+
+    // Load appropriate user level for this individual.
+    lovd_isAuthorized('individual', $nID);
+    lovd_requireAUTH(LEVEL_OWNER);
+
+    require ROOT_PATH . 'class/object_individuals.php';
+    $_DATA = new LOVD_Individual();
+    $zData = $_DATA->loadEntry($nID);
+    // Load the zData into POST
+    foreach ($zData as $key => $val) {
+        $_POST[$key] = $val;
+    }
+
+    require ROOT_PATH . 'inc-lib-form.php';
+
+    $_T->printHeader();
+    $_T->printTitle();
+
+    lovd_errorPrint();
+
+    // Tooltip JS code.
+    lovd_includeJS('inc-js-tooltip.php');
+    lovd_includeJS('inc-js-custom_links.php');
+
+    // This gives the user one chance to add in the correct details and then posts to the normal edit screen.
+    print('      <FORM action="' . CURRENT_PATH . '?edit" method="post">' . "\n");
+    // Array which will make up the form table.
+    $aForm =
+        array(
+            array('POST', '', '', '', '50%', '14', '50%'),
+            array('Custom gene panel', '', 'textarea', 'custom_panel', 50, 2),
+            array('Enter your password for authorization', '', 'password', 'password', 20),
+            array('', '', 'print', '<INPUT type="submit" value="Edit gene panels">'),
+        );
+    lovd_viewForm($aForm);
+
+    // Include all the values as hidden fields so as they are passed back to the main form.
+    foreach ($zData as $key => $val) {
+        if (!in_array($key,array('custom_panel','password','active_diseases_'))) {
+                print('<input type="hidden" name="' . $key . '" value="' . $val . '">' . "\n");
+        }
+    }
+    // Explode out the diseases assigned to this individual into hidden fields
+    foreach (explode(';', $_POST['active_diseases_']) as $sActiveDisease) {
+        print('<input type="hidden" name="active_diseases[]" value="' . $sActiveDisease . '">' . "\n");
+    }
+
+    print("\n" .
+        '      </FORM>' . "\n\n");
 
     $_T->printFooter();
     exit;
