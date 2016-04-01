@@ -257,6 +257,34 @@ class LOVD_Individual extends LOVD_Custom {
             }
         }
 
+        // Checks the genes added to the custom panel to ensure they exist within the database
+        if (!empty($aData['custom_panel'])) {
+            // Explode the custom panel genes into an array
+            $aGeneSymbols = array_filter(array_unique(array_map('trim', preg_split('/(\s|[,;])+/', strtoupper($aData['custom_panel'])))));
+
+            // Check if there are any genes left after cleaning up the gene symbol string.
+            if (count($aGeneSymbols) > 0) {
+                // Load the genes and alternative names into an array.
+                $aGenesInLOVD = $_DB->query('SELECT UPPER(id), id FROM ' . TABLE_GENES)->fetchAllCombine();
+                // Loop through all the gene symbols in the array and check them for any errors.
+                foreach ($aGeneSymbols as $key => $sGeneSymbol) {
+                    $sGeneSymbol = $sGeneSymbol;
+                    // Check to see if this gene symbol has been found within the database.
+                    if (isset($aGenesInLOVD[$sGeneSymbol])) {
+                        // A correct gene symbol was found, so lets use that to remove any case issues.
+                        $aGeneSymbols[$key] = $aGenesInLOVD[$sGeneSymbol];
+                    } else {
+                        // This gene symbol was not found in the database.
+                        // It got uppercased by us, but we assume that will be OK.
+                        lovd_errorAdd('custom_panel', 'The gene symbol ' . htmlspecialchars($sGeneSymbol) . ' can not be found within the database.');
+                        // Make the offending gene stand out amongst the list of other genes. TODO is there an existing standard within LOVD to do this? Is this even a good idea, it might just be annoying.
+                        $aGeneSymbols[$key] = '***' . trim($sGeneSymbol,'*') . '***';
+                    }
+                }
+                // Write the cleaned up custom gene panel back to POST so as to ensure the genes in the custom panel are stored in a standard way.
+                $_POST['custom_panel'] = implode(", ", $aGeneSymbols);
+            }
+        }
         lovd_checkXSS();
     }
 

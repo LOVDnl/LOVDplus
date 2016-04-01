@@ -954,8 +954,10 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && ACTION == 'edit_panels') {
         }
     }
     // Explode out the diseases assigned to this individual into hidden fields
-    foreach (explode(';', $_POST['active_diseases_']) as $sActiveDisease) {
-        print('<input type="hidden" name="active_diseases[]" value="' . $sActiveDisease . '">' . "\n");
+    if (!empty($_POST['active_diseases_'])) {
+        foreach (explode(';', $_POST['active_diseases_']) as $sActiveDisease) {
+            print('<input type="hidden" name="active_diseases[]" value="' . $sActiveDisease . '">' . "\n");
+        }
     }
 
     print("\n" .
