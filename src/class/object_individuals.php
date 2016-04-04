@@ -318,7 +318,15 @@ class LOVD_Individual extends LOVD_Custom {
         }
 
         // Get list of gene panels.
-        $aGenePanelsForm = $_DB->query('SELECT id, name FROM ' . TABLE_GENE_PANELS . ' ORDER BY name ASC')->fetchAllCombine();
+//        $aGenePanelsForm = $_DB->query('SELECT id, name FROM ' . TABLE_GENE_PANELS . ' ORDER BY name ASC')->fetchAllCombine();
+        $aGenePanelsForm = array_merge(
+            array('optgroup1' => 'Gene Panels'),
+            $_DB->query('SELECT id, name FROM ' . TABLE_GENE_PANELS . ' WHERE type = "gene_panel" ORDER BY name ASC')->fetchAllCombine(),
+            array('optgroup2' => 'Mendeliome'),
+            $_DB->query('SELECT id, name FROM ' . TABLE_GENE_PANELS . ' WHERE type = "mendeliome" ORDER BY name ASC')->fetchAllCombine(),
+            array('optgroup3' => 'Black List'),
+            $_DB->query('SELECT id, name FROM ' . TABLE_GENE_PANELS . ' WHERE type = "blacklist" ORDER BY name ASC')->fetchAllCombine()
+        );
         $nGenePanels = count($aGenePanelsForm);
         foreach ($aGenePanelsForm as $nID => $sGenePanel) {
             $aGenePanelsForm[$nID] = lovd_shortenString($sGenePanel, 75);
