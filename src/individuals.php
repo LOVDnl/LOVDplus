@@ -119,6 +119,12 @@ if (PATH_COUNT >= 2 && ctype_digit($_PE[1]) && !ACTION && (PATH_COUNT == 2 || PA
     }
     lovd_showJGNavigation($aNavigation, 'Individuals');
 
+    // Show a warning if no gene panels have been assigned to this individual.
+    if (!count($zData['gene_panels'])) {
+        print('<BR>');
+        lovd_showInfoTable('No gene panels have been assigned to this individual, <A href="' . $_PE[0] . '/' . $_PE[1] . '?edit_panels">click here</A> to assign them.', 'information', 600);
+    }
+
     print('
           </TD>
           <TD valign="top" id="screeningViewEntry">' . "\n");

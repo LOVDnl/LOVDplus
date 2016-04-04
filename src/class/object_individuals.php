@@ -279,12 +279,12 @@ class LOVD_Individual extends LOVD_Custom {
                         // This gene symbol was not found in the database.
                         // It got uppercased by us, but we assume that will be OK.
                         lovd_errorAdd('custom_panel', 'The gene symbol ' . htmlspecialchars($sGeneSymbol) . ' can not be found within the database.');
-                        // Make the offending gene stand out amongst the list of other genes. TODO is there an existing standard within LOVD to do this? Is this even a good idea, it might just be annoying.
+                        // Make the offending gene stand out amongst the list of other genes. TODO AM is there an existing standard within LOVD to do this? Is this even a good idea, it might just be annoying.
                         $aGeneSymbols[$key] = '***' . trim($sGeneSymbol,'*') . '***';
                     }
                 }
                 // Write the cleaned up custom gene panel back to POST so as to ensure the genes in the custom panel are stored in a standard way.
-                $_POST['custom_panel'] = implode(", ", $aGeneSymbols);
+                $_POST['custom_panel'] = implode(", ", $aGeneSymbols); // TODO AM Ivo you are probably not going to like this as we are directly overwriting form data here, let me know how best to achieve this.
             }
         }
         lovd_checkXSS();
