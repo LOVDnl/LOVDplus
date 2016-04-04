@@ -62,6 +62,7 @@ class LOVD_IndividualMOD extends LOVD_Individual {
         $this->aSQLViewEntry['SELECT']   = 'i.*, "" AS owned_by, ' .
                                            'GROUP_CONCAT(DISTINCT d.id SEPARATOR ";") AS _diseaseids, ' .
                                            'GROUP_CONCAT(DISTINCT d.id, ";", IF(CASE d.symbol WHEN "-" THEN "" ELSE d.symbol END = "", d.name, d.symbol), ";", d.name ORDER BY (d.symbol != "" AND d.symbol != "-") DESC, d.symbol, d.name SEPARATOR ";;") AS __diseases, ' .
+                                           'GROUP_CONCAT(DISTINCT gp.id, ";", gp.name ORDER BY gp.name ASC SEPARATOR ";;") AS __gene_panels, ' .
                                            'GROUP_CONCAT(DISTINCT s.id SEPARATOR ";") AS _screeningids, ' .
                                            'COUNT(DISTINCT s2v.variantid) AS variants, ' .
                                            'uc.name AS created_by_, ' .
@@ -71,6 +72,8 @@ class LOVD_IndividualMOD extends LOVD_Individual {
                                            'LEFT OUTER JOIN ' . TABLE_SCR2VAR . ' AS s2v ON (s2v.screeningid = s.id) ' .
                                            'LEFT OUTER JOIN ' . TABLE_IND2DIS . ' AS i2d ON (i.id = i2d.individualid) ' .
                                            'LEFT OUTER JOIN ' . TABLE_DISEASES . ' AS d ON (i2d.diseaseid = d.id) ' .
+                                           'LEFT OUTER JOIN ' . TABLE_IND2GP . ' AS i2gp ON (i.id = i2gp.individualid) ' .
+                                           'LEFT OUTER JOIN ' . TABLE_GENE_PANELS . ' AS gp ON (i2gp.genepanelid = gp.id) ' .
                                            'LEFT OUTER JOIN ' . TABLE_USERS . ' AS uc ON (i.created_by = uc.id) ' .
                                            'LEFT OUTER JOIN ' . TABLE_USERS . ' AS ue ON (i.edited_by = ue.id)';
         $this->aSQLViewEntry['GROUP_BY'] = 'i.id';
@@ -109,7 +112,8 @@ class LOVD_IndividualMOD extends LOVD_Individual {
             ),
                  $this->buildViewEntry(),
                  array(
-                        'custom_panel' => 'Custom gene panel',
+                        'custom_panel' => 'Custom gene panel', // TODO AM Do we need to create URLS to the genes for the view entry?
+                        'gene_panels_' => 'Gene panels',
                         'diseases_' => 'Diseases',
                         'parents_' => 'Parent(s)',
                         'variants' => 'Total variants imported',

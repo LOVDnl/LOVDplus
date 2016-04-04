@@ -927,7 +927,6 @@ $aTableSQL =
     'CREATE TABLE ' . TABLE_IND2GP . ' (
     individualid MEDIUMINT(8) UNSIGNED ZEROFILL NOT NULL,
     genepanelid SMALLINT(5) UNSIGNED ZEROFILL NOT NULL,
-    priority TINYINT(2) UNSIGNED NOT NULL DEFAULT 1,
     created_by SMALLINT(5) UNSIGNED ZEROFILL,
     created_date DATETIME NOT NULL,
     PRIMARY KEY (individualid, genepanelid),
