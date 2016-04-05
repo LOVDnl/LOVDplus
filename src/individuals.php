@@ -636,7 +636,7 @@ if (PATH_COUNT == 1 && ACTION == 'create') {
         if (!lovd_error()) {
             // Fields to be used.
             $aFields = array_merge(
-                            array('panelid', 'panel_size', 'owned_by', 'statusid', 'created_by', 'created_date', 'custom_panel'),
+                            array('panelid', 'panel_size', 'owned_by', 'statusid', 'created_by', 'created_date'),
                             $_DATA->buildFields());
 
             // Prepare values.
@@ -662,23 +662,6 @@ if (PATH_COUNT == 1 && ACTION == 'create') {
                             lovd_writeLog('Error', LOG_EVENT, 'Disease information entry ' . $nDisease . ' - could not be added to individual ' . $nID);
                         } else {
                             $aSuccessDiseases[] = $nDisease; // TODO AM This array doesn't seem to be used anywhere. Either write a log or remove it?
-                        }
-                    }
-                }
-            }
-
-            // Add gene panels.
-            $aSuccessGenePanels = array();
-            if (!empty($_POST['gene_panels']) && is_array($_POST['gene_panels'])) {
-                foreach ($_POST['gene_panels'] as $nGenePanel) {
-                    // Add gene panel to individual.
-                    if ($nGenePanel) {
-                        $q = $_DB->query('INSERT INTO ' . TABLE_IND2GP . ' VALUES (?, ?, ?, ?)', array($nID, $nGenePanel, $_POST['created_by'], $_POST['created_date']), false);
-                        if (!$q) {
-                            // Silent error.
-                            lovd_writeLog('Error', LOG_EVENT, 'Gene panel entry ' . $nGenePanel . ' - could not be added to individual ' . $nID);
-                        } else {
-                            $aSuccessGenePanels[] = $nGenePanel; // TODO AM Do we need to write a log of the gene panels assigned to this individual?
                         }
                     }
                 }
