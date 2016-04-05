@@ -122,7 +122,7 @@ if (PATH_COUNT >= 2 && ctype_digit($_PE[1]) && !ACTION && (PATH_COUNT == 2 || PA
     // Show a warning if no gene panels have been assigned to this individual.
     if (!count($zData['gene_panels'])) {
         print('<BR>');
-        lovd_showInfoTable('No gene panels have been assigned to this individual, <A href="' . $_PE[0] . '/' . $_PE[1] . '?edit_panels">click here</A> to assign them.', 'information', 600);
+        lovd_showInfoTable('No gene panels have been assigned to this individual, <A href="' . $_PE[0] . '/' . $_PE[1] . '?edit_panels">click here</A> to assign them.', 'warning', 600);
     }
 
     print('
@@ -1017,7 +1017,7 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && ACTION == 'edit_panels') {
     }
 
     // This gives the user one chance to add in the correct details and then posts to the normal edit screen.
-    print('      <FORM action="' . CURRENT_PATH . '?edit" method="post">' . "\n");
+    print('      <FORM action="' . CURRENT_PATH . '?' . ACTION . '" method="post">' . "\n");
     // Array which will make up the form table.
     $aForm =
         array(

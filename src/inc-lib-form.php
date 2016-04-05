@@ -928,9 +928,16 @@ function lovd_viewForm ($a,
                 if (is_array($oData)) {
                     // Array input.
                     foreach ($oData as $key => $val) {
-                        // We have to cast the $key to string because PHP made integers of them, if they were integer strings.
-                        $bSelected = ((!$bMultiple && (string) $GLOBALS['_' . $sMethod][$sName] === (string) $key) || ($bMultiple && is_array($GLOBALS['_' . $sMethod][$sName]) && in_array((string) $key, $GLOBALS['_' . $sMethod][$sName], true)));
-                        print("\n" . $sNewLine . '  <OPTION value="' . htmlspecialchars($key) . '"' . ($bSelected? ' selected' : '') . '>' . htmlspecialchars($val) . '</OPTION>');
+                        // Create option groups for select boxes
+                        if (substr($key, 0, 8) == 'optgroup') {
+                            // This handles the creation of option groups.
+                            // To add option groups include array values above each group as follows array('optgroup1' => 'Group 1 Name').
+                            print("\n" . $sNewLine . '  <OPTGROUP label="' . htmlspecialchars($val) . '"></OPTGROUP>'); // TODO This is not technically the correct use but used correctly there is no way to remove the indenting of options. Is this a problem?
+                        } else {
+                            // We have to cast the $key to string because PHP made integers of them, if they were integer strings.
+                            $bSelected = ((!$bMultiple && (string)$GLOBALS['_' . $sMethod][$sName] === (string)$key) || ($bMultiple && is_array($GLOBALS['_' . $sMethod][$sName]) && in_array((string)$key, $GLOBALS['_' . $sMethod][$sName], true)));
+                            print("\n" . $sNewLine . '  <OPTION value="' . htmlspecialchars($key) . '"' . ($bSelected ? ' selected' : '') . '">' . htmlspecialchars($val) . '</OPTION>');
+                        }
                     }
                 }
 
