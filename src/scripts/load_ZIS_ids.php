@@ -4,7 +4,7 @@
  * LEIDEN OPEN VARIATION DATABASE (LOVD)
  *
  * Created     : 2014-04-03
- * Modified    : 2016-02-18
+ * Modified    : 2016-04-05
  * For LOVD    : 3.0-15
  *
  * Copyright   : 2004-2016 Leiden University Medical Center; http://www.LUMC.nl/
@@ -68,7 +68,13 @@ while (($sFile = readdir($h)) !== false) {
         print('Ignoring file, does not conform to format: ' . $sFile . ".\n");
         continue;
     }
+    // Now that we passed this point, proves nothing. We're running into useless lines in correct files either way.
+    // So we need to keep checking what we're getting.
     foreach ($aFile as $sLine) {
+        if (!preg_match('/^\d+\t\d+$/', $sLine)) {
+            // Wrong line in correct file. Silently ignore, preventing notices below.
+            continue;
+        }
         list($nMiracleID, $nZISID) = explode("\t", $sLine);
         if (isset($aIndividuals[$nMiracleID]) && ctype_digit($nZISID)) {
             // We know this one!
