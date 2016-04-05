@@ -774,12 +774,6 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && in_array(ACTION, array('edit', 'p
             // An array with an empty string as a value doesn't get past the checkFields() since '' is not a valid option.
             $_POST['active_diseases'] = array();
         }
-        if ($zData['gene_panels_']) {
-            $_POST['gene_panels'] = explode(';', $zData['gene_panels_']);
-        } else {
-            // An array with an empty string as a value doesn't get past the checkFields() since '' is not a valid option.
-            $_POST['gene_panels'] = array();
-        }
         $_POST['statusid'] = STATUS_OK;
     }
 
@@ -791,7 +785,7 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && in_array(ACTION, array('edit', 'p
         if (!lovd_error()) {
             // Fields to be used.
             $aFields = array_merge(
-                            array('panelid', 'panel_size', 'custom_panel'),
+                            array('panelid', 'panel_size'),
                             (!$bSubmit || !empty($zData['edited_by'])? array('edited_by', 'edited_date') : array()),
                             $_DATA->buildFields());
 
@@ -859,44 +853,6 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && in_array(ACTION, array('edit', 'p
             if ($aFailed) {
                 // Silent error.
                 lovd_writeLog('Error', LOG_EVENT, 'Disease information entr' . (count($aFailed) == 1? 'y' : 'ies') . ' ' . implode(', ', $aFailed) . ' could not be added to individual ' . $nID);
-            }
-
-            // Change linked gene panels.
-            $aGenePanels = explode(';', $zData['gene_panels_']);
-
-            // Remove gene panels.
-            $aToRemove = array();
-            foreach ($aGenePanels as $nGenePanel) {
-                if ($nGenePanel && !in_array($nGenePanel, $_POST['gene_panels'])) {
-                    // User has requested removal...
-                    $aToRemove[] = $nGenePanel;
-                }
-            }
-            if ($aToRemove) {
-                $q = $_DB->query('DELETE FROM ' . TABLE_IND2GP . ' WHERE individualid = ? AND genepanelid IN (?' . str_repeat(', ?', count($aToRemove) - 1) . ')', array_merge(array($nID), $aToRemove), false);
-                if (!$q) {
-                    // Silent error.
-                    lovd_writeLog('Error', LOG_EVENT, 'Gene panel entr' . (count($aToRemove) == 1? 'y' : 'ies') . ' ' . implode(', ', $aToRemove) . ' could not be removed from individual ' . $nID);
-                }
-            }
-
-            // Add gene panels.
-            $aSuccess = array();
-            $aFailed = array();
-            foreach ($_POST['gene_panels'] as $nGenePanel) {
-                if (!in_array($nGenePanel, $aGenePanels)) {
-                    // Add disease to gene.
-                    $q = $_DB->query('INSERT IGNORE INTO ' . TABLE_IND2GP . ' VALUES (?, ?, ?, ?)', array($nID, $nGenePanel, $_POST['edited_by'], $_POST['edited_date']), false);
-                    if (!$q) {
-                        $aFailed[] = $nGenePanel;
-                    } else {
-                        $aSuccess[] = $nGenePanel;
-                    }
-                }
-            }
-            if ($aFailed) {
-                // Silent error.
-                lovd_writeLog('Error', LOG_EVENT, 'Gene panel entr' . (count($aFailed) == 1? 'y' : 'ies') . ' ' . implode(', ', $aFailed) . ' could not be added to individual ' . $nID);
             }
 
             // Thank the user...
@@ -968,9 +924,7 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && in_array(ACTION, array('edit', 'p
 
 
 
-// TODO AM I am not happy with how this works. It relies on writing all the current data to hidden form elements in order to re use the existing ?edit code.
-//      I tried to implement this using the existing code for edit remarks on a variant but the individual object was setup differently so I would have to re
-//      write a lot of code to get it to work that way. Need to work out the best way to proceed with this.
+
 if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && ACTION == 'edit_panels') {
     // URL: /individuals/00000001?edit_panels
     // Edit an individuals gene panels.
@@ -993,11 +947,63 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && ACTION == 'edit_panels') {
 
         $_DATA->checkFields($_POST, $zData);
 
+        if (!lovd_error()) {
+            // Fields to be used.
+            $aFields = array('custom_panel');
+            $sDateNow = date('Y-m-d H:i:s');
 
+            $_DATA->updateEntry($nID, $_POST, $aFields);
 
+            // Write to log...
+            lovd_writeLog('Event', LOG_EVENT, 'Edited gene panels for individual ' . $nID);
 
+            // Change linked gene panels.
+            $aGenePanels = explode(';', $zData['gene_panels_']);
 
+            // Remove gene panels.
+            $aToRemove = array();
+            foreach ($aGenePanels as $nGenePanel) {
+                if ($nGenePanel && !in_array($nGenePanel, $_POST['gene_panels'])) {
+                    // User has requested removal...
+                    $aToRemove[] = $nGenePanel;
+                }
+            }
+            if ($aToRemove) {
+                $q = $_DB->query('DELETE FROM ' . TABLE_IND2GP . ' WHERE individualid = ? AND genepanelid IN (?' . str_repeat(', ?', count($aToRemove) - 1) . ')', array_merge(array($nID), $aToRemove), false);
+                if (!$q) {
+                    // Silent error.
+                    lovd_writeLog('Error', LOG_EVENT, 'Gene panel entr' . (count($aToRemove) == 1? 'y' : 'ies') . ' ' . implode(', ', $aToRemove) . ' could not be removed from individual ' . $nID);
+                }
+            }
 
+            // Add gene panels.
+            $aSuccess = array();
+            $aFailed = array();
+            foreach ($_POST['gene_panels'] as $nGenePanel) {
+                if (!in_array($nGenePanel, $aGenePanels)) {
+                    // Add disease to gene.
+                    $q = $_DB->query('INSERT IGNORE INTO ' . TABLE_IND2GP . ' VALUES (?, ?, ?, ?)', array($nID, $nGenePanel, $_AUTH['id'], $sDateNow), false);
+                    if (!$q) {
+                        $aFailed[] = $nGenePanel;
+                    } else {
+                        $aSuccess[] = $nGenePanel;
+                    }
+                }
+            }
+            if ($aFailed) {
+                // Silent error.
+                lovd_writeLog('Error', LOG_EVENT, 'Gene panel entr' . (count($aFailed) == 1? 'y' : 'ies') . ' ' . implode(', ', $aFailed) . ' could not be added to individual ' . $nID);
+            }
+
+            // Thank the user...
+            header('Refresh: 3; url=' . lovd_getInstallURL() . CURRENT_PATH);
+            $_T->printHeader();
+            $_T->printTitle();
+            lovd_showInfoTable('Successfully edited the gene panels for this individual!', 'success');
+
+            $_T->printFooter();
+            exit;
+        }
     } else {
         $_POST = array_merge($_POST, $zData);
         $_POST['gene_panels'] = explode(';', $zData['gene_panels_']);
