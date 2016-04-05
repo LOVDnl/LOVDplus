@@ -927,7 +927,7 @@ function lovd_viewForm ($a,
 
                 if (is_array($oData)) {
                     // Array input.
-                    $bInOptGroup = false; // Used to determine if we are in an option group
+                    $bInOptGroup = false; // Used to determine if we are in an option group.
                     foreach ($oData as $key => $val) {
                         // Create option groups for select boxes.
                         if (substr($key, 0, 8) == 'optgroup') {

@@ -985,7 +985,7 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && ACTION == 'edit_panels') {
 
     require ROOT_PATH . 'class/object_individuals.mod.php';
     $_DATA = new LOVD_IndividualMOD();
-    $zData = $_DATA->loadEntry($nID);
+    $zData = $_DATA->loadEntry($nID); // TODO AM This loads up all the data for this individual which is a bit excessive, should I create a new $this->sSQLLoadEntry in the individuals mod file that only loads the gene panel data? Not sure what else this would affect as this currently doesn't exist so it could break something.
     require ROOT_PATH . 'inc-lib-form.php';
 
     if (POST) {
