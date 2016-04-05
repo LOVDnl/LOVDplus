@@ -4,7 +4,7 @@
  * LEIDEN OPEN VARIATION DATABASE (LOVD)
  *
  * Created     : 2016-03-22
- * Modified    : 2016-03-24
+ * Modified    : 2016-04-05
  * For LOVD    : 3.0-13
  *
  * Copyright   : 2004-2016 Leiden University Medical Center; http://www.LUMC.nl/
@@ -89,7 +89,7 @@ class LOVD_GenePanelGeneREV extends LOVD_GenePanelGene {
                     'legend' => array('The mode of inheritance.')),
                 'pmid' => array(
                     'view' => array('PubMed', 60),
-                    'db'   => array('gp2g.pmid', 'ASC', false),
+                    'db'   => array('gp2g.pmid', 'ASC', true),
                     'legend' => array('PubMed ID.')),
                 'created_by_' => array(
                     'view' => array('Added By', 110),
