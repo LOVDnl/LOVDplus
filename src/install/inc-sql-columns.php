@@ -4,10 +4,10 @@
  * LEIDEN OPEN VARIATION DATABASE (LOVD)
  *
  * Created     : 2009-10-22
- * Modified    : 2015-05-05
+ * Modified    : 2016-04-05
  * For LOVD    : 3.0-14
  *
- * Copyright   : 2004-2015 Leiden University Medical Center; http://www.LUMC.nl/
+ * Copyright   : 2004-2016 Leiden University Medical Center; http://www.LUMC.nl/
  * Programmers : Ing. Ivo F.A.C. Fokkema <I.F.A.C.Fokkema@LUMC.nl>
  *               Ing. Ivar C. Lugtenburg <I.C.Lugtenburg@LUMC.nl>
  *
@@ -43,7 +43,7 @@ $aColSQL =
                 'INSERT INTO ' . TABLE_COLS . ' VALUES ("Individual/Death/Cause",                     249, 150, 0, 0, 0, "Cause of death",       "", "The cause of the individual\'s death, if known and applicable.", "The cause of the individual\'s death, if known and applicable.", "VARCHAR(255)", "Cause of death|The cause of the individual\'s death, if known and applicable.|text|30", "", "", 1, 1, 1, 0, NOW(), NULL, NULL)',
                 // SEER list: 1 Male, 2 Female, 3 Other (hermaphrodite, sex chromosome aberrations), 4 Transsexual/Transgender, 9 Not stated/Unknown
                 'INSERT INTO ' . TABLE_COLS . ' VALUES ("Individual/Gender",                            3,  70, 0, 1, 0, "Gender",               "", "Individual\'s gender.", "The gender of the reported individual.", "VARCHAR(100)", "Gender||select|1|--Not specified--|false|false", "? = Unknown\r\nF = Female\r\nM = Male\r\nrF = Raised as female\r\nrM = Raised as male", "", 1, 1, 1, 0, NOW(), NULL, NULL)',
-                'INSERT INTO ' . TABLE_COLS . ' VALUES ("Individual/Lab_ID",                            1,  80, 1, 1, 1, "Lab-ID",               "", "The individual\'s ID in the hospital, diagnostic laboratory or in the publication.", "The individual\'s ID in the hospital, diagnostic laboratory or in the publication.", "VARCHAR(15)", "Lab ID||text|15", "", "", 0, 1, 0, 0, NOW(), NULL, NULL)',
+                'INSERT INTO ' . TABLE_COLS . ' VALUES ("Individual/Lab_ID",                            1,  80, 1, 1, 1, "Lab-ID",               "", "The individual\'s ID in the hospital, diagnostic laboratory or in the publication.", "The individual\'s ID in the hospital, diagnostic laboratory or in the publication.", "VARCHAR(20)", "Lab ID||text|20", "", "", 0, 1, 0, 0, NOW(), NULL, NULL)',
                 'INSERT INTO ' . TABLE_COLS . ' VALUES ("Individual/Origin/Ethnic",                   201, 200, 0, 0, 0, "Ethnic origin",        "Ethnic origin of individual; e.g. African, Caucasian, gypsy, jew (Ashkenazi).", "Ethnic origin of individual; e.g. African, Caucasian, gypsy, jew (Ashkenazi).", "The ethnic origin of the individual; e.g. African, Caucasian, gypsy, jew (Ashkenazi).", "VARCHAR(50)", "Ethnic origin|If mixed, please indicate origin of father and mother, if known.|text|20", "", "", 1, 1, 1, 0, NOW(), NULL, NULL)',
                 'INSERT INTO ' . TABLE_COLS . ' VALUES ("Individual/Origin/Geographic",               200, 200, 0, 0, 0, "Geographic origin",    "Geographic origin of individual; Belgium = individual\'s origin is Belgium, (France) = reported by laboratory in France, individual\'s origin not sure.", "Geographic origin of individual; Belgium = individual\'s origin is Belgium, (France) = reported by laboratory in France, individual\'s origin not sure.", "The geographic origin of the individual (country and/or region); Belgium = individual\'s origin is Belgium, (France) = reported by laboratory in France, individual\'s origin not sure.", "VARCHAR(50)", "Geographic origin|If mixed, please indicate origin of father and mother, if known.|text|30", "", "", 1, 1, 1, 0, NOW(), NULL, NULL)',
                 'INSERT INTO ' . TABLE_COLS . ' VALUES ("Individual/Origin/Population",               202, 200, 0, 0, 0, "Population",           "", "Individual population.", "Additional information on the individual\'s population.", "VARCHAR(50)", "Individual population||text|30", "", "", 1, 1, 1, 0, NOW(), NULL, NULL)',
