@@ -75,13 +75,14 @@ class LOVD_GenePanel extends LOVD_Object {
         $this->aSQLViewEntry['GROUP_BY'] = 'gp.id';
 
         // SQL code for viewing the list of gene panels
-        $this->aSQLViewList['SELECT']   = 'gp.*, ' .
+        $this->aSQLViewList['SELECT']   = 'gp.*, COUNT(DISTINCT i2gp.individualid) AS individuals, ' .
                                           'GROUP_CONCAT(DISTINCT IF(CASE d.symbol WHEN "-" THEN "" ELSE d.symbol END = "", d.name, d.symbol) ORDER BY (d.symbol != "" AND d.symbol != "-") DESC, d.symbol, d.name SEPARATOR ", ") AS diseases_, ' .
                                           'uc.name AS created_by_,' .
                                           'COUNT(DISTINCT gp2g.geneid) AS genes';
         $this->aSQLViewList['FROM']     = TABLE_GENE_PANELS . ' AS gp ' .
                                           'LEFT OUTER JOIN ' . TABLE_GP2DIS . ' AS gp2d ON (gp.id = gp2d.genepanelid) ' .
                                           'LEFT OUTER JOIN ' . TABLE_GP2GENE . ' AS gp2g ON (gp.id = gp2g.genepanelid) ' .
+                                          'LEFT OUTER JOIN ' . TABLE_IND2GP . ' i2gp ON gp.id = i2gp.genepanelid ' .
                                           'LEFT OUTER JOIN ' . TABLE_USERS . ' AS uc ON (gp.created_by = uc.id) ' .
                                           'LEFT OUTER JOIN ' . TABLE_DISEASES . ' AS d ON (gp2d.diseaseid = d.id)';
         $this->aSQLViewList['GROUP_BY'] = 'gp.id';
@@ -123,6 +124,10 @@ class LOVD_GenePanel extends LOVD_Object {
                 'genes' => array(
                     'view' => array('Genes', 60),
                     'db'   => array('genes', 'DESC', 'INT_UNSIGNED'),
+                    'legend' => array('The number of genes in this gene panel.')),
+                'individuals' => array(
+                    'view' => array('Individuals', 60),
+                    'db'   => array('individuals', 'DESC', 'INT_UNSIGNED'),
                     'legend' => array('The number of genes in this gene panel.')),
                 'created_by_' => array(
                     'view' => array('Created By', 80),

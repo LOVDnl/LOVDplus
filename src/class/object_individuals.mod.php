@@ -87,6 +87,7 @@ class LOVD_IndividualMOD extends LOVD_Individual {
                                         // FIXME; Can we get this order correct, such that diseases without abbreviation nicely mix with those with? Right now, the diseases without symbols are in the back.
                                           'GROUP_CONCAT(DISTINCT IF(CASE d.symbol WHEN "-" THEN "" ELSE d.symbol END = "", d.name, d.symbol) ORDER BY (d.symbol != "" AND d.symbol != "-") DESC, d.symbol, d.name SEPARATOR ", ") AS diseases_, ' .
 //                                          'COUNT(DISTINCT ' . ($_AUTH['level'] >= LEVEL_COLLABORATOR? 's2v.variantid' : 'vog.id') . ') AS variants_, ' . // Counting s2v.variantid will not include the limit opposed to vog in the join's ON() clause.
+                                          'GROUP_CONCAT(DISTINCT gp.name ORDER BY gp.name ASC SEPARATOR ", ") AS gene_panels_, ' .
                                           'ua.name AS analysis_by_, ' .
                                           'uaa.name AS analysis_approved_by_, ' .
                                           'CONCAT_WS(";", ua.id, ua.name, ua.email, ua.institute, ua.department, IFNULL(ua.countryid, "")) AS _analyzer, ' .
@@ -95,6 +96,8 @@ class LOVD_IndividualMOD extends LOVD_Individual {
         $this->aSQLViewList['FROM']     = TABLE_INDIVIDUALS . ' AS i ' .
                                           'LEFT OUTER JOIN ' . TABLE_IND2DIS . ' AS i2d ON (i.id = i2d.individualid) ' .
                                           'LEFT OUTER JOIN ' . TABLE_DISEASES . ' AS d ON (i2d.diseaseid = d.id) ' .
+                                          'LEFT OUTER JOIN ' . TABLE_IND2GP . ' AS i2gp ON (i.id = i2gp.individualid) ' .
+                                          'LEFT OUTER JOIN ' . TABLE_GENE_PANELS . ' AS gp ON (i2gp.genepanelid = gp.id) ' .
                                           'LEFT OUTER JOIN ' . TABLE_SCREENINGS . ' AS s ON (i.id = s.individualid) ' .
 //                                          'LEFT OUTER JOIN ' . TABLE_SCR2VAR . ' AS s2v ON (s2v.screeningid = s.id) ' .
 //                                          ($_AUTH['level'] >= LEVEL_COLLABORATOR? '' :
@@ -141,6 +144,12 @@ class LOVD_IndividualMOD extends LOVD_Individual {
                      'diseases_' => array(
                          'view' => array('Disease', 175),
                          'db'   => array('diseases_', 'ASC', true)),
+                     'gene_panels_' => array(
+                         'view' => array('Gene panels', 200),
+                         'db'   => array('gene_panels_', 'ASC', true)),
+                     'custom_panel' => array(
+                         'view' => array('Custom panel', 100),
+                         'db'   => array('i.custom_panel', 'ASC', true)),
 //                     'variants_' => array(
 //                         'view' => array('Variants', 75),
 //                         'db'   => array('variants_', 'ASC', 'INT_UNSIGNED')),
