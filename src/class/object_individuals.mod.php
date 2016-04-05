@@ -171,6 +171,98 @@ class LOVD_IndividualMOD extends LOVD_Individual {
 
 
 
+    function checkFields ($aData, $zData = false)
+    {
+        global $_DB;
+        $this->getForm();
+
+        // Checks to make sure a valid gene panel ID is used
+        $aGenePanels = array_keys($this->aFormData['aGenePanels'][5]);
+        if (!empty($aData['gene_panels'])) {
+            foreach ($aData['gene_panels'] as $nGenePanel) {
+                if ($nGenePanel && !in_array($nGenePanel, $aGenePanels)) {
+                    lovd_errorAdd('gene_panels', htmlspecialchars($nGenePanel) . ' is not a valid gene panel.');
+                }
+            }
+        }
+
+        // Checks the genes added to the custom panel to ensure they exist within the database
+        if (!empty($aData['custom_panel'])) {
+            // Explode the custom panel genes into an array
+            $aGeneSymbols = array_filter(array_unique(array_map('trim', preg_split('/(\s|[,;])+/', strtoupper($aData['custom_panel'])))));
+
+            // Check if there are any genes left after cleaning up the gene symbol string.
+            if (count($aGeneSymbols) > 0) {
+                // Load the genes and alternative names into an array.
+                $aGenesInLOVD = $_DB->query('SELECT UPPER(id), id FROM ' . TABLE_GENES)->fetchAllCombine();
+                // Loop through all the gene symbols in the array and check them for any errors.
+                foreach ($aGeneSymbols as $key => $sGeneSymbol) {
+                    $sGeneSymbol = $sGeneSymbol;
+                    // Check to see if this gene symbol has been found within the database.
+                    if (isset($aGenesInLOVD[$sGeneSymbol])) {
+                        // A correct gene symbol was found, so lets use that to remove any case issues.
+                        $aGeneSymbols[$key] = $aGenesInLOVD[$sGeneSymbol];
+                    } else {
+                        // This gene symbol was not found in the database.
+                        // It got uppercased by us, but we assume that will be OK.
+                        lovd_errorAdd('custom_panel', 'The gene symbol ' . htmlspecialchars($sGeneSymbol) . ' can not be found within the database.');
+                    }
+                }
+                // Write the cleaned up custom gene panel back to POST so as to ensure the genes in the custom panel are stored in a standard way.
+                $_POST['custom_panel'] = implode(", ", $aGeneSymbols); // TODO AM Ivo you are probably not going to like this as we are directly overwriting form data here, let me know how best to achieve this.
+            }
+        }
+        lovd_checkXSS();
+    }
+
+
+
+
+
+    function getForm ()
+    {
+        // Build the form.
+
+        // If we've built the form before, simply return it. Especially imports will repeatedly call checkFields(), which calls getForm().
+        if (!empty($this->aFormData)) {
+            return LOVD_Custom::getForm(); // Bypass the LOVD_Individual object so as it doesn't add in the extra columns into the form
+        }
+
+        global $_AUTH, $_DB, $_SETT;
+
+        // Get list of gene panels.
+        $aGenePanelsForm = $_DB->query('(SELECT "optgroup2" AS id, "Mendeliome" AS name, "mendeliome_header" AS type)
+                                        UNION
+                                        (SELECT "optgroup1", "Gene Panels", "gene_panel_header")
+                                        UNION
+                                        (SELECT "optgroup3", "Blacklist", "blacklist_header")
+                                        UNION
+                                        (SELECT CAST(id AS CHAR), name, type FROM lovd_gene_panels)
+                                        ORDER BY type DESC, name')->fetchAllCombine(); // TODO AM I have had to cast the id as a char to get the id with zero padding eg "00033" as the inc-lib-form.php creates the option values in this way. Without doing this the "selected" option is not set correctly as it does not match without the zero padding. Is there are better way to do this?
+        $nGenePanels = count($aGenePanelsForm);
+        foreach ($aGenePanelsForm as $nID => $sGenePanel) {
+            $aGenePanelsForm[$nID] = lovd_shortenString($sGenePanel, 75);
+        }
+        $nGPFieldSize = ($nGenePanels < 10? $nGenePanels : 10);
+        if (!$nGenePanels) {
+            $aGenePanelsForm = array('' => 'No gene panel entries available');
+            $nGPFieldSize = 1;
+        }
+
+        $this->aFormData = array_merge(
+            array(
+                array('POST', '', '', '', '50%', '14', '50%'),
+                'custom_panel' => array('Custom gene panel', '', 'textarea', 'custom_panel', 50, 2),
+                'aGenePanels' => array('Assigned gene panels', '', 'select', 'gene_panels', $nGPFieldSize, $aGenePanelsForm, false, true, false),
+            ));
+
+        return LOVD_Custom::getForm();
+    }
+
+
+
+
+
     function prepareData ($zData = '', $sView = 'list')
     {
         // Prepares the data by "enriching" the variable received with links, pictures, etc.

@@ -927,7 +927,6 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && in_array(ACTION, array('edit', 'p
         $_POST = array_merge($_POST, $zData);
         // Load connected diseases.
         $_POST['active_diseases'] = explode(';', $_POST['active_diseases_']);
-        $_POST['gene_panels'] = explode(';', $_POST['gene_panels_']);
         if ($zData['statusid'] < STATUS_HIDDEN) {
             $_POST['statusid'] = STATUS_OK;
         }
@@ -984,16 +983,27 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && ACTION == 'edit_panels') {
     lovd_isAuthorized('individual', $nID);
     lovd_requireAUTH(LEVEL_OWNER);
 
-    require ROOT_PATH . 'class/object_individuals.php';
-    $_DATA = new LOVD_Individual();
+    require ROOT_PATH . 'class/object_individuals.mod.php';
+    $_DATA = new LOVD_IndividualMOD();
     $zData = $_DATA->loadEntry($nID);
-    // Load the zData into POST
-    foreach ($zData as $key => $val) {
-        $_POST[$key] = $val;
-    }
-    $_POST['gene_panels'] = explode(';', $zData['gene_panels_']);
-
     require ROOT_PATH . 'inc-lib-form.php';
+
+    if (POST) {
+        lovd_errorClean();
+
+        $_DATA->checkFields($_POST, $zData);
+
+
+
+
+
+
+    } else {
+        $_POST = array_merge($_POST, $zData);
+        $_POST['gene_panels'] = explode(';', $zData['gene_panels_']);
+    }
+
+
 
     $_T->printHeader();
     $_T->printTitle();
@@ -1004,46 +1014,17 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && ACTION == 'edit_panels') {
     lovd_includeJS('inc-js-tooltip.php');
     lovd_includeJS('inc-js-custom_links.php');
 
-    // Get list of gene panels.
-    $aGenePanelsForm = $_DB->query('SELECT id, name FROM ' . TABLE_GENE_PANELS . ' ORDER BY name ASC')->fetchAllCombine();
-    $nGenePanels = count($aGenePanelsForm);
-    foreach ($aGenePanelsForm as $nID => $sGenePanel) {
-        $aGenePanelsForm[$nID] = lovd_shortenString($sGenePanel, 75);
-    }
-    $nGPFieldSize = ($nGenePanels < 10? $nGenePanels : 10);
-    if (!$nGenePanels) {
-        $aGenePanelsForm = array('' => 'No gene panel entries available');
-        $nGPFieldSize = 1;
-    }
-
     // This gives the user one chance to add in the correct details and then posts to the normal edit screen.
     print('      <FORM action="' . CURRENT_PATH . '?' . ACTION . '" method="post">' . "\n");
     // Array which will make up the form table.
-    $aForm =
+    $aForm = array_merge(
+        $_DATA->getForm(),
         array(
-            array('POST', '', '', '', '50%', '14', '50%'),
-            array('Custom gene panel', '', 'textarea', 'custom_panel', 50, 2),
-            array('Assigned gene panels', '', 'select', 'gene_panels', $nGPFieldSize, $aGenePanelsForm, false, true, false),
-            array('Enter your password for authorization', '', 'password', 'password', 20),
             array('', '', 'print', '<INPUT type="submit" value="Edit gene panels">'),
-        );
+        ));
     lovd_viewForm($aForm);
 
-    // Include all the values as hidden fields so as they are passed back to the main form.
-    foreach ($zData as $key => $val) {
-        if (!in_array($key,array('custom_panel','password','active_diseases_'))) {
-                print('<input type="hidden" name="' . $key . '" value="' . $val . '">' . "\n");
-        }
-    }
-    // Explode out the diseases assigned to this individual into hidden fields
-    if (!empty($_POST['active_diseases_'])) {
-        foreach (explode(';', $_POST['active_diseases_']) as $sActiveDisease) {
-            print('<input type="hidden" name="active_diseases[]" value="' . $sActiveDisease . '">' . "\n");
-        }
-    }
-
-    print("\n" .
-        '      </FORM>' . "\n\n");
+    print('</FORM>' . "\n\n");
 
     $_T->printFooter();
     exit;
