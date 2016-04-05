@@ -385,6 +385,11 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && ACTION == 'delete') {
             lovd_errorAdd('password', 'Please enter your correct password for authorization.');
         }
 
+        // This gene panel has already been assigned to an individual so we can not delete it
+        if ($zData['individuals'] > 0) {
+            lovd_errorAdd('error', 'This gene panel has already been assigned to ' . $zData['individuals'] . ' individuals so it can not be deleted.');
+        }
+
         if (!lovd_error()) {
             // This also deletes the entries in gp2dis and gp2gene.
             $_DATA->deleteEntry($nID, $_POST['reason']);
@@ -409,6 +414,16 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && ACTION == 'delete') {
     }
 
 
+
+    // This gene panel has already been assigned to an individual so we can not delete it
+    if ($zData['individuals'] > 0) {
+        header('Refresh: 4; url=' . lovd_getInstallURL() . CURRENT_PATH);
+        $_T->printHeader();
+        $_T->printTitle();
+        lovd_showInfoTable('This gene panel can not be deleted as it has already been assigned to ' . $zData['individuals'] . ' individuals.', 'warning');
+        $_T->printFooter();
+        exit;
+    }
 
     $_T->printHeader();
     $_T->printTitle();
