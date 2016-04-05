@@ -4,7 +4,7 @@
  * LEIDEN OPEN VARIATION DATABASE (LOVD)
  *
  * Created     : 2016-03-07
- * Modified    : 2016-03-30
+ * Modified    : 2016-04-05
  * For LOVD    : 3.0-13
  *
  * Copyright   : 2004-2016 Leiden University Medical Center; http://www.LUMC.nl/
@@ -241,7 +241,7 @@ class LOVD_GenePanelGene extends LOVD_Object {
             }
             // Format the OMIM URL.
             $zData['id_omim_'] = '';
-            if ($zData['id_omim']) {
+            if (!empty($zData['id_omim'])) {
                 $zData['id_omim_'] = '<SPAN' . ($sView != 'list' ? '' : ' onclick="cancelParentEvent(event);"') . '><A href="' . lovd_getExternalSource('omim', $zData['id_omim'], true) . '" target="_blank">' . $zData['id_omim'] . '</A></SPAN>';
             }
             // Create a link to a transcript.
