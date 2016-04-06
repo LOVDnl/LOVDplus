@@ -112,7 +112,7 @@ class LOVD_ScreeningMOD extends LOVD_Screening {
                      'analysis_status' => 'Analysis status',
                      'analysis_by_' => 'Analysis by',
                      'analysis_date' => 'Analysis started',
-                     'analysis_approved_by' => 'Analysis approved by',
+                     'analysis_approved_by_' => 'Analysis approved by',
                      'analysis_approved_date' => 'Analysis approved',
                         'variants_found_link' => 'Variants found?',
                         'variants_to_be_confirmed_' => 'Variants to be confirmed',
@@ -221,9 +221,11 @@ class LOVD_ScreeningMOD extends LOVD_Screening {
                     $sClose = 'Close';
                 }
             } elseif ($zData['analysis_statusid'] == ANALYSIS_STATUS_CLOSED) {
-                if ($_AUTH['level'] >= LEVEL_MANAGER) {
+                if ($_AUTH['level'] >= LEVEL_OWNER && $zData['analysis_approved_by'] == $_AUTH['id']) {
                     $sOpen = 'Re-open for analysis';
-                    $sClose = 'Wait for confirmation';
+                }
+                if ($_AUTH['level'] >= LEVEL_MANAGER) {
+                    $sClose = 'Close as waiting for confirmation';
                 }
             } elseif ($zData['analysis_statusid'] == ANALYSIS_STATUS_WAIT_CONFIRMATION) {
                 if ($_AUTH['level'] >= LEVEL_ADMIN) {
@@ -242,7 +244,8 @@ class LOVD_ScreeningMOD extends LOVD_Screening {
         $zData['variants_to_be_confirmed_'] = $_DB->query('SELECT COUNT(*) FROM ' . TABLE_VARIANTS . ' AS vog INNER JOIN ' . TABLE_SCR2VAR . ' AS s2v ON (vog.id = s2v.variantid) WHERE vog.to_be_confirmed = 1 AND s2v.screeningid = ?', array($zData['id']))->fetchColumn();
         if ($zData['variants_to_be_confirmed_']) {
             $zData['variants_to_be_confirmed_'] .= ' (<A href="screenings/' . $zData['id'] . '?downloadToBeConfirmed">download</A>)';
-            if ($_AUTH['level'] >= LEVEL_MANAGER) {
+            if (($_AUTH['level'] >= LEVEL_OWNER && $zData['analysis_statusid'] < ANALYSIS_STATUS_CLOSED) ||
+                ($_AUTH['level'] >= LEVEL_MANAGER && $zData['analysis_statusid'] < ANALYSIS_STATUS_WAIT_CONFIRMATION)) {
                 // Managers are allowed to export the variants as well.
                 $zData['variants_to_be_confirmed_'] .= ' (<A id="export_variants" href="#" onclick="$.get(\'screenings/' . $zData['id'] . '?exportToBeConfirmed\',function(sResponse){if(sResponse.substring(0,1)==\'1\'){alert(\'Successfully exported \'+sResponse.substring(2)+\' lines of variant data.\');$(\'#export_variants\').replaceWith($(\'#export_variants\').html());}else{alert(\'Error while exporting file:\n\'+sResponse);}}).error(function(){alert(\'Error while exporting file.\');});return false;">export to Miracle</A>)';
             }
