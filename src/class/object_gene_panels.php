@@ -256,6 +256,13 @@ class LOVD_GenePanel extends LOVD_Object {
                 }
             }
             $zData['pmid_mandatory_'] = ($zData['pmid_mandatory']? 'Yes' : 'No');
+
+            // Show a URL to search for the individuals that have this gene panel assigned.
+            // A future improvement could be to use the gene panel ID instead of the name but this is fine for now.
+            if ($zData['individuals'] > 0) {
+                $sLink = '<A href="individuals?search_gene_panels_=%22' . $zData['name'] . '%22">See individuals</A>';
+                $zData['individuals'] .= ' <SPAN style="float:right">' . $sLink . '</SPAN>';
+            }
         }
         $zData['type_'] = ucwords(str_replace('_', ' ', $zData['type']));
 
