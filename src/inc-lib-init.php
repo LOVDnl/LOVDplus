@@ -4,10 +4,10 @@
  * LEIDEN OPEN VARIATION DATABASE (LOVD)
  *
  * Created     : 2009-10-19
- * Modified    : 2015-03-05
- * For LOVD    : 3.0-13
+ * Modified    : 2016-04-06
+ * For LOVD    : 3.0-15
  *
- * Copyright   : 2004-2015 Leiden University Medical Center; http://www.LUMC.nl/
+ * Copyright   : 2004-2016 Leiden University Medical Center; http://www.LUMC.nl/
  * Programmers : Ing. Ivo F.A.C. Fokkema <I.F.A.C.Fokkema@LUMC.nl>
  *               Ing. Ivar C. Lugtenburg <I.C.Lugtenburg@LUMC.nl>
  *
@@ -973,10 +973,25 @@ function lovd_showInfoTable ($sMessage, $sType = 'information', $sWidth = '100%'
         $sWidth = '100%';
     }
 
-    print('      <TABLE border="0" cellpadding="2" cellspacing="0" width="' . $sWidth . '" class="info"' . (!empty($sHref)? ' style="cursor : pointer;" onclick="' . (preg_match('/[ ;"\'=()]/', $sHref)? $sHref : 'window.location.href=\'' . $sHref . '\';') . '"': '') . '>' . "\n" .
-          '        <TR>' . "\n" .
-          '          <TD valign="top" align="center" width="40"><IMG src="gfx/lovd_' . $sType . '.png" alt="' . $aTypes[$sType] . '" title="' . $aTypes[$sType] . '" width="32" height="32" style="margin : 4px;"></TD>' . "\n" .
-          '          <TD valign="middle">' . $sMessage . '</TD></TR></TABLE><BR>' . "\n\n");
+    switch (FORMAT) {
+        case 'text/plain':
+            // We're ignoring the $sWidth here.
+            $nWidth = 100;
+            $sSeparatorLine = '+' . str_repeat('-', $nWidth - 2) . '+';
+            $aMessage = explode("\n", wordwrap($sMessage, $nWidth - 4));
+            $aMessage = array_map('str_pad', $aMessage, array_fill(0, count($aMessage), $nWidth - 4));
+            print($sSeparatorLine . "\n" .
+                  '| ' . str_pad($aTypes[$sType], $nWidth - 4, ' ') . ' |' . "\n" .
+                  $sSeparatorLine . "\n" .
+                  '| ' . implode(" |\n| ", $aMessage) . ' |' . "\n" .
+                  $sSeparatorLine . "\n\n");
+            break;
+        default:
+            print('      <TABLE border="0" cellpadding="2" cellspacing="0" width="' . $sWidth . '" class="info"' . (!empty($sHref)? ' style="cursor : pointer;" onclick="' . (preg_match('/[ ;"\'=()]/', $sHref)? $sHref : 'window.location.href=\'' . $sHref . '\';') . '"': '') . '>' . "\n" .
+                  '        <TR>' . "\n" .
+                  '          <TD valign="top" align="center" width="40"><IMG src="gfx/lovd_' . $sType . '.png" alt="' . $aTypes[$sType] . '" title="' . $aTypes[$sType] . '" width="32" height="32" style="margin : 4px;"></TD>' . "\n" .
+                  '          <TD valign="middle">' . $sMessage . '</TD></TR></TABLE><BR>' . "\n\n");
+    }
 }
 
 
