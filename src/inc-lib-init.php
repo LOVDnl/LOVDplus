@@ -548,7 +548,7 @@ function lovd_isAuthorized ($sType, $Data, $bSetUserLevel = true)
     }
 
     if ($sType == 'analysisrun') {
-        // Authorization based on person who started the analysis run.
+        // Authorization based on person who started the analysis run (note, not necessarily the whole analysis).
         if (is_array($Data)) {
             // Not supported on this data type.
             return false;

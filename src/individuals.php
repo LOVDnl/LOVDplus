@@ -124,6 +124,11 @@ if (PATH_COUNT >= 2 && ctype_digit($_PE[1]) && !ACTION && (PATH_COUNT == 2 || PA
 
     // If we're here, analyzing a screening, show the screening VE on the right.
     if ($nScreeningToAnalyze) {
+        // Authorize the user for this screening, but specifically meant for the analysis.
+        // For LEVEL_ANALYZER, this should activate LEVEL_OWNER for
+        //   free screenings or screenings under analysis by this user.
+        lovd_isAuthorized('screening_analysis', $nScreeningToAnalyze);
+
         require_once ROOT_PATH . 'class/object_screenings.mod.php';
         $_DATA = new LOVD_ScreeningMOD();
         $zScreening = $_DATA->viewEntry($nScreeningToAnalyze);
@@ -201,11 +206,6 @@ if (PATH_COUNT >= 2 && ctype_digit($_PE[1]) && !ACTION && (PATH_COUNT == 2 || PA
             $_T->printFooter();
             exit;
         }
-
-        // Authorize the user for this screening, but specifically meant for the analysis.
-        // For LEVEL_ANALYZER, this should activate LEVEL_OWNER for
-        //   free screenings or screenings under analysis by this user.
-        lovd_isAuthorized('screening_analysis', $nScreeningToAnalyze);
 
 
 
@@ -382,7 +382,7 @@ if (PATH_COUNT == 4 && ctype_digit($_PE[1]) && $_PE[2] == 'analyze' && ctype_dig
 
     // Load appropriate user level.
     lovd_isAuthorized('screening_analysis', $nScreeningID);
-    lovd_requireAUTH(LEVEL_ANALYZER); // Minimal level needed.
+    lovd_requireAUTH(LEVEL_OWNER); // Analyzer becomes Owner, if authorized.
 
 
 

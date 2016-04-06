@@ -4,8 +4,8 @@
  * LEIDEN OPEN VARIATION DATABASE (LOVD)
  *
  * Created     : 2014-01-03
- * Modified    : 2016-03-07
- * For LOVD    : 3.0-12
+ * Modified    : 2016-04-06
+ * For LOVD    : 3.0-13
  *
  * Copyright   : 2004-2016 Leiden University Medical Center; http://www.LUMC.nl/
  * Programmer  : Ing. Ivo F.A.C. Fokkema <I.F.A.C.Fokkema@LUMC.nl>
@@ -214,6 +214,29 @@ class LOVD_ScreeningMOD extends LOVD_Screening {
                 $zData['variants_found_link'] .= ' (<A href="screenings/' . $zData['id'] . '">See all</A>)';
             }
             $zData['analysis_status'] = $_SETT['analysis_status'][$zData['analysis_statusid']];
+            // Add link to action, depending on level and current status.
+            $sOpen = $sClose = '';
+            if ($zData['analysis_statusid'] == ANALYSIS_STATUS_IN_PROGRESS) {
+                if ($_AUTH['level'] >= LEVEL_OWNER) {
+                    $sClose = 'Close';
+                }
+            } elseif ($zData['analysis_statusid'] == ANALYSIS_STATUS_CLOSED) {
+                if ($_AUTH['level'] >= LEVEL_MANAGER) {
+                    $sOpen = 'Re-open for analysis';
+                    $sClose = 'Wait for confirmation';
+                }
+            } elseif ($zData['analysis_statusid'] == ANALYSIS_STATUS_WAIT_CONFIRMATION) {
+                if ($_AUTH['level'] >= LEVEL_ADMIN) {
+                    $sOpen = 'Re-open';
+                    $sClose = 'Confirm';
+                }
+            }
+            if ($sOpen) {
+                $zData['analysis_status'] .= ' (<A href="' . CURRENT_PATH . '?open">' . $sOpen . '</A>)';
+            }
+            if ($sClose) {
+                $zData['analysis_status'] .= ' (<A href="' . CURRENT_PATH . '?close">' . $sClose . '</A>)';
+            }
         }
         // Just do a separate query for the variants to be confirmed (instead of modifying the VE query).
         $zData['variants_to_be_confirmed_'] = $_DB->query('SELECT COUNT(*) FROM ' . TABLE_VARIANTS . ' AS vog INNER JOIN ' . TABLE_SCR2VAR . ' AS s2v ON (vog.id = s2v.variantid) WHERE vog.to_be_confirmed = 1 AND s2v.screeningid = ?', array($zData['id']))->fetchColumn();
