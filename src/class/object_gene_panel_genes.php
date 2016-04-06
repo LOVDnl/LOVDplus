@@ -4,7 +4,7 @@
  * LEIDEN OPEN VARIATION DATABASE (LOVD)
  *
  * Created     : 2016-03-07
- * Modified    : 2016-04-05
+ * Modified    : 2016-04-06
  * For LOVD    : 3.0-13
  *
  * Copyright   : 2004-2016 Leiden University Medical Center; http://www.LUMC.nl/
@@ -233,19 +233,19 @@ class LOVD_GenePanelGene extends LOVD_Object {
             $zData['genepanelid'] = '<A href="gene_panels/' . $zData['genepanelid'] . '">' . $zData['genepanelid'] . '</A>';
         }
         // Only format this viewlist if we are not downloading it
+        $zData['pmid_'] = $zData['pmid'];
+        $zData['id_omim_'] = $zData['id_omim'];
+        $zData['transcript_ncbi_'] = $zData['transcript_ncbi'];
         if (FORMAT == 'text/html') {
             // Format the pubmed URL.
-            $zData['pmid_'] = '';
             if ($zData['pmid']) {
                 $zData['pmid_'] = '<SPAN' . ($sView != 'list' ? '' : ' onclick="cancelParentEvent(event);"') . '><A href="' . lovd_getExternalSource('pubmed_article', $zData['pmid'], true) . '" target="_blank">' . $zData['pmid'] . '</A></SPAN>';
             }
             // Format the OMIM URL.
-            $zData['id_omim_'] = '';
             if (!empty($zData['id_omim'])) {
                 $zData['id_omim_'] = '<SPAN' . ($sView != 'list' ? '' : ' onclick="cancelParentEvent(event);"') . '><A href="' . lovd_getExternalSource('omim', $zData['id_omim'], true) . '" target="_blank">' . $zData['id_omim'] . '</A></SPAN>';
             }
             // Create a link to a transcript.
-            $zData['transcript_ncbi_'] = '';
             if ($zData['transcriptid']) {
                 $zData['transcript_ncbi_'] = '<SPAN' . ($sView != 'list' ? '' : ' onclick="cancelParentEvent(event);"') . '><A href="transcripts/' . $zData['transcriptid'] . '">' . $zData['transcript_ncbi'] . '</A></SPAN>';
             }
