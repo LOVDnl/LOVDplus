@@ -1013,6 +1013,70 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && ACTION == 'history') {
 }
 
 
+if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && ACTION == 'history_cat') {
+    // URL: /gene_panels/00001?history_cat
+    // Show the history for this gene panel.
+ 
+    $nID = sprintf('%05d', $_PE[1]);
+    define('PAGE_TITLE', 'View categorized history for gene panel #' . $nID);
+
+    lovd_requireAUTH();
+
+    $_T->printHeader();
+    $_T->printTitle();
+
+    require ROOT_PATH . 'class/object_gene_panel_genes.rev.php';
+    $_DATA = new LOVD_GenePanelGeneREV();
+    $_GET['search_genepanelid'] = $nID;
+   // $_DATA->viewList('GenePanelGeneREV');
+
+    $aGenesCurrent = $_DB->query('SELECT geneid, 1 FROM ' . TABLE_GP2GENE . ' WHERE genepanelid = ?', array($nID))->fetchAllCombine();
+
+    //var_dump($aGenesCurrent);
+
+    print('   <TABLE border="0" cellpadding="10" cellspacing="0"><TR valign="top">' . "\n");
+    foreach (array(1, 0) as $i) {
+        print('            <TD>
+              <TABLE border="0" cellpadding="10" cellspacing="1" width="' . ($i? '350' : '450') . '" class="data" style="font-size : 13px;">
+                <TR>
+                  <TH' . ($i? '' : '></TH><TH') . ' class="S16">' . ($i? 'New Genes' : 'Removed Genes') . '</TH></TR>');
+        foreach (    $aGenesCurrent as $newGene => $anumber ) {
+
+           // $nAgeInDays = floor(($tNow - $tFile)/(60*60*24));
+
+        //    if ($i) {
+                // Already imported.
+         //       print("\n" .
+          //          '                <TR class="del">');
+          //  } else {
+            //    $bScheduled = isset($aFilesScheduled[$sFile]);
+            //    if ($bScheduled) {
+                    // Not imported yet, but scheduled.
+                //    print("\n" .
+                //        '                <TR class="del">
+                //  <TD width="30" style="text-align : center;"><IMG src="gfx/menu_clock.png" alt="Scheduled" width="16" height="16"></TD>');
+             //   } else {
+                    // Not imported yet, can be scheduled.
+             //       print("\n" .
+             //           '                <TR class="data" style="cursor : pointer;" onclick="if ($(this).find(\':checkbox\').prop(\'checked\')) { $(this).find(\':checkbox\').attr(\'checked\', false); $(this).find(\'img\').hide(); $(this).removeClass(\'colGreen\'); } else { $(this).find(\':checkbox\').attr(\'checked\', true);  $(this).find(\'img\').show(); $(this).addClass(\'colGreen\'); }">
+              //    <TD width="30" style="text-align : center;"><INPUT type="checkbox" name="' . $sFile . '" value="1" style="display : none;"><IMG src="gfx/check.png" alt="Import" width="16" height="16" style="display : none;"></TD>');
+             //   }
+            //}
+            //print('
+             //     <TD><SPAN class="S15"><B>' . $sFile . '</B>' . (!$bScheduled? '' : ' <SPAN class="S13">(scheduled for import)</SPAN>') . '</SPAN><BR>
+              //      ' . date('Y-m-d H:i:s', $tFile) . ' - Converted ' . $nAgeInDays . ' day' . ($nAgeInDays == 1? '' : 's') . ' ago</TD></TR>');
+            print('
+                  <TR><TD'. ($i? '' : '></TD><TD' )  . '>' .  ($i?  $newGene  : 'todo') .'</TD></TR>');
+        }
+        print('</TABLE></TD>' . "\n");
+    }
+    print('</TABLE>');
+
+
+    $_T->printFooter();
+    exit;
+}
+
 
 
 
