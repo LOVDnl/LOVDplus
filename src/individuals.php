@@ -220,6 +220,33 @@ if (PATH_COUNT >= 2 && ctype_digit($_PE[1]) && !ACTION && (PATH_COUNT == 2 || PA
 
         lovd_includeJS('inc-js-analyses.php', 1);
 
+        // The popover div for showing the gene panel selection form.
+        print('
+      <DIV id="gene_panel_selection" title="Select gene panels for analysis" style="display : none;">
+        <FORM id="gene_panel_selection_form">
+          <TABLE border="0" cellpadding="0" cellspacing="0" width="100%">');
+
+        // Add each of the gene panels assigned to this individual to the form.
+        foreach ($zData['gene_panels'] as $nKey => $aGenePanel) {
+            print('
+            <TR> 
+              <TD><INPUT type="checkbox" name="gene_panel" value="' . $aGenePanel[0] . ';' . $aGenePanel[2] . '"' . ($aGenePanel[2]=='mendeliome'? '' : ' checked') . '></TD>
+              <TD>' . $aGenePanel[1] . '</TD>
+              <TD>' . ucfirst(str_replace('_', ' ', $aGenePanel[2])) . '</TD>
+            </TR>');
+        }
+
+        // Add in the custom gene panel option.
+        print('
+            <TR>
+              <TD><INPUT type="checkbox" name="gene_panel" value="custom_panel;custom_panel" checked></TD>
+              <TD>Custom Panel<BR><SPAN class="form_note">(' . $zData['custom_panel'] . ')</SPAN></TD>
+              <TD>Custom Panel</TD>
+            </TR>
+          </TABLE>
+        </FORM>
+      </DIV>' . "\n");
+
         // If we're ready to analyze, or if we are analyzing already, show analysis options.
         // Both already run analyses and analyses not yet run will be shown. Analyses already run are fetched differently, though.
         $zAnalysesRun    = $_DB->query('SELECT a.id, a.name, a.description, a.filters, IFNULL(MAX(arf.run_time)>-1, 0) AS analysis_run, ar.id AS runid,   ar.modified, GROUP_CONCAT(arf.filterid, ";", IFNULL(arf.filtered_out, "-"), ";", IFNULL(arf.run_time, "-") ORDER BY arf.filter_order SEPARATOR ";;") AS __run_filters
@@ -271,7 +298,7 @@ if (PATH_COUNT >= 2 && ctype_digit($_PE[1]) && !ACTION && (PATH_COUNT == 2 || PA
             print('
             <TD class="analysis" valign="top">
               <TABLE border="0" cellpadding="0" cellspacing="1" id="' . ($zAnalysis['runid']? 'run_' . $zAnalysis['runid'] : 'analysis_' . $zAnalysis['id']) . '" class="analysis ' . $sAnalysisClassName . '" onclick="' .
-                ($zAnalysis['analysis_run']? 'lovd_showAnalysisResults(\'' . $zAnalysis['runid'] . '\');' : ($_AUTH['level'] < LEVEL_OWNER? '' : 'lovd_runAnalysis(\'' . $nScreeningToAnalyze . '\', \'' . $zAnalysis['id'] . '\'' . (!$zAnalysis['runid']? '' : ', \'' . $zAnalysis['runid'] . '\'') . ');')) . '">
+                ($zAnalysis['analysis_run']? 'lovd_showAnalysisResults(\'' . $zAnalysis['runid'] . '\');' : ($_AUTH['level'] < LEVEL_OWNER? '' : 'lovd_popoverGenePanelSelectionForm(\'' . $nScreeningToAnalyze . '\', \'' . $zAnalysis['id'] . '\'' . (!$zAnalysis['runid']? '' : ', \'' . $zAnalysis['runid'] . '\'') . ');')) . '">
                 <TR>
                   <TH colspan="3">
                     <DIV style="position : relative">

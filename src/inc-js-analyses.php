@@ -220,6 +220,77 @@ function lovd_runNextFilter (nAnalysisID, nRunID)
 
 
 
+function lovd_popoverGenePanelSelectionForm (nScreeningID, nAnalysisID, nRunID)
+{
+    // Makes the gene panel selection form dialog visible and prepares it for the user
+
+    // Popup the gene panel selection form dialog
+    $("#gene_panel_selection").dialog(
+        {
+        open: function() {
+            $("#run_analysis").focus();
+        },
+        draggable:false,
+        resizable:false,
+        minWidth:500,
+        show:"fade",
+        closeOnEscape:true,
+        hide:"fade",
+        modal:true,
+        buttons:[
+            {
+                id: "run_analysis",
+                text: "Run analysis",
+                click: function () {
+                    lovd_processGenePanelSelectionForm();
+                    $(this).dialog("close");
+                }
+            }
+            ]
+        }
+    );
+
+    // Add the values passed to this function as hidden inputs unless no value was passed
+    if (typeof(nScreeningID) != 'undefined') {
+        $('#gene_panel_selection_form').prepend('<input type="hidden" name="nScreeningID" value="' + nScreeningID + '" />');
+    }
+    if (typeof(nAnalysisID) != 'undefined') {
+        $('#gene_panel_selection_form').prepend('<input type="hidden" name="nAnalysisID" value="' + nAnalysisID + '" />');
+    }
+    if (typeof(nRunID) != 'undefined') {
+        $('#gene_panel_selection_form').prepend('<input type="hidden" name="nRunID" value="' + nRunID + '" />');
+    }
+}
+
+
+
+
+
+function lovd_processGenePanelSelectionForm ()
+{
+    // Processes the popover form that selects the gene panels for a particular analysis
+
+    // Get all the values from the checked checkboxes and read them into an array
+    aSelectedGenePanels = $("#gene_panel_selection_form input:checkbox:checked").map(function(){
+        return $(this).val();
+    }).get();
+
+    // Read in the hidden form values
+    nScreeningID = $("#gene_panel_selection_form input[name=nScreeningID]").val();
+    nAnalysisID = $("#gene_panel_selection_form input[name=nAnalysisID]").val();
+    nRunID = $("#gene_panel_selection_form input[name=nRunID]").val();
+
+<!--    console.log(aSelectedGenePanels, nScreeningID, nAnalysisID, nRunID);-->
+
+    // Call lovd_runAnalysis and pass all the extra values
+<!--    TODO AM Need to pass the selected gene array to this function.-->
+    lovd_runAnalysis(nScreeningID, nAnalysisID, nRunID);
+}
+
+
+
+
+
 function lovd_showAnalysisResults (nRunID)
 {
     // Calls the ViewList to refresh and load the given Run ID's results.

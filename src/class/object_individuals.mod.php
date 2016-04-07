@@ -62,7 +62,7 @@ class LOVD_IndividualMOD extends LOVD_Individual {
         $this->aSQLViewEntry['SELECT']   = 'i.*, "" AS owned_by, ' .
                                            'GROUP_CONCAT(DISTINCT d.id SEPARATOR ";") AS _diseaseids, ' .
                                            'GROUP_CONCAT(DISTINCT d.id, ";", IF(CASE d.symbol WHEN "-" THEN "" ELSE d.symbol END = "", d.name, d.symbol), ";", d.name ORDER BY (d.symbol != "" AND d.symbol != "-") DESC, d.symbol, d.name SEPARATOR ";;") AS __diseases, ' .
-                                           'GROUP_CONCAT(DISTINCT gp.id, ";", gp.name ORDER BY gp.name ASC SEPARATOR ";;") AS __gene_panels, ' .
+                                           'GROUP_CONCAT(DISTINCT gp.id, ";", gp.name, ";", gp.type ORDER BY gp.type DESC, gp.name ASC SEPARATOR ";;") AS __gene_panels, ' .
                                            'GROUP_CONCAT(DISTINCT s.id SEPARATOR ";") AS _screeningids, ' .
                                            'COUNT(DISTINCT s2v.variantid) AS variants, ' .
                                            'uc.name AS created_by_, ' .
