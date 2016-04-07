@@ -370,7 +370,7 @@ if (PATH_COUNT >= 2 && ctype_digit($_PE[1]) && !ACTION && (PATH_COUNT == 2 || PA
 
 if (PATH_COUNT == 4 && ctype_digit($_PE[1]) && $_PE[2] == 'analyze' && ctype_digit($_PE[3]) && ACTION == 'close') {
     // URL: /individuals/00000001/analyze/0000000001?close
-    // Close specific analysis.
+    // Close a specific analysis.
 
     $nIndividualID = sprintf('%08d', $_PE[1]);
     $nScreeningID = sprintf('%010d', $_PE[3]);
@@ -387,10 +387,12 @@ if (PATH_COUNT == 4 && ctype_digit($_PE[1]) && $_PE[2] == 'analyze' && ctype_dig
 
 
     // This code is for all levels of closing, since the work is so very similar.
-    $zData = $_DB->query('SELECT s.analysis_statusid
+    $zData = $_DB->query('SELECT *
                           FROM ' . TABLE_SCREENINGS . ' AS s
                           WHERE id = ? AND individualid = ?', array($nScreeningID, $nIndividualID))->fetchAssoc();
     if (!$zData) {
+        $_T->printHeader();
+        $_T->printTitle();
         lovd_showInfoTable('No such screening defined for this individual!', 'stop');
         $_T->printFooter();
         exit;
@@ -435,7 +437,7 @@ if (PATH_COUNT == 4 && ctype_digit($_PE[1]) && $_PE[2] == 'analyze' && ctype_dig
         $_DB->beginTransaction();
         if ($_DB->query('UPDATE ' . TABLE_SCREENINGS . ' SET analysis_statusid = ?, analysis_approved_by = ?, analysis_approved_date = NOW() WHERE id = ?',
             array($nNextStatus, $_AUTH['id'], $nScreeningID))) {
-            $bLog = lovd_writeLog('Event', LOG_EVENT, 'Successfully set analysis status to "' . $_SETT['analysis_status'][$nNextStatus] . '" for individual ' . $nIndividualID . ':' . $nScreeningID);
+            $bLog = lovd_writeLog('Event', LOG_EVENT, 'Successfully increased analysis status to "' . $_SETT['analysis_status'][$nNextStatus] . '" for individual ' . $nIndividualID . ':' . $nScreeningID);
             if ($bLog) {
                 $_DB->commit();
 
@@ -453,6 +455,111 @@ if (PATH_COUNT == 4 && ctype_digit($_PE[1]) && $_PE[2] == 'analyze' && ctype_dig
     $_T->printHeader();
     $_T->printTitle();
     lovd_showInfoTable('Failed to close analysis.', 'stop', 600);
+    $_T->printFooter();
+    exit;
+}
+
+
+
+
+
+if (PATH_COUNT == 4 && ctype_digit($_PE[1]) && $_PE[2] == 'analyze' && ctype_digit($_PE[3]) && ACTION == 'open') {
+    // URL: /individuals/00000001/analyze/0000000001?open
+    // Open a specific analysis.
+
+    $nIndividualID = sprintf('%08d', $_PE[1]);
+    $nScreeningID = sprintf('%010d', $_PE[3]);
+    define('PAGE_TITLE', 'Open analysis #' . $nScreeningID . ' of individual #' . $nIndividualID);
+    define('LOG_EVENT', 'AnalysisOpen');
+
+    // If all is well, we have no output, and we redirect the user back.
+    // Only in case of an error, we create some output here.
+
+    // Load appropriate user level.
+    lovd_isAuthorized('screening_analysis', $nScreeningID);
+    lovd_requireAUTH(LEVEL_OWNER); // Analyzer becomes Owner, if authorized.
+
+
+
+    // This code is for all levels of opening, since the work is so very similar.
+    $zData = $_DB->query('SELECT *
+                          FROM ' . TABLE_SCREENINGS . ' AS s
+                          WHERE id = ? AND individualid = ?', array($nScreeningID, $nIndividualID))->fetchAssoc();
+    if (!$zData) {
+        $_T->printHeader();
+        $_T->printTitle();
+        lovd_showInfoTable('No such screening defined for this individual!', 'stop');
+        $_T->printFooter();
+        exit;
+    }
+
+
+
+    if ($zData['analysis_statusid'] >= ANALYSIS_STATUS_ARCHIVED) {
+        $_T->printHeader();
+        $_T->printTitle();
+        lovd_showInfoTable('Analysis has already been archived, can not re-open analysis!', 'stop');
+        $_T->printFooter();
+        exit;
+    } elseif ($zData['analysis_statusid'] <= ANALYSIS_STATUS_IN_PROGRESS) {
+        $_T->printHeader();
+        $_T->printTitle();
+        lovd_showInfoTable('Analysis has already fully been opened.', 'stop');
+        $_T->printFooter();
+        exit;
+    } else {
+        // Analysis can be opened.
+        $aStatuses = array_keys($_SETT['analysis_status']);
+        $iCurrentStatus = array_search($zData['analysis_statusid'], $aStatuses);
+        if (!isset($aStatuses[$iCurrentStatus - 1])) {
+            lovd_displayError(LOG_EVENT, 'Error: Previous status not available, current status is ' . $zData['analysis_statusid']);
+        }
+        $nPreviousStatus = $aStatuses[$iCurrentStatus - 1];
+
+        // Several final checks.
+        if ($zData['analysis_statusid'] >= ANALYSIS_STATUS_CONFIRMED) {
+            // Analysis was set to confirmed (or higher, shouldn't get here), and will now be set to awaiting confirmation.
+            // This requires Admin access.
+            lovd_requireAUTH(LEVEL_ADMIN);
+        } elseif ($zData['analysis_statusid'] >= ANALYSIS_STATUS_WAIT_CONFIRMATION) {
+            // Analysis was awaiting confirmation (or higher, shouldn't get here), and will now be set to closed.
+            // This requires Manager access.
+            lovd_requireAUTH(LEVEL_MANAGER);
+        } elseif ($zData['analysis_statusid'] >= ANALYSIS_STATUS_CLOSED) {
+            // Analysis was closed (or higher, shouldn't get here), and will now be set to in progress.
+            // This requires Manager access, or Owner access with the
+            //  additional requirement of being the one who closed the analysis.
+            if (!($_AUTH['level'] == LEVEL_OWNER && $zData['analysis_approved_by'] == $_AUTH['id'])) {
+                lovd_requireAUTH(LEVEL_MANAGER);
+            }
+        }
+
+        // All good, let's process the opening.
+        // The next few queries should all be run, or non should be run.
+        $_DB->beginTransaction();
+        // Choosing to overwrite the Approved By and Approved Date values as well,
+        //  so that at least you can see who put the analysis in this state, and when.
+        // You simply don't know the direction in which the status moved (up or down).
+        if ($_DB->query('UPDATE ' . TABLE_SCREENINGS . ' SET analysis_statusid = ?, analysis_approved_by = ?, analysis_approved_date = NOW() WHERE id = ?',
+            array($nPreviousStatus, $_AUTH['id'], $nScreeningID))) {
+            $bLog = lovd_writeLog('Event', LOG_EVENT, 'Successfully decreased analysis status to "' . $_SETT['analysis_status'][$nPreviousStatus] . '" for individual ' . $nIndividualID . ':' . $nScreeningID);
+            if ($bLog) {
+                $_DB->commit();
+
+                // All good, we send the user back.
+                header('Location: ' . lovd_getInstallURL() . CURRENT_PATH);
+                exit;
+            }
+        }
+        $_DB->rollBack();
+    }
+
+
+
+    // If we get here, there's been an issue...
+    $_T->printHeader();
+    $_T->printTitle();
+    lovd_showInfoTable('Failed to open analysis.', 'stop', 600);
     $_T->printFooter();
     exit;
 }
