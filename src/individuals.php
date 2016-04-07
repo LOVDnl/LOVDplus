@@ -224,6 +224,9 @@ if (PATH_COUNT >= 2 && ctype_digit($_PE[1]) && !ACTION && (PATH_COUNT == 2 || PA
         print('
       <DIV id="gene_panel_selection" title="Select gene panels for analysis" style="display : none;">
         <FORM id="gene_panel_selection_form">
+          <INPUT type="hidden" name="nScreeningID" value="">
+          <INPUT type="hidden" name="nAnalysisID" value="">
+          <INPUT type="hidden" name="nRunID" value="">
           <TABLE border="0" cellpadding="0" cellspacing="0" width="80%" align="center">');
 
         $sLastType = '';
@@ -241,7 +244,7 @@ if (PATH_COUNT >= 2 && ctype_digit($_PE[1]) && !ACTION && (PATH_COUNT == 2 || PA
             // Add the gene panel to the form.
             print('
             <TR> 
-              <TD><INPUT type="checkbox" name="gene_panel" value="' . $aGenePanel[0] . ';' . $aGenePanel[2] . '"' . ($aGenePanel[2]=='mendeliome'? '' : ' checked') . '></TD>
+              <TD><INPUT type="checkbox" name="gene_panel" value="' . $aGenePanel[0] . '"' . ($aGenePanel[2]=='mendeliome'? '' : ' checked') . '></TD>
               <TD>' . $aGenePanel[1] . '</TD>
             </TR>');
         }
@@ -252,7 +255,7 @@ if (PATH_COUNT >= 2 && ctype_digit($_PE[1]) && !ACTION && (PATH_COUNT == 2 || PA
               <TD class="gpheader" colspan="2">Custom panel</TD>
             </TR>
             <TR>
-              <TD><INPUT type="checkbox" name="gene_panel" value="custom_panel;custom_panel" checked></TD>
+              <TD><INPUT type="checkbox" name="gene_panel" value="custom_panel" checked></TD>
               <TD><SPAN>' . $zData['custom_panel'] . '</SPAN></TD>
             </TR>
           </TABLE>

@@ -250,16 +250,10 @@ function lovd_popoverGenePanelSelectionForm (nScreeningID, nAnalysisID, nRunID)
         }
     );
 
-    // Add the values passed to this function as hidden inputs unless no value was passed
-    if (typeof(nScreeningID) != 'undefined') {
-        $('#gene_panel_selection_form').prepend('<input type="hidden" name="nScreeningID" value="' + nScreeningID + '" />');
-    }
-    if (typeof(nAnalysisID) != 'undefined') {
-        $('#gene_panel_selection_form').prepend('<input type="hidden" name="nAnalysisID" value="' + nAnalysisID + '" />');
-    }
-    if (typeof(nRunID) != 'undefined') {
-        $('#gene_panel_selection_form').prepend('<input type="hidden" name="nRunID" value="' + nRunID + '" />');
-    }
+    // Add the values passed to this function to the hidden inputs
+    $("#gene_panel_selection_form input[name=nScreeningID]").val(nScreeningID);
+    $("#gene_panel_selection_form input[name=nAnalysisID]").val(nAnalysisID);
+    $("#gene_panel_selection_form input[name=nRunID]").val(nRunID);
 }
 
 
@@ -280,9 +274,16 @@ function lovd_processGenePanelSelectionForm ()
     nAnalysisID = $("#gene_panel_selection_form input[name=nAnalysisID]").val();
     nRunID = $("#gene_panel_selection_form input[name=nRunID]").val();
 
+    // If we don't have a run ID then make it undefined.
+    if (nRunID == '') {
+        nRunID = undefined;
+    }
+
 <!--    console.log(aSelectedGenePanels, nScreeningID, nAnalysisID, nRunID);-->
 
-    // Call lovd_runAnalysis and pass all the extra values
+<!--TODO Add the gene panel names to the bottom of the analysis here as well as when the page is refreshed for finished analysis-->
+
+    // Call lovd_runAnalysis and pass all the extra values.
 <!--    TODO AM Need to pass the selected gene array to this function.-->
     lovd_runAnalysis(nScreeningID, nAnalysisID, nRunID);
 }
