@@ -4,7 +4,7 @@
  * LEIDEN OPEN VARIATION DATABASE (LOVD)
  *
  * Created     : 2016-03-01
- * Modified    : 2016-03-24
+ * Modified    : 2016-04-06
  * For LOVD    : 3.0-13
  *
  * Copyright   : 2004-2016 Leiden University Medical Center; http://www.LUMC.nl/
@@ -59,7 +59,7 @@ if (PATH_COUNT == 1 && !ACTION) {
 
     require ROOT_PATH . 'class/object_gene_panels.php';
     $_DATA = new LOVD_GenePanel();
-    $_DATA->viewList('GenePanel', array(), false, false, (bool) ($_AUTH['level'] >= LEVEL_SUBMITTER));
+    $_DATA->viewList('GenePanel', array(), false, false, true);
 
     $_T->printFooter();
     exit;
@@ -73,10 +73,6 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && !ACTION) {
     // URL: /gene_panels/00001
     // View specific entry.
 
-    if ($_AUTH['level'] >= LEVEL_SUBMITTER) {
-        define('FORMAT_ALLOW_TEXTPLAIN', true);
-    }
-
     $nID = sprintf('%05d', $_PE[1]);
     define('PAGE_TITLE', 'View gene panel #' . $nID);
     $_T->printHeader();
@@ -88,12 +84,13 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && !ACTION) {
     $zData = $_DATA->viewEntry($nID);
 
     $aNavigation = array();
-    if ($_AUTH && $_AUTH['level'] >= LEVEL_CURATOR) {
+    if ($_AUTH && $_AUTH['level'] >= LEVEL_ANALYZER) {
         // Authorized user is logged in. Provide tools.
         $aNavigation[CURRENT_PATH . '?edit']            = array('menu_edit.png', 'Edit gene panel information', 1);
         $aNavigation[CURRENT_PATH . '?manage_genes']    = array('menu_plus.png', 'Manage gene panel\'s genes', 1);
         $aNavigation[CURRENT_PATH . '?history']         = array('menu_clock.png', 'View history of genes in this gene panel', 1);
-        if ($_AUTH['level'] >= LEVEL_MANAGER) {
+        $aNavigation['download/' . CURRENT_PATH]        = array('menu_save.png', 'Download this gene panel and its genes', 1);
+        if ($_AUTH['level'] >= LEVEL_ADMIN) {
             $aNavigation[CURRENT_PATH . '?delete']      = array('cross.png', 'Delete gene panel entry', 1);
         }
     }
@@ -109,7 +106,7 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && !ACTION) {
     $sGPGViewListID = 'GenePanelGene';
     // Add a menu item to allow the user to download the whole gene panel
     print('      <UL id="viewlistMenu_' . $sGPGViewListID . '" class="jeegoocontext jeegooviewlist">' . "\n" .
-          '        <LI class="icon"><A click="lovd_AJAX_viewListSubmit(\'' . $sGPGViewListID . '\', function(){lovd_AJAX_viewListDownload(\'' . $sGPGViewListID . '\', true);});"><SPAN class="icon" style="background-image: url(gfx/menu_save.png);"></SPAN>Download gene panel</A></LI>' . "\n" .
+          '        <LI class="icon"><A click="lovd_AJAX_viewListSubmit(\'' . $sGPGViewListID . '\', function(){lovd_AJAX_viewListDownload(\'' . $sGPGViewListID . '\', true);});"><SPAN class="icon" style="background-image: url(gfx/menu_save.png);"></SPAN>Download gene panel\'s genes</A></LI>' . "\n" .
           '      </UL>' . "\n\n");
     $_DATA->setRowLink($sGPGViewListID, CURRENT_PATH . '/{{geneid}}');
     $_DATA->viewList($sGPGViewListID, array(), false, false, true);
@@ -129,7 +126,7 @@ if (PATH_COUNT == 1 && ACTION == 'create') {
     define('PAGE_TITLE', 'Create a new gene panel entry');
     define('LOG_EVENT', 'GenePanelCreate');
 
-    lovd_requireAUTH();
+    lovd_requireAUTH(LEVEL_ANALYZER);
 
     require ROOT_PATH . 'class/object_gene_panels.php';
     $_DATA = new LOVD_GenePanel();
@@ -234,7 +231,7 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && ACTION == 'edit') {
     define('PAGE_TITLE', 'Edit gene panel entry #' . $nID);
     define('LOG_EVENT', 'GenePanelEdit');
 
-    lovd_requireAUTH();
+    lovd_requireAUTH(LEVEL_ANALYZER);
 
     require ROOT_PATH . 'class/object_gene_panels.php';
     $_DATA = new LOVD_GenePanel();
@@ -361,8 +358,8 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && ACTION == 'delete') {
     define('PAGE_TITLE', 'Delete gene panel entry #' . $nID);
     define('LOG_EVENT', 'GenePanelDelete');
 
-    // Require manager clearance.
-    lovd_requireAUTH(LEVEL_MANAGER);
+    // Require admin clearance.
+    lovd_requireAUTH(LEVEL_ADMIN);
 
     require ROOT_PATH . 'class/object_gene_panels.php';
     $_DATA = new LOVD_GenePanel();
@@ -465,7 +462,7 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && ACTION == 'manage_genes') {
     define('PAGE_TITLE', 'Manage genes for gene panel entry #' . $nID);
     define('LOG_EVENT', 'GenePanelManage');
 
-    lovd_requireAUTH(LEVEL_ADMIN);
+    lovd_requireAUTH(LEVEL_ANALYZER);
 
     $zData = $_DB->query('SELECT * FROM ' . TABLE_GENE_PANELS . ' WHERE id = ?', array($nID))->fetchAssoc();
     if (!$zData) {
@@ -823,7 +820,9 @@ if (PATH_COUNT == 3 && preg_match('/^[a-z][a-z0-9#@-]+$/i', rawurldecode($_PE[2]
 
     $aNavigation = array();
 
-    $aNavigation[CURRENT_PATH . '?edit']            = array('menu_edit.png', 'Edit gene information', 1);
+    if ($_AUTH['level'] >= LEVEL_ANALYZER) {
+        $aNavigation[CURRENT_PATH . '?edit'] = array('menu_edit.png', 'Edit gene information', 1);
+    }
     if ($_AUTH['level'] >= LEVEL_MANAGER) {
         $aNavigation[CURRENT_PATH . '?delete']      = array('cross.png', 'Remove gene entry', 1);
     }
@@ -847,7 +846,7 @@ if (PATH_COUNT == 3 && preg_match('/^[a-z][a-z0-9#@-]+$/i', rawurldecode($_PE[2]
     define('PAGE_TITLE', 'Edit gene ' . $sGeneID . ' in gene panel #' . $nGenePanelID);
     define('LOG_EVENT', 'GenePanelGeneEdit');
 
-    lovd_requireAUTH();
+    lovd_requireAUTH(LEVEL_ANALYZER);
 
     require ROOT_PATH . 'class/object_gene_panel_genes.php';
     require ROOT_PATH . 'inc-lib-form.php';

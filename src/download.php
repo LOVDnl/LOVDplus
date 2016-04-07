@@ -28,15 +28,10 @@
  *
  *************/
 
-//$_GET['format'] = 'text/plain'; // To make sure all possible error functions output text.
+$_GET['format'] = 'text/plain'; // To make sure all possible error functions output text.
 define('FORMAT_ALLOW_TEXTPLAIN', true);
 define('ROOT_PATH', './');
 require ROOT_PATH . 'inc-init.php';
-
-$_T->printHeader();
-lovd_showInfoTable('Disabled on request.', 'information');
-$_T->printFooter();
-exit;
 
 //header('Content-type: text/plain; charset=UTF-8');
 
@@ -54,21 +49,32 @@ if (ACTION || PATH_COUNT < 2) {
 
 
 if (($_PE[1] == 'all' && (empty($_PE[2]) || in_array($_PE[2], array('gene', 'mine', 'user')))) ||
-    ($_PE[1] == 'columns' && PATH_COUNT <= 3)) {
+    ($_PE[1] == 'columns' && PATH_COUNT <= 3) ||
+    ($_PE[1] == 'gene_panels' && PATH_COUNT == 3 && ctype_digit($_PE[2]))) {
     // URL: /download/all
     // URL: /download/all/gene/IVD
     // URL: /download/all/mine
     // URL: /download/all/user/00001
     // URL: /download/columns
     // URL: /download/columns/(VariantOnGenome|VariantOnTranscript|Individual|...)
+    // URL: /download/gene_panels/00001
     // Download data from the database, so that we can import it elsewhere.
+
+    if (!(LOVD_plus && $_PE[1] == 'gene_panels')) {
+        // For LOVD+, in general downloads are closed.
+        // We have an exception for gene panels.
+        $_T->printHeader();
+        lovd_showInfoTable('Disabled on request.', 'information');
+        $_T->printFooter();
+        exit;
+    }
 
     $sFileName = '';
     $sHeader = '';
     $sFilter = '';
     $ID = '';
     if ($_PE[1] == 'all' && empty($_PE[2])) {
-        // Download all.
+        // Download all data.
         $sFileName = 'full_download';
         $sHeader = 'Full data';
         lovd_requireAuth(LEVEL_MANAGER);
@@ -96,7 +102,7 @@ if (($_PE[1] == 'all' && (empty($_PE[2]) || in_array($_PE[2], array('gene', 'min
         lovd_requireAuth(LEVEL_MANAGER);
 
     } elseif ($_PE[1] == 'columns' && empty($_PE[2])) {
-        // Download all.
+        // Download all custom columns.
         $sFileName = 'custom_columns';
         $sHeader = 'Custom column';
         lovd_requireAuth(LEVEL_MANAGER);
@@ -106,6 +112,13 @@ if (($_PE[1] == 'all' && (empty($_PE[2]) || in_array($_PE[2], array('gene', 'min
         $sFileName = 'custom_columns_' . $_PE[2];
         $sHeader = 'Custom column';
         $sFilter = 'category';
+        $ID = $_PE[2];
+        lovd_requireAuth(LEVEL_MANAGER);
+    } elseif (LOVD_plus && $_PE[1] == 'gene_panels' && PATH_COUNT == 3 && ctype_digit($_PE[2])) {
+        // Download a single gene panel.
+        $sFileName = 'gene_panel_' . $_PE[2];
+        $sHeader = 'Gene panel';
+        $sFilter = 'genepanel';
         $ID = $_PE[2];
         lovd_requireAuth(LEVEL_MANAGER);
     } else {
@@ -118,10 +131,8 @@ if (($_PE[1] == 'all' && (empty($_PE[2]) || in_array($_PE[2], array('gene', 'min
     print('### LOVD-version ' . lovd_calculateVersion($_SETT['system']['version']) . ' ### ' . $sHeader . ' download ### To import, do not remove or alter this header ###' . "\r\n");
     if ($sFilter == 'owner') {
         print('## Filter: (created_by = ' . $ID . ' || owned_by = ' . $ID . ')' . "\r\n");
-    } elseif ($sFilter == 'gene') {
-        print('## Filter: (gene = ' . $ID . ')' . "\r\n");
-    } elseif ($sFilter == 'category') {
-        print('## Filter: (category = ' . $ID . ')' . "\r\n");
+    } elseif (in_array($sFilter, array('gene', 'category', 'genepanel'))) {
+        print('## Filter: (' . $sFilter . ' = ' . $ID . ')' . "\r\n");
     }
     print('# charset = UTF-8' . "\r\n\r\n");
 
@@ -280,6 +291,19 @@ if (($_PE[1] == 'all' && (empty($_PE[2]) || in_array($_PE[2], array('gene', 'min
         // Apply filters and filter order, for user-specific download.
         if ($sFilter == 'category') {
             $aObjects['Columns']['filters']['category'] = $ID;
+        }
+
+    } elseif (LOVD_plus && $_PE[1] == 'gene_panels') {
+        $aObjects =
+            array(
+                'Gene_Panels' => $aDataTypeSettings,
+                'GP2Gene' => array_merge($aDataTypeSettings, array('label' => 'Gene_Panels_To_Genes', 'order_by' => 'genepanelid, geneid')),
+            );
+
+        // Apply filters and filter order, for user-specific download.
+        if ($sFilter == 'genepanel') {
+            $aObjects['Gene_Panels']['filters']['id'] = $ID;
+            $aObjects['GP2Gene']['filters']['genepanelid'] = $ID;
         }
     }
 }
