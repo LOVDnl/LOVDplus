@@ -4,7 +4,7 @@
  * LEIDEN OPEN VARIATION DATABASE (LOVD)
  *
  * Created     : 2013-11-27
- * Modified    : 2016-03-02
+ * Modified    : 2016-04-07
  * For LOVD    : 3.0-12
  *
  * Copyright   : 2004-2016 Leiden University Medical Center; http://www.LUMC.nl/
@@ -45,17 +45,22 @@ if (!empty($_GET['id']) && $_AUTH && ACTION !== false && in_array(ACTION, array_
     // Nobody should be able to hack their way through this. We might just assume that the user is authorized for editing the
     // selections in the SESSION array because the interface should have checked, but let's not make any assumptions here.
     // IDs should lead to only one screening. IDs' screening/analysis should be owned by the user.
+    $zScreenings = $_DB->query('SELECT s.* FROM ' . TABLE_SCREENINGS . ' AS s INNER JOIN ' . TABLE_SCR2VAR . ' AS s2v ON (s.id = s2v.screeningid) WHERE s2v.variantid IN (?' . str_repeat(', ?', count($aIDs) - 1) . ') GROUP BY s.id', $aIDs)->fetchAllAssoc();
+    $bAuthorized = lovd_isAuthorized('screening_analysis', $zScreenings[0]['id']);
     if ($_AUTH['level'] < LEVEL_MANAGER) {
-        $aScreeningIDs = $_DB->query('SELECT DISTINCT s2v.screeningid FROM ' . TABLE_SCR2VAR . ' AS s2v WHERE s2v.variantid IN (?' . str_repeat(', ?', count($aIDs) - 1) . ')', $aIDs)->fetchAllColumn();
-        if (count($aScreeningIDs) > 1) {
+        if (count($zScreenings) > 1) {
             // Somehow the IDs passed are linked to two different screenings. Not allowed.
             die('9|IDs belong to multiple screenings.');
         }
         // Check rights of user on screening.
-        if (!lovd_isAuthorized('screening_analysis', $aScreeningIDs[0])) {
+        if (!$bAuthorized) {
             // Either returned false or 0. Both are bad in this case.
             die('9|No authorization to edit this screening.');
         }
+    }
+    if (!($_AUTH['level'] >= LEVEL_OWNER && $zScreenings[0]['analysis_statusid'] < ANALYSIS_STATUS_CLOSED) &&
+        !($_AUTH['level'] >= LEVEL_MANAGER && $zScreenings[0]['analysis_statusid'] < ANALYSIS_STATUS_WAIT_CONFIRMATION)) {
+        die('9|Unable to update variants, the analysis status requires a higher user level.');
     }
 
     $nSwitched = 0;
