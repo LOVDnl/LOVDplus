@@ -224,24 +224,36 @@ if (PATH_COUNT >= 2 && ctype_digit($_PE[1]) && !ACTION && (PATH_COUNT == 2 || PA
         print('
       <DIV id="gene_panel_selection" title="Select gene panels for analysis" style="display : none;">
         <FORM id="gene_panel_selection_form">
-          <TABLE border="0" cellpadding="0" cellspacing="0" width="100%">');
+          <TABLE border="0" cellpadding="0" cellspacing="0" width="80%" align="center">');
 
+        $sLastType = '';
         // Add each of the gene panels assigned to this individual to the form.
         foreach ($zData['gene_panels'] as $nKey => $aGenePanel) {
+            // Create the gene panel type header.
+            if ($sLastType == '' || $sLastType <> $aGenePanel[2]) {
+                print('
+            <TR> 
+              <TD class="gpheader" colspan="2" ' . ($sLastType? '' : 'style="border-top: 0px"') . '>' . ucfirst(str_replace('_', ' ', $aGenePanel[2])) . '</TD>
+            </TR>');
+            }
+            $sLastType = $aGenePanel[2];
+
+            // Add the gene panel to the form.
             print('
             <TR> 
               <TD><INPUT type="checkbox" name="gene_panel" value="' . $aGenePanel[0] . ';' . $aGenePanel[2] . '"' . ($aGenePanel[2]=='mendeliome'? '' : ' checked') . '></TD>
               <TD>' . $aGenePanel[1] . '</TD>
-              <TD>' . ucfirst(str_replace('_', ' ', $aGenePanel[2])) . '</TD>
             </TR>');
         }
 
         // Add in the custom gene panel option.
         print('
             <TR>
+              <TD class="gpheader" colspan="2">Custom panel</TD>
+            </TR>
+            <TR>
               <TD><INPUT type="checkbox" name="gene_panel" value="custom_panel;custom_panel" checked></TD>
-              <TD>Custom Panel<BR><SPAN class="form_note">(' . $zData['custom_panel'] . ')</SPAN></TD>
-              <TD>Custom Panel</TD>
+              <TD><SPAN>' . $zData['custom_panel'] . '</SPAN></TD>
             </TR>
           </TABLE>
         </FORM>

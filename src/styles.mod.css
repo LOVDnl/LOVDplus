@@ -100,3 +100,6 @@ table.data tr.transparent50               {opacity:0.5; filter:alpha(opacity=50)
 
 /* Span looking like an Anchor */
 table.data span.anchor                    {cursor: pointer; color: #0000FF;}
+
+/* Headings on the gene panel selection dialog form */
+.gpheader       {font-weight : bold; text-align : center; padding-top: 10px; border-top: 1px solid #dddddd}

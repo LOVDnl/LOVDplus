@@ -232,7 +232,7 @@ function lovd_popoverGenePanelSelectionForm (nScreeningID, nAnalysisID, nRunID)
         },
         draggable:false,
         resizable:false,
-        minWidth:500,
+        minWidth:400,
         show:"fade",
         closeOnEscape:true,
         hide:"fade",
