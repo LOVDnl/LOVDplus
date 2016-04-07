@@ -564,7 +564,7 @@ function lovd_isAuthorized ($sType, $Data, $bSetUserLevel = true)
         }
         return false;
 
-    } elseif ($sType == 'screening_analysis') {
+    } elseif (LOVD_plus && $sType == 'screening_analysis') {
         // Authorization based on not being analyzed, or analysis being started by $_AUTH['id'].
         if (is_array($Data)) {
             // Not supported on this data type.
@@ -600,7 +600,14 @@ function lovd_isAuthorized ($sType, $Data, $bSetUserLevel = true)
             return lovd_isAuthorized('gene', $aGenes, $bSetUserLevel);
         case 'variant':
             $aGenes = $_DB->query('SELECT DISTINCT t.geneid FROM ' . TABLE_VARIANTS_ON_TRANSCRIPTS . ' AS vot LEFT OUTER JOIN ' . TABLE_TRANSCRIPTS . ' AS t ON (vot.transcriptid = t.id) WHERE vot.id IN (?' . str_repeat(', ?', count($Data)-1) . ')', $Data)->fetchAllColumn();
-            $bOwner = $_DB->query('SELECT COUNT(*) FROM ' . TABLE_VARIANTS . ' WHERE id IN (?' . str_repeat(', ?', count($Data)-1) . ') AND (owned_by = ? OR created_by = ?)', array_merge($Data, array($_AUTH['id'], $_AUTH['id'])))->fetchColumn();
+            if (LOVD_plus) {
+                // LOVD+ allows LEVEL_OWNER authorization based on ownership of the screening analysis.
+                // We dump in multiple variants, but we should really only get one Screening back.
+                $aScreeningIDs = $_DB->query('SELECT DISTINCT screeningid FROM ' . TABLE_SCR2VAR . ' WHERE variantid IN (?' . str_repeat(', ?', count($Data) - 1) . ')', $Data)->fetchAllColumn();
+                $bOwner = lovd_isAuthorized('screening_analysis', $aScreeningIDs[0], false);
+            } else {
+                $bOwner = $_DB->query('SELECT COUNT(*) FROM ' . TABLE_VARIANTS . ' WHERE id IN (?' . str_repeat(', ?', count($Data) - 1) . ') AND (owned_by = ? OR created_by = ?)', array_merge($Data, array($_AUTH['id'], $_AUTH['id'])))->fetchColumn();
+            }
             break;
         case 'individual':
             $aGenes = $_DB->query('SELECT DISTINCT t.geneid FROM ' . TABLE_TRANSCRIPTS . ' AS t LEFT OUTER JOIN ' . TABLE_VARIANTS_ON_TRANSCRIPTS . ' AS vot ON (vot.transcriptid = t.id) LEFT OUTER JOIN ' . TABLE_SCR2VAR . ' AS s2v ON (vot.id = s2v.variantid) LEFT OUTER JOIN ' . TABLE_SCREENINGS . ' AS s ON (s2v.screeningid = s.id) WHERE s.individualid IN (?' . str_repeat(', ?', count($Data)-1) . ')', $Data)->fetchAllColumn();

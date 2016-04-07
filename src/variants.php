@@ -2850,8 +2850,8 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && ACTION == 'edit_remarks') {
     define('PAGE_TITLE', 'Edit remarks for variant entry #' . $nID);
     define('LOG_EVENT', 'VariantRemarksEdit');
 
-//    lovd_isAuthorized('variant', $nID);
-    lovd_requireAUTH(LEVEL_MANAGER);
+    lovd_isAuthorized('variant', $nID);
+    lovd_requireAUTH(LEVEL_OWNER);
 
     require ROOT_PATH . 'class/object_genome_variants.mod.php';
     $_DATA = array();
