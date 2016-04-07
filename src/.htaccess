@@ -26,6 +26,8 @@ php_flag mysql.trace_mode Off
     RewriteRule ^diseases(.*)$ diseases.php
     RewriteRule ^download(.*)$ download.php
     RewriteRule ^genes(.*)$ genes.php
+    RewriteRule ^gene_statistics(.*)$ gene_statistics.php
+    RewriteRule ^gene_panels(.*)$ gene_panels.php
     RewriteRule ^import(.*)$ import.php
 #    RewriteRule ^install(.*)$ install/index.php # I'm having trouble using /install?etc because Apache is redirecting to /install/?etc which loses the $_POST info. Very annoying.
     RewriteRule ^individuals(.*)$ individuals.php
@@ -46,6 +48,4 @@ php_flag mysql.trace_mode Off
     RewriteRule ^users(.*)$ users.php
     RewriteRule ^variants(.*)$ variants.php
     RewriteRule ^view(.*)$ view.php
-    RewriteRule ^gene_statistics(.*)$ gene_statistics.php
-    RewriteRule ^gene_panels(.*)$ gene_panels.php
 </IfModule>
