@@ -45,6 +45,17 @@ if (empty($_GET['screeningid']) || empty($_GET['analysisid']) || !ctype_digit($_
     die(AJAX_DATA_ERROR);
 }
 
+$bCustomPanel = false;
+$aGenePanels = array();
+// Process any gene panels that may have been passed.
+if (!empty($_GET['gene_panels'])) {
+    $aGenePanels = $_GET['gene_panels'];
+    if(($nKey = array_search('custom_panel', $aGenePanels)) !== false) {
+        // If the custom panel has been selected then record this and remove from array.
+        $bCustomPanel = true;
+        unset($aGenePanels[$nKey]);
+    }
+}
 
 
 // Find screening data, make sure we have the right to analyze this patient.
@@ -97,7 +108,7 @@ $_DB->query('UPDATE ' . TABLE_SCREENINGS . ' SET analysis_statusid = ?, analysis
 
 if (!$_GET['runid']) {
     // Create analysis in database.
-    $q = $_DB->query('INSERT INTO ' . TABLE_ANALYSES_RUN . ' VALUES (NULL, ?, ?, 0, ?, NOW())', array($zAnalysis['id'], $_GET['screeningid'], $_AUTH['id']));
+    $q = $_DB->query('INSERT INTO ' . TABLE_ANALYSES_RUN . ' VALUES (NULL, ?, ?, 0, ?, ?, NOW())', array($zAnalysis['id'], $_GET['screeningid'], $bCustomPanel, $_AUTH['id']));
     if (!$q) {
         $_DB->rollBack();
         die('Failed to create analysis run in the database. If the analysis is defined properly, this is an error in the software.');
@@ -117,6 +128,17 @@ if (!$_GET['runid']) {
     $nRunID = (int) $_GET['runid']; // (int) is to prevent zerofill from messing things up.
     $aFilters = explode(';', $zAnalysisRun['_filters']);
 }
+
+// Process the selected gene panels.
+foreach ($aGenePanels as $nKey => $nGenePanelID) {
+    // Write the gene panels selected to the analyses_run2gene_panel table.
+    $q = $_DB->query('INSERT INTO ' . TABLE_AR2GP . ' VALUES (?, ?)', array($nRunID, $nGenePanelID));
+    if (!$q) {
+        $_DB->rollBack();
+        die('Failed to insert the analysis 2 gene panel record');
+    }
+}
+
 $_DB->commit();
 
 // Write to log...
@@ -137,6 +159,10 @@ $_SESSION['analyses'][$nRunID] =
         'filters' => $aFilters,
         'IDsLeft' => array()
     );
+
+// Store gene panel details in session.
+$_SESSION['analyses'][$nRunID]['custom_panel'] = $bCustomPanel;
+$_SESSION['analyses'][$nRunID]['gene_panels'] = $aGenePanels;
 
 // Collect variant IDs and store in session.
 $_SESSION['analyses'][$nRunID]['IDsLeft'] = $_DB->query('SELECT DISTINCT CAST(s2v.variantid AS UNSIGNED) FROM ' . TABLE_SCR2VAR . ' AS s2v WHERE s2v.screeningid = ?', array($_GET['screeningid']))->fetchAllColumn();

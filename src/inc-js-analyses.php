@@ -74,8 +74,13 @@ function lovd_runAnalysis (nScreeningID, nAnalysisID, nRunID, aSelectedGenePanel
     if (typeof(nRunID) == 'undefined') {
         nRunID = 0;
     }
+    if (aSelectedGenePanels.length > 0) {
+        sGenePanels = encodeURI('&gene_panels[]=' + aSelectedGenePanels.join('&gene_panels[]='));
+    } else {
+        sGenePanels = '';
+    }
 
-    $.get('<?php echo lovd_getInstallURL(); ?>ajax/run_analysis.php?screeningid=' + escape(nScreeningID) + '&analysisid=' + escape(nAnalysisID) + '&runid=' + escape(nRunID),
+    $.get('<?php echo lovd_getInstallURL(); ?>ajax/run_analysis.php?screeningid=' + escape(nScreeningID) + '&analysisid=' + escape(nAnalysisID) + '&runid=' + escape(nRunID) + sGenePanels,
         function () {
             // Remove onClick handler and change class of table, to visually show that it's running.
             // But first check if we're dealing with a modified run or an unmodified analysis.
@@ -279,7 +284,7 @@ function lovd_processGenePanelSelectionForm ()
         nRunID = undefined;
     }
 
-    console.log(aSelectedGenePanels, nScreeningID, nAnalysisID, nRunID);
+<!--    console.log(aSelectedGenePanels, nScreeningID, nAnalysisID, nRunID);-->
 
 <!--TODO Add the gene panel names to the bottom of the analysis here as well as when the page is refreshed for finished analysis-->
 
