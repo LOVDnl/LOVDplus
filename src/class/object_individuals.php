@@ -59,9 +59,11 @@ class LOVD_Individual extends LOVD_Custom {
         // FIXME; change owner to owned_by_ in the load entry query below.
         $this->sSQLLoadEntry = 'SELECT i.*, ' .
                                'uo.name AS owner, ' .
-                               'GROUP_CONCAT(DISTINCT i2d.diseaseid ORDER BY i2d.diseaseid SEPARATOR ";") AS active_diseases_ ' .
+                               'GROUP_CONCAT(DISTINCT i2d.diseaseid ORDER BY i2d.diseaseid SEPARATOR ";") AS active_diseases_, ' .
+                               'GROUP_CONCAT(DISTINCT i2gp.genepanelid ORDER BY i2gp.genepanelid SEPARATOR ";") AS gene_panels_ ' .
                                'FROM ' . TABLE_INDIVIDUALS . ' AS i ' .
                                'LEFT OUTER JOIN ' . TABLE_IND2DIS . ' AS i2d ON (i.id = i2d.individualid) ' .
+                               'LEFT OUTER JOIN ' . TABLE_IND2GP . ' AS i2gp ON (i.id = i2gp.individualid) ' .
                                'LEFT OUTER JOIN ' . TABLE_USERS . ' AS uo ON (i.owned_by = uo.id) ' .
                                'WHERE i.id = ? ' .
                                'GROUP BY i.id';
@@ -384,6 +386,12 @@ class LOVD_Individual extends LOVD_Custom {
             foreach($zData['diseases'] as $aDisease) {
                 list($nID, $sSymbol, $sName) = $aDisease;
                 $zData['diseases_'] .= (!$zData['diseases_']? '' : ', ') . '<A href="diseases/' . $nID . '" title="' . $sName . '">' . $sSymbol . '</A>';
+            }
+            // Gene panels assigned.
+            $zData['gene_panels_'] = '';
+            foreach($zData['gene_panels'] as $aGenePanels) {
+                list($nID, $sName, $sType) = $aGenePanels;
+                $zData['gene_panels_'] .= (!$zData['gene_panels_']? '' : ', ') . '<A href="gene_panels/' . $nID . '" title="' . $sName . '">' . $sName . '</A>';
             }
             // Parents...
             if (empty($zData['fatherid']) && empty($zData['motherid'])) {

@@ -53,34 +53,36 @@ class LOVD_GenePanel extends LOVD_Object {
         // Default constructor.
 
         // SQL code for loading an entry for an edit form.
-        $this->sSQLLoadEntry = 'SELECT gp.*, ' .
+        $this->sSQLLoadEntry = 'SELECT gp.*, COUNT(DISTINCT i2gp.individualid) AS individuals, ' .
                                'GROUP_CONCAT(DISTINCT gp2d.diseaseid ORDER BY gp2d.diseaseid SEPARATOR ";") AS _active_diseases ' .
                                'FROM ' . TABLE_GENE_PANELS . ' AS gp ' .
                                'LEFT OUTER JOIN ' . TABLE_GP2DIS . ' AS gp2d ON (gp.id = gp2d. genepanelid) ' .
+                               'LEFT OUTER JOIN ' . TABLE_IND2GP . ' i2gp ON gp.id = i2gp.genepanelid ' .
                                'WHERE gp.id = ? ' .
                                'GROUP BY gp.id';
 
         // SQL code for viewing an entry.
-        $this->aSQLViewEntry['SELECT']   = 'gp.*, ' .
-//            'GROUP_CONCAT(DISTINCT d.id, ";", d.symbol ORDER BY (d.symbol != "" AND d.symbol != "-") DESC, d.symbol, d.name SEPARATOR ";;") AS __diseases, ' .
+        $this->aSQLViewEntry['SELECT']   = 'gp.*, COUNT(DISTINCT i2gp.individualid) AS individuals, ' .
             'GROUP_CONCAT(DISTINCT d.id, ";", IFNULL(d.id_omim, 0), ";", IF(CASE d.symbol WHEN "-" THEN "" ELSE d.symbol END = "", d.name, d.symbol), ";", d.name ORDER BY (d.symbol != "" AND d.symbol != "-") DESC, d.symbol, d.name SEPARATOR ";;") AS __diseases, ' .
             'uc.name AS created_by_,' .
             'ue.name AS edited_by_';
         $this->aSQLViewEntry['FROM']     = TABLE_GENE_PANELS . ' AS gp ' .
             'LEFT OUTER JOIN ' . TABLE_GP2DIS . ' AS gp2d ON (gp.id = gp2d. genepanelid) ' .
             'LEFT OUTER JOIN ' . TABLE_DISEASES . ' AS d ON (gp2d.diseaseid = d.id) ' .
+            'LEFT OUTER JOIN ' . TABLE_IND2GP . ' i2gp ON gp.id = i2gp.genepanelid ' .
             'LEFT OUTER JOIN ' . TABLE_USERS . ' AS uc ON (gp.created_by = uc.id) ' .
             'LEFT OUTER JOIN ' . TABLE_USERS . ' AS ue ON (gp.edited_by = ue.id) ';
         $this->aSQLViewEntry['GROUP_BY'] = 'gp.id';
 
         // SQL code for viewing the list of gene panels
-        $this->aSQLViewList['SELECT']   = 'gp.*, ' .
+        $this->aSQLViewList['SELECT']   = 'gp.*, COUNT(DISTINCT i2gp.individualid) AS individuals, ' .
                                           'GROUP_CONCAT(DISTINCT IF(CASE d.symbol WHEN "-" THEN "" ELSE d.symbol END = "", d.name, d.symbol) ORDER BY (d.symbol != "" AND d.symbol != "-") DESC, d.symbol, d.name SEPARATOR ", ") AS diseases_, ' .
                                           'uc.name AS created_by_,' .
                                           'COUNT(DISTINCT gp2g.geneid) AS genes';
         $this->aSQLViewList['FROM']     = TABLE_GENE_PANELS . ' AS gp ' .
                                           'LEFT OUTER JOIN ' . TABLE_GP2DIS . ' AS gp2d ON (gp.id = gp2d.genepanelid) ' .
                                           'LEFT OUTER JOIN ' . TABLE_GP2GENE . ' AS gp2g ON (gp.id = gp2g.genepanelid) ' .
+                                          'LEFT OUTER JOIN ' . TABLE_IND2GP . ' i2gp ON gp.id = i2gp.genepanelid ' .
                                           'LEFT OUTER JOIN ' . TABLE_USERS . ' AS uc ON (gp.created_by = uc.id) ' .
                                           'LEFT OUTER JOIN ' . TABLE_DISEASES . ' AS d ON (gp2d.diseaseid = d.id)';
         $this->aSQLViewList['GROUP_BY'] = 'gp.id';
@@ -94,6 +96,7 @@ class LOVD_GenePanel extends LOVD_Object {
                 'type_' => 'Type',
                 'pmid_mandatory_' => 'PMID Mandatory',
                 'diseases_' => 'Associated with diseases',
+                'individuals' => 'Individuals',
                 'created_by_' => 'Created by',
                 'created_date' => 'Created date',
                 'edited_by_' => 'Edited by',
@@ -121,6 +124,10 @@ class LOVD_GenePanel extends LOVD_Object {
                 'genes' => array(
                     'view' => array('Genes', 60),
                     'db'   => array('genes', 'DESC', 'INT_UNSIGNED'),
+                    'legend' => array('The number of genes in this gene panel.')),
+                'individuals' => array(
+                    'view' => array('Individuals', 60),
+                    'db'   => array('individuals', 'DESC', 'INT_UNSIGNED'),
                     'legend' => array('The number of genes in this gene panel.')),
                 'created_by_' => array(
                     'view' => array('Created By', 80),
@@ -249,6 +256,13 @@ class LOVD_GenePanel extends LOVD_Object {
                 }
             }
             $zData['pmid_mandatory_'] = ($zData['pmid_mandatory']? 'Yes' : 'No');
+
+            // Show a URL to search for the individuals that have this gene panel assigned.
+            // A future improvement could be to use the gene panel ID instead of the name but this is fine for now.
+            if ($zData['individuals'] > 0) {
+                $sLink = '<A href="individuals?search_gene_panels_=%22' . $zData['name'] . '%22">See individuals</A>';
+                $zData['individuals'] .= ' <SPAN style="float:right">' . $sLink . '</SPAN>';
+            }
         }
         $zData['type_'] = ucwords(str_replace('_', ' ', $zData['type']));
 

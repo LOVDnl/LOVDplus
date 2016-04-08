@@ -101,6 +101,7 @@ if (PATH_COUNT >= 2 && ctype_digit($_PE[1]) && !ACTION && (PATH_COUNT == 2 || PA
     $aNavigation = array();
     if ($_AUTH && $_AUTH['level'] == LEVEL_ADMIN) {
         $aNavigation[$_PE[0] . '/' . $_PE[1] . '?edit']                     = array('menu_edit.png', 'Edit individual entry', 1);
+        $aNavigation[$_PE[0] . '/' . $_PE[1] . '?edit_panels']              = array('menu_edit.png', 'Edit gene panels', 1);
         if ($_AUTH['level'] >= LEVEL_MANAGER) {
             $aNavigation['screenings?search_individualid=' . $nID] = array('menu_magnifying_glass.png', 'View screenings', 1);
         }
@@ -117,6 +118,12 @@ if (PATH_COUNT >= 2 && ctype_digit($_PE[1]) && !ACTION && (PATH_COUNT == 2 || PA
         }
     }
     lovd_showJGNavigation($aNavigation, 'Individuals');
+
+    // Show a warning if no gene panels have been assigned to this individual.
+    if (!count($zData['gene_panels'])) {
+        print('<BR>');
+        lovd_showInfoTable('No gene panels have been assigned to this individual, <A href="' . $_PE[0] . '/' . $_PE[1] . '?edit_panels">click here</A> to assign them.', 'warning', 600);
+    }
 
     print('
           </TD>
@@ -213,6 +220,48 @@ if (PATH_COUNT >= 2 && ctype_digit($_PE[1]) && !ACTION && (PATH_COUNT == 2 || PA
 
         lovd_includeJS('inc-js-analyses.php', 1);
 
+        // The popover div for showing the gene panel selection form.
+        print('
+      <DIV id="gene_panel_selection" title="Select gene panels for analysis" style="display : none;">
+        <FORM id="gene_panel_selection_form">
+          <INPUT type="hidden" name="nScreeningID" value="">
+          <INPUT type="hidden" name="nAnalysisID" value="">
+          <INPUT type="hidden" name="nRunID" value="">
+          <TABLE border="0" cellpadding="0" cellspacing="0" width="80%" align="center">');
+
+        $sLastType = '';
+        // Add each of the gene panels assigned to this individual to the form.
+        foreach ($zData['gene_panels'] as $nKey => $aGenePanel) {
+            // Create the gene panel type header.
+            if ($sLastType == '' || $sLastType <> $aGenePanel[2]) {
+                print('
+            <TR> 
+              <TD class="gpheader" colspan="2" ' . ($sLastType? '' : 'style="border-top: 0px"') . '>' . ucfirst(str_replace('_', ' ', $aGenePanel[2])) . '</TD>
+            </TR>');
+            }
+            $sLastType = $aGenePanel[2];
+
+            // Add the gene panel to the form.
+            print('
+            <TR> 
+              <TD><INPUT type="checkbox" name="gene_panel" value="' . $aGenePanel[0] . '"' . ($aGenePanel[2]=='mendeliome'? '' : ' checked') . '></TD>
+              <TD>' . $aGenePanel[1] . '</TD>
+            </TR>');
+        }
+
+        // Add in the custom gene panel option.
+        print('
+            <TR>
+              <TD class="gpheader" colspan="2">Custom panel</TD>
+            </TR>
+            <TR>
+              <TD><INPUT type="checkbox" name="gene_panel" value="custom_panel" checked></TD>
+              <TD><SPAN>' . $zData['custom_panel'] . '</SPAN></TD>
+            </TR>
+          </TABLE>
+        </FORM>
+      </DIV>' . "\n");
+
         // If we're ready to analyze, or if we are analyzing already, show analysis options.
         // Both already run analyses and analyses not yet run will be shown. Analyses already run are fetched differently, though.
         $zAnalysesRun    = $_DB->query('SELECT a.id, a.name, a.description, a.filters, IFNULL(MAX(arf.run_time)>-1, 0) AS analysis_run, ar.id AS runid,   ar.modified, GROUP_CONCAT(arf.filterid, ";", IFNULL(arf.filtered_out, "-"), ";", IFNULL(arf.run_time, "-") ORDER BY arf.filter_order SEPARATOR ";;") AS __run_filters
@@ -264,7 +313,7 @@ if (PATH_COUNT >= 2 && ctype_digit($_PE[1]) && !ACTION && (PATH_COUNT == 2 || PA
             print('
             <TD class="analysis" valign="top">
               <TABLE border="0" cellpadding="0" cellspacing="1" id="' . ($zAnalysis['runid']? 'run_' . $zAnalysis['runid'] : 'analysis_' . $zAnalysis['id']) . '" class="analysis ' . $sAnalysisClassName . '" onclick="' .
-                ($zAnalysis['analysis_run']? 'lovd_showAnalysisResults(\'' . $zAnalysis['runid'] . '\');' : ($_AUTH['level'] < LEVEL_OWNER? '' : 'lovd_runAnalysis(\'' . $nScreeningToAnalyze . '\', \'' . $zAnalysis['id'] . '\'' . (!$zAnalysis['runid']? '' : ', \'' . $zAnalysis['runid'] . '\'') . ');')) . '">
+                ($zAnalysis['analysis_run']? 'lovd_showAnalysisResults(\'' . $zAnalysis['runid'] . '\');' : ($_AUTH['level'] < LEVEL_OWNER? '' : 'lovd_popoverGenePanelSelectionForm(\'' . $nScreeningToAnalyze . '\', \'' . $zAnalysis['id'] . '\'' . (!$zAnalysis['runid']? '' : ', \'' . $zAnalysis['runid'] . '\'') . ');')) . '">
                 <TR>
                   <TH colspan="3">
                     <DIV style="position : relative">
@@ -654,7 +703,7 @@ if (PATH_COUNT == 1 && ACTION == 'create') {
                             // Silent error.
                             lovd_writeLog('Error', LOG_EVENT, 'Disease information entry ' . $nDisease . ' - could not be added to individual ' . $nID);
                         } else {
-                            $aSuccessDiseases[] = $nDisease;
+                            $aSuccessDiseases[] = $nDisease; // TODO AM This array doesn't seem to be used anywhere. Either write a log or remove it?
                         }
                     }
                 }
@@ -889,6 +938,121 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && in_array(ACTION, array('edit', 'p
                  array(
                         array('', '', 'print', '<INPUT type="submit" value="Edit individual information entry">' . ($bSubmit? '&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<INPUT type="submit" value="Cancel" onclick="window.location.href=\'' . lovd_getInstallURL() . 'submit/individual/' . $nID . '\'; return false;" style="border : 1px solid #FF4422;">' : '')),
                       ));
+    lovd_viewForm($aForm);
+
+    print('</FORM>' . "\n\n");
+
+    $_T->printFooter();
+    exit;
+}
+
+
+
+
+
+if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && ACTION == 'edit_panels') {
+    // URL: /individuals/00000001?edit_panels
+    // Edit an individuals gene panels.
+
+    $nID = sprintf('%08d', $_PE[1]);
+    define('PAGE_TITLE', 'Edit gene panels for individual #' . $nID);
+    define('LOG_EVENT', 'IndividualEditPanels');
+
+    // Load appropriate user level for this individual.
+    lovd_isAuthorized('individual', $nID);
+    lovd_requireAUTH(LEVEL_OWNER);
+
+    require ROOT_PATH . 'class/object_individuals.mod.php';
+    $_DATA = new LOVD_IndividualMOD();
+    $zData = $_DATA->loadEntry($nID); // TODO AM This loads up all the data for this individual which is a bit excessive, should I create a new $this->sSQLLoadEntry in the individuals mod file that only loads the gene panel data? Not sure what else this would affect as this currently doesn't exist so it could break something.
+    require ROOT_PATH . 'inc-lib-form.php';
+
+    if (POST) {
+        lovd_errorClean();
+
+        $_DATA->checkFields($_POST, $zData);
+
+        if (!lovd_error()) {
+            // Fields to be used.
+            $aFields = array('custom_panel');
+            $sDateNow = date('Y-m-d H:i:s');
+
+            $_DATA->updateEntry($nID, $_POST, $aFields);
+
+            // Write to log...
+            lovd_writeLog('Event', LOG_EVENT, 'Edited gene panels for individual ' . $nID);
+
+            // Change linked gene panels.
+            $aGenePanels = explode(';', $zData['gene_panels_']);
+
+            // Remove gene panels.
+            $aToRemove = array();
+            foreach ($aGenePanels as $nGenePanel) {
+                if ($nGenePanel && !in_array($nGenePanel, $_POST['gene_panels'])) {
+                    // User has requested removal...
+                    $aToRemove[] = $nGenePanel;
+                }
+            }
+            if ($aToRemove) {
+                $q = $_DB->query('DELETE FROM ' . TABLE_IND2GP . ' WHERE individualid = ? AND genepanelid IN (?' . str_repeat(', ?', count($aToRemove) - 1) . ')', array_merge(array($nID), $aToRemove), false);
+                if (!$q) {
+                    // Silent error.
+                    lovd_writeLog('Error', LOG_EVENT, 'Gene panel entr' . (count($aToRemove) == 1? 'y' : 'ies') . ' ' . implode(', ', $aToRemove) . ' could not be removed from individual ' . $nID);
+                }
+            }
+
+            // Add gene panels.
+            $aSuccess = array();
+            $aFailed = array();
+            foreach ($_POST['gene_panels'] as $nGenePanel) {
+                if (!in_array($nGenePanel, $aGenePanels)) {
+                    // Add disease to gene.
+                    $q = $_DB->query('INSERT IGNORE INTO ' . TABLE_IND2GP . ' VALUES (?, ?, ?, ?)', array($nID, $nGenePanel, $_AUTH['id'], $sDateNow), false);
+                    if (!$q) {
+                        $aFailed[] = $nGenePanel;
+                    } else {
+                        $aSuccess[] = $nGenePanel;
+                    }
+                }
+            }
+            if ($aFailed) {
+                // Silent error.
+                lovd_writeLog('Error', LOG_EVENT, 'Gene panel entr' . (count($aFailed) == 1? 'y' : 'ies') . ' ' . implode(', ', $aFailed) . ' could not be added to individual ' . $nID);
+            }
+
+            // Thank the user...
+            header('Refresh: 3; url=' . lovd_getInstallURL() . CURRENT_PATH);
+            $_T->printHeader();
+            $_T->printTitle();
+            lovd_showInfoTable('Successfully edited the gene panels for this individual!', 'success');
+
+            $_T->printFooter();
+            exit;
+        }
+    } else {
+        $_POST = array_merge($_POST, $zData);
+        $_POST['gene_panels'] = explode(';', $zData['gene_panels_']);
+    }
+
+
+
+    $_T->printHeader();
+    $_T->printTitle();
+
+    lovd_errorPrint();
+
+    // Tooltip JS code.
+    lovd_includeJS('inc-js-tooltip.php');
+    lovd_includeJS('inc-js-custom_links.php');
+
+    // This gives the user one chance to add in the correct details and then posts to the normal edit screen.
+    print('      <FORM action="' . CURRENT_PATH . '?' . ACTION . '" method="post">' . "\n");
+    // Array which will make up the form table.
+    $aForm = array_merge(
+        $_DATA->getForm(),
+        array(
+            array('', '', 'print', '<INPUT type="submit" value="Edit gene panels">'),
+        ));
     lovd_viewForm($aForm);
 
     print('</FORM>' . "\n\n");
