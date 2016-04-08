@@ -941,8 +941,14 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && ACTION == 'edit_panels') {
             lovd_writeLog('Event', LOG_EVENT, 'Edited gene panels for individual ' . $nID);
 
             // Change linked gene panels.
-            $aGenePanels = explode(';', $zData['gene_panels_']);
-
+            $aGenePanels = array();
+            if ($zData['gene_panels_']) {
+                $aGenePanels = explode(';', $zData['gene_panels_']);
+            }
+            // If we have removed all gene panels from this individual then we need to set the $_POST['gene_panels'] to an empty array otherwise functions below will error.
+            if (empty($_POST['gene_panels'])) {
+                $_POST['gene_panels'] = array();
+            }
             // Remove gene panels.
             $aToRemove = array();
             foreach ($aGenePanels as $nGenePanel) {
@@ -989,10 +995,29 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && ACTION == 'edit_panels') {
         }
     } else {
         $_POST = array_merge($_POST, $zData);
-        $_POST['gene_panels'] = explode(';', $zData['gene_panels_']);
+
+        if(!empty($zData['gene_panels_'])) {
+            $_POST['gene_panels'] = explode(';', $zData['gene_panels_']);
+        } else {
+            $_POST['gene_panels'] = array();
+        }
+
+        // Check to see if any gene panels are selected, if not then lets suggest some.
+        if (empty($_POST['gene_panels']) && !empty($zData['active_diseases_'])) {
+
+            $aDiseases = explode(';', $zData['active_diseases_']);
+
+            // Check to see if any gene panels share the individuals diseases.
+            $aDefaultGenePanels = $_DB->query('SELECT DISTINCT gp.id, gp.name, gp.type FROM ' . TABLE_GENE_PANELS . ' AS gp JOIN ' . TABLE_GP2DIS . ' AS gp2d ON (gp.id = gp2d.genepanelid) WHERE gp2d.diseaseid IN (?' . str_repeat(', ?', count($aDiseases)-1) . ') ORDER BY gp.type DESC, gp.name ASC', array_values($aDiseases))->fetchAllAssoc();
+
+            if ($aDefaultGenePanels) {
+                // Set the default gene panels in the form to these gene panels.
+                foreach ($aDefaultGenePanels as $nKey => $aGenePanel) {
+                    $_POST['gene_panels'][] = $aGenePanel['id'];
+                }
+            }
+        }
     }
-
-
 
     $_T->printHeader();
     $_T->printTitle();
@@ -1004,7 +1029,8 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && ACTION == 'edit_panels') {
     lovd_includeJS('inc-js-custom_links.php');
 
     // This gives the user one chance to add in the correct details and then posts to the normal edit screen.
-    print('      <FORM action="' . CURRENT_PATH . '?' . ACTION . '" method="post">' . "\n");
+    print('      <DIV style="display: -webkit-flex; display: flex; flex-direction: row;">
+        <FORM action="' . CURRENT_PATH . '?' . ACTION . '" method="post">' . "\n");
     // Array which will make up the form table.
     $aForm = array_merge(
         $_DATA->getForm(),
@@ -1015,6 +1041,30 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && ACTION == 'edit_panels') {
 
     print('</FORM>' . "\n\n");
 
+    if (!empty($aDefaultGenePanels)) {
+        // Display a message to the user identifying the gene panels that have been assigned by default.
+        $sDefaultGenePanelMsg = "\n" . '            <H4 class="LOVD">Default gene panels</H4>
+            The following gene panels were automatically assigned to this individual using the individuals diseases:<BR><BR>' . "\n";
+        $sDefaultGenePanelMsg .= '            <TABLE border="0" cellpadding="1" cellspacing="1" width="90%" class="data" style="background: #dddddd; font-size: 13px;">
+              <TR>
+                <TH width="70%">Gene panel name</TH>
+                <TH>Type</TH>
+              </TR>' . "\n";
+        // List all the gene panels found in a table.
+        foreach ($aDefaultGenePanels as $nKey => $aGenePanel) {
+            $sDefaultGenePanelMsg .= '              <TR>
+                <TD>' . htmlspecialchars($aGenePanel['name']) . '</TD>
+                <TD>' . ucfirst(str_replace('_', ' ', $aGenePanel['type'])) . '</TD>
+              </TR>' . "\n";
+        }
+        $sDefaultGenePanelMsg .= '            </TABLE><BR>
+            If you do not wish to assign these gene panels to this individual then please unselect them.<BR><BR>' . "\n";
+
+        print('          <DIV style="width: 500px; margin-left: 25px;">');
+        lovd_showInfoTable($sDefaultGenePanelMsg, 'information');
+        print('          </DIV>');
+    }
+    print('    </DIV>');
     $_T->printFooter();
     exit;
 }

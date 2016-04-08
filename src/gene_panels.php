@@ -587,10 +587,12 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && ACTION == 'manage_genes') {
                 // When not using deleteEntry(), we could simply run one query for all genes that were dropped.
                 // However, for that we'd need to duplicate code handling the revision history.
                 // So we're going to keep the code simple, in expense of some speed on large deletions.
-                foreach (array_keys($aGenesCurrentlyAssociated) as $sGeneID) {
-                    // FIXME: No reason passed. Should we demand one from our users?
-                    $_DATA->deleteEntry(array('genepanelid' => $nID, 'geneid' => $sGeneID));
-                    lovd_writeLog('Event', 'GenePanelGeneDelete', 'Deleted gene entry ' . $sGeneID . ' from gene panel #' . $nID);
+                if ($_AUTH['level'] >= LEVEL_MANAGER) {
+                    foreach (array_keys($aGenesCurrentlyAssociated) as $sGeneID) {
+                        // FIXME: No reason passed. Should we demand one from our users?
+                        $_DATA->deleteEntry(array('genepanelid' => $nID, 'geneid' => $sGeneID));
+                        lovd_writeLog('Event', 'GenePanelGeneDelete', 'Deleted gene entry ' . $sGeneID . ' from gene panel #' . $nID);
+                    }
                 }
             }
 
@@ -687,7 +689,7 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && ACTION == 'manage_genes') {
     // Show curators, to sort and to select whether or not they can edit.
     print('      <BR><BR>' . "\n\n");
 
-    lovd_showInfoTable('All genes below have been selected for this gene panel.<BR>To remove a gene from this list, click the red cross on the far right of the line.', 'information', 950);
+    lovd_showInfoTable('All genes below have been selected for this gene panel.' . ($_AUTH['level'] < LEVEL_MANAGER? '' : '<BR>To remove a gene from this list, click the red cross on the far right of the line.'), 'information', 950);
 
     $aInheritances =
         array(
@@ -712,7 +714,7 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && ACTION == 'manage_genes') {
               <TH>Inheritance</TH>
               <TH>PMID</TH>
               <TH>Remarks</TH>
-              <TH width="30">&nbsp;</TH></TR></THEAD>
+              ' . ($_AUTH['level'] < LEVEL_MANAGER? '' : '<TH width="30">&nbsp;</TH>') . '</TR></THEAD>
           <TBODY>');
     // Now loop the items in the order given.
     foreach ($aGenes as $sID => $aGene) {
@@ -725,7 +727,7 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && ACTION == 'manage_genes') {
               <TD><SELECT name="inheritances[]">' . str_replace('"' . $aGene['inheritance'] . '">', '"' . $aGene['inheritance'] . '" selected>', $sInheritanceOptions) . '</SELECT></TD>
               <TD><INPUT type="text" name="pmids[]" value="' . $aGene['pmid'] . '" size="10"></TD>
               <TD><INPUT type="text" name="remarkses[]" value="' . $aGene['remarks'] . '" size="40"></TD>
-              <TD width="30" align="right"><A href="#" onclick="lovd_removeGene(\'' . $sViewListID . '\', \'' . $sID . '\'); return false;"><IMG src="gfx/mark_0.png" alt="Remove" width="11" height="11" border="0"></A></TD></TR>');
+              ' . ($_AUTH['level'] < LEVEL_MANAGER? '' : '<TD width="30" align="right"><A href="#" onclick="lovd_removeGene(\'' . $sViewListID . '\', \'' . $sID . '\'); return false;"><IMG src="gfx/mark_0.png" alt="Remove" width="11" height="11" border="0"></A></TD>') . '</TR>');
     }
     print('
           </TBODY></TABLE></DIV><BR>' . "\n");
