@@ -562,6 +562,11 @@ if ($sCalcVersionFiles != $sCalcVersionDB) {
                      array(
                          'ALTER TABLE ' . TABLE_INDIVIDUALS . ' ADD COLUMN custom_panel TEXT NOT NULL AFTER edited_by',
                      ),
+                 '3.0-12s' =>
+                     array(
+                         'ALTER TABLE ' . TABLE_ANALYSES_RUN . ' ADD COLUMN use_custom_panel BOOLEAN NOT NULL AFTER modified',
+                         'CREATE TABLE ' . TABLE_AR2GP . ' (runid SMALLINT(5) UNSIGNED ZEROFILL NOT NULL, genepanelid SMALLINT(5) UNSIGNED ZEROFILL NOT NULL, PRIMARY KEY (runid, genepanelid), INDEX (runid), INDEX (genepanelid), CONSTRAINT ' . TABLE_AR2GP . '_fk_runid FOREIGN KEY (runid) REFERENCES ' . TABLE_ANALYSES_RUN . ' (id) ON DELETE CASCADE ON UPDATE CASCADE, CONSTRAINT ' . TABLE_AR2GP . '_fk_genepanelid FOREIGN KEY (genepanelid) REFERENCES ' . TABLE_GENE_PANELS . ' (id) ON DELETE CASCADE ON UPDATE CASCADE) ENGINE=InnoDB, DEFAULT CHARACTER SET utf8',
+                     ),
              );
 
     if ($sCalcVersionDB < lovd_calculateVersion('3.0-alpha-01')) {

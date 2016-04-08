@@ -63,7 +63,7 @@ function lovd_resetAfterFailedRun (sClassName)
 
 
 
-function lovd_runAnalysis (nScreeningID, nAnalysisID, nRunID)
+function lovd_runAnalysis (nScreeningID, nAnalysisID, nRunID, aSelectedGenePanels)
 {
     // Starts the analysis of the given screening.
 
@@ -279,13 +279,12 @@ function lovd_processGenePanelSelectionForm ()
         nRunID = undefined;
     }
 
-<!--    console.log(aSelectedGenePanels, nScreeningID, nAnalysisID, nRunID);-->
+    console.log(aSelectedGenePanels, nScreeningID, nAnalysisID, nRunID);
 
 <!--TODO Add the gene panel names to the bottom of the analysis here as well as when the page is refreshed for finished analysis-->
 
     // Call lovd_runAnalysis and pass all the extra values.
-<!--    TODO AM Need to pass the selected gene array to this function.-->
-    lovd_runAnalysis(nScreeningID, nAnalysisID, nRunID);
+    lovd_runAnalysis(nScreeningID, nAnalysisID, nRunID, aSelectedGenePanels);
 }
 
 
