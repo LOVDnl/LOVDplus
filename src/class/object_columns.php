@@ -188,8 +188,8 @@ class LOVD_Column extends LOVD_Object {
         parent::checkFields($aData);
 
         // Category; not chosen on this form, but we want to make sure it's correct anyways.
-        if (!empty($aData['category']) && !in_array($aData['category'], array('Individual', 'Phenotype', 'Screening', 'VariantOnGenome', 'VariantOnTranscript'))) {
-            lovd_errorAdd('category', 'The category is not correct. Please choose one of the following: Individual, Phenotype, Screening, VariantOnGenome or VariantOnTranscript.');
+        if (!empty($aData['category']) && !in_array($aData['category'], array('Individual', 'Phenotype', 'Screening', 'VariantOnGenome', 'VariantOnTranscript', 'GeneralAnnotation'))) {
+            lovd_errorAdd('category', 'The category is not correct. Please choose one of the following: Individual, Phenotype, Screening, VariantOnGenome, VariantOnTranscript or GeneralAnnotation.');
         }
 
         // ColID format.
@@ -335,6 +335,12 @@ class LOVD_Column extends LOVD_Object {
                 $this->aFormData['public_view'][0] .= ' *';
                 $this->aFormData['public_add'][0] .= ' *';
                 $this->aFormData['apply_to_all'][0] = str_replace('{{ UNIT }}', 'genes', $this->aFormData['apply_to_all'][0]);
+                break;
+            case 'GeneralAnnotation':
+                unset($this->aFormData['settings_note']);
+                unset($this->aFormData['standard']);
+                unset($this->aFormData['apply_to_all']);
+                $this->aFormData['colid_note'][3] = str_replace('{{ EXAMPLE }}', 'Reference/PubMed', $this->aFormData['colid_note'][3]);
                 break;
         }
 

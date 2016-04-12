@@ -43,6 +43,8 @@ require_once ROOT_PATH . 'class/object_custom.php';
 class LOVD_GeneralAnnotation extends LOVD_Custom {
     // This class extends the basic Object class and it handles the Link object.
     var $sObject = 'General_Annotation';
+    var $sCategory = 'GeneralAnnotation';
+    var $sTable = 'TABLE_GENERAL_ANNOTATIONS';
     var $bShared = false;
 
 
@@ -71,7 +73,7 @@ class LOVD_GeneralAnnotation extends LOVD_Custom {
                  array(
                         'TableHeader_General' => 'General annotations',
                       ),
-//                 $this->buildViewEntry(),
+                 $this->buildViewEntry(),
                  array(
                         'created_by_' => array('Created by', LEVEL_COLLABORATOR),
                         'created_date' => array('Date created', LEVEL_COLLABORATOR),

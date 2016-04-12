@@ -48,7 +48,7 @@ if (PATH_COUNT < 3 && !ACTION) {
 
     if (!empty($_PE[1])) {
         // FIXME; Is there a better way checking if it's a valid category?
-        if (in_array($_PE[1], array('Individual', 'Phenotype', 'Screening', 'VariantOnGenome', 'VariantOnTranscript'))) {
+        if (in_array($_PE[1], array('Individual', 'Phenotype', 'Screening', 'VariantOnGenome', 'VariantOnTranscript', 'GeneralAnnotation'))) {
             // Category given.
             $_GET['search_category'] = $_PE[1];
             define('PAGE_TITLE', 'Browse ' . $_PE[1] . ' custom data columns');
@@ -88,7 +88,7 @@ if (PATH_COUNT < 3 && !ACTION) {
 
     } else {
         // Let users restrict their choices.
-        $aCategories = array('Individual', 'Phenotype', 'Screening', 'VariantOnGenome', 'VariantOnTranscript');
+        $aCategories = array('Individual', 'Phenotype', 'Screening', 'VariantOnGenome', 'VariantOnTranscript', 'GeneralAnnotation');
         foreach ($aCategories as $sCategory) {
             print('        <LI><A href="' . CURRENT_PATH . '/' . $sCategory . '">Show only ' . $sCategory . ' columns</A></LI>' . "\n");
         }
@@ -679,6 +679,10 @@ if (PATH_COUNT == 1 && ACTION == 'create') {
                              array(
                                     'onclick'     => 'javascript:$(\'#optionForm input\').attr(\'value\', \'VariantOnTranscript\'); $(\'#optionForm\').submit();',
                                     'option_text' => '<B>Information on the variant(s) found, specific for the transcript level</B>, such as predicted effect on protein level',
+                                  ),
+                             array(
+                                    'onclick'     => 'javascript:$(\'#optionForm input\').attr(\'value\', \'GeneralAnnotation\'); $(\'#optionForm\').submit();',
+                                    'option_text' => '<B>Information on a variant, shared amongst all instances of that variant</B>, such as general annotations',
                                   ),
                               ),
                   );
