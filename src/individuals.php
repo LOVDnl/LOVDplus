@@ -358,7 +358,7 @@ if (PATH_COUNT >= 2 && ctype_digit($_PE[1]) && !ACTION && (PATH_COUNT == 2 || PA
                 </TR>
               </TABLE>');
             // Handle the gene panels for analyses that have already been run.
-            print('<DIV class="analysis_gene_panels" id="gene_panels_' . $zAnalysis['runid'] . '">');
+            print('<DIV id="gene_panels_' . $zAnalysis['runid'] . '"' . (empty($zAnalysis['__gene_panels'])? '' : 'class="analysis_gene_panels"') . '>');
             // If we have gene panels assigned to this analysis then display them.
             if (!empty($zAnalysis['__gene_panels'])) {
                 $aGenePanels = array();

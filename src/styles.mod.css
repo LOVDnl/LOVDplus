@@ -102,7 +102,7 @@ table.data tr.transparent50               {opacity:0.5; filter:alpha(opacity=50)
 table.data span.anchor                    {cursor: pointer; color: #0000FF;}
 
 /* Headings on the gene panel selection dialog form */
-.gpheader       {font-weight : bold; text-align : center; padding-top: 10px; border-top: 1px solid #dddddd}
+.gpheader       {font-weight : bold; text-align : center; padding-top: 10px; border-top: 1px solid #dddddd;}
 
- /*Displaying the gene panels below an analysis*/
-.analysis_gene_panels                              {font-size: 10px; background: #f0f0f0;}
+/* Displaying the gene panels below an analysis */
+.analysis_gene_panels                     {font-size: 10px; background: #f0f0f0; border: solid 1px #8b8b8b; padding: 4px; margin: 0px 2px 0px 2px;}
