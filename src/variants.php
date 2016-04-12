@@ -444,6 +444,9 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && !ACTION) {
 
     require ROOT_PATH . 'class/object_genome_variants.php';
     lovd_isAuthorized('variant', $nID);
+    print('  <TABLE cellpadding="0" cellspacing="0" border="0">
+    <TR>
+      <TD valign="top">' . "\n");
     $_DATA = new LOVD_GenomeVariant();
     $zData = $_DATA->viewEntry($nID);
 
@@ -488,7 +491,27 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && !ACTION) {
     }
     lovd_showJGNavigation($aNavigation, 'Variants');
 
-    print('      <BR><BR>' . "\n\n" .
+    print('
+      </TD>
+      <TD valign="top" id="general_annotation_view_entry" style="padding-left: 10px;">' . "\n");
+        // Load the variant data so as we can search by the DBID.
+        $aVariantData = $_DATA->loadEntry($nID);
+    if ($_DB->query('SELECT COUNT(*) FROM ' . TABLE_GENERAL_ANNOTATIONS . ' AS ga WHERE ga.id = ?', array($aVariantData['VariantOnGenome/DBID']))->fetchColumn()) {
+        // Checks if there is an existing general annotation record.
+        require ROOT_PATH . 'class/object_general_annotations.php';
+        $_DATA = new LOVD_GeneralAnnotation();
+        $zData = $_DATA->viewEntry($aVariantData['VariantOnGenome/DBID']);
+    } else {
+        // Otherwise show a button that can be used to create a new general annotation record.
+        // TODO Create a button to add a new GAR.
+        print('Create new GAR button here.');
+    }
+
+    print('      </TD>
+    </TR>
+  </TABLE>' . "\n");
+
+    print('      <BR>' . "\n" .
           '      <DIV id="viewentryDiv">' . "\n" .
           '      </DIV>' . "\n\n");
 
