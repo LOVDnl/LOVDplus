@@ -103,3 +103,6 @@ table.data span.anchor                    {cursor: pointer; color: #0000FF;}
 
 /* Headings on the gene panel selection dialog form */
 .gpheader       {font-weight : bold; text-align : center; padding-top: 10px; border-top: 1px solid #dddddd}
+
+ /*Displaying the gene panels below an analysis*/
+.analysis_gene_panels                              {font-size: 10px; background: #f0f0f0;}

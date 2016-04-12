@@ -264,8 +264,8 @@ if (PATH_COUNT >= 2 && ctype_digit($_PE[1]) && !ACTION && (PATH_COUNT == 2 || PA
 
         // If we're ready to analyze, or if we are analyzing already, show analysis options.
         // Both already run analyses and analyses not yet run will be shown. Analyses already run are fetched differently, though.
-        $zAnalysesRun    = $_DB->query('SELECT a.id, a.name, a.description, a.filters, IFNULL(MAX(arf.run_time)>-1, 0) AS analysis_run, ar.id AS runid,   ar.modified, GROUP_CONCAT(arf.filterid, ";", IFNULL(arf.filtered_out, "-"), ";", IFNULL(arf.run_time, "-") ORDER BY arf.filter_order SEPARATOR ";;") AS __run_filters
-                                        FROM ' . TABLE_ANALYSES . ' AS a INNER JOIN ' . TABLE_ANALYSES_RUN . ' AS ar ON (a.id = ar.analysisid) INNER JOIN ' . TABLE_ANALYSES_RUN_FILTERS . ' AS arf ON (ar.id = arf.runid)
+        $zAnalysesRun    = $_DB->query('SELECT a.id, a.name, a.description, a.filters, IFNULL(MAX(arf.run_time)>-1, 0) AS analysis_run, ar.id AS runid,   ar.modified, GROUP_CONCAT(DISTINCT arf.filterid, ";", IFNULL(arf.filtered_out, "-"), ";", IFNULL(arf.run_time, "-") ORDER BY arf.filter_order SEPARATOR ";;") AS __run_filters, GROUP_CONCAT(DISTINCT gp.id, ";", gp.name, ";", gp.type ORDER BY gp.type DESC, gp.name ASC SEPARATOR ";;") AS __gene_panels, ar.use_custom_panel 
+                                        FROM ' . TABLE_ANALYSES . ' AS a INNER JOIN ' . TABLE_ANALYSES_RUN . ' AS ar ON (a.id = ar.analysisid) INNER JOIN ' . TABLE_ANALYSES_RUN_FILTERS . ' AS arf ON (ar.id = arf.runid) LEFT OUTER JOIN ' . TABLE_AR2GP . ' AS ar2gp ON (ar.id = ar2gp.runid) LEFT OUTER JOIN ' . TABLE_GENE_PANELS . ' AS gp ON (ar2gp.genepanelid = gp.id)
                                         WHERE ar.screeningid = ? GROUP BY ar.id ORDER BY ar.modified, ar.id', array($nScreeningToAnalyze))->fetchAllAssoc();
         $zAnalysesNotRun = $_DB->query('SELECT a.id, a.name, a.description, a.filters, 0                               AS analysis_run, 0     AS runid, 0 AS modified
                                         FROM ' . TABLE_ANALYSES . ' AS a
@@ -356,8 +356,28 @@ if (PATH_COUNT >= 2 && ctype_digit($_PE[1]) && !ACTION && (PATH_COUNT == 2 || PA
                 <TR id="' . ($zAnalysis['runid']? 'run_' . $zAnalysis['runid'] : 'analysis_' . $zAnalysis['id']) . '_message" class="message">
                   <TD colspan="3">' . ($sAnalysisClassName == 'analysis_running analysis_half_run'? 'Analysis seems to have been interrupted' : ($sAnalysisClassName == 'analysis_run'? 'Click to see results' : 'Click to run this analysis')) . '</TD>
                 </TR>
-              </TABLE>
-            </TD>');
+              </TABLE>');
+            // Handle the gene panels for analyses that have already been run.
+            print('<DIV class="analysis_gene_panels" id="gene_panels_' . $zAnalysis['runid'] . '">');
+            // If we have gene panels assigned to this analysis then display them.
+            if (!empty($zAnalysis['__gene_panels'])) {
+                $aGenePanels = array();
+                $aGenePanelsFormatted = array();
+                // Explode the gene panels into an array
+                list($aGenePanels) = $_DATA->autoExplode(array('__0' => $zAnalysis['__gene_panels']));
+                foreach ($aGenePanels as $aGenePanel) {
+                    $aGenePanelsFormatted[] = $aGenePanel[1] . ' (' . ucfirst(str_replace('_', ' ', $aGenePanel[2])) . ')';
+                }
+                // Assign the custom panel to the list of gene panels.
+                // TODO AM We don't actually store the genes in the custom panel at the time this analysis was run. It might be important to show this as these custom panel genes may change since this analysis was run.
+                if ($zAnalysis['use_custom_panel']) {
+                    $aGenePanelsFormatted[] = 'Custom panel (ADD GENES HERE??)';
+                }
+
+                print('<B>Gene panels:</B> ' . implode(', ',$aGenePanelsFormatted) . '.');
+            }
+            print('</DIV>');
+            print('</TD>');
         }
         print('
           </TR>
