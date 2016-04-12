@@ -556,7 +556,7 @@ $_TABLES =
                 'TABLE_ANALYSES_RUN_RESULTS' => TABLEPREFIX . '_analyses_run_results',
                 'TABLE_SCHEDULED_IMPORTS' => TABLEPREFIX . '_scheduled_imports',
 
-                // Gene Lists
+                // Gene Lists.
                 'TABLE_GENE_PANELS' => TABLEPREFIX . '_gene_panels',
                 'TABLE_GENE_PANELS_REV' => TABLEPREFIX . '_gene_panels_revisions',
                 'TABLE_GP2GENE' => TABLEPREFIX . '_gene_panels2genes',
@@ -564,6 +564,10 @@ $_TABLES =
                 'TABLE_IND2GP' => TABLEPREFIX . '_individuals2gene_panels',
                 'TABLE_GP2DIS' => TABLEPREFIX . '_gene_panels2diseases',
                 'TABLE_GENE_STATISTICS' => TABLEPREFIX . '_gene_statistics',
+
+                // General Annotations.
+                'TABLE_GENERAL_ANNOTATIONS' => TABLEPREFIX . '_general_annotations',
+                'TABLE_GENERAL_ANNOTATIONS_REV' => TABLEPREFIX . '_general_annotations_revisions',
               );
 
 foreach ($_TABLES as $sConst => $sTable) {
