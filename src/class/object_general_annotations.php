@@ -72,16 +72,17 @@ class LOVD_GeneralAnnotation extends LOVD_Custom {
         $this->aColumnsViewEntry = array_merge(
                  array(
                         'TableHeader_General' => 'General annotations',
+                        'effect' => 'Affects function',
                       ),
                  $this->buildViewEntry(),
                  array(
-                        'created_by_' => array('Created by', LEVEL_COLLABORATOR),
-                        'created_date' => array('Date created', LEVEL_COLLABORATOR),
-                        'edited_by_' => array('Last edited by', LEVEL_COLLABORATOR),
-                        'edited_date_' => array('Date last edited', LEVEL_COLLABORATOR),
+                        'created_by_' => 'Created by',
+                        'created_date' => 'Date created',
+                        'edited_by_' => 'Last edited by',
+                        'edited_date_' => 'Date last edited',
                       ));
 
-        $this->unsetColsByAuthLevel(); // TODO AM DO we need this? Check with Ivo.
+//        $this->unsetColsByAuthLevel(); // TODO AM DO we need this? Check with Ivo.
     }
 
 
@@ -90,12 +91,17 @@ class LOVD_GeneralAnnotation extends LOVD_Custom {
 
     function prepareData ($zData = '', $sView = 'list')
     {
+        global $_SETT;
         if (!in_array($sView, array('list', 'entry'))) {
             $sView = 'list';
         }
 
         // Makes sure it's an array and htmlspecialchars() all the values.
         $zData = parent::prepareData($zData, $sView);
+
+        if ($sView == 'entry') {
+            $zData['effect'] = $_SETT['var_effect'][$zData['effectid']];
+        }
 
         return $zData;
     }

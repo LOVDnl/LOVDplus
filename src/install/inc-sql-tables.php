@@ -979,12 +979,13 @@ $aTableSQL =
         , 'TABLE_GENERAL_ANNOTATIONS' =>
     'CREATE TABLE ' . TABLE_GENERAL_ANNOTATIONS . ' (
     id VARCHAR(50) NOT NULL,
-    effectid TINYINT(2) UNSIGNED ZEROFILL,
+    effectid TINYINT(1) UNSIGNED ZEROFILL,
     created_by SMALLINT(5) UNSIGNED ZEROFILL,
     created_date DATETIME NOT NULL,
     edited_by SMALLINT(5) UNSIGNED ZEROFILL,
     edited_date DATETIME,
     PRIMARY KEY (id),
+    INDEX (effectid),
     INDEX (created_by),
     INDEX (edited_by),
     CONSTRAINT ' . TABLE_GENERAL_ANNOTATIONS . '_fk_created_by FOREIGN KEY (created_by) REFERENCES ' . TABLE_USERS . ' (id) ON DELETE SET NULL ON UPDATE CASCADE,
@@ -994,7 +995,7 @@ $aTableSQL =
         , 'TABLE_GENERAL_ANNOTATIONS_REV' =>
     'CREATE TABLE ' . TABLE_GENERAL_ANNOTATIONS_REV . ' (
     id VARCHAR(50) NOT NULL,
-    effectid TINYINT(2) UNSIGNED ZEROFILL,
+    effectid TINYINT(1) UNSIGNED ZEROFILL,
     created_by SMALLINT(5) UNSIGNED ZEROFILL,
     created_date DATETIME NOT NULL,
     edited_by SMALLINT(5) UNSIGNED ZEROFILL,
@@ -1005,6 +1006,7 @@ $aTableSQL =
     deleted_by SMALLINT(5) UNSIGNED ZEROFILL,
     reason TEXT,
     PRIMARY KEY (id, valid_from),
+    INDEX (effectid),
     INDEX (created_by),
     INDEX (edited_by),
     INDEX (deleted_by),
