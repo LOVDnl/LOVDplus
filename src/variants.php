@@ -495,15 +495,15 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && !ACTION) {
       </TD>
       <TD valign="top" id="general_annotation_view_entry" style="padding-left: 10px;">' . "\n");
         // Load the variant data so as we can search by the DBID.
-        $aVariantData = $_DATA->loadEntry($nID);
-    if ($_DB->query('SELECT COUNT(*) FROM ' . TABLE_GENERAL_ANNOTATIONS . ' AS ga WHERE ga.id = ?', array($aVariantData['VariantOnGenome/DBID']))->fetchColumn()) {
+    if ($zData['gaid']) {
+        $sGeneralAnnotationsID = $zData['gaid'];
         // Checks if there is an existing general annotation record.
         require ROOT_PATH . 'class/object_general_annotations.php';
         $_DATA = new LOVD_GeneralAnnotation();
-        $zData = $_DATA->viewEntry($aVariantData['VariantOnGenome/DBID']);
+        $zData = $_DATA->viewEntry($sGeneralAnnotationsID);
 
         $aNavigation = array();
-        $aNavigation['general_annotations/' . $aVariantData['VariantOnGenome/DBID'] . '?edit&variant_id=' . $nID]       = array('menu_edit.png', 'Edit general annotations entry', 1);
+        $aNavigation['general_annotations/' . $sGeneralAnnotationsID . '?edit&variant_id=' . $nID]       = array('menu_edit.png', 'Edit general annotations entry', 1);
         lovd_showJGNavigation($aNavigation, 'GeneralAnnotations');
 
     } else {
@@ -512,7 +512,7 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && !ACTION) {
               '          <TR>' . "\n" .
               '            <TH colspan="2">General annotations</TH>' . "\n" .
               '          </TR>' . "\n" .
-              '          <TR class="pointer" onclick="window.location.href=\'' . lovd_getInstallURL() . 'general_annotations/' . $aVariantData['VariantOnGenome/DBID'] . '?create&variant_id=' . $nID . '\';">' . "\n" .
+              '          <TR class="pointer" onclick="window.location.href=\'' . lovd_getInstallURL() . 'general_annotations/' . $zData['dbid'] . '?create&variant_id=' . $nID . '\';">' . "\n" .
               '            <TD align="center" width="40"><IMG src="gfx/lovd_variants_create.png" alt="General annotations" width="32" height="32"></TD>' . "\n" .
               '            <TD>Annotations that may be applicable to any instance of a particular variant can be stored in a general annotations entry. Click here to create a general annotation entry for this variant.</TD>' . "\n" .
               '          </TR>' . "\n" .
