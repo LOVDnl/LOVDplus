@@ -345,9 +345,42 @@ if (PATH_COUNT >= 2 && ctype_digit($_PE[1]) && !ACTION && (PATH_COUNT == 2 || PA
                         $sFilterClassName = 'filter_completed';
                     }
                 }
+
+                // Display the information for the gene panels used in this analysis.
+                $sGenePanelsInfo = '';
+                if ($sFilter == 'apply_selected_gene_panels' && (!empty($zAnalysis['__gene_panels']) || !empty($zAnalysis['custom_panel']))) {
+                    // Check to see if this is the right filter to show the info under and that we actually have some gene panels or custom panel assigned.
+                    $sGenePanelsInfo = '';
+
+                    $aGenePanels = array();
+                    $aGenePanelsFormatted = array();
+                    // Explode the gene panels into an array.
+                    list($aGenePanels) = $_DATA->autoExplode(array('__0' => $zAnalysis['__gene_panels']));
+                    foreach ($aGenePanels as $aGenePanel) {
+                        // Add this gene panel to this type.
+                        $aGenePanelsFormatted[$aGenePanel[2]][] = array('id' => $aGenePanel[0], 'name' => $aGenePanel[1]);
+                    }
+
+                    foreach ($aGenePanelsFormatted as $sType => $aGenePanels) {
+                        // Format each of the gene panel types into the info table.
+                        $nGenePanelCount = count($aGenePanels);
+                        $sGenePanelsInfo .= '<TR><TD>' . $nGenePanelCount . '</TD><TD>' . ucfirst(str_replace('_', ' ', $sType)) . ($nGenePanelCount > 1? 's' : '') . '</TD><TD>(??? genes)</TD></TR>' . "\n";
+
+                    }
+
+                    if ($zAnalysis['custom_panel']) {
+                        // Add the custom panel info to the table.
+                        $aCustomPanelGenes = explode(', ', $zAnalysis['custom_panel']);
+                        $sGenePanelsInfo .= '<TR><TD>1</TD><TD>Custom panel</TD><TD>(' . count($aCustomPanelGenes) . ' genes)</TD></TR>' . "\n";
+                    }
+
+                    // Layout for how the table should look like once the gene panels have been processed.
+                    $sGenePanelsInfo = '<TABLE border="0" cellpadding="0" cellspacing="1" class="gpinfo">' . $sGenePanelsInfo . '</TABLE>';
+                }
+
                 print('
                 <TR id="' . ($zAnalysis['runid']? 'run_' . $zAnalysis['runid'] : 'analysis_' . $zAnalysis['id']) . '_filter_' . preg_replace('/[^a-z0-9_]/i', '_', $sFilter) . '"' . (!$sFilterClassName? '' : ' class="' . $sFilterClassName . '"') . '>
-                  <TD>' . $sFilter . '</TD>
+                  <TD>' . $sFilter . $sGenePanelsInfo . '</TD>
                   <TD>' . ($nTime == '-'? '-' : lovd_convertSecondsToTime($nTime, 1)) . '</TD>
                   <TD>' . ($nTime == '-'? '-' : $nVariantsLeft) . '</TD>
                 </TR>');
@@ -356,27 +389,8 @@ if (PATH_COUNT >= 2 && ctype_digit($_PE[1]) && !ACTION && (PATH_COUNT == 2 || PA
                 <TR id="' . ($zAnalysis['runid']? 'run_' . $zAnalysis['runid'] : 'analysis_' . $zAnalysis['id']) . '_message" class="message">
                   <TD colspan="3">' . ($sAnalysisClassName == 'analysis_running analysis_half_run'? 'Analysis seems to have been interrupted' : ($sAnalysisClassName == 'analysis_run'? 'Click to see results' : 'Click to run this analysis')) . '</TD>
                 </TR>
-              </TABLE>');
-            // Handle the gene panels for analyses that have already been run.
-            print('<DIV id="gene_panels_' . $zAnalysis['runid'] . '"' . (empty($zAnalysis['__gene_panels'])? '' : 'class="analysis_gene_panels"') . '>');
-            // If we have gene panels assigned to this analysis then display them.
-            if (!empty($zAnalysis['__gene_panels'])) {
-                $aGenePanels = array();
-                $aGenePanelsFormatted = array();
-                // Explode the gene panels into an array
-                list($aGenePanels) = $_DATA->autoExplode(array('__0' => $zAnalysis['__gene_panels']));
-                foreach ($aGenePanels as $aGenePanel) {
-                    $aGenePanelsFormatted[] = $aGenePanel[1] . ' (' . ucfirst(str_replace('_', ' ', $aGenePanel[2])) . ')';
-                }
-                // Assign the custom panel to the list of gene panels.
-                if ($zAnalysis['custom_panel']) {
-                    $aGenePanelsFormatted[] = 'Custom panel (' . $zAnalysis['custom_panel'] . ')';
-                }
-
-                print('<B>Gene panels:</B> ' . implode(', ',$aGenePanelsFormatted) . '.');
-            }
-            print('</DIV>');
-            print('</TD>');
+              </TABLE>
+            </TD>');
         }
         print('
           </TR>
