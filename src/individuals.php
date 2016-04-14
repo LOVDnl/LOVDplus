@@ -256,7 +256,7 @@ if (PATH_COUNT >= 2 && ctype_digit($_PE[1]) && !ACTION && (PATH_COUNT == 2 || PA
             </TR>
             <TR>
               <TD><INPUT type="checkbox" name="gene_panel" value="custom_panel" checked></TD>
-              <TD><SPAN>' . $zData['custom_panel'] . '</SPAN></TD>
+              <TD>' . $zData['custom_panel'] . '</TD>
             </TR>
           </TABLE>
         </FORM>
@@ -264,7 +264,7 @@ if (PATH_COUNT >= 2 && ctype_digit($_PE[1]) && !ACTION && (PATH_COUNT == 2 || PA
 
         // If we're ready to analyze, or if we are analyzing already, show analysis options.
         // Both already run analyses and analyses not yet run will be shown. Analyses already run are fetched differently, though.
-        $zAnalysesRun    = $_DB->query('SELECT a.id, a.name, a.description, a.filters, IFNULL(MAX(arf.run_time)>-1, 0) AS analysis_run, ar.id AS runid,   ar.modified, GROUP_CONCAT(DISTINCT arf.filterid, ";", IFNULL(arf.filtered_out, "-"), ";", IFNULL(arf.run_time, "-") ORDER BY arf.filter_order SEPARATOR ";;") AS __run_filters, GROUP_CONCAT(DISTINCT gp.id, ";", gp.name, ";", gp.type ORDER BY gp.type DESC, gp.name ASC SEPARATOR ";;") AS __gene_panels, ar.use_custom_panel 
+        $zAnalysesRun    = $_DB->query('SELECT a.id, a.name, a.description, a.filters, IFNULL(MAX(arf.run_time)>-1, 0) AS analysis_run, ar.id AS runid,   ar.modified, GROUP_CONCAT(DISTINCT arf.filterid, ";", IFNULL(arf.filtered_out, "-"), ";", IFNULL(arf.run_time, "-") ORDER BY arf.filter_order SEPARATOR ";;") AS __run_filters, GROUP_CONCAT(DISTINCT gp.id, ";", gp.name, ";", gp.type ORDER BY gp.type DESC, gp.name ASC SEPARATOR ";;") AS __gene_panels, ar.custom_panel 
                                         FROM ' . TABLE_ANALYSES . ' AS a INNER JOIN ' . TABLE_ANALYSES_RUN . ' AS ar ON (a.id = ar.analysisid) INNER JOIN ' . TABLE_ANALYSES_RUN_FILTERS . ' AS arf ON (ar.id = arf.runid) LEFT OUTER JOIN ' . TABLE_AR2GP . ' AS ar2gp ON (ar.id = ar2gp.runid) LEFT OUTER JOIN ' . TABLE_GENE_PANELS . ' AS gp ON (ar2gp.genepanelid = gp.id)
                                         WHERE ar.screeningid = ? GROUP BY ar.id ORDER BY ar.modified, ar.id', array($nScreeningToAnalyze))->fetchAllAssoc();
         $zAnalysesNotRun = $_DB->query('SELECT a.id, a.name, a.description, a.filters, 0                               AS analysis_run, 0     AS runid, 0 AS modified
@@ -369,9 +369,8 @@ if (PATH_COUNT >= 2 && ctype_digit($_PE[1]) && !ACTION && (PATH_COUNT == 2 || PA
                     $aGenePanelsFormatted[] = $aGenePanel[1] . ' (' . ucfirst(str_replace('_', ' ', $aGenePanel[2])) . ')';
                 }
                 // Assign the custom panel to the list of gene panels.
-                // TODO AM We don't actually store the genes in the custom panel at the time this analysis was run. It might be important to show this as these custom panel genes may change since this analysis was run.
-                if ($zAnalysis['use_custom_panel']) {
-                    $aGenePanelsFormatted[] = 'Custom panel (ADD GENES HERE??)';
+                if ($zAnalysis['custom_panel']) {
+                    $aGenePanelsFormatted[] = 'Custom panel (' . $zAnalysis['custom_panel'] . ')';
                 }
 
                 print('<B>Gene panels:</B> ' . implode(', ',$aGenePanelsFormatted) . '.');

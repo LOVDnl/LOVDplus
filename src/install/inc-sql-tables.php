@@ -767,7 +767,7 @@ $aTableSQL =
     analysisid TINYINT(3) UNSIGNED ZEROFILL,
     screeningid INT(10) UNSIGNED ZEROFILL NOT NULL,
     modified BOOLEAN NOT NULL,
-    use_custom_panel BOOLEAN NOT NULL,
+    custom_panel TEXT NOT NULL,
     created_by SMALLINT(5) UNSIGNED ZEROFILL,
     created_date DATETIME NOT NULL,
     PRIMARY KEY (id),

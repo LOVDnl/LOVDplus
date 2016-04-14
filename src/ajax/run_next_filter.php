@@ -205,9 +205,8 @@ if ($aVariantIDs) {
             }
 
             // If we are using a custom panel then load the genes.
-            if (empty($_SESSION['analyses'][$nRunID]['custom_panel'])) {
-                $sCustomPanel = $_DB->query('SELECT i.custom_panel FROM ' . TABLE_INDIVIDUALS . ' AS i INNER JOIN ' . TABLE_SCREENINGS . ' AS s ON (i.id = s.individualid) INNER JOIN ' . TABLE_SCR2VAR . ' AS s2v ON (s.id = s2v.screeningid) WHERE s2v.variantid = ?', array($aVariantIDs[0]))->fetchColumn();
-                $aCustomPanels = explode(', ', $sCustomPanel);
+            if (!empty($_SESSION['analyses'][$nRunID]['custom_panel'])) {
+                $aCustomPanels = explode(', ', $_SESSION['analyses'][$nRunID]['custom_panel']);
             }
 
             // Load the selected gene panels into gene panels and blacklists.
