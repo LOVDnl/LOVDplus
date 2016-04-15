@@ -4,7 +4,7 @@
  * LEIDEN OPEN VARIATION DATABASE (LOVD)
  *
  * Created     : 2014-11-28
- * Modified    : 2016-03-16
+ * Modified    : 2016-04-15
  * For LOVD+   : 3.0-15
  *
  * Copyright   : 2004-2016 Leiden University Medical Center; http://www.LUMC.nl/
@@ -1208,7 +1208,7 @@ foreach ($aFiles as $sID) {
     // Start creating the output file, based on the meta file. We just add the analysis_status, so the analysis can start directly after importing.
     $aFileMeta = file($sFileMeta, FILE_IGNORE_NEW_LINES);
     foreach ($aFileMeta as $nLine => $sLine) {
-        if (strpos($sLine, '{{Individual/') !== false) {
+        if (strpos($sLine, '{{Screening/') !== false) {
             $aFileMeta[$nLine]   .= "\t\"{{analysis_statusid}}\"";
             $aFileMeta[$nLine+1] .= "\t\"" . ANALYSIS_STATUS_READY . '"';
             break;
