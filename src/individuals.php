@@ -364,14 +364,20 @@ if (PATH_COUNT >= 2 && ctype_digit($_PE[1]) && !ACTION && (PATH_COUNT == 2 || PA
                     foreach ($aGenePanelsFormatted as $sType => $aGenePanels) {
                         // Format each of the gene panel types into the info table.
                         $nGenePanelCount = count($aGenePanels);
-                        $sGenePanelsInfo .= '<TR><TD>' . $nGenePanelCount . '</TD><TD>' . ucfirst(str_replace('_', ' ', $sType)) . ($nGenePanelCount > 1? 's' : '') . '</TD><TD>(??? genes)</TD></TR>' . "\n";
+                        $sToolTop = '<DIV class=\'S11\'><B>' . ucfirst(str_replace('_', ' ', $sType)) . ($nGenePanelCount > 1? 's' : '') . '</B><BR>';
 
+                        foreach ($aGenePanels as $aGenePanel) {
+                            $sToolTop .= '<A href=\'gene_panels/' . $aGenePanel['id'] . '\'>' . $aGenePanel['name'] . '</A><BR>';
+                        }
+                        $sToolTop .= '</DIV>';
+                        $sGenePanelsInfo .= '<TR onmouseover="lovd_showToolTip(\'' . addslashes($sToolTop) . '\', this, [100, -10]);"><TD>' . $nGenePanelCount . '</TD><TD>' . ucfirst(str_replace('_', ' ', $sType)) . ($nGenePanelCount > 1? 's' : '') . '</TD><TD>&nbsp;</TD></TR>' . "\n";
                     }
 
                     if ($zAnalysis['custom_panel']) {
                         // Add the custom panel info to the table.
                         $aCustomPanelGenes = explode(', ', $zAnalysis['custom_panel']);
-                        $sGenePanelsInfo .= '<TR><TD>1</TD><TD>Custom panel</TD><TD>(' . count($aCustomPanelGenes) . ' genes)</TD></TR>' . "\n";
+                        $sToolTop = '<DIV class=\'S11\'><B>Custom panel</B><BR>' . $zAnalysis['custom_panel'] . '</DIV>';
+                        $sGenePanelsInfo .= '<TR onmouseover="lovd_showToolTip(\'' . addslashes($sToolTop) . '\', this, [100, -10]);"><TD>1</TD><TD>Custom panel</TD><TD>(' . count($aCustomPanelGenes) . ' genes)</TD></TR>' . "\n";
                     }
 
                     // Layout for how the table should look like once the gene panels have been processed.
