@@ -250,14 +250,18 @@ if (PATH_COUNT >= 2 && ctype_digit($_PE[1]) && !ACTION && (PATH_COUNT == 2 || PA
         }
 
         // Add in the custom gene panel option.
-        print('
+        if ($zData['custom_panel']) {
+            print('
             <TR>
               <TD class="gpheader" colspan="2">Custom panel</TD>
             </TR>
             <TR>
               <TD><INPUT type="checkbox" name="gene_panel" value="custom_panel" checked></TD>
               <TD>' . $zData['custom_panel'] . '</TD>
-            </TR>
+            </TR>');
+        }
+
+        print('
           </TABLE>
         </FORM>
       </DIV>' . "\n");

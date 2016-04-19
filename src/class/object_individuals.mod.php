@@ -115,7 +115,7 @@ class LOVD_IndividualMOD extends LOVD_Individual {
             ),
                  $this->buildViewEntry(),
                  array(
-                        'custom_panel' => 'Custom gene panel', // TODO AM Do we need to create URLS to the genes for the view entry?
+                        'custom_panel_' => 'Custom gene panel', // TODO AM Do we need to create URLS to the genes for the view entry?
                         'gene_panels_' => 'Gene panels',
                         'diseases_' => 'Diseases',
                         'parents_' => 'Parent(s)',
@@ -302,6 +302,8 @@ class LOVD_IndividualMOD extends LOVD_Individual {
         if ($sView == 'list') {
             $zData['analysis_date_'] = substr($zData['analysis_date'], 0, 10);
             $zData['analysis_approved_date_'] = substr($zData['analysis_approved_date'], 0, 10);
+        } else {
+            $zData['custom_panel_'] = $zData['custom_panel'] . ' <SPAN style="float:right"><A href="individuals/' . $zData['id'] . '?edit_panels">Edit gene panels</A></SPAN>';;
         }
 
         return $zData;
