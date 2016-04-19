@@ -176,6 +176,27 @@ function lovd_runNextFilter (nAnalysisID, nRunID)
                     oTR.children('td:eq(1)').html(nTime);
                     oTR.children('td:eq(2)').html(nVariantsLeft);
 
+                    // Show the details of the selected gene panels under the apply_selected_gene_panels filter.
+                    if (sFilterID.substr(sFilterID.length - 26) == 'apply_selected_gene_panels') {
+                        $.get('<?php echo lovd_getInstallURL(); ?>ajax/selected_gene_panels.php?runid=' + escape(nRunID))
+                            .done(
+                                function (data) {
+                                    if (data == '0') {
+                                        // Failure, we're in trouble, reload view.
+                                        alert('Failed to construct the selected gene panel table.\nIf this error persists, please contact support.');
+                                        location.reload();
+                                    } else {
+                                        oTR.children('td:eq(0)').html(oTR.children('td:eq(0)').html() + data);
+                                    }
+                                })
+                            .fail(
+                                function (data) {
+                                    // Failure, we're in trouble, reload view.
+                                    alert('Failed to construct the selected gene panel table.\nIf this error persists, please contact support.');
+                                    location.reload();
+                                });
+                    }
+
                     if (!bDone) {
                         return lovd_runNextFilter(nAnalysisID, nRunID);
                     }

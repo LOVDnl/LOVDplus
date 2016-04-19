@@ -350,38 +350,7 @@ if (PATH_COUNT >= 2 && ctype_digit($_PE[1]) && !ACTION && (PATH_COUNT == 2 || PA
                 $sGenePanelsInfo = '';
                 if ($sFilter == 'apply_selected_gene_panels' && (!empty($zAnalysis['__gene_panels']) || !empty($zAnalysis['custom_panel']))) {
                     // Check to see if this is the right filter to show the info under and that we actually have some gene panels or custom panel assigned.
-                    $sGenePanelsInfo = '';
-
-                    $aGenePanels = array();
-                    $aGenePanelsFormatted = array();
-                    // Explode the gene panels into an array.
-                    list($aGenePanels) = $_DATA->autoExplode(array('__0' => $zAnalysis['__gene_panels']));
-                    foreach ($aGenePanels as $aGenePanel) {
-                        // Add this gene panel to this type.
-                        $aGenePanelsFormatted[$aGenePanel[2]][] = array('id' => $aGenePanel[0], 'name' => $aGenePanel[1]);
-                    }
-
-                    foreach ($aGenePanelsFormatted as $sType => $aGenePanels) {
-                        // Format each of the gene panel types into the info table.
-                        $nGenePanelCount = count($aGenePanels);
-                        $sToolTop = '<DIV class=\'S11\'><B>' . ucfirst(str_replace('_', ' ', $sType)) . ($nGenePanelCount > 1? 's' : '') . '</B><BR>';
-
-                        foreach ($aGenePanels as $aGenePanel) {
-                            $sToolTop .= '<A href=\'gene_panels/' . $aGenePanel['id'] . '\'>' . $aGenePanel['name'] . '</A><BR>';
-                        }
-                        $sToolTop .= '</DIV>';
-                        $sGenePanelsInfo .= '<TR onmouseover="lovd_showToolTip(\'' . addslashes($sToolTop) . '\', this, [100, -10]);"><TD>' . $nGenePanelCount . '</TD><TD>' . ucfirst(str_replace('_', ' ', $sType)) . ($nGenePanelCount > 1? 's' : '') . '</TD><TD>&nbsp;</TD></TR>' . "\n";
-                    }
-
-                    if ($zAnalysis['custom_panel']) {
-                        // Add the custom panel info to the table.
-                        $aCustomPanelGenes = explode(', ', $zAnalysis['custom_panel']);
-                        $sToolTop = '<DIV class=\'S11\'><B>Custom panel</B><BR>' . $zAnalysis['custom_panel'] . '</DIV>';
-                        $sGenePanelsInfo .= '<TR onmouseover="lovd_showToolTip(\'' . addslashes($sToolTop) . '\', this, [100, -10]);"><TD>1</TD><TD>Custom panel</TD><TD>(' . count($aCustomPanelGenes) . ' genes)</TD></TR>' . "\n";
-                    }
-
-                    // Layout for how the table should look like once the gene panels have been processed.
-                    $sGenePanelsInfo = '<TABLE border="0" cellpadding="0" cellspacing="1" class="gpinfo">' . $sGenePanelsInfo . '</TABLE>';
+                    require ROOT_PATH . 'ajax/selected_gene_panels.php';
                 }
 
                 print('
