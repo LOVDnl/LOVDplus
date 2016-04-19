@@ -126,6 +126,8 @@ if (!$_GET['runid']) {
 } else {
     $nRunID = (int) $_GET['runid']; // (int) is to prevent zerofill from messing things up.
     $aFilters = explode(';', $zAnalysisRun['_filters']);
+    // Update the existing analyses run record to store the custom panel genes.
+    $_DB->query('UPDATE ' . TABLE_ANALYSES_RUN . ' SET custom_panel = ? WHERE id = ?', array($sCustomPanel, $nRunID));
 }
 
 // Process the selected gene panels.
