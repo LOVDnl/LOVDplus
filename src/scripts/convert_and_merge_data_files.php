@@ -4,7 +4,7 @@
  * LEIDEN OPEN VARIATION DATABASE (LOVD)
  *
  * Created     : 2014-11-28
- * Modified    : 2016-03-16
+ * Modified    : 2016-04-15
  * For LOVD+   : 3.0-15
  *
  * Copyright   : 2004-2016 Leiden University Medical Center; http://www.LUMC.nl/
@@ -1537,7 +1537,7 @@ $aTranscriptInfo = array(array('id' => 'NO_TRANSCRIPTS')); // Basically, any tex
 
                         // Add transcript to gene.
                         if (!$_DB->query('INSERT INTO ' . TABLE_TRANSCRIPTS . ' (id, geneid, name, id_mutalyzer, id_ncbi, id_ensembl, id_protein_ncbi, id_protein_ensembl, id_protein_uniprot, position_c_mrna_start, position_c_mrna_end, position_c_cds_end, position_g_mrna_start, position_g_mrna_end, created_date, created_by) VALUES (NULL, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), ?)',
-                            array($aGenes[$aLine['SYMBOL']]['id'], $sTranscriptName, $aTranscript['id_mutalyzer'], $aTranscript['id_ncbi'], '', $sTranscriptProtein, '', '', $aTranscript['cTransStart'], $aTranscript['cTransEnd'], $aTranscript['cCDSStop'], $aTranscript['chromTransStart'], $aTranscript['chromTransEnd'], 0))) {
+                            array($aGenes[$aLine['SYMBOL']]['id'], $sTranscriptName, $aTranscript['id_mutalyzer'], $aTranscript['id_ncbi'], '', $sTranscriptProtein, '', '', $aTranscript['cTransStart'], $aTranscript['sortableTransEnd'], $aTranscript['cCDSStop'], $aTranscript['chromTransStart'], $aTranscript['chromTransEnd'], 0))) {
                             die('Can\'t create transcript ' . $aTranscript['id_ncbi'] . ' for gene ' . $aLine['SYMBOL'] . '.' . "\n");
                         }
 
