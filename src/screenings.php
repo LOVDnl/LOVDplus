@@ -47,13 +47,17 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && in_array(ACTION, array('downloadT
     // Load appropiate user level for this screening entry.
     $bAuthorized = lovd_isAuthorized('screening_analysis', $nID);
 
-    // Only managers can export variants, though.
+    // Load status as well, since that's also important.
+    $zData = $_DB->query('SELECT * FROM ' . TABLE_SCREENINGS . ' WHERE id = ?', array($nID))->fetchAssoc();
+
+    // Export depends on user level (Owner or Manager) and status.
     if (ACTION == 'exportToBeConfirmed') {
         if (!$bAuthorized) {
             // Either returned false or 0. Both are bad in this case.
             die('9|No authorization on this screening.');
-        } elseif ($_AUTH['level'] < LEVEL_MANAGER) {
-            die('9|To export the variants to be confirmed, Manager level is required.');
+        } elseif (!($_AUTH['level'] >= LEVEL_OWNER && $zData['analysis_statusid'] < ANALYSIS_STATUS_CLOSED) &&
+                  !($_AUTH['level'] >= LEVEL_MANAGER && $zData['analysis_statusid'] < ANALYSIS_STATUS_WAIT_CONFIRMATION)) {
+            die('9|Unable to export variants, the analysis status requires a higher user level.');
         }
     }
     lovd_requireAUTH(LEVEL_OWNER);
