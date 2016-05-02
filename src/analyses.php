@@ -135,18 +135,17 @@ if (PATH_COUNT == 3 && $_PE[1] == 'run' && ctype_digit($_PE[2]) && ACTION == 'mo
     lovd_isAuthorized('analysisrun', $nID);
     lovd_requireAUTH(LEVEL_OWNER);
 
-    // ADMIN can always edit an analysis run, even when the individual's analysis hasn't been started by him.
-    // FIXME: Shouldn't the owner of the individual's analysis be able to edit the run, when it's created by somebody else?
+    // Everyone (Owner-Analyzer and up) can always edit an analysis run, even when it hasn't been started by him.
     // It's a complete mystery to me why this query, having the GROUP_CONCAT() there, always returns a row with only NULL values when there is no match.
     //   HAVING clauses filtering out NULL values don't work. There *are* values there, you just don't see them and you can't filter on them.
     //   Changing the created_by filter to an INT also solves the problem. It just makes no sense. So removing the GROUP_CONCAT here, to make sure I don't get results when I don't want them.
     // $sSQL = 'SELECT ar.*, s.individualid, a.name, GROUP_CONCAT(arf.filterid ORDER BY arf.filter_order SEPARATOR ";") AS _filters FROM ' . TABLE_ANALYSES_RUN . ' AS ar INNER JOIN ' . TABLE_SCREENINGS . ' AS s ON (ar.screeningid = s.id) INNER JOIN ' . TABLE_ANALYSES . ' AS a ON (ar.analysisid = a.id) INNER JOIN ' . TABLE_ANALYSES_RUN_FILTERS . ' AS arf ON (ar.id = arf.runid) WHERE ar.id = ?' . ($_AUTH['level'] >= LEVEL_MANAGER? '' : ' AND ar.created_by = ?');
-    $sSQL = 'SELECT ar.*, s.individualid, a.name FROM ' . TABLE_ANALYSES_RUN . ' AS ar INNER JOIN ' . TABLE_SCREENINGS . ' AS s ON (ar.screeningid = s.id) INNER JOIN ' . TABLE_ANALYSES . ' AS a ON (ar.analysisid = a.id) WHERE ar.id = ?' . ($_AUTH['level'] >= LEVEL_MANAGER? '' : ' AND ar.created_by = ?');
-    $aSQL = array($nID);
-    if ($_AUTH['level'] < LEVEL_MANAGER) {
-        $aSQL[] = $_AUTH['id'];
-    }
-    $zData = $_DB->query($sSQL, $aSQL)->fetchAssoc();
+    $zData = $_DB->query('SELECT ar.*, s.individualid, a.name
+                          FROM ' . TABLE_ANALYSES_RUN . ' AS ar
+                           INNER JOIN ' . TABLE_SCREENINGS . ' AS s ON (ar.screeningid = s.id)
+                           INNER JOIN ' . TABLE_ANALYSES . ' AS a ON (ar.analysisid = a.id)
+                          WHERE ar.id = ? AND s.analysis_statusid < ?',
+        array($nID, ANALYSIS_STATUS_CLOSED))->fetchAssoc();
     if (!$zData) {
         $_T->printHeader();
         $_T->printTitle();
@@ -154,6 +153,7 @@ if (PATH_COUNT == 3 && $_PE[1] == 'run' && ctype_digit($_PE[2]) && ACTION == 'mo
         $_T->printFooter();
         exit;
     }
+
     // See above, I had to split the queries.
     // $zData['filters'] = explode(';', $zData['_filters']);
     $zData['filters'] = $_DB->query('SELECT filterid FROM ' . TABLE_ANALYSES_RUN_FILTERS . ' WHERE runid = ? ORDER BY filter_order', array($nID))->fetchAllColumn();
@@ -267,10 +267,12 @@ if (PATH_COUNT == 3 && $_PE[1] == 'run' && ctype_digit($_PE[2]) && ACTION == 'de
     lovd_isAuthorized('analysisrun', $nID);
     lovd_requireAUTH(LEVEL_OWNER);
 
-    // ADMIN can always delete an analysis run, even when the individual's analysis hasn't been started by him.
-    // FIXME: Shouldn't the owner of the individual's analysis be able to delete the run, when it's created by somebody else?
-    $sSQL = 'SELECT ar.*, s.individualid FROM ' . TABLE_ANALYSES_RUN . ' AS ar INNER JOIN ' . TABLE_SCREENINGS . ' AS s ON (ar.screeningid = s.id) WHERE ar.id = ?' . ($_AUTH['level'] >= LEVEL_MANAGER? '' : ' AND ar.created_by = ?');
-    $aSQL = array($nID);
+    // A Manager can always delete an analysis run, even when it hasn't been started by him.
+    $sSQL = 'SELECT ar.*, s.individualid
+             FROM ' . TABLE_ANALYSES_RUN . ' AS ar
+              INNER JOIN ' . TABLE_SCREENINGS . ' AS s ON (ar.screeningid = s.id)
+             WHERE ar.id = ? AND s.analysis_statusid < ?' . ($_AUTH['level'] >= LEVEL_MANAGER? '' : ' AND ar.created_by = ?');
+    $aSQL = array($nID, ANALYSIS_STATUS_CLOSED);
     if ($_AUTH['level'] < LEVEL_MANAGER) {
         $aSQL[] = $_AUTH['id'];
     }

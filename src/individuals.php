@@ -131,6 +131,11 @@ if (PATH_COUNT >= 2 && ctype_digit($_PE[1]) && !ACTION && (PATH_COUNT == 2 || PA
 
     // If we're here, analyzing a screening, show the screening VE on the right.
     if ($nScreeningToAnalyze) {
+        // Authorize the user for this screening, but specifically meant for the analysis.
+        // For LEVEL_ANALYZER, this should activate LEVEL_OWNER for
+        //   free screenings or screenings under analysis by this user.
+        lovd_isAuthorized('screening_analysis', $nScreeningToAnalyze);
+
         require_once ROOT_PATH . 'class/object_screenings.mod.php';
         $_DATA = new LOVD_ScreeningMOD();
         $zScreening = $_DATA->viewEntry($nScreeningToAnalyze);
@@ -209,11 +214,6 @@ if (PATH_COUNT >= 2 && ctype_digit($_PE[1]) && !ACTION && (PATH_COUNT == 2 || PA
             exit;
         }
 
-        // Authorize the user for this screening, but specifically meant for the analysis.
-        // For LEVEL_ANALYZER, this should activate LEVEL_OWNER for
-        //   free screenings or screenings under analysis by this user.
-        lovd_isAuthorized('screening_analysis', $nScreeningToAnalyze);
-
 
 
 
@@ -268,8 +268,8 @@ if (PATH_COUNT >= 2 && ctype_digit($_PE[1]) && !ACTION && (PATH_COUNT == 2 || PA
 
         // If we're ready to analyze, or if we are analyzing already, show analysis options.
         // Both already run analyses and analyses not yet run will be shown. Analyses already run are fetched differently, though.
-        $zAnalysesRun    = $_DB->query('SELECT a.id, a.name, a.description, a.filters, IFNULL(MAX(arf.run_time)>-1, 0) AS analysis_run, ar.id AS runid,   ar.modified, GROUP_CONCAT(DISTINCT arf.filterid, ";", IFNULL(arf.filtered_out, "-"), ";", IFNULL(arf.run_time, "-") ORDER BY arf.filter_order SEPARATOR ";;") AS __run_filters, GROUP_CONCAT(DISTINCT gp.id, ";", gp.name, ";", gp.type ORDER BY gp.type DESC, gp.name ASC SEPARATOR ";;") AS __gene_panels, ar.custom_panel 
-                                        FROM ' . TABLE_ANALYSES . ' AS a INNER JOIN ' . TABLE_ANALYSES_RUN . ' AS ar ON (a.id = ar.analysisid) INNER JOIN ' . TABLE_ANALYSES_RUN_FILTERS . ' AS arf ON (ar.id = arf.runid) LEFT OUTER JOIN ' . TABLE_AR2GP . ' AS ar2gp ON (ar.id = ar2gp.runid) LEFT OUTER JOIN ' . TABLE_GENE_PANELS . ' AS gp ON (ar2gp.genepanelid = gp.id)
+        $zAnalysesRun    = $_DB->query('SELECT a.id, a.name, a.description, a.filters, IFNULL(MAX(arf.run_time)>-1, 0) AS analysis_run, ar.id AS runid,   ar.modified, GROUP_CONCAT(arf.filterid, ";", IFNULL(arf.filtered_out, "-"), ";", IFNULL(arf.run_time, "-") ORDER BY arf.filter_order SEPARATOR ";;") AS __run_filters
+                                        FROM ' . TABLE_ANALYSES . ' AS a INNER JOIN ' . TABLE_ANALYSES_RUN . ' AS ar ON (a.id = ar.analysisid) INNER JOIN ' . TABLE_ANALYSES_RUN_FILTERS . ' AS arf ON (ar.id = arf.runid)
                                         WHERE ar.screeningid = ? GROUP BY ar.id ORDER BY ar.modified, ar.id', array($nScreeningToAnalyze))->fetchAllAssoc();
         $zAnalysesNotRun = $_DB->query('SELECT a.id, a.name, a.description, a.filters, 0                               AS analysis_run, 0     AS runid, 0 AS modified
                                         FROM ' . TABLE_ANALYSES . ' AS a
@@ -317,12 +317,13 @@ if (PATH_COUNT >= 2 && ctype_digit($_PE[1]) && !ACTION && (PATH_COUNT == 2 || PA
             print('
             <TD class="analysis" valign="top">
               <TABLE border="0" cellpadding="0" cellspacing="1" id="' . ($zAnalysis['runid']? 'run_' . $zAnalysis['runid'] : 'analysis_' . $zAnalysis['id']) . '" class="analysis ' . $sAnalysisClassName . '" onclick="' .
+                ($zAnalysis['analysis_run']? 'lovd_showAnalysisResults(\'' . $zAnalysis['runid'] . '\');' : ($_AUTH['level'] < LEVEL_OWNER || $zScreening['analysis_statusid'] >= ANALYSIS_STATUS_CLOSED? '' : 'lovd_runAnalysis(\'' . $nScreeningToAnalyze . '\', \'' . $zAnalysis['id'] . '\'' . (!$zAnalysis['runid']? '' : ', \'' . $zAnalysis['runid'] . '\'') . ');')) . '">
                 ($zAnalysis['analysis_run']? 'lovd_showAnalysisResults(\'' . $zAnalysis['runid'] . '\');' : ($_AUTH['level'] < LEVEL_OWNER? '' : 'lovd_popoverGenePanelSelectionForm(\'' . $nScreeningToAnalyze . '\', \'' . $zAnalysis['id'] . '\'' . (!$zAnalysis['runid']? '' : ', \'' . $zAnalysis['runid'] . '\'') . ');')) . '">
                 <TR>
                   <TH colspan="3">
                     <DIV style="position : relative">
                       ' . $zAnalysis['name'] . (!$zAnalysis['modified']? '' : ' (modified)') .
-                ($_AUTH['level'] < LEVEL_OWNER? '' :
+                ($_AUTH['level'] < LEVEL_OWNER || $zScreening['analysis_statusid'] >= ANALYSIS_STATUS_CLOSED? '' :
                 // FIXME: Probably an Ajax call would be better maybe? The window opening with refresh is ugly... we could just let this table disappear when successful (which may not work for the last run analysis because of the divider)...
                 (!$zAnalysis['runid']? '' : '
                       <IMG src="gfx/cross.png" alt="Remove" onclick="if(window.confirm(\'Are you sure you want to remove this analysis run? The variants will not be deleted.\')){lovd_openWindow(\'' . lovd_getInstallURL() . 'analyses/run/' . $zAnalysis['runid'] . '?delete&amp;in_window\', \'DeleteAnalysisRun\', 780, 400);} cancelParentEvent(event);" width="16" height="16" class="remove">') . '
@@ -410,11 +411,11 @@ if (PATH_COUNT >= 2 && ctype_digit($_PE[1]) && !ACTION && (PATH_COUNT == 2 || PA
         $_DATA->setRowLink('CustomVL_AnalysisRunResults_for_I_VE', 'javascript:lovd_openWindow(\'' . lovd_getInstallURL() . 'variants/{{ID}}?&in_window\', \'VarVE_{{ID}}\', 1000); return false;');
         print('      <UL id="viewlistMenu_CustomVL_AnalysisRunResults_for_I_VE" class="jeegoocontext jeegooviewlist">' . "\n");
         foreach ($_SETT['var_effect'] as $nEffectID => $sEffect) {
-            print('        <LI class="icon"><A click="lovd_AJAX_viewListSubmit(\'CustomVL_AnalysisRunResults_for_I_VE\', function(){$.get(\'ajax/set_variant_effect.php?' . $nEffectID . '&id=selected\', function(sResponse){if(sResponse.substring(0,1) == \'1\'){alert(\'Successfully set reported variant effect of \' + sResponse.substring(2) + \' variants to \\\'' . $sEffect . '\\\'.\');lovd_AJAX_viewListSubmit(\'CustomVL_AnalysisRunResults_for_I_VE\');}}).error(function(){alert(\'Error while setting variant effect.\');});});"><SPAN class="icon" style="background-image: url(gfx/menu_edit.png);"></SPAN>Set variant effect to "' . $sEffect . '"</A></LI>' . "\n");
+            print('        <LI class="icon"><A click="lovd_AJAX_viewListSubmit(\'CustomVL_AnalysisRunResults_for_I_VE\', function(){$.get(\'ajax/set_variant_effect.php?' . $nEffectID . '&id=selected\', function(sResponse){if(sResponse.substring(0,1) == \'1\'){alert(\'Successfully set reported variant effect of \' + sResponse.substring(2) + \' variants to \\\'' . $sEffect . '\\\'.\');lovd_AJAX_viewListSubmit(\'CustomVL_AnalysisRunResults_for_I_VE\');}else if(sResponse.substring(0,1) == \'9\'){alert(\'Error: \' + sResponse.substring(2));}}).error(function(){alert(\'Error while setting variant effect.\');});});"><SPAN class="icon" style="background-image: url(gfx/menu_edit.png);"></SPAN>Set variant effect to "' . $sEffect . '"</A></LI>' . "\n");
         }
         // Link for marking variant to be (un)confirmed.
-        print('        <LI class="icon"><A click="lovd_AJAX_viewListSubmit(\'CustomVL_AnalysisRunResults_for_I_VE\', function(){$.get(\'ajax/set_to_be_confirmed.php?set&id=selected\', function(sResponse){if(sResponse.substring(0,1) == \'1\'){alert(\'Successfully set \' + sResponse.substring(2) + \' variants to be confirmed.\');lovd_AJAX_viewListSubmit(\'CustomVL_AnalysisRunResults_for_I_VE\');lovd_AJAX_viewEntryLoad();}}).error(function(){alert(\'Error while setting variant status.\');});});"><SPAN class="icon" style="background-image: url(gfx/menu_confirm.png);"></SPAN>Set variant to be confirmed</A></LI>' . "\n" .
-              '        <LI class="icon"><A click="lovd_AJAX_viewListSubmit(\'CustomVL_AnalysisRunResults_for_I_VE\', function(){$.get(\'ajax/set_to_be_confirmed.php?unset&id=selected\', function(sResponse){if(sResponse.substring(0,1) == \'1\'){alert(\'Successfully unset \' + sResponse.substring(2) + \' variants to be confirmed.\');lovd_AJAX_viewListSubmit(\'CustomVL_AnalysisRunResults_for_I_VE\');lovd_AJAX_viewEntryLoad();}}).error(function(){alert(\'Error while unsetting variant status.\');});});"><SPAN class="icon" style="background-image: url(gfx/menu_unconfirm.png);"></SPAN>Set variant to <I>not</I> be confirmed</A></LI>' . "\n");
+        print('        <LI class="icon"><A click="lovd_AJAX_viewListSubmit(\'CustomVL_AnalysisRunResults_for_I_VE\', function(){$.get(\'ajax/set_to_be_confirmed.php?set&id=selected\', function(sResponse){if(sResponse.substring(0,1) == \'1\'){alert(\'Successfully set \' + sResponse.substring(2) + \' variants to be confirmed.\');lovd_AJAX_viewListSubmit(\'CustomVL_AnalysisRunResults_for_I_VE\');lovd_AJAX_viewEntryLoad();}else if(sResponse.substring(0,1) == \'9\'){alert(\'Error: \' + sResponse.substring(2));}}).error(function(){alert(\'Error while setting variant status.\');});});"><SPAN class="icon" style="background-image: url(gfx/menu_confirm.png);"></SPAN>Set variant to be confirmed</A></LI>' . "\n" .
+              '        <LI class="icon"><A click="lovd_AJAX_viewListSubmit(\'CustomVL_AnalysisRunResults_for_I_VE\', function(){$.get(\'ajax/set_to_be_confirmed.php?unset&id=selected\', function(sResponse){if(sResponse.substring(0,1) == \'1\'){alert(\'Successfully unset \' + sResponse.substring(2) + \' variants to be confirmed.\');lovd_AJAX_viewListSubmit(\'CustomVL_AnalysisRunResults_for_I_VE\');lovd_AJAX_viewEntryLoad();}else if(sResponse.substring(0,1) == \'9\'){alert(\'Error: \' + sResponse.substring(2));}}).error(function(){alert(\'Error while unsetting variant status.\');});});"><SPAN class="icon" style="background-image: url(gfx/menu_unconfirm.png);"></SPAN>Set variant to <I>not</I> be confirmed</A></LI>' . "\n");
         print('      </UL>' . "\n\n");
         $_DATA->viewList('CustomVL_AnalysisRunResults_for_I_VE', array(), false, false, ($_AUTH['level'] >= LEVEL_OWNER));
         print('
@@ -431,26 +432,29 @@ if (PATH_COUNT >= 2 && ctype_digit($_PE[1]) && !ACTION && (PATH_COUNT == 2 || PA
 
 if (PATH_COUNT == 4 && ctype_digit($_PE[1]) && $_PE[2] == 'analyze' && ctype_digit($_PE[3]) && ACTION == 'close') {
     // URL: /individuals/00000001/analyze/0000000001?close
-    // Close specific analysis.
+    // Close a specific analysis.
 
     $nIndividualID = sprintf('%08d', $_PE[1]);
     $nScreeningID = sprintf('%010d', $_PE[3]);
     define('PAGE_TITLE', 'Close analysis #' . $nScreeningID . ' of individual #' . $nIndividualID);
     define('LOG_EVENT', 'AnalysisClose');
-    $_T->printHeader();
-    $_T->printTitle();
 
-    // Load appropiate user level.
-    lovd_isAuthorized('screening_analysis', $nScreeningID); // Not actually needed, when we require manager anyway.
-    lovd_requireAUTH(LEVEL_MANAGER); // Minimal level needed.
+    // If all is well, we have no output, and we redirect the user back.
+    // Only in case of an error, we create some output here.
+
+    // Load appropriate user level.
+    lovd_isAuthorized('screening_analysis', $nScreeningID);
+    lovd_requireAUTH(LEVEL_OWNER); // Analyzer becomes Owner, if authorized.
 
 
 
     // This code is for all levels of closing, since the work is so very similar.
-    $zData = $_DB->query('SELECT s.analysis_statusid
+    $zData = $_DB->query('SELECT *
                           FROM ' . TABLE_SCREENINGS . ' AS s
                           WHERE id = ? AND individualid = ?', array($nScreeningID, $nIndividualID))->fetchAssoc();
     if (!$zData) {
+        $_T->printHeader();
+        $_T->printTitle();
         lovd_showInfoTable('No such screening defined for this individual!', 'stop');
         $_T->printFooter();
         exit;
@@ -459,10 +463,14 @@ if (PATH_COUNT == 4 && ctype_digit($_PE[1]) && $_PE[2] == 'analyze' && ctype_dig
 
 
     if ($zData['analysis_statusid'] < ANALYSIS_STATUS_IN_PROGRESS) {
+        $_T->printHeader();
+        $_T->printTitle();
         lovd_showInfoTable('Analysis has not started yet, can not close analysis!', 'stop');
         $_T->printFooter();
         exit;
     } elseif ($zData['analysis_statusid'] >= ANALYSIS_STATUS_CONFIRMED) {
+        $_T->printHeader();
+        $_T->printTitle();
         lovd_showInfoTable('Analysis has already fully been closed.', 'stop');
         $_T->printFooter();
         exit;
@@ -480,44 +488,140 @@ if (PATH_COUNT == 4 && ctype_digit($_PE[1]) && $_PE[2] == 'analyze' && ctype_dig
             // Analysis was awaiting confirmation, and will now be set to confirmed.
             // This requires Admin access.
             lovd_requireAUTH(LEVEL_ADMIN);
+        } elseif ($zData['analysis_statusid'] >= ANALYSIS_STATUS_CLOSED) {
+            // Analysis was closed (or higher), and will now be set to awaiting confirmation (or higher).
+            // This requires Manager access.
+            lovd_requireAUTH(LEVEL_MANAGER);
         }
 
         // All good, let's process the closure.
         // The next few queries should all be run, or non should be run.
         $_DB->beginTransaction();
         if ($_DB->query('UPDATE ' . TABLE_SCREENINGS . ' SET analysis_statusid = ?, analysis_approved_by = ?, analysis_approved_date = NOW() WHERE id = ?',
-            array($nNextStatus, $_AUTH['id']))) {
-            $bLog = lovd_writeLog('Event', LOG_EVENT, 'Successfully set analysis status to "' . $_SETT['analysis_status'][$nNextStatus] . '" for individual ' . $nIndividualID . ':' . $nScreeningID);
+            array($nNextStatus, $_AUTH['id'], $nScreeningID))) {
+            $bLog = lovd_writeLog('Event', LOG_EVENT, 'Successfully increased analysis status to "' . $_SETT['analysis_status'][$nNextStatus] . '" for individual ' . $nIndividualID . ':' . $nScreeningID);
             if ($bLog) {
                 $_DB->commit();
+
+                // All good, we send the user back.
+                header('Location: ' . lovd_getInstallURL() . CURRENT_PATH);
+                exit;
             }
         }
+        $_DB->rollBack();
     }
-/////////////////////////////////////////////////////////////////////////////////////////////
 
-/*
-    ANALYSIS_STATUS_WAIT => 'Waiting for data upload',
-    ANALYSIS_STATUS_READY => 'Ready for analysis',
-    ANALYSIS_STATUS_IN_PROGRESS => 'In progress',
-    ANALYSIS_STATUS_CLOSED => 'Closed',
-    ANALYSIS_STATUS_WAIT_CONFIRMATION => 'Awaiting confirmation',
-    ANALYSIS_STATUS_CONFIRMED => 'Confirmed',
-    ANALYSIS_STATUS_ARCHIVED => 'Archived',
-*/
 
-/////////////////////////////////////////////////////////////////////////////////////////////
-    print('      <BR><BR>' . "\n\n");
-    
-    lovd_includeJS('inc-js-tooltip.php');
 
-    // Show info table about data analysis.
-    if (!$zData['variants']) {
-        // Can't start.
-        lovd_showInfoTable('Can\'t start analysis, still waiting for variant data to be uploaded.', 'stop', 600);
+    // If we get here, there's been an issue...
+    $_T->printHeader();
+    $_T->printTitle();
+    lovd_showInfoTable('Failed to close analysis.', 'stop', 600);
+    $_T->printFooter();
+    exit;
+}
+
+
+
+
+
+if (PATH_COUNT == 4 && ctype_digit($_PE[1]) && $_PE[2] == 'analyze' && ctype_digit($_PE[3]) && ACTION == 'open') {
+    // URL: /individuals/00000001/analyze/0000000001?open
+    // Open a specific analysis.
+
+    $nIndividualID = sprintf('%08d', $_PE[1]);
+    $nScreeningID = sprintf('%010d', $_PE[3]);
+    define('PAGE_TITLE', 'Open analysis #' . $nScreeningID . ' of individual #' . $nIndividualID);
+    define('LOG_EVENT', 'AnalysisOpen');
+
+    // If all is well, we have no output, and we redirect the user back.
+    // Only in case of an error, we create some output here.
+
+    // Load appropriate user level.
+    lovd_isAuthorized('screening_analysis', $nScreeningID);
+    lovd_requireAUTH(LEVEL_OWNER); // Analyzer becomes Owner, if authorized.
+
+
+
+    // This code is for all levels of opening, since the work is so very similar.
+    $zData = $_DB->query('SELECT *
+                          FROM ' . TABLE_SCREENINGS . ' AS s
+                          WHERE id = ? AND individualid = ?', array($nScreeningID, $nIndividualID))->fetchAssoc();
+    if (!$zData) {
+        $_T->printHeader();
+        $_T->printTitle();
+        lovd_showInfoTable('No such screening defined for this individual!', 'stop');
         $_T->printFooter();
         exit;
     }
 
+
+
+    if ($zData['analysis_statusid'] >= ANALYSIS_STATUS_ARCHIVED) {
+        $_T->printHeader();
+        $_T->printTitle();
+        lovd_showInfoTable('Analysis has already been archived, can not re-open analysis!', 'stop');
+        $_T->printFooter();
+        exit;
+    } elseif ($zData['analysis_statusid'] <= ANALYSIS_STATUS_IN_PROGRESS) {
+        $_T->printHeader();
+        $_T->printTitle();
+        lovd_showInfoTable('Analysis has already fully been opened.', 'stop');
+        $_T->printFooter();
+        exit;
+    } else {
+        // Analysis can be opened.
+        $aStatuses = array_keys($_SETT['analysis_status']);
+        $iCurrentStatus = array_search($zData['analysis_statusid'], $aStatuses);
+        if (!isset($aStatuses[$iCurrentStatus - 1])) {
+            lovd_displayError(LOG_EVENT, 'Error: Previous status not available, current status is ' . $zData['analysis_statusid']);
+        }
+        $nPreviousStatus = $aStatuses[$iCurrentStatus - 1];
+
+        // Several final checks.
+        if ($zData['analysis_statusid'] >= ANALYSIS_STATUS_CONFIRMED) {
+            // Analysis was set to confirmed (or higher, shouldn't get here), and will now be set to awaiting confirmation.
+            // This requires Admin access.
+            lovd_requireAUTH(LEVEL_ADMIN);
+        } elseif ($zData['analysis_statusid'] >= ANALYSIS_STATUS_WAIT_CONFIRMATION) {
+            // Analysis was awaiting confirmation (or higher, shouldn't get here), and will now be set to closed.
+            // This requires Manager access.
+            lovd_requireAUTH(LEVEL_MANAGER);
+        } elseif ($zData['analysis_statusid'] >= ANALYSIS_STATUS_CLOSED) {
+            // Analysis was closed (or higher, shouldn't get here), and will now be set to in progress.
+            // This requires Manager access, or Owner access with the
+            //  additional requirement of being the one who closed the analysis.
+            if (!($_AUTH['level'] == LEVEL_OWNER && $zData['analysis_approved_by'] == $_AUTH['id'])) {
+                lovd_requireAUTH(LEVEL_MANAGER);
+            }
+        }
+
+        // All good, let's process the opening.
+        // The next few queries should all be run, or non should be run.
+        $_DB->beginTransaction();
+        // Choosing to overwrite the Approved By and Approved Date values as well,
+        //  so that at least you can see who put the analysis in this state, and when.
+        // You simply don't know the direction in which the status moved (up or down).
+        if ($_DB->query('UPDATE ' . TABLE_SCREENINGS . ' SET analysis_statusid = ?, analysis_approved_by = ?, analysis_approved_date = NOW() WHERE id = ?',
+            array($nPreviousStatus, $_AUTH['id'], $nScreeningID))) {
+            $bLog = lovd_writeLog('Event', LOG_EVENT, 'Successfully decreased analysis status to "' . $_SETT['analysis_status'][$nPreviousStatus] . '" for individual ' . $nIndividualID . ':' . $nScreeningID);
+            if ($bLog) {
+                $_DB->commit();
+
+                // All good, we send the user back.
+                header('Location: ' . lovd_getInstallURL() . CURRENT_PATH);
+                exit;
+            }
+        }
+        $_DB->rollBack();
+    }
+
+
+
+    // If we get here, there's been an issue...
+    $_T->printHeader();
+    $_T->printTitle();
+    lovd_showInfoTable('Failed to open analysis.', 'stop', 600);
     $_T->printFooter();
     exit;
 }
