@@ -450,18 +450,8 @@ if (LOVD_plus) {
     $aConfigValues['instance'] = array(
         'name' =>
             array(
-                'required' => true,
-                'default'  => 'generic',
-            ),
-        'gene_panel' =>
-            array(
-                'required' => true,
-                'default'  => 'gene panel',
-            ),
-        'summary_annotation' =>
-            array(
-                'required' => true,
-                'default'  => 'summary annotation',
+                'required' => false,
+                'default'  => '',
             ),
     );
 }
