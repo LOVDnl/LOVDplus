@@ -30,6 +30,7 @@
 
 define('ROOT_PATH', '../');
 require ROOT_PATH . 'inc-init.php';
+require ROOT_PATH . 'inc-lib-analyses.php';
 set_time_limit(0); // Unfortunately, necessary.
 
 // Require collaborator clearance.
@@ -65,6 +66,8 @@ list(,$sFilter) = each($aFilters);
 // Run filter, but only if there are variants left.
 $aVariantIDs = &$_SESSION['analyses'][$nRunID]['IDsLeft'];
 //sleep(2);
+// Information about the selected gene panels for the apply_selected_gene_panels filter.
+$sGenePanelsInfo = '';
 $tStart = microtime(true);
 if ($aVariantIDs) {
     $aVariantIDsFiltered = false;
@@ -201,6 +204,8 @@ if ($aVariantIDs) {
             // If no gene panels or custom panels are selected then don't do anything.
             if (empty($_SESSION['analyses'][$nRunID]['custom_panel']) && empty($_SESSION['analyses'][$nRunID]['gene_panels'])) {
                 $aVariantIDsFiltered = $aVariantIDs;
+                // We still have to show that no gene panels were selected.
+                $sGenePanelsInfo = getSelectedGenePanelsByRunID($nRunID);
                 break;
             }
 
@@ -257,7 +262,8 @@ if ($aVariantIDs) {
             // Add the existing variants to the end of the query.
             $q .= ') AND vot.id IN (?' . str_repeat(', ?', count($aVariantIDs) - 1) . ')';
 
-//            die($q . print_r($aParam));
+            // Get the details about the selected gene panels for this analysis.
+            $sGenePanelsInfo = getSelectedGenePanelsByRunID($nRunID);
 
             $aVariantIDsFiltered = $_DB->query($q, array_merge($aParam, $aVariantIDs), false)->fetchAllColumn();
 
@@ -321,7 +327,7 @@ array_shift($aFilters); // Will cascade into the $_SESSION variable.
 // Done! Check if we need to run another filter.
 if ($aFilters) {
     // Still more to do.
-    die(AJAX_TRUE . ' ' . $sFilter . ' ' . count($aVariantIDs) . ' ' . lovd_convertSecondsToTime($nTimeSpent, 1));
+    die(json_encode(array('result' => TRUE, 'sFilterID' => $sFilter, 'nVariantsLeft' => count($aVariantIDs), 'nTime' => lovd_convertSecondsToTime($nTimeSpent, 1), 'sGenePanelsInfo' => $sGenePanelsInfo, 'bDone' => FALSE)));
 } else {
     // Since we're done, save the results in the database.
     $q = $_DB->prepare('INSERT INTO ' . TABLE_ANALYSES_RUN_RESULTS . ' VALUES (?, ?)');
@@ -332,6 +338,6 @@ if ($aFilters) {
 
     // Now that we're done, clean up after ourselves...
     unset($_SESSION['analyses'][$nRunID]);
-    die(AJAX_TRUE . ' ' . $sFilter . ' ' . $nVariants . ' ' . lovd_convertSecondsToTime($nTimeSpent, 1) . ' done');
+    die(json_encode(array('result' => TRUE, 'sFilterID' => $sFilter, 'nVariantsLeft' => $nVariants, 'nTime' => lovd_convertSecondsToTime($nTimeSpent, 1), 'sGenePanelsInfo' => $sGenePanelsInfo, 'bDone' => TRUE)));
 }
 ?>

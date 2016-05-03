@@ -160,44 +160,26 @@ function lovd_runNextFilter (nAnalysisID, nRunID)
     $.get('<?php echo lovd_getInstallURL(); ?>ajax/run_next_filter.php?runid=' + escape(nRunID))
         .done(
             function (data) {
+                // The results from the filter are passed back as a JSON string from the run_next_filter.php page, load them into an object.
+                var dataObj = $.parseJSON(data);
                 if (data == '0') {
                     // Failure, we're in trouble, reload view.
                     alert('Filter step not valid or no authorization to start a new filter step. Refreshing the page...');
                     location.reload();
 
-                } else if (oRegExp = /1\s([a-z0-9_.]+)\s(\d+)\s([^\s]+)(\sdone)?$/i.exec(data)) {
+                } else if (dataObj.result) {
                     // Success! Mark line and continue to the next, or stop if we're done...
-                    var sFilterID     = oRegExp[1].replace(/[^a-z0-9_]/ig, '_');
-                    var nVariantsLeft = oRegExp[2];
-                    var nTime         = oRegExp[3];
-                    var bDone         = (typeof(oRegExp[4]) != 'undefined');
-                    oTR = $('#' + sClassName + '_filter_' + sFilterID);
+                    oTR = $('#' + sClassName + '_filter_' + dataObj.sFilterID);
                     oTR.attr('class', 'filter_completed');
-                    oTR.children('td:eq(1)').html(nTime);
-                    oTR.children('td:eq(2)').html(nVariantsLeft);
+                    oTR.children('td:eq(1)').html(dataObj.nTime);
+                    oTR.children('td:eq(2)').html(dataObj.nVariantsLeft);
 
                     // Show the details of the selected gene panels under the apply_selected_gene_panels filter.
-                    if (sFilterID.substr(sFilterID.length - 26) == 'apply_selected_gene_panels') {
-                        $.get('<?php echo lovd_getInstallURL(); ?>ajax/selected_gene_panels.php?runid=' + escape(nRunID))
-                            .done(
-                                function (data) {
-                                    if (data == '0') {
-                                        // Failure, we're in trouble, reload view.
-                                        alert('Failed to construct the selected gene panel table.\nIf this error persists, please contact support.');
-                                        location.reload();
-                                    } else {
-                                        oTR.children('td:eq(0)').html(oTR.children('td:eq(0)').html() + data);
-                                    }
-                                })
-                            .fail(
-                                function (data) {
-                                    // Failure, we're in trouble, reload view.
-                                    alert('Failed to construct the selected gene panel table.\nIf this error persists, please contact support.');
-                                    location.reload();
-                                });
+                    if (dataObj.sFilterID.substr(dataObj.sFilterID.length - 26) == 'apply_selected_gene_panels') {
+                        oTR.children('td:eq(0)').html(oTR.children('td:eq(0)').html() + dataObj.sGenePanelsInfo);
                     }
 
-                    if (!bDone) {
+                    if (!dataObj.bDone) {
                         return lovd_runNextFilter(nAnalysisID, nRunID);
                     }
 
