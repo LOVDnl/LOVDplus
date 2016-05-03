@@ -390,7 +390,7 @@ class LOVD_Individual extends LOVD_Custom {
             // Gene panels assigned.
             $zData['gene_panels_'] = '';
             foreach($zData['gene_panels'] as $aGenePanels) {
-                list($nID, $sName) = $aGenePanels;
+                list($nID, $sName, $sType) = $aGenePanels;
                 $zData['gene_panels_'] .= (!$zData['gene_panels_']? '' : ', ') . '<A href="gene_panels/' . $nID . '" title="' . $sName . '">' . $sName . '</A>';
             }
             // Parents...

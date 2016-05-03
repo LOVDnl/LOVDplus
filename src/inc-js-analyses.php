@@ -63,7 +63,7 @@ function lovd_resetAfterFailedRun (sClassName)
 
 
 
-function lovd_runAnalysis (nScreeningID, nAnalysisID, nRunID)
+function lovd_runAnalysis (nScreeningID, nAnalysisID, nRunID, aSelectedGenePanels)
 {
     // Starts the analysis of the given screening.
 
@@ -74,8 +74,13 @@ function lovd_runAnalysis (nScreeningID, nAnalysisID, nRunID)
     if (typeof(nRunID) == 'undefined') {
         nRunID = 0;
     }
+    if (aSelectedGenePanels.length > 0) {
+        sGenePanels = encodeURI('&gene_panels[]=' + aSelectedGenePanels.join('&gene_panels[]='));
+    } else {
+        sGenePanels = '';
+    }
 
-    $.get('<?php echo lovd_getInstallURL(); ?>ajax/run_analysis.php?screeningid=' + escape(nScreeningID) + '&analysisid=' + escape(nAnalysisID) + '&runid=' + escape(nRunID),
+    $.get('<?php echo lovd_getInstallURL(); ?>ajax/run_analysis.php?screeningid=' + escape(nScreeningID) + '&analysisid=' + escape(nAnalysisID) + '&runid=' + escape(nRunID) + sGenePanels,
         function () {
             // Remove onClick handler and change class of table, to visually show that it's running.
             // But first check if we're dealing with a modified run or an unmodified analysis.
@@ -155,23 +160,26 @@ function lovd_runNextFilter (nAnalysisID, nRunID)
     $.get('<?php echo lovd_getInstallURL(); ?>ajax/run_next_filter.php?runid=' + escape(nRunID))
         .done(
             function (data) {
+                // The results from the filter are passed back as a JSON string from the run_next_filter.php page, load them into an object.
+                var dataObj = $.parseJSON(data);
                 if (data == '0') {
                     // Failure, we're in trouble, reload view.
                     alert('Filter step not valid or no authorization to start a new filter step. Refreshing the page...');
                     location.reload();
 
-                } else if (oRegExp = /1\s([a-z0-9_.]+)\s(\d+)\s([^\s]+)(\sdone)?$/i.exec(data)) {
+                } else if (dataObj.result) {
                     // Success! Mark line and continue to the next, or stop if we're done...
-                    var sFilterID     = oRegExp[1].replace(/[^a-z0-9_]/ig, '_');
-                    var nVariantsLeft = oRegExp[2];
-                    var nTime         = oRegExp[3];
-                    var bDone         = (typeof(oRegExp[4]) != 'undefined');
-                    oTR = $('#' + sClassName + '_filter_' + sFilterID);
+                    oTR = $('#' + sClassName + '_filter_' + dataObj.sFilterID);
                     oTR.attr('class', 'filter_completed');
-                    oTR.children('td:eq(1)').html(nTime);
-                    oTR.children('td:eq(2)').html(nVariantsLeft);
+                    oTR.children('td:eq(1)').html(dataObj.nTime);
+                    oTR.children('td:eq(2)').html(dataObj.nVariantsLeft);
 
-                    if (!bDone) {
+                    // Show the details of the selected gene panels under the apply_selected_gene_panels filter.
+                    if (dataObj.sFilterID.substr(dataObj.sFilterID.length - 26) == 'apply_selected_gene_panels') {
+                        oTR.children('td:eq(0)').html(oTR.children('td:eq(0)').html() + dataObj.sGenePanelsInfo);
+                    }
+
+                    if (!dataObj.bDone) {
                         return lovd_runNextFilter(nAnalysisID, nRunID);
                     }
 
@@ -214,6 +222,77 @@ function lovd_runNextFilter (nAnalysisID, nRunID)
                 location.reload();
             });
     return false;
+}
+
+
+
+
+
+function lovd_popoverGenePanelSelectionForm (nScreeningID, nAnalysisID, nRunID)
+{
+    // Makes the gene panel selection form dialog visible and prepares it for the user
+
+    // Popup the gene panel selection form dialog
+    $("#gene_panel_selection").dialog(
+        {
+        open: function() {
+            $("#run_analysis").focus();
+        },
+        draggable:false,
+        resizable:false,
+        minWidth:400,
+        show:"fade",
+        closeOnEscape:true,
+        hide:"fade",
+        modal:true,
+        buttons:[
+            {
+                id: "run_analysis",
+                text: "Run analysis",
+                click: function () {
+                    lovd_processGenePanelSelectionForm();
+                    $(this).dialog("close");
+                }
+            }
+            ]
+        }
+    );
+
+    // Add the values passed to this function to the hidden inputs
+    $("#gene_panel_selection_form input[name=nScreeningID]").val(nScreeningID);
+    $("#gene_panel_selection_form input[name=nAnalysisID]").val(nAnalysisID);
+    $("#gene_panel_selection_form input[name=nRunID]").val(nRunID);
+}
+
+
+
+
+
+function lovd_processGenePanelSelectionForm ()
+{
+    // Processes the popover form that selects the gene panels for a particular analysis
+
+    // Get all the values from the checked checkboxes and read them into an array
+    aSelectedGenePanels = $("#gene_panel_selection_form input:checkbox:checked").map(function(){
+        return $(this).val();
+    }).get();
+
+    // Read in the hidden form values
+    nScreeningID = $("#gene_panel_selection_form input[name=nScreeningID]").val();
+    nAnalysisID = $("#gene_panel_selection_form input[name=nAnalysisID]").val();
+    nRunID = $("#gene_panel_selection_form input[name=nRunID]").val();
+
+    // If we don't have a run ID then make it undefined.
+    if (nRunID == '') {
+        nRunID = undefined;
+    }
+
+<!--    console.log(aSelectedGenePanels, nScreeningID, nAnalysisID, nRunID);-->
+
+<!--TODO Add the gene panel names to the bottom of the analysis here as well as when the page is refreshed for finished analysis-->
+
+    // Call lovd_runAnalysis and pass all the extra values.
+    lovd_runAnalysis(nScreeningID, nAnalysisID, nRunID, aSelectedGenePanels);
 }
 
 

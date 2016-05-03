@@ -220,6 +220,52 @@ if (PATH_COUNT >= 2 && ctype_digit($_PE[1]) && !ACTION && (PATH_COUNT == 2 || PA
 
         lovd_includeJS('inc-js-analyses.php', 1);
 
+        // The popover div for showing the gene panel selection form.
+        print('
+      <DIV id="gene_panel_selection" title="Select gene panels for analysis" style="display : none;">
+        <FORM id="gene_panel_selection_form">
+          <INPUT type="hidden" name="nScreeningID" value="">
+          <INPUT type="hidden" name="nAnalysisID" value="">
+          <INPUT type="hidden" name="nRunID" value="">
+          <TABLE border="0" cellpadding="0" cellspacing="0" width="80%" align="center">');
+
+        $sLastType = '';
+        // Add each of the gene panels assigned to this individual to the form.
+        foreach ($zData['gene_panels'] as $nKey => $aGenePanel) {
+            // Create the gene panel type header.
+            if ($sLastType == '' || $sLastType <> $aGenePanel[2]) {
+                print('
+            <TR> 
+              <TD class="gpheader" colspan="2" ' . ($sLastType? '' : 'style="border-top: 0px"') . '>' . ucfirst(str_replace('_', ' ', $aGenePanel[2])) . '</TD>
+            </TR>');
+            }
+            $sLastType = $aGenePanel[2];
+
+            // Add the gene panel to the form.
+            print('
+            <TR> 
+              <TD><INPUT type="checkbox" name="gene_panel" value="' . $aGenePanel[0] . '"' . ($aGenePanel[2]=='mendeliome'? '' : ' checked') . '></TD>
+              <TD>' . $aGenePanel[1] . '</TD>
+            </TR>');
+        }
+
+        // Add in the custom gene panel option.
+        if ($zData['custom_panel']) {
+            print('
+            <TR>
+              <TD class="gpheader" colspan="2">Custom panel</TD>
+            </TR>
+            <TR>
+              <TD><INPUT type="checkbox" name="gene_panel" value="custom_panel" checked></TD>
+              <TD>' . $zData['custom_panel'] . '</TD>
+            </TR>');
+        }
+
+        print('
+          </TABLE>
+        </FORM>
+      </DIV>' . "\n");
+
         // If we're ready to analyze, or if we are analyzing already, show analysis options.
         // Both already run analyses and analyses not yet run will be shown. Analyses already run are fetched differently, though.
         $zAnalysesRun    = $_DB->query('SELECT a.id, a.name, a.description, a.filters, IFNULL(MAX(arf.run_time)>-1, 0) AS analysis_run, ar.id AS runid,   ar.modified, GROUP_CONCAT(arf.filterid, ";", IFNULL(arf.filtered_out, "-"), ";", IFNULL(arf.run_time, "-") ORDER BY arf.filter_order SEPARATOR ";;") AS __run_filters
@@ -231,6 +277,7 @@ if (PATH_COUNT >= 2 && ctype_digit($_PE[1]) && !ACTION && (PATH_COUNT == 2 || PA
                                                            FROM ' . TABLE_ANALYSES_RUN . ' AS ar
                                                            WHERE ar.screeningid = ? AND ar.modified = 0) ORDER BY a.sortid, a.id', array($nScreeningToAnalyze))->fetchAllAssoc();
         $zAnalyses = array_merge($zAnalysesRun, array(''), $zAnalysesNotRun);
+        require ROOT_PATH . 'inc-lib-analyses.php';
         print('
       <DIV id="analyses">
         <TABLE id="analysesTable" border="0" cellpadding="0" cellspacing="0">
@@ -271,7 +318,7 @@ if (PATH_COUNT >= 2 && ctype_digit($_PE[1]) && !ACTION && (PATH_COUNT == 2 || PA
             print('
             <TD class="analysis" valign="top">
               <TABLE border="0" cellpadding="0" cellspacing="1" id="' . ($zAnalysis['runid']? 'run_' . $zAnalysis['runid'] : 'analysis_' . $zAnalysis['id']) . '" class="analysis ' . $sAnalysisClassName . '" onclick="' .
-                ($zAnalysis['analysis_run']? 'lovd_showAnalysisResults(\'' . $zAnalysis['runid'] . '\');' : ($_AUTH['level'] < LEVEL_OWNER || $zScreening['analysis_statusid'] >= ANALYSIS_STATUS_CLOSED? '' : 'lovd_runAnalysis(\'' . $nScreeningToAnalyze . '\', \'' . $zAnalysis['id'] . '\'' . (!$zAnalysis['runid']? '' : ', \'' . $zAnalysis['runid'] . '\'') . ');')) . '">
+                ($zAnalysis['analysis_run']? 'lovd_showAnalysisResults(\'' . $zAnalysis['runid'] . '\');' : ($_AUTH['level'] < LEVEL_OWNER || $zScreening['analysis_statusid'] >= ANALYSIS_STATUS_CLOSED? '' : 'lovd_popoverGenePanelSelectionForm(\'' . $nScreeningToAnalyze . '\', \'' . $zAnalysis['id'] . '\'' . (!$zAnalysis['runid']? '' : ', \'' . $zAnalysis['runid'] . '\'') . ');')) . '">
                 <TR>
                   <TH colspan="3">
                     <DIV style="position : relative">
@@ -303,9 +350,17 @@ if (PATH_COUNT >= 2 && ctype_digit($_PE[1]) && !ACTION && (PATH_COUNT == 2 || PA
                         $sFilterClassName = 'filter_completed';
                     }
                 }
+
+                // Display the information for the gene panels used in this analysis.
+                $sGenePanelsInfo = '';
+                if ($sFilter == 'apply_selected_gene_panels' && !empty($zAnalysis['runid'])) {
+                    // Check to see if this is the right filter to show the info under and that we actually have some gene panels or custom panel assigned.
+                    $sGenePanelsInfo = getSelectedGenePanelsByRunID($zAnalysis['runid']);
+                }
+
                 print('
                 <TR id="' . ($zAnalysis['runid']? 'run_' . $zAnalysis['runid'] : 'analysis_' . $zAnalysis['id']) . '_filter_' . preg_replace('/[^a-z0-9_]/i', '_', $sFilter) . '"' . (!$sFilterClassName? '' : ' class="' . $sFilterClassName . '"') . '>
-                  <TD>' . $sFilter . '</TD>
+                  <TD>' . $sFilter . $sGenePanelsInfo . '</TD>
                   <TD>' . ($nTime == '-'? '-' : lovd_convertSecondsToTime($nTime, 1)) . '</TD>
                   <TD>' . ($nTime == '-'? '-' : $nVariantsLeft) . '</TD>
                 </TR>');

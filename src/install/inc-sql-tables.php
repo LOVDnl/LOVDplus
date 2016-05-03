@@ -767,6 +767,7 @@ $aTableSQL =
     analysisid TINYINT(3) UNSIGNED ZEROFILL,
     screeningid INT(10) UNSIGNED ZEROFILL NOT NULL,
     modified BOOLEAN NOT NULL,
+    custom_panel TEXT NOT NULL,
     created_by SMALLINT(5) UNSIGNED ZEROFILL,
     created_date DATETIME NOT NULL,
     PRIMARY KEY (id),
@@ -775,6 +776,17 @@ $aTableSQL =
     CONSTRAINT ' . TABLE_ANALYSES_RUN . '_fk_analysisid FOREIGN KEY (analysisid) REFERENCES ' . TABLE_ANALYSES . ' (id) ON DELETE SET NULL ON UPDATE CASCADE,
     CONSTRAINT ' . TABLE_ANALYSES_RUN . '_fk_screeningid FOREIGN KEY (screeningid) REFERENCES ' . TABLE_SCREENINGS . ' (id) ON DELETE CASCADE ON UPDATE CASCADE,
     CONSTRAINT ' . TABLE_ANALYSES_RUN . '_fk_created_by FOREIGN KEY (created_by) REFERENCES ' . TABLE_USERS . ' (id) ON DELETE SET NULL ON UPDATE CASCADE)
+    ' . $sSettings
+
+        , 'TABLE_AR2GP' =>
+    'CREATE TABLE ' . TABLE_AR2GP . ' (
+    runid SMALLINT(5) UNSIGNED ZEROFILL NOT NULL,
+    genepanelid SMALLINT(5) UNSIGNED ZEROFILL NOT NULL,
+    PRIMARY KEY (runid, genepanelid),
+    INDEX (runid),
+    INDEX (genepanelid),
+    CONSTRAINT ' . TABLE_AR2GP . '_fk_runid FOREIGN KEY (runid) REFERENCES ' . TABLE_ANALYSES_RUN . ' (id) ON DELETE CASCADE ON UPDATE CASCADE,
+    CONSTRAINT ' . TABLE_AR2GP . '_fk_genepanelid FOREIGN KEY (genepanelid) REFERENCES ' . TABLE_GENE_PANELS . ' (id) ON DELETE CASCADE ON UPDATE CASCADE)
     ' . $sSettings
 
         , 'TABLE_ANALYSES_RUN_FILTERS' =>
@@ -976,6 +988,6 @@ $aTableSQL =
 // DMD_SPECIFIC;
 if (lovd_getProjectFile() == '/install/inc-sql-tables.php') {
     header('Content-type: text/plain; charset=UTF-8');
-    var_dump($aTableSQL);
+    print_r($aTableSQL);
 }
 ?>
