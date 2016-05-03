@@ -448,7 +448,7 @@ if (LOVD_plus) {
     );
     // Configure instance details.
     $aConfigValues['instance'] = array(
-        'instance_name' =>
+        'name' =>
             array(
                 'required' => true,
                 'default'  => 'generic',

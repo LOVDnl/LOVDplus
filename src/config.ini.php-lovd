@@ -58,7 +58,7 @@ confirm_variants =
 [instance]
 
 # The name of this instance, used to activate site specific features.
-instance_name = generic
+name = generic
 
 # The wording for the gene panels for this instance. Use singular wording.
 gene_panel = gene panel
