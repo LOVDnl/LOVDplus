@@ -446,6 +446,24 @@ if (LOVD_plus) {
                 'path_is_writable' => true,
             ),
     );
+    // Configure instance details.
+    $aConfigValues['instance'] = array(
+        'instance_name' =>
+            array(
+                'required' => true,
+                'default'  => 'generic',
+            ),
+        'gene_panel' =>
+            array(
+                'required' => true,
+                'default'  => 'gene panel',
+            ),
+        'summary_annotation' =>
+            array(
+                'required' => true,
+                'default'  => 'summary annotation',
+            ),
+    );
 }
 // SQLite doesn't need an username and password...
 if (isset($_INI['database']['driver']) && $_INI['database']['driver'] == 'sqlite') {

@@ -52,3 +52,16 @@ alternative_ids =
 # The following path is used by LOVD+ to export information on variants that
 # need to be confirmed in the lab (usually by Sanger sequencing).
 confirm_variants =
+
+
+
+[instance]
+
+# The name of this instance, used to activate site specific features.
+instance_name = generic
+
+# The wording for the gene panels for this instance. Use singular wording.
+gene_panel = gene panel
+
+# The wording for the summary annotation for this instance. Use singular wording.
+summary_annotation = summary annotation
