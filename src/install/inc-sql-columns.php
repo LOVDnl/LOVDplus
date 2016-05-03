@@ -140,6 +140,16 @@ $aColSQL =
              'INSERT INTO ' . TABLE_COLS . ' VALUES ("VariantOnTranscript/Prediction/Grantham",              255, 100, 0, 1, 0, "Grantham score", "", "Grantham score.", "The Grantham score, predicting the effect of the DNA variant on the function of the protein.", "TINYINT UNSIGNED", "Grantham score||text|6", "", "", 0, 0, 1, 0, NOW(), NULL, NULL)',
               );
 
+if (strtoupper($_INI['instance']['name']) == 'MGHA') {
+    // Site specific columns for Melbourne Genomics Health Alliance (MGHA).
+    $aMGHAColSQL = array (
+        //                                       COL ID,                                         ORDER,WIDTH,HGVS,STND,MAND,      TITLE,             FORM DESCRIPTION,
+        'INSERT INTO ' . TABLE_COLS . ' VALUES ("Screening/Pipeline/Run_ID",              255, 100, 0, 1, 0, "Pipeline Run ID", "Pipeline Run ID", "Pipeline Run ID", "Pipeline Run ID", "VARCHAR(255)", "Pipeline Run ID||text|6", "", "", 1, 0, 1, 0, NOW(), NULL, NULL)',
+    );
+    // Add these new columns to the existing columns.
+    $aColSQL = array_merge($aColSQL, $aMGHAColSQL);
+}
+
 // DMD_SPECIFIC;
 if (lovd_getProjectFile() == '/install/inc-sql-columns.php') {
     header('Content-type: text/plain; charset=UTF-8');
