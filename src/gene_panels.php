@@ -88,7 +88,7 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && !ACTION) {
         // Authorized user is logged in. Provide tools.
         $aNavigation[CURRENT_PATH . '?edit']            = array('menu_edit.png', 'Edit gene panel information', 1);
         $aNavigation[CURRENT_PATH . '?manage_genes']    = array('menu_plus.png', 'Manage gene panel\'s genes', 1);
-        $aNavigation[CURRENT_PATH . '?history']         = array('menu_clock.png', 'View history of genes in this gene panel', 1);
+        $aNavigation[CURRENT_PATH . '?history&fromDate=' . $zData['created_date'] .'&toDate=' . date("Y-m-d"). ' 23:59:59']  = array('menu_clock.png', 'View history of this gene panel', 1);  // set the created_date and end of today's date as the default dates.
         $aNavigation['download/' . CURRENT_PATH]        = array('menu_save.png', 'Download this gene panel and its genes', 1);
         if ($_AUTH['level'] >= LEVEL_ADMIN) {
             $aNavigation[CURRENT_PATH . '?delete']      = array('cross.png', 'Delete gene panel entry', 1);
@@ -990,12 +990,12 @@ if (PATH_COUNT == 3 && preg_match('/^[a-z][a-z0-9#@-]+$/i', rawurldecode($_PE[2]
 
 
 
-if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && ACTION == 'history') {
-    // URL: /gene_panels/00001?history
+if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && ACTION == 'history_full') {
+    // URL: /gene_panels/00001?history_detailed
     // Show the history for this gene panel.
 
     $nID = sprintf('%05d', $_PE[1]);
-    define('PAGE_TITLE', 'View history for gene panel #' . $nID);
+    define('PAGE_TITLE', 'View full history for gene panel #' . $nID);
 
     lovd_requireAUTH();
 
@@ -1012,71 +1012,65 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && ACTION == 'history') {
 }
 
 
-if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && ACTION == 'history_cat') {
-    // URL: /gene_panels/00001?history_cat
-    // Show the history for this gene panel.
- 
+if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && ACTION == 'history') {
+    // URL: /gene_panels/00001?history
+    // Show the history of this gene panel between two dates.
+
     $nID = sprintf('%05d', $_PE[1]);
-    define('PAGE_TITLE', 'View categorized history for gene panel #' . $nID);
+    define('PAGE_TITLE', 'View changes for gene panel #' . $nID . ' between dates');
 
     lovd_requireAUTH();
 
     $_T->printHeader();
     $_T->printTitle();
 
-    require ROOT_PATH . 'class/object_gene_panel_genes.rev.php';
-    $_DATA = new LOVD_GenePanelGeneREV();
-    $_GET['search_genepanelid'] = $nID;
-   // $_DATA->viewList('GenePanelGeneREV');
+    $bContinue = true;  // flag to determine if correctly formatted dates are entered.
 
-    $aGenesCurrent = $_DB->query('SELECT geneid, 1 FROM ' . TABLE_GP2GENE . ' WHERE genepanelid = ?', array($nID))->fetchAllCombine();
-
-    //var_dump($aGenesCurrent);
-
-    print('   <TABLE border="0" cellpadding="10" cellspacing="0"><TR valign="top">' . "\n");
-    foreach (array(1, 0) as $i) {
-        print('            <TD>
-              <TABLE border="0" cellpadding="10" cellspacing="1" width="' . ($i? '350' : '450') . '" class="data" style="font-size : 13px;">
-                <TR>
-                  <TH' . ($i? '' : '></TH><TH') . ' class="S16">' . ($i? 'New Genes' : 'Removed Genes') . '</TH></TR>');
-        foreach (    $aGenesCurrent as $newGene => $anumber ) {
-
-           // $nAgeInDays = floor(($tNow - $tFile)/(60*60*24));
-
-        //    if ($i) {
-                // Already imported.
-         //       print("\n" .
-          //          '                <TR class="del">');
-          //  } else {
-            //    $bScheduled = isset($aFilesScheduled[$sFile]);
-            //    if ($bScheduled) {
-                    // Not imported yet, but scheduled.
-                //    print("\n" .
-                //        '                <TR class="del">
-                //  <TD width="30" style="text-align : center;"><IMG src="gfx/menu_clock.png" alt="Scheduled" width="16" height="16"></TD>');
-             //   } else {
-                    // Not imported yet, can be scheduled.
-             //       print("\n" .
-             //           '                <TR class="data" style="cursor : pointer;" onclick="if ($(this).find(\':checkbox\').prop(\'checked\')) { $(this).find(\':checkbox\').attr(\'checked\', false); $(this).find(\'img\').hide(); $(this).removeClass(\'colGreen\'); } else { $(this).find(\':checkbox\').attr(\'checked\', true);  $(this).find(\'img\').show(); $(this).addClass(\'colGreen\'); }">
-              //    <TD width="30" style="text-align : center;"><INPUT type="checkbox" name="' . $sFile . '" value="1" style="display : none;"><IMG src="gfx/check.png" alt="Import" width="16" height="16" style="display : none;"></TD>');
-             //   }
-            //}
-            //print('
-             //     <TD><SPAN class="S15"><B>' . $sFile . '</B>' . (!$bScheduled? '' : ' <SPAN class="S13">(scheduled for import)</SPAN>') . '</SPAN><BR>
-              //      ' . date('Y-m-d H:i:s', $tFile) . ' - Converted ' . $nAgeInDays . ' day' . ($nAgeInDays == 1? '' : 's') . ' ago</TD></TR>');
-            print('
-                  <TR><TD'. ($i? '' : '></TD><TD' )  . '>' .  ($i?  $newGene  : 'todo') .'</TD></TR>');
-        }
-        print('</TABLE></TD>' . "\n");
+    // Check that the date format is correct (Y-m-d or Y-m-d H:i:s).
+    $dUnixTime = strtotime($_GET['fromDate']);
+    if( date('Y-m-d', $dUnixTime) <> $_GET['fromDate'] && date('Y-m-d H:i:s', $dUnixTime) <> $_GET['fromDate']) {
+        lovd_showInfoTable('Please enter From Date (YYYY-MM-DD).', 'stop');
+        $bContinue = false;
     }
-    print('</TABLE>');
+    else {
+        $dFromDate = $_GET['fromDate'] ;
+        if ( date('Y-m-d', $dUnixTime) == $dFromDate ) {  // only date part is entered.
+            $dFromDate .= " 00:00:00"; // set the dFromDate as the first second of the selected day.
+        }
+    }
+
+    $dUnixTime = strtotime($_GET['toDate']);
+    if( date('Y-m-d', $dUnixTime) <> $_GET['toDate'] && date('Y-m-d H:i:s', $dUnixTime) <> $_GET['toDate']) {
+        lovd_showInfoTable('Please enter To Date (YYYY-MM-DD).', 'stop');
+        $bContinue = false;
+    }
+    else {
+        $dToDate = $_GET['toDate'];
+        if ( date('Y-m-d', $dUnixTime) == $dToDate ) {   // only date part is entered.
+            $dToDate .= " 23:59:59";  // set the dtoDate as the last second of the selected day.
+        }
+    }
 
 
+    print('     <FORM action="' . CURRENT_PATH . '?history" method="get"  name="dateRangeForm" id="dateRangeForm" onsubmit="lovd_changeDateRange(\'\', \'gene_panels/' . $nID . '?history\'); return false;">
+        <TABLE border="0" cellpadding="10" cellspacing="1" width="750" class="data" style="font-size : 13px;"><TR><TD>
+        <SPAN> From Date: <INPUT type="text" name="fromDate" id="fromDate"  readonly="true" value="'.$_GET['fromDate'].'"></SPAN>
+        <SPAN> To Date: <INPUT type="text" name="toDate" id="toDate"  readonly="true" value="'.$_GET['toDate'].'"></SPAN>
+        <INPUT type="submit" value="submit">
+        </TD></TR></TABLE>
+    </FORM>'."\n");
+
+    if ($bContinue) {
+        require ROOT_PATH . 'class/object_gene_panel_genes.rev.php';
+        $_DATA = new LOVD_GenePanelGeneREV();
+
+        $_DATA->displayGenePanelHistory($nID, $dFromDate, $dToDate);
+        //$_GET['search_genepanelid'] = $nID;
+        //$_DATA->viewList('GenePanelGeneREV');   // This shows the detailed history for all revisions in the selected panel.
+    }
     $_T->printFooter();
     exit;
 }
-
-
 
 
 print('No condition met using the provided URL.');

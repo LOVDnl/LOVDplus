@@ -488,7 +488,7 @@ function lovd_mapVariants ()
         lovd_includeJS('inc-js-openwindow.php', 1);
         lovd_includeJS('inc-js-toggle-visibility.js', 1); // Used on forms and variant overviews for small info tables.
         lovd_includeJS('lib/jQuery/jquery.min.js', 1);
-        lovd_includeJS('lib/jQuery/jquery-ui.custom.min.js', 1);
+        lovd_includeJS('lib/jQuery/jquery-ui.min.js', 1);
         lovd_includeJS('lib/jeegoocontext/jquery.jeegoocontext.min.js', 1);
 
         if (!$bFull) {
@@ -516,6 +516,30 @@ function lovd_mapVariants ()
 ?>
 
   <SCRIPT type="text/javascript">
+
+      $(function() {
+          $( "#fromDate" ).datepicker({ dateFormat: 'yy-mm-dd' });
+          $( "#toDate" ).datepicker({ dateFormat: 'yy-mm-dd' });
+      });
+
+      function lovd_changeDateRange(page, url) {
+          var aDateFields = document.getElementById("dateRangeForm");
+
+          if ( aDateFields.elements[0].value == '' || aDateFields.elements[1].value == ''  ) {
+              alert("Both dates must be entered!");
+          }
+          else if (aDateFields.elements[0].value > aDateFields.elements[1].value ) {
+              alert("From Date can not be greater than the To Date")
+          }
+          else if (typeof (history.pushState) != "undefined") {
+              var obj = { Page: page, Url: url };
+              //history.pushState(obj, obj.Page, obj.Url + '&fromDate=' + aDateFields.elements[0].value  + '&toDate=' + aDateFields.elements[1].value);    // change the url - pushState does not update page when user goes back - if going back to other date ranges.
+              history.replaceState(obj, obj.Page, obj.Url + '&fromDate=' + aDateFields.elements[0].value  + '&toDate=' + aDateFields.elements[1].value);    // change the url - replaceState allows user to go back to the gene panel screen.
+              window.location = window.location;    // this reloads the browser page using the new url.
+          } else {
+           //   alert("Browser does not support HTML5.");
+          }
+      }
     <!--
 
 <?php
@@ -545,7 +569,7 @@ function lovd_mapVariants ()
 
     //-->
   </SCRIPT>
-  <LINK rel="stylesheet" type="text/css" href="lib/jQuery/css/cupertino/jquery-ui.custom.css">
+  <LINK rel="stylesheet" type="text/css" href="lib/jQuery/css/cupertino/jquery-ui.min.css">
 </HEAD>
 
 <BODY style="margin : 0px;">

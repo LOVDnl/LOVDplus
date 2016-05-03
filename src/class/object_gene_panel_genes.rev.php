@@ -169,5 +169,90 @@ class LOVD_GenePanelGeneREV extends LOVD_GenePanelGene {
 
         return $zData;
     }
+
+    function displayGenePanelHistory ($nID, $dFromDate, $dToDate )  {
+
+        global $_DB;
+
+        // Query to get the genepanel revisions
+        $aGenePanelRevs = $_DB->query('SELECT * FROM lovd_gene_panels_revisions WHERE id = ? ', array($nID))->fetchAll();  // todo Need Table Constant here // Use valid_from to get entries of interest (records that have been created or edited) in the selected date range
+        //$aGenePanelRevs = $_DB->query('SELECT * FROM lovd_gene_panels_revisions WHERE id = ? and ( edited_date >= ? and edited_date <= ? )', array($nID, $dFromDate, $dToDate))->fetchAll();  // Note: This query doesn't return the record created entry.
+
+        $nCount = 0; // The number of Gene Panel revisions (modifications) in date range, not counting the "Created record" revision.
+
+        // Display the genepanel revisions.
+        print('   <TABLE border="0" cellpadding="10" cellspacing="0"><TR valign="top">' . "\n");
+        print('            <TD>
+                   <TABLE border="0" cellpadding="10" cellspacing="1" width="720" class="data" style="font-size : 13px;">   
+                      <TR>
+                        <TH  class="S16" >Changes to Gene Panel information</TH><TH  class="S16" width="150" >Date</TH></TR>');
+
+        foreach ($aGenePanelRevs as $aGenePanelRev) {
+                if ( $aGenePanelRev['valid_from'] >= $dFromDate && $aGenePanelRev['valid_from'] <= $dToDate ) {   // The revision's valid_from date is used to determine if an event (record created, record modified) happens in the selected date range. The revision's valid_to date doesn't matter for these events, for the purpose of showing the history.
+                    print('<TR><TD>' . $aGenePanelRev['reason'] . '</TD><TD>' . $aGenePanelRev['valid_from'] . '</TD></TR>');
+                    $nCount++;
+                }
+        }
+
+        if ($aGenePanelRevs[0]['created_date'] >= $dFromDate && $aGenePanelRevs[0]['created_date'] <= $dToDate ) {
+            $nCount--;  // don't include the created record revision - it shouldn't be counted as a modification outside the selected date range. It's counted as one if it was created in the selected date range.
+        }
+
+        print('</TABLE></TD>' . "\n");
+        print('</TABLE>'."\n");
+
+        // If the To Date is earlier than when the gene panel was created, then notify user.
+        if ( $dToDate < $aGenePanelRevs[0]['created_date']) {
+            lovd_showInfoTable('Gene Panel ' . $aGenePanelRevs[0]['reason'] . ' on ' . $aGenePanelRevs[0]['valid_from'], 'information');
+        }
+        elseif ($nCount == 0)  {  // "modification" count is zero
+            lovd_showInfoTable('Information about this gene panel has not changed between ' . $dFromDate . ' and ' . $dToDate .'.', 'information');
+        }
+
+        // Notify if gene panel has been deleted, even if it was deleted outside selected date range.
+        if ($aGenePanelRevs[count($aGenePanelRevs)-1]['deleted']) {
+            lovd_showInfoTable('Gene Panel record deleted on ' . $aGenePanelRevs[count($aGenePanelRevs)-1]['valid_to'], 'information');
+        }
+
+        // Notify if there are other gene panel revisions not in the selected date range. -1 because not counting the created record revision.
+        if ( $nCount < (count($aGenePanelRevs)-1)  ) {
+            lovd_showInfoTable('There are additional modifications to the gene panel information outside the selected date range!', 'information');
+        }
+
+
+        // Query to get the genepanel gene revisions for the genepanel.
+        // This query caused genes to appear as both "NEW" and "REMOVED" even though the gene is in the panel at the fromDate and the toDate. E.g. When a gene is added, then removed, then added again.
+        // $aGenePanelGeneRevs = $_DB->query('SELECT * FROM ' . TABLE_GP2GENE_REV . ' WHERE genepanelid = ?', array($nID))->fetchAll();
+
+        // This more complex query can handle the case of a gene that is added, removed, then added again. Also, exclude genes where valid_from and valid_to do not overlap with the selected data range because they are not relevant and would produce wrong results.
+        $aGenePanelGeneRevs = $_DB->query('SELECT geneid, MIN(valid_from) as valid_from, MAX(valid_to) as valid_to FROM ' . TABLE_GP2GENE_REV . ' WHERE genepanelid = ? and ( valid_to >= ? and valid_from <= ? ) group by geneid', array($nID, $dFromDate, $dToDate))->fetchAll();
+
+        $nCount = 0;   // Number of genes that have been added or removed between selected date range.
+
+        // Display the genepanel gene revisions for the genepanel between two dates.
+        print('   <TABLE border="0" cellpadding="10" cellspacing="0"><TR valign="top">' . "\n");
+        foreach (array(1, 0) as $i) {
+            print('            <TD>
+                  <TABLE border="0" cellpadding="10" cellspacing="1" width="' . ($i ? '350' : '350') . '" class="data" style="font-size : 13px;">
+                  <TR>
+                  <TH class="S16">' . ($i ? 'Added Genes </TH>' : 'Removed Genes </TH>') . '</TR>');
+            foreach ($aGenePanelGeneRevs as $aGenePanelGeneRev) {
+                if ($aGenePanelGeneRev['valid_from'] >= $dFromDate && $aGenePanelGeneRev['valid_to'] >= $dToDate) {  // Added Genes: these are genes which were created between the dFromDate and dToDate and are still valid after dtoDate.
+                    $nCount++;
+                    print(($i ? '<TR><TD>' . $aGenePanelGeneRev['geneid'] . '</TD></TR>' : ''));
+                } elseif ($aGenePanelGeneRev['valid_from'] <= $dFromDate && $aGenePanelGeneRev['valid_to'] <= $dToDate) {  // Removed Genes: these are genes which existed at the fromDate but not after the toDate.
+                    $nCount++;
+                    print(($i ? '' : '<TR><TD>' . $aGenePanelGeneRev['geneid'] . ' </TD></TR>'));
+                }
+            }
+            print('</TABLE></TD>' . "\n");
+        }
+        print('</TABLE>' . "\n");
+
+        if ( $nCount == 0) {
+            lovd_showInfoTable('Genes in this gene panel have not changed between ' . $dFromDate . ' and ' . $dToDate .'.', 'information');
+        }
+        
+    }
 }
 ?>
