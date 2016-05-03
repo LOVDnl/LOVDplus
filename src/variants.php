@@ -4,10 +4,10 @@
  * LEIDEN OPEN VARIATION DATABASE (LOVD)
  *
  * Created     : 2010-12-21
- * Modified    : 2014-11-05
- * For LOVD    : 3.0-12
+ * Modified    : 2016-04-07
+ * For LOVD    : 3.0-15
  *
- * Copyright   : 2004-2014 Leiden University Medical Center; http://www.LUMC.nl/
+ * Copyright   : 2004-2016 Leiden University Medical Center; http://www.LUMC.nl/
  * Programmers : Ing. Ivar C. Lugtenburg <I.C.Lugtenburg@LUMC.nl>
  *               Ing. Ivo F.A.C. Fokkema <I.F.A.C.Fokkema@LUMC.nl>
  *               Jerry Hoogenboom <J.Hoogenboom@LUMC.nl>
@@ -450,12 +450,21 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && !ACTION) {
     $_DATA = new LOVD_GenomeVariant();
     $zData = $_DATA->viewEntry($nID);
 
+    $bAuthorized = ($_AUTH && $_AUTH['level'] >= LEVEL_OWNER);
+    // However, for LOVD_plus, depending on the status of the screening, we might not have the rights to edit the variant.
+    if (LOVD_plus && $bAuthorized) {
+        $zScreenings = $_DB->query('SELECT s.* FROM ' . TABLE_SCREENINGS . ' AS s INNER JOIN ' . TABLE_SCR2VAR . ' AS s2v ON (s.id = s2v.screeningid) WHERE s2v.variantid = ? GROUP BY s.id', array($nID))->fetchAllAssoc();
+        if (!($_AUTH['level'] >= LEVEL_OWNER && $zScreenings[0]['analysis_statusid'] < ANALYSIS_STATUS_CLOSED) &&
+            !($_AUTH['level'] >= LEVEL_MANAGER && $zScreenings[0]['analysis_statusid'] < ANALYSIS_STATUS_WAIT_CONFIRMATION)) {
+            $bAuthorized = false;
+        }
+    }
+
     $aNavigation = array();
-    if ($_AUTH && $_AUTH['level'] >= LEVEL_OWNER) {
+    if ($bAuthorized) {
         // Authorized user is logged in. Provide tools.
-        if ($_AUTH['id'] == 1) {
-            // Just for me... but not on level, since they are all ADMIN as well.
-        $aNavigation[CURRENT_PATH . '?edit']       = array('menu_edit.png', 'Edit variant entry', 1);
+        if (!LOVD_plus) {
+            $aNavigation[CURRENT_PATH . '?edit']       = array('menu_edit.png', 'Edit variant entry', 1);
         }
         $aNavigation[CURRENT_PATH . '?edit_remarks' . (isset($_GET['in_window'])? '&amp;in_window' : '')] = array('menu_edit.png', 'Edit remarks', 1);
         if ($zData['statusid'] < STATUS_OK && $_AUTH['level'] >= LEVEL_CURATOR) {
@@ -2547,6 +2556,20 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && in_array(ACTION, array('edit', 'p
         lovd_requireAUTH(LEVEL_OWNER);
     }
 
+    $bAuthorized = ($_AUTH && $_AUTH['level'] >= LEVEL_OWNER);
+    // However, for LOVD_plus, depending on the status of the screening, we might not have the rights to edit the variant.
+    if (LOVD_plus && $bAuthorized) {
+        $zScreenings = $_DB->query('SELECT s.* FROM ' . TABLE_SCREENINGS . ' AS s INNER JOIN ' . TABLE_SCR2VAR . ' AS s2v ON (s.id = s2v.screeningid) WHERE s2v.variantid = ? GROUP BY s.id', array($nID))->fetchAllAssoc();
+        if (!($_AUTH['level'] >= LEVEL_OWNER && $zScreenings[0]['analysis_statusid'] < ANALYSIS_STATUS_CLOSED) &&
+            !($_AUTH['level'] >= LEVEL_MANAGER && $zScreenings[0]['analysis_statusid'] < ANALYSIS_STATUS_WAIT_CONFIRMATION)) {
+            $_T->printHeader();
+            $_T->printTitle();
+            lovd_showInfoTable('This analysis has been closed. It\'s not possible to edit this variant.', 'stop');
+            $_T->printFooter();
+            exit;
+        }
+    }
+
     $aGenes = $_DB->query('SELECT DISTINCT t.geneid FROM ' . TABLE_VARIANTS_ON_TRANSCRIPTS . ' AS vot LEFT OUTER JOIN ' . TABLE_TRANSCRIPTS . ' AS t ON (vot.transcriptid = t.id) WHERE vot.id = ?', array($nID))->fetchAllColumn();
     $bGene = (!empty($aGenes));
 
@@ -2885,8 +2908,19 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && ACTION == 'edit_remarks') {
     define('PAGE_TITLE', 'Edit remarks for variant entry #' . $nID);
     define('LOG_EVENT', 'VariantRemarksEdit');
 
-//    lovd_isAuthorized('variant', $nID);
-    lovd_requireAUTH(LEVEL_MANAGER);
+    lovd_isAuthorized('variant', $nID);
+    lovd_requireAUTH(LEVEL_OWNER);
+
+    // However, depending on the status of the screening, we might not have the rights to edit the variant.
+    $zScreenings = $_DB->query('SELECT s.* FROM ' . TABLE_SCREENINGS . ' AS s INNER JOIN ' . TABLE_SCR2VAR . ' AS s2v ON (s.id = s2v.screeningid) WHERE s2v.variantid = ? GROUP BY s.id', array($nID))->fetchAllAssoc();
+    if (!($_AUTH['level'] >= LEVEL_OWNER && $zScreenings[0]['analysis_statusid'] < ANALYSIS_STATUS_CLOSED) &&
+        !($_AUTH['level'] >= LEVEL_MANAGER && $zScreenings[0]['analysis_statusid'] < ANALYSIS_STATUS_WAIT_CONFIRMATION)) {
+        $_T->printHeader();
+        $_T->printTitle();
+        lovd_showInfoTable('This analysis has been closed. It\'s not possible to edit this variant.', 'stop');
+        $_T->printFooter();
+        exit;
+    }
 
     require ROOT_PATH . 'class/object_genome_variants.mod.php';
     $_DATA = array();
@@ -3139,6 +3173,17 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && ACTION == 'map') {
     // Require manager clearance.
     lovd_isAuthorized('variant', $nID);
     lovd_requireAUTH(LEVEL_OWNER);
+
+    // However, depending on the status of the screening, we might not have the rights to edit the variant.
+    $zScreenings = $_DB->query('SELECT s.* FROM ' . TABLE_SCREENINGS . ' AS s INNER JOIN ' . TABLE_SCR2VAR . ' AS s2v ON (s.id = s2v.screeningid) WHERE s2v.variantid = ? GROUP BY s.id', array($nID))->fetchAllAssoc();
+    if (!($_AUTH['level'] >= LEVEL_OWNER && $zScreenings[0]['analysis_statusid'] < ANALYSIS_STATUS_CLOSED) &&
+        !($_AUTH['level'] >= LEVEL_MANAGER && $zScreenings[0]['analysis_statusid'] < ANALYSIS_STATUS_WAIT_CONFIRMATION)) {
+        $_T->printHeader();
+        $_T->printTitle();
+        lovd_showInfoTable('This analysis has been closed. It\'s not possible to edit this variant.', 'stop');
+        $_T->printFooter();
+        exit;
+    }
 
     require ROOT_PATH . 'class/object_genome_variants.php';
     $_DATA = new LOVD_GenomeVariant();
