@@ -52,3 +52,10 @@ alternative_ids =
 # The following path is used by LOVD+ to export information on variants that
 # need to be confirmed in the lab (usually by Sanger sequencing).
 confirm_variants =
+
+
+
+[instance]
+
+# The name of this instance, used to activate site specific features.
+name =
