@@ -1,2 +1,3 @@
 .idea
 src/config.ini.php
+src/scripts/adapter.php
