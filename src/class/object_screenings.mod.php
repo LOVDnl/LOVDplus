@@ -4,7 +4,7 @@
  * LEIDEN OPEN VARIATION DATABASE (LOVD)
  *
  * Created     : 2014-01-03
- * Modified    : 2016-04-07
+ * Modified    : 2016-05-04
  * For LOVD    : 3.0-13
  *
  * Copyright   : 2004-2016 Leiden University Medical Center; http://www.LUMC.nl/
@@ -239,11 +239,12 @@ class LOVD_ScreeningMOD extends LOVD_Screening {
                     $sOpen = 'Re-open';
                 }
             }
+            // In the following two links I cannot use CURRENT_PATH, because this file can also have been loaded through ajax/viewentry.php!
             if ($sOpen) {
-                $zData['analysis_status'] .= ' (<A href="' . CURRENT_PATH . '?open">' . $sOpen . '</A>)';
+                $zData['analysis_status'] .= ' (<A href="individuals/' . $zData['individualid'] . '/analyze/' . $zData['id'] . '?open">' . $sOpen . '</A>)';
             }
             if ($sClose) {
-                $zData['analysis_status'] .= ' (<A href="' . CURRENT_PATH . '?close">' . $sClose . '</A>)';
+                $zData['analysis_status'] .= ' (<A href="individuals/' . $zData['individualid'] . '/analyze/' . $zData['id'] . '?close">' . $sClose . '</A>)';
             }
         }
         // Just do a separate query for the variants to be confirmed (instead of modifying the VE query).
