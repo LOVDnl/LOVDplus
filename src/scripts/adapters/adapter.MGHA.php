@@ -23,46 +23,8 @@ ini_set('memory_limit', '4294967296');
 /*******************************************************************************/
 // set variables
 
-$vFiles = array();
+$vFiles = array(); // array(ID => array(files), ...);
 $metaFile = '';
-
-// open the data files folder and process files
-$h = opendir($_INI['paths']['data_files']);
-
-if (!$h) {
-    die('Can\'t open directory.' . "\n");
-}
-
-// need to find the sample meta data file (SMDF) first. There may be multiple SMDF as we do not move files after they are processed.
-// However once processed they are renamed to .ARK so we are able to find files to process based on this
-while (($xFile = readdir($h)) !== false) {
-    if ($xFile{0} == '.') {
-        // Current dir, parent dir, and hidden files.
-        continue;
-    }
-
-    // get the SMDF, it is possible there could be more than one, but we are only going to take the first one
-    // we have discussed that this means there is the potential that any subsequent SMDF will not be processed until any issues with the first one are addressed, at this stage we are not concerned with this
-    // the naming of the file has not yet been confirmed, for testing we are using "meta"
-    if (preg_match('/^(.+?)meta(.+?).txt/i', $xFile)) {
-
-        $metaFile = $_INI['paths']['data_files']  . $xFile;
-    }
-
-    // get all the variant files into an array
-    if (preg_match('/^(.+?).tsv/', $xFile, $vRegs)){
-        //list($sID, $vFileName) = $vRegs;
-        $sID = $vRegs[1];
-        $vFiles[$sID] = $xFile;
-
-    }
-
-}
-
-// If no SMDF found do not continue
-if(!$metaFile){
-    die('No Sample Meta Data File found.');
-}
 
 // create mapping arrays for singleton/child record, mother and father
 $aColumnMappings = array(
@@ -108,34 +70,82 @@ $aColumnMappings = array(
 
 );
 
-$motherColumnMappings = array(
-    'Sample_ID' => 'Screening/Mother/Sample_ID',
-    'Ethnicity' => 'Screening/Mother/Origin/Ethnic',
-    'DNA_Tube_ID' => 'Screening/Mother/DNA/Tube_ID',
-    'Notes' => 'Screening/Mother/Notes'
+// these are the columns for the mother and father. As they are the same columns for both, we will loop through and replace "Parent" with "Father" and "Mother" before writing out the data
+$parentColumnMappings = array(
+    'Sample_ID' => 'Screening/Parent/Sample_ID',
+    'Ethnicity' => 'Screening/Parent/Origin/Ethnic',
+    'DNA_Tube_ID' => 'Screening/Parent/DNA/Tube_ID',
+    'Notes' => 'Screening/Parent/Notes'
 );
 
-$fatherColumnMappings = array(
-    'Sample_ID' => 'Screening/Father/Sample_ID',
-    'Ethnicity' => 'Screening/Father/Origin/Ethnic',
-    'DNA_Tube_ID' => 'Screening/Father/DNA/Tube_ID',
-    'Notes' => 'Screening/Father/Notes'
+
+// Screening Default values.
+$aDefaultValues = array(
+    'Screening/Template' => 'DNA',
+    'Screening/Technique' => 'SEQ-NG'
 );
 
-// open the sample meta data file
-// check to make sure you have the right file format, convert and merge data files uses left 53 characters of the heading
+// open the data files folder and process files
+$h = opendir($_INI['paths']['data_files']);
 
-// NEED TO ADD THIS CODE
+if (!$h) {
+    die('Can\'t open directory.' . "\n");
+}
 
-// process the sample IDs, any samples that have pedigree_file column populated are child samples, we need to add columns to flag if a record is a parent and for the father and mother's sample ID
+// need to find the sample meta data file (SMDF) first. There may be multiple SMDF as we do not move files after they are processed.
+// However once processed they are renamed to .ARK so we are able to find files to process based on this
+while (($xFile = readdir($h)) !== false) {
+    if ($xFile{0} == '.') {
+        // Current dir, parent dir, and hidden files.
+        continue;
+    }
 
+    // get the SMDF, it is possible there could be more than one, but we are only going to take the first one
+    // we have discussed that this means there is the potential that any subsequent SMDF will not be processed until any issues with the first one are addressed, at this stage we are not concerned with this
+    // the naming of the file has not yet been confirmed, for testing we are using "meta"
+    if (preg_match('/^(.+?)meta(.+?).txt/i', $xFile)) {
+
+        $metaFile = $_INI['paths']['data_files']  . $xFile;
+    }
+
+    // get all the variant files into an array
+    if (preg_match('/^(.+?).tsv/', $xFile, $vRegs)){
+        //list($sID, $vFileName) = $vRegs;
+        $sID = $vRegs[1];
+        $vFiles[$sID] = $xFile;
+
+    }
+
+}
+
+// If no SMDF found do not continue
+if(!$metaFile){
+    die('No Sample Meta Data File found.');
+}
+
+// set arrays
 $sDataArr = array();
+$parentArr = array();
 
-// open the sample meta data file and read the first line which is the headers
+// open the file, get first line as string to check headers match expected output.
+$fInput = fopen($metaFile, 'r');
+if ($fInput === false) {
+    die('Error opening file: ' . $metaFile . ".\n");
+}
+
+$strHeaders = fgets($fInput);
+
+if (substr($strHeaders, 0, 76) != "Pipeline_Run_ID\tBatch\tSample_ID\tDNA_Tube_ID\tSex\tDNA_Concentration\tDNA_Volume") {
+    die('File does not conform to format: ' . $metaFile . ".\n");
+}
+
+fclose($fInput);
+
+// open the sample meta data file into an array
 $sFile = file($metaFile,FILE_IGNORE_NEW_LINES);
 
-$sHeader = explode("\t",$sFile[0]); // Create an array of headers from the first line
-
+// Create an array of headers from the first line
+$sHeader = explode("\t",$sFile[0]);
 
 foreach ($sFile as $nKey => $sValue) {
 
@@ -149,39 +159,44 @@ foreach ($sFile as $nKey => $sValue) {
     }
 }
 
-
+// loop through each sample
 foreach ($sDataArr as $sample) {
 
-   // if Pedigree_File column is not empty, then it is a trio and we need to get the parent IDs, work out who is mother and father based on sex and update child's record
-   If(!empty($sample['Pedigree_File'])){
+    $sampleID = $sample['Sample_ID'];
+    // if Pedigree_File column is not empty, then it is a trio and we need to get the parent IDs, work out who is mother and father based on sex and update child's record
+    If (!empty($sample['Pedigree_File'])) {
 
-        $sampleID = $sample['Sample_ID'];
         if (preg_match('/^fid\d+\=(.+)/', $sample['Pedigree_File'], $pRegs)) {
             // can combine this into the above regex
             $parentIDs = explode(",", $pRegs[1]);
             $fatherCount = 0;
             $motherCount = 0;
             //loop through parent sample IDs and check gender. Should have male and female. If unknown we exit. If both male or female, we exit out
-            foreach ($parentIDs as $parentID){
+            foreach ($parentIDs as $parentID) {
                 $parentGender = $sDataArr[$parentID]['Sex'];
                 $sDataArr[$parentID]['parent'] = "T";
 
-                if($parentGender == 'Male'){
+                if ($parentGender == 'Male') {
                     $fatherID = $parentID;
+                    $parent = 'Father';
                     $fatherCount++;
-                    if($fatherCount > 1){
+                    if ($fatherCount > 1) {
                         die('We have 2 parent IDs with the gender Male for sample ID ' . $sampleID);
                     }
-                    // NEED TO ADD CODE TO LOOP THROUGH FATHER COLUMNS
-                }elseif($parentGender == 'Female'){
+                } elseif ($parentGender == 'Female') {
                     $motherID = $parentID;
+                    $parent = 'Mother';
                     $motherCount++;
-                    if($motherCount > 1){
+                    if ($motherCount > 1) {
                         die('We have 2 parent IDs with the gender Female for sample ID ' . $sampleID);
                     }
-                    // NEED TO ADD CODE TO LOOP THROUGH MOTHER COLUMNS
-                }else{
+                } else {
                     die('Unknown Gender for Sample' . $parentID);
+                }
+
+                foreach ($parentColumnMappings as $pCol => $lCol) {
+                    $LOVDColumn = str_replace('Parent', $parent, $lCol);
+                    $parentArr[$sampleID][$LOVDColumn] = $sDataArr[$parentID][$pCol];
                 }
             }
             // update the father ID and mother ID on the child's record
@@ -190,7 +205,6 @@ foreach ($sDataArr as $sample) {
         }
     }
 }
-
 
 // remove any tsv files that are not for a singleton or child listed in the SMDF
 foreach($vFiles as $vFileSampleID => $variantFileName){
@@ -217,7 +231,6 @@ foreach($sDataArr as $sKeys) {
 $zDataArr = array(); // output data array
 
 // Prepare Individuals and Screenings, include the found columns.
-
 foreach ($sDataArr as $sKey => $sVal){
     if(empty($sVal['parent'])) {
 
@@ -225,8 +238,22 @@ foreach ($sDataArr as $sKey => $sVal){
         $aColumnsForScreening['id'] = 1;
         $aColumnsForScreening['individual_id'] = $sVal['Sample_ID'];
         $aColumnsForIndividual['id'] = $sVal['Sample_ID'];
+        // hard code the status id
+        $aColumnsForIndividual['statusid'] = 4;
 
-        // Map VEP columns to LOVD columns.
+        // add default values
+        foreach ($aDefaultValues as $dKey => $dVal){
+
+            if (substr($dKey, 0, 11) == 'Individual/') {
+                $aColumnsForIndividual[$dKey] = $dVal;
+
+            } elseif (substr($dKey, 0, 10) == 'Screening/') {
+                $aColumnsForScreening[$dKey] = $dVal;
+
+            }
+        }
+
+        // Map pipeline columns to LOVD columns.
         foreach ($aColumnMappings as $pipelineColumn => $sLOVDColumn) {
 
             if (empty($sVal[$pipelineColumn]) || $sVal[$pipelineColumn] == 'unknown' || $sVal[$pipelineColumn] == '.') {
@@ -239,7 +266,24 @@ foreach ($sDataArr as $sKey => $sVal){
             } elseif (substr($sLOVDColumn, 0, 10) == 'Screening/') {
                 $aColumnsForScreening[$sLOVDColumn] = $sVal[$pipelineColumn];
             }
+
         }
+
+        // if trio then add the parent columns and mark panel size as trio
+        if(!empty($sVal['mother_id']) || !empty($sVal['father_id'])){
+            $aColumnsForIndividual['panel_size'] = 3;
+            foreach ($parentArr as $cKey => $pVal){
+                if ($cKey == $sKey){
+                    $aColumnsForScreening = array_merge($aColumnsForScreening, $pVal);
+                    // Need to add code here to check if column name is Individual or Screening to make it more robust.
+                }
+            }
+        }else{
+            // not a trio, so must be a singleton
+            $aColumnsForIndividual['panelsize'] = 1;
+        }
+
+
         // for each singleton and/or child we need to create a meta file
         // create a temp file first while we write out the records
         $xFileTmp = $_INI['paths']['data_files'] . $sVal['Sample_ID'] . '_Meta_File.tmp';;
@@ -268,7 +312,6 @@ foreach ($sDataArr as $sKey => $sVal){
 
         // Now rename the tmp to the final file, and close this loop.
         if (!rename($xFileTmp, $xFileDone)) {
-            // Fatal error, because we're all done actually!
             die('Error moving temp file to target: ' . $xFileDone . ".\n");
         }
     }
