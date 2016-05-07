@@ -11,7 +11,7 @@ $_GET['format'] = 'text/plain';
 // To prevent notices when running inc-init.php.
 $_SERVER = array_merge($_SERVER, array(
     'HTTP_HOST' => 'localhost',
-    'REQUEST_URI' => 'scripts/convert_and_merge_data_files.php',
+    'REQUEST_URI' => 'scripts/adapter.php',
     'QUERY_STRING' => '',
     'REQUEST_METHOD' => 'GET',
 ));
@@ -82,7 +82,8 @@ $parentColumnMappings = array(
 // Screening Default values.
 $aDefaultValues = array(
     'Screening/Template' => 'DNA',
-    'Screening/Technique' => 'SEQ-NG'
+    'Screening/Technique' => 'SEQ-NG',
+    'Screening/Analysis_restricted' => 0
 );
 
 // open the data files folder and process files
@@ -220,6 +221,8 @@ foreach($vFiles as $vFileSampleID => $variantFileName){
 foreach($sDataArr as $sKeys) {
     $sID = $sKeys['Sample_ID'];
     $parent = $sKeys['parent'];
+    // update the gender (sex) to only store the first character. M = Male  F = Female
+    $sDataArr[$sID]['Sex'] = substr($sKeys['Sex'],0,1);
 
     if(!$parent) {
         If (!in_array($sID, array_keys($vFiles))) {
@@ -236,7 +239,8 @@ foreach ($sDataArr as $sKey => $sVal){
 
         // set the IDs for each section, since we are generating one meta data file per child/singleton, there will only ever be 1 individual record and screening
         $aColumnsForScreening['id'] = 1;
-        $aColumnsForScreening['individual_id'] = $sVal['Sample_ID'];
+        $aColumnsForScreening['individualid'] = $sVal['Sample_ID'];
+        $aColumnsForScreening['variants_found'] = 1;
         $aColumnsForIndividual['id'] = $sVal['Sample_ID'];
         // hard code the status id
         $aColumnsForIndividual['statusid'] = 4;
