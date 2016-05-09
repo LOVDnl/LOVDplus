@@ -88,14 +88,14 @@ if (PATH_COUNT >= 2 && ctype_digit($_PE[1]) && !ACTION && (PATH_COUNT == 2 || PA
     if (LOVD_plus) {
         lovd_requireAUTH();
     } else {
-        // Load appropiate user level for this individual.
+        // Load appropriate user level for this individual.
         lovd_isAuthorized('individual', $nID);
     }
 
     // FIXME: This means, when the ID does not exist, we have an open table that doesn't close.
-    print('      <TABLE cellpadding="0" cellspacing="0" border="0" width="100%">
+    print('      <TABLE cellpadding="0" cellspacing="0" border="0">
         <TR>
-          <TD valign="top">' . "\n");
+          <TD valign="top" width="1000">' . "\n");
     require ROOT_PATH . 'class/object_individuals.mod.php';
     $_DATA = new LOVD_IndividualMOD($nID);
     $zData = $_DATA->viewEntry($nID);
@@ -120,8 +120,24 @@ if (PATH_COUNT >= 2 && ctype_digit($_PE[1]) && !ACTION && (PATH_COUNT == 2 || PA
     }
     lovd_showJGNavigation($aNavigation, 'Individuals');
 
+
+
+    // Show logs related to closing and opening of analyses this individual.
+    print('    <BR><BR>' . "\n\n");
+    $_GET['page_size'] = 10;
+    $_GET['search_event'] = 'AnalysisOpen|AnalysisClose';
+    $_GET['search_entry_'] = '"individual ' . $nID . '"';
+    $_T->printTitle('Log entries', 'H4');
+    require_once ROOT_PATH . 'class/object_logs.php';
+    $_DATA = new LOVD_Log();
+    $_DATA->viewList('Logs_for_I_VE', array('name', 'event', 'del'), true);
+    unset($_GET['page_size'], $_GET['search_event'], $_GET['search_entry_']);
+
+
+
     print('
           </TD>
+          <TD width="50">&nbsp;</TD>
           <TD valign="top" id="screeningViewEntry">' . "\n");
 
     // If we're here, analyzing a screening, show the screening VE on the right.
