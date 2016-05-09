@@ -223,9 +223,16 @@ class LOVD_Template {
         }
 
         // Unset unneeded tabs for Diagnostics.
-        unset($this->aMenu['transcripts'], $this->aMenu['transcripts_']);
-        unset($this->aMenu['screenings'], $this->aMenu['screenings_']);
-        unset($this->aMenu['submit'], $this->aMenu['submit_']);
+        if (LOVD_plus) {
+            unset($this->aMenu['transcripts'], $this->aMenu['transcripts_']);
+            unset($this->aMenu['variants'], $this->aMenu['variants_']);
+            unset($this->aMenu['screenings'], $this->aMenu['screenings_']);
+            unset($this->aMenu['submit'], $this->aMenu['submit_']);
+            unset($this->aMenu['configuration'], $this->aMenu['configuration_']);
+            if ($_AUTH && $_AUTH['level'] <= LEVEL_ANALYZER) {
+                unset($this->aMenu['diseases'], $this->aMenu['diseases_']);
+            }
+        }
 
         if (!defined('PAGE_TITLE')) {
             $sFile = substr(lovd_getProjectFile(), 1, strrpos(lovd_getProjectFile(), '.') - 1); // Isolate "genes" out of "/genes.php".
