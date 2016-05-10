@@ -4,7 +4,7 @@
  * LEIDEN OPEN VARIATION DATABASE (LOVD)
  *
  * Created     : 2013-10-28
- * Modified    : 2016-03-07
+ * Modified    : 2016-05-10
  * For LOVD    : 3.0-12
  *
  * Copyright   : 2004-2016 Leiden University Medical Center; http://www.LUMC.nl/
@@ -248,14 +248,15 @@ class LOVD_IndividualMOD extends LOVD_Individual {
             global $_DB;
 
             // Get list of gene panels.
+            // Note: CAST(id AS CHAR) is needed to preserve the zerofill.
             $aGenePanelsForm = $_DB->query('(SELECT "optgroup2" AS id, "Mendeliome" AS name, "mendeliome_header" AS type)
                                         UNION
                                         (SELECT "optgroup1", "Gene Panels", "gene_panel_header")
                                         UNION
                                         (SELECT "optgroup3", "Blacklist", "blacklist_header")
                                         UNION
-                                        (SELECT CAST(id AS CHAR), name, type FROM lovd_gene_panels)
-                                        ORDER BY type DESC, name')->fetchAllCombine(); // TODO AM I have had to cast the id as a char to get the id with zero padding eg "00033" as the inc-lib-form.php creates the option values in this way. Without doing this the "selected" option is not set correctly as it does not match without the zero padding. Is there are better way to do this?
+                                        (SELECT CAST(id AS CHAR), name, type FROM ' . TABLE_GENE_PANELS . ')
+                                        ORDER BY type DESC, name')->fetchAllCombine();
             $nGenePanels = count($aGenePanelsForm);
             foreach ($aGenePanelsForm as $nID => $sGenePanel) {
                 $aGenePanelsForm[$nID] = lovd_shortenString($sGenePanel, 75);
@@ -269,7 +270,7 @@ class LOVD_IndividualMOD extends LOVD_Individual {
             $this->aFormData = array_merge(
                 array(
                     array('POST', '', '', '', '50%', '14', '50%'),
-                    'custom_panel' => array('Custom gene panel', '', 'textarea', 'custom_panel', 50, 2),
+                    'custom_panel' => array('Custom gene panel', 'Please insert any gene symbols here that you want to use as a custom gene panel, only for this individual.', 'textarea', 'custom_panel', 50, 2),
                     'aGenePanels' => array('Assigned gene panels', '', 'select', 'gene_panels', $nGPFieldSize, $aGenePanelsForm, false, true, false),
                 ));
 

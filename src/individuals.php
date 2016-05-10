@@ -235,7 +235,7 @@ if (PATH_COUNT >= 2 && ctype_digit($_PE[1]) && !ACTION && (PATH_COUNT == 2 || PA
             // Create the gene panel type header.
             if ($sLastType == '' || $sLastType <> $aGenePanel[2]) {
                 print('
-            <TR> 
+            <TR>
               <TD class="gpheader" colspan="2" ' . ($sLastType? '' : 'style="border-top: 0px"') . '>' . ucfirst(str_replace('_', ' ', $aGenePanel[2])) . '</TD>
             </TR>');
             }
@@ -243,7 +243,7 @@ if (PATH_COUNT >= 2 && ctype_digit($_PE[1]) && !ACTION && (PATH_COUNT == 2 || PA
 
             // Add the gene panel to the form.
             print('
-            <TR> 
+            <TR>
               <TD><INPUT type="checkbox" name="gene_panel" value="' . $aGenePanel[0] . '"' . ($aGenePanel[2]=='mendeliome'? '' : ' checked') . '></TD>
               <TD>' . $aGenePanel[1] . '</TD>
             </TR>');
@@ -1200,10 +1200,12 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && ACTION == 'edit_panels') {
     print('</FORM>' . "\n\n");
 
     if (!empty($aDefaultGenePanels)) {
+        $nDefaultGenePanels = count($aDefaultGenePanels);
         // Display a message to the user identifying the gene panels that have been assigned by default.
-        $sDefaultGenePanelMsg = "\n" . '            <H4 class="LOVD">Default gene panels</H4>
-            The following gene panels were automatically assigned to this individual using the individuals diseases:<BR><BR>' . "\n";
-        $sDefaultGenePanelMsg .= '            <TABLE border="0" cellpadding="1" cellspacing="1" width="90%" class="data" style="background: #dddddd; font-size: 13px;">
+        $sDefaultGenePanelMsg = "\n" .
+            '            <H4 class="LOVD">Default gene panels</H4>
+            The following gene panel' . ($nDefaultGenePanels == 1? ' is' : 's were') . ' automatically assigned to this individual because ' . ($nDefaultGenePanels == 1? 'it is' : 'they are') . ' associated to (one of) the individual\'s diseases:<BR><BR>
+            <TABLE border="0" cellpadding="1" cellspacing="1" width="90%" class="data" style="background: #dddddd; font-size: 13px;">
               <TR>
                 <TH width="70%">Gene panel name</TH>
                 <TH>Type</TH>
@@ -1211,14 +1213,14 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && ACTION == 'edit_panels') {
         // List all the gene panels found in a table.
         foreach ($aDefaultGenePanels as $nKey => $aGenePanel) {
             $sDefaultGenePanelMsg .= '              <TR>
-                <TD>' . htmlspecialchars($aGenePanel['name']) . '</TD>
+                <TD>' . $aGenePanel['name'] . '</TD>
                 <TD>' . ucfirst(str_replace('_', ' ', $aGenePanel['type'])) . '</TD>
               </TR>' . "\n";
         }
         $sDefaultGenePanelMsg .= '            </TABLE><BR>
-            If you do not wish to assign these gene panels to this individual then please unselect them.<BR><BR>' . "\n";
+            If you do not wish to assign these gene panels to this individual then please unselect them.<BR><BR>';
 
-        print('          <DIV style="width: 500px; margin-left: 25px;">');
+        print('          <DIV style="width: 500px; margin-left: 25px;">' . "\n");
         lovd_showInfoTable($sDefaultGenePanelMsg, 'information');
         print('          </DIV>');
     }
