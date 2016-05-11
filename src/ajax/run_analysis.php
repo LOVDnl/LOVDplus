@@ -4,7 +4,7 @@
  * LEIDEN OPEN VARIATION DATABASE (LOVD)
  *
  * Created     : 2013-11-05
- * Modified    : 2016-04-07
+ * Modified    : 2016-05-11
  * For LOVD    : 3.0-15
  *
  * Copyright   : 2004-2016 Leiden University Medical Center; http://www.LUMC.nl/
@@ -138,7 +138,7 @@ foreach ($aGenePanels as $nKey => $nGenePanelID) {
     $q = $_DB->query('INSERT INTO ' . TABLE_AR2GP . ' VALUES (?, ?)', array($nRunID, $nGenePanelID));
     if (!$q) {
         $_DB->rollBack();
-        die('Failed to insert the analysis 2 gene panel record');
+        die('Failed to store the gene panels for this analysis. This may be a temporary error, or an error in the software.');
     }
 }
 
@@ -155,17 +155,15 @@ lovd_writeLog('Event', LOG_EVENT, 'Started analysis run ' . str_pad($nRunID, 5, 
 if (empty($_SESSION['analyses'])) {
     $_SESSION['analyses'] = array();
 }
-// Store screeningid and filters in session.
+// Store analysis information in the session.
 $_SESSION['analyses'][$nRunID] =
     array(
         'screeningid' => (int) $_GET['screeningid'], // (int) is to prevent zerofill from messing things up.
         'filters' => $aFilters,
-        'IDsLeft' => array()
+        'IDsLeft' => array(),
+        'custom_panel' => $sCustomPanel,
+        'gene_panels' => $aGenePanels,
     );
-
-// Store gene panel details in session.
-$_SESSION['analyses'][$nRunID]['custom_panel'] = $sCustomPanel;
-$_SESSION['analyses'][$nRunID]['gene_panels'] = $aGenePanels;
 
 // Collect variant IDs and store in session.
 $_SESSION['analyses'][$nRunID]['IDsLeft'] = $_DB->query('SELECT DISTINCT CAST(s2v.variantid AS UNSIGNED) FROM ' . TABLE_SCR2VAR . ' AS s2v WHERE s2v.screeningid = ?', array($_GET['screeningid']))->fetchAllColumn();

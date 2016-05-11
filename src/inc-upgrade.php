@@ -546,7 +546,7 @@ if ($sCalcVersionFiles != $sCalcVersionDB) {
                          'INSERT INTO ' . TABLE_ANALYSIS_STATUS . ' VALUES (' . ANALYSIS_STATUS_WAIT_CONFIRMATION . ', "Awaiting confirmation")',
                          'UPDATE ' . TABLE_ANALYSIS_STATUS . ' SET name = "Confirmed" WHERE id = ' . ANALYSIS_STATUS_CONFIRMED,
                      ),
-                 // Gene panels and statistics
+                 // Gene panels and statistics.
                  '3.0-12p' =>
                      array(
                          'INSERT IGNORE INTO ' . TABLE_SOURCES . ' VALUES ("pubmed_article", "http://www.ncbi.nlm.nih.gov/pubmed/{{ ID }}")',
@@ -570,6 +570,7 @@ if ($sCalcVersionFiles != $sCalcVersionDB) {
                      array(
                          'ALTER TABLE ' . TABLE_ANALYSES_RUN . ' ADD COLUMN custom_panel TEXT NOT NULL AFTER modified',
                          'CREATE TABLE ' . TABLE_AR2GP . ' (runid SMALLINT(5) UNSIGNED ZEROFILL NOT NULL, genepanelid SMALLINT(5) UNSIGNED ZEROFILL NOT NULL, PRIMARY KEY (runid, genepanelid), INDEX (runid), INDEX (genepanelid), CONSTRAINT ' . TABLE_AR2GP . '_fk_runid FOREIGN KEY (runid) REFERENCES ' . TABLE_ANALYSES_RUN . ' (id) ON DELETE CASCADE ON UPDATE CASCADE, CONSTRAINT ' . TABLE_AR2GP . '_fk_genepanelid FOREIGN KEY (genepanelid) REFERENCES ' . TABLE_GENE_PANELS . ' (id) ON DELETE CASCADE ON UPDATE CASCADE) ENGINE=InnoDB, DEFAULT CHARACTER SET utf8',
+                         'UPDATE ' . TABLE_ANALYSES . ' SET filters = REPLACE(filters, "remove_not_in_gene_panel", "remove_not_in_gene_panel\r\napply_selected_gene_panels")',
                      ),
              );
 

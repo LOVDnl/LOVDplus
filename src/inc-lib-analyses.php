@@ -4,10 +4,10 @@
  * LEIDEN OPEN VARIATION DATABASE (LOVD)
  *
  * Created     : 2016-05-03
- * Modified    : 2016-05-03
+ * Modified    : 2016-05-11
  * For LOVD    : 3.0-12
  *
- * Copyright   : 2004-2012 Leiden University Medical Center; http://www.LUMC.nl/
+ * Copyright   : 2004-2016 Leiden University Medical Center; http://www.LUMC.nl/
  * Programmers : Anthony Marty <anthony.marty@unimelb.edu.au>
  *               Ivo F.A.C. Fokkema <I.F.A.C.Fokkema@LUMC.nl>
  *
@@ -74,7 +74,7 @@ function getSelectedGenePanelsByRunID ($nRunID)
         $sGenePanelsInfo .= '<TR onmouseover="lovd_showToolTip(\'' . addslashes($sToolTip) . '\', this, [100, -10]);"><TD>1</TD><TD>Custom panel</TD><TD>(' . count($aCustomPanelGenes) . ' genes)</TD></TR>' . "\n";
     }
 
-    if ($sGenePanelsInfo == '') {
+    if (!$sGenePanelsInfo) {
         // Display a message if there are no gene panels selected for this analysis.
         $sGenePanelsInfo = '<TR><TD>No gene panels selected</TD></TR>';
     }
