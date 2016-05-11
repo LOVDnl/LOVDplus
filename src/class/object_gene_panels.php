@@ -4,7 +4,7 @@
  * LEIDEN OPEN VARIATION DATABASE (LOVD)
  *
  * Created     : 2016-03-01
- * Modified    : 2016-03-24
+ * Modified    : 2016-05-10
  * For LOVD    : 3.0-13
  *
  * Copyright   : 2004-2016 Leiden University Medical Center; http://www.LUMC.nl/
@@ -164,6 +164,7 @@ class LOVD_GenePanel extends LOVD_Object {
             );
 
         parent::checkFields($aData);
+        lovd_checkXSS();
     }
 
 
