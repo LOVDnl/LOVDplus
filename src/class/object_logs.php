@@ -4,10 +4,10 @@
  * LEIDEN OPEN VARIATION DATABASE (LOVD)
  *
  * Created     : 2010-01-28
- * Modified    : 2013-09-30
- * For LOVD    : 3.0-08
+ * Modified    : 2016-05-09
+ * For LOVD    : 3.0-16
  *
- * Copyright   : 2004-2013 Leiden University Medical Center; http://www.LUMC.nl/
+ * Copyright   : 2004-2016 Leiden University Medical Center; http://www.LUMC.nl/
  * Programmers : Ing. Ivo F.A.C. Fokkema <I.F.A.C.Fokkema@LUMC.nl>
  *               Ing. Ivar C. Lugtenburg <I.C.Lugtenburg@LUMC.nl>
  *
@@ -77,6 +77,9 @@ class LOVD_Log extends LOVD_Object {
                                     'db'   => array('l.event', 'ASC', true)),
                         'del' => array(
                                     'view' => array('&nbsp;', 14, 'style="text-align : center;"')),
+                        'entry_' => array(
+                                    'view' => false,
+                                    'db'   => array('l.log', false, true)), // Meant only for a hidden search.
                         'entry' => array(
                                     'view' => array('Entry', 700),
                                     'db'   => array('l.log', false, true)),
@@ -108,10 +111,12 @@ class LOVD_Log extends LOVD_Object {
 
         // 2013-09-30; 3.0-08; Make log entry texts clickable.
         switch ($zData['event']) {
+            case 'AnalysisClose':
+            case 'AnalysisOpen':
             case 'AnalysisRun':
             case 'AnalysisRunModify':
             case 'AnalysisRunDelete':
-                $zData['entry'] = preg_replace('/(individual) ([0-9]+):([0-9]+)( |$)/', '$1 <A href="individuals/$2/analyze/$3">$2</A> ', $zData['entry']);
+                $zData['entry'] = preg_replace('/(individual) ([0-9]+):([0-9]+)( |$)/', '$1 <A href="individuals/$2/analyze/$3">$2</A> (analysis $3)$4', $zData['entry']);
                 break;
             case 'ColCreate':
                 $zData['entry'] = preg_replace('/(link) ([0-9]+) /', '$1 <A href="links/$2">$2</A> ', $zData['entry']);
