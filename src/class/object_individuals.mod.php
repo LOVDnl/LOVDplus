@@ -312,7 +312,13 @@ class LOVD_IndividualMOD extends LOVD_Individual {
             $zData['analysis_date_'] = substr($zData['analysis_date'], 0, 10);
             $zData['analysis_approved_date_'] = substr($zData['analysis_approved_date'], 0, 10);
         } else {
-            $zData['gene_panels_'] = $zData['gene_panels_'] . ' <SPAN style="float:right"><A href="individuals/' . $zData['id'] . '?edit_panels">Edit gene panels</A></SPAN>';;
+            // Gene panels assigned.
+            $zData['gene_panels_'] = '';
+            foreach($zData['gene_panels'] as $aGenePanels) {
+                list($nID, $sName, $sType) = $aGenePanels;
+                $zData['gene_panels_'] .= (!$zData['gene_panels_']? '' : ', ') . '<A href="gene_panels/' . $nID . '" title="' . $sName . '">' . $sName . '</A>';
+            }
+            $zData['gene_panels_'] = $zData['gene_panels_'] . ' <SPAN style="float:right"><A href="individuals/' . $zData['id'] . '?edit_panels">Edit gene panels</A></SPAN>';
         }
 
         return $zData;
