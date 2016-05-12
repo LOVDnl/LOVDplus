@@ -88,7 +88,8 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && !ACTION) {
         // Authorized user is logged in. Provide tools.
         $aNavigation[CURRENT_PATH . '?edit']            = array('menu_edit.png', 'Edit gene panel information', 1);
         $aNavigation[CURRENT_PATH . '?manage_genes']    = array('menu_plus.png', 'Manage gene panel\'s genes', 1);
-        $aNavigation[CURRENT_PATH . '?history&fromDate=' . $zData['created_date'] .'&toDate=' . date("Y-m-d"). ' 23:59:59']  = array('menu_clock.png', 'View history of this gene panel', 1);  // set the created_date and end of today's date as the default dates.
+        $aNavigation[CURRENT_PATH . '?history&fromDate=' . $zData['created_date'] .'&toDate=' . date("Y-m-d"). ' 23:59:59']  = array('menu_clock.png', 'View differences between two dates', 1);  // set the created_date and end of today's date as the default dates.
+        $aNavigation[CURRENT_PATH . '?history_full']    = array('menu_clock.png', 'View full history of this gene panel', 1);  // set the created_date and end of today's date as the default dates.
         $aNavigation['download/' . CURRENT_PATH]        = array('menu_save.png', 'Download this gene panel and its genes', 1);
         if ($_AUTH['level'] >= LEVEL_ADMIN) {
             $aNavigation[CURRENT_PATH . '?delete']      = array('cross.png', 'Delete gene panel entry', 1);
