@@ -569,7 +569,7 @@ function lovd_mapVariants ()
 
     //-->
   </SCRIPT>
-  <LINK rel="stylesheet" type="text/css" href="lib/jQuery/css/cupertino/jquery-ui.min.css">
+  <LINK rel="stylesheet" type="text/css" href="lib/jQuery/css/cupertino/jquery-ui.css">
 </HEAD>
 
 <BODY style="margin : 0px;">
