@@ -59,11 +59,9 @@ class LOVD_Individual extends LOVD_Custom {
         // FIXME; change owner to owned_by_ in the load entry query below.
         $this->sSQLLoadEntry = 'SELECT i.*, ' .
                                'uo.name AS owner, ' .
-                               'GROUP_CONCAT(DISTINCT i2d.diseaseid ORDER BY i2d.diseaseid SEPARATOR ";") AS active_diseases_, ' .
-                               'GROUP_CONCAT(DISTINCT i2gp.genepanelid ORDER BY i2gp.genepanelid SEPARATOR ";") AS gene_panels_ ' .
+                               'GROUP_CONCAT(DISTINCT i2d.diseaseid ORDER BY i2d.diseaseid SEPARATOR ";") AS active_diseases_ ' .
                                'FROM ' . TABLE_INDIVIDUALS . ' AS i ' .
                                'LEFT OUTER JOIN ' . TABLE_IND2DIS . ' AS i2d ON (i.id = i2d.individualid) ' .
-                               'LEFT OUTER JOIN ' . TABLE_IND2GP . ' AS i2gp ON (i.id = i2gp.individualid) ' .
                                'LEFT OUTER JOIN ' . TABLE_USERS . ' AS uo ON (i.owned_by = uo.id) ' .
                                'WHERE i.id = ? ' .
                                'GROUP BY i.id';

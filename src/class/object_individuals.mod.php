@@ -58,6 +58,14 @@ class LOVD_IndividualMOD extends LOVD_Individual {
         $this->sObject = 'IndividualMOD';
         $this->sTable  = 'TABLE_INDIVIDUALS';
 
+        // SQL code for loading the gene panel data.
+        $this->sSQLLoadEntry = 'SELECT i.custom_panel, ' .
+                               'GROUP_CONCAT(DISTINCT i2gp.genepanelid ORDER BY i2gp.genepanelid SEPARATOR ";") AS gene_panels_ ' .
+                               'FROM ' . TABLE_INDIVIDUALS . ' AS i ' .
+                               'LEFT OUTER JOIN ' . TABLE_IND2GP . ' AS i2gp ON (i.id = i2gp.individualid) ' .
+                               'WHERE i.id = ? ' .
+                               'GROUP BY i.id';
+
         // SQL code for viewing an entry.
         $this->aSQLViewEntry['SELECT']   = 'i.*, "" AS owned_by, ' .
                                            'GROUP_CONCAT(DISTINCT d.id SEPARATOR ";") AS _diseaseids, ' .
@@ -115,7 +123,7 @@ class LOVD_IndividualMOD extends LOVD_Individual {
             ),
                  $this->buildViewEntry(),
                  array(
-                        'custom_panel_' => 'Custom gene panel', // TODO AM Do we need to create URLS to the genes for the view entry?
+                        'custom_panel' => 'Custom gene panel', // TODO AM Do we need to create URLS to the genes for the view entry?
                         'gene_panels_' => 'Gene panels',
                         'diseases_' => 'Diseases',
                         'parents_' => 'Parent(s)',
@@ -304,7 +312,7 @@ class LOVD_IndividualMOD extends LOVD_Individual {
             $zData['analysis_date_'] = substr($zData['analysis_date'], 0, 10);
             $zData['analysis_approved_date_'] = substr($zData['analysis_approved_date'], 0, 10);
         } else {
-            $zData['custom_panel_'] = $zData['custom_panel'] . ' <SPAN style="float:right"><A href="individuals/' . $zData['id'] . '?edit_panels">Edit gene panels</A></SPAN>';;
+            $zData['gene_panels_'] = $zData['gene_panels_'] . ' <SPAN style="float:right"><A href="individuals/' . $zData['id'] . '?edit_panels">Edit gene panels</A></SPAN>';;
         }
 
         return $zData;
