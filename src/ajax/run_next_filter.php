@@ -248,7 +248,7 @@ if ($aVariantIDs) {
 
             // Custom panel.
             if (!empty($aCustomPanels)) {
-                if ((empty($aBlacklists) && !empty($aGenePanels)) || (!empty($aBlacklists && !empty($aGenePanels)))) {
+                if ((empty($aBlacklists) && !empty($aGenePanels)) || (!empty($aBlacklists) && !empty($aGenePanels))) {
                     // If we don't have a blacklist but we do have a gene panel OR
                     // if we have a blacklist and a gene panel then we use OR.
                     $q .= ' OR ';
