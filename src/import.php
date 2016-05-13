@@ -4,8 +4,8 @@
  * LEIDEN OPEN VARIATION DATABASE (LOVD)
  *
  * Created     : 2012-09-19
- * Modified    : 2016-03-03
- * For LOVD    : 3.0-15
+ * Modified    : 2016-05-13
+ * For LOVD    : 3.0-16
  *
  * Copyright   : 2004-2016 Leiden University Medical Center; http://www.LUMC.nl/
  * Programmer  : Ing. Ivo F.A.C. Fokkema <I.F.A.C.Fokkema@LUMC.nl>
@@ -1750,9 +1750,20 @@ if (!lovd_isCurator($_SESSION['currdb'])) {
                 lovd_writeLog('Event', LOG_EVENT, 'Imported ' . $sMessage . '; ran ' . $nDone . ' queries' . (!$aGenes? '' : ' (' . ($nGenes > 100? $nGenes . ' genes' : implode(', ', $aGenes)) . ')') . (ACTION != 'autoupload_scheduled_file' || !$sFile? '' : ' (' . $sFile . ')') . '.');
                 lovd_setUpdatedDate($aGenes); // FIXME; regardless of variant status... oh, well...
 
-                // DIAGNOSTICS: Remove the lock.
-                if (ACTION == 'autoupload_scheduled_file' && $sFile) {
-                    $_DB->query('DELETE FROM ' . TABLE_SCHEDULED_IMPORTS . ' WHERE filename = ? AND in_progress = 1', array($sFile));
+                if (LOVD_plus) {
+                    // Tasks for LOVD+, LOVD for diagnostics.
+                    if (ACTION == 'autoupload_scheduled_file' && $sFile) {
+                        // Remove the file from the schedule.
+                        $_DB->query('DELETE FROM ' . TABLE_SCHEDULED_IMPORTS . ' WHERE filename = ? AND in_progress = 1', array($sFile));
+
+                        // Also, if we have an archive folder, move it there, including all its sibling files.
+                        if (is_writable($_INI['paths']['data_files_archive'])) {
+                            $sFilePrefix = $sFilePrefix = substr($sFile, 0, strpos($sFile . '.', '.'));
+                            // Doing this the proper PHP way, would be to open the dir, loop the files, find matching files, and then rename them one by one.
+                            // Instead, I'm doing this in a Linux-specific way, by just calling a simple mv command.
+                            @exec('mv -i ' . $_INI['paths']['data_files'] . '/' . $sFilePrefix . '.* ' . $_INI['paths']['data_files_archive'] . '/');
+                        }
+                    }
                 }
             }
             // FIXME: Why is this not empty?
