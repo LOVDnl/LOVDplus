@@ -221,7 +221,7 @@ if ($aVariantIDs) {
             }
             
             // Build up the query.
-            $q = 'SELECT DISTINCT CAST(vot.id AS UNSIGNED), t.geneid FROM ' . TABLE_VARIANTS_ON_TRANSCRIPTS . ' AS vot INNER JOIN ' . TABLE_TRANSCRIPTS . ' AS t ON (vot.transcriptid = t.id) LEFT OUTER JOIN ' . TABLE_GP2GENE . ' AS gp2g ON (t.geneid = gp2g.geneid) WHERE ((';
+            $q = 'SELECT DISTINCT CAST(vot.id AS UNSIGNED) FROM ' . TABLE_VARIANTS_ON_TRANSCRIPTS . ' AS vot INNER JOIN ' . TABLE_TRANSCRIPTS . ' AS t ON (vot.transcriptid = t.id) LEFT OUTER JOIN ' . TABLE_GP2GENE . ' AS gp2g ON (t.geneid = gp2g.geneid) WHERE ((';
             $aParam = array();
 
             // Gene panels.
@@ -248,9 +248,8 @@ if ($aVariantIDs) {
 
             // Custom panel.
             if (!empty($aCustomPanels)) {
-                if ((empty($aBlacklists) && !empty($aGenePanels)) || (!empty($aBlacklists) && !empty($aGenePanels))) {
-                    // If we don't have a blacklist but we do have a gene panel OR
-                    // if we have a blacklist and a gene panel then we use OR.
+                if (!empty($aGenePanels)) {
+                    // If we have a gene panel then we use OR otherwise we use AND
                     $q .= ' OR ';
                 } else {
                     $q .= ' AND ';
