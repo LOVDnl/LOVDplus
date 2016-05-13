@@ -4,7 +4,7 @@
  * LEIDEN OPEN VARIATION DATABASE (LOVD)
  *
  * Created     : 2016-03-01
- * Modified    : 2016-05-10
+ * Modified    : 2016-05-13
  * For LOVD    : 3.0-13
  *
  * Copyright   : 2004-2016 Leiden University Medical Center; http://www.LUMC.nl/
@@ -128,7 +128,7 @@ class LOVD_GenePanel extends LOVD_Object {
                 'individuals' => array(
                     'view' => array('Individuals', 60),
                     'db'   => array('individuals', 'DESC', 'INT_UNSIGNED'),
-                    'legend' => array('The number of genes in this gene panel.')),
+                    'legend' => array('The number of individuals this gene panel has been assigned to.')),
                 'created_by_' => array(
                     'view' => array('Created By', 80),
                     'db'   => array('created_by_', 'ASC', true),

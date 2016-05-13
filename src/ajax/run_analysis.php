@@ -4,7 +4,7 @@
  * LEIDEN OPEN VARIATION DATABASE (LOVD)
  *
  * Created     : 2013-11-05
- * Modified    : 2016-05-11
+ * Modified    : 2016-05-13
  * For LOVD    : 3.0-15
  *
  * Copyright   : 2004-2016 Leiden University Medical Center; http://www.LUMC.nl/
@@ -90,7 +90,7 @@ $sCustomPanel = '';
 $aGenePanels = array();
 // Process any gene panels that may have been passed.
 if (!empty($_GET['gene_panels'])) {
-    $aGenePanels = $_GET['gene_panels'];
+    $aGenePanels = array_values($_GET['gene_panels']);
     if(($nKey = array_search('custom_panel', $aGenePanels)) !== false) {
         // If the custom panel has been selected then record this and remove from array.
         $sCustomPanel = $zIndividual['custom_panel'];

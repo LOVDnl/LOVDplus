@@ -4,11 +4,12 @@
  * LEIDEN OPEN VARIATION DATABASE (LOVD)
  *
  * Created     : 2013-11-05
- * Modified    : 2014-04-02
- * For LOVD    : 3.0-10
+ * Modified    : 2016-05-13
+ * For LOVD    : 3.0-13
  *
- * Copyright   : 2004-2014 Leiden University Medical Center; http://www.LUMC.nl/
+ * Copyright   : 2004-2016 Leiden University Medical Center; http://www.LUMC.nl/
  * Programmer  : Ing. Ivo F.A.C. Fokkema <I.F.A.C.Fokkema@LUMC.nl>
+ *               Anthony Marty <anthony.marty@unimelb.edu.au>
  *
  *
  * This file is part of LOVD.
@@ -175,8 +176,8 @@ function lovd_runNextFilter (nAnalysisID, nRunID)
                     oTR.children('td:eq(2)').html(dataObj.nVariantsLeft);
 
                     // Show the details of the selected gene panels under the apply_selected_gene_panels filter.
-                    if (dataObj.sFilterID.substr(dataObj.sFilterID.length - 26) == 'apply_selected_gene_panels') {
-                        oTR.children('td:eq(0)').html(oTR.children('td:eq(0)').html() + dataObj.sGenePanelsInfo);
+                    if (dataObj.sFilterID == 'apply_selected_gene_panels') {
+                        oTR.children('td:eq(0)').append(dataObj.sGenePanelsInfo);
                     }
 
                     if (!dataObj.bDone) {
@@ -286,10 +287,6 @@ function lovd_processGenePanelSelectionForm ()
     if (nRunID == '') {
         nRunID = undefined;
     }
-
-<!--    console.log(aSelectedGenePanels, nScreeningID, nAnalysisID, nRunID);-->
-
-<!--TODO Add the gene panel names to the bottom of the analysis here as well as when the page is refreshed for finished analysis-->
 
     // Call lovd_runAnalysis and pass all the extra values.
     lovd_runAnalysis(nScreeningID, nAnalysisID, nRunID, aSelectedGenePanels);
