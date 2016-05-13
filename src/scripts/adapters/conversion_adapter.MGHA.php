@@ -97,7 +97,10 @@ if ($argc != 1 && in_array($argv[1], array('--help', '-help', '-h', '-?'))) {
     $aDefaultValues = array(
         'Screening/Template' => 'DNA',
         'Screening/Technique' => 'SEQ-NG',
-        'Screening/Analysis_restricted' => 0
+        'Screening/Analysis_restricted' => 0,
+        'variants_found' => 1,
+        'id' => 1,
+        'id_sample' => 1
     );
 
     // open the data files folder and process files
@@ -275,19 +278,13 @@ if ($argc != 1 && in_array($argv[1], array('--help', '-help', '-h', '-?'))) {
         if (empty($sVal['parent'])) {
 
             // set the IDs for each section, since we are generating one meta data file per child/singleton, there will only ever be 1 individual record and screening
-            $aColumnsForScreening['id'] = 1;
             $aColumnsForScreening['individualid'] = $sVal['Sample_ID'];
             $aColumnsForIndividual['id'] = $sVal['Sample_ID'];
 
 
-            // add default values
+            // add default values, we currently only have them for screening, if we get some for individual we need to handle this below.
             foreach ($aDefaultValues as $dKey => $dVal) {
-
-                if (substr($dKey, 0, 11) == 'Individual/') {
-                    $aColumnsForIndividual[$dKey] = $dVal;
-                } elseif (substr($dKey, 0, 10) == 'Screening/') {
-                    $aColumnsForScreening[$dKey] = $dVal;
-                }
+                $aColumnsForScreening[$dKey] = $dVal;
             }
 
             // Map pipeline columns to LOVD columns.
