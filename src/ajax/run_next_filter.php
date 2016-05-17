@@ -4,10 +4,10 @@
  * LEIDEN OPEN VARIATION DATABASE (LOVD)
  *
  * Created     : 2013-11-06
- * Modified    : 2015-11-20
+ * Modified    : 2016-05-17
  * For LOVD    : 3.0-13
  *
- * Copyright   : 2004-2014 Leiden University Medical Center; http://www.LUMC.nl/
+ * Copyright   : 2004-2016 Leiden University Medical Center; http://www.LUMC.nl/
  * Programmer  : Ing. Ivo F.A.C. Fokkema <I.F.A.C.Fokkema@LUMC.nl>
  *
  *
@@ -279,10 +279,23 @@ if ($aVariantIDs) {
             $bCustomPanels = !empty($aCustomPanels);
             $sWhereGenePanels = '';   // WHERE statement for the gene panels.
             $sWhereBlacklists = '';   // WHERE statement for the blacklists.
+            $sWherePanelsSeparator = 'OR'; // The parts of the WHERE query of the panels and the custom panel are separated by ...?
             $sWhereCustomPanels = ''; // WHERE statement for the custom panels.
             $aSQL = array();          // Arguments to the query.
+            // Using a blacklist is not necessary and complicates things a lot,
+            // when we don't have a gene list, but we do have a custom list. The
+            // custom list then takes the lead, and the blacklist has no
+            // function. Better make this easier, by getting rid of it now.
+            if (!$bGenePanels && $bCustomPanels) {
+                $bPanels = $bBlackLists = false;
+            }
             if (!$bPanels) {
                 $sWhereGenePanels = 'TRUE'; // To not have to make the query too custom.
+                if ($bCustomPanels) {
+                    // To make sure the custom panel works while the gene
+                    // panels are not used, we have to use AND instead of OR.
+                    $sWherePanelsSeparator = 'AND';
+                }
             } else {
                 if ($bGenePanels) {
                     $sWhereGenePanels = 'gp.id IS NOT NULL';
@@ -314,7 +327,7 @@ if ($aVariantIDs) {
                        LEFT OUTER JOIN ' . TABLE_GENE_PANELS . ' AS gp ON (gp2g.genepanelid = gp.id AND gp.id IN (?' . str_repeat(', ?', count($aGenePanels['gene_panel'])-1) . '))') . '
                      WHERE (
                         (' . $sWhereGenePanels . $sWhereBlacklists . ')
-                        OR ' . $sWhereCustomPanels . ')
+                        ' . $sWherePanelsSeparator . ' ' . $sWhereCustomPanels . ')
                        AND vot.id IN (?' . str_repeat(', ?', count($aVariantIDs) - 1) . ')';
             $aSQL = array_merge($aSQL, $aVariantIDs);
 
