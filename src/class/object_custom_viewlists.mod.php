@@ -139,8 +139,11 @@ class LOVD_CustomViewListMOD extends LOVD_CustomViewList {
                             'VariantOnGenome/Sequencing/Depth/Alt/Fraction',
                             'VariantOnGenome/Sequencing/Quality',
                             'VariantOnGenome/Sequencing/GATKcaller',
+                            'obs_variant',
+                            'obs_individual',
+                            'obs_var_ind_ratio',
                         );
-                    $aSQL['SELECT'] .= (!$aSQL['SELECT']? '' : ', ') . 'vog.*, a.name AS allele_, eg.name AS vog_effect';
+                    $aSQL['SELECT'] .= (!$aSQL['SELECT']? '' : ', ') . 'vog.*, a.name AS allele_, eg.name AS vog_effect, 1234 AS obs_variant, 5678 AS obs_individual, 0.2237 AS obs_var_ind_ratio'; // MGHA AM TODO Write the SQL to get these observation counts.
                     if (!$aSQL['FROM']) {
                         // First data table in query.
                         $aSQL['SELECT'] .= ', vog.id AS row_id'; // To ensure other table's id columns don't interfere.
@@ -317,6 +320,27 @@ class LOVD_CustomViewListMOD extends LOVD_CustomViewList {
                             'gene_OMIM_' => array(
                                 'view' => array('OMIM links', 100),
                                 'db'   => array('__gene_OMIM', 'ASC', true)),
+                        ));
+                    break;
+                case 'VariantOnGenome':
+                    // The fixed columns.
+                    $this->aColumnsViewList = array_merge($this->aColumnsViewList,
+                        array(
+                            'obs_variant' => array(
+                                'view' => array('Var Count', 70),
+                                'db'   => array('obs_variant', 'ASC', 'INT'),
+                                'legend' => array('The number of individuals with this variant within this database.',
+                                    'The number of individuals with this variant within this database.')),
+                            'obs_individual' => array(
+                                'view' => array('Ind Count', 70),
+                                'db'   => array('obs_individual', 'ASC', 'INT'),
+                                'legend' => array('The number of individuals within this database.',
+                                    'The number of individuals within this database.')),
+                            'obs_var_ind_ratio' => array(
+                                'view' => array('Var Ind Ratio', 70),
+                                'db'   => array('obs_var_ind_ratio', 'ASC', 'DECIMAL'),
+                                'legend' => array('The ratio of the number of individuals with this variant divided by the total number of individuals within this database.',
+                                    'The ratio of the number of individuals with this variant divided by the total number of individuals within this database.')),
                         ));
                     break;
             }
