@@ -139,11 +139,9 @@ class LOVD_CustomViewListMOD extends LOVD_CustomViewList {
                             'VariantOnGenome/Sequencing/Depth/Alt/Fraction',
                             'VariantOnGenome/Sequencing/Quality',
                             'VariantOnGenome/Sequencing/GATKcaller',
-                            'obs_variant',
-                            'obs_individual',
-                            'obs_var_ind_ratio',
                         );
-                    $aSQL['SELECT'] .= (!$aSQL['SELECT']? '' : ', ') . 'vog.*, a.name AS allele_, eg.name AS vog_effect, 1234 AS obs_variant, 5678 AS obs_individual, 0.2237 AS obs_var_ind_ratio'; // MGHA AM TODO Write the SQL to get these observation counts.
+                    $aSQL['SELECT'] .= (!$aSQL['SELECT']? '' : ', ') . 'vog.*, a.name AS allele_, eg.name AS vog_effect';
+                    $aSQL['SELECT'] .= ', COUNT(DISTINCT os.individualid) AS obs_variant, COUNT(DISTINCT os.individualid) / ' . $_DB->query('SELECT COUNT(*) FROM ' . TABLE_INDIVIDUALS)->fetchColumn() . ' AS obs_var_ind_ratio'; // Observation count columns.
                     if (!$aSQL['FROM']) {
                         // First data table in query.
                         $aSQL['SELECT'] .= ', vog.id AS row_id'; // To ensure other table's id columns don't interfere.
@@ -166,6 +164,10 @@ class LOVD_CustomViewListMOD extends LOVD_CustomViewList {
                     }
                     $aSQL['FROM'] .= ' LEFT OUTER JOIN ' . TABLE_ALLELES . ' AS a ON (vog.allele = a.id)';
                     $aSQL['FROM'] .= ' LEFT OUTER JOIN ' . TABLE_EFFECT . ' AS eg ON (vog.effectid = eg.id)';
+                    // Outer joins for the observation counts.
+                    $aSQL['FROM'] .= ' LEFT OUTER JOIN ' . TABLE_VARIANTS . ' AS ovog USING (`VariantOnGenome/DBID`)';
+                    $aSQL['FROM'] .= ' LEFT OUTER JOIN ' . TABLE_SCR2VAR . ' AS os2v ON (ovog.id = os2v.variantid)';
+                    $aSQL['FROM'] .= ' LEFT OUTER JOIN ' . TABLE_SCREENINGS . ' AS os ON (os2v.screeningid = os.id)';
                     break;
 
                 case 'VariantOnTranscript':
@@ -331,11 +333,6 @@ class LOVD_CustomViewListMOD extends LOVD_CustomViewList {
                                 'db'   => array('obs_variant', 'ASC', 'INT'),
                                 'legend' => array('The number of individuals with this variant within this database.',
                                     'The number of individuals with this variant within this database.')),
-                            'obs_individual' => array(
-                                'view' => array('Ind Count', 70),
-                                'db'   => array('obs_individual', 'ASC', 'INT'),
-                                'legend' => array('The number of individuals within this database.',
-                                    'The number of individuals within this database.')),
                             'obs_var_ind_ratio' => array(
                                 'view' => array('Var Ind Ratio', 70),
                                 'db'   => array('obs_var_ind_ratio', 'ASC', 'DECIMAL'),
