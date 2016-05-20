@@ -38,7 +38,7 @@ require ROOT_PATH . 'inc-lib-genes.php';
 // 128MB was not enough for a 100MB file. We're already no longer using file(), now we're using fgets().
 // But still, loading all the gene and transcript data, uses too much memory. After some 18000 lines, the thing dies.
 // Setting to 1.5GB, but still maybe we'll run into problems. Do we need to reset the genes and transcripts arrays after each chromosome?
-ini_set('memory_limit', '1536M');
+ini_set('memory_limit', '4294967296');
 
 // But we don't care about your session (in fact, it locks the whole LOVD if we keep this page running).
 session_write_close();
@@ -48,12 +48,15 @@ ignore_user_abort(true);
 // This script will be called from localhost by a cron job.
 
 // call adapter script first for MGHA
-/*if (strtoupper($_INI['instance']['name']) == 'MGHA') {
-passthru('adapter.php',$adapterResult);
-    print $adapterResult;
-    die('Stopping here.' . "\n");
+if (strtoupper($_INI['instance']['name']) == 'MGHA') {
+
+    $cmd = 'php adapter.php';
+    passthru($cmd, $adapterResult);
+    if ($adapterResult !== 0){
+        die('Adapter Failed');
+    }
 }
-*/
+
 
 // define the array of suffixes for the files names expected
 
@@ -919,17 +922,25 @@ $aColumnMappings = array(
     'CHROM' => 'chromosome',
     'POS' => 'position', // lovd_getVariantDescription() needs this.
     'ID' => 'VariantOnGenome/dbSNP',
-    'QUAL' => 'VariantOnGenome/Sequencing/Quality',
     'FILTER' => 'VariantOnGenome/Sequencing/Filter',
-    'Child_GT' => 'allele',
+    'Child_GT' => 'allele', // this is in the form of A/A, A/T etc. This is converted to 0/0, 1/0 later on
+    'Child_AD' => 'VariantOnGenome/Sequencing/Depth/Ref', // this is currently two values for ref & alt, they will be split out later on
+    'Child_DP' => 'VariantOnGenome/Sequencing/Depth/Total',
+    'Child_GQ' => 'VariantOnGenome/Sequencing/Genotype/Quality',
+    'Child_PL' => 'VariantOnGenome/Sequencing/Phredscaled_Likelihoods',
+    'Child_AB' => 'VariantOnGenome/Sequencing/Allele_Balance',
     'Father_GT' => 'VariantOnGenome/Sequencing/Father/GenoType',
+    'Father_AD' => 'VariantOnGenome/Sequencing/Father/Depth/Ref',// used to calculate the alt percentage
+    'Father_PL' => 'VariantOnGenome/Sequencing/Father/Phredscaled_Likelihoods',// used to calculate the allele value
+    'Father_DP' => 'VariantOnGenome/Sequencing/Father/Depth/Total',// we actually do not receive a value for depth in this column, we need to calculate this using AD & PL
+    'Father_GQ' => 'VariantOnGenome/Sequencing/Father/Genotype/Quality',
+    'Father_AB' => 'VariantOnGenome/Sequencing/Father/Allele_Balance',
     'Mother_GT' => 'VariantOnGenome/Sequencing/Mother/GenoType',
-    'Father_AD' => 'Father_AD',// used to calculate the alt percentage
-    'Mother_AD' => 'Mother_AD',// used to calculate the alt percentage
-    'Father_PL' => 'Father_PL',// used to calculate the allele value
-    'Mother_PL' => 'Mother_PL',// used to calculate the allele value
-    'HGVSc' => 'VariantOnTranscript/DNA',
-    'HGVSp' => 'VariantOnTranscript/Protein'
+    'Mother_AD' => 'VariantOnGenome/Sequencing/Mother/Depth/Ref',// used to calculate the alt percentage
+    'Mother_PL' => 'VariantOnGenome/Sequencing/Mother/Phredscaled_Likelihoods',// used to calculate the allele value
+    'Mother_DP' => 'VariantOnGenome/Sequencing/Mother/Depth/Total',// we actually do not receive a value for depth in this column, we need to calculate this using AD & PL
+    'Mother_GQ' => 'VariantOnGenome/Sequencing/Mother/Genotype/Quality',
+    'Mother_AB' => 'VariantOnGenome/Sequencing/Mother/Allele_Balance'
 );
 
 
@@ -976,9 +987,6 @@ $aDefaultValues = array(
     'created_by' => 0,
     'created_date' => date('Y-m-d H:i:s'),
 );
-
-
-
 
 
 
@@ -1418,73 +1426,104 @@ foreach ($aFiles as $sID) {
             $sLastChromosome = $aVariant['chromosome'];
         }
 
-
         // Now "fix" certain values.
         // First, VOG fields.
 
-        // For MGHA the allele column is in the format A/A, C/T etc. Lieden have converted this to 1/1, 0/1, etc.
+        // For MGHA the allele column is in the format A/A, C/T etc. Leiden have converted this to 1/1, 0/1, etc.
+        // MGHA also need to calculate the VarPresent for Father and Mother as this is required later on when assigning a value to allele
+        if (strtoupper($_INI['instance']['name']) == 'MGHA') {
+            $childGenotypes = explode('/', $aVariant['allele']);
 
-        for ($parentCount = 1; $parentCount <= 2; $parentCount++) {
-            if ($parentCount == 1){
-                $parent = 'Father';
-            }else{
-                $parent = 'Mother';
-            }
-            // get the genotypes for the parents and compare them to each other
-            // data is separated by a / or a |
-            if (strpos($aVariant['VariantOnGenome/Sequencing/' . $parent . '/GenoType'], '|') !== false) {
-                $parentGenotypes = explode('|', $aVariant['VariantOnGenome/Sequencing/' . $parent . '/GenoType']);
-            }elseif (strpos($aVariant['VariantOnGenome/Sequencing/' . $parent . '/GenoType'], '/') !== false) {
-                $parentGenotypes = explode('/', $aVariant['VariantOnGenome/Sequencing/' . $parent . '/GenoType']);
-            }else{
-                print('Unexpected delimiter in VariantOnGenome/Sequencing/' . $parent . '/GenoType column. Current time: ' . date('Y-m-d H:i:s') . ".\n");
-            }
-            $firstGenotype = $parentGenotypes[0];
-            $secondGenotype = $parentGenotypes[1];
-            if($aVariant['VariantOnGenome/Sequencing/' . $parent . '/GenoType'] = "./."){
-                $aVariant['VariantOnGenome/Sequencing/' . $parent . '/VarPresent'] = 6;
-                $aVariant['VariantOnGenome/Sequencing/' . $parent . '/GenoType'] = "None"; // we set it to none instead of ./. as that is what Leiden use later on
-            }elseif($firstGenotype === $secondGenotype && $firstGenotype == $aVariant['ref']){
-                // homo ref
-                $aVariant['allele'] == '0/0';
-                $aVariant['VariantOnGenome/Sequencing/' . $parent .'/VarPresent'] = 6;
-            }elseif ($firstGenotype === $secondGenotype && $firstGenotype !== $aVariant['ref']) {
+            if($aVariant['allele'] == './.'){
+                // we set it to '' as this is what Leiden do
+                $aVariant['allele'] = '';
+            }elseif($childGenotypes[0] !== $childGenotypes[1]){
+                //het
+                $aVariant['allele'] = '0/1';
+            }elseif($childGenotypes[0] == $childGenotypes[1] && $childGenotypes[0] == $aVariant['alt']){
                 // homo alt
-                $aVariant['allele'] == '1/1';
-                $aVariant['VariantOnGenome/Sequencing/' . $parent .'/VarPresent'] = 6;
+                $aVariant['allele'] = '1/1';
+            }elseif($childGenotypes[0] == $childGenotypes[1] && $childGenotypes[0] == $aVariant['ref']){
+                // homo ref
+                $aVariant['allele'] = '0/0';
+            }
 
-            }else{
-                // calculate the VarPresent for the mother and the father using the allelic depths (Parent_AD) and Phred-scaled Likelihoods (Parent_PL)
-                // Parent_AD(x,y)   Parent_PL(a,b,c)
-                $parentAllelicDepths = explode('/', $aVariant[$parent . '_AD']);
-                // Parent_AD(x)
-                $parentAltPerc1 = $parentAllelicDepths[0];
-                // Parent_AD(y)
-                $parentAltPerc2 = $parentAllelicDepths[1];
-                if ($parentAltPerc2 == 0) {
-                    $parentAltPecentage = 0;
-                } else {
-                    // alt percentage = Parent_AD(y) / (Parent.AD(x) + Parent.AD(y))
-                    $parentAltPecentage = $parentAltPerc2 / ($parentAltPerc1 + $parentAltPerc2);
+            // check whether the mother or father's genotype is present. If so we are dealing with a trio and we need to calculate the following
+            if ($aVariant['VariantOnGenome/Sequencing/Mother/GenoType'] | $aVariant['VariantOnGenome/Sequencing/Father/GenoType']) {
+                for ($parentCount = 1; $parentCount <= 2; $parentCount++) {
+                    if ($parentCount == 1) {
+                        $parent = 'Father';
+                    } else {
+                        $parent = 'Mother';
+                    }
+                    // get the genotypes for the parents and compare them to each other
+                    // data is separated by a / or a |
+                    if (strpos($aVariant['VariantOnGenome/Sequencing/' . $parent . '/GenoType'], '|') !== false) {
+                        $parentGenotypes = explode('|', $aVariant['VariantOnGenome/Sequencing/' . $parent . '/GenoType']);
+                    } elseif (strpos($aVariant['VariantOnGenome/Sequencing/' . $parent . '/GenoType'], '/') !== false) {
+                        $parentGenotypes = explode('/', $aVariant['VariantOnGenome/Sequencing/' . $parent . '/GenoType']);
+                    } else {
+                        print('Unexpected delimiter in VariantOnGenome/Sequencing/' . $parent . '/GenoType column. Current time: ' . date('Y-m-d H:i:s') . ".\n");
+                    }
+
+                    if ($parentGenotypes[0] == $parentGenotypes[1] && $parentGenotypes[0] == $aVariant['alt']) {
+                        // homo alt
+                        $aVariant['VariantOnGenome/Sequencing/' . $parent . '/GenoType'] = '1/1';
+                        $aVariant['VariantOnGenome/Sequencing/' . $parent . '/VarPresent'] = 6;
+                    } elseif ($parentGenotypes[0] !== $parentGenotypes[1]) {
+                        // het
+                        $aVariant['VariantOnGenome/Sequencing/' . $parent . '/GenoType'] = '0/1';
+                        $aVariant['VariantOnGenome/Sequencing/' . $parent . '/VarPresent'] = 6;
+                    } else {
+                        if ($parentGenotypes[0] == $parentGenotypes[1] && $parentGenotypes[0] == $aVariant['ref']) {
+                            // homo ref
+                            $aVariant['VariantOnGenome/Sequencing/' . $parent . '/GenoType'] = '0/0';
+                        }
+                        if ($aVariant['VariantOnGenome/Sequencing/' . $parent . '/GenoType'] = './.') {
+                            // we set it to '' as this is what Leiden do.
+                            $aVariant['VariantOnGenome/Sequencing/' . $parent . '/GenoType'] = '';
+                        }
+
+                        // calculate the VarPresent for the mother and the father using the allelic depths (Parent_AD) and Phred-scaled Likelihoods (Parent_PL)
+                        // Parent_AD(x,y)   Parent_PL(a,b,c)
+                        $parentAllelicDepths = explode(',', $aVariant['VariantOnGenome/Sequencing/' . $parent . '/Depth/Ref']);
+
+                        if ($parentAllelicDepths[1] == 0) {
+                            $parentAltPercentage = 0;
+                        } else {
+                            // alt percentage = Parent_AD(y) / (Parent.AD(x) + Parent.AD(y))
+                            $parentAltPercentage = $parentAllelicDepths[1] / ($parentAllelicDepths[0] + $parentAllelicDepths[1]);
+                        }
+                        if($aVariant['VariantOnGenome/Sequencing/' . $parent . '/Phredscaled_Likelihoods'] == '') {
+                            $parentPLAlt = 'unknown';
+                        }else {
+                            $parentPL = explode(',', $aVariant['VariantOnGenome/Sequencing/' . $parent . '/Phredscaled_Likelihoods']);
+                            // parent PLAlt = Parent_PL(b)
+                            $parentPLAlt = $parentPL[1];
+                        }
+
+                        if ($parentAltPercentage > 10) {
+                            $aVariant['VariantOnGenome/Sequencing/' . $parent . '/VarPresent'] = 5;
+                        } elseif ($parentAltPercentage > 0 && $parentAltPercentage <= 10) {
+                            $aVariant['VariantOnGenome/Sequencing/' . $parent . '/VarPresent'] = 4;
+                        } elseif ($parentPLAlt < 30 || $parentPLAlt == 'unknown') {
+                            $aVariant['VariantOnGenome/Sequencing/' . $parent . '/VarPresent'] = 3;
+                        } elseif ($parentPLAlt >= 30 && $parentPLAlt < 60) {
+                            $aVariant['VariantOnGenome/Sequencing/' . $parent . '/VarPresent'] = 2;
+                        } else {
+                            $aVariant['VariantOnGenome/Sequencing/' . $parent . '/VarPresent'] = 1;
+                        }
+                    }
                 }
-                $parentPL = explode('/', $aVariant[$parent . '_PL']);
-                // parent PLAlt = Parent_PL(b)
-                $parentPLAlt = $parentPL[1];
-
-                if ($parentAltPecentage > 10){
-                    $aVariant['VariantOnGenome/Sequencing/'. $parent .'/VarPresent'] = 5;
-                }elseif($parentAltPecentage > 0 && $parentAltPecentage <= 10){
-                    $aVariant['VariantOnGenome/Sequencing/'. $parent .'/VarPresent'] = 4;
-                }elseif($parentPLAlt < 30 || $parentPLAlt = "unknown"){
-                    $aVariant['VariantOnGenome/Sequencing/'. $parent .'/VarPresent'] = 3;
-                }elseif($parentPLAlt >= 30 && $parentPLAlt < 60) {
-                    $aVariant['VariantOnGenome/Sequencing/'. $parent .'/VarPresent'] = 2;
-                }else{
-                    $aVariant['VariantOnGenome/Sequencing/'. $parent .'/VarPresent'] = 1;
+            }
+        }else{
+            // Leiden's fix for no genotype
+            foreach (array('VariantOnGenome/Sequencing/Father/GenoType', 'VariantOnGenome/Sequencing/Mother/GenoType') as $sCol) {
+                if ($aVariant[$sCol] && $aVariant[$sCol] == 'None') {
+                    $aVariant[$sCol] = '';
                 }
             }
         }
-
 
         // Allele.
         if ($aVariant['allele'] == '1/1') {
@@ -1498,6 +1537,7 @@ foreach ($aFiles as $sID) {
         } else {
             $aVariant['allele'] = 0;
         }
+
         // Chromosome.
         $aVariant['chromosome'] = substr($aVariant['chromosome'], 3); // chr1 -> 1
 
@@ -1517,13 +1557,8 @@ foreach ($aFiles as $sID) {
                 }
             }
         }
-        // Fixing some other VOG fields.
-        foreach (array('VariantOnGenome/Sequencing/Father/GenoType', 'VariantOnGenome/Sequencing/Mother/GenoType') as $sCol) {
-            if ($aVariant[$sCol] && $aVariant[$sCol] == 'None') {
-                $aVariant[$sCol] = '';
-            }
-        }
 
+        // Fixing some other VOG fields.
         // Some percentages we get need to be turned into decimals before it can be stored.
         // 2015-10-28; Because of the double column mappings, we ended up with values divided twice.
         // Flipping the array makes sure we get rid of double mappings.
@@ -1534,6 +1569,11 @@ foreach ($aFiles as $sID) {
         }
 
         // Now, VOT fields.
+        // SIFT - split up prediction and score
+
+
+
+
         // Find gene && transcript in database. When not found, try to create it. Otherwise, throw a fatal error.
         // Trusting the gene symbol information from VEP is by far the easiest method, and the fastest. This can fail, therefore we also created an alias list.
         if (isset($aGeneAliases[$aVariant['symbol']])) {

@@ -121,13 +121,13 @@ if ($argc != 1 && in_array($argv[1], array('--help', '-help', '-h', '-?'))) {
         // get the SMDF, it is possible there could be more than one, but we are only going to take the first one
         // we have discussed that this means there is the potential that any subsequent SMDF will not be processed until any issues with the first one are addressed, at this stage we are not concerned with this
         // the naming of the file has not yet been confirmed, for testing we are using "SMDF"
-        if (preg_match('/^(.+?)\.SMDF/i', $xFile)) {
+        if (preg_match('/^.+?\.SMDF$/', $xFile)) {
 
             $metaFile = $_INI['paths']['data_files'] . $xFile;
         }
 
         // get all the variant files into an array
-        if (preg_match('/^(.+?).directvep.data.lovd/', $xFile, $vRegs)) {
+        if (preg_match('/^(.+?)\.directvep\.data\.lovd/', $xFile, $vRegs)) {
             //list($sID, $vFileName) = $vRegs;
             $sID = $vRegs[1];
             $vFiles[$sID] = $xFile;
@@ -138,7 +138,8 @@ if ($argc != 1 && in_array($argv[1], array('--help', '-help', '-h', '-?'))) {
 
     // If no SMDF found do not continue
     if (!$metaFile) {
-        die('No Sample Meta Data File found.');
+        print('No Sample Meta Data File found.');
+        die(1);
     }
 
     // set arrays
@@ -160,7 +161,7 @@ if ($argc != 1 && in_array($argv[1], array('--help', '-help', '-h', '-?'))) {
     fclose($fInput);
 
     // open the sample meta data file into an array
-    $sFile = file($metaFile, FILE_IGNORE_NEW_LINES);
+    $sFile = file($metaFile);
 
     // Create an array of headers from the first line
     $sHeader = explode("\t", $sFile[0]);
@@ -255,9 +256,10 @@ if ($argc != 1 && in_array($argv[1], array('--help', '-help', '-h', '-?'))) {
             } else {
                 // update the headers in the variant file for the singleton/child
                 $variantFile = $_INI['paths']['data_files'] . $vFiles[$sID];
-                $variantFileArr = file($variantFile,FILE_IGNORE_NEW_LINES);
+                $variantFileArr = file($variantFile);
                 // use preg_replace to update the column headers using child, father and mother sample IDs.
                 $variantHeader = preg_replace("/" . $sID . "\./", "Child_", $variantFileArr[0]);
+
                 if (!empty($sKeys['mother_id'])) {
                     $variantHeader = preg_replace("/" . $sKeys['mother_id'] . "\./", "Mother_", $variantHeader);
                 }
@@ -353,8 +355,11 @@ if ($argc != 1 && in_array($argv[1], array('--help', '-help', '-h', '-?'))) {
 
 
     // Now rename the SMDF to .ARK
-    //*** NEED TO ADD THIS CODE ***
+    $archiveMetaFile = $metaFile . '.ARK';
+    if (!rename($metaFile, $archiveMetaFile)) {
+        die('Error archiving SMDF to: ' . $archiveMetaFile . ".\n");
+    }
 
-    print('All done, files are ready for merging.' . "\n" . 'Current time: ' . date('Y-m-d H:i:s') . ".\n\n");
+    print('Adapter Process Complete' . "\n" . 'Current time: ' . date('Y-m-d H:i:s') . ".\n\n");
 }
 ?>
