@@ -4,8 +4,8 @@
  * LEIDEN OPEN VARIATION DATABASE (LOVD)
  *
  * Created     : 2013-10-28
- * Modified    : 2016-05-10
- * For LOVD    : 3.0-12
+ * Modified    : 2016-05-24
+ * For LOVD    : 3.0-13
  *
  * Copyright   : 2004-2016 Leiden University Medical Center; http://www.LUMC.nl/
  * Programmer  : Ing. Ivo F.A.C. Fokkema <I.F.A.C.Fokkema@LUMC.nl>
@@ -59,7 +59,7 @@ class LOVD_IndividualMOD extends LOVD_Individual {
         $this->sTable  = 'TABLE_INDIVIDUALS';
 
         // SQL code for loading the gene panel data.
-        $this->sSQLLoadEntry = 'SELECT i.custom_panel, ' .
+        $this->sSQLLoadEntry = 'SELECT i.*, ' .
                                'GROUP_CONCAT(DISTINCT i2gp.genepanelid ORDER BY i2gp.genepanelid SEPARATOR ";") AS gene_panels_ ' .
                                'FROM ' . TABLE_INDIVIDUALS . ' AS i ' .
                                'LEFT OUTER JOIN ' . TABLE_IND2GP . ' AS i2gp ON (i.id = i2gp.individualid) ' .
@@ -123,7 +123,7 @@ class LOVD_IndividualMOD extends LOVD_Individual {
             ),
                  $this->buildViewEntry(),
                  array(
-                        'custom_panel' => 'Custom gene panel', // TODO AM Do we need to create URLS to the genes for the view entry?
+                        'custom_panel_' => 'Custom gene panel',
                         'gene_panels_' => 'Gene panels',
                         'diseases_' => 'Diseases',
                         'parents_' => 'Parent(s)',
@@ -188,121 +188,9 @@ class LOVD_IndividualMOD extends LOVD_Individual {
 
 
 
-    function checkFields ($aData, $zData = false)
-    {
-        if (ACTION == 'edit_panels') {
-            // If we are assigning gene panels to an individual then only check the relevant fields.
-            global $_DB;
-            $this->getForm();
-
-            // Checks to make sure a valid gene panel ID is used
-            $aGenePanels = array_keys($this->aFormData['aGenePanels'][5]);
-            if (!empty($aData['gene_panels'])) {
-                foreach ($aData['gene_panels'] as $nGenePanel) {
-                    if ($nGenePanel && !in_array($nGenePanel, $aGenePanels)) {
-                        lovd_errorAdd('gene_panels', htmlspecialchars($nGenePanel) . ' is not a valid gene panel.');
-                    }
-                }
-            }
-
-            // Checks the genes added to the custom panel to ensure they exist within the database
-            if (!empty($aData['custom_panel'])) {
-                // Explode the custom panel genes into an array
-                $aGeneSymbols = array_filter(array_unique(array_map('trim', preg_split('/(\s|[,;])+/', strtoupper($aData['custom_panel'])))));
-
-                // Check if there are any genes left after cleaning up the gene symbol string.
-                if (count($aGeneSymbols) > 0) {
-                    // Load the genes and alternative names into an array.
-                    $aGenesInLOVD = $_DB->query('SELECT UPPER(id), id FROM ' . TABLE_GENES)->fetchAllCombine();
-                    // Loop through all the gene symbols in the array and check them for any errors.
-                    foreach ($aGeneSymbols as $key => $sGeneSymbol) {
-                        $sGeneSymbol = $sGeneSymbol;
-                        // Check to see if this gene symbol has been found within the database.
-                        if (isset($aGenesInLOVD[$sGeneSymbol])) {
-                            // A correct gene symbol was found, so lets use that to remove any case issues.
-                            $aGeneSymbols[$key] = $aGenesInLOVD[$sGeneSymbol];
-                        } else {
-                            // This gene symbol was not found in the database.
-                            // It got uppercased by us, but we assume that will be OK.
-                            lovd_errorAdd('custom_panel', 'The gene symbol ' . htmlspecialchars($sGeneSymbol) . ' can not be found within the database.');
-                        }
-                    }
-                    // Write the cleaned up custom gene panel back to POST so as to ensure the genes in the custom panel are stored in a standard way.
-                    $_POST['custom_panel'] = implode(", ", $aGeneSymbols); // TODO AM Ivo you are probably not going to like this as we are directly overwriting form data here, let me know how best to achieve this.
-                }
-            }
-            lovd_checkXSS();
-        } else {
-            // Otherwise use the parents checkFields function.
-            parent::checkFields($aData);
-        }
-    }
-
-
-
-
-
-    function getForm ()
-    {
-        // Build the form.
-        if (ACTION == 'edit_panels') {
-            // Show the form for editing gene panels if we are assigning gene panels to an individual.
-
-            // If we've built the form before, simply return it. Especially imports will repeatedly call checkFields(), which calls getForm().
-            if (!empty($this->aFormData)) {
-                return LOVD_Custom::getForm(); // Bypass the LOVD_Individual object so as it doesn't add in the extra columns into the form.
-            }
-
-            global $_DB;
-
-            // Get list of gene panels.
-            // Note: CAST(id AS CHAR) is needed to preserve the zerofill.
-            $aGenePanelsForm = $_DB->query('(SELECT "optgroup2" AS id, "Mendeliome" AS name, "mendeliome_header" AS type)
-                                        UNION
-                                        (SELECT "optgroup1", "Gene Panels", "gene_panel_header")
-                                        UNION
-                                        (SELECT "optgroup3", "Blacklist", "blacklist_header")
-                                        UNION
-                                        (SELECT CAST(id AS CHAR), name, type FROM ' . TABLE_GENE_PANELS . ')
-                                        ORDER BY type DESC, name')->fetchAllCombine();
-            $nGenePanels = count($aGenePanelsForm);
-            foreach ($aGenePanelsForm as $nID => $sGenePanel) {
-                $aGenePanelsForm[$nID] = lovd_shortenString($sGenePanel, 75);
-            }
-            $nGPFieldSize = ($nGenePanels < 20 ? $nGenePanels : 20);
-            if (!$nGenePanels) {
-                $aGenePanelsForm = array('' => 'No gene panel entries available');
-                $nGPFieldSize = 1;
-            }
-
-            $this->aFormData = array_merge(
-                array(
-                    array('POST', '', '', '', '50%', '14', '50%'),
-                    'custom_panel' => array('Custom gene panel', 'Please insert any gene symbols here that you want to use as a custom gene panel, only for this individual.', 'textarea', 'custom_panel', 50, 2),
-                    'aGenePanels' => array('Assigned gene panels', '', 'select', 'gene_panels', $nGPFieldSize, $aGenePanelsForm, false, true, false),
-                ));
-
-            return LOVD_Custom::getForm();
-        } else {
-            // Otherwise use the parents functions.
-            // If we've built the form before, simply return it. Especially imports will repeatedly call checkFields(), which calls getForm().
-            if (!empty($this->aFormData)) {
-                return parent::getForm();
-            }
-            return parent::getForm();
-        }
-
-    }
-
-
-
-
-
     function prepareData ($zData = '', $sView = 'list')
     {
         // Prepares the data by "enriching" the variable received with links, pictures, etc.
-        global $_SETT;
-
         if (!in_array($sView, array('list', 'entry'))) {
             $sView = 'list';
         }
@@ -312,13 +200,18 @@ class LOVD_IndividualMOD extends LOVD_Individual {
             $zData['analysis_date_'] = substr($zData['analysis_date'], 0, 10);
             $zData['analysis_approved_date_'] = substr($zData['analysis_approved_date'], 0, 10);
         } else {
+            // Make the custom panel link to the genes.
+            $zData['custom_panel_'] = '';
+            foreach(explode(', ', $zData['custom_panel']) as $sGene) {
+                $zData['custom_panel_'] .= (!$zData['custom_panel_']? '' : ', ') . '<A href="genes/' . $sGene . '">' . $sGene . '</A>';
+            }
             // Gene panels assigned.
             $zData['gene_panels_'] = '';
             foreach($zData['gene_panels'] as $aGenePanels) {
                 list($nID, $sName, $sType) = $aGenePanels;
-                $zData['gene_panels_'] .= (!$zData['gene_panels_']? '' : ', ') . '<A href="gene_panels/' . $nID . '" title="' . $sName . '">' . $sName . '</A>';
+                $zData['gene_panels_'] .= (!$zData['gene_panels_']? '' : ', ') . '<A href="gene_panels/' . $nID . '">' . $sName . '</A>';
             }
-            $zData['gene_panels_'] = $zData['gene_panels_'] . ' <SPAN style="float:right"><A href="individuals/' . $zData['id'] . '?edit_panels">Edit gene panels</A></SPAN>';
+            $zData['gene_panels_'] = $zData['gene_panels_'] . ' <SPAN style="float:right; margin-left : 25px;"><A href="individuals/' . $zData['id'] . '?edit_panels">Edit gene panels</A></SPAN>';
         }
 
         return $zData;

@@ -57,7 +57,7 @@ class LOVD_GenePanel extends LOVD_Object {
                                'GROUP_CONCAT(DISTINCT gp2d.diseaseid ORDER BY gp2d.diseaseid SEPARATOR ";") AS _active_diseases ' .
                                'FROM ' . TABLE_GENE_PANELS . ' AS gp ' .
                                'LEFT OUTER JOIN ' . TABLE_GP2DIS . ' AS gp2d ON (gp.id = gp2d. genepanelid) ' .
-                               'LEFT OUTER JOIN ' . TABLE_IND2GP . ' i2gp ON gp.id = i2gp.genepanelid ' .
+                               'LEFT OUTER JOIN ' . TABLE_IND2GP . ' i2gp ON (gp.id = i2gp.genepanelid) ' .
                                'WHERE gp.id = ? ' .
                                'GROUP BY gp.id';
 
@@ -69,7 +69,7 @@ class LOVD_GenePanel extends LOVD_Object {
         $this->aSQLViewEntry['FROM']     = TABLE_GENE_PANELS . ' AS gp ' .
             'LEFT OUTER JOIN ' . TABLE_GP2DIS . ' AS gp2d ON (gp.id = gp2d. genepanelid) ' .
             'LEFT OUTER JOIN ' . TABLE_DISEASES . ' AS d ON (gp2d.diseaseid = d.id) ' .
-            'LEFT OUTER JOIN ' . TABLE_IND2GP . ' i2gp ON gp.id = i2gp.genepanelid ' .
+            'LEFT OUTER JOIN ' . TABLE_IND2GP . ' i2gp ON (gp.id = i2gp.genepanelid) ' .
             'LEFT OUTER JOIN ' . TABLE_USERS . ' AS uc ON (gp.created_by = uc.id) ' .
             'LEFT OUTER JOIN ' . TABLE_USERS . ' AS ue ON (gp.edited_by = ue.id) ';
         $this->aSQLViewEntry['GROUP_BY'] = 'gp.id';

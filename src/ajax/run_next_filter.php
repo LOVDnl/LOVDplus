@@ -202,10 +202,10 @@ if ($aVariantIDs) {
             break;
         case 'apply_selected_gene_panels':
             // If no gene panels or custom panels are selected then don't do anything.
+            // Regardless of success, we need to show the selected gene panels.
+            $sGenePanelsInfo = getSelectedGenePanelsByRunID($nRunID);
             if (empty($_SESSION['analyses'][$nRunID]['custom_panel']) && empty($_SESSION['analyses'][$nRunID]['gene_panels'])) {
                 $aVariantIDsFiltered = $aVariantIDs;
-                // We still have to show that no gene panels were selected.
-                $sGenePanelsInfo = getSelectedGenePanelsByRunID($nRunID);
                 break;
             }
 
@@ -213,60 +213,6 @@ if ($aVariantIDs) {
             if (!empty($_SESSION['analyses'][$nRunID]['custom_panel'])) {
                 $aCustomPanels = explode(', ', $_SESSION['analyses'][$nRunID]['custom_panel']);
             }
-
-/*
-            // Load the selected gene panels into gene panels and blacklists.
-            if (!empty($_SESSION['analyses'][$nRunID]['gene_panels'])) {
-                $aGenePanels = $_DB->query('SELECT gp.id, gp.type FROM ' . TABLE_GENE_PANELS . ' AS gp WHERE gp.type != "blacklist" and gp.id IN (?' . str_repeat(', ?', count($_SESSION['analyses'][$nRunID]['gene_panels'])-1) . ') ORDER BY gp.type DESC, gp.name ASC', array_values($_SESSION['analyses'][$nRunID]['gene_panels']))->fetchAllCombine();
-                $aBlacklists = $_DB->query('SELECT gp.id, gp.type FROM ' . TABLE_GENE_PANELS . ' AS gp WHERE gp.type = "blacklist" and gp.id IN (?' . str_repeat(', ?', count($_SESSION['analyses'][$nRunID]['gene_panels'])-1) . ') ORDER BY gp.type DESC, gp.name ASC', array_values($_SESSION['analyses'][$nRunID]['gene_panels']))->fetchAllCombine();
-            }
-
-            // Build up the query.
-            $q = 'SELECT DISTINCT CAST(vot.id AS UNSIGNED) FROM ' . TABLE_VARIANTS_ON_TRANSCRIPTS . ' AS vot INNER JOIN ' . TABLE_TRANSCRIPTS . ' AS t ON (vot.transcriptid = t.id) LEFT OUTER JOIN ' . TABLE_GP2GENE . ' AS gp2g ON (t.geneid = gp2g.geneid) WHERE ((';
-            $aParam = array();
-
-            // Gene panels.
-            if (!empty($aGenePanels)) {
-                $q .= 'gp2g.genepanelid IN (?' . str_repeat(', ?', count($aGenePanels)-1) . ')';
-                $aParam = array_merge(array_values($aParam), array_keys($aGenePanels));
-            } else {
-                $q .= 'TRUE';
-            }
-
-            $q .= ' AND ';
-
-            // Blacklists.
-            if (empty($aBlacklists) || (empty($aGenePanels) && !empty($aCustomPanels))) {
-                // If we do not have a black list OR
-                // we have a blacklist and a custom panel without a gene panel then don't use the blacklist.
-                $q .= 'TRUE';
-            } else {
-                $q .= 'NOT EXISTS(SELECT * FROM lovd_gene_panels2genes AS bl WHERE bl.genepanelid IN (?' . str_repeat(', ?', count($aBlacklists)-1) . ') AND t.geneid = bl.geneid)';
-                $aParam = array_merge(array_values($aParam), array_keys($aBlacklists));
-            }
-
-            $q .= ')';
-
-            // Custom panel.
-            if (!empty($aCustomPanels)) {
-                if (!empty($aGenePanels)) {
-                    // If we have a gene panel then we use OR otherwise we use AND
-                    $q .= ' OR ';
-                } else {
-                    $q .= ' AND ';
-                }
-                $q .= 't.geneid IN (?' . str_repeat(', ?', count($aCustomPanels)-1) . ')';
-                $aParam = array_merge(array_values($aParam), array_values($aCustomPanels));
-            }
-
-            // Add the existing variants to the end of the query.
-            $q .= ') AND vot.id IN (?' . str_repeat(', ?', count($aVariantIDs) - 1) . ')';
-
-            // Get the details about the selected gene panels for this analysis.
-            $sGenePanelsInfo = getSelectedGenePanelsByRunID($nRunID);
-
-            $aVariantIDsFiltered = $_DB->query($q, array_merge($aParam, $aVariantIDs), false)->fetchAllColumn();
-*/
 
             // Load the selected gene panels into gene panels and blacklists.
             if (!empty($_SESSION['analyses'][$nRunID]['gene_panels'])) {
@@ -331,9 +277,6 @@ if ($aVariantIDs) {
                        AND vot.id IN (?' . str_repeat(', ?', count($aVariantIDs) - 1) . ')';
             $aSQL = array_merge($aSQL, $aVariantIDs);
 
-            // Get the details about the selected gene panels for this analysis.
-            $sGenePanelsInfo = getSelectedGenePanelsByRunID($nRunID);
-
             $aVariantIDsFiltered = $_DB->query($sSQL, $aSQL, false)->fetchAllColumn();
             break;
         case 'remove_with_any_frequency':
@@ -395,6 +338,7 @@ array_shift($aFilters); // Will cascade into the $_SESSION variable.
 // Done! Check if we need to run another filter.
 if ($aFilters) {
     // Still more to do.
+    // FIXME: This script now returns JSON as well as simple return values. Standardize this.
     die(json_encode(array('result' => true, 'sFilterID' => $sFilter, 'nVariantsLeft' => count($aVariantIDs), 'nTime' => lovd_convertSecondsToTime($nTimeSpent, 1), 'sGenePanelsInfo' => $sGenePanelsInfo, 'bDone' => false)));
 } else {
     // Since we're done, save the results in the database.
@@ -406,6 +350,7 @@ if ($aFilters) {
 
     // Now that we're done, clean up after ourselves...
     unset($_SESSION['analyses'][$nRunID]);
+    // FIXME: This script now returns JSON as well as simple return values. Standardize this.
     die(json_encode(array('result' => true, 'sFilterID' => $sFilter, 'nVariantsLeft' => $nVariants, 'nTime' => lovd_convertSecondsToTime($nTimeSpent, 1), 'sGenePanelsInfo' => $sGenePanelsInfo, 'bDone' => true)));
 }
 ?>

@@ -1116,7 +1116,42 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && ACTION == 'edit_panels') {
     if (POST) {
         lovd_errorClean();
 
-        $_DATA->checkFields($_POST, $zData);
+        // Checks to make sure a valid gene panel ID is used.
+        if (!empty($_POST['gene_panels'])) {
+            $aGenePanels = $_DB->query('SELECT id FROM ' . TABLE_GENE_PANELS)->fetchAllColumn();
+            foreach ($_POST['gene_panels'] as $nGenePanelID) {
+                if ($nGenePanelID && !in_array($nGenePanelID, $aGenePanels)) {
+                    lovd_errorAdd('gene_panels', htmlspecialchars($nGenePanelID) . ' is not a valid gene panel ID.');
+                }
+            }
+        }
+
+        // Checks the genes added to the custom panel to ensure they exist within the database.
+        if (!empty($_POST['custom_panel'])) {
+            // Explode the custom panel genes into an array.
+            $aGeneSymbols = array_filter(array_unique(preg_split('/(\s|[,;])+/', strtoupper($_POST['custom_panel']))));
+
+            // Check if there are any genes left after cleaning up the gene symbol string.
+            if (count($aGeneSymbols) > 0) {
+                // Load the matching genes into an array.
+                $aGenesInLOVD = $_DB->query('SELECT UPPER(id), id FROM ' . TABLE_GENES . ' WHERE id IN (?' . str_repeat(', ?', count($aGeneSymbols) - 1) . ')', $aGeneSymbols)->fetchAllCombine();
+                // Loop through all the gene symbols in the array and check them for any errors.
+                foreach ($aGeneSymbols as $nKey => $sGeneSymbol) {
+                    // Check to see if this gene symbol has been found within the database.
+                    if (isset($aGenesInLOVD[$sGeneSymbol])) {
+                        // A correct gene symbol was found, so lets use that to remove any case issues.
+                        $aGeneSymbols[$nKey] = $aGenesInLOVD[$sGeneSymbol];
+                    } else {
+                        // This gene symbol was not found in the database.
+                        // It got uppercased by us, but we assume that will be OK.
+                        lovd_errorAdd('custom_panel', 'The gene symbol ' . htmlspecialchars($sGeneSymbol) . ' can not be found within the database.');
+                    }
+                }
+                // Write the cleaned up custom gene panel back to POST so as to ensure the genes in the custom panel are stored with correct casing.
+                $_POST['custom_panel'] = implode(', ', $aGeneSymbols);
+            }
+        }
+        lovd_checkXSS();
 
         if (!lovd_error()) {
             // Fields to be used.
@@ -1219,12 +1254,35 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && ACTION == 'edit_panels') {
     // This gives the user one chance to add in the correct details and then posts to the normal edit screen.
     print('      <DIV style="display: -webkit-flex; display: flex; flex-direction: row;">
         <FORM action="' . CURRENT_PATH . '?' . ACTION . '" method="post">' . "\n");
+
+    // Get list of gene panels.
+    // Note: CAST(id AS CHAR) is needed to preserve the zerofill.
+    $aGenePanelsForm = $_DB->query('(SELECT "optgroup2" AS id, "Mendeliome" AS name, "mendeliome_header" AS type)
+                                     UNION
+                                    (SELECT "optgroup1", "Gene Panels", "gene_panel_header")
+                                     UNION
+                                    (SELECT "optgroup3", "Blacklist", "blacklist_header")
+                                     UNION
+                                    (SELECT CAST(id AS CHAR), name, type FROM ' . TABLE_GENE_PANELS . ')
+                                     ORDER BY type DESC, name')->fetchAllCombine();
+    $nGenePanels = count($aGenePanelsForm);
+    foreach ($aGenePanelsForm as $nID => $sGenePanel) {
+        $aGenePanelsForm[$nID] = lovd_shortenString($sGenePanel, 75);
+    }
+    $nGPFieldSize = ($nGenePanels < 20 ? $nGenePanels : 20);
+    if (!$nGenePanels) {
+        $aGenePanelsForm = array('' => 'No gene panel entries available');
+        $nGPFieldSize = 1;
+    }
+
     // Array which will make up the form table.
-    $aForm = array_merge(
-        $_DATA->getForm(),
+    $aForm =
         array(
+            array('POST', '', '', '', '50%', '14', '50%'),
+            'custom_panel' => array('Custom gene panel', 'Please insert any gene symbols here that you want to use as a custom gene panel, only for this individual.', 'textarea', 'custom_panel', 50, 2),
+            'aGenePanels' => array('Assigned gene panels', '', 'select', 'gene_panels', $nGPFieldSize, $aGenePanelsForm, false, true, false),
             array('', '', 'print', '<INPUT type="submit" value="Edit gene panels">'),
-        ));
+        );
     lovd_viewForm($aForm);
 
     print('</FORM>' . "\n\n");

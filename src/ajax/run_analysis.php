@@ -133,6 +133,8 @@ if (!$_GET['runid']) {
 }
 
 // Process the selected gene panels.
+// FIXME: This will fail if we already have the run ID in the database. That can
+// happen, when somehow the analysis run was created, but didn't start (JS error?).
 foreach ($aGenePanels as $nKey => $nGenePanelID) {
     // Write the gene panels selected to the analyses_run2gene_panel table.
     $q = $_DB->query('INSERT INTO ' . TABLE_AR2GP . ' VALUES (?, ?)', array($nRunID, $nGenePanelID));
