@@ -4,7 +4,7 @@
  * LEIDEN OPEN VARIATION DATABASE (LOVD)
  *
  * Created     : 2016-03-01
- * Modified    : 2016-04-06
+ * Modified    : 2016-05-24
  * For LOVD    : 3.0-13
  *
  * Copyright   : 2004-2016 Leiden University Medical Center; http://www.LUMC.nl/
@@ -366,6 +366,15 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && ACTION == 'delete') {
     $zData = $_DATA->loadEntry($nID);
     require ROOT_PATH . 'inc-lib-form.php';
 
+    // Check if this gene panel has already been assigned to an individual, so we can not delete it.
+    if ($zData['individuals'] > 0) {
+        $_T->printHeader();
+        $_T->printTitle();
+        lovd_showInfoTable('This gene panel can not be deleted as it has already been assigned to ' . $zData['individuals'] . ' individual' . ($zData['individuals'] == 1? '' : 's') . '.', 'stop');
+        $_T->printFooter();
+        exit;
+    }
+
     if (!empty($_POST)) {
         lovd_errorClean();
 
@@ -382,11 +391,6 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && ACTION == 'delete') {
             lovd_errorAdd('password', 'Please enter your correct password for authorization.');
         }
 
-        // This gene panel has already been assigned to an individual so we can not delete it
-        if ($zData['individuals'] > 0) {
-            lovd_errorAdd('error', 'This gene panel has already been assigned to ' . $zData['individuals'] . ' individuals so it can not be deleted.');
-        }
-
         if (!lovd_error()) {
             // This also deletes the entries in gp2dis and gp2gene.
             $_DATA->deleteEntry($nID, $_POST['reason']);
@@ -400,7 +404,6 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && ACTION == 'delete') {
             $_T->printHeader();
             $_T->printTitle();
             lovd_showInfoTable('Successfully deleted the gene panel entry!', 'success');
-
             $_T->printFooter();
             exit;
 
@@ -411,16 +414,6 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && ACTION == 'delete') {
     }
 
 
-
-    // This gene panel has already been assigned to an individual so we can not delete it
-    if ($zData['individuals'] > 0) {
-        header('Refresh: 4; url=' . lovd_getInstallURL() . CURRENT_PATH);
-        $_T->printHeader();
-        $_T->printTitle();
-        lovd_showInfoTable('This gene panel can not be deleted as it has already been assigned to ' . $zData['individuals'] . ' individuals.', 'warning');
-        $_T->printFooter();
-        exit;
-    }
 
     $_T->printHeader();
     $_T->printTitle();
@@ -463,6 +456,7 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && ACTION == 'manage_genes') {
     define('LOG_EVENT', 'GenePanelManage');
 
     lovd_requireAUTH(LEVEL_ANALYZER);
+    $bRemovableGenes = ($_AUTH['level'] >= LEVEL_MANAGER);
 
     $zData = $_DB->query('SELECT * FROM ' . TABLE_GENE_PANELS . ' WHERE id = ?', array($nID))->fetchAssoc();
     if (!$zData) {
@@ -583,16 +577,14 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && ACTION == 'manage_genes') {
             }
 
             // Now delete what was no longer selected.
-            if ($aGenesCurrentlyAssociated) {
+            if ($aGenesCurrentlyAssociated && $_AUTH['level'] >= LEVEL_MANAGER) {
                 // When not using deleteEntry(), we could simply run one query for all genes that were dropped.
                 // However, for that we'd need to duplicate code handling the revision history.
                 // So we're going to keep the code simple, in expense of some speed on large deletions.
-                if ($_AUTH['level'] >= LEVEL_MANAGER) {
-                    foreach (array_keys($aGenesCurrentlyAssociated) as $sGeneID) {
-                        // FIXME: No reason passed. Should we demand one from our users?
-                        $_DATA->deleteEntry(array('genepanelid' => $nID, 'geneid' => $sGeneID));
-                        lovd_writeLog('Event', 'GenePanelGeneDelete', 'Deleted gene entry ' . $sGeneID . ' from gene panel #' . $nID);
-                    }
+                foreach (array_keys($aGenesCurrentlyAssociated) as $sGeneID) {
+                    // FIXME: No reason passed. Should we demand one from our users?
+                    $_DATA->deleteEntry(array('genepanelid' => $nID, 'geneid' => $sGeneID));
+                    lovd_writeLog('Event', 'GenePanelGeneDelete', 'Deleted gene entry ' . $sGeneID . ' from gene panel #' . $nID);
                 }
             }
 
@@ -689,7 +681,8 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && ACTION == 'manage_genes') {
     // Show curators, to sort and to select whether or not they can edit.
     print('      <BR><BR>' . "\n\n");
 
-    lovd_showInfoTable('All genes below have been selected for this gene panel.' . ($_AUTH['level'] < LEVEL_MANAGER? '' : '<BR>To remove a gene from this list, click the red cross on the far right of the line.'), 'information', 950);
+    lovd_showInfoTable('All genes below have been selected for this gene panel.' .
+        (!$bRemovableGenes? '' : '<BR>To remove a gene from this list, click the red cross on the far right of the line.'), 'information', 950);
 
     $aInheritances =
         array(
@@ -714,7 +707,7 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && ACTION == 'manage_genes') {
               <TH>Inheritance</TH>
               <TH>PMID</TH>
               <TH>Remarks</TH>
-              ' . ($_AUTH['level'] < LEVEL_MANAGER? '' : '<TH width="30">&nbsp;</TH>') . '</TR></THEAD>
+              ' . (!$bRemovableGenes? '' : '<TH width="30">&nbsp;</TH>') . '</TR></THEAD>
           <TBODY>');
     // Now loop the items in the order given.
     foreach ($aGenes as $sID => $aGene) {
@@ -727,7 +720,7 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && ACTION == 'manage_genes') {
               <TD><SELECT name="inheritances[]">' . str_replace('"' . $aGene['inheritance'] . '">', '"' . $aGene['inheritance'] . '" selected>', $sInheritanceOptions) . '</SELECT></TD>
               <TD><INPUT type="text" name="pmids[]" value="' . $aGene['pmid'] . '" size="10"></TD>
               <TD><INPUT type="text" name="remarkses[]" value="' . $aGene['remarks'] . '" size="40"></TD>
-              ' . ($_AUTH['level'] < LEVEL_MANAGER? '' : '<TD width="30" align="right"><A href="#" onclick="lovd_removeGene(\'' . $sViewListID . '\', \'' . $sID . '\'); return false;"><IMG src="gfx/mark_0.png" alt="Remove" width="11" height="11" border="0"></A></TD>') . '</TR>');
+              ' . (!$bRemovableGenes? '' : '<TD width="30" align="right"><A href="#" onclick="lovd_removeGene(\'' . $sViewListID . '\', \'' . $sID . '\'); return false;"><IMG src="gfx/mark_0.png" alt="Remove" width="11" height="11" border="0"></A></TD>') . '</TR>');
     }
     print('
           </TBODY></TABLE></DIV><BR>' . "\n");

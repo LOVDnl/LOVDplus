@@ -4,7 +4,7 @@
  * LEIDEN OPEN VARIATION DATABASE (LOVD)
  *
  * Created     : 2011-02-16
- * Modified    : 2015-03-11
+ * Modified    : 2015-05-24
  * For LOVD    : 3.0-13
  *
  * Copyright   : 2004-2015 Leiden University Medical Center; http://www.LUMC.nl/
@@ -251,7 +251,7 @@ if (PATH_COUNT >= 2 && ctype_digit($_PE[1]) && !ACTION && (PATH_COUNT == 2 || PA
         // Add each of the gene panels assigned to this individual to the form.
         foreach ($zData['gene_panels'] as $nKey => $aGenePanel) {
             // Create the gene panel type header.
-            if ($sLastType == '' || $sLastType <> $aGenePanel[2]) {
+            if ($sLastType == '' || $sLastType != $aGenePanel[2]) {
                 print('
             <TR>
               <TD class="gpheader" colspan="2" ' . ($sLastType? '' : 'style="border-top: 0px"') . '>' . ucfirst(str_replace('_', ' ', $aGenePanel[2])) . '</TD>
@@ -262,7 +262,7 @@ if (PATH_COUNT >= 2 && ctype_digit($_PE[1]) && !ACTION && (PATH_COUNT == 2 || PA
             // Add the gene panel to the form.
             print('
             <TR>
-              <TD><INPUT type="checkbox" name="gene_panel" value="' . $aGenePanel[0] . '"' . ($aGenePanel[2]=='mendeliome'? '' : ' checked') . '></TD>
+              <TD><INPUT type="checkbox" name="gene_panel" value="' . $aGenePanel[0] . '"' . ($aGenePanel[2] == 'mendeliome'? '' : ' checked') . '></TD>
               <TD>' . $aGenePanel[1] . '</TD>
             </TR>');
         }
@@ -849,10 +849,14 @@ if (PATH_COUNT == 1 && ACTION == 'create') {
                             // Silent error.
                             lovd_writeLog('Error', LOG_EVENT, 'Disease information entry ' . $nDisease . ' - could not be added to individual ' . $nID);
                         } else {
-                            $aSuccessDiseases[] = $nDisease; // TODO AM This array doesn't seem to be used anywhere. Either write a log or remove it?
+                            $aSuccessDiseases[] = $nDisease;
                         }
                     }
                 }
+            }
+
+            if (count($aSuccessDiseases)) {
+                lovd_writeLog('Event', LOG_EVENT, 'Disease entr' . (count($aSuccessDiseases) > 1? 'ies' : 'y') . ' successfully added to individual ' . $nID);
             }
 
             $_AUTH['saved_work']['submissions']['individual'][$nID] = array('id' => $nID, 'panel_size' => $_POST['panel_size']);
@@ -1165,8 +1169,8 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && ACTION == 'edit_panels') {
 
             // Change linked gene panels.
             $aGenePanels = array();
-            if ($zData['gene_panels_']) {
-                $aGenePanels = explode(';', $zData['gene_panels_']);
+            if ($zData['gene_panels']) {
+                $aGenePanels = $zData['gene_panels'];
             }
             // If we have removed all gene panels from this individual then we need to set the $_POST['gene_panels'] to an empty array otherwise functions below will error.
             if (empty($_POST['gene_panels'])) {
@@ -1193,7 +1197,7 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && ACTION == 'edit_panels') {
             $aFailed = array();
             foreach ($_POST['gene_panels'] as $nGenePanel) {
                 if (!in_array($nGenePanel, $aGenePanels)) {
-                    // Add disease to gene.
+                    // Add gene panel to individual.
                     $q = $_DB->query('INSERT IGNORE INTO ' . TABLE_IND2GP . ' VALUES (?, ?, ?, ?)', array($nID, $nGenePanel, $_AUTH['id'], $sDateNow), false);
                     if (!$q) {
                         $aFailed[] = $nGenePanel;
@@ -1208,27 +1212,32 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && ACTION == 'edit_panels') {
             }
 
             // Thank the user...
-            header('Refresh: 3; url=' . lovd_getInstallURL() . CURRENT_PATH);
+            if (!$aFailed) {
+                header('Refresh: 3; url=' . lovd_getInstallURL() . CURRENT_PATH);
+            }
             $_T->printHeader();
             $_T->printTitle();
-            lovd_showInfoTable('Successfully edited the gene panels for this individual!', 'success');
+            if (!$aFailed) {
+                lovd_showInfoTable('Successfully edited the gene panels for this individual!', 'success');
+            } else {
+                lovd_showInfoTable('Failed to edit the gene panels for this individual. Please see the <A href="logs">system logs</A> for more information.', 'stop');
+            }
 
             $_T->printFooter();
             exit;
         }
+
     } else {
+        // Not submitted, set default values for this form.
         $_POST = array_merge($_POST, $zData);
 
-        if(!empty($zData['gene_panels_'])) {
-            $_POST['gene_panels'] = explode(';', $zData['gene_panels_']);
-        } else {
+        if(empty($_POST['gene_panels'])) {
             $_POST['gene_panels'] = array();
         }
 
         // Check to see if any gene panels are selected, if not then lets suggest some.
-        if (empty($_POST['gene_panels']) && !empty($zData['active_diseases_'])) {
-
-            $aDiseases = explode(';', $zData['active_diseases_']);
+        if (empty($_POST['gene_panels']) && !empty($zData['active_diseases'])) {
+            $aDiseases = $zData['active_diseases'];
 
             // Check to see if any gene panels share the individuals diseases.
             $aDefaultGenePanels = $_DB->query('SELECT DISTINCT gp.id, gp.name, gp.type FROM ' . TABLE_GENE_PANELS . ' AS gp JOIN ' . TABLE_GP2DIS . ' AS gp2d ON (gp.id = gp2d.genepanelid) WHERE gp2d.diseaseid IN (?' . str_repeat(', ?', count($aDiseases)-1) . ') ORDER BY gp.type DESC, gp.name ASC', array_values($aDiseases))->fetchAllAssoc();

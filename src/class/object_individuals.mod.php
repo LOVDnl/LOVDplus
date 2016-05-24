@@ -60,9 +60,11 @@ class LOVD_IndividualMOD extends LOVD_Individual {
 
         // SQL code for loading the gene panel data.
         $this->sSQLLoadEntry = 'SELECT i.*, ' .
-                               'GROUP_CONCAT(DISTINCT i2gp.genepanelid ORDER BY i2gp.genepanelid SEPARATOR ";") AS gene_panels_ ' .
+                               'GROUP_CONCAT(DISTINCT i2gp.genepanelid ORDER BY i2gp.genepanelid SEPARATOR ";") AS _gene_panels, ' .
+                               'GROUP_CONCAT(DISTINCT i2d.diseaseid ORDER BY i2d.diseaseid SEPARATOR ";") AS _active_diseases ' .
                                'FROM ' . TABLE_INDIVIDUALS . ' AS i ' .
                                'LEFT OUTER JOIN ' . TABLE_IND2GP . ' AS i2gp ON (i.id = i2gp.individualid) ' .
+                               'LEFT OUTER JOIN ' . TABLE_IND2DIS . ' AS i2d ON (i.id = i2d.individualid) ' .
                                'WHERE i.id = ? ' .
                                'GROUP BY i.id';
 

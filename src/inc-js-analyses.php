@@ -4,7 +4,7 @@
  * LEIDEN OPEN VARIATION DATABASE (LOVD)
  *
  * Created     : 2013-11-05
- * Modified    : 2016-05-13
+ * Modified    : 2016-05-24
  * For LOVD    : 3.0-13
  *
  * Copyright   : 2004-2016 Leiden University Medical Center; http://www.LUMC.nl/
@@ -72,7 +72,7 @@ function lovd_runAnalysis (nScreeningID, nAnalysisID, nRunID, aSelectedGenePanel
         alert('Incorrect argument(s) passed to runAnalysis function.');
         return false;
     }
-    if (typeof(nRunID) == 'undefined') {
+    if (nRunID == '') {
         nRunID = 0;
     }
     if (aSelectedGenePanels.length > 0) {
@@ -176,7 +176,7 @@ function lovd_runNextFilter (nAnalysisID, nRunID)
                     oTR.children('td:eq(2)').html(dataObj.nVariantsLeft);
 
                     // Show the details of the selected gene panels under the apply_selected_gene_panels filter.
-                    if (dataObj.sFilterID == 'apply_selected_gene_panels') {
+                    if (dataObj.sGenePanelsInfo.length) {
                         oTR.children('td:eq(0)').append(dataObj.sGenePanelsInfo);
                     }
 
@@ -231,9 +231,9 @@ function lovd_runNextFilter (nAnalysisID, nRunID)
 
 function lovd_popoverGenePanelSelectionForm (nScreeningID, nAnalysisID, nRunID)
 {
-    // Makes the gene panel selection form dialog visible and prepares it for the user
+    // Makes the gene panel selection form dialog visible and prepares it for the user.
 
-    // Popup the gene panel selection form dialog
+    // Popup the gene panel selection form dialog.
     $("#gene_panel_selection").dialog(
         {
         open: function() {
@@ -259,7 +259,7 @@ function lovd_popoverGenePanelSelectionForm (nScreeningID, nAnalysisID, nRunID)
         }
     );
 
-    // Add the values passed to this function to the hidden inputs
+    // Add the values passed to this function to the hidden inputs.
     $("#gene_panel_selection_form input[name=nScreeningID]").val(nScreeningID);
     $("#gene_panel_selection_form input[name=nAnalysisID]").val(nAnalysisID);
     $("#gene_panel_selection_form input[name=nRunID]").val(nRunID);
@@ -271,22 +271,17 @@ function lovd_popoverGenePanelSelectionForm (nScreeningID, nAnalysisID, nRunID)
 
 function lovd_processGenePanelSelectionForm ()
 {
-    // Processes the popover form that selects the gene panels for a particular analysis
+    // Processes the popover form that selects the gene panels for a particular analysis.
 
-    // Get all the values from the checked checkboxes and read them into an array
+    // Get all the values from the checked checkboxes and read them into an array.
     aSelectedGenePanels = $("#gene_panel_selection_form input:checkbox:checked").map(function(){
         return $(this).val();
     }).get();
 
-    // Read in the hidden form values
+    // Read in the hidden form values.
     nScreeningID = $("#gene_panel_selection_form input[name=nScreeningID]").val();
     nAnalysisID = $("#gene_panel_selection_form input[name=nAnalysisID]").val();
     nRunID = $("#gene_panel_selection_form input[name=nRunID]").val();
-
-    // If we don't have a run ID then make it undefined.
-    if (nRunID == '') {
-        nRunID = undefined;
-    }
 
     // Call lovd_runAnalysis and pass all the extra values.
     lovd_runAnalysis(nScreeningID, nAnalysisID, nRunID, aSelectedGenePanels);
