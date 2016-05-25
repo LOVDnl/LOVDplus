@@ -1260,7 +1260,6 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && ACTION == 'edit_panels') {
     lovd_includeJS('inc-js-tooltip.php');
     lovd_includeJS('inc-js-custom_links.php');
 
-    // This gives the user one chance to add in the correct details and then posts to the normal edit screen.
     print('      <DIV style="display: -webkit-flex; display: flex; flex-direction: row;">
         <FORM action="' . CURRENT_PATH . '?' . ACTION . '" method="post">' . "\n");
 

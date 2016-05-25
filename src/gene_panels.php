@@ -4,7 +4,7 @@
  * LEIDEN OPEN VARIATION DATABASE (LOVD)
  *
  * Created     : 2016-03-01
- * Modified    : 2016-05-24
+ * Modified    : 2016-05-25
  * For LOVD    : 3.0-13
  *
  * Copyright   : 2004-2016 Leiden University Medical Center; http://www.LUMC.nl/
@@ -681,8 +681,10 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && ACTION == 'manage_genes') {
     // Show curators, to sort and to select whether or not they can edit.
     print('      <BR><BR>' . "\n\n");
 
-    lovd_showInfoTable('All genes below have been selected for this gene panel.' .
-        (!$bRemovableGenes? '' : '<BR>To remove a gene from this list, click the red cross on the far right of the line.'), 'information', 950);
+    lovd_showInfoTable('All genes below have been selected for this gene panel.<BR>' .
+        (!$bRemovableGenes?
+            'Only higher level users can also remove genes from this gene panel. If you believe a certain gene should be removed, please ask a Manager to do so.' :
+            'To remove a gene from this list, click the red cross on the far right of the line.'), 'information', 950);
 
     $aInheritances =
         array(

@@ -4,8 +4,8 @@
  * LEIDEN OPEN VARIATION DATABASE (LOVD)
  *
  * Created     : 2016-05-03
- * Modified    : 2016-05-24
- * For LOVD    : 3.0-12
+ * Modified    : 2016-05-25
+ * For LOVD    : 3.0-13
  *
  * Copyright   : 2004-2016 Leiden University Medical Center; http://www.LUMC.nl/
  * Programmers : Anthony Marty <anthony.marty@unimelb.edu.au>
@@ -63,14 +63,14 @@ function getSelectedGenePanelsByRunID ($nRunID)
         foreach ($aGenePanels as $aGenePanel) {
             $sToolTip .= '<A href="gene_panels/' . $aGenePanel['id'] . '">' . str_replace(' ', '&nbsp;', $aGenePanel['name']) . '</A><BR>';
         }
-        $sGenePanelsInfo .= '<TR onmouseover="lovd_showToolTip(\'' . addslashes($sToolTip) . '\', this, [100, -10]);"><TD>' . $nGenePanelCount . '</TD><TD>' . ucfirst(str_replace('_', ' ', $sType)) . ($nGenePanelCount > 1? 's' : '') . '</TD><TD>&nbsp;</TD></TR>' . "\n";
+        $sGenePanelsInfo .= '<TR onmouseover="lovd_showToolTip(\'' . htmlspecialchars($sToolTip) . '\', this, [100, -10]);"><TD>' . $nGenePanelCount . '</TD><TD>' . ucfirst(str_replace('_', ' ', $sType)) . ($nGenePanelCount > 1? 's' : '') . '</TD><TD>&nbsp;</TD></TR>' . "\n";
     }
 
     if ($sCustomPanel) {
         // Add the custom panel info to the table.
         $aCustomPanelGenes = explode(', ', $sCustomPanel);
         $sToolTip = '<B>Custom&nbsp;panel</B><BR>' . $sCustomPanel;
-        $sGenePanelsInfo .= '<TR onmouseover="lovd_showToolTip(\'' . addslashes($sToolTip) . '\', this, [100, -10]);"><TD>1</TD><TD>Custom panel</TD><TD>(' . count($aCustomPanelGenes) . ' genes)</TD></TR>' . "\n";
+        $sGenePanelsInfo .= '<TR onmouseover="lovd_showToolTip(\'' . htmlspecialchars($sToolTip) . '\', this, [100, -10]);"><TD>1</TD><TD>Custom panel</TD><TD>(' . count($aCustomPanelGenes) . ' genes)</TD></TR>' . "\n";
     }
 
     if (!$sGenePanelsInfo) {
