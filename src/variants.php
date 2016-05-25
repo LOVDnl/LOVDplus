@@ -2903,8 +2903,6 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && ACTION == 'edit_remarks') {
         $_DATA['Genome']->checkFields($_POST);
 
         if (!lovd_error()) {
-            $aFieldsGenome = $_DATA['Genome']->buildFields();
-
             // Manual query, because updateEntry() empties the whole VOG.
             $_DB->query('UPDATE ' . TABLE_VARIANTS . ' SET `VariantOnGenome/Remarks` = ? WHERE id = ?', array($_POST['VariantOnGenome/Remarks'], $nID), true, true);
 

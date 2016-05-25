@@ -4,8 +4,8 @@
  * LEIDEN OPEN VARIATION DATABASE (LOVD)
  *
  * Created     : 2013-10-28
- * Modified    : 2016-03-07
- * For LOVD    : 3.0-12
+ * Modified    : 2016-05-24
+ * For LOVD    : 3.0-13
  *
  * Copyright   : 2004-2016 Leiden University Medical Center; http://www.LUMC.nl/
  * Programmer  : Ing. Ivo F.A.C. Fokkema <I.F.A.C.Fokkema@LUMC.nl>
@@ -58,10 +58,21 @@ class LOVD_IndividualMOD extends LOVD_Individual {
         $this->sObject = 'IndividualMOD';
         $this->sTable  = 'TABLE_INDIVIDUALS';
 
+        // SQL code for loading the gene panel data.
+        $this->sSQLLoadEntry = 'SELECT i.*, ' .
+                               'GROUP_CONCAT(DISTINCT i2gp.genepanelid ORDER BY i2gp.genepanelid SEPARATOR ";") AS _gene_panels, ' .
+                               'GROUP_CONCAT(DISTINCT i2d.diseaseid ORDER BY i2d.diseaseid SEPARATOR ";") AS _active_diseases ' .
+                               'FROM ' . TABLE_INDIVIDUALS . ' AS i ' .
+                               'LEFT OUTER JOIN ' . TABLE_IND2GP . ' AS i2gp ON (i.id = i2gp.individualid) ' .
+                               'LEFT OUTER JOIN ' . TABLE_IND2DIS . ' AS i2d ON (i.id = i2d.individualid) ' .
+                               'WHERE i.id = ? ' .
+                               'GROUP BY i.id';
+
         // SQL code for viewing an entry.
         $this->aSQLViewEntry['SELECT']   = 'i.*, "" AS owned_by, ' .
                                            'GROUP_CONCAT(DISTINCT d.id SEPARATOR ";") AS _diseaseids, ' .
                                            'GROUP_CONCAT(DISTINCT d.id, ";", IF(CASE d.symbol WHEN "-" THEN "" ELSE d.symbol END = "", d.name, d.symbol), ";", d.name ORDER BY (d.symbol != "" AND d.symbol != "-") DESC, d.symbol, d.name SEPARATOR ";;") AS __diseases, ' .
+                                           'GROUP_CONCAT(DISTINCT gp.id, ";", gp.name, ";", gp.type ORDER BY gp.type DESC, gp.name ASC SEPARATOR ";;") AS __gene_panels, ' .
                                            'GROUP_CONCAT(DISTINCT s.id SEPARATOR ";") AS _screeningids, ' .
                                            'COUNT(DISTINCT s2v.variantid) AS variants, ' .
                                            'uc.name AS created_by_, ' .
@@ -71,6 +82,8 @@ class LOVD_IndividualMOD extends LOVD_Individual {
                                            'LEFT OUTER JOIN ' . TABLE_SCR2VAR . ' AS s2v ON (s2v.screeningid = s.id) ' .
                                            'LEFT OUTER JOIN ' . TABLE_IND2DIS . ' AS i2d ON (i.id = i2d.individualid) ' .
                                            'LEFT OUTER JOIN ' . TABLE_DISEASES . ' AS d ON (i2d.diseaseid = d.id) ' .
+                                           'LEFT OUTER JOIN ' . TABLE_IND2GP . ' AS i2gp ON (i.id = i2gp.individualid) ' .
+                                           'LEFT OUTER JOIN ' . TABLE_GENE_PANELS . ' AS gp ON (i2gp.genepanelid = gp.id) ' .
                                            'LEFT OUTER JOIN ' . TABLE_USERS . ' AS uc ON (i.created_by = uc.id) ' .
                                            'LEFT OUTER JOIN ' . TABLE_USERS . ' AS ue ON (i.edited_by = ue.id)';
         $this->aSQLViewEntry['GROUP_BY'] = 'i.id';
@@ -84,6 +97,7 @@ class LOVD_IndividualMOD extends LOVD_Individual {
                                         // FIXME; Can we get this order correct, such that diseases without abbreviation nicely mix with those with? Right now, the diseases without symbols are in the back.
                                           'GROUP_CONCAT(DISTINCT IF(CASE d.symbol WHEN "-" THEN "" ELSE d.symbol END = "", d.name, d.symbol) ORDER BY (d.symbol != "" AND d.symbol != "-") DESC, d.symbol, d.name SEPARATOR ", ") AS diseases_, ' .
 //                                          'COUNT(DISTINCT ' . ($_AUTH['level'] >= LEVEL_COLLABORATOR? 's2v.variantid' : 'vog.id') . ') AS variants_, ' . // Counting s2v.variantid will not include the limit opposed to vog in the join's ON() clause.
+                                          'GROUP_CONCAT(DISTINCT gp.name ORDER BY gp.name ASC SEPARATOR ", ") AS gene_panels_, ' .
                                           'ua.name AS analysis_by_, ' .
                                           'uaa.name AS analysis_approved_by_, ' .
                                           'CONCAT_WS(";", ua.id, ua.name, ua.email, ua.institute, ua.department, IFNULL(ua.countryid, "")) AS _analyzer, ' .
@@ -92,6 +106,8 @@ class LOVD_IndividualMOD extends LOVD_Individual {
         $this->aSQLViewList['FROM']     = TABLE_INDIVIDUALS . ' AS i ' .
                                           'LEFT OUTER JOIN ' . TABLE_IND2DIS . ' AS i2d ON (i.id = i2d.individualid) ' .
                                           'LEFT OUTER JOIN ' . TABLE_DISEASES . ' AS d ON (i2d.diseaseid = d.id) ' .
+                                          'LEFT OUTER JOIN ' . TABLE_IND2GP . ' AS i2gp ON (i.id = i2gp.individualid) ' .
+                                          'LEFT OUTER JOIN ' . TABLE_GENE_PANELS . ' AS gp ON (i2gp.genepanelid = gp.id) ' .
                                           'LEFT OUTER JOIN ' . TABLE_SCREENINGS . ' AS s ON (i.id = s.individualid) ' .
 //                                          'LEFT OUTER JOIN ' . TABLE_SCR2VAR . ' AS s2v ON (s2v.screeningid = s.id) ' .
 //                                          ($_AUTH['level'] >= LEVEL_COLLABORATOR? '' :
@@ -109,6 +125,8 @@ class LOVD_IndividualMOD extends LOVD_Individual {
             ),
                  $this->buildViewEntry(),
                  array(
+                        'custom_panel_' => 'Custom gene panel',
+                        'gene_panels_' => 'Gene panels',
                         'diseases_' => 'Diseases',
                         'parents_' => 'Parent(s)',
                         'variants' => 'Total variants imported',
@@ -136,6 +154,12 @@ class LOVD_IndividualMOD extends LOVD_Individual {
                      'diseases_' => array(
                          'view' => array('Disease', 175),
                          'db'   => array('diseases_', 'ASC', true)),
+                     'gene_panels_' => array(
+                         'view' => array('Gene panels', 200),
+                         'db'   => array('gene_panels_', 'ASC', true)),
+                     'custom_panel' => array(
+                         'view' => array('Custom panel', 100),
+                         'db'   => array('i.custom_panel', 'ASC', true)),
 //                     'variants_' => array(
 //                         'view' => array('Variants', 75),
 //                         'db'   => array('variants_', 'ASC', 'INT_UNSIGNED')),
@@ -169,8 +193,6 @@ class LOVD_IndividualMOD extends LOVD_Individual {
     function prepareData ($zData = '', $sView = 'list')
     {
         // Prepares the data by "enriching" the variable received with links, pictures, etc.
-        global $_SETT;
-
         if (!in_array($sView, array('list', 'entry'))) {
             $sView = 'list';
         }
@@ -179,6 +201,19 @@ class LOVD_IndividualMOD extends LOVD_Individual {
         if ($sView == 'list') {
             $zData['analysis_date_'] = substr($zData['analysis_date'], 0, 10);
             $zData['analysis_approved_date_'] = substr($zData['analysis_approved_date'], 0, 10);
+        } else {
+            // Make the custom panel link to the genes.
+            $zData['custom_panel_'] = '';
+            foreach(explode(', ', $zData['custom_panel']) as $sGene) {
+                $zData['custom_panel_'] .= (!$zData['custom_panel_']? '' : ', ') . '<A href="genes/' . $sGene . '">' . $sGene . '</A>';
+            }
+            // Gene panels assigned.
+            $zData['gene_panels_'] = '';
+            foreach($zData['gene_panels'] as $aGenePanels) {
+                list($nID, $sName, $sType) = $aGenePanels;
+                $zData['gene_panels_'] .= (!$zData['gene_panels_']? '' : ', ') . '<A href="gene_panels/' . $nID . '">' . $sName . '</A>';
+            }
+            $zData['gene_panels_'] = $zData['gene_panels_'] . ' <SPAN style="float:right; margin-left : 25px;"><A href="individuals/' . $zData['id'] . '?edit_panels">Edit gene panels</A></SPAN>';
         }
 
         return $zData;
