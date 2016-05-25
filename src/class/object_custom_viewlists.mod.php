@@ -142,10 +142,24 @@ class LOVD_CustomViewListMOD extends LOVD_CustomViewList {
                         );
                     $aSQL['SELECT'] .= (!$aSQL['SELECT']? '' : ', ') . 'vog.*, a.name AS allele_, eg.name AS vog_effect';
                     // Observation count columns.
+                    // Find the diseases that this individual has assigned using the analysis run ID in $_GET.
+                    $sDiseaseIDs = implode(',',$_DB->query('SELECT i2d.diseaseid FROM ' . TABLE_IND2DIS . ' AS i2d INNER JOIN ' . TABLE_SCREENINGS . ' AS scr ON (i2d.individualid = scr.individualid) INNER JOIN ' . TABLE_ANALYSES_RUN . ' AS ar ON (scr.id = ar.screeningid) WHERE ar.id = ?', array($_GET['search_runid']))->fetchAllColumn());
+
+                    // Check if we have found any diseases and set the boolean flag accordingly.
+                    $bDiseases = ($sDiseaseIDs != ''?true:false);
+                    
                     $aSQL['SELECT'] .= ', COUNT(DISTINCT os.individualid) AS obs_variant';
                     $aSQL['SELECT'] .= ', COUNT(DISTINCT os.individualid) / ' . $_DB->query('SELECT COUNT(*) FROM ' . TABLE_INDIVIDUALS)->fetchColumn() . ' AS obs_var_ind_ratio';
-                    $aSQL['SELECT'] .= ', COUNT(DISTINCT odi2d.individualid) AS obs_disease';
-                    $aSQL['SELECT'] .= ', COUNT(DISTINCT odi2d.individualid) / 999 AS obs_var_dis_ind_ratio'; // TODO AM Need to find the best way to get the individual details.
+
+                    if ($bDiseases) {
+                        // If this individual has diseases then setup the disease specific observation count columns.
+                        $aSQL['SELECT'] .= ', COUNT(DISTINCT odi2d.individualid) AS obs_disease';
+                        $aSQL['SELECT'] .= ', COUNT(DISTINCT odi2d.individualid) / ' . $_DB->query('SELECT COUNT(DISTINCT i2d.individualid) FROM ' . TABLE_IND2DIS . ' AS i2d WHERE i2d.diseaseid in(' . $sDiseaseIDs . ')')->fetchColumn() . ' AS obs_var_dis_ind_ratio';
+                    } else {
+                        // Otherwise do not do anything for the disease specific observation count columns.
+                        $aSQL['SELECT'] .= ', NULL AS obs_disease, NULL AS obs_var_dis_ind_ratio';
+                    }
+
                     if (!$aSQL['FROM']) {
                         // First data table in query.
                         $aSQL['SELECT'] .= ', vog.id AS row_id'; // To ensure other table's id columns don't interfere.
@@ -178,14 +192,10 @@ class LOVD_CustomViewListMOD extends LOVD_CustomViewList {
                     $aSQL['FROM'] .= ' LEFT OUTER JOIN ' . TABLE_SCREENINGS . ' AS os ON (os2v.screeningid = os.id)';
 
                     // Outer joins for the disease specific observation counts.
-                    // Join the screening2variants table to get the screening info for this variant.
-                    $aSQL['FROM'] .= ' LEFT OUTER JOIN ' . TABLE_SCR2VAR . ' AS ods2v ON (vog.id = ods2v.variantid)'; // TODO AM This would be faster if we were able to get the individual ID and list of disease IDs at the start and re use it as this doesn't change throughout this whole query!
-                    // Join the screening table to to get the individual ID for this variant.
-                    $aSQL['FROM'] .= ' LEFT OUTER JOIN ' . TABLE_SCREENINGS . ' AS ods ON (ods2v.screeningid = ods.id)';
-                    // Join the individual2diseases table to get a list of diseases that this individual has.
-                    $aSQL['FROM'] .= ' LEFT OUTER JOIN ' . TABLE_IND2DIS . ' AS i2d ON (ods.individualid = i2d.individualid)';
-                    // Join the individual2diseases table for only those individuals that have this variant and have at lease one of the same diseases. We then count the DISTINCT individualids.
-                    $aSQL['FROM'] .= ' LEFT OUTER JOIN ' . TABLE_IND2DIS . ' AS odi2d ON (os.individualid = odi2d.individualid AND i2d.diseaseid = odi2d.diseaseid)';
+                    if ($bDiseases) {
+                        // Join the individuals2diseases table to get the individuals with this variant and this individuals diseases.
+                        $aSQL['FROM'] .= ' LEFT OUTER JOIN ' . TABLE_IND2DIS . ' AS odi2d ON (os.individualid = odi2d.individualid AND odi2d.diseaseid in(' . $sDiseaseIDs . '))';
+                    }
                     break;
 
                 case 'VariantOnTranscript':
