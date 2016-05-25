@@ -913,11 +913,14 @@ $aColumnMappings = array(
     'ALTPERC_Mother' => 'VariantOnGenome/Sequencing/Mother/Depth/Alt/Fraction', // Will be divided by 100 later.
     'ISPRESENT_Mother' => 'VariantOnGenome/Sequencing/Mother/VarPresent',
 //    'distanceToSplice' => 'VariantOnTranscript/Distance_to_splice_site',
+
     // Mappings for fields used to process other fields but not imported into the database
     'SYMBOL' => 'symbol',
     'REF' => 'ref',
     'ALT' => 'alt',
     'Existing_variation' => 'existingvariation',
+    // VariantOnGenome/DNA - constructed by the lovd_getVariantDescription function further down
+
     // MGHA Mappings
     'CHROM' => 'chromosome',
     'POS' => 'position', // lovd_getVariantDescription() needs this.
@@ -1677,8 +1680,8 @@ print('Loading transcript information for ' . $aGenes[$aVariant['symbol']]['id']
 //                        die('Can\'t load available transcripts for gene ' . $aLine['SYMBOL'] . '.' . "\n");
 //print('Can\'t load available transcripts for gene ' . $aLine['SYMBOL'] . '.' . "\n");
 print('No available transcripts for gene ' . $aGenes[$aVariant['symbol']]['id'] . ' found.' . "\n"); // Usually this is the case. Not always an error. We might get an error, but that will show now.
-$aTranscripts[$aVariant['transcriptid']] = false; // Ignore transcript.
-$aTranscriptInfo = array(array('id' => 'NO_TRANSCRIPTS')); // Basically, any text will do. Just stop searching for other transcripts for this gene.
+                        $aTranscripts[$aVariant['transcriptid']] = false; // Ignore transcript.
+                        $aTranscriptInfo = array(array('id' => 'NO_TRANSCRIPTS')); // Basically, any text will do. Just stop searching for other transcripts for this gene.
                     }
                     // Store for next time.
                     $aGenes[$aVariant['symbol']]['transcripts_in_UD'] = $aTranscriptInfo;

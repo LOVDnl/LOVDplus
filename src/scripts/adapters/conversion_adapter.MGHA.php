@@ -29,6 +29,11 @@ if ($argc != 1 && in_array($argv[1], array('--help', '-help', '-h', '-?'))) {
     After this script is executed the convert_and_merge_data_files.php script should be run to merge
     the meta data files with the variant files. The final merged file should then be imported into LOVD
 
+    Error Handling
+    51 - Error opening or renaming files or directories
+    52 - Required files are missing. Check sample meta data file or variant files
+    53 - File does not conform to expected format. Check sample meta data file.
+    54 - Unexpected gender for parent. Either two females, two males or gender other than male or female
     <?php
 } else {
 
@@ -107,7 +112,8 @@ if ($argc != 1 && in_array($argv[1], array('--help', '-help', '-h', '-?'))) {
     $h = opendir($_INI['paths']['data_files']);
 
     if (!$h) {
-        die('Can\'t open directory.' . "\n");
+        print('Can\'t open directory.' . "\n");
+        die(51);
     }
 
     // need to find the sample meta data file (SMDF) first. There may be multiple SMDF as we do not move files after they are processed.
@@ -127,8 +133,7 @@ if ($argc != 1 && in_array($argv[1], array('--help', '-help', '-h', '-?'))) {
         }
 
         // get all the variant files into an array
-        if (preg_match('/^(.+?)\.directvep\.data\.lovd/', $xFile, $vRegs)) {
-            //list($sID, $vFileName) = $vRegs;
+        if (preg_match('/^(.+?)\.tsv/', $xFile, $vRegs)) {
             $sID = $vRegs[1];
             $vFiles[$sID] = $xFile;
 
@@ -136,10 +141,10 @@ if ($argc != 1 && in_array($argv[1], array('--help', '-help', '-h', '-?'))) {
 
     }
 
-    // If no SMDF found do not continue
-    if (!$metaFile) {
-        print('No Sample Meta Data File found.');
-        die(1);
+    // If no SMDF found and tsv variant files are found, do not continue
+    if (!$metaFile && !empty($vFiles)) {
+        print('Variant files found without a sample meta data file' . ".\n");
+        die(52);
     }
 
     // set arrays
@@ -149,13 +154,15 @@ if ($argc != 1 && in_array($argv[1], array('--help', '-help', '-h', '-?'))) {
     // open the file, get first line as string to check headers match expected output.
     $fInput = fopen($metaFile, 'r');
     if ($fInput === false) {
-        die('Error opening file: ' . $metaFile . ".\n");
+        print('Error opening file: ' . $metaFile . ".\n");
+        die(51);
     }
 
     $strHeaders = fgets($fInput);
 
     if (substr($strHeaders, 0, 76) != "Pipeline_Run_ID\tBatch\tSample_ID\tDNA_Tube_ID\tSex\tDNA_Concentration\tDNA_Volume") {
-        die('File does not conform to format: ' . $metaFile . ".\n");
+        print('File does not conform to format: ' . $metaFile . ".\n");
+        die(53);
     }
 
     fclose($fInput);
@@ -200,17 +207,20 @@ if ($argc != 1 && in_array($argv[1], array('--help', '-help', '-h', '-?'))) {
                         $parent = 'Father';
                         $fatherCount++;
                         if ($fatherCount > 1) {
-                            die('We have 2 parent IDs with the gender Male for sample ID ' . $sampleID);
+                            print('We have 2 parent IDs with the gender Male for sample ID ' . $sampleID . ".\n");
+                            die(54);
                         }
                     } elseif ($parentGender == 'Female') {
                         $motherID = $parentID;
                         $parent = 'Mother';
                         $motherCount++;
                         if ($motherCount > 1) {
-                            die('We have 2 parent IDs with the gender Female for sample ID ' . $sampleID);
+                            print('We have 2 parent IDs with the gender Female for sample ID ' . $sampleID . ".\n");
+                            die(54);
                         }
                     } else {
-                        die('Unknown Gender for Sample' . $parentID);
+                        print('Unknown Gender for Sample' . $parentID . ".\n");
+                        die(54);
                     }
 
                     foreach ($parentColumnMappings as $pCol => $lCol) {
@@ -252,7 +262,8 @@ if ($argc != 1 && in_array($argv[1], array('--help', '-help', '-h', '-?'))) {
 
         if (!$parent) {
             If (!in_array($sID, array_keys($vFiles))) {
-                die('There is no variant file for Sample ID ' . $sID . "\n");
+                print('There is no variant file for Sample ID ' . $sID . "\n");
+                die(52);
             } else {
                 // update the headers in the variant file for the singleton/child
                 $variantFile = $_INI['paths']['data_files'] . $vFiles[$sID];
@@ -269,6 +280,7 @@ if ($argc != 1 && in_array($argv[1], array('--help', '-help', '-h', '-?'))) {
 
                 $variantFileArr[0] = $variantHeader;
                 file_put_contents($variantFile, $variantFileArr);
+                // ********** error handling to check the contents were updated
             }
         }
     }
@@ -328,6 +340,10 @@ if ($argc != 1 && in_array($argv[1], array('--help', '-help', '-h', '-?'))) {
 
             // open the temporary file for writing
             $fOutput = fopen($xFileTmp, 'w');
+            if ($fOutput === false) {
+                print('Error opening the temporary output file: ' . $xFileTmp . ".\n");
+                die(51);
+            }
 
             // write out the heading information for the meta data file
             fputs($fOutput,
@@ -348,7 +364,8 @@ if ($argc != 1 && in_array($argv[1], array('--help', '-help', '-h', '-?'))) {
 
             // Now rename the tmp to the final file, and close this loop.
             if (!rename($xFileTmp, $xFileDone)) {
-                die('Error moving temp file to target: ' . $xFileDone . ".\n");
+                print('Error renaming temp file to target: ' . $xFileDone . ".\n");
+                die(51);
             }
         }
     }
@@ -357,7 +374,18 @@ if ($argc != 1 && in_array($argv[1], array('--help', '-help', '-h', '-?'))) {
     // Now rename the SMDF to .ARK
     $archiveMetaFile = $metaFile . '.ARK';
     if (!rename($metaFile, $archiveMetaFile)) {
-        die('Error archiving SMDF to: ' . $archiveMetaFile . ".\n");
+        print('Error archiving SMDF to: ' . $archiveMetaFile . ".\n");
+        die(51);
+    }
+
+    // Now rename all the variant .tsv files to .ARK
+    foreach ($vFiles as $vID => $vFileName) {
+        $oldVariantFile = $_INI['paths']['data_files'] . $vFileName;
+        $newVariantFile = $_INI['paths']['data_files'] . $vID . '.directvep.data.lovd';
+        if (!rename($oldVariantFile, $newVariantFile)) {
+            print('Error renaming tsv variant file to: ' . $newVariantFile . "\n");
+            die(51);
+        }
     }
 
     print('Adapter Process Complete' . "\n" . 'Current time: ' . date('Y-m-d H:i:s') . ".\n\n");
