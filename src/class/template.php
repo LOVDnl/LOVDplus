@@ -518,24 +518,24 @@ function lovd_mapVariants ()
   <SCRIPT type="text/javascript">
 
       $(function() {
-          $( "#fromDate" ).datepicker({ dateFormat: 'yy-mm-dd' });
-          $( "#toDate" ).datepicker({ dateFormat: 'yy-mm-dd' });
+          $("#fromDate").datepicker({dateFormat: 'yy-mm-dd'});
+          $("#toDate").datepicker({dateFormat: 'yy-mm-dd'});
       });
 
       function lovd_changeDateRange(page, url) {
           var aDateFields = document.getElementById("dateRangeForm");
 
-          if ( aDateFields.elements[0].value == '' || aDateFields.elements[1].value == ''  ) {
+          if (aDateFields.elements[0].value == '' || aDateFields.elements[1].value == '') {
               alert("Both dates must be entered!");
           }
-          else if (aDateFields.elements[0].value > aDateFields.elements[1].value ) {
+          else if (aDateFields.elements[0].value > aDateFields.elements[1].value) {
               alert("From Date can not be greater than the To Date")
           }
-          else if (typeof (history.pushState) != "undefined") {
-              var obj = { Page: page, Url: url };
-              //history.pushState(obj, obj.Page, obj.Url + '&fromDate=' + aDateFields.elements[0].value  + '&toDate=' + aDateFields.elements[1].value);    // change the url - pushState does not update page when user goes back - if going back to other date ranges.
-              history.replaceState(obj, obj.Page, obj.Url + '&fromDate=' + aDateFields.elements[0].value  + '&toDate=' + aDateFields.elements[1].value);    // change the url - replaceState allows user to go back to the gene panel screen.
-              window.location = window.location;    // this reloads the browser page using the new url.
+          else if (typeof(history.pushState) != "undefined") {
+              var obj = {Page: page, Url: url};
+              // Change the url - replaceState allows user to go back to the gene panel screen.
+              history.replaceState(obj, obj.Page, obj.Url + '&fromDate=' + aDateFields.elements[0].value  + '&toDate=' + aDateFields.elements[1].value);
+              window.location = window.location; // This reloads the browser page using the new url.
           } else {
            //   alert("Browser does not support HTML5.");
           }

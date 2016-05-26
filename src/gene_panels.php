@@ -88,8 +88,8 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && !ACTION) {
         // Authorized user is logged in. Provide tools.
         $aNavigation[CURRENT_PATH . '?edit']            = array('menu_edit.png', 'Edit gene panel information', 1);
         $aNavigation[CURRENT_PATH . '?manage_genes']    = array('menu_plus.png', 'Manage gene panel\'s genes', 1);
-        $aNavigation[CURRENT_PATH . '?history&fromDate=' . $zData['created_date'] .'&toDate=' . date("Y-m-d"). ' 23:59:59']  = array('menu_clock.png', 'View differences between two dates', 1);  // set the created_date and end of today's date as the default dates.
-        $aNavigation[CURRENT_PATH . '?history_full']    = array('menu_clock.png', 'View full history of this gene panel', 1);  // set the created_date and end of today's date as the default dates.
+        $aNavigation[CURRENT_PATH . '?history&fromDate=' . $zData['created_date'] .'&toDate=' . date("Y-m-d"). ' 23:59:59']  = array('menu_clock.png', 'View differences between two dates', 1);  // Set the created_date and end of today's date as the default dates.
+        $aNavigation[CURRENT_PATH . '?history_full']    = array('menu_clock.png', 'View full history of this gene panel', 1); // Set the created_date and end of today's date as the default dates.
         $aNavigation['download/' . CURRENT_PATH]        = array('menu_save.png', 'Download this gene panel and its genes', 1);
         if ($_AUTH['level'] >= LEVEL_ADMIN) {
             $aNavigation[CURRENT_PATH . '?delete']      = array('cross.png', 'Delete gene panel entry', 1);
@@ -97,15 +97,15 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && !ACTION) {
     }
     lovd_showJGNavigation($aNavigation, 'GenePanel');
 
-    // Display the genes in this gene panel
+    // Display the genes in this gene panel.
     print('<BR><BR>' . "\n\n");
     $_T->printTitle('Genes in gene panel', 'H4');
     require ROOT_PATH . 'class/object_gene_panel_genes.php';
     $_DATA = new LOVD_GenePanelGene();
-    // Only show the genes in this gene panel by setting the genepanelid to the current gene panel id
+    // Only show the genes in this gene panel by setting the genepanelid to the current gene panel id.
     $_GET['search_genepanelid'] = $nID;
     $sGPGViewListID = 'GenePanelGene';
-    // Add a menu item to allow the user to download the whole gene panel
+    // Add a menu item to allow the user to download the whole gene panel.
     print('      <UL id="viewlistMenu_' . $sGPGViewListID . '" class="jeegoocontext jeegooviewlist">' . "\n" .
           '        <LI class="icon"><A click="lovd_AJAX_viewListSubmit(\'' . $sGPGViewListID . '\', function(){lovd_AJAX_viewListDownload(\'' . $sGPGViewListID . '\', true);});"><SPAN class="icon" style="background-image: url(gfx/menu_save.png);"></SPAN>Download gene panel\'s genes</A></LI>' . "\n" .
           '      </UL>' . "\n\n");
@@ -1025,7 +1025,7 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && ACTION == 'history') {
     $_T->printHeader();
     $_T->printTitle();
 
-    $bContinue = true;  // flag to determine if correctly formatted dates are entered.
+    $bContinue = true;  // Flag to determine if correctly formatted dates are entered.
 
     // Check that the date format is correct (Y-m-d or Y-m-d H:i:s).
     $dUnixTime = strtotime($_GET['fromDate']);
@@ -1035,8 +1035,8 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && ACTION == 'history') {
     }
     else {
         $dFromDate = $_GET['fromDate'] ;
-        if ( date('Y-m-d', $dUnixTime) == $dFromDate ) {  // only date part is entered.
-            $dFromDate .= " 00:00:00"; // set the dFromDate as the first second of the selected day.
+        if ( date('Y-m-d', $dUnixTime) == $dFromDate ) {  // Only date part is entered.
+            $dFromDate .= " 00:00:00"; // Set the dFromDate as the first second of the selected day.
         }
     }
 
@@ -1047,32 +1047,30 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && ACTION == 'history') {
     }
     else {
         $dToDate = $_GET['toDate'];
-        if ( date('Y-m-d', $dUnixTime) == $dToDate ) {   // only date part is entered.
-            $dToDate .= " 23:59:59";  // set the dtoDate as the last second of the selected day.
+        if ( date('Y-m-d', $dUnixTime) == $dToDate ) {   // Only date part is entered.
+            $dToDate .= " 23:59:59";  // Set the dtoDate as the last second of the selected day.
         }
     }
 
-
-    print('     <FORM action="' . CURRENT_PATH . '?history" method="get"  name="dateRangeForm" id="dateRangeForm" onsubmit="lovd_changeDateRange(\'\', \'gene_panels/' . $nID . '?history\'); return false;">
-        <TABLE border="0" cellpadding="10" cellspacing="1" width="750" class="data" style="font-size : 13px;"><TR><TD>
-        <SPAN> From Date: <INPUT type="text" name="fromDate" id="fromDate"  readonly="true" value="'.$_GET['fromDate'].'"></SPAN>
-        <SPAN> To Date: <INPUT type="text" name="toDate" id="toDate"  readonly="true" value="'.$_GET['toDate'].'"></SPAN>
-        <INPUT type="submit" value="submit">
-        </TD></TR></TABLE>
+    print('    <FORM action="' . CURRENT_PATH . '?history" method="get"  name="dateRangeForm" id="dateRangeForm" onsubmit="lovd_changeDateRange(\'\', \'gene_panels/' . $nID . '?history\'); return false;">
+      <TABLE border="0" cellpadding="10" cellspacing="1" width="750" class="data" style="font-size : 13px;">
+        <TR>
+          <TD>
+            <SPAN> From Date: <INPUT type="text" name="fromDate" id="fromDate"  readonly="true" value="'.$_GET['fromDate'].'"></SPAN>
+            <SPAN> To Date: <INPUT type="text" name="toDate" id="toDate"  readonly="true" value="'.$_GET['toDate'].'"></SPAN>
+            <INPUT type="submit" value="submit">
+          </TD>
+        </TR>
+      </TABLE>
     </FORM>'."\n");
 
     if ($bContinue) {
         require ROOT_PATH . 'class/object_gene_panel_genes.rev.php';
         $_DATA = new LOVD_GenePanelGeneREV();
-
         $_DATA->displayGenePanelHistory($nID, $dFromDate, $dToDate);
-        //$_GET['search_genepanelid'] = $nID;
-        //$_DATA->viewList('GenePanelGeneREV');   // This shows the detailed history for all revisions in the selected panel.
     }
     $_T->printFooter();
     exit;
 }
-
-
 print('No condition met using the provided URL.');
 ?>
