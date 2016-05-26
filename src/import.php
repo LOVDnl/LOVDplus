@@ -4,7 +4,7 @@
  * LEIDEN OPEN VARIATION DATABASE (LOVD)
  *
  * Created     : 2012-09-19
- * Modified    : 2016-05-13
+ * Modified    : 2016-05-26
  * For LOVD    : 3.0-16
  *
  * Copyright   : 2004-2016 Leiden University Medical Center; http://www.LUMC.nl/
@@ -34,6 +34,7 @@ define('TAB_SELECTED', 'setup');
 require ROOT_PATH . 'inc-init.php';
 ini_set('auto_detect_line_endings', true); // So we can work with Mac files also...
 set_time_limit(0); // Disable time limit, parsing may take a long time.
+session_write_close(); // Also don't care about the session (in fact, it locks the whole LOVD while this page is running).
 ini_set('memory_limit', '4096M'); // 4GB.
 
 // FIXME: How do we implement authorization? First parse everything, THEN using the parsed data we check if user has rights to insert this data?
@@ -248,6 +249,9 @@ if (ACTION == 'autoupload_scheduled_file' && PATH_COUNT == 1 && FORMAT == 'text/
 
     print(':Preparing to upload ' . $sFile . ' into database...' . "\n" .
           ':Current time: ' . date('Y-m-d H:i:s.') . "\n");
+
+    // If we're running automatically, ignore user aborts (dying caller script).
+    ignore_user_abort(true);
 }
 
 
