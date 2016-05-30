@@ -4,10 +4,10 @@
  * LEIDEN OPEN VARIATION DATABASE (LOVD)
  *
  * Created     : 2013-11-07
- * Modified    : 2015-06-16
- * For LOVD    : 3.0-11
+ * Modified    : 2016-05-17
+ * For LOVD    : 3.0-13
  *
- * Copyright   : 2004-2015 Leiden University Medical Center; http://www.LUMC.nl/
+ * Copyright   : 2004-2016 Leiden University Medical Center; http://www.LUMC.nl/
  * Programmer  : Ing. Ivo F.A.C. Fokkema <I.F.A.C.Fokkema@LUMC.nl>
  *
  *
@@ -349,7 +349,7 @@ class LOVD_CustomViewListMOD extends LOVD_CustomViewList {
                         array(
                             'gene_OMIM_' => array(
                                 'view' => array('OMIM links', 100),
-                                'db'   => array('__gene_OMIM', 'ASC', true)),
+                                'db'   => array('__gene_OMIM', 'ASC', 'TEXT')),
                         ));
                     break;
                 case 'VariantOnGenome':

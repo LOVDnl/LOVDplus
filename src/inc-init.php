@@ -137,7 +137,7 @@ $aRequired =
 $_SETT = array(
                 'system' =>
                      array(
-                            'version' => '3.0-12p',
+                            'version' => '3.0-12s',
                           ),
                 'user_levels' =>
                      array(
@@ -569,6 +569,7 @@ $_TABLES =
                 'TABLE_ANALYSES_RUN_FILTERS' => TABLEPREFIX . '_analyses_run_filters',
                 'TABLE_ANALYSES_RUN_RESULTS' => TABLEPREFIX . '_analyses_run_results',
                 'TABLE_SCHEDULED_IMPORTS' => TABLEPREFIX . '_scheduled_imports',
+                'TABLE_AR2GP' => TABLEPREFIX . '_analyses_run2gene_panels',
 
                 // Gene Lists
                 'TABLE_GENE_PANELS' => TABLEPREFIX . '_gene_panels',
