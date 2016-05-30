@@ -191,7 +191,7 @@ class LOVD_CustomViewListMOD extends LOVD_CustomViewList {
                     // Join the screening table to to get the individual IDs for these variants as we count the DISTINCT individualids.
                     $aSQL['FROM'] .= ' LEFT OUTER JOIN ' . TABLE_SCREENINGS . ' AS os ON (os2v.screeningid = os.id)';
 
-                    // Outer joins for the disease specific observation counts.
+                    // Outer join for the disease specific observation counts.
                     if ($bDiseases) {
                         // Join the individuals2diseases table to get the individuals with this variant and this individuals diseases.
                         $aSQL['FROM'] .= ' LEFT OUTER JOIN ' . TABLE_IND2DIS . ' AS odi2d ON (os.individualid = odi2d.individualid AND odi2d.diseaseid in(' . $sDiseaseIDs . '))';
@@ -374,8 +374,8 @@ class LOVD_CustomViewListMOD extends LOVD_CustomViewList {
                             'obs_var_dis_ind_ratio' => array(
                                 'view' => array('Var. dis. ind. ratio', 70),
                                 'db'   => array('obs_var_dis_ind_ratio', 'ASC', 'DECIMAL'),
-                                'legend' => array('REPLACE',
-                                    'REPLACE')),
+                                'legend' => array('The ratio of the number of individuals with this variant and this disease divided by the total number of individuals with this disease within this database.',
+                                    'The ratio of the number of individuals with this variant and this disease divided by the total number of individuals with this disease within this database.')),
                         ));
                     break;
             }
