@@ -1058,13 +1058,13 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && ACTION == 'history') {
       <TABLE border="0" cellpadding="10" cellspacing="1" width="750" class="data" style="font-size : 13px;">
         <TR>
           <TD>
-            <SPAN>From Date: <INPUT type="text" id="fromDate" readonly="true" value="' . $_GET['from'] . '"></SPAN>
-            <SPAN>To Date: <INPUT type="text" id="toDate" readonly="true" value="' . $_GET['to'] . '"></SPAN>
-            <INPUT type="submit" value="submit">
+            <SPAN>From date: <INPUT type="text" id="fromDate" readonly="true" value="' . $_GET['from'] . '" style="font-size : 13px;"></SPAN>
+            <SPAN>To date: <INPUT type="text" id="toDate" readonly="true" value="' . $_GET['to'] . '" style="font-size : 13px;"></SPAN>
+            <INPUT type="submit" value="View changes" style="font-size : 13px;">
           </TD>
         </TR>
       </TABLE>
-    </FORM>'."\n");
+    </FORM><BR>' . "\n");
 
     require ROOT_PATH . 'class/object_gene_panel_genes.rev.php';
     $_DATA = new LOVD_GenePanelGeneREV();

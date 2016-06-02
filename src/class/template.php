@@ -520,7 +520,9 @@ function lovd_mapVariants ()
       $(function() {
           $("#fromDate").datepicker({
               changeYear: true,
+              yearRange: '1970:<?php echo date('Y'); ?>',
               numberOfMonths: 3,
+              stepMonths: 3,
               dateFormat: 'yy-mm-dd',
               maxDate: $("#toDate").val(),
               onClose: function(selectedDate) {
@@ -529,7 +531,9 @@ function lovd_mapVariants ()
           });
           $("#toDate").datepicker({
               changeYear: true,
+              yearRange: '1970:<?php echo date('Y'); ?>',
               numberOfMonths: 3,
+              stepMonths: 3,
               dateFormat: 'yy-mm-dd',
               minDate: $("#fromDate").val(),
               onClose: function(selectedDate) {
@@ -542,10 +546,9 @@ function lovd_mapVariants ()
 
           if (aDateFields.elements[0].value == '' || aDateFields.elements[1].value == '') {
               alert("Both dates must be entered!");
-          }
-          else if (aDateFields.elements[0].value > aDateFields.elements[1].value) {
-              alert("From Date can not be greater than the To Date");
-          } else  {
+          } else if (aDateFields.elements[0].value > aDateFields.elements[1].value) {
+              alert("From date can not be greater than the To date");
+          } else {
               // Change the URL, allowing the user to go back to the gene panel screen.
               window.location = url + '&from=' + aDateFields.elements[0].value  + '&to=' + aDateFields.elements[1].value;
           }
