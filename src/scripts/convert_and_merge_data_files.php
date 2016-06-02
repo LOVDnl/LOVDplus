@@ -4,7 +4,7 @@
  * LEIDEN OPEN VARIATION DATABASE (LOVD)
  *
  * Created     : 2014-11-28
- * Modified    : 2016-05-20
+ * Modified    : 2016-06-02
  * For LOVD+   : 3.0-16
  *
  * Copyright   : 2004-2016 Leiden University Medical Center; http://www.LUMC.nl/
@@ -885,6 +885,8 @@ $aColumnMappings = array(
     'scorePhastCons' => 'VariantOnGenome/Conservation_score/Phast',
     'GT_Child' => 'allele',
     'GT_Patient' => 'allele',
+    'GQ_Child' => 'VariantOnGenome/Sequencing/GenoType/Quality',
+    'GQ_Patient' => 'VariantOnGenome/Sequencing/GenoType/Quality',
     'DP_Child' => 'VariantOnGenome/Sequencing/Depth/Total',
     'DP_Patient' => 'VariantOnGenome/Sequencing/Depth/Total',
     'DPREF_Child' => 'VariantOnGenome/Sequencing/Depth/Ref',
@@ -894,10 +896,12 @@ $aColumnMappings = array(
     'ALTPERC_Child' => 'VariantOnGenome/Sequencing/Depth/Alt/Fraction', // Will be divided by 100 later.
     'ALTPERC_Patient' => 'VariantOnGenome/Sequencing/Depth/Alt/Fraction', // Will be divided by 100 later.
     'GT_Father' => 'VariantOnGenome/Sequencing/Father/GenoType',
+    'GQ_Father' => 'VariantOnGenome/Sequencing/Father/GenoType/Quality',
     'DP_Father' => 'VariantOnGenome/Sequencing/Father/Depth/Total',
     'ALTPERC_Father' => 'VariantOnGenome/Sequencing/Father/Depth/Alt/Fraction', // Will be divided by 100 later.
     'ISPRESENT_Father' => 'VariantOnGenome/Sequencing/Father/VarPresent',
     'GT_Mother' => 'VariantOnGenome/Sequencing/Mother/GenoType',
+    'GQ_Mother' => 'VariantOnGenome/Sequencing/Mother/GenoType/Quality',
     'DP_Mother' => 'VariantOnGenome/Sequencing/Mother/Depth/Total',
     'ALTPERC_Mother' => 'VariantOnGenome/Sequencing/Mother/Depth/Alt/Fraction', // Will be divided by 100 later.
     'ISPRESENT_Mother' => 'VariantOnGenome/Sequencing/Mother/VarPresent',
@@ -1399,7 +1403,7 @@ foreach ($aFiles as $sID) {
             }
         }
         // Fixing some other VOG fields.
-        foreach (array('VariantOnGenome/Sequencing/Father/GenoType', 'VariantOnGenome/Sequencing/Mother/GenoType') as $sCol) {
+        foreach (array('VariantOnGenome/Sequencing/Father/GenoType', 'VariantOnGenome/Sequencing/Father/GenoType/Quality', 'VariantOnGenome/Sequencing/Mother/GenoType', 'VariantOnGenome/Sequencing/Mother/GenoType/Quality') as $sCol) {
             if ($aVariant[$sCol] && $aVariant[$sCol] == 'None') {
                 $aVariant[$sCol] = '';
             }
