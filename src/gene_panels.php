@@ -1032,7 +1032,7 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && ACTION == 'history') {
         $bReload = true;
     }
     if ($bReload) {
-        // One of the times had to be filled in, let's reload.
+        // One of the times had to be filled in by us, let's reload.
         header('Location: ' . lovd_getInstallURL() . CURRENT_PATH . '?' . ACTION . '&from=' . $_GET['from'] . '&to=' . $_GET['to']);
         exit;
     }
@@ -1045,50 +1045,31 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && ACTION == 'history') {
     $_T->printHeader();
     $_T->printTitle();
 
-    $bContinue = true;  // Flag to determine if correctly formatted dates are entered.
-
-    // Check that the date format is correct (Y-m-d or Y-m-d H:i:s).
-    $dUnixTime = strtotime($_GET['from']);
-    if( date('Y-m-d', $dUnixTime) != $_GET['from'] && date('Y-m-d H:i:s', $dUnixTime) != $_GET['from']) {
-        lovd_showInfoTable('Please enter From Date (YYYY-MM-DD).', 'stop');
-        $bContinue = false;
+    // Fill in the time if we don't have it already.
+    // Format has already been checked, now we can just check for the length.
+    if (strlen($_GET['from']) == 10) {
+        $_GET['from'] .= ' 00:00:00'; // Set the 'from' date as the first second of the selected day.
     }
-    else {
-        $dFromDate = $_GET['from'];
-        if (date('Y-m-d', $dUnixTime) == $dFromDate) {  // Only date part is entered.
-            $dFromDate .= " 00:00:00"; // Set the dFromDate as the first second of the selected day.
-        }
+    if (strlen($_GET['to']) == 10) {
+        $_GET['to'] .= ' 23:59:59'; // Set the 'to' date as the last second of the selected day.
     }
 
-    $dUnixTime = strtotime($_GET['to']);
-    if( date('Y-m-d', $dUnixTime) != $_GET['to'] && date('Y-m-d H:i:s', $dUnixTime) != $_GET['to']) {
-        lovd_showInfoTable('Please enter To Date (YYYY-MM-DD).', 'stop');
-        $bContinue = false;
-    }
-    else {
-        $dToDate = $_GET['to'];
-        if ( date('Y-m-d', $dUnixTime) == $dToDate ) {   // Only date part is entered.
-            $dToDate .= " 23:59:59";  // Set the dtoDate as the last second of the selected day.
-        }
-    }
-
-    print('    <FORM action="' . CURRENT_PATH . '?history" method="get"  name="dateRangeForm" id="dateRangeForm" onsubmit="lovd_changeDateRange(\'\', \'gene_panels/' . $nID . '?history\'); return false;">
+    print('    <FORM action="' . CURRENT_PATH . '?history" method="get" id="dateRangeForm" onsubmit="lovd_changeDateRange(\'gene_panels/' . $nID . '?history\'); return false;">
       <TABLE border="0" cellpadding="10" cellspacing="1" width="750" class="data" style="font-size : 13px;">
         <TR>
           <TD>
-            <SPAN>From Date: <INPUT type="text" name="fromDate" id="fromDate" readonly="true" value="' . $_GET['from'] . '"></SPAN>
-            <SPAN>To Date: <INPUT type="text" name="toDate" id="toDate" readonly="true" value="' . $_GET['to'] . '"></SPAN>
+            <SPAN>From Date: <INPUT type="text" id="fromDate" readonly="true" value="' . $_GET['from'] . '"></SPAN>
+            <SPAN>To Date: <INPUT type="text" id="toDate" readonly="true" value="' . $_GET['to'] . '"></SPAN>
             <INPUT type="submit" value="submit">
           </TD>
         </TR>
       </TABLE>
     </FORM>'."\n");
 
-    if ($bContinue) {
-        require ROOT_PATH . 'class/object_gene_panel_genes.rev.php';
-        $_DATA = new LOVD_GenePanelGeneREV();
-        $_DATA->displayGenePanelHistory($nID, $dFromDate, $dToDate);
-    }
+    require ROOT_PATH . 'class/object_gene_panel_genes.rev.php';
+    $_DATA = new LOVD_GenePanelGeneREV();
+    $_DATA->displayGenePanelHistory($nID, $_GET['from'], $_GET['to']);
+
     $_T->printFooter();
     exit;
 }
