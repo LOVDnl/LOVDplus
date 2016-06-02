@@ -4,7 +4,7 @@
  * LEIDEN OPEN VARIATION DATABASE (LOVD)
  *
  * Created     : 2016-03-01
- * Modified    : 2016-04-06
+ * Modified    : 2016-06-02
  * For LOVD    : 3.0-13
  *
  * Copyright   : 2004-2016 Leiden University Medical Center; http://www.LUMC.nl/
@@ -88,8 +88,8 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && !ACTION) {
         // Authorized user is logged in. Provide tools.
         $aNavigation[CURRENT_PATH . '?edit']            = array('menu_edit.png', 'Edit gene panel information', 1);
         $aNavigation[CURRENT_PATH . '?manage_genes']    = array('menu_plus.png', 'Manage gene panel\'s genes', 1);
-        $aNavigation[CURRENT_PATH . '?history&fromDate=' . $zData['created_date'] .'&toDate=' . date("Y-m-d"). ' 23:59:59']  = array('menu_clock.png', 'View differences between two dates', 1);  // Set the created_date and end of today's date as the default dates.
-        $aNavigation[CURRENT_PATH . '?history_full']    = array('menu_clock.png', 'View full history of this gene panel', 1); // Set the created_date and end of today's date as the default dates.
+        $aNavigation[CURRENT_PATH . '?history']         = array('menu_clock.png', 'View differences between two dates', 1);
+        $aNavigation[CURRENT_PATH . '?history_full']    = array('menu_clock.png', 'View full history of this gene panel', 1);
         $aNavigation['download/' . CURRENT_PATH]        = array('menu_save.png', 'Download this gene panel and its genes', 1);
         if ($_AUTH['level'] >= LEVEL_ADMIN) {
             $aNavigation[CURRENT_PATH . '?delete']      = array('cross.png', 'Delete gene panel entry', 1);
@@ -1015,7 +1015,27 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && ACTION == 'history_full') {
 
 if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && ACTION == 'history') {
     // URL: /gene_panels/00001?history
+    // URL: /gene_panels/00001?history&from=2013-09-06%2014:15:09&to=2016-06-02%2016:27:29
     // Show the history of this gene panel between two dates.
+
+    // When no dates are given, take defaults and refresh.
+    $bReload = false;
+    require ROOT_PATH . 'inc-lib-form.php';
+    if (empty($_GET['from']) || (!lovd_matchDate($_GET['from']) && !lovd_matchDate($_GET['from'], true))) {
+        // From date empty or rejected. Set to t=0.
+        $_GET['from'] = date('Y-m-d H:i:s', 0);
+        $bReload = true;
+    }
+    if (empty($_GET['to']) || (!lovd_matchDate($_GET['to']) && !lovd_matchDate($_GET['to'], true))) {
+        // To date empty or rejected. Set to t=time().
+        $_GET['to'] = date('Y-m-d H:i:s');
+        $bReload = true;
+    }
+    if ($bReload) {
+        // One of the times had to be filled in, let's reload.
+        header('Location: ' . lovd_getInstallURL() . CURRENT_PATH . '?' . ACTION . '&from=' . $_GET['from'] . '&to=' . $_GET['to']);
+        exit;
+    }
 
     $nID = sprintf('%05d', $_PE[1]);
     define('PAGE_TITLE', 'View changes for gene panel #' . $nID . ' between dates');
@@ -1028,25 +1048,25 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && ACTION == 'history') {
     $bContinue = true;  // Flag to determine if correctly formatted dates are entered.
 
     // Check that the date format is correct (Y-m-d or Y-m-d H:i:s).
-    $dUnixTime = strtotime($_GET['fromDate']);
-    if( date('Y-m-d', $dUnixTime) <> $_GET['fromDate'] && date('Y-m-d H:i:s', $dUnixTime) <> $_GET['fromDate']) {
+    $dUnixTime = strtotime($_GET['from']);
+    if( date('Y-m-d', $dUnixTime) != $_GET['from'] && date('Y-m-d H:i:s', $dUnixTime) != $_GET['from']) {
         lovd_showInfoTable('Please enter From Date (YYYY-MM-DD).', 'stop');
         $bContinue = false;
     }
     else {
-        $dFromDate = $_GET['fromDate'] ;
-        if ( date('Y-m-d', $dUnixTime) == $dFromDate ) {  // Only date part is entered.
+        $dFromDate = $_GET['from'];
+        if (date('Y-m-d', $dUnixTime) == $dFromDate) {  // Only date part is entered.
             $dFromDate .= " 00:00:00"; // Set the dFromDate as the first second of the selected day.
         }
     }
 
-    $dUnixTime = strtotime($_GET['toDate']);
-    if( date('Y-m-d', $dUnixTime) <> $_GET['toDate'] && date('Y-m-d H:i:s', $dUnixTime) <> $_GET['toDate']) {
+    $dUnixTime = strtotime($_GET['to']);
+    if( date('Y-m-d', $dUnixTime) != $_GET['to'] && date('Y-m-d H:i:s', $dUnixTime) != $_GET['to']) {
         lovd_showInfoTable('Please enter To Date (YYYY-MM-DD).', 'stop');
         $bContinue = false;
     }
     else {
-        $dToDate = $_GET['toDate'];
+        $dToDate = $_GET['to'];
         if ( date('Y-m-d', $dUnixTime) == $dToDate ) {   // Only date part is entered.
             $dToDate .= " 23:59:59";  // Set the dtoDate as the last second of the selected day.
         }
@@ -1056,8 +1076,8 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && ACTION == 'history') {
       <TABLE border="0" cellpadding="10" cellspacing="1" width="750" class="data" style="font-size : 13px;">
         <TR>
           <TD>
-            <SPAN> From Date: <INPUT type="text" name="fromDate" id="fromDate"  readonly="true" value="'.$_GET['fromDate'].'"></SPAN>
-            <SPAN> To Date: <INPUT type="text" name="toDate" id="toDate"  readonly="true" value="'.$_GET['toDate'].'"></SPAN>
+            <SPAN>From Date: <INPUT type="text" name="fromDate" id="fromDate" readonly="true" value="' . $_GET['from'] . '"></SPAN>
+            <SPAN>To Date: <INPUT type="text" name="toDate" id="toDate" readonly="true" value="' . $_GET['to'] . '"></SPAN>
             <INPUT type="submit" value="submit">
           </TD>
         </TR>

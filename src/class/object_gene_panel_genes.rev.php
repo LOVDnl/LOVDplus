@@ -170,8 +170,16 @@ class LOVD_GenePanelGeneREV extends LOVD_GenePanelGene {
         return $zData;
     }
 
-    function displayGenePanelHistory ($nID, $dFromDate, $dToDate )  {
 
+
+
+
+    // FIXME: This function does not belong here. It does not interact with the
+    // Object at all, does not use the Object's methods, it's basically a static
+    // method that should be included in a library. It's also just used once, so
+    // I'll move the function elsewhere later.
+    function displayGenePanelHistory ($nID, $dFromDate, $dToDate)
+    {
         global $_DB;
 
         // Query to get the gene panel revisions.
@@ -179,12 +187,13 @@ class LOVD_GenePanelGeneREV extends LOVD_GenePanelGene {
         $nCount = 0; // The number of Gene Panel revisions (modifications) in date range, not counting the "Created record" revision.
 
         // Display the gene panel revisions.
-        print('    <TABLE border="0" cellpadding="10" cellspacing="0"><TR valign="top">
+        print('    <TABLE border="0" cellpadding="10" cellspacing="0">
+    <TR valign="top">
       <TD>
         <TABLE border="0" cellpadding="10" cellspacing="1" width="720" class="data" style="font-size : 13px;">   
           <TR>
-            <TH  class="S16" >Changes to Gene Panel information</TH>
-            <TH  class="S16" width="150" >Date</TH>
+            <TH class="S16">Changes to Gene Panel information</TH>
+            <TH class="S16" width="150">Date</TH>
           </TR>' . "\n");
 
         foreach ($aGenePanelRevs as $aGenePanelRev) {
@@ -258,7 +267,7 @@ class LOVD_GenePanelGeneREV extends LOVD_GenePanelGene {
         print('      </TR>
     </TABLE>' . "\n");
 
-        if ( $nCount == 0) {
+        if ($nCount == 0) {
             lovd_showInfoTable('Genes in this gene panel have not changed between ' . $dFromDate . ' and ' . $dToDate .'.', 'information');
         }
     }
