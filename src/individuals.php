@@ -4,7 +4,7 @@
  * LEIDEN OPEN VARIATION DATABASE (LOVD)
  *
  * Created     : 2011-02-16
- * Modified    : 2015-03-11
+ * Modified    : 2015-05-24
  * For LOVD    : 3.0-13
  *
  * Copyright   : 2004-2015 Leiden University Medical Center; http://www.LUMC.nl/
@@ -59,6 +59,8 @@ if (PATH_COUNT == 1 && !ACTION) {
         lovd_requireAUTH();
     }
 
+    // Hide confirmed analyses by default.
+    $_GET['search_analysis_status'] = '!="Confirmed"';
     require ROOT_PATH . 'class/object_individuals.mod.php';
     $_DATA = new LOVD_IndividualMOD();
     $_DATA->setRowLink('Individuals', 'javascript:window.location.href=\'' . lovd_getInstallURL() . $_PE[0] . '/{{id}}/analyze/{{screeningid}}\'; return false');
@@ -86,14 +88,14 @@ if (PATH_COUNT >= 2 && ctype_digit($_PE[1]) && !ACTION && (PATH_COUNT == 2 || PA
     if (LOVD_plus) {
         lovd_requireAUTH();
     } else {
-        // Load appropiate user level for this individual.
+        // Load appropriate user level for this individual.
         lovd_isAuthorized('individual', $nID);
     }
 
     // FIXME: This means, when the ID does not exist, we have an open table that doesn't close.
-    print('      <TABLE cellpadding="0" cellspacing="0" border="0" width="100%">
+    print('      <TABLE cellpadding="0" cellspacing="0" border="0">
         <TR>
-          <TD valign="top">' . "\n");
+          <TD valign="top" width="1000">' . "\n");
     require ROOT_PATH . 'class/object_individuals.mod.php';
     $_DATA = new LOVD_IndividualMOD($nID);
     $zData = $_DATA->viewEntry($nID);
@@ -101,6 +103,7 @@ if (PATH_COUNT >= 2 && ctype_digit($_PE[1]) && !ACTION && (PATH_COUNT == 2 || PA
     $aNavigation = array();
     if ($_AUTH && $_AUTH['level'] == LEVEL_ADMIN) {
         $aNavigation[$_PE[0] . '/' . $_PE[1] . '?edit']                     = array('menu_edit.png', 'Edit individual entry', 1);
+        $aNavigation[$_PE[0] . '/' . $_PE[1] . '?edit_panels']              = array('menu_edit.png', 'Edit gene panels', 1);
         if ($_AUTH['level'] >= LEVEL_MANAGER) {
             $aNavigation['screenings?search_individualid=' . $nID] = array('menu_magnifying_glass.png', 'View screenings', 1);
         }
@@ -118,8 +121,30 @@ if (PATH_COUNT >= 2 && ctype_digit($_PE[1]) && !ACTION && (PATH_COUNT == 2 || PA
     }
     lovd_showJGNavigation($aNavigation, 'Individuals');
 
+    // Show a warning if no gene panels have been assigned to this individual.
+    if (!count($zData['gene_panels'])) {
+        print('<BR>');
+        lovd_showInfoTable('No gene panels have been assigned to this individual, <A href="' . $_PE[0] . '/' . $_PE[1] . '?edit_panels">click here</A> to assign them.', 'warning', 600);
+    }
+
+
+
+    // Show logs related to closing and opening of analyses this individual.
+    print('    <BR><BR>' . "\n\n");
+    $_GET['page_size'] = 10;
+    $_GET['search_event'] = 'AnalysisOpen|AnalysisClose';
+    $_GET['search_entry_'] = '"individual ' . $nID . '"';
+    $_T->printTitle('Log entries', 'H4');
+    require_once ROOT_PATH . 'class/object_logs.php';
+    $_DATA = new LOVD_Log();
+    $_DATA->viewList('Logs_for_I_VE', array('name', 'event', 'del'), true);
+    unset($_GET['page_size'], $_GET['search_event'], $_GET['search_entry_']);
+
+
+
     print('
           </TD>
+          <TD width="50">&nbsp;</TD>
           <TD valign="top" id="screeningViewEntry">' . "\n");
 
     // If we're here, analyzing a screening, show the screening VE on the right.
@@ -213,6 +238,52 @@ if (PATH_COUNT >= 2 && ctype_digit($_PE[1]) && !ACTION && (PATH_COUNT == 2 || PA
 
         lovd_includeJS('inc-js-analyses.php', 1);
 
+        // The popover div for showing the gene panel selection form.
+        print('
+      <DIV id="gene_panel_selection" title="Select gene panels for analysis" style="display : none;">
+        <FORM id="gene_panel_selection_form">
+          <INPUT type="hidden" name="nScreeningID" value="">
+          <INPUT type="hidden" name="nAnalysisID" value="">
+          <INPUT type="hidden" name="nRunID" value="">
+          <TABLE border="0" cellpadding="0" cellspacing="0" width="80%" align="center">');
+
+        $sLastType = '';
+        // Add each of the gene panels assigned to this individual to the form.
+        foreach ($zData['gene_panels'] as $nKey => $aGenePanel) {
+            // Create the gene panel type header.
+            if ($sLastType == '' || $sLastType != $aGenePanel[2]) {
+                print('
+            <TR>
+              <TD class="gpheader" colspan="2" ' . ($sLastType? '' : 'style="border-top: 0px"') . '>' . ucfirst(str_replace('_', ' ', $aGenePanel[2])) . '</TD>
+            </TR>');
+            }
+            $sLastType = $aGenePanel[2];
+
+            // Add the gene panel to the form.
+            print('
+            <TR>
+              <TD><INPUT type="checkbox" name="gene_panel" value="' . $aGenePanel[0] . '"' . ($aGenePanel[2] == 'mendeliome'? '' : ' checked') . '></TD>
+              <TD>' . $aGenePanel[1] . '</TD>
+            </TR>');
+        }
+
+        // Add in the custom gene panel option.
+        if ($zData['custom_panel']) {
+            print('
+            <TR>
+              <TD class="gpheader" colspan="2">Custom panel</TD>
+            </TR>
+            <TR>
+              <TD><INPUT type="checkbox" name="gene_panel" value="custom_panel" checked></TD>
+              <TD>' . $zData['custom_panel'] . '</TD>
+            </TR>');
+        }
+
+        print('
+          </TABLE>
+        </FORM>
+      </DIV>' . "\n");
+
         // If we're ready to analyze, or if we are analyzing already, show analysis options.
         // Both already run analyses and analyses not yet run will be shown. Analyses already run are fetched differently, though.
         $zAnalysesRun    = $_DB->query('SELECT a.id, a.name, a.description, a.filters, IFNULL(MAX(arf.run_time)>-1, 0) AS analysis_run, ar.id AS runid,   ar.modified, GROUP_CONCAT(arf.filterid, ";", IFNULL(arf.filtered_out, "-"), ";", IFNULL(arf.run_time, "-") ORDER BY arf.filter_order SEPARATOR ";;") AS __run_filters
@@ -224,6 +295,7 @@ if (PATH_COUNT >= 2 && ctype_digit($_PE[1]) && !ACTION && (PATH_COUNT == 2 || PA
                                                            FROM ' . TABLE_ANALYSES_RUN . ' AS ar
                                                            WHERE ar.screeningid = ? AND ar.modified = 0) ORDER BY a.sortid, a.id', array($nScreeningToAnalyze))->fetchAllAssoc();
         $zAnalyses = array_merge($zAnalysesRun, array(''), $zAnalysesNotRun);
+        require ROOT_PATH . 'inc-lib-analyses.php';
         print('
       <DIV id="analyses">
         <TABLE id="analysesTable" border="0" cellpadding="0" cellspacing="0">
@@ -264,7 +336,7 @@ if (PATH_COUNT >= 2 && ctype_digit($_PE[1]) && !ACTION && (PATH_COUNT == 2 || PA
             print('
             <TD class="analysis" valign="top">
               <TABLE border="0" cellpadding="0" cellspacing="1" id="' . ($zAnalysis['runid']? 'run_' . $zAnalysis['runid'] : 'analysis_' . $zAnalysis['id']) . '" class="analysis ' . $sAnalysisClassName . '" onclick="' .
-                ($zAnalysis['analysis_run']? 'lovd_showAnalysisResults(\'' . $zAnalysis['runid'] . '\');' : ($_AUTH['level'] < LEVEL_OWNER || $zScreening['analysis_statusid'] >= ANALYSIS_STATUS_CLOSED? '' : 'lovd_runAnalysis(\'' . $nScreeningToAnalyze . '\', \'' . $zAnalysis['id'] . '\'' . (!$zAnalysis['runid']? '' : ', \'' . $zAnalysis['runid'] . '\'') . ');')) . '">
+                ($zAnalysis['analysis_run']? 'lovd_showAnalysisResults(\'' . $zAnalysis['runid'] . '\');' : ($_AUTH['level'] < LEVEL_OWNER || $zScreening['analysis_statusid'] >= ANALYSIS_STATUS_CLOSED? '' : 'lovd_popoverGenePanelSelectionForm(\'' . $nScreeningToAnalyze . '\', \'' . $zAnalysis['id'] . '\'' . (!$zAnalysis['runid']? '' : ', \'' . $zAnalysis['runid'] . '\'') . ');')) . '">
                 <TR>
                   <TH colspan="3">
                     <DIV style="position : relative">
@@ -296,9 +368,17 @@ if (PATH_COUNT >= 2 && ctype_digit($_PE[1]) && !ACTION && (PATH_COUNT == 2 || PA
                         $sFilterClassName = 'filter_completed';
                     }
                 }
+
+                // Display the information for the gene panels used in this analysis.
+                $sGenePanelsInfo = '';
+                if ($sFilter == 'apply_selected_gene_panels' && !empty($zAnalysis['runid']) && $zAnalysis['analysis_run']) {
+                    // Check to see if this is the right filter to show the info under and that we actually have some gene panels or custom panel assigned.
+                    $sGenePanelsInfo = getSelectedGenePanelsByRunID($zAnalysis['runid']);
+                }
+
                 print('
-                <TR id="' . ($zAnalysis['runid']? 'run_' . $zAnalysis['runid'] : 'analysis_' . $zAnalysis['id']) . '_filter_' . preg_replace('/[^a-z0-9_]/i', '_', $sFilter) . '"' . (!$sFilterClassName? '' : ' class="' . $sFilterClassName . '"') . '>
-                  <TD>' . $sFilter . '</TD>
+                <TR id="' . ($zAnalysis['runid']? 'run_' . $zAnalysis['runid'] : 'analysis_' . $zAnalysis['id']) . '_filter_' . preg_replace('/[^a-z0-9_]/i', '_', $sFilter) . '"' . (!$sFilterClassName? '' : ' class="' . $sFilterClassName . '"') . ' valign="top">
+                  <TD>' . $sFilter . $sGenePanelsInfo . '</TD>
                   <TD>' . ($nTime == '-'? '-' : lovd_convertSecondsToTime($nTime, 1)) . '</TD>
                   <TD>' . ($nTime == '-'? '-' : $nVariantsLeft) . '</TD>
                 </TR>');
@@ -347,15 +427,27 @@ if (PATH_COUNT >= 2 && ctype_digit($_PE[1]) && !ACTION && (PATH_COUNT == 2 || PA
         $_DATA = new LOVD_CustomViewListMOD(array('AnalysisRunResults', 'VariantOnGenome', 'VariantOnTranscript'));
         // Define menu, to set pathogenicity flags of multiple variants in one go.
         $_DATA->setRowLink('CustomVL_AnalysisRunResults_for_I_VE', 'javascript:lovd_openWindow(\'' . lovd_getInstallURL() . 'variants/{{ID}}?&in_window\', \'VarVE_{{ID}}\', 1000); return false;');
+        $bMenu         = true; // Show the gear-menu, with which users can mark and label variants?
+        $bConfirmation = true; // Are users allowed to set the confirmation status of variants? Value is ignored when $bMenu = false.
+        if (!($_AUTH['level'] >= LEVEL_OWNER && $zScreening['analysis_statusid'] < ANALYSIS_STATUS_CLOSED) &&
+            !($_AUTH['level'] >= LEVEL_MANAGER && $zScreening['analysis_statusid'] < ANALYSIS_STATUS_WAIT_CONFIRMATION)) {
+            $bMenu = false;
+            if ($_AUTH['level'] >= LEVEL_ADMIN && $zScreening['analysis_statusid'] < ANALYSIS_STATUS_CONFIRMED) {
+                $bMenu = true;
+                $bConfirmation = false;
+            }
+        }
         print('      <UL id="viewlistMenu_CustomVL_AnalysisRunResults_for_I_VE" class="jeegoocontext jeegooviewlist">' . "\n");
         foreach ($_SETT['var_effect'] as $nEffectID => $sEffect) {
             print('        <LI class="icon"><A click="lovd_AJAX_viewListSubmit(\'CustomVL_AnalysisRunResults_for_I_VE\', function(){$.get(\'ajax/set_variant_effect.php?' . $nEffectID . '&id=selected\', function(sResponse){if(sResponse.substring(0,1) == \'1\'){alert(\'Successfully set reported variant effect of \' + sResponse.substring(2) + \' variants to \\\'' . $sEffect . '\\\'.\');lovd_AJAX_viewListSubmit(\'CustomVL_AnalysisRunResults_for_I_VE\');}else if(sResponse.substring(0,1) == \'9\'){alert(\'Error: \' + sResponse.substring(2));}}).error(function(){alert(\'Error while setting variant effect.\');});});"><SPAN class="icon" style="background-image: url(gfx/menu_edit.png);"></SPAN>Set variant effect to "' . $sEffect . '"</A></LI>' . "\n");
         }
-        // Link for marking variant to be (un)confirmed.
-        print('        <LI class="icon"><A click="lovd_AJAX_viewListSubmit(\'CustomVL_AnalysisRunResults_for_I_VE\', function(){$.get(\'ajax/set_to_be_confirmed.php?set&id=selected\', function(sResponse){if(sResponse.substring(0,1) == \'1\'){alert(\'Successfully set \' + sResponse.substring(2) + \' variants to be confirmed.\');lovd_AJAX_viewListSubmit(\'CustomVL_AnalysisRunResults_for_I_VE\');lovd_AJAX_viewEntryLoad();}else if(sResponse.substring(0,1) == \'9\'){alert(\'Error: \' + sResponse.substring(2));}}).error(function(){alert(\'Error while setting variant status.\');});});"><SPAN class="icon" style="background-image: url(gfx/menu_confirm.png);"></SPAN>Set variant to be confirmed</A></LI>' . "\n" .
-              '        <LI class="icon"><A click="lovd_AJAX_viewListSubmit(\'CustomVL_AnalysisRunResults_for_I_VE\', function(){$.get(\'ajax/set_to_be_confirmed.php?unset&id=selected\', function(sResponse){if(sResponse.substring(0,1) == \'1\'){alert(\'Successfully unset \' + sResponse.substring(2) + \' variants to be confirmed.\');lovd_AJAX_viewListSubmit(\'CustomVL_AnalysisRunResults_for_I_VE\');lovd_AJAX_viewEntryLoad();}else if(sResponse.substring(0,1) == \'9\'){alert(\'Error: \' + sResponse.substring(2));}}).error(function(){alert(\'Error while unsetting variant status.\');});});"><SPAN class="icon" style="background-image: url(gfx/menu_unconfirm.png);"></SPAN>Set variant to <I>not</I> be confirmed</A></LI>' . "\n");
+        if ($bConfirmation) {
+            // Link for marking variant to be (un)confirmed.
+            print('        <LI class="icon"><A click="lovd_AJAX_viewListSubmit(\'CustomVL_AnalysisRunResults_for_I_VE\', function(){$.get(\'ajax/set_to_be_confirmed.php?set&id=selected\', function(sResponse){if(sResponse.substring(0,1) == \'1\'){alert(\'Successfully set \' + sResponse.substring(2) + \' variants to be confirmed.\');lovd_AJAX_viewListSubmit(\'CustomVL_AnalysisRunResults_for_I_VE\');lovd_AJAX_viewEntryLoad();}else if(sResponse.substring(0,1) == \'9\'){alert(\'Error: \' + sResponse.substring(2));}}).error(function(){alert(\'Error while setting variant status.\');});});"><SPAN class="icon" style="background-image: url(gfx/menu_confirm.png);"></SPAN>Set variant to be confirmed</A></LI>' . "\n" .
+                  '        <LI class="icon"><A click="lovd_AJAX_viewListSubmit(\'CustomVL_AnalysisRunResults_for_I_VE\', function(){$.get(\'ajax/set_to_be_confirmed.php?unset&id=selected\', function(sResponse){if(sResponse.substring(0,1) == \'1\'){alert(\'Successfully unset \' + sResponse.substring(2) + \' variants to be confirmed.\');lovd_AJAX_viewListSubmit(\'CustomVL_AnalysisRunResults_for_I_VE\');lovd_AJAX_viewEntryLoad();}else if(sResponse.substring(0,1) == \'9\'){alert(\'Error: \' + sResponse.substring(2));}}).error(function(){alert(\'Error while unsetting variant status.\');});});"><SPAN class="icon" style="background-image: url(gfx/menu_unconfirm.png);"></SPAN>Set variant to <I>not</I> be confirmed</A></LI>' . "\n");
+        }
         print('      </UL>' . "\n\n");
-        $_DATA->viewList('CustomVL_AnalysisRunResults_for_I_VE', array(), false, false, ($_AUTH['level'] >= LEVEL_OWNER));
+        $_DATA->viewList('CustomVL_AnalysisRunResults_for_I_VE', array(), false, false, $bMenu);
         print('
           </DIV>');
     }
@@ -763,6 +855,10 @@ if (PATH_COUNT == 1 && ACTION == 'create') {
                 }
             }
 
+            if (count($aSuccessDiseases)) {
+                lovd_writeLog('Event', LOG_EVENT, 'Disease entr' . (count($aSuccessDiseases) > 1? 'ies' : 'y') . ' successfully added to individual ' . $nID);
+            }
+
             $_AUTH['saved_work']['submissions']['individual'][$nID] = array('id' => $nID, 'panel_size' => $_POST['panel_size']);
             lovd_saveWork();
 
@@ -996,6 +1092,235 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && in_array(ACTION, array('edit', 'p
 
     print('</FORM>' . "\n\n");
 
+    $_T->printFooter();
+    exit;
+}
+
+
+
+
+
+if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && ACTION == 'edit_panels') {
+    // URL: /individuals/00000001?edit_panels
+    // Edit an individuals gene panels.
+
+    $nID = sprintf('%08d', $_PE[1]);
+    define('PAGE_TITLE', 'Edit gene panels for individual #' . $nID);
+    define('LOG_EVENT', 'IndividualEditPanels');
+
+    // Load appropriate user level for this individual.
+    lovd_isAuthorized('individual', $nID);
+    lovd_requireAUTH(LEVEL_OWNER);
+
+    require ROOT_PATH . 'class/object_individuals.mod.php';
+    $_DATA = new LOVD_IndividualMOD();
+    $zData = $_DATA->loadEntry($nID);
+    require ROOT_PATH . 'inc-lib-form.php';
+
+    if (POST) {
+        lovd_errorClean();
+
+        // Checks to make sure a valid gene panel ID is used.
+        if (!empty($_POST['gene_panels'])) {
+            $aGenePanels = $_DB->query('SELECT id FROM ' . TABLE_GENE_PANELS)->fetchAllColumn();
+            foreach ($_POST['gene_panels'] as $nGenePanelID) {
+                if ($nGenePanelID && !in_array($nGenePanelID, $aGenePanels)) {
+                    lovd_errorAdd('gene_panels', htmlspecialchars($nGenePanelID) . ' is not a valid gene panel ID.');
+                }
+            }
+        }
+
+        // Checks the genes added to the custom panel to ensure they exist within the database.
+        if (!empty($_POST['custom_panel'])) {
+            // Explode the custom panel genes into an array.
+            $aGeneSymbols = array_filter(array_unique(preg_split('/(\s|[,;])+/', strtoupper($_POST['custom_panel']))));
+
+            // Check if there are any genes left after cleaning up the gene symbol string.
+            if (count($aGeneSymbols) > 0) {
+                // Load the matching genes into an array.
+                $aGenesInLOVD = $_DB->query('SELECT UPPER(id), id FROM ' . TABLE_GENES . ' WHERE id IN (?' . str_repeat(', ?', count($aGeneSymbols) - 1) . ')', $aGeneSymbols)->fetchAllCombine();
+                // Loop through all the gene symbols in the array and check them for any errors.
+                foreach ($aGeneSymbols as $nKey => $sGeneSymbol) {
+                    // Check to see if this gene symbol has been found within the database.
+                    if (isset($aGenesInLOVD[$sGeneSymbol])) {
+                        // A correct gene symbol was found, so lets use that to remove any case issues.
+                        $aGeneSymbols[$nKey] = $aGenesInLOVD[$sGeneSymbol];
+                    } else {
+                        // This gene symbol was not found in the database.
+                        // It got uppercased by us, but we assume that will be OK.
+                        lovd_errorAdd('custom_panel', 'The gene symbol ' . htmlspecialchars($sGeneSymbol) . ' can not be found within the database.');
+                    }
+                }
+                // Write the cleaned up custom gene panel back to POST so as to ensure the genes in the custom panel are stored with correct casing.
+                $_POST['custom_panel'] = implode(', ', $aGeneSymbols);
+            }
+        }
+        lovd_checkXSS();
+
+        if (!lovd_error()) {
+            // Fields to be used.
+            $aFields = array('custom_panel');
+            $sDateNow = date('Y-m-d H:i:s');
+
+            $_DATA->updateEntry($nID, $_POST, $aFields);
+
+            // Write to log...
+            lovd_writeLog('Event', LOG_EVENT, 'Edited gene panels for individual ' . $nID);
+
+            // Change linked gene panels.
+            $aGenePanels = array();
+            if ($zData['gene_panels']) {
+                $aGenePanels = $zData['gene_panels'];
+            }
+            // If we have removed all gene panels from this individual then we need to set the $_POST['gene_panels'] to an empty array otherwise functions below will error.
+            if (empty($_POST['gene_panels'])) {
+                $_POST['gene_panels'] = array();
+            }
+            // Remove gene panels.
+            $aToRemove = array();
+            foreach ($aGenePanels as $nGenePanel) {
+                if ($nGenePanel && !in_array($nGenePanel, $_POST['gene_panels'])) {
+                    // User has requested removal...
+                    $aToRemove[] = $nGenePanel;
+                }
+            }
+            if ($aToRemove) {
+                $q = $_DB->query('DELETE FROM ' . TABLE_IND2GP . ' WHERE individualid = ? AND genepanelid IN (?' . str_repeat(', ?', count($aToRemove) - 1) . ')', array_merge(array($nID), $aToRemove), false);
+                if (!$q) {
+                    // Silent error.
+                    lovd_writeLog('Error', LOG_EVENT, 'Gene panel entr' . (count($aToRemove) == 1? 'y' : 'ies') . ' ' . implode(', ', $aToRemove) . ' could not be removed from individual ' . $nID);
+                }
+            }
+
+            // Add gene panels.
+            $aSuccess = array();
+            $aFailed = array();
+            foreach ($_POST['gene_panels'] as $nGenePanel) {
+                if (!in_array($nGenePanel, $aGenePanels)) {
+                    // Add gene panel to individual.
+                    $q = $_DB->query('INSERT IGNORE INTO ' . TABLE_IND2GP . ' VALUES (?, ?, ?, ?)', array($nID, $nGenePanel, $_AUTH['id'], $sDateNow), false);
+                    if (!$q) {
+                        $aFailed[] = $nGenePanel;
+                    } else {
+                        $aSuccess[] = $nGenePanel;
+                    }
+                }
+            }
+            if ($aFailed) {
+                // Silent error.
+                lovd_writeLog('Error', LOG_EVENT, 'Gene panel entr' . (count($aFailed) == 1? 'y' : 'ies') . ' ' . implode(', ', $aFailed) . ' could not be added to individual ' . $nID);
+            }
+
+            // Thank the user...
+            if (!$aFailed) {
+                header('Refresh: 3; url=' . lovd_getInstallURL() . CURRENT_PATH);
+            }
+            $_T->printHeader();
+            $_T->printTitle();
+            if (!$aFailed) {
+                lovd_showInfoTable('Successfully edited the gene panels for this individual!', 'success');
+            } else {
+                lovd_showInfoTable('Failed to edit the gene panels for this individual. Please see the <A href="logs">system logs</A> for more information.', 'stop');
+            }
+
+            $_T->printFooter();
+            exit;
+        }
+
+    } else {
+        // Not submitted, set default values for this form.
+        $_POST = array_merge($_POST, $zData);
+
+        if(empty($_POST['gene_panels'])) {
+            $_POST['gene_panels'] = array();
+        }
+
+        // Check to see if any gene panels are selected, if not then lets suggest some.
+        if (empty($_POST['gene_panels']) && !empty($zData['active_diseases'])) {
+            $aDiseases = $zData['active_diseases'];
+
+            // Check to see if any gene panels share the individuals diseases.
+            $aDefaultGenePanels = $_DB->query('SELECT DISTINCT gp.id, gp.name, gp.type FROM ' . TABLE_GENE_PANELS . ' AS gp JOIN ' . TABLE_GP2DIS . ' AS gp2d ON (gp.id = gp2d.genepanelid) WHERE gp2d.diseaseid IN (?' . str_repeat(', ?', count($aDiseases)-1) . ') ORDER BY gp.type DESC, gp.name ASC', array_values($aDiseases))->fetchAllAssoc();
+
+            if ($aDefaultGenePanels) {
+                // Set the default gene panels in the form to these gene panels.
+                foreach ($aDefaultGenePanels as $nKey => $aGenePanel) {
+                    $_POST['gene_panels'][] = $aGenePanel['id'];
+                }
+            }
+        }
+    }
+
+    $_T->printHeader();
+    $_T->printTitle();
+
+    lovd_errorPrint();
+
+    // Tooltip JS code.
+    lovd_includeJS('inc-js-tooltip.php');
+    lovd_includeJS('inc-js-custom_links.php');
+
+    print('      <DIV style="display: -webkit-flex; display: flex; flex-direction: row;">
+        <FORM action="' . CURRENT_PATH . '?' . ACTION . '" method="post">' . "\n");
+
+    // Get list of gene panels.
+    // Note: CAST(id AS CHAR) is needed to preserve the zerofill.
+    $aGenePanelsForm = $_DB->query('(SELECT "optgroup2" AS id, "Mendeliome" AS name, "mendeliome_header" AS type)
+                                     UNION
+                                    (SELECT "optgroup1", "Gene Panels", "gene_panel_header")
+                                     UNION
+                                    (SELECT "optgroup3", "Blacklist", "blacklist_header")
+                                     UNION
+                                    (SELECT CAST(id AS CHAR), name, type FROM ' . TABLE_GENE_PANELS . ')
+                                     ORDER BY type DESC, name')->fetchAllCombine();
+    $nGenePanels = count($aGenePanelsForm);
+    foreach ($aGenePanelsForm as $nID => $sGenePanel) {
+        $aGenePanelsForm[$nID] = lovd_shortenString($sGenePanel, 75);
+    }
+    $nGPFieldSize = ($nGenePanels < 20 ? $nGenePanels : 20);
+    if (!$nGenePanels) {
+        $aGenePanelsForm = array('' => 'No gene panel entries available');
+        $nGPFieldSize = 1;
+    }
+
+    // Array which will make up the form table.
+    $aForm =
+        array(
+            array('POST', '', '', '', '50%', '14', '50%'),
+            'custom_panel' => array('Custom gene panel', 'Please insert any gene symbols here that you want to use as a custom gene panel, only for this individual.', 'textarea', 'custom_panel', 50, 2),
+            'aGenePanels' => array('Assigned gene panels', '', 'select', 'gene_panels', $nGPFieldSize, $aGenePanelsForm, false, true, false),
+            array('', '', 'print', '<INPUT type="submit" value="Edit gene panels">'),
+        );
+    lovd_viewForm($aForm);
+
+    print('</FORM>' . "\n\n");
+
+    if (!empty($aDefaultGenePanels)) {
+        $nDefaultGenePanels = count($aDefaultGenePanels);
+        // Display a message to the user identifying the gene panels that have been assigned by default.
+        $sDefaultGenePanelMsg = "\n" .
+            '            <H4 class="LOVD">Default gene panels</H4>
+            The following gene panel' . ($nDefaultGenePanels == 1? ' is' : 's were') . ' automatically assigned to this individual because ' . ($nDefaultGenePanels == 1? 'it is' : 'they are') . ' associated to (one of) the individual\'s diseases:<BR><BR>
+            <TABLE border="0" cellpadding="1" cellspacing="1" width="90%" class="data" style="background: #dddddd; font-size: 13px;">
+              <TR>
+                <TH width="70%">Gene panel name</TH>
+                <TH>Type</TH>
+              </TR>' . "\n";
+        // List all the gene panels found in a table.
+        foreach ($aDefaultGenePanels as $nKey => $aGenePanel) {
+            $sDefaultGenePanelMsg .= '              <TR>
+                <TD>' . $aGenePanel['name'] . '</TD>
+                <TD>' . ucfirst(str_replace('_', ' ', $aGenePanel['type'])) . '</TD>
+              </TR>' . "\n";
+        }
+        $sDefaultGenePanelMsg .= '            </TABLE><BR>
+            If you do not wish to assign these gene panels to this individual then please unselect them.<BR><BR>';
+
+        print('          <DIV style="width: 500px; margin-left: 25px;">' . "\n");
+        lovd_showInfoTable($sDefaultGenePanelMsg, 'information');
+        print('          </DIV>');
+    }
+    print('    </DIV>');
     $_T->printFooter();
     exit;
 }

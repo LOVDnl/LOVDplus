@@ -4,7 +4,7 @@
  * LEIDEN OPEN VARIATION DATABASE (LOVD)
  *
  * Created     : 2013-11-05
- * Modified    : 2016-04-07
+ * Modified    : 2016-05-13
  * For LOVD    : 3.0-15
  *
  * Copyright   : 2004-2016 Leiden University Medical Center; http://www.LUMC.nl/
@@ -49,7 +49,7 @@ if (empty($_GET['screeningid']) || empty($_GET['analysisid']) || !ctype_digit($_
 
 // Find screening data, make sure we have the right to analyze this patient.
 // MANAGER can always start an analysis, even when the individual's analysis hasn't been started by him.
-$sSQL = 'SELECT i.id FROM ' . TABLE_INDIVIDUALS . ' AS i INNER JOIN ' . TABLE_SCREENINGS . ' AS s ON (i.id = s.individualid) WHERE s.id = ? AND s.analysis_statusid < ? AND (s.analysis_statusid = ? OR s.analysis_by ' . ($_AUTH['level'] >= LEVEL_MANAGER? 'IS NOT NULL' : '= ?') . ')';
+$sSQL = 'SELECT i.id, i.custom_panel FROM ' . TABLE_INDIVIDUALS . ' AS i INNER JOIN ' . TABLE_SCREENINGS . ' AS s ON (i.id = s.individualid) WHERE s.id = ? AND s.analysis_statusid < ? AND (s.analysis_statusid = ? OR s.analysis_by ' . ($_AUTH['level'] >= LEVEL_MANAGER? 'IS NOT NULL' : '= ?') . ')';
 $aSQL = array($_GET['screeningid'], ANALYSIS_STATUS_CLOSED, ANALYSIS_STATUS_READY);
 if ($_AUTH['level'] < LEVEL_MANAGER) {
     $aSQL[] = $_AUTH['id'];
@@ -86,6 +86,18 @@ if ($_GET['runid']) {
     }
 }
 
+$sCustomPanel = '';
+$aGenePanels = array();
+// Process any gene panels that may have been passed.
+if (!empty($_GET['gene_panels'])) {
+    $aGenePanels = array_values($_GET['gene_panels']);
+    if(($nKey = array_search('custom_panel', $aGenePanels)) !== false) {
+        // If the custom panel has been selected then record this and remove from array.
+        $sCustomPanel = $zIndividual['custom_panel'];
+        unset($aGenePanels[$nKey]);
+    }
+}
+
 
 
 
@@ -97,7 +109,7 @@ $_DB->query('UPDATE ' . TABLE_SCREENINGS . ' SET analysis_statusid = ?, analysis
 
 if (!$_GET['runid']) {
     // Create analysis in database.
-    $q = $_DB->query('INSERT INTO ' . TABLE_ANALYSES_RUN . ' VALUES (NULL, ?, ?, 0, ?, NOW())', array($zAnalysis['id'], $_GET['screeningid'], $_AUTH['id']));
+    $q = $_DB->query('INSERT INTO ' . TABLE_ANALYSES_RUN . ' VALUES (NULL, ?, ?, 0, ?, ?, NOW())', array($zAnalysis['id'], $_GET['screeningid'], $sCustomPanel, $_AUTH['id']));
     if (!$q) {
         $_DB->rollBack();
         die('Failed to create analysis run in the database. If the analysis is defined properly, this is an error in the software.');
@@ -116,7 +128,22 @@ if (!$_GET['runid']) {
 } else {
     $nRunID = (int) $_GET['runid']; // (int) is to prevent zerofill from messing things up.
     $aFilters = explode(';', $zAnalysisRun['_filters']);
+    // Update the existing analyses run record to store the custom panel genes.
+    $_DB->query('UPDATE ' . TABLE_ANALYSES_RUN . ' SET custom_panel = ? WHERE id = ?', array($sCustomPanel, $nRunID));
 }
+
+// Process the selected gene panels.
+// FIXME: This will fail if we already have the run ID in the database. That can
+// happen, when somehow the analysis run was created, but didn't start (JS error?).
+foreach ($aGenePanels as $nKey => $nGenePanelID) {
+    // Write the gene panels selected to the analyses_run2gene_panel table.
+    $q = $_DB->query('INSERT INTO ' . TABLE_AR2GP . ' VALUES (?, ?)', array($nRunID, $nGenePanelID));
+    if (!$q) {
+        $_DB->rollBack();
+        die('Failed to store the gene panels for this analysis. This may be a temporary error, or an error in the software.');
+    }
+}
+
 $_DB->commit();
 
 // Write to log...
@@ -130,12 +157,14 @@ lovd_writeLog('Event', LOG_EVENT, 'Started analysis run ' . str_pad($nRunID, 5, 
 if (empty($_SESSION['analyses'])) {
     $_SESSION['analyses'] = array();
 }
-// Store screeningid and filters in session.
+// Store analysis information in the session.
 $_SESSION['analyses'][$nRunID] =
     array(
         'screeningid' => (int) $_GET['screeningid'], // (int) is to prevent zerofill from messing things up.
         'filters' => $aFilters,
-        'IDsLeft' => array()
+        'IDsLeft' => array(),
+        'custom_panel' => $sCustomPanel,
+        'gene_panels' => $aGenePanels,
     );
 
 // Collect variant IDs and store in session.

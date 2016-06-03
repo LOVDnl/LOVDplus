@@ -4,8 +4,8 @@
  * LEIDEN OPEN VARIATION DATABASE (LOVD)
  *
  * Created     : 2009-10-19
- * Modified    : 2016-04-06
- * For LOVD    : 3.0-15
+ * Modified    : 2016-05-13
+ * For LOVD    : 3.0-16
  *
  * Copyright   : 2004-2016 Leiden University Medical Center; http://www.LUMC.nl/
  * Programmers : Ing. Ivo F.A.C. Fokkema <I.F.A.C.Fokkema@LUMC.nl>
@@ -137,7 +137,7 @@ $aRequired =
 $_SETT = array(
                 'system' =>
                      array(
-                            'version' => '3.0-12p',
+                            'version' => '3.0-12t',
                           ),
                 'user_levels' =>
                      array(
@@ -433,6 +433,12 @@ if (LOVD_plus) {
                 'path_is_readable' => true,
                 'path_is_writable' => true,
             ),
+        'data_files_archive' =>
+            array(
+                'required' => false,
+                'path_is_readable' => true,
+                'path_is_writable' => true,
+            ),
         'alternative_ids' =>
             array(
                 'required' => false,
@@ -444,6 +450,14 @@ if (LOVD_plus) {
                 'required' => false,
                 'path_is_readable' => true,
                 'path_is_writable' => true,
+            ),
+    );
+    // Configure instance details.
+    $aConfigValues['instance'] = array(
+        'name' =>
+            array(
+                'required' => false,
+                'default'  => '',
             ),
     );
 }
@@ -555,6 +569,7 @@ $_TABLES =
                 'TABLE_ANALYSES_RUN_FILTERS' => TABLEPREFIX . '_analyses_run_filters',
                 'TABLE_ANALYSES_RUN_RESULTS' => TABLEPREFIX . '_analyses_run_results',
                 'TABLE_SCHEDULED_IMPORTS' => TABLEPREFIX . '_scheduled_imports',
+                'TABLE_AR2GP' => TABLEPREFIX . '_analyses_run2gene_panels',
 
                 // Gene Lists.
                 'TABLE_GENE_PANELS' => TABLEPREFIX . '_gene_panels',

@@ -46,9 +46,19 @@ table_prefix = lovd
 # The following path contains data files to load into LOVD+.
 data_files =
 
+# The following path is where LOVD+ will write imported files to.
+data_files_archive =
+
 # The following path contains alternative IDs for the patients in the database.
 alternative_ids =
 
 # The following path is used by LOVD+ to export information on variants that
 # need to be confirmed in the lab (usually by Sanger sequencing).
 confirm_variants =
+
+
+
+[instance]
+
+# The name of this instance, used to activate site specific features.
+name =
