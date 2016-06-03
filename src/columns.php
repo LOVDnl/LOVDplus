@@ -913,9 +913,28 @@ if (PATH_COUNT > 2 && ACTION == 'edit') {
                 // If it fails directly after this, one can always just redo the edit. LOVD will detect properly that it still needs to be edited in TABLE_COLS.
                 $aColumns = $_DB->query('DESCRIBE ' . $aColumnInfo['table_sql'])->fetchAllColumn();
                 if (in_array($sColumnID, $aColumns)) {
+                    $bRev = !empty($aColumnInfo['table_sql_rev']); // Check if we have a revision version of this table.
+                    if ($bRev) {
+                        // If we have a revision table then start a transaction as we will be running multiple queries here.
+                        $_DB->beginTransaction();
+                    }
                     // Column active for this table.
                     // This variables have been checked using regexps, so can be considered safe.
                     $q = $_DB->query('ALTER TABLE ' . $aColumnInfo['table_sql'] . ' MODIFY COLUMN `' . $sColumnID . '` ' . $_POST['mysql_type']);
+                    if ($bRev) {
+                        // Modify the same column in the revision table.
+                        $sSQL = 'ALTER TABLE ' . $aColumnInfo['table_sql_rev'] . ' MODIFY COLUMN `' . $sColumnID . '` ' . $_POST['mysql_type'];
+                        $q = $_DB->query($sSQL);
+                        if ($q === false) {
+                            $sError = $_DB->formatError(); // Save the PDO error before it disappears.
+                            $tPassed = time() - $dStart;
+                            $sMessage = ($tPassed < 2 ? '' : ' (fail after ' . $tPassed . ' seconds - disk full maybe?)');
+                            lovd_queryError(LOG_EVENT . $sMessage, $sSQL, $sError);
+                            $_DB->rollBack();
+                        } else {
+                            $_DB->commit();
+                        }
+                    }
                 }
             }
 
@@ -1520,6 +1539,11 @@ if (PATH_COUNT > 2 && ACTION == 'add') {
             // Now, start with ALTER TABLE if necessary, since that will take the longest time and ends a transaction anyway.
             // If it fails directly after this, one can always just redo the add. LOVD will detect properly that it needs to be added to the ACTIVE_COLS table, then.
             if (!$zData['active_checked']) {
+                $bRev = !empty($aTableInfo['table_sql_rev']); // Check if we have a revision version of this table.
+                if ($bRev) {
+                    // If we have a revision table then start a transaction as we will be running multiple queries here.
+                    $_DB->beginTransaction();
+                }
                 $sSQL = 'ALTER TABLE ' . $aTableInfo['table_sql'] . ' ADD COLUMN `' . $zData['id'] . '` ' . $zData['mysql_type'];
                 $dStart = time();
                 $q = $_DB->exec($sSQL, false);
@@ -1528,6 +1552,23 @@ if (PATH_COUNT > 2 && ACTION == 'add') {
                     $tPassed = time() - $dStart;
                     $sMessage = ($tPassed < 2? '' : ' (fail after ' . $tPassed . ' seconds - disk full maybe?)');
                     lovd_queryError(LOG_EVENT . $sMessage, $sSQL, $sError);
+                }
+                if ($bRev) {
+                    // Insert the same column into the revision table.
+                    // Since we do not remove columns from the revisions table it could be possible that this column already exists.
+                    // TODO AM Check if the column already exist and is the same data type. If all the same then don't do anything, if same name but different type then we want to not allow it to be added as we don't want to change the old data type.
+                    $sSQL = 'ALTER TABLE ' . $aTableInfo['table_sql_rev'] . ' ADD COLUMN `' . $zData['id'] . '` ' . $zData['mysql_type'];
+                    $dStart = time();
+                    $q = $_DB->exec($sSQL, false);
+                    if ($q === false) {
+                        $sError = $_DB->formatError(); // Save the PDO error before it disappears.
+                        $tPassed = time() - $dStart;
+                        $sMessage = ($tPassed < 2 ? '' : ' (fail after ' . $tPassed . ' seconds - disk full maybe?)');
+                        lovd_queryError(LOG_EVENT . $sMessage, $sSQL, $sError);
+                        $_DB->rollBack();
+                    } else {
+                        $_DB->commit();
+                    }
                 }
             }
 

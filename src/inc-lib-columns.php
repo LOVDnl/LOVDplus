@@ -106,6 +106,7 @@ function lovd_getTableInfoByCategory ($sCategory)
                 'GeneralAnnotation' =>
                      array(
                             'table_sql' => TABLE_GENERAL_ANNOTATIONS,
+                            'table_sql_rev' => TABLE_GENERAL_ANNOTATIONS_REV,
                             'table_name' => 'General Annotations',
                             'shared' => false,
                             'unit' => '',

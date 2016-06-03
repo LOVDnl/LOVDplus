@@ -145,7 +145,10 @@ class LOVD_GeneralAnnotation extends LOVD_Custom {
         $zData = parent::prepareData($zData, $sView);
 
         if ($sView == 'entry') {
-            $zData['effectid'] = $_SETT['var_effect'][$zData['effectid']];
+            if ($zData['effectid'] != '') {
+                // Replace the effectid with the effect text if it has been set.
+                $zData['effectid'] = $_SETT['var_effect'][$zData['effectid']];
+            }
         }
 
         return $zData;
