@@ -4,7 +4,7 @@
  * LEIDEN OPEN VARIATION DATABASE (LOVD)
  *
  * Created     : 2016-04-12
- * Modified    : 2016-04-12
+ * Modified    : 2016-06-03
  * For LOVD    : 3.0-13
  *
  * Copyright   : 2004-2016 Leiden University Medical Center; http://www.LUMC.nl/
@@ -72,12 +72,12 @@ class LOVD_GeneralAnnotation extends LOVD_Custom {
         $this->aColumnsViewEntry = array_merge(
                  array(
                         'TableHeader_General' => 'General annotations',
-                        'effect' => 'Affects function',
+                        'effectid' => 'Affects function',
                       ),
                  $this->buildViewEntry(),
                  array(
                         'created_by_' => 'Created by',
-                        'created_date' => 'Date created',
+                        'created_date' => 'Date created',  // Todo: why does it not have underscore at end like edited_date?
                         'edited_by_' => 'Last edited by',
                         'edited_date_' => 'Date last edited',
                       ));
@@ -86,12 +86,57 @@ class LOVD_GeneralAnnotation extends LOVD_Custom {
     }
 
 
+    function checkFields ($aData, $zData = false)
+    {
+        // Checks fields before submission of data.
+        global $_DB;
+
+        // Mandatory fields.
+       // $this->aCheckMandatory =
+       //     array(
+       //         'name',
+       //         'description',
+       //     );
+
+        parent::checkFields($aData);
+
+        lovd_checkXSS();  // todo: is this required here? it's not in object_gene_panels checkFields
+    }
+
+
+
+
+    function getForm ()
+    {
+        // Build the form.
+        // If we've built the form before, simply return it. Especially imports will repeatedly call checkFields(), which calls getForm().
+        if (!empty($this->aFormData)) {
+            return parent::getForm();
+        }
+        global $_SETT;
+
+        $this->aFormData = array_merge(
+            array(
+                array('POST', '', '', '', '50%', '14', '50%'),
+            //    array('', '', 'print', '<B>General information</B>'),
+            //    'hr',
+            //    'skip'
+            ),
+            $this->buildForm(),
+
+            array(array('Affects function', '', 'select', 'effectid', 6, $_SETT['var_effect'], false, false, false))
+        );
+
+        return parent::getForm();
+    }
+
 
 
 
     function prepareData ($zData = '', $sView = 'list')
     {
         global $_SETT;
+
         if (!in_array($sView, array('list', 'entry'))) {
             $sView = 'list';
         }
@@ -100,7 +145,7 @@ class LOVD_GeneralAnnotation extends LOVD_Custom {
         $zData = parent::prepareData($zData, $sView);
 
         if ($sView == 'entry') {
-            $zData['effect'] = $_SETT['var_effect'][$zData['effectid']];
+            $zData['effectid'] = $_SETT['var_effect'][$zData['effectid']];
         }
 
         return $zData;
