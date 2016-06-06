@@ -4,7 +4,7 @@
  * LEIDEN OPEN VARIATION DATABASE (LOVD)
  *
  * Created     : 2016-05-04
- * Modified    : 2016-05-04
+ * Modified    : 2016-06-06
  * For LOVD    : 3.0-13
  *
  * Copyright   : 2004-2016 Leiden University Medical Center; http://www.LUMC.nl/
@@ -159,6 +159,32 @@ if (PATH_COUNT == 2 && ACTION == 'create') {
     header('Refresh: 0; url=' . lovd_getInstallURL() . CURRENT_PATH . '?edit&variant_id=' . $nVariantID . (isset($_GET['in_window'])? '&in_window' : ''));
     exit;
 }
+
+
+
+
+
+if (PATH_COUNT == 2 && ACTION == 'history') {
+    // URL: /summary_annotations/chrX_000030?history
+    // Show the history for this summary annotation record.
+
+    $sID = $_PE[1];
+    define('PAGE_TITLE', 'View history for summary annotation record #' . $sID);
+
+    lovd_requireAUTH();
+
+    $_T->printHeader();
+    $_T->printTitle();
+
+    require ROOT_PATH . 'class/object_summary_annotations.rev.php';
+    $_DATA = new LOVD_SummaryAnnotationREV();
+    $_GET['search_id'] = $sID;
+    $_DATA->viewList('SummaryAnnotationREV');
+
+    $_T->printFooter();
+    exit;
+}
+
 
 
 

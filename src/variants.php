@@ -4,7 +4,7 @@
  * LEIDEN OPEN VARIATION DATABASE (LOVD)
  *
  * Created     : 2010-12-21
- * Modified    : 2016-04-07
+ * Modified    : 2016-06-06
  * For LOVD    : 3.0-15
  *
  * Copyright   : 2004-2016 Leiden University Medical Center; http://www.LUMC.nl/
@@ -12,6 +12,7 @@
  *               Ing. Ivo F.A.C. Fokkema <I.F.A.C.Fokkema@LUMC.nl>
  *               Jerry Hoogenboom <J.Hoogenboom@LUMC.nl>
  *               Zuotian Tatum <Z.Tatum@LUMC.nl>
+ *               Anthony Marty <anthony.marty@unimelb.edu.au>
  *
  *
  * This file is part of LOVD.
@@ -514,6 +515,7 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && !ACTION) {
 
         $aNavigation = array();
         $aNavigation['summary_annotations/' . $sSummaryAnnotationsID . '?edit&variant_id=' . $nID . (isset($_GET['in_window'])? '&amp;in_window' : '')]       = array('menu_edit.png', 'Edit summary annotations entry', 1);
+        $aNavigation['summary_annotations/' . $sSummaryAnnotationsID . '?history&variant_id=' . $nID . (isset($_GET['in_window'])? '&amp;in_window' : '')]       = array('menu_clock.png', 'View history of this entry', 1);
         lovd_showJGNavigation($aNavigation, 'SummaryAnnotations');
 
     } else {
