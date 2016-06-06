@@ -426,7 +426,7 @@ if (PATH_COUNT >= 2 && ctype_digit($_PE[1]) && !ACTION && (PATH_COUNT == 2 || PA
         // VOG needs to be first, so it groups by the VOG ID.
         $_DATA = new LOVD_CustomViewListMOD(array('AnalysisRunResults', 'VariantOnGenome', 'VariantOnTranscript'));
         // Define menu, to set pathogenicity flags of multiple variants in one go.
-        $_DATA->setRowLink('CustomVL_AnalysisRunResults_for_I_VE', 'javascript:lovd_openWindow(\'' . lovd_getInstallURL() . 'variants/{{ID}}?&in_window\', \'VarVE_{{ID}}\', 1000); return false;');
+        $_DATA->setRowLink('CustomVL_AnalysisRunResults_for_I_VE', 'javascript:lovd_openWindow(\'' . lovd_getInstallURL() . 'variants/{{ID}}?&in_window\', \'VarVE_{{ID}}\', 1250); return false;');
         $bMenu         = true; // Show the gear-menu, with which users can mark and label variants?
         $bConfirmation = true; // Are users allowed to set the confirmation status of variants? Value is ignored when $bMenu = false.
         if (!($_AUTH['level'] >= LEVEL_OWNER && $zScreening['analysis_statusid'] < ANALYSIS_STATUS_CLOSED) &&
