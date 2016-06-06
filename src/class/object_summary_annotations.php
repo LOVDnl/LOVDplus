@@ -77,31 +77,24 @@ class LOVD_SummaryAnnotation extends LOVD_Custom {
                  $this->buildViewEntry(),
                  array(
                         'created_by_' => 'Created by',
-                        'created_date' => 'Date created',  // Todo: why does it not have underscore at end like edited_date?
+                        'created_date' => 'Date created',
                         'edited_by_' => 'Last edited by',
-                        'edited_date_' => 'Date last edited',
+                        'edited_date' => 'Date last edited',
                       ));
-
-//        $this->unsetColsByAuthLevel(); // TODO AM DO we need this? Check with Ivo.
     }
+
+
+
 
 
     function checkFields ($aData, $zData = false)
     {
         // Checks fields before submission of data.
-        global $_DB;
-
-        // Mandatory fields.
-       // $this->aCheckMandatory =
-       //     array(
-       //         'name',
-       //         'description',
-       //     );
-
         parent::checkFields($aData);
 
-        lovd_checkXSS();  // todo: is this required here? it's not in object_gene_panels checkFields
+        lovd_checkXSS();
     }
+
 
 
 
@@ -118,9 +111,6 @@ class LOVD_SummaryAnnotation extends LOVD_Custom {
         $this->aFormData = array_merge(
             array(
                 array('POST', '', '', '', '50%', '14', '50%'),
-            //    array('', '', 'print', '<B>General information</B>'),
-            //    'hr',
-            //    'skip'
             ),
             $this->buildForm(),
 
@@ -129,6 +119,7 @@ class LOVD_SummaryAnnotation extends LOVD_Custom {
 
         return parent::getForm();
     }
+
 
 
 
