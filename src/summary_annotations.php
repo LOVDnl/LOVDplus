@@ -55,8 +55,8 @@ if (PATH_COUNT == 2 && ACTION == 'edit') {
 
     lovd_requireAUTH(LEVEL_ANALYZER);
 
-    require ROOT_PATH . 'class/object_general_annotations.php';
-    $_DATA = new LOVD_GeneralAnnotation();
+    require ROOT_PATH . 'class/object_summary_annotations.php';
+    $_DATA = new LOVD_SummaryAnnotation();
 
     $zData = $_DATA->loadEntry($DBID);
     require ROOT_PATH . 'inc-lib-form.php';
@@ -141,8 +141,8 @@ if (PATH_COUNT == 2 && ACTION == 'create') {
     lovd_requireAUTH(LEVEL_ANALYZER);
 
 
-    require ROOT_PATH . 'class/object_general_annotations.php';
-    $_DATA = new LOVD_GeneralAnnotation();
+    require ROOT_PATH . 'class/object_summary_annotations.php';
+    $_DATA = new LOVD_SummaryAnnotation();
     require ROOT_PATH . 'inc-lib-form.php';
 
     //if (!empty($_POST)) {

@@ -103,11 +103,11 @@ function lovd_getTableInfoByCategory ($sCategory)
                             'shared' => true,
                             'unit' => 'gene', // Is also used to determine the key (geneid).
                           ),
-                'GeneralAnnotation' =>
+                'SummaryAnnotation' =>
                      array(
-                            'table_sql' => TABLE_GENERAL_ANNOTATIONS,
-                            'table_sql_rev' => TABLE_GENERAL_ANNOTATIONS_REV,
-                            'table_name' => 'General Annotations',
+                            'table_sql' => TABLE_SUMMARY_ANNOTATIONS,
+                            'table_sql_rev' => TABLE_SUMMARY_ANNOTATIONS_REV,
+                            'table_name' => 'Summary Annotations',
                             'shared' => false,
                             'unit' => '',
                           ),

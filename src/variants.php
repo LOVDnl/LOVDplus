@@ -503,28 +503,28 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && !ACTION) {
 
     print('
       </TD>
-      <TD valign="top" id="general_annotation_view_entry" style="padding-left: 10px;">' . "\n");
+      <TD valign="top" id="summary_annotation_view_entry" style="padding-left: 10px;">' . "\n");
         // Load the variant data so as we can search by the DBID.
-    if ($zData['gaid']) {
-        $sGeneralAnnotationsID = $zData['gaid'];
-        // Checks if there is an existing general annotation record.
-        require ROOT_PATH . 'class/object_general_annotations.php';
-        $_DATA = new LOVD_GeneralAnnotation();
-        $zData = $_DATA->viewEntry($sGeneralAnnotationsID);
+    if ($zData['said']) {
+        $sSummaryAnnotationsID = $zData['said'];
+        // Checks if there is an existing summary annotation record.
+        require ROOT_PATH . 'class/object_summary_annotations.php';
+        $_DATA = new LOVD_SummaryAnnotation();
+        $zData = $_DATA->viewEntry($sSummaryAnnotationsID);
 
         $aNavigation = array();
-        $aNavigation['summary_annotations/' . $sGeneralAnnotationsID . '?edit&variant_id=' . $nID]       = array('menu_edit.png', 'Edit general annotations entry', 1);
-        lovd_showJGNavigation($aNavigation, 'GeneralAnnotations');
+        $aNavigation['summary_annotations/' . $sSummaryAnnotationsID . '?edit&variant_id=' . $nID]       = array('menu_edit.png', 'Edit summary annotations entry', 1);
+        lovd_showJGNavigation($aNavigation, 'SummaryAnnotations');
 
     } else {
-        // Otherwise show a button that can be used to create a new general annotation record.
+        // Otherwise show a button that can be used to create a new summary annotation record.
         print('        <TABLE border="0" cellpadding="2" cellspacing="0" class="setup" width="400px">' . "\n" .
               '          <TR>' . "\n" .
-              '            <TH colspan="2">General annotations</TH>' . "\n" .
+              '            <TH colspan="2">Summary annotations</TH>' . "\n" .
               '          </TR>' . "\n" .
               '          <TR class="pointer" onclick="window.location.href=\'' . lovd_getInstallURL() . 'summary_annotations/' . $zData['dbid'] . '?create&variant_id=' . $nID . '\';">' . "\n" .
-              '            <TD align="center" width="40"><IMG src="gfx/lovd_variants_create.png" alt="General annotations" width="32" height="32"></TD>' . "\n" .
-              '            <TD>Annotations that may be applicable to any instance of a particular variant can be stored in a general annotations entry. Click here to create a general annotation entry for this variant.</TD>' . "\n" .
+              '            <TD align="center" width="40"><IMG src="gfx/lovd_variants_create.png" alt="Summary annotations" width="32" height="32"></TD>' . "\n" .
+              '            <TD>Annotations that may be applicable to any instance of a particular variant can be stored in a summary annotations entry. Click here to create a summary annotation entry for this variant.</TD>' . "\n" .
               '          </TR>' . "\n" .
               '        </TABLE><BR>' . "\n\n");
     }

@@ -580,9 +580,9 @@ $_TABLES =
                 'TABLE_GP2DIS' => TABLEPREFIX . '_gene_panels2diseases',
                 'TABLE_GENE_STATISTICS' => TABLEPREFIX . '_gene_statistics',
 
-                // General Annotations.
-                'TABLE_GENERAL_ANNOTATIONS' => TABLEPREFIX . '_general_annotations',
-                'TABLE_GENERAL_ANNOTATIONS_REV' => TABLEPREFIX . '_general_annotations_revisions',
+                // Summary Annotations.
+                'TABLE_SUMMARY_ANNOTATIONS' => TABLEPREFIX . '_summary_annotations',
+                'TABLE_SUMMARY_ANNOTATIONS_REV' => TABLEPREFIX . '_summary_annotations_revisions',
               );
 
 foreach ($_TABLES as $sConst => $sTable) {

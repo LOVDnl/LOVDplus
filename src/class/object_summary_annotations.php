@@ -40,11 +40,11 @@ require_once ROOT_PATH . 'class/object_custom.php';
 
 
 
-class LOVD_GeneralAnnotation extends LOVD_Custom {
+class LOVD_SummaryAnnotation extends LOVD_Custom {
     // This class extends the basic Object class and it handles the Link object.
-    var $sObject = 'General_Annotation';
-    var $sCategory = 'GeneralAnnotation';
-    var $sTable = 'TABLE_GENERAL_ANNOTATIONS';
+    var $sObject = 'Summary_Annotation';
+    var $sCategory = 'SummaryAnnotation';
+    var $sTable = 'TABLE_SUMMARY_ANNOTATIONS';
     var $bShared = false;
 
 
@@ -57,13 +57,13 @@ class LOVD_GeneralAnnotation extends LOVD_Custom {
         global $_AUTH;
 
         // SQL code for viewing an entry.
-        $this->aSQLViewEntry['SELECT']   = 'ga.*, ' .
+        $this->aSQLViewEntry['SELECT']   = 'sa.*, ' .
                                            'uc.name AS created_by_, ' .
                                            'ue.name AS edited_by_';
-        $this->aSQLViewEntry['FROM']     = TABLE_GENERAL_ANNOTATIONS . ' AS ga ' .
-                                           'LEFT OUTER JOIN ' . TABLE_USERS . ' AS uc ON (ga.created_by = uc.id) ' .
-                                           'LEFT OUTER JOIN ' . TABLE_USERS . ' AS ue ON (ga.edited_by = ue.id)';
-        $this->aSQLViewEntry['GROUP_BY'] = 'ga.id';
+        $this->aSQLViewEntry['FROM']     = TABLE_SUMMARY_ANNOTATIONS . ' AS sa ' .
+                                           'LEFT OUTER JOIN ' . TABLE_USERS . ' AS uc ON (sa.created_by = uc.id) ' .
+                                           'LEFT OUTER JOIN ' . TABLE_USERS . ' AS ue ON (sa.edited_by = ue.id)';
+        $this->aSQLViewEntry['GROUP_BY'] = 'sa.id';
 
         // Run parent constructor to find out about the custom columns.
         parent::__construct();
@@ -71,7 +71,7 @@ class LOVD_GeneralAnnotation extends LOVD_Custom {
         // List of columns and (default?) order for viewing an entry.
         $this->aColumnsViewEntry = array_merge(
                  array(
-                        'TableHeader_General' => 'General annotations',
+                        'TableHeader_General' => 'Summary annotations',
                         'effectid' => 'Affects function',
                       ),
                  $this->buildViewEntry(),
