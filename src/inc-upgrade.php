@@ -583,6 +583,12 @@ if ($sCalcVersionFiles != $sCalcVersionDB) {
                          'PREPARE Statement FROM @sSQL',
                          'EXECUTE Statement',
                      ),
+                 // Summary annotation record.
+                 '3.0-12u' =>
+                     array(
+                        'CREATE TABLE IF NOT EXISTS ' . TABLE_SUMMARY_ANNOTATIONS . ' (id VARCHAR(50) NOT NULL, effectid TINYINT(1) UNSIGNED ZEROFILL, created_by SMALLINT(5) UNSIGNED ZEROFILL, created_date DATETIME NOT NULL, edited_by SMALLINT(5) UNSIGNED ZEROFILL, edited_date DATETIME, PRIMARY KEY (id), INDEX (effectid), INDEX (created_by), INDEX (edited_by), CONSTRAINT ' . TABLE_SUMMARY_ANNOTATIONS . '_fk_created_by FOREIGN KEY (created_by) REFERENCES ' . TABLE_USERS . ' (id) ON DELETE SET NULL ON UPDATE CASCADE, CONSTRAINT ' . TABLE_SUMMARY_ANNOTATIONS . '_fk_edited_by FOREIGN KEY (edited_by) REFERENCES ' . TABLE_USERS . ' (id) ON DELETE SET NULL ON UPDATE CASCADE) ENGINE=InnoDB, DEFAULT CHARACTER SET utf8',
+                        'CREATE TABLE IF NOT EXISTS ' . TABLE_SUMMARY_ANNOTATIONS_REV . ' (id VARCHAR(50) NOT NULL, effectid TINYINT(1) UNSIGNED ZEROFILL, created_by SMALLINT(5) UNSIGNED ZEROFILL, created_date DATETIME NOT NULL, edited_by SMALLINT(5) UNSIGNED ZEROFILL, edited_date DATETIME, valid_from DATETIME NOT NULL, valid_to DATETIME NOT NULL DEFAULT "9999-12-31", deleted BOOLEAN NOT NULL, deleted_by SMALLINT(5) UNSIGNED ZEROFILL, reason TEXT, PRIMARY KEY (id, valid_from), INDEX (effectid), INDEX (created_by), INDEX (edited_by), INDEX (deleted_by), CONSTRAINT ' . TABLE_SUMMARY_ANNOTATIONS_REV . '_fk_created_by FOREIGN KEY (created_by) REFERENCES ' . TABLE_USERS . ' (id) ON DELETE SET NULL ON UPDATE CASCADE, CONSTRAINT ' . TABLE_SUMMARY_ANNOTATIONS_REV . '_fk_edited_by FOREIGN KEY (edited_by) REFERENCES ' . TABLE_USERS . ' (id) ON DELETE SET NULL ON UPDATE CASCADE, CONSTRAINT ' . TABLE_SUMMARY_ANNOTATIONS_REV . '_fk_deleted_by FOREIGN KEY (deleted_by) REFERENCES ' . TABLE_USERS . ' (id) ON DELETE SET NULL ON UPDATE CASCADE) ENGINE=InnoDB, DEFAULT CHARACTER SET utf8',
+                     ),
              );
 
     if ($sCalcVersionDB < lovd_calculateVersion('3.0-alpha-01')) {
