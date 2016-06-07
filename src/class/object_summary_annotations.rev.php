@@ -64,15 +64,14 @@ class LOVD_SummaryAnnotationREV extends LOVD_SummaryAnnotation {
          LEFT OUTER JOIN ' . TABLE_USERS . ' AS ud ON (sa.deleted_by = ud.id)';
 
         // List of columns and (default?) order for viewing a list of entries.
-        $this->aColumnsViewList =
+        $this->aColumnsViewList = array_merge(
             array(
                 'id' => array(
                     'view' => false,
                     'db'   => array('sa.id', 'ASC', true)),
-                'dbid' => array(
-                    'view' => array('DBID', 110),
-                    'db'   => array('dbid', 'DESC', 'TEXT'),
-                    'legend' => array('The user created this summary annotation entry.')),
+            ),
+            $this->buildViewList(),
+            array(
                 'created_by_' => array(
                     'view' => array('Added By', 110),
                     'db'   => array('uc.name', 'DESC', true),
@@ -109,7 +108,7 @@ class LOVD_SummaryAnnotationREV extends LOVD_SummaryAnnotation {
                     'view' => array('Deleted by', 110),
                     'db'   => array('ud.name', 'ASC', true),
                     'legend' => array('The user that deleted this summary annotation entry.')),
-            );
+            ));
         $this->sSortDefault = 'valid_from';
         $this->sRowLink = '';
     }
