@@ -223,7 +223,7 @@ if (ACTION == 'autoupload_scheduled_file' && PATH_COUNT == 1 && FORMAT == 'text/
 
     // This should not happen (we already checked if there was something to do), but just in case...
     if (!$sFile) {
-        die(':Error: Failed to retrieved filename from database.' . "\n");
+        die(':Error: Failed to retrieve a filename from the database.' . "\n");
     }
 
     // Load necessary authorisation.

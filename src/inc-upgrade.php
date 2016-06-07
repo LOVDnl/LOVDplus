@@ -573,6 +573,16 @@ if ($sCalcVersionFiles != $sCalcVersionDB) {
                          'CREATE TABLE ' . TABLE_AR2GP . ' (runid SMALLINT(5) UNSIGNED ZEROFILL NOT NULL, genepanelid SMALLINT(5) UNSIGNED ZEROFILL NOT NULL, PRIMARY KEY (runid, genepanelid), INDEX (runid), INDEX (genepanelid), CONSTRAINT ' . TABLE_AR2GP . '_fk_runid FOREIGN KEY (runid) REFERENCES ' . TABLE_ANALYSES_RUN . ' (id) ON DELETE CASCADE ON UPDATE CASCADE, CONSTRAINT ' . TABLE_AR2GP . '_fk_genepanelid FOREIGN KEY (genepanelid) REFERENCES ' . TABLE_GENE_PANELS . ' (id) ON DELETE CASCADE ON UPDATE CASCADE) ENGINE=InnoDB, DEFAULT CHARACTER SET utf8',
                          'UPDATE ' . TABLE_ANALYSES . ' SET filters = REPLACE(filters, "remove_not_in_gene_panel", "remove_not_in_gene_panel\r\napply_selected_gene_panels")',
                      ),
+                 '3.0-12t' =>
+                     array(
+                         'INSERT INTO ' . TABLE_COLS . ' VALUES ("VariantOnGenome/Sequencing/GenoType/Quality",        255, 100, 0, 1, 0, "Genotype quality", "", "Genotype quality.", "Genotype quality, as presented in the input file.", "TINYINT(2) UNSIGNED", "Genotype quality||text|6", "", "", 0, 0, 1, 0, NOW(), NULL, NULL)',
+                         'INSERT INTO ' . TABLE_COLS . ' VALUES ("VariantOnGenome/Sequencing/Father/GenoType/Quality", 255, 100, 0, 1, 0, "Genotype quality of father", "", "Genotype quality of the unaffected father.", "Genotype quality of the unaffected father, as presented in the input file.", "TINYINT(2) UNSIGNED", "Genotype quality of father||text|6", "", "", 0, 0, 1, 0, NOW(), NULL, NULL)',
+                         'INSERT INTO ' . TABLE_COLS . ' VALUES ("VariantOnGenome/Sequencing/Mother/GenoType/Quality", 255, 100, 0, 1, 0, "Genotype quality of mother", "", "Genotype quality of the unaffected mother.", "Genotype quality of the unaffected mother, as presented in the input file.", "TINYINT(2) UNSIGNED", "Genotype quality of mother||text|6", "", "", 0, 0, 1, 0, NOW(), NULL, NULL)',
+                         'SET @bExists := (SELECT COUNT(*) FROM information_schema.STATISTICS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = "' . TABLE_VARIANTS . '" AND COLUMN_NAME = "VariantOnGenome/DBID")',
+                         'SET @sSQL := IF(@bExists > 0, \'SELECT "INFO: Index already exists."\', \'ALTER TABLE ' . TABLE_VARIANTS . ' ADD INDEX(`VariantOnGenome/DBID`)\')',
+                         'PREPARE Statement FROM @sSQL',
+                         'EXECUTE Statement',
+                     ),
              );
 
     if ($sCalcVersionDB < lovd_calculateVersion('3.0-alpha-01')) {
