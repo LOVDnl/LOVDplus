@@ -743,95 +743,6 @@ $aTableSQL =
 
 
 
-        , 'TABLE_ANALYSES' =>
-   'CREATE TABLE ' . TABLE_ANALYSES . ' (
-    id TINYINT(3) UNSIGNED ZEROFILL NOT NULL AUTO_INCREMENT,
-    sortid TINYINT(3) UNSIGNED NOT NULL,
-    name VARCHAR(50) NOT NULL,
-    description TEXT NOT NULL,
-    filters TEXT NOT NULL,
-    created_by SMALLINT(5) UNSIGNED ZEROFILL,
-    created_date DATETIME NOT NULL,
-    edited_by SMALLINT(5) UNSIGNED ZEROFILL,
-    edited_date DATETIME,
-    PRIMARY KEY (id),
-    INDEX (created_by),
-    INDEX (edited_by),
-    CONSTRAINT ' . TABLE_ANALYSES . '_fk_created_by FOREIGN KEY (created_by) REFERENCES ' . TABLE_USERS . ' (id) ON DELETE SET NULL ON UPDATE CASCADE,
-    CONSTRAINT ' . TABLE_ANALYSES . '_fk_edited_by FOREIGN KEY (edited_by) REFERENCES ' . TABLE_USERS . ' (id) ON DELETE SET NULL ON UPDATE CASCADE)
-    ' . $sSettings
-
-        , 'TABLE_ANALYSES_RUN' =>
-   'CREATE TABLE ' . TABLE_ANALYSES_RUN . ' (
-    id SMALLINT(5) UNSIGNED ZEROFILL NOT NULL AUTO_INCREMENT,
-    analysisid TINYINT(3) UNSIGNED ZEROFILL,
-    screeningid INT(10) UNSIGNED ZEROFILL NOT NULL,
-    modified BOOLEAN NOT NULL,
-    custom_panel TEXT NOT NULL,
-    created_by SMALLINT(5) UNSIGNED ZEROFILL,
-    created_date DATETIME NOT NULL,
-    PRIMARY KEY (id),
-    INDEX (screeningid),
-    INDEX (created_by),
-    CONSTRAINT ' . TABLE_ANALYSES_RUN . '_fk_analysisid FOREIGN KEY (analysisid) REFERENCES ' . TABLE_ANALYSES . ' (id) ON DELETE SET NULL ON UPDATE CASCADE,
-    CONSTRAINT ' . TABLE_ANALYSES_RUN . '_fk_screeningid FOREIGN KEY (screeningid) REFERENCES ' . TABLE_SCREENINGS . ' (id) ON DELETE CASCADE ON UPDATE CASCADE,
-    CONSTRAINT ' . TABLE_ANALYSES_RUN . '_fk_created_by FOREIGN KEY (created_by) REFERENCES ' . TABLE_USERS . ' (id) ON DELETE SET NULL ON UPDATE CASCADE)
-    ' . $sSettings
-
-        , 'TABLE_AR2GP' =>
-    'CREATE TABLE ' . TABLE_AR2GP . ' (
-    runid SMALLINT(5) UNSIGNED ZEROFILL NOT NULL,
-    genepanelid SMALLINT(5) UNSIGNED ZEROFILL NOT NULL,
-    PRIMARY KEY (runid, genepanelid),
-    INDEX (runid),
-    INDEX (genepanelid),
-    CONSTRAINT ' . TABLE_AR2GP . '_fk_runid FOREIGN KEY (runid) REFERENCES ' . TABLE_ANALYSES_RUN . ' (id) ON DELETE CASCADE ON UPDATE CASCADE,
-    CONSTRAINT ' . TABLE_AR2GP . '_fk_genepanelid FOREIGN KEY (genepanelid) REFERENCES ' . TABLE_GENE_PANELS . ' (id) ON DELETE CASCADE ON UPDATE CASCADE)
-    ' . $sSettings
-
-        , 'TABLE_ANALYSES_RUN_FILTERS' =>
-   'CREATE TABLE ' . TABLE_ANALYSES_RUN_FILTERS . ' (
-    runid SMALLINT(5) UNSIGNED ZEROFILL NOT NULL,
-    filterid VARCHAR(50) NOT NULL,
-    filter_order TINYINT UNSIGNED NOT NULL,
-    filtered_out MEDIUMINT UNSIGNED,
-    run_time TINYINT UNSIGNED,
-    PRIMARY KEY (runid, filterid),
-    UNIQUE (runid, filter_order),
-    INDEX (filterid),
-    CONSTRAINT ' . TABLE_ANALYSES_RUN_FILTERS . '_fk_runid FOREIGN KEY (runid) REFERENCES ' . TABLE_ANALYSES_RUN . ' (id) ON DELETE CASCADE ON UPDATE CASCADE)
-    ' . $sSettings
-
-        , 'TABLE_ANALYSES_RUN_RESULTS' =>
-   'CREATE TABLE ' . TABLE_ANALYSES_RUN_RESULTS . ' (
-    runid SMALLINT(5) UNSIGNED ZEROFILL NOT NULL,
-    variantid INT(10) UNSIGNED ZEROFILL NOT NULL,
-    PRIMARY KEY (runid, variantid),
-    INDEX (runid),
-    INDEX (variantid),
-    CONSTRAINT ' . TABLE_ANALYSES_RUN_RESULTS . '_fk_runid FOREIGN KEY (runid) REFERENCES ' . TABLE_ANALYSES_RUN . ' (id) ON DELETE CASCADE ON UPDATE CASCADE,
-    CONSTRAINT ' . TABLE_ANALYSES_RUN_RESULTS . '_fk_variantid FOREIGN KEY (variantid) REFERENCES ' . TABLE_VARIANTS . ' (id) ON DELETE CASCADE ON UPDATE CASCADE)
-    ' . $sSettings
-
-        , 'TABLE_SCHEDULED_IMPORTS' =>
-   'CREATE TABLE ' . TABLE_SCHEDULED_IMPORTS . ' (
-    filename VARCHAR(255) NOT NULL,
-    in_progress BOOLEAN NOT NULL DEFAULT 0,
-    scheduled_by SMALLINT(5) UNSIGNED ZEROFILL,
-    scheduled_date DATETIME NOT NULL,
-    processed_by SMALLINT(5) UNSIGNED ZEROFILL,
-    processed_date DATETIME,
-    PRIMARY KEY (filename),
-    INDEX (scheduled_by),
-    INDEX (processed_by),
-    CONSTRAINT ' . TABLE_SCHEDULED_IMPORTS . '_fk_scheduled_by FOREIGN KEY (scheduled_by) REFERENCES ' . TABLE_USERS . ' (id) ON DELETE SET NULL ON UPDATE CASCADE,
-    CONSTRAINT ' . TABLE_SCHEDULED_IMPORTS . '_fk_processed_by FOREIGN KEY (processed_by) REFERENCES ' . TABLE_USERS . ' (id) ON DELETE SET NULL ON UPDATE CASCADE)
-    ' . $sSettings
-
-
-
-
-
         , 'TABLE_GENE_PANELS' =>
     'CREATE TABLE ' . TABLE_GENE_PANELS . ' (
     id SMALLINT(5) UNSIGNED ZEROFILL NOT NULL AUTO_INCREMENT,
@@ -957,6 +868,91 @@ $aTableSQL =
     INDEX (diseaseid),
     CONSTRAINT ' . TABLE_GP2DIS . '_fk_genepanelid FOREIGN KEY (genepanelid) REFERENCES ' . TABLE_GENE_PANELS . ' (id) ON DELETE CASCADE ON UPDATE CASCADE,
     CONSTRAINT ' . TABLE_GP2DIS . '_fk_diseaseid FOREIGN KEY (diseaseid) REFERENCES ' . TABLE_DISEASES . ' (id) ON DELETE CASCADE ON UPDATE CASCADE)
+    ' . $sSettings
+
+        , 'TABLE_ANALYSES' =>
+   'CREATE TABLE ' . TABLE_ANALYSES . ' (
+    id TINYINT(3) UNSIGNED ZEROFILL NOT NULL AUTO_INCREMENT,
+    sortid TINYINT(3) UNSIGNED NOT NULL,
+    name VARCHAR(50) NOT NULL,
+    description TEXT NOT NULL,
+    filters TEXT NOT NULL,
+    created_by SMALLINT(5) UNSIGNED ZEROFILL,
+    created_date DATETIME NOT NULL,
+    edited_by SMALLINT(5) UNSIGNED ZEROFILL,
+    edited_date DATETIME,
+    PRIMARY KEY (id),
+    INDEX (created_by),
+    INDEX (edited_by),
+    CONSTRAINT ' . TABLE_ANALYSES . '_fk_created_by FOREIGN KEY (created_by) REFERENCES ' . TABLE_USERS . ' (id) ON DELETE SET NULL ON UPDATE CASCADE,
+    CONSTRAINT ' . TABLE_ANALYSES . '_fk_edited_by FOREIGN KEY (edited_by) REFERENCES ' . TABLE_USERS . ' (id) ON DELETE SET NULL ON UPDATE CASCADE)
+    ' . $sSettings
+
+        , 'TABLE_ANALYSES_RUN' =>
+   'CREATE TABLE ' . TABLE_ANALYSES_RUN . ' (
+    id SMALLINT(5) UNSIGNED ZEROFILL NOT NULL AUTO_INCREMENT,
+    analysisid TINYINT(3) UNSIGNED ZEROFILL,
+    screeningid INT(10) UNSIGNED ZEROFILL NOT NULL,
+    modified BOOLEAN NOT NULL,
+    custom_panel TEXT NOT NULL,
+    created_by SMALLINT(5) UNSIGNED ZEROFILL,
+    created_date DATETIME NOT NULL,
+    PRIMARY KEY (id),
+    INDEX (screeningid),
+    INDEX (created_by),
+    CONSTRAINT ' . TABLE_ANALYSES_RUN . '_fk_analysisid FOREIGN KEY (analysisid) REFERENCES ' . TABLE_ANALYSES . ' (id) ON DELETE SET NULL ON UPDATE CASCADE,
+    CONSTRAINT ' . TABLE_ANALYSES_RUN . '_fk_screeningid FOREIGN KEY (screeningid) REFERENCES ' . TABLE_SCREENINGS . ' (id) ON DELETE CASCADE ON UPDATE CASCADE,
+    CONSTRAINT ' . TABLE_ANALYSES_RUN . '_fk_created_by FOREIGN KEY (created_by) REFERENCES ' . TABLE_USERS . ' (id) ON DELETE SET NULL ON UPDATE CASCADE)
+    ' . $sSettings
+
+        , 'TABLE_AR2GP' =>
+    'CREATE TABLE ' . TABLE_AR2GP . ' (
+    runid SMALLINT(5) UNSIGNED ZEROFILL NOT NULL,
+    genepanelid SMALLINT(5) UNSIGNED ZEROFILL NOT NULL,
+    PRIMARY KEY (runid, genepanelid),
+    INDEX (runid),
+    INDEX (genepanelid),
+    CONSTRAINT ' . TABLE_AR2GP . '_fk_runid FOREIGN KEY (runid) REFERENCES ' . TABLE_ANALYSES_RUN . ' (id) ON DELETE CASCADE ON UPDATE CASCADE,
+    CONSTRAINT ' . TABLE_AR2GP . '_fk_genepanelid FOREIGN KEY (genepanelid) REFERENCES ' . TABLE_GENE_PANELS . ' (id) ON DELETE CASCADE ON UPDATE CASCADE)
+    ' . $sSettings
+
+        , 'TABLE_ANALYSES_RUN_FILTERS' =>
+   'CREATE TABLE ' . TABLE_ANALYSES_RUN_FILTERS . ' (
+    runid SMALLINT(5) UNSIGNED ZEROFILL NOT NULL,
+    filterid VARCHAR(50) NOT NULL,
+    filter_order TINYINT UNSIGNED NOT NULL,
+    filtered_out MEDIUMINT UNSIGNED,
+    run_time TINYINT UNSIGNED,
+    PRIMARY KEY (runid, filterid),
+    UNIQUE (runid, filter_order),
+    INDEX (filterid),
+    CONSTRAINT ' . TABLE_ANALYSES_RUN_FILTERS . '_fk_runid FOREIGN KEY (runid) REFERENCES ' . TABLE_ANALYSES_RUN . ' (id) ON DELETE CASCADE ON UPDATE CASCADE)
+    ' . $sSettings
+
+        , 'TABLE_ANALYSES_RUN_RESULTS' =>
+   'CREATE TABLE ' . TABLE_ANALYSES_RUN_RESULTS . ' (
+    runid SMALLINT(5) UNSIGNED ZEROFILL NOT NULL,
+    variantid INT(10) UNSIGNED ZEROFILL NOT NULL,
+    PRIMARY KEY (runid, variantid),
+    INDEX (runid),
+    INDEX (variantid),
+    CONSTRAINT ' . TABLE_ANALYSES_RUN_RESULTS . '_fk_runid FOREIGN KEY (runid) REFERENCES ' . TABLE_ANALYSES_RUN . ' (id) ON DELETE CASCADE ON UPDATE CASCADE,
+    CONSTRAINT ' . TABLE_ANALYSES_RUN_RESULTS . '_fk_variantid FOREIGN KEY (variantid) REFERENCES ' . TABLE_VARIANTS . ' (id) ON DELETE CASCADE ON UPDATE CASCADE)
+    ' . $sSettings
+
+        , 'TABLE_SCHEDULED_IMPORTS' =>
+   'CREATE TABLE ' . TABLE_SCHEDULED_IMPORTS . ' (
+    filename VARCHAR(255) NOT NULL,
+    in_progress BOOLEAN NOT NULL DEFAULT 0,
+    scheduled_by SMALLINT(5) UNSIGNED ZEROFILL,
+    scheduled_date DATETIME NOT NULL,
+    processed_by SMALLINT(5) UNSIGNED ZEROFILL,
+    processed_date DATETIME,
+    PRIMARY KEY (filename),
+    INDEX (scheduled_by),
+    INDEX (processed_by),
+    CONSTRAINT ' . TABLE_SCHEDULED_IMPORTS . '_fk_scheduled_by FOREIGN KEY (scheduled_by) REFERENCES ' . TABLE_USERS . ' (id) ON DELETE SET NULL ON UPDATE CASCADE,
+    CONSTRAINT ' . TABLE_SCHEDULED_IMPORTS . '_fk_processed_by FOREIGN KEY (processed_by) REFERENCES ' . TABLE_USERS . ' (id) ON DELETE SET NULL ON UPDATE CASCADE)
     ' . $sSettings
 
         , 'TABLE_GENE_STATISTICS' =>
