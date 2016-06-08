@@ -1023,12 +1023,12 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && ACTION == 'history') {
     require ROOT_PATH . 'inc-lib-form.php';
     if (empty($_GET['from']) || (!lovd_matchDate($_GET['from']) && !lovd_matchDate($_GET['from'], true))) {
         // From date empty or rejected. Set to t=0.
-        $_GET['from'] = date('Y-m-d H:i:s', 0);
+        $_GET['from'] = date('Y-m-d', 0);
         $bReload = true;
     }
     if (empty($_GET['to']) || (!lovd_matchDate($_GET['to']) && !lovd_matchDate($_GET['to'], true))) {
         // To date empty or rejected. Set to t=time().
-        $_GET['to'] = date('Y-m-d H:i:s');
+        $_GET['to'] = date('Y-m-d');
         $bReload = true;
     }
     if ($bReload) {
@@ -1038,21 +1038,12 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && ACTION == 'history') {
     }
 
     $nID = sprintf('%05d', $_PE[1]);
-    define('PAGE_TITLE', 'View changes for gene panel #' . $nID . ' between dates');
+    define('PAGE_TITLE', 'View changes to gene panel #' . $nID . ' between dates');
 
     lovd_requireAUTH();
 
     $_T->printHeader();
     $_T->printTitle();
-
-    // Fill in the time if we don't have it already.
-    // Format has already been checked, now we can just check for the length.
-    if (strlen($_GET['from']) == 10) {
-        $_GET['from'] .= ' 00:00:00'; // Set the 'from' date as the first second of the selected day.
-    }
-    if (strlen($_GET['to']) == 10) {
-        $_GET['to'] .= ' 23:59:59'; // Set the 'to' date as the last second of the selected day.
-    }
 
     print('    <FORM action="' . CURRENT_PATH . '?history" method="get" id="dateRangeForm" onsubmit="lovd_changeDateRange(\'gene_panels/' . $nID . '?history\'); return false;">
       <TABLE border="0" cellpadding="10" cellspacing="1" width="750" class="data" style="font-size : 13px;">

@@ -546,8 +546,8 @@ function lovd_mapVariants ()
 
           if (aDateFields.elements[0].value == '' || aDateFields.elements[1].value == '') {
               alert("Both dates must be entered!");
-          } else if (aDateFields.elements[0].value > aDateFields.elements[1].value) {
-              alert("From date can not be greater than the To date");
+          //} else if (aDateFields.elements[0].value > aDateFields.elements[1].value) {  // This condition is not possible to reach because datepicker prevents it with minDate and maxDate parameters.
+          //    alert("From date can not be greater than the To date");
           } else {
               // Change the URL, allowing the user to go back to the gene panel screen.
               window.location = url + '&from=' + aDateFields.elements[0].value  + '&to=' + aDateFields.elements[1].value;
