@@ -91,7 +91,7 @@ Converted files can be scheduled for automatic import by the scheduling feature
 available from the Setup area. To facilitate automatic import of the scheduled
 import files, insert the following cronjob, for a user of your choice:
 
-*/15 0-5,19-23 * * * GET "http://URL_to_LOVD/import?autoupload_scheduled_file&format=text/plain" | grep -E "^(:|[0-9]+0\%)" | sed -r 's/^://'
+*/15 0-5,19-23 * * * GET "http://URL_to_LOVD/import?autoupload_scheduled_file&format=text/plain" -t 2h | grep -E "^(:|[0-9]+0\%)" | sed -r 's/^://'
 
 Make sure GET is installed (libwww-perl) and its directory is in the PATH
 environment variable. Using wget or curl is also possible, just make sure the
@@ -99,7 +99,9 @@ output is sent to STDOUT. Feel free to change the time settings.
 
 The duration of an import depends completely on the size of the file. The import
 of large data files does slow down normal functionality of LOVD+, and as such is
-recommended to run only outside of working hours.
+recommended to run only outside of working hours. Also make sure that the caller
+script (here, we use GET) doesn't time out if the process doesn't return output
+for a while.
 
 The grep and sed statements in the cronjob filter out unnecessary output. Feel
 free to edit them to get more or fewer lines of output.

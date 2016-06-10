@@ -221,3 +221,7 @@ table.option tr.disabled:hover td      {background : #CACACA; cursor : not-allow
 table.option tr.disabled td            {background : #EAEAEA; color : #525252;}
 table.option tr.disabled:hover span    {visibility : hidden;}
 
+/* For option grouping*/
+optgroup        {font-weight : bold; color : #FFFFFF; background : #224488; text-align : center;}
+option          {font-weight : normal; color : #000000; background : #FFFFFF; text-align : left;}
+
