@@ -5,7 +5,7 @@
  * LEIDEN OPEN VARIATION DATABASE (LOVD)
  *
  * Created     : 2009-10-19
- * Modified    : 2015-02-17
+ * Modified    : 2016-06-09
  * For LOVD    : 3.0-13
  *
  * Copyright   : 2004-2015 Leiden University Medical Center; http://www.LUMC.nl/
@@ -503,6 +503,10 @@ if ($_SERVER['SERVER_ADMIN'] == 'i.f.a.c.fokkema@lumc.nl' && $_SERVER['HTTP_HOST
 
             $aInstallSQL['Activating LOVD standard custom columns...'][] = 'ALTER TABLE ' . constant($sTable) . ' ADD COLUMN `' . $aCol[0] . '` ' . stripslashes($aCol[10]);
             $aInstallSQL['Activating LOVD standard custom columns...'][] = 'INSERT INTO ' . TABLE_ACTIVE_COLS . ' VALUES ("' . $aCol[0] . '", "00000", NOW())';
+            if (LOVD_plus && $aCol[0] == 'VariantOnGenome/DBID') {
+                // Make sure the DBID column is indexed.
+                $aInstallSQL['Activating LOVD standard custom columns...'][] = 'ALTER TABLE ' . constant($sTable) . ' ADD INDEX(`' . $aCol[0] . '`)';
+            }
         }
     }
 

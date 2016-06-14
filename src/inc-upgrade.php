@@ -81,7 +81,7 @@ if ($sCalcVersionFiles != $sCalcVersionDB) {
                                 'ALTER TABLE ' . TABLE_GEN2DIS . ' MODIFY COLUMN geneid VARCHAR(20) NOT NULL',
                                 'ALTER TABLE ' . TABLE_SCR2GENE . ' MODIFY COLUMN geneid VARCHAR(20) NOT NULL',
                                 'ALTER TABLE ' . TABLE_SHARED_COLS . ' MODIFY COLUMN geneid VARCHAR(20)',
-                                'ALTER TABLE ' . TABLE_HITS . ' MODIFY COLUMN geneid VARCHAR(20) NOT NULL',
+                                'ALTER TABLE ' . TABLEPREFIX . '_hits MODIFY COLUMN geneid VARCHAR(20) NOT NULL',
                               ),
                     '3.0-alpha-02' =>
                          array(
@@ -155,7 +155,7 @@ if ($sCalcVersionFiles != $sCalcVersionDB) {
                                 'ALTER TABLE ' . TABLE_VARIANTS_ON_TRANSCRIPTS . ' CHANGE pathogenicid effectid TINYINT(2) UNSIGNED ZEROFILL',
                                 'ALTER TABLE ' . TABLE_VARIANTS_ON_TRANSCRIPTS . ' ADD INDEX (effectid)',
 
-                                'RENAME TABLE ' . TABLE_PATHOGENIC . ' TO ' . TABLE_EFFECT,
+                                'RENAME TABLE ' . TABLEPREFIX . '_variant_pathogenicity TO ' . TABLE_EFFECT,
                                 'ALTER TABLE ' . TABLE_VARIANTS . ' ADD CONSTRAINT ' . TABLE_VARIANTS . '_fk_effectid FOREIGN KEY (effectid) REFERENCES ' . TABLE_EFFECT . ' (id) ON DELETE SET NULL ON UPDATE CASCADE',
                                 'ALTER TABLE ' . TABLE_VARIANTS_ON_TRANSCRIPTS . ' ADD CONSTRAINT ' . TABLE_VARIANTS_ON_TRANSCRIPTS . '_fk_effectid FOREIGN KEY (effectid) REFERENCES ' . TABLE_EFFECT . ' (id) ON DELETE SET NULL ON UPDATE CASCADE',
                                 'UPDATE ' . TABLE_VARIANTS . ' SET effectid = 55 WHERE effectid < 11 OR effectid IS NULL',
@@ -349,7 +349,7 @@ if ($sCalcVersionFiles != $sCalcVersionDB) {
                      'ALTER TABLE ' . TABLE_GEN2DIS . ' MODIFY COLUMN geneid VARCHAR(25) NOT NULL',
                      'ALTER TABLE ' . TABLE_SCR2GENE . ' MODIFY COLUMN geneid VARCHAR(25) NOT NULL',
                      'ALTER TABLE ' . TABLE_SHARED_COLS . ' MODIFY COLUMN geneid VARCHAR(25)',
-                     'DROP TABLE ' . TABLE_HITS,
+                     'DROP TABLE ' . TABLEPREFIX . '_hits',
                  ),
                  '3.0-07' =>
                  array(
@@ -659,6 +659,24 @@ if ($sCalcVersionFiles != $sCalcVersionDB) {
         if (in_array('Phenotype/Inheritance', $aColumns)) {
             $aUpdates['3.0-beta-05'][] = 'ALTER TABLE ' . TABLE_PHENOTYPES . ' MODIFY `Phenotype/Inheritance` VARCHAR(50)';
         }
+    }
+
+    if (LOVD_plus && $sCalcVersionDB < lovd_calculateVersion('3.0-12u') && $_INI['instance']['name'] == 'leiden') {
+        // Add Leiden-specific columns.
+        $aUpdates['3.0-12u'] = array_merge(
+            $aUpdates['3.0-12u'],
+            array(
+                'INSERT INTO ' . TABLE_COLS . ' VALUES ("VariantOnGenome/InhouseDB/Count/Global/Heterozygotes",             255, 100, 0, 1, 0, "INDB Count Global Het", "", "The number of samples in the Inhouse Database that have this variant in a heterozygous state.", "The number of samples in the Inhouse Database that have this variant in a heterozygous state.", "MEDIUMINT UNSIGNED", "INDB Count Global Het||text|6", "", "", 0, 0, 1, 0, NOW(), NULL, NULL)',
+                'INSERT INTO ' . TABLE_COLS . ' VALUES ("VariantOnGenome/InhouseDB/Count/Global/Homozygotes",               255, 100, 0, 1, 0, "INDB Count Global Hom", "", "The number of samples in the Inhouse Database that have this variant in a homozygous state.", "The number of samples in the Inhouse Database that have this variant in a homozygous state.", "MEDIUMINT UNSIGNED", "INDB Count Global Hom||text|6", "", "", 0, 0, 1, 0, NOW(), NULL, NULL)',
+                'INSERT INTO ' . TABLE_COLS . ' VALUES ("VariantOnGenome/InhouseDB/Count/InPanel/Heterozygotes",            255, 100, 0, 1, 0, "INDB Count In Panel Het", "", "The number of samples in the Inhouse Database, having the same indication as the individual that is analyzed, that have this variant in a heterozygous state.", "The number of samples in the Inhouse Database, having the same indication as the individual that is analyzed, that have this variant in a heterozygous state.", "MEDIUMINT UNSIGNED", "INDB Count In Panel Het||text|6", "", "", 0, 0, 1, 0, NOW(), NULL, NULL)',
+                'INSERT INTO ' . TABLE_COLS . ' VALUES ("VariantOnGenome/InhouseDB/Count/InPanel/Homozygotes",              255, 100, 0, 1, 0, "INDB Count In Panel Hom", "", "The number of samples in the Inhouse Database, having the same indication as the individual that is analyzed, that have this variant in a homozygous state.", "The number of samples in the Inhouse Database, having the same indication as the individual that is analyzed, that have this variant in a homozygous state.", "MEDIUMINT UNSIGNED", "INDB Count In Panel Hom||text|6", "", "", 0, 0, 1, 0, NOW(), NULL, NULL)',
+                'INSERT INTO ' . TABLE_COLS . ' VALUES ("VariantOnGenome/InhouseDB/Count/OutOfPanel/Heterozygotes",         255, 100, 0, 1, 0, "INDB Count Out Of Panel Het", "", "The number of samples in the Inhouse Database, not having the same indication as the individual that is analyzed, that have this variant in a heterozygous state.", "The number of samples in the Inhouse Database, not having the same indication as the individual that is analyzed, that have this variant in a heterozygous state.", "MEDIUMINT UNSIGNED", "INDB Count Out Of Panel Het||text|6", "", "", 0, 0, 1, 0, NOW(), NULL, NULL)',
+                'INSERT INTO ' . TABLE_COLS . ' VALUES ("VariantOnGenome/InhouseDB/Count/OutOfPanel/Homozygotes",           255, 100, 0, 1, 0, "INDB Count Out Of Panel Hom", "", "The number of samples in the Inhouse Database, not having the same indication as the individual that is analyzed, that have this variant in a homozygous state.", "The number of samples in the Inhouse Database, not having the same indication as the individual that is analyzed, that have this variant in a homozygous state.", "MEDIUMINT UNSIGNED", "INDB Count Out Of Panel Hom||text|6", "", "", 0, 0, 1, 0, NOW(), NULL, NULL)',
+                'INSERT INTO ' . TABLE_COLS . ' VALUES ("VariantOnGenome/InhouseDB/Position/Global/Samples_w_coverage",     255, 100, 0, 1, 0, "INDB Global Samples", "", "The number of samples in the Inhouse Database that have enough coverage on the position of the variant.", "The number of samples in the Inhouse Database that have enough coverage on the position of the variant.", "MEDIUMINT UNSIGNED", "INDB Global Samples||text|6", "", "", 0, 0, 1, 0, NOW(), NULL, NULL)',
+                'INSERT INTO ' . TABLE_COLS . ' VALUES ("VariantOnGenome/InhouseDB/Position/InPanel/Samples_w_coverage",    255, 100, 0, 1, 0, "INDB In Panel Samples", "", "The number of samples in the Inhouse Database, having the same indication as the individual that is analyzed, that have enough coverage on the position of the variant.", "The number of samples in the Inhouse Database, having the same indication as the individual that is analyzed, that have enough coverage on the position of the variant.", "MEDIUMINT UNSIGNED", "INDB In Panel Samples||text|6", "", "", 0, 0, 1, 0, NOW(), NULL, NULL)',
+                'INSERT INTO ' . TABLE_COLS . ' VALUES ("VariantOnGenome/InhouseDB/Position/OutOfPanel/Samples_w_coverage", 255, 100, 0, 1, 0, "INDB Out Of Panel Samples", "", "The number of samples in the Inhouse Database, not having the same indication as the individual that is analyzed, that have enough coverage on the position of the variant.", "The number of samples in the Inhouse Database, not having the same indication as the individual that is analyzed, that have enough coverage on the position of the variant.", "MEDIUMINT UNSIGNED", "INDB Out Of Panel Samples||text|6", "", "", 0, 0, 1, 0, NOW(), NULL, NULL)',
+            )
+        );
     }
 
 
