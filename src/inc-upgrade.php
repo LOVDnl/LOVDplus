@@ -583,6 +583,11 @@ if ($sCalcVersionFiles != $sCalcVersionDB) {
                          'PREPARE Statement FROM @sSQL',
                          'EXECUTE Statement',
                      ),
+                 '3.0-12u' =>
+                 // TODO This might cause a merge conflict with the summary annotation record as I am trying to bundle this change with that one to re use this release version as we are running out of letters. Remove this line when merging.
+                     array(
+                         'ALTER TABLE ' . TABLE_VARIANTS . ' ADD curation_statusid TINYINT(2) UNSIGNED NULL AFTER statusid, ADD INDEX (curation_statusid)',
+                     ),
              );
 
     if ($sCalcVersionDB < lovd_calculateVersion('3.0-alpha-01')) {
