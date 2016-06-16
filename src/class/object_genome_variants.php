@@ -118,6 +118,7 @@ class LOVD_GenomeVariant extends LOVD_Custom {
                         'allele_' => 'Allele',
                         'effect_reported' => 'Affects function (reported)',
                         'effect_concluded' => 'Affects function (concluded)',
+                        'curation_statusid' => 'Curation status',
                       ),
                  $this->buildViewEntry(),
                  array(
@@ -439,6 +440,12 @@ class LOVD_GenomeVariant extends LOVD_Custom {
             } else {
                 $zData['average_frequency_'] = round($zData['average_frequency'], 5) . ' <SPAN style="float: right"><A href="http://databases.lovd.nl/whole_genome/variants/chr' . $zData['chromosome'] . '?search_VariantOnGenome/DNA=' . $zData['VariantOnGenome/DNA'] . '" title="" target="_blank">View details</A></SPAN>';
             }
+            if (!empty($zData['curation_statusid'])) {
+                // Change the curation status ID into the curation status text.
+                // TODO Add a table for the curation status options and use a join instead? The user could then use the full text to sort and filter.
+                $zData['curation_statusid'] = $_SETT['curation_status'][$zData['curation_statusid']];
+            }
+
         }
         // Replace rs numbers with dbSNP links.
         if (!empty($zData['VariantOnGenome/dbSNP'])) {

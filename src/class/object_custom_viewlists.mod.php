@@ -254,6 +254,11 @@ class LOVD_CustomViewListMOD extends LOVD_CustomViewList {
                                         'db'   => array('eg.name', 'ASC', true),
                                         'legend' => array('The variant\'s effect on a protein\'s function, in the format Reported/Curator concluded; ranging from \'+\' (variant affects function) to \'-\' (does not affect function).',
                                                           'The variant\'s affect on a protein\'s function, in the format Reported/Curator concluded; \'+\' indicating the variant affects function, \'+?\' probably affects function, \'-\' does not affect function, \'-?\' probably does not affect function, \'?\' effect unknown.')),
+                                'curation_statusid' => array(
+                                        'view' => array('Curation status', 70),
+                                        'db'   => array('vog.curation_statusid', 'ASC', true),
+                                        'legend' => array('The variant\'s curation status.',
+                                                          'The variant\'s curation status.')),
                               ));
 
                     if (!$this->sSortDefault) {
@@ -350,6 +355,7 @@ class LOVD_CustomViewListMOD extends LOVD_CustomViewList {
     function prepareData ($zData = '', $sView = 'list')
     {
         // Prepares the data by "enriching" the variable received with links, pictures, etc.
+        global $_SETT;
 
         // Needs to be done before the custom links are rendered.
         if (isset($this->aColumnsViewList['VariantOnGenome/Alamut'])) {
@@ -404,6 +410,11 @@ class LOVD_CustomViewListMOD extends LOVD_CustomViewList {
                     $zData['gene_OMIM_'] .= (!$zData['gene_OMIM_']? '' : ', ') . '<SPAN class="anchor" onclick="lovd_openWindow(\'' . lovd_getExternalSource('omim', $nOMIMID) . '\', \'GeneOMIMPage\', 1100, 650); cancelParentEvent(event);">' . $sGene . '</SPAN>';
                 }
             }
+        }
+        if (!empty($zData['curation_statusid'])) {
+            // Change the curation status ID into the curation status text.
+            // TODO Add a table for the curation status options and use a join instead? The user could then use the full text to sort and filter.
+            $zData['curation_statusid'] = $_SETT['curation_status'][$zData['curation_statusid']];
         }
 
         return $zData;
