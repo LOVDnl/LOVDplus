@@ -1023,18 +1023,18 @@ function lovd_showJGNavigation ($aOptions, $sID, $nPrefix = 3)
         $sSubMenu = '';
         if (!empty($aLink['sub_menu'])) {
             // Allow for one level of sub menus.
-            $sSubMenu = $sPrefix . '<UL>' . "\n";
+            $sSubMenu = "\n" . $sPrefix . '    <UL>' . "\n";
             foreach ($aLink['sub_menu'] as $sSubURL => $aSubMenu) {
                 list($sSubIMG, $sSubName) = $aSubMenu;
-                $sSubMenu .= $sPrefix . '  <LI' . (!$sSubIMG? '' : ' class="icon"') . '><A ' . (substr($sSubURL, 0, 11) == 'javascript:'? 'click="' : 'href="' . lovd_getInstallURL(false)) . ltrim($sSubURL, '/') . '">' .
+                $sSubMenu .= $sPrefix . '      <LI' . (!$sSubIMG? '' : ' class="icon"') . '><A ' . (substr($sSubURL, 0, 11) == 'javascript:'? 'click="' : 'href="' . lovd_getInstallURL(false)) . ltrim($sSubURL, '/') . '">' .
                     (!$sIMG? '' : '<SPAN class="icon" style="background-image: url(gfx/' . $sSubIMG . ');"></SPAN>') . $sSubName .
                     '</A></LI>' . "\n";
             }
-            $sSubMenu .= $sPrefix . '</UL>' . "\n";
+            $sSubMenu .= $sPrefix . '    </UL>' . "\n  " . $sPrefix;
         }
         if ($bShown) {
             // IE (who else) refuses to respect the BASE href tag when using JS. So we have no other option than to include the full path here.
-            print($sPrefix . '  <LI' . (!$sIMG? '' : ' class="icon"') . '><A ' . (substr($sURL, 0, 11) == 'javascript:'? 'click="' : 'href="' . lovd_getInstallURL(false)) . ltrim($sURL, '/') . '">' .
+            print($sPrefix . '  <LI' . (!$sIMG? '' : ' class="icon"') . '><A ' . (substr($sURL, 0, 11) == 'javascript:'? 'click="' : 'href="' . ($sSubMenu ? '' : lovd_getInstallURL(false))) . ($sSubMenu ? '' : ltrim($sURL, '/')) . '">' .
                                 (!$sIMG? '' : '<SPAN class="icon" style="background-image: url(gfx/' . $sIMG . ');"></SPAN>') . $sName .
                                 '</A>' . $sSubMenu . '</LI>' . "\n");
         } else {

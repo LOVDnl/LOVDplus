@@ -95,6 +95,14 @@ define('STATUS_HIDDEN', 4);
 define('STATUS_MARKED', 7);
 define('STATUS_OK', 9);
 
+define('STATUS_VARIANT_OF_INTEREST', 10);
+define('STATUS_FOR_CURATION', 20);
+define('STATUS_REQUIRES_CONFIRMATION', 30);
+define('STATUS_CONFIRMED', 40);
+define('STATUS_CURATED_REPORTABLE', 70);
+define('STATUS_CURATED_NOT_REPORTABLE', 80);
+define('STATUS_NOT_FOR_CURATION', 90);
+
 define('AJAX_FALSE', '0');
 define('AJAX_TRUE', '1');
 define('AJAX_UNKNOWN_RESPONSE', '6');
@@ -179,6 +187,16 @@ $_SETT = array(
                             STATUS_HIDDEN => 'Non public',
                             STATUS_MARKED => 'Marked',
                             STATUS_OK => 'Public',
+                          ),
+                'curation_status' =>
+                     array(
+                            STATUS_VARIANT_OF_INTEREST => 'Variant of Interest',
+                            STATUS_NOT_FOR_CURATION => 'Not for Curation',
+                            STATUS_FOR_CURATION => 'For Curation',
+                            STATUS_REQUIRES_CONFIRMATION => 'Requires Confirmation',
+                            STATUS_CONFIRMED => 'Confirmed',
+                            STATUS_CURATED_REPORTABLE => 'Curated & Reportable',
+                            STATUS_CURATED_NOT_REPORTABLE => 'Curated & Not Reportable',
                           ),
                 'update_levels' =>
                      array(

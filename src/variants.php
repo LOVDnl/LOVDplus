@@ -464,13 +464,11 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && !ACTION) {
         if (!LOVD_plus) {
             $aNavigation[CURRENT_PATH . '?edit']       = array('menu_edit.png', 'Edit variant entry', 1);
         }
-        $aNavigation['menu_curationstatus'] = array('menu_import.png', 'Set Curation Status', 1, 'sub_menu' => array(
-            'a' => array('menu_import.png','Sub Menu 1'),
-            'b' => array('menu_import.png','Sub Menu 2'),
-            'c' => array('menu_import.png','Sub Menu 3'),
-            )
-        );
-
+        // Menu items for setting the curation status.
+        foreach ($_SETT['curation_status'] as $nCurationStatusID => $sCurationStatus) {
+            $aCurationStatusMenu[$nCurationStatusID] = array('menu_edit.png', $sCurationStatus);
+        }
+        $aNavigation['curation_status'] = array('menu_edit.png', 'Set Curation Status', 1, 'sub_menu' => $aCurationStatusMenu);
         $aNavigation[CURRENT_PATH . '?edit_remarks' . (isset($_GET['in_window'])? '&amp;in_window' : '')] = array('menu_edit.png', 'Edit remarks', 1);
         if ($zData['statusid'] < STATUS_OK && $_AUTH['level'] >= LEVEL_CURATOR) {
             $aNavigation[CURRENT_PATH . '?publish'] = array('check.png', ($zData['statusid'] == STATUS_MARKED ? 'Remove mark from' : 'Publish (curate)') . ' variant entry', 1);
