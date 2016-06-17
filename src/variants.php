@@ -466,9 +466,9 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && !ACTION) {
         }
         // Menu items for setting the curation status.
         foreach ($_SETT['curation_status'] as $nCurationStatusID => $sCurationStatus) {
-            $aCurationStatusMenu['javascript:$.get(\'ajax/set_curation_status.php?' . $nCurationStatusID . '&id=' . $nID . '\', function(sResponse){if(sResponse.substring(0,1) == \'1\'){alert(\'Successfully set curation status of this variant to \\\'' . $sCurationStatus . '\\\'.\');window.location.reload();' . (!isset($_GET['in_window'])? '' : 'window.opener.lovd_AJAX_viewListSubmit(\'CustomVL_AnalysisRunResults_for_I_VE\');') . '}else if(sResponse.substring(0,1) == \'9\'){alert(\'Error: \' + sResponse.substring(2));}}).error(function(){alert(\'Error while setting curation status.\');});'] = array('menu_edit.png', $sCurationStatus);
+            $aCurationStatusMenu['javascript:$.get(\'ajax/set_curation_status.php?' . $nCurationStatusID . '&id=' . $nID . '\', function(sResponse){if(sResponse.substring(0,1) == \'1\'){alert(\'Successfully set curation status of this variant to \\\'' . $sCurationStatus . '\\\'.\');window.location.reload();' . (!isset($_GET['in_window'])? '' : 'window.opener.lovd_AJAX_viewListSubmit(\'CustomVL_AnalysisRunResults_for_I_VE\');window.opener.lovd_AJAX_viewEntryLoad();') . '}else if(sResponse.substring(0,1) == \'9\'){alert(\'Error: \' + sResponse.substring(2));}}).error(function(){alert(\'Error while setting curation status.\');});'] = array('menu_edit.png', $sCurationStatus);
         }
-        $aNavigation['curation_status'] = array('menu_edit.png', 'Set Curation Status', 1, 'sub_menu' => $aCurationStatusMenu);
+        $aNavigation['curation_status'] = array('menu_edit.png', 'Set curation status', 1, 'sub_menu' => $aCurationStatusMenu);
         $aNavigation[CURRENT_PATH . '?edit_remarks' . (isset($_GET['in_window'])? '&amp;in_window' : '')] = array('menu_edit.png', 'Edit remarks', 1);
         if ($zData['statusid'] < STATUS_OK && $_AUTH['level'] >= LEVEL_CURATOR) {
             $aNavigation[CURRENT_PATH . '?publish'] = array('check.png', ($zData['statusid'] == STATUS_MARKED ? 'Remove mark from' : 'Publish (curate)') . ' variant entry', 1);
