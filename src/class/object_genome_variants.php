@@ -443,7 +443,7 @@ class LOVD_GenomeVariant extends LOVD_Custom {
             if (!empty($zData['curation_statusid'])) {
                 // Change the curation status ID into the curation status text.
                 // TODO Add a table for the curation status options and use a join instead? The user could then use the full text to sort and filter.
-                $zData['curation_statusid'] = $_SETT['curation_status'][$zData['curation_statusid']];
+                $zData['curation_statusid'] = $_SETT['curation_status'][$zData['curation_statusid']] . '<SPAN style="float: right"><A href="#" onclick="lovd_openWindow(\'' . lovd_getInstallURL(). 'variants/' . $zData['id'] . '?curation_status_log&in_window\', \'curationStatusHistory\', 1050, 450);return false;">View History</A></SPAN>';
             }
 
         }

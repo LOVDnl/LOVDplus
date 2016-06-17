@@ -72,6 +72,10 @@ if (!empty($_GET['id']) && $_AUTH && ACTION !== false && in_array(ACTION, array_
             $_SESSION['viewlists']['CustomVL_AnalysisRunResults_for_I_VE']['checked'] = array(); // To clean up.
         }
     }
+    foreach ($aIDs as $nID) {
+        // Write to log...
+        lovd_writeLog('Event', 'CurationStatus', 'Updated curation status for variant #' . $nID . ' to "' . $_SETT['curation_status'][ACTION] . '".');
+    }
     die((string) ($nSwitched > 0) . ' ' . $nSwitched);
 }
 ?>

@@ -3420,4 +3420,27 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && ACTION == 'map') {
     $_T->printFooter();
     exit;
 }
+
+
+
+
+
+if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && ACTION == 'curation_status_log') {
+    // URL: /variants/0000000001?curation_status_log
+    // Show the logs for the changes of curation status for this variant.
+
+    $nID = sprintf('%010d', $_PE[1]);
+    define('PAGE_TITLE', 'Curation status history for variant #' . $nID);
+    $_T->printHeader();
+    $_T->printTitle();
+    $_GET['page_size'] = 10;
+    $_GET['search_event'] = 'CurationStatus';
+    $_GET['search_entry_'] = '"variant #' . $nID . '"';
+    require_once ROOT_PATH . 'class/object_logs.php';
+    $_DATA = new LOVD_Log();
+    $_DATA->viewList('Logs_for_curation_status', array('name', 'event', 'del'), true);
+    unset($_GET['page_size'], $_GET['search_event'], $_GET['search_entry_']);
+    $_T->printFooter();
+    exit;
+}
 ?>
