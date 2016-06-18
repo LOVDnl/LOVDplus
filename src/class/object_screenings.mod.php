@@ -261,10 +261,10 @@ class LOVD_ScreeningMOD extends LOVD_Screening {
                 }
             }
         } else {
-            $zData['variants_to_be_confirmed_'] = $zData['variants_to_be_confirmed_'] = $_DB->query('SELECT COUNT(*) FROM ' . TABLE_VARIANTS . ' AS vog INNER JOIN ' . TABLE_SCR2VAR . ' AS s2v ON (vog.id = s2v.variantid) WHERE vog.curation_statusid = ? AND s2v.screeningid = ?', array(STATUS_REQUIRES_CONFIRMATION, $zData['id']))->fetchColumn();
+            $zData['variants_to_be_confirmed_'] = $zData['variants_to_be_confirmed_'] = $_DB->query('SELECT COUNT(*) FROM ' . TABLE_VARIANTS . ' AS vog INNER JOIN ' . TABLE_SCR2VAR . ' AS s2v ON (vog.id = s2v.variantid) WHERE vog.curation_statusid = ? AND s2v.screeningid = ?', array(CUR_STATUS_REQUIRES_CONFIRMATION, $zData['id']))->fetchColumn();
         }
 
-        $zData['curation_progress_'] = $_DB->query('SELECT COUNT(*) FROM ' . TABLE_VARIANTS . ' AS vog INNER JOIN ' . TABLE_SCR2VAR . ' AS s2v ON (vog.id = s2v.variantid) WHERE vog.curation_statusid in(?,?) AND s2v.screeningid = ?', array(STATUS_CURATED_NOT_REPORTABLE, STATUS_CURATED_REPORTABLE, $zData['id']))->fetchColumn() . ' of ' . $_DB->query('SELECT COUNT(*) FROM ' . TABLE_VARIANTS . ' AS vog INNER JOIN ' . TABLE_SCR2VAR . ' AS s2v ON (vog.id = s2v.variantid) WHERE vog.curation_statusid IS NOT NULL AND vog.curation_statusid != ? AND s2v.screeningid = ?', array(STATUS_NOT_FOR_CURATION, $zData['id']))->fetchColumn() . ' variants curated';
+        $zData['curation_progress_'] = $_DB->query('SELECT COUNT(*) FROM ' . TABLE_VARIANTS . ' AS vog INNER JOIN ' . TABLE_SCR2VAR . ' AS s2v ON (vog.id = s2v.variantid) WHERE vog.curation_statusid in(?,?) AND s2v.screeningid = ?', array(CUR_STATUS_CURATED_NOT_REPORTABLE, CUR_STATUS_CURATED_REPORTABLE, $zData['id']))->fetchColumn() . ' of ' . $_DB->query('SELECT COUNT(*) FROM ' . TABLE_VARIANTS . ' AS vog INNER JOIN ' . TABLE_SCR2VAR . ' AS s2v ON (vog.id = s2v.variantid) WHERE vog.curation_statusid IS NOT NULL AND vog.curation_statusid != ? AND s2v.screeningid = ?', array(CUR_STATUS_NOT_FOR_CURATION, $zData['id']))->fetchColumn() . ' variants curated';
 
         return $zData;
     }

@@ -300,6 +300,7 @@ if (PATH_COUNT >= 2 && ctype_digit($_PE[1]) && !ACTION && (PATH_COUNT == 2 || PA
       <DIV id="analyses">
         <TABLE id="analysesTable" border="0" cellpadding="0" cellspacing="0">
           <TR>');
+        $aAnalysisRunIDs = array();
         foreach ($zAnalyses as $key => $zAnalysis) {
             if (!$zAnalysis) {
                 // This is the separation between run and non-run filters.
@@ -329,6 +330,7 @@ if (PATH_COUNT >= 2 && ctype_digit($_PE[1]) && !ACTION && (PATH_COUNT == 2 || PA
                     $sAnalysisClassName = 'analysis_running analysis_half_run';
                 } else {
                     $sAnalysisClassName = 'analysis_run';
+                    $aAnalysisRunIDs[] = $zAnalysis['runid'];
                 }
             } else {
                 $sAnalysisClassName = 'analysis_not_run';
@@ -418,9 +420,16 @@ if (PATH_COUNT >= 2 && ctype_digit($_PE[1]) && !ACTION && (PATH_COUNT == 2 || PA
       </SCRIPT>
 
 
-      <DIV id="analysis_results_VL" style="display: none;">' . "\n");
+      <DIV id="analysis_results_VL"' . ($_INI['instance']['name'] == 'mgha' && $aAnalysisRunIDs ? '' : ' style="display: none;"') . '>' . "\n");
         $_GET['search_runid'] = '0'; // Will for sure not return anything.
         $_GET['search_vog_effect'] = '!-'; // We always want to exclude the (probably) non-pathogenic ones by default.
+
+        if ($_INI['instance']['name'] == 'mgha') {
+            // Find all the possible run ids for this screening and use them to display the variants of interest.
+            $_GET['search_runid'] = (!$aAnalysisRunIDs ? '0' : implode($aAnalysisRunIDs,'|')); // Show all variants in all the analyses for this screening. If no analyses have been run then pick analysis 0 which should always be empty.
+            $_GET['search_vog_effect'] = ''; // Don't hide any variants based on the effect.
+            $_GET['search_curation_statusid'] = '!="" !' . CUR_STATUS_NOT_FOR_CURATION; // Show variants with a curation status other than "Not for curation".
+        }
 
         require ROOT_PATH . 'class/object_custom_viewlists.mod.php';
         // VOG needs to be first, so it groups by the VOG ID.
