@@ -137,7 +137,7 @@ $aRequired =
 $_SETT = array(
                 'system' =>
                      array(
-                            'version' => '3.0-12s',
+                            'version' => '3.0-12t',
                           ),
                 'user_levels' =>
                      array(
@@ -513,6 +513,10 @@ foreach ($aConfigValues as $sSection => $aVars) {
 
 
 // Define table names (system-wide).
+// WARNING: The order of tables *MUST* be the same as the order in which the
+// tables are defined in the installer (meaning, respecting foreign keys),
+// because uninstalling LOVD will use this table, reverse it, and try to remove
+// the tables in the right order.
 // FIXME: TABLE_SCR2GENE => TABLE_SCRS2GENES etc. etc.?
 define('TABLEPREFIX', $_INI['database']['table_prefix']);
 $_TABLES =
@@ -526,14 +530,20 @@ $_TABLES =
                 'TABLE_DISEASES' => TABLEPREFIX . '_diseases',
                 'TABLE_GEN2DIS' => TABLEPREFIX . '_genes2diseases',
                 'TABLE_DATA_STATUS' => TABLEPREFIX . '_data_status',
+                'TABLE_ANALYSIS_STATUS' => TABLEPREFIX . '_analysis_status',
                 'TABLE_ALLELES' => TABLEPREFIX . '_alleles',
                 'TABLE_EFFECT' => TABLEPREFIX . '_variant_effect',
                 'TABLE_INDIVIDUALS' => TABLEPREFIX . '_individuals',
+                //'TABLE_INDIVIDUALS_REV' => TABLEPREFIX . '_individuals_revisions',
                 'TABLE_IND2DIS' => TABLEPREFIX . '_individuals2diseases',
                 'TABLE_VARIANTS' => TABLEPREFIX . '_variants',
+                //'TABLE_VARIANTS_REV' => TABLEPREFIX . '_variants_revisions',
                 'TABLE_VARIANTS_ON_TRANSCRIPTS' => TABLEPREFIX . '_variants_on_transcripts',
+                //'TABLE_VARIANTS_ON_TRANSCRIPTS_REV' => TABLEPREFIX . '_variants_on_transcripts_revisions',
                 'TABLE_PHENOTYPES' => TABLEPREFIX . '_phenotypes',
+                //'TABLE_PHENOTYPES_REV' => TABLEPREFIX . '_phenotypes_revisions',
                 'TABLE_SCREENINGS' => TABLEPREFIX . '_screenings',
+                //'TABLE_SCREENINGS_REV' => TABLEPREFIX . '_screenings_revisions',
                 'TABLE_SCR2GENE' => TABLEPREFIX . '_screenings2genes',
                 'TABLE_SCR2VAR' => TABLEPREFIX . '_screenings2variants',
                 'TABLE_COLS' => TABLEPREFIX . '_columns',
@@ -546,38 +556,18 @@ $_TABLES =
                 'TABLE_SOURCES' => TABLEPREFIX . '_external_sources',
                 'TABLE_LOGS' => TABLEPREFIX . '_logs',
                 'TABLE_MODULES' => TABLEPREFIX . '_modules',
-
-                // VERSIONING TABLES
-                //'TABLE_INDIVIDUALS_REV' => TABLEPREFIX . '_individuals_revisions',
-                //'TABLE_VARIANTS_REV' => TABLEPREFIX . '_variants_revisions',
-                //'TABLE_VARIANTS_ON_TRANSCRIPTS_REV' => TABLEPREFIX . '_variants_on_transcripts_revisions',
-                //'TABLE_PHENOTYPES_REV' => TABLEPREFIX . '_phenotypes_revisions',
-                //'TABLE_SCREENINGS_REV' => TABLEPREFIX . '_screenings_revisions',
-
-                // REMOVED in 3.0-alpha-07; delete only if sure that there are no legacy versions still out there!
-                // SEE ALSO uninstall.php !!!
-                // SEE ALSO line 559 !!!
-                'TABLE_PATHOGENIC' => TABLEPREFIX . '_variant_pathogenicity',
-                // REMOVED IN 3.0-05; delete only if sure that there are no legacy versions still out there!
-                'TABLE_HITS' => TABLEPREFIX . '_hits',
-                // They can also be removed, if they are completely removed from the code (also inc-upgrade.php), and only the DROP code is kept with the name hard coded.
-
-                // For KG.
-                'TABLE_ANALYSIS_STATUS' => TABLEPREFIX . '_analysis_status',
-                'TABLE_ANALYSES' => TABLEPREFIX . '_analyses',
-                'TABLE_ANALYSES_RUN' => TABLEPREFIX . '_analyses_run',
-                'TABLE_ANALYSES_RUN_FILTERS' => TABLEPREFIX . '_analyses_run_filters',
-                'TABLE_ANALYSES_RUN_RESULTS' => TABLEPREFIX . '_analyses_run_results',
-                'TABLE_SCHEDULED_IMPORTS' => TABLEPREFIX . '_scheduled_imports',
-                'TABLE_AR2GP' => TABLEPREFIX . '_analyses_run2gene_panels',
-
-                // Gene Lists
                 'TABLE_GENE_PANELS' => TABLEPREFIX . '_gene_panels',
                 'TABLE_GENE_PANELS_REV' => TABLEPREFIX . '_gene_panels_revisions',
                 'TABLE_GP2GENE' => TABLEPREFIX . '_gene_panels2genes',
                 'TABLE_GP2GENE_REV' => TABLEPREFIX . '_gene_panels2genes_revisions',
                 'TABLE_IND2GP' => TABLEPREFIX . '_individuals2gene_panels',
                 'TABLE_GP2DIS' => TABLEPREFIX . '_gene_panels2diseases',
+                'TABLE_ANALYSES' => TABLEPREFIX . '_analyses',
+                'TABLE_ANALYSES_RUN' => TABLEPREFIX . '_analyses_run',
+                'TABLE_AR2GP' => TABLEPREFIX . '_analyses_run2gene_panels',
+                'TABLE_ANALYSES_RUN_FILTERS' => TABLEPREFIX . '_analyses_run_filters',
+                'TABLE_ANALYSES_RUN_RESULTS' => TABLEPREFIX . '_analyses_run_results',
+                'TABLE_SCHEDULED_IMPORTS' => TABLEPREFIX . '_scheduled_imports',
                 'TABLE_GENE_STATISTICS' => TABLEPREFIX . '_gene_statistics',
               );
 
@@ -674,7 +664,7 @@ if (defined('MISSING_CONF') || defined('MISSING_STAT') || !preg_match('/^([1-9]\
             $aTables[] = $sCol;
         }
     }
-    if (count($aTables) < (count($_TABLES) - 2)) {
+    if (count($aTables) < (count($_TABLES))) {
         // We're not completely installed.
         define('NOT_INSTALLED', true);
     }
