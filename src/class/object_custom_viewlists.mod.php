@@ -140,7 +140,7 @@ class LOVD_CustomViewListMOD extends LOVD_CustomViewList {
                             'VariantOnGenome/Sequencing/Quality',
                             'VariantOnGenome/Sequencing/GATKcaller',
                         );
-                    $aSQL['SELECT'] .= (!$aSQL['SELECT']? '' : ', ') . 'vog.*, a.name AS allele_, eg.name AS vog_effect';
+                    $aSQL['SELECT'] .= (!$aSQL['SELECT']? '' : ', ') . 'vog.*, a.name AS allele_, eg.name AS vog_effect, cs.name AS curation_status';
                     if (!$aSQL['FROM']) {
                         // First data table in query.
                         $aSQL['SELECT'] .= ', vog.id AS row_id'; // To ensure other table's id columns don't interfere.
@@ -163,6 +163,7 @@ class LOVD_CustomViewListMOD extends LOVD_CustomViewList {
                     }
                     $aSQL['FROM'] .= ' LEFT OUTER JOIN ' . TABLE_ALLELES . ' AS a ON (vog.allele = a.id)';
                     $aSQL['FROM'] .= ' LEFT OUTER JOIN ' . TABLE_EFFECT . ' AS eg ON (vog.effectid = eg.id)';
+                    $aSQL['FROM'] .= ' LEFT OUTER JOIN ' . TABLE_CURATION_STATUS . ' AS cs ON (vog.curation_statusid = cs.id)';
                     break;
 
                 case 'VariantOnTranscript':
@@ -255,8 +256,11 @@ class LOVD_CustomViewListMOD extends LOVD_CustomViewList {
                                         'legend' => array('The variant\'s effect on a protein\'s function, in the format Reported/Curator concluded; ranging from \'+\' (variant affects function) to \'-\' (does not affect function).',
                                                           'The variant\'s affect on a protein\'s function, in the format Reported/Curator concluded; \'+\' indicating the variant affects function, \'+?\' probably affects function, \'-\' does not affect function, \'-?\' probably does not affect function, \'?\' effect unknown.')),
                                 'curation_statusid' => array(
+                                        'view' => false,
+                                        'db'   => array('vog.curation_statusid', 'ASC', true)),
+                                'curation_status' => array(
                                         'view' => array('Curation status', 70),
-                                        'db'   => array('vog.curation_statusid', 'ASC', true),
+                                        'db'   => array('curation_status', 'ASC', 'TEXT'),
                                         'legend' => array('The variant\'s curation status.',
                                                           'The variant\'s curation status.')),
                               ));
@@ -410,11 +414,6 @@ class LOVD_CustomViewListMOD extends LOVD_CustomViewList {
                     $zData['gene_OMIM_'] .= (!$zData['gene_OMIM_']? '' : ', ') . '<SPAN class="anchor" onclick="lovd_openWindow(\'' . lovd_getExternalSource('omim', $nOMIMID) . '\', \'GeneOMIMPage\', 1100, 650); cancelParentEvent(event);">' . $sGene . '</SPAN>';
                 }
             }
-        }
-        if (!empty($zData['curation_statusid'])) {
-            // Change the curation status ID into the curation status text.
-            // TODO Add a table for the curation status options and use a join instead? The user could then use the full text to sort and filter.
-            $zData['curation_statusid'] = $_SETT['curation_status'][$zData['curation_statusid']];
         }
 
         return $zData;

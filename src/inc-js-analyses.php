@@ -303,6 +303,7 @@ function lovd_showAnalysisResults (nRunID)
     $('#viewlistForm_CustomVL_AnalysisRunResults_for_I_VE').children('input[name="search_runid"]').attr('value', nRunID);
     // Sometimes it's disabled...
     $('#viewlistForm_CustomVL_AnalysisRunResults_for_I_VE').children('input[name="search_runid"]')[0].disabled = false;
+    $('#viewlistForm_CustomVL_AnalysisRunResults_for_I_VE').children('input[name="search_curation_statusid"]').remove();
 
     // The ViewList normally loads only hidden input fields for skipped columns (like runid). But we want
     // to have a default filter on variant effect, and can only do that if we have a search field.

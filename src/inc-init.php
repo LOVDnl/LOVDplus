@@ -548,6 +548,7 @@ $_TABLES =
                 'TABLE_DISEASES' => TABLEPREFIX . '_diseases',
                 'TABLE_GEN2DIS' => TABLEPREFIX . '_genes2diseases',
                 'TABLE_DATA_STATUS' => TABLEPREFIX . '_data_status',
+                'TABLE_CURATION_STATUS' => TABLEPREFIX . '_curation_status',
                 'TABLE_ANALYSIS_STATUS' => TABLEPREFIX . '_analysis_status',
                 'TABLE_ALLELES' => TABLEPREFIX . '_alleles',
                 'TABLE_EFFECT' => TABLEPREFIX . '_variant_effect',
