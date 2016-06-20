@@ -359,7 +359,6 @@ class LOVD_CustomViewListMOD extends LOVD_CustomViewList {
     function prepareData ($zData = '', $sView = 'list')
     {
         // Prepares the data by "enriching" the variable received with links, pictures, etc.
-        global $_SETT;
 
         // Needs to be done before the custom links are rendered.
         if (isset($this->aColumnsViewList['VariantOnGenome/Alamut'])) {

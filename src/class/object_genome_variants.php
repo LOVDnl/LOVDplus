@@ -443,7 +443,7 @@ class LOVD_GenomeVariant extends LOVD_Custom {
                 $zData['average_frequency_'] = round($zData['average_frequency'], 5) . ' <SPAN style="float: right"><A href="http://databases.lovd.nl/whole_genome/variants/chr' . $zData['chromosome'] . '?search_VariantOnGenome/DNA=' . $zData['VariantOnGenome/DNA'] . '" title="" target="_blank">View details</A></SPAN>';
             }
             if (!empty($zData['curation_status_'])) {
-                // Change the curation status ID into the curation status text.
+                // Add a link to the curation status to show the curation status history for this variant.
                 $zData['curation_status_'] .= '<SPAN style="float: right"><A href="#" onclick="lovd_openWindow(\'' . lovd_getInstallURL(). 'variants/' . $zData['id'] . '?curation_status_log&in_window\', \'curationStatusHistory\', 1050, 450);return false;">View History</A></SPAN>';
             }
 
