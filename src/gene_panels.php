@@ -452,7 +452,6 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && ACTION == 'manage_genes') {
     // Manage genes in a gene panel.
 
     $nID = sprintf('%05d', $_PE[1]);
-    define('PAGE_TITLE', 'Manage genes for gene panel entry #' . $nID);
     define('LOG_EVENT', 'GenePanelManage');
 
     lovd_requireAUTH(LEVEL_ANALYZER);
@@ -460,12 +459,26 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && ACTION == 'manage_genes') {
 
     $zData = $_DB->query('SELECT * FROM ' . TABLE_GENE_PANELS . ' WHERE id = ?', array($nID))->fetchAssoc();
     if (!$zData) {
+        define('PAGE_TITLE', 'Manage genes for gene panel entry #' . $nID);
         $_T->printHeader();
         $_T->printTitle();
         lovd_showInfoTable('No such ID!', 'stop');
         $_T->printFooter();
         exit;
     }
+    $aSelectedGenes = array();
+    if (!empty($_GET['viewlistid']) && (empty($_SESSION['viewlists'][$_GET['viewlistid']]['checked']) || count($_SESSION['viewlists'][$_GET['viewlistid']]['checked']) == 0)) {
+        // A viewlistid has been specified with the intention of adding selected genes in that viewlistid but there are no selected genes or the viewlistid is incorrect.
+        $_T->printHeader();
+        $_T->printTitle();
+        lovd_showInfoTable('There are no genes selected to add to this gene panel!', 'stop');
+        $_T->printFooter();
+        exit;
+    } else {
+        // Selected genes in the viewlist are added to this array for further processing.
+        $aSelectedGenes = $_SESSION['viewlists'][$_GET['viewlistid']]['checked'];
+    }
+    define('PAGE_TITLE', 'Manage genes for gene panel: ' . htmlspecialchars($zData['name']));
 
     require ROOT_PATH . 'inc-lib-form.php';
 
@@ -1018,6 +1031,52 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && ACTION == 'history') {
     $_DATA = new LOVD_GenePanelGeneREV();
     $_GET['search_genepanelid'] = $nID;
     $_DATA->viewList('GenePanelGeneREV');
+
+    $_T->printFooter();
+    exit;
+}
+
+
+
+
+
+if (PATH_COUNT == 1 && ACTION == 'add') {
+// URL: /gene_panels?add
+// Show all gene panels so as the user can select which one to add the selected genes into.
+
+    define('PAGE_TITLE', 'Select gene panel to add selected genes to');
+    define('LOG_EVENT', 'GenePanelSelect');
+
+    if (!empty($_GET['viewlistid'])) {
+        $sViewListID = $_GET['viewlistid'];
+    } else {
+        // We have not been provided with a viewlistid.
+        $_T->printHeader();
+        $_T->printTitle();
+        lovd_showInfoTable('Must supply a view list ID!', 'stop');
+        $_T->printFooter();
+        exit;
+    }
+
+    if (empty($_SESSION['viewlists'][$sViewListID]['checked']) || count($_SESSION['viewlists'][$sViewListID]['checked']) == 0) {
+        // We have a viewlistid but there are no selected gene.
+        $_T->printHeader();
+        $_T->printTitle();
+        lovd_showInfoTable('No genes have been selected!', 'stop');
+        $_T->printFooter();
+        exit;
+    }
+
+    $_T->printHeader();
+    $_T->printTitle();
+
+    lovd_requireAUTH();
+
+    require ROOT_PATH . 'class/object_gene_panels.php';
+    $_DATA = new LOVD_GenePanel();
+    // Set the row link URL to point to the gene panel genes management along with the required $_GET values.
+    $_DATA->setRowLink('GenePanel', 'javascript:window.location.href=\'' . lovd_getInstallURL() . 'gene_panels/{{id}}?manage_genes&viewlistid=' . $sViewListID . '\'; return false');
+    $_DATA->viewList('GenePanel', array(), false, false, true);
 
     $_T->printFooter();
     exit;
