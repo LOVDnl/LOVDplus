@@ -586,7 +586,7 @@ if ($sCalcVersionFiles != $sCalcVersionDB) {
                  '3.0-12u' =>
                  // TODO This might cause a merge conflict with the summary annotation record as I am trying to bundle this change with that one to re use this release version as we are running out of letters. Remove this line when merging.
                      array(
-                         'CREATE TABLE IF NOT EXISTS ' . TABLE_CURATION_STATUS . ' (id TINYINT(2) UNSIGNED NOT NULL, name VARCHAR(50) NOT NULL, PRIMARY KEY (id)) ENGINE=InnoDB, DEFAULT CHARACTER SET utf8', // We are inserting the curation status records below by using array merge to add them into this array.
+                         'CREATE TABLE IF NOT EXISTS ' . TABLE_CURATION_STATUS . ' (id TINYINT(2) UNSIGNED ZEROFILL NOT NULL, name VARCHAR(50) NOT NULL, PRIMARY KEY (id)) ENGINE=InnoDB, DEFAULT CHARACTER SET utf8', // We are inserting the curation status records below by using array merge to add them into this array.
                          'ALTER TABLE ' . TABLE_VARIANTS . ' ADD curation_statusid TINYINT(2) UNSIGNED NULL AFTER statusid, ADD INDEX (curation_statusid), ADD CONSTRAINT ' . TABLE_VARIANTS . '_fk_curation_statusid FOREIGN KEY (curation_statusid) REFERENCES ' . TABLE_CURATION_STATUS . ' (id) ON DELETE SET NULL ON UPDATE CASCADE',
                      ),
              );

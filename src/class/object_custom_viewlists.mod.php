@@ -140,7 +140,7 @@ class LOVD_CustomViewListMOD extends LOVD_CustomViewList {
                             'VariantOnGenome/Sequencing/Quality',
                             'VariantOnGenome/Sequencing/GATKcaller',
                         );
-                    $aSQL['SELECT'] .= (!$aSQL['SELECT']? '' : ', ') . 'vog.*, a.name AS allele_, eg.name AS vog_effect, cs.name AS curation_status';
+                    $aSQL['SELECT'] .= (!$aSQL['SELECT']? '' : ', ') . 'vog.*, a.name AS allele_, eg.name AS vog_effect, CONCAT(cs.id, cs.name) AS curation_status_';
                     if (!$aSQL['FROM']) {
                         // First data table in query.
                         $aSQL['SELECT'] .= ', vog.id AS row_id'; // To ensure other table's id columns don't interfere.
@@ -258,9 +258,9 @@ class LOVD_CustomViewListMOD extends LOVD_CustomViewList {
                                 'curation_statusid' => array(
                                         'view' => false,
                                         'db'   => array('vog.curation_statusid', 'ASC', true)),
-                                'curation_status' => array(
+                                'curation_status_' => array(
                                         'view' => array('Curation status', 70),
-                                        'db'   => array('curation_status', 'ASC', 'TEXT'),
+                                        'db'   => array('curation_status_', 'ASC', 'TEXT'),
                                         'legend' => array('The variant\'s curation status.',
                                                           'The variant\'s curation status.')),
                               ));
@@ -359,6 +359,7 @@ class LOVD_CustomViewListMOD extends LOVD_CustomViewList {
     function prepareData ($zData = '', $sView = 'list')
     {
         // Prepares the data by "enriching" the variable received with links, pictures, etc.
+        global $_SETT;
 
         // Needs to be done before the custom links are rendered.
         if (isset($this->aColumnsViewList['VariantOnGenome/Alamut'])) {
@@ -413,6 +414,9 @@ class LOVD_CustomViewListMOD extends LOVD_CustomViewList {
                     $zData['gene_OMIM_'] .= (!$zData['gene_OMIM_']? '' : ', ') . '<SPAN class="anchor" onclick="lovd_openWindow(\'' . lovd_getExternalSource('omim', $nOMIMID) . '\', \'GeneOMIMPage\', 1100, 650); cancelParentEvent(event);">' . $sGene . '</SPAN>';
                 }
             }
+        }
+        if (!empty($zData['curation_status_'])) {
+            $zData['curation_status_'] = $_SETT['curation_status'][$zData['curation_statusid']];
         }
 
         return $zData;

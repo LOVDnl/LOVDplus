@@ -239,7 +239,7 @@ $aTableSQL =
 
          , 'TABLE_CURATION_STATUS' =>
    'CREATE TABLE ' . TABLE_CURATION_STATUS . ' (
-    id TINYINT(2) UNSIGNED NOT NULL,
+    id TINYINT(2) UNSIGNED ZEROFILL NOT NULL,
     name VARCHAR(50) NOT NULL,
     PRIMARY KEY (id))
     ' . $sSettings
