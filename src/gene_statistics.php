@@ -200,7 +200,7 @@ if (PATH_COUNT == 1 && !ACTION) {
     // Redirect the link when clicking on genes to the genes info page.
     //$_DATA->setRowLink($sViewListID, ROOT_PATH . 'genes/' . $_DATA->sRowID);
     // Bold the row when clicked. Not sure if this is better or going to the gene info is better. It might get annoying going away from this page as you lose the work you have done.
-    $_DATA->setRowLink($sViewListID, 'javascript:$(\'#{{id}}\').toggleClass(\'marked\');');
+    $_DATA->setRowLink($sViewListID, 'javascript:$(\'#{{id}}\').toggleClass(\'colGreen\');');
     // Allow users to download this gene statistics selected gene list.
     print('      <UL id="viewlistMenu_' . $sViewListID . '" class="jeegoocontext jeegooviewlist">
         <LI class="icon"><A click="lovd_AJAX_viewListSubmit(\'' . $sViewListID . '\', function(){lovd_AJAX_viewListCheckedFilter(\'' . $sViewListID . '\', true);});"><SPAN class="icon" style="background-image: url(gfx/check.png);"></SPAN>Show only selected genes</A></LI>

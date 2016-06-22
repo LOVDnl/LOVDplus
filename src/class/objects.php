@@ -1624,6 +1624,9 @@ class LOVD_Object {
                     }
                     $sMessage .= $sWhere;
                 }
+                if ($sUnit == 'gene_statistics') {
+                    $sMessage = 'No gene statistics have been imported into this database. Please <A href="gene_statistics?import">click here</A> to import them';
+                }
                 lovd_showInfoTable($sMessage . '!', 'stop');
 
                 return 0;
