@@ -2907,6 +2907,15 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && ACTION == 'edit_remarks') {
             // Manual query, because updateEntry() empties the whole VOG.
             $_DB->query('UPDATE ' . TABLE_VARIANTS . ' SET `VariantOnGenome/Remarks` = ? WHERE id = ?', array($_POST['VariantOnGenome/Remarks'], $nID), true, true);
 
+            $_DB->query('UPDATE ' . TABLE_VARIANTS . ' SET `effectid` = ? WHERE id = ?', array($_POST['effect_reported'] . ($_AUTH['level'] >= LEVEL_CURATOR? $_POST['effect_concluded'] : substr($_SETT['var_effect_default'], -1)), $nID), true, true);   // todo: for MGHA, do we need the AUTH check here?
+
+            foreach( $_POST as $sCol => $val ) {
+                if (strpos($sCol, 'VariantOnGenome/Curation/') !== false) {
+                       $_DB->query('UPDATE ' . TABLE_VARIANTS . " SET `" . $sCol . "` = ? WHERE id = ?", array( $val, $nID), true, true);
+                }
+            }
+
+
             // Write to log...
             lovd_writeLog('Event', LOG_EVENT, 'Edited remarks for variant entry ' . $nID . ' - ' . (!trim($_POST['VariantOnGenome/Remarks'])? '<empty>' : str_replace(array("\r", "\n", "\t"), array('\r', '\n', '\t'), $_POST['VariantOnGenome/Remarks'])));
 
@@ -2924,6 +2933,8 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && ACTION == 'edit_remarks') {
         foreach ($zData as $key => $val) {
             $_POST[$key] = $val;
         }
+        $_POST['effect_reported'] = $zData['effectid']{0};
+        $_POST['effect_concluded'] = $zData['effectid']{1};
     }
 
 
