@@ -60,7 +60,7 @@ class LOVD_GeneStatistic extends LOVD_Object {
                                             'LEFT OUTER JOIN ' . TABLE_GENE_PANELS . ' AS gp ON (gp2g.genepanelid = gp.id)';
         $this->aSQLViewList['GROUP_BY'] = 'g.id';
         // If we detect that the user wants to only show the checked genes and there are genes stored in the session variable then lets add them to the where clause here.
-        if (isset($_GET['viewlistid']) && isset($_GET['filterChecked']) && $_GET['filterChecked'] == 'true') {
+        if (isset($_GET['viewlistid']) && isset($_GET['filterChecked']) && $_GET['filterChecked'] == 'true' && $_SESSION['viewlists'][$_GET['viewlistid']]['checked']) {
             // Run the PDO:quote function over all the gene IDs to sanitize them
             $this->aSQLViewList['WHERE']     = 'g.id IN (' . implode(',', array_map(array($_DB, 'quote'),$_SESSION['viewlists'][$_GET['viewlistid']]['checked'])) . ')';
         }
