@@ -474,7 +474,7 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && ACTION == 'manage_genes') {
         lovd_showInfoTable('There are no genes selected to add to this gene panel!', 'stop');
         $_T->printFooter();
         exit;
-    } else {
+    } elseif (!empty($_GET['viewlistid'])) {
         // Selected genes in the viewlist are added to this array for further processing.
         $aSelectedGenes = $_SESSION['viewlists'][$_GET['viewlistid']]['checked'];
     }
@@ -656,6 +656,7 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && ACTION == 'manage_genes') {
                     'inheritance' => (!isset($_POST['inheritances'][$nKey])? '' : $_POST['inheritances'][$nKey]),
                     'pmid' => (!isset($_POST['pmids'][$nKey])? '' : $_POST['pmids'][$nKey]),
                     'remarks' => (!isset($_POST['remarkses'][$nKey])? '' : $_POST['remarkses'][$nKey]), // Some LOTR here just for fun...
+                    'vlgene' => 0, // A flag to determine if the row is to be highlighted green.
                 );
         }
         ksort($aGenes); // So it will be resorted on a page reload.
@@ -666,11 +667,30 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && ACTION == 'manage_genes') {
         // Retrieve current genes, alphabetically ordered (makes it a bit easier to work with new forms).
         // FIXME: This is where the new fetchAllCombine() will make sense...
         $qGenes = $_DB->query(
-            'SELECT gp2g.geneid, gp2g.geneid AS name, gp2g.transcriptid, gp2g.inheritance, gp2g.pmid, REPLACE(gp2g.remarks, "\r\n", " ") AS remarks, IFNULL(CONCAT("<OPTION value=\"\">-- select --</OPTION>", GROUP_CONCAT(CONCAT("<OPTION value=\"", t.id, "\">", t.id_ncbi, "</OPTION>") ORDER BY t.id_ncbi SEPARATOR "")), "<OPTION value=\"\">-- no transcripts available --</OPTION>") AS transcripts_HTML
+            'SELECT gp2g.geneid, gp2g.geneid AS name, gp2g.transcriptid, gp2g.inheritance, gp2g.pmid, REPLACE(gp2g.remarks, "\r\n", " ") AS remarks, IFNULL(CONCAT("<OPTION value=\"\">-- select --</OPTION>", GROUP_CONCAT(CONCAT("<OPTION value=\"", t.id, "\">", t.id_ncbi, "</OPTION>") ORDER BY t.id_ncbi SEPARATOR "")), "<OPTION value=\"\">-- no transcripts available --</OPTION>") AS transcripts_HTML, 0 AS vlgene
              FROM ' . TABLE_GP2GENE . ' AS gp2g LEFT OUTER JOIN ' . TABLE_TRANSCRIPTS . ' AS t ON (gp2g.geneid = t.geneid)
              WHERE gp2g.genepanelid = ? GROUP BY gp2g.geneid ORDER BY gp2g.geneid', array($nID));
         while ($z = $qGenes->fetchAssoc()) {
             $aGenes[$z['geneid']] = $z;
+        }
+
+        if ($aSelectedGenes) {
+            // Prepend the selected genes from the viewlist. Build an array of these selected genes.
+            $qGenes = $_DB->query(
+                'SELECT g.id AS geneid, g.id AS name, null AS transcriptid, "" AS inheritance, null AS pmid, "" AS remarks, IFNULL(CONCAT("<OPTION value=\"\">-- select --</OPTION>", GROUP_CONCAT(CONCAT("<OPTION value=\"", t.id, "\">", t.id_ncbi, "</OPTION>") ORDER BY t.id_ncbi SEPARATOR "")), "<OPTION value=\"\">-- no transcripts available --</OPTION>") AS transcripts_HTML, 1 AS vlgene
+             FROM ' . TABLE_GENES . ' AS g LEFT OUTER JOIN ' . TABLE_TRANSCRIPTS . ' AS t ON (g.id = t.geneid)
+             WHERE g.id IN (?' . str_repeat(', ?', count($aSelectedGenes)-1) . ') GROUP BY g.id ORDER BY g.id', array_values($aSelectedGenes));
+            while ($z = $qGenes->fetchAssoc()) {
+                if (empty($aGenes[$z['geneid']])) {
+                    // If this gene is already in the gene panel then do not overwrite the gene data in the array.
+                    $aVLGenes[$z['geneid']] = $z;
+                }
+                // TODO AM Do we want to notify the user that this gene already existed within the gene panel?
+            }
+            if (!empty($aVLGenes) && count($aVLGenes) > 0) {
+                // Merge these genes to the start of the existing genes.
+                $aGenes = array_merge($aVLGenes, $aGenes);
+            }
         }
     }
 
@@ -727,7 +747,7 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && ACTION == 'manage_genes') {
     // Now loop the items in the order given.
     foreach ($aGenes as $sID => $aGene) {
         print('
-            <TR id="tr_' . $sID . '">
+            <TR id="tr_' . $sID . '"' . (!$aGene['vlgene'] ? '' : ' class="colGreen"') . '>
               <TD>
                 <INPUT type="hidden" name="genes[]" value="' . $sID . '">
               ' . $aGene['name'] . '</TD>
@@ -774,6 +794,7 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && ACTION == 'manage_genes') {
         objGenes = document.getElementById('gene_list');
         oTR = document.createElement('TR');
         oTR.id = 'tr_' + sID;
+        oTR.className = 'colGreen';
         oTR.innerHTML =
             '<TD><INPUT type="hidden" name="genes[]" value="' + sID + '">' + sID + '</TD>' +
             '<TD><SELECT name="transcriptids[]" style="width : 100%;">' + sTranscripts + '</SELECT></TD>' +
@@ -1075,8 +1096,8 @@ if (PATH_COUNT == 1 && ACTION == 'add') {
     require ROOT_PATH . 'class/object_gene_panels.php';
     $_DATA = new LOVD_GenePanel();
     // Set the row link URL to point to the gene panel genes management along with the required $_GET values.
-    $_DATA->setRowLink('GenePanel', 'javascript:window.location.href=\'' . lovd_getInstallURL() . 'gene_panels/{{id}}?manage_genes&viewlistid=' . $sViewListID . '\'; return false');
-    $_DATA->viewList('GenePanel', array(), false, false, true);
+    $_DATA->setRowLink('GenePanelSelect', 'javascript:window.location.href=\'' . lovd_getInstallURL() . 'gene_panels/{{id}}?manage_genes&viewlistid=' . $sViewListID . '\'; return false');
+    $_DATA->viewList('GenePanelSelect', array(), false, false, true);
 
     $_T->printFooter();
     exit;
