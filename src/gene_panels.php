@@ -467,16 +467,16 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && ACTION == 'manage_genes') {
         exit;
     }
     $aSelectedGenes = array();
-    if (!empty($_GET['viewlistid']) && (empty($_SESSION['viewlists'][$_GET['viewlistid']]['checked']) || count($_SESSION['viewlists'][$_GET['viewlistid']]['checked']) == 0)) {
+    if (!empty($_GET['select_genes_from']) && (empty($_SESSION['viewlists'][$_GET['select_genes_from']]['checked']) || count($_SESSION['viewlists'][$_GET['select_genes_from']]['checked']) == 0)) {
         // A viewlistid has been specified with the intention of adding selected genes in that viewlistid but there are no selected genes or the viewlistid is incorrect.
         $_T->printHeader();
         $_T->printTitle();
         lovd_showInfoTable('There are no genes selected to add to this gene panel!', 'stop');
         $_T->printFooter();
         exit;
-    } elseif (!empty($_GET['viewlistid'])) {
+    } elseif (!empty($_GET['select_genes_from'])) {
         // Selected genes in the viewlist are added to this array for further processing.
-        $aSelectedGenes = $_SESSION['viewlists'][$_GET['viewlistid']]['checked'];
+        $aSelectedGenes = $_SESSION['viewlists'][$_GET['select_genes_from']]['checked'];
     }
     define('PAGE_TITLE', 'Manage genes for gene panel: ' . htmlspecialchars($zData['name']));
 
@@ -1068,8 +1068,8 @@ if (PATH_COUNT == 1 && ACTION == 'add') {
     define('PAGE_TITLE', 'Select gene panel to add selected genes to');
     define('LOG_EVENT', 'GenePanelSelect');
 
-    if (!empty($_GET['viewlistid'])) {
-        $sViewListID = $_GET['viewlistid'];
+    if (!empty($_GET['select_genes_from'])) {
+        $sViewListID = $_GET['select_genes_from'];
     } else {
         // We have not been provided with a viewlistid.
         $_T->printHeader();
@@ -1096,7 +1096,7 @@ if (PATH_COUNT == 1 && ACTION == 'add') {
     require ROOT_PATH . 'class/object_gene_panels.php';
     $_DATA = new LOVD_GenePanel();
     // Set the row link URL to point to the gene panel genes management along with the required $_GET values.
-    $_DATA->setRowLink('GenePanelSelect', 'javascript:window.location.href=\'' . lovd_getInstallURL() . 'gene_panels/{{id}}?manage_genes&viewlistid=' . $sViewListID . '\'; return false');
+    $_DATA->setRowLink('GenePanelSelect', 'javascript:window.location.href=\'' . lovd_getInstallURL() . 'gene_panels/{{id}}?manage_genes&select_genes_from=' . $sViewListID . '\'; return false');
     $_DATA->viewList('GenePanelSelect', array(), false, false, true);
 
     $_T->printFooter();
