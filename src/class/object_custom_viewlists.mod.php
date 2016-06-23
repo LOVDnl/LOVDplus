@@ -240,29 +240,22 @@ class LOVD_CustomViewListMOD extends LOVD_CustomViewList {
                     $this->aColumnsViewList = array_merge($this->aColumnsViewList,
                          array(
                                 // NOTE: there are more columns defined a little further below.
-                                'chromosome' => array(
-                                        'view' => array('Chr', 50),
-                                        'db'   => array('vog.chromosome', 'ASC', true)),
-/*
-                                'allele_' => array(
-                                        'view' => array('Allele', 120),
-                                        'db'   => array('a.name', 'ASC', true),
-                                        'legend' => array('On which allele is the variant located? Does not necessarily imply inheritance!',
-                                                          'On which allele is the variant located? Does not necessarily imply inheritance! \'Paternal\' (confirmed or inferred), \'Maternal\' (confirmed or inferred), \'Parent #1\' or #2 for compound heterozygosity without having screened the parents, \'Unknown\' for heterozygosity without having screened the parents, \'Both\' for homozygozity.')),
-*/
+                                'curation_status_' => array(
+                                        'view' => array('Curation status', 70),
+                                        'db'   => array('curation_status_', 'ASC', 'TEXT'),
+                                        'legend' => array('The variant\'s curation status.',
+                                        'The variant\'s curation status.')),
+                                'curation_statusid' => array(
+                                        'view' => false,
+                                        'db'   => array('vog.curation_statusid', 'ASC', true)),
                                 'vog_effect' => array(
                                         'view' => array('Effect', 70),
                                         'db'   => array('eg.name', 'ASC', true),
                                         'legend' => array('The variant\'s effect on a protein\'s function, in the format Reported/Curator concluded; ranging from \'+\' (variant affects function) to \'-\' (does not affect function).',
                                                           'The variant\'s affect on a protein\'s function, in the format Reported/Curator concluded; \'+\' indicating the variant affects function, \'+?\' probably affects function, \'-\' does not affect function, \'-?\' probably does not affect function, \'?\' effect unknown.')),
-                                'curation_statusid' => array(
-                                        'view' => false,
-                                        'db'   => array('vog.curation_statusid', 'ASC', true)),
-                                'curation_status_' => array(
-                                        'view' => array('Curation status', 70),
-                                        'db'   => array('curation_status_', 'ASC', 'TEXT'),
-                                        'legend' => array('The variant\'s curation status.',
-                                                          'The variant\'s curation status.')),
+                                'chromosome' => array(
+                                        'view' => array('Chr', 50),
+                                        'db'   => array('vog.chromosome', 'ASC', true)),
                               ));
 
                     if (!$this->sSortDefault) {
@@ -395,8 +388,8 @@ class LOVD_CustomViewListMOD extends LOVD_CustomViewList {
                     break;
             }
         }
-        // Variants marked as "to be confirmed" are transparent a bit.
-        if ($zData['to_be_confirmed'] && empty($zData['confirmed'])) {
+        // Variants requiring confirmation are transparent a bit.
+        if (!empty($zData['curation_statusid']) && $zData['curation_statusid'] == CUR_STATUS_REQUIRES_CONFIRMATION) {
             $zData['class_name'] = (empty($zData['class_name'])? '' : $zData['class_name'] . ' ') . 'transparent50';
         }
 

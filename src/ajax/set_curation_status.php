@@ -33,7 +33,7 @@ define('ROOT_PATH', '../');
 require ROOT_PATH . 'inc-init.php';
 
 // Set the curation status for selected variants from a ViewList.
-if (!empty($_GET['id']) && $_AUTH && ACTION !== false && in_array(ACTION, array_keys($_SETT['curation_status']))) {
+if (!empty($_GET['id']) && $_AUTH && ACTION !== false && (in_array(ACTION, array_keys($_SETT['curation_status'])) || ACTION == 'clear')) {
     // The easiest thing to do is just run the query, and just dump the result.
     if ($_GET['id'] == 'selected') {
         $aIDs = array_values($_SESSION['viewlists']['CustomVL_AnalysisRunResults_for_I_VE']['checked']);
@@ -65,7 +65,7 @@ if (!empty($_GET['id']) && $_AUTH && ACTION !== false && in_array(ACTION, array_
     }
 
     $nSwitched = 0;
-    $q = $_DB->query('UPDATE ' . TABLE_VARIANTS . ' SET curation_statusid = CAST(? AS UNSIGNED) WHERE id IN (?' . str_repeat(', ?', count($aIDs) - 1) . ')', array_merge(array(ACTION), $aIDs), false);
+    $q = $_DB->query('UPDATE ' . TABLE_VARIANTS . ' SET curation_statusid = ' . (ACTION == 'clear' ? '?' : 'CAST(? AS UNSIGNED)') . ' WHERE id IN (?' . str_repeat(', ?', count($aIDs) - 1) . ')', array_merge(array((ACTION == 'clear' ? NULL : ACTION)), $aIDs), false);
     if ($q) {
         $nSwitched = $q->rowCount();
         if ($_GET['id'] == 'selected') {
@@ -74,7 +74,7 @@ if (!empty($_GET['id']) && $_AUTH && ACTION !== false && in_array(ACTION, array_
     }
     foreach ($aIDs as $nID) {
         // Write to log...
-        lovd_writeLog('Event', 'CurationStatus', 'Updated curation status for variant #' . $nID . ' to "' . $_SETT['curation_status'][ACTION] . '".');
+        lovd_writeLog('Event', 'CurationStatus', 'Updated curation status for variant #' . $nID . ' to "' . (ACTION == 'clear' ? 'Clear curation status' : $_SETT['curation_status'][ACTION]) . '".');
     }
     die((string) ($nSwitched > 0) . ' ' . $nSwitched);
 }
