@@ -464,7 +464,7 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && !ACTION) {
         if (!LOVD_plus) {
             $aNavigation[CURRENT_PATH . '?edit']       = array('menu_edit.png', 'Edit variant entry', 1);
         }
-        $aNavigation[CURRENT_PATH . '?edit_remarks' . (isset($_GET['in_window'])? '&amp;in_window' : '')] = array('menu_edit.png', 'Edit remarks', 1);
+     //   $aNavigation[CURRENT_PATH . '?edit_remarks' . (isset($_GET['in_window'])? '&amp;in_window' : '')] = array('menu_edit.png', 'Edit remarks', 1);
         $aNavigation[CURRENT_PATH . '?curate' . (isset($_GET['in_window'])? '&amp;in_window' : '')] = array('menu_edit.png', 'Curate this variant', 1);
         if ($zData['statusid'] < STATUS_OK && $_AUTH['level'] >= LEVEL_CURATOR) {
             $aNavigation[CURRENT_PATH . '?publish'] = array('check.png', ($zData['statusid'] == STATUS_MARKED ? 'Remove mark from' : 'Publish (curate)') . ' variant entry', 1);
@@ -2868,16 +2868,17 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && in_array(ACTION, array('edit', 'p
 
 
 
-if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && ACTION == 'edit_remarks') {
-    // URL: /variants/0000000001?edit_remarks
+if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && ACTION == 'curate') {
+    // URL: /variants/0000000001?curate
     // Edit the remarks of an entry, hide all other fields.
 
     $nID = sprintf('%010d', $_PE[1]);
-    define('PAGE_TITLE', 'Edit remarks for variant entry #' . $nID);
-    define('LOG_EVENT', 'VariantRemarksEdit');
+    define('PAGE_TITLE', 'Curate variant entry #' . $nID);
+    define('LOG_EVENT', 'VariantCuration');
 
     lovd_isAuthorized('variant', $nID);
-    lovd_requireAUTH(LEVEL_OWNER);
+    //lovd_requireAUTH(LEVEL_OWNER);
+    lovd_requireAUTH(LEVEL_ANALYZER);
 
     // However, depending on the status of the screening, we might not have the rights to edit the variant.
     $zScreenings = $_DB->query('SELECT s.* FROM ' . TABLE_SCREENINGS . ' AS s INNER JOIN ' . TABLE_SCR2VAR . ' AS s2v ON (s.id = s2v.screeningid) WHERE s2v.variantid = ? GROUP BY s.id', array($nID))->fetchAllAssoc();
@@ -2935,104 +2936,6 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && ACTION == 'edit_remarks') {
         }
         $_POST['effect_reported'] = $zData['effectid']{0};
         $_POST['effect_concluded'] = $zData['effectid']{1};
-    }
-
-
-
-
-
-    $_T->printHeader();
-    $_T->printTitle();
-
-    lovd_errorPrint();
-
-    // Tooltip JS code.
-    lovd_includeJS('inc-js-tooltip.php');
-    lovd_includeJS('inc-js-custom_links.php');
-
-    // Hardcoded ACTION because when we're publishing, but we get the form on screen (i.e., something is wrong), we want this to be handled as a normal edit.
-    print('      <FORM id="variantForm" action="' . CURRENT_PATH . '?' . ACTION . (isset($_GET['in_window'])? '&amp;in_window' : '') . '" method="post">' . "\n");
-
-    // Array which will make up the form table.
-    $aForm = array_merge(
-                 $_DATA['Genome']->getForm(),
-                 array(
-                        array('', '', 'print', '<INPUT type="submit" value="Edit variant entry">'),
-                      ));
-    lovd_viewForm($aForm);
-
-    print("\n" .
-          '      </FORM>' . "\n\n");
-
-    $_T->printFooter();
-    exit;
-}
-
-
-if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && ACTION == 'curate') {
-    // URL: /variants/0000000001?curate
-    // Curate certain fields of an entry, hide all other fields.
-
-    $nID = sprintf('%010d', $_PE[1]);
-    define('PAGE_TITLE', 'Curate variant entry #' . $nID);
-    define('LOG_EVENT', 'VariantCurate');
-
-    lovd_isAuthorized('variant', $nID);
-    lovd_requireAUTH(LEVEL_OWNER);   // todo: is this the right AUTH level for MGHA?
-
-    // However, depending on the status of the screening, we might not have the rights to edit the variant.
-    $zScreenings = $_DB->query('SELECT s.* FROM ' . TABLE_SCREENINGS . ' AS s INNER JOIN ' . TABLE_SCR2VAR . ' AS s2v ON (s.id = s2v.screeningid) WHERE s2v.variantid = ? GROUP BY s.id', array($nID))->fetchAllAssoc();
-    if (!($_AUTH['level'] >= LEVEL_OWNER && $zScreenings[0]['analysis_statusid'] < ANALYSIS_STATUS_CLOSED) &&
-        !($_AUTH['level'] >= LEVEL_MANAGER && $zScreenings[0]['analysis_statusid'] < ANALYSIS_STATUS_WAIT_CONFIRMATION) &&
-        !($_AUTH['level'] >= LEVEL_ADMIN && $zScreenings[0]['analysis_statusid'] < ANALYSIS_STATUS_CONFIRMED)) {
-        $_T->printHeader();
-        $_T->printTitle();
-        lovd_showInfoTable('This analysis has been closed. It\'s not possible to edit this variant.', 'stop');
-        $_T->printFooter();
-        exit;
-    }
-
-    require ROOT_PATH . 'class/object_genome_variants.curation.mod.php';
-    require ROOT_PATH . 'class/object_transcript_variants.php';
-    $_DATA = array();
-    $_DATA['Genome'] = new LOVD_GenomeVariant();
-    $zData = $_DATA['Genome']->loadEntry($nID);
-
-    require ROOT_PATH . 'inc-lib-form.php';
-
-    if (POST) {
-        lovd_errorClean();
-
-        $_DATA['Genome']->checkFields($_POST);
-
-        if (!lovd_error()) {
-            // Manual query, because updateEntry() empties the whole VOG.
-            $_DB->query('UPDATE ' . TABLE_VARIANTS . ' SET `VariantOnGenome/Remarks` = ? WHERE id = ?', array($_POST['VariantOnGenome/Remarks'], $nID), true, true);
-
-            $_DB->query('UPDATE ' . TABLE_VARIANTS . ' SET `VariantOnGenome/PhenotypeFindings` = ? WHERE id = ?', array($_POST['VariantOnGenome/PhenotypeFindings'], $nID), true, true);
-
-            $_DB->query('UPDATE ' . TABLE_VARIANTS . ' SET `effectid` = ? WHERE id = ?', array($_POST['effect_reported'] . ($_AUTH['level'] >= LEVEL_CURATOR? $_POST['effect_concluded'] : substr($_SETT['var_effect_default'], -1)), $nID), true, true);   // todo: for MGHA, do we need the AUTH check here?
-
-            // Write to log...
-            lovd_writeLog('Event', LOG_EVENT, 'Edited remarks for variant entry ' . $nID . ' - ' . (!trim($_POST['VariantOnGenome/Remarks'])? '<empty>' : str_replace(array("\r", "\n", "\t"), array('\r', '\n', '\t'), $_POST['VariantOnGenome/Remarks'])));
-
-            // Thank the user...
-            header('Location: ' . lovd_getInstallURL() . CURRENT_PATH . (isset($_GET['in_window'])? '?&in_window' : ''));
-            exit;
-
-        } else {
-            // Because we're sending the data back to the form, I need to unset the password field!
-            unset($_POST['password']);
-        }
-
-    } else {
-        // Default values.
-        foreach ($zData as $key => $val) {
-            $_POST[$key] = $val;
-        }
-        $_POST['effect_reported'] = $zData['effectid']{0};
-        $_POST['effect_concluded'] = $zData['effectid']{1};
-
     }
 
 
