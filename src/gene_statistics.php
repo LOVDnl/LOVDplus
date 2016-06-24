@@ -86,8 +86,8 @@ if (PATH_COUNT == 1 && !ACTION) {
             }
             // Create a table of any bad gene symbols and try to work out if there is a correct gene symbol available.
             if ($aBadGeneSymbols) {
-                $sBadGenesHTML .= '    <H3>Genes not found!</H3>' . "\n" .
-                                  '    These genes were not found, please review them and correct your gene list before proceeding.' . "\n" .
+                $sBadGenesHTML .= '    <H3>' . count($aBadGeneSymbols) . ' gene' . (count($aBadGeneSymbols) <= 1 ? '' : 's') . ' not found!</H3>' . "\n" .
+                                  '    These genes were not found, please review them and correct them before proceeding.' . "\n" .
                                   '    <TABLE  border="0" cellpadding="0" cellspacing="1" class="data">' . "\n" .
                                   '      <TR>' . "\n" .
                                   '        <TH>Gene Symbol</TH>' . "\n" .
@@ -181,9 +181,9 @@ if (PATH_COUNT == 1 && !ACTION) {
           '      <INPUT type="submit" name="submitGenes" id="submitGenes" value="Search">' . "\n" .
           '    </FORM>' . "\n");
     // Show an info box if the gene lists are limited by the search.
-    if (isset($aGeneSymbols) && count($aGeneSymbols) > 0) {
+    if ($aCorrectGeneSymbols) {
         print('    <DIV id="searchInfo">' . "\n");
-        lovd_showInfoTable('Genes from the search above have been selected in the list below. <A href="javascript:lovd_AJAX_viewListSubmit(\'' . $sViewListID . '\', function(){lovd_AJAX_viewListCheckedFilter(\'' . $sViewListID . '\', true);});">Click here</A> to limit the list to only those genes.');
+        lovd_showInfoTable(count($aCorrectGeneSymbols) . ' gene' . (count($aCorrectGeneSymbols) <= 1 ? '' : 's') . ' from the search above ' . (count($aCorrectGeneSymbols) <= 1 ? 'has' : 'have') . ' been selected in the list below. <A href="javascript:lovd_AJAX_viewListSubmit(\'' . $sViewListID . '\', function(){lovd_AJAX_viewListCheckedFilter(\'' . $sViewListID . '\', true);});">Click here</A> to limit the list to only ' . (count($aCorrectGeneSymbols) <= 1 ? 'this' : 'those') . ' gene' . (count($aCorrectGeneSymbols) <= 1 ? '' : 's') . '.');
         print('    </DIV>' . "\n");
     }
     print('    <DIV id="searchChecked" style="display: none;">' . "\n");
@@ -200,12 +200,13 @@ if (PATH_COUNT == 1 && !ACTION) {
     // Redirect the link when clicking on genes to the genes info page.
     //$_DATA->setRowLink($sViewListID, ROOT_PATH . 'genes/' . $_DATA->sRowID);
     // Bold the row when clicked. Not sure if this is better or going to the gene info is better. It might get annoying going away from this page as you lose the work you have done.
-    $_DATA->setRowLink($sViewListID, 'javascript:$(\'#{{id}}\').toggleClass(\'marked\');');
+    $_DATA->setRowLink($sViewListID, 'javascript:$(\'#{{id}}\').toggleClass(\'colGreen\');');
     // Allow users to download this gene statistics selected gene list.
     print('      <UL id="viewlistMenu_' . $sViewListID . '" class="jeegoocontext jeegooviewlist">
         <LI class="icon"><A click="lovd_AJAX_viewListSubmit(\'' . $sViewListID . '\', function(){lovd_AJAX_viewListCheckedFilter(\'' . $sViewListID . '\', true);});"><SPAN class="icon" style="background-image: url(gfx/check.png);"></SPAN>Show only selected genes</A></LI>
         <LI class="icon"><A click="lovd_AJAX_viewListSubmit(\'' . $sViewListID . '\', function(){lovd_AJAX_viewListCheckedFilter(\'' . $sViewListID . '\', false);});"><SPAN class="icon" style="background-image: url(gfx/cross_disabled.png);"></SPAN>Show all genes</A></LI>
         <LI class="icon"><A click="lovd_AJAX_viewListSubmit(\'' . $sViewListID . '\', function(){lovd_AJAX_viewListDownload(\'' . $sViewListID . '\', false);});"><SPAN class="icon" style="background-image: url(gfx/menu_save.png);"></SPAN>Download selected genes</A></LI>
+        <LI class="icon"><A click="lovd_AJAX_viewListSubmit(\'' . $sViewListID . '\', function(){window.location.href=\'' . lovd_getInstallURL() . 'gene_panels?add&select_genes_from=' . $sViewListID . '\'; return false;});"><SPAN class="icon" style="background-image: url(gfx/menu_plus.png);"></SPAN>Add selected genes to gene panel</A></LI>
         <LI class="icon"><A href="' . CURRENT_PATH . '?import"><SPAN class="icon" style="background-image: url(gfx/menu_import.png);"></SPAN>Import gene statistics</A></LI>
       </UL>' . "\n\n");
     $_DATA->viewList($sViewListID, array(), false, false, (bool) ($_AUTH['level'] >= LEVEL_SUBMITTER));

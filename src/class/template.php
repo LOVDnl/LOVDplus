@@ -741,7 +741,7 @@ if ($_SERVER['HTTP_HOST'] == 'leiden-test.diagnostics.lovd.nl') {
                 }
             }
             $nTotalTabWidth += $aImage[0];
-            print('      <A href="' . $sURL . '"><IMG src="' . $sFileName . '" alt="' . $Title . '" id="' . $sFile . '" ' . $sSize . ' align="left"></A>' . "\n");
+            print('      <A href="' . ($sURL == 'genes' ? 'gene_panels' : $sURL) . '"><IMG src="' . $sFileName . '" alt="' . $Title . '" id="' . $sFile . '" ' . $sSize . ' align="left"></A>' . "\n");
 
             $bPrevSel = $bSel;
             $n ++;
