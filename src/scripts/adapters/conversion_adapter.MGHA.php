@@ -144,6 +144,8 @@ if ($argc != 1 && in_array($argv[1], array('--help', '-help', '-h', '-?'))) {
     if (!$metaFile && !empty($vFiles)) {
         print('Variant files found without a sample meta data file' . ".\n");
         die(52);
+    }elseif(!$metaFile){
+        return;
     }
 
     // set arrays
@@ -196,6 +198,7 @@ if ($argc != 1 && in_array($argv[1], array('--help', '-help', '-h', '-?'))) {
                 $parentIDs = explode(",", $pRegs[1]);
                 $fatherCount = 0;
                 $motherCount = 0;
+
                 //loop through parent sample IDs and check gender. Should have male and female. If unknown we exit. If both male or female, we exit out
                 foreach ($parentIDs as $parentID) {
                     $parentGender = $sDataArr[$parentID]['Sex'];
@@ -225,6 +228,7 @@ if ($argc != 1 && in_array($argv[1], array('--help', '-help', '-h', '-?'))) {
                     foreach ($parentColumnMappings as $pCol => $lCol) {
                         $LOVDColumn = str_replace('Parent', $parent, $lCol);
                         $parentArr[$sampleID][$LOVDColumn] = $sDataArr[$parentID][$pCol];
+
                     }
                 }
                 // update the father ID and mother ID on the child's record
