@@ -48,7 +48,7 @@ if (PATH_COUNT < 3 && !ACTION) {
 
     if (!empty($_PE[1])) {
         // FIXME; Is there a better way checking if it's a valid category?
-        if (in_array($_PE[1], array('Individual', 'Phenotype', 'Screening', 'VariantOnGenome', 'VariantOnTranscript'))) {
+        if (in_array($_PE[1], array('Individual', 'Phenotype', 'Screening', 'VariantOnGenome', 'VariantOnTranscript', 'SummaryAnnotation'))) {
             // Category given.
             $_GET['search_category'] = $_PE[1];
             define('PAGE_TITLE', 'Browse ' . $_PE[1] . ' custom data columns');
@@ -88,7 +88,7 @@ if (PATH_COUNT < 3 && !ACTION) {
 
     } else {
         // Let users restrict their choices.
-        $aCategories = array('Individual', 'Phenotype', 'Screening', 'VariantOnGenome', 'VariantOnTranscript');
+        $aCategories = array('Individual', 'Phenotype', 'Screening', 'VariantOnGenome', 'VariantOnTranscript', 'SummaryAnnotation');
         foreach ($aCategories as $sCategory) {
             print('        <LI><A href="' . CURRENT_PATH . '/' . $sCategory . '">Show only ' . $sCategory . ' columns</A></LI>' . "\n");
         }
@@ -271,7 +271,7 @@ if (PATH_COUNT == 1 && ACTION == 'data_type_wizard') {
         $_T->printTitle();
 
         if (isset($_SERVER['HTTP_REFERER']) && substr($_SERVER['HTTP_REFERER'], -4) == 'edit') {
-            lovd_showInfoTable('Please note that changing the data type of an existing column causes a risk of losing data!', 'warning');
+            lovd_showInfoTable('Please note that changing the data type of an existing column causes a risk of losing data, including historic data!', 'warning');
         }
 
         print('      <FORM action="' . CURRENT_PATH . '?' . ACTION . '&amp;workID=' . $_GET['workID'] . '" method="post">' . "\n");
@@ -680,6 +680,10 @@ if (PATH_COUNT == 1 && ACTION == 'create') {
                                     'onclick'     => 'javascript:$(\'#optionForm input\').attr(\'value\', \'VariantOnTranscript\'); $(\'#optionForm\').submit();',
                                     'option_text' => '<B>Information on the variant(s) found, specific for the transcript level</B>, such as predicted effect on protein level',
                                   ),
+                             array(
+                                    'onclick'     => 'javascript:$(\'#optionForm input\').attr(\'value\', \'SummaryAnnotation\'); $(\'#optionForm\').submit();',
+                                    'option_text' => '<B>Information on a variant, shared amongst all instances of that variant</B>, such as summary annotations',
+                                  ),
                               ),
                   );
 
@@ -912,6 +916,17 @@ if (PATH_COUNT > 2 && ACTION == 'edit') {
                     // Column active for this table.
                     // This variables have been checked using regexps, so can be considered safe.
                     $q = $_DB->query('ALTER TABLE ' . $aColumnInfo['table_sql'] . ' MODIFY COLUMN `' . $sColumnID . '` ' . $_POST['mysql_type']);
+                    if (!empty($aColumnInfo['table_sql_rev'])) {
+                        // Modify the same column in the revision table.
+                        $sSQL = 'ALTER TABLE ' . $aColumnInfo['table_sql_rev'] . ' MODIFY COLUMN `' . $sColumnID . '` ' . $_POST['mysql_type'];
+                        $q = $_DB->query($sSQL,false,false);
+                        if ($q === false) {
+                            $sError = $_DB->formatError(); // Save the PDO error before it disappears.
+                            $tPassed = time() - $dStart;
+                            $sMessage = ($tPassed < 2 ? '' : ' (fail after ' . $tPassed . ' seconds - disk full maybe?)');
+                            lovd_queryError(LOG_EVENT . $sMessage, $sSQL, $sError);
+                        }
+                    }
                 }
             }
 
@@ -1154,7 +1169,7 @@ if (PATH_COUNT > 2 && ACTION == 'edit') {
 
     print('</FORM>' . "\n\n");
 
-    $sJSMessage = 'Are you sure you want to change the MySQL data type of this column? Changing the data type of an existing column causes a risk of losing data!';
+    $sJSMessage = 'Are you sure you want to change the MySQL data type of this column? Changing the data type of an existing column causes a risk of losing data, including historic data!';
     $sJSMessage .= ($tAlter > $tAlterMax? '\nPlease note that the time estimated to edit this columns MySQL type is ' . round($tAlter) . ' seconds. During this time, no updates to the data table are possible.' : '');
 
 ?>
@@ -1524,6 +1539,32 @@ if (PATH_COUNT > 2 && ACTION == 'add') {
                     $tPassed = time() - $dStart;
                     $sMessage = ($tPassed < 2? '' : ' (fail after ' . $tPassed . ' seconds - disk full maybe?)');
                     lovd_queryError(LOG_EVENT . $sMessage, $sSQL, $sError);
+                } elseif (!empty($aTableInfo['table_sql_rev'])) {
+                    // Insert the same column into the revision table.
+                    // Since we do not remove columns from the revisions table it could be possible that this column already exists so lets check.
+                    $aTableColumns = lovd_getColumnData($aTableInfo['table_sql_rev']); // Load the column details of this table into an array.
+                    if (!isset($aTableColumns[$zData['id']])) {
+                        // This column doesn't already exist so it is safe to create it in the revision table.
+                        $sSQL = 'ALTER TABLE ' . $aTableInfo['table_sql_rev'] . ' ADD COLUMN `' . $zData['id'] . '` ' . $zData['mysql_type'];
+                        $dStart = time();
+                        $q = $_DB->exec($sSQL, false);
+                        if ($q === false) {
+                            $sError = $_DB->formatError(); // Save the PDO error before it disappears.
+                            $tPassed = time() - $dStart;
+                            $sMessage = ($tPassed < 2 ? '' : ' (fail after ' . $tPassed . ' seconds - disk full maybe?)');
+                            lovd_queryError(LOG_EVENT . $sMessage, $sSQL, $sError);
+                        }
+                    } elseif ($aTableColumns[$zData['id']]['type'] != $zData['mysql_type']) {
+                        // This column already exists but it is a different data type, change it to match the main tables new data type.
+                        $sSQL = 'ALTER TABLE ' . $aTableInfo['table_sql_rev'] . ' MODIFY COLUMN `' . $zData['id'] . '` ' . $zData['mysql_type'];
+                        $q = $_DB->query($sSQL,false,false);
+                        if ($q === false) {
+                            $sError = $_DB->formatError(); // Save the PDO error before it disappears.
+                            $tPassed = time() - $dStart;
+                            $sMessage = ($tPassed < 2 ? '' : ' (fail after ' . $tPassed . ' seconds - disk full maybe?)');
+                            lovd_queryError(LOG_EVENT . $sMessage, $sSQL, $sError);
+                        }
+                    } // Otherwise we do nothing as this column already exists in the revisions table.
                 }
             }
 

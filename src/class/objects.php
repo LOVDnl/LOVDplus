@@ -156,7 +156,7 @@ class LOVD_Object {
                 continue;
             }
             @list($sHeader, $sHelp, $sType, $sName) = $aField;
-            $sNameClean = preg_replace('/^\d{5}_/', '', $sName); // Remove prefix (transcriptid) that LOVD_TranscriptVariants puts there.
+            $sNameClean = preg_replace('/^\d+_/', '', $sName); // Remove prefix (transcriptid) that LOVD_TranscriptVariants puts there.
             if (lovd_getProjectFile() == '/import.php') {
                 // During import, we don't mention the field names how they appear on screen, but using their IDs which are used in the file.
                 $sHeader = $sName;

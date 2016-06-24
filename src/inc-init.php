@@ -591,6 +591,8 @@ $_TABLES =
                 'TABLE_ANALYSES_RUN_RESULTS' => TABLEPREFIX . '_analyses_run_results',
                 'TABLE_SCHEDULED_IMPORTS' => TABLEPREFIX . '_scheduled_imports',
                 'TABLE_GENE_STATISTICS' => TABLEPREFIX . '_gene_statistics',
+                'TABLE_SUMMARY_ANNOTATIONS' => TABLEPREFIX . '_summary_annotations',
+                'TABLE_SUMMARY_ANNOTATIONS_REV' => TABLEPREFIX . '_summary_annotations_revisions',
               );
 
 foreach ($_TABLES as $sConst => $sTable) {

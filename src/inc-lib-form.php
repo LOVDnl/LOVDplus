@@ -395,7 +395,7 @@ function lovd_fetchDBID ($aData)
                 $aArgs[] = $aData['position_g_start'];
             }
         }
-        if (false && !empty($aTranscriptVariants)) {
+        if (!LOVD_plus && !empty($aTranscriptVariants)) {
             if (!empty($sGenomeVariant)) {
                 $sSQL .= ' UNION ';
             }
@@ -446,7 +446,7 @@ function lovd_fetchDBID ($aData)
                 }
             }
         }
-        if ((substr($sDBID, 0, 3) == 'chr' && !empty($aGenes)) || $sDBID == 'chr' . $aData['chromosome'] . '_999999') {
+        if (!LOVD_plus && ((substr($sDBID, 0, 3) == 'chr' && !empty($aGenes)) || $sDBID == 'chr' . $aData['chromosome'] . '_999999')) {
             // Either this variant has a DBID with chr, but also a VOT that we want to change to, or
             // no entries found with these combinations and a DBID, so we are going to use the gene symbol
             // (or chromosome if there is no gene) and take the first number available to make a DBID.
