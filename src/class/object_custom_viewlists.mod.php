@@ -140,7 +140,7 @@ class LOVD_CustomViewListMOD extends LOVD_CustomViewList {
                             'VariantOnGenome/Sequencing/Quality',
                             'VariantOnGenome/Sequencing/GATKcaller',
                         );
-                    $aSQL['SELECT'] .= (!$aSQL['SELECT']? '' : ', ') . 'vog.*, a.name AS allele_, eg.name AS vog_effect';
+                    $aSQL['SELECT'] .= (!$aSQL['SELECT']? '' : ', ') . 'vog.*, a.name AS allele_, eg.name AS vog_effect, CONCAT(cs.id, cs.name) AS curation_status_';
                     // Observation count columns.
                     // Find the diseases that this individual has assigned using the analysis run ID in $_GET.
                     $sDiseaseIDs = implode(',',$_DB->query('SELECT i2d.diseaseid FROM ' . TABLE_IND2DIS . ' AS i2d INNER JOIN ' . TABLE_SCREENINGS . ' AS scr ON (i2d.individualid = scr.individualid) INNER JOIN ' . TABLE_ANALYSES_RUN . ' AS ar ON (scr.id = ar.screeningid) WHERE ar.id = ?', array($_GET['search_runid']))->fetchAllColumn());
@@ -182,6 +182,7 @@ class LOVD_CustomViewListMOD extends LOVD_CustomViewList {
                     }
                     $aSQL['FROM'] .= ' LEFT OUTER JOIN ' . TABLE_ALLELES . ' AS a ON (vog.allele = a.id)';
                     $aSQL['FROM'] .= ' LEFT OUTER JOIN ' . TABLE_EFFECT . ' AS eg ON (vog.effectid = eg.id)';
+                    $aSQL['FROM'] .= ' LEFT OUTER JOIN ' . TABLE_CURATION_STATUS . ' AS cs ON (vog.curation_statusid = cs.id)';
 
                     // Outer joins for the observation counts.
                     // Join the variants table using the DBID to get all of the variants that are the same as this one.
@@ -272,21 +273,22 @@ class LOVD_CustomViewListMOD extends LOVD_CustomViewList {
                     $this->aColumnsViewList = array_merge($this->aColumnsViewList,
                          array(
                                 // NOTE: there are more columns defined a little further below.
-                                'chromosome' => array(
-                                        'view' => array('Chr', 50),
-                                        'db'   => array('vog.chromosome', 'ASC', true)),
-/*
-                                'allele_' => array(
-                                        'view' => array('Allele', 120),
-                                        'db'   => array('a.name', 'ASC', true),
-                                        'legend' => array('On which allele is the variant located? Does not necessarily imply inheritance!',
-                                                          'On which allele is the variant located? Does not necessarily imply inheritance! \'Paternal\' (confirmed or inferred), \'Maternal\' (confirmed or inferred), \'Parent #1\' or #2 for compound heterozygosity without having screened the parents, \'Unknown\' for heterozygosity without having screened the parents, \'Both\' for homozygozity.')),
-*/
+                                'curation_status_' => array(
+                                        'view' => array('Curation status', 70),
+                                        'db'   => array('curation_status_', 'ASC', 'TEXT'),
+                                        'legend' => array('The variant\'s curation status.',
+                                        'The variant\'s curation status.')),
+                                'curation_statusid' => array(
+                                        'view' => false,
+                                        'db'   => array('vog.curation_statusid', 'ASC', true)),
                                 'vog_effect' => array(
                                         'view' => array('Effect', 70),
                                         'db'   => array('eg.name', 'ASC', true),
                                         'legend' => array('The variant\'s effect on a protein\'s function, in the format Reported/Curator concluded; ranging from \'+\' (variant affects function) to \'-\' (does not affect function).',
                                                           'The variant\'s affect on a protein\'s function, in the format Reported/Curator concluded; \'+\' indicating the variant affects function, \'+?\' probably affects function, \'-\' does not affect function, \'-?\' probably does not affect function, \'?\' effect unknown.')),
+                                'chromosome' => array(
+                                        'view' => array('Chr', 50),
+                                        'db'   => array('vog.chromosome', 'ASC', true)),
                               ));
 
                     if (!$this->sSortDefault) {
@@ -409,6 +411,7 @@ class LOVD_CustomViewListMOD extends LOVD_CustomViewList {
     function prepareData ($zData = '', $sView = 'list')
     {
         // Prepares the data by "enriching" the variable received with links, pictures, etc.
+        global $_SETT;
 
         // Needs to be done before the custom links are rendered.
         if (isset($this->aColumnsViewList['VariantOnGenome/Alamut'])) {
@@ -444,8 +447,8 @@ class LOVD_CustomViewListMOD extends LOVD_CustomViewList {
                     break;
             }
         }
-        // Variants marked as "to be confirmed" are transparent a bit.
-        if ($zData['to_be_confirmed'] && empty($zData['confirmed'])) {
+        // Variants requiring confirmation are transparent a bit.
+        if (!empty($zData['curation_statusid']) && $zData['curation_statusid'] == CUR_STATUS_REQUIRES_CONFIRMATION) {
             $zData['class_name'] = (empty($zData['class_name'])? '' : $zData['class_name'] . ' ') . 'transparent50';
         }
 
@@ -463,6 +466,9 @@ class LOVD_CustomViewListMOD extends LOVD_CustomViewList {
                     $zData['gene_OMIM_'] .= (!$zData['gene_OMIM_']? '' : ', ') . '<SPAN class="anchor" onclick="lovd_openWindow(\'' . lovd_getExternalSource('omim', $nOMIMID) . '\', \'GeneOMIMPage\', 1100, 650); cancelParentEvent(event);">' . $sGene . '</SPAN>';
                 }
             }
+        }
+        if (!empty($zData['curation_status_'])) {
+            $zData['curation_status_'] = $_SETT['curation_status'][$zData['curation_statusid']];
         }
 
         return $zData;

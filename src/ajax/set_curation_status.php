@@ -3,12 +3,13 @@
  *
  * LEIDEN OPEN VARIATION DATABASE (LOVD)
  *
- * Created     : 2014-05-01
- * Modified    : 2016-04-07
- * For LOVD    : 3.0-12
+ * Created     : 2016-06-17
+ * Modified    : 2016-06-17
+ * For LOVD    : 3.0-13
  *
  * Copyright   : 2004-2016 Leiden University Medical Center; http://www.LUMC.nl/
- * Programmer  : Ing. Ivo F.A.C. Fokkema <I.F.A.C.Fokkema@LUMC.nl>
+ * Programmers : Anthony Marty <anthony.marty@unimelb.edu.au>
+ *               Ing. Ivo F.A.C. Fokkema <I.F.A.C.Fokkema@LUMC.nl>
  *
  *
  * This file is part of LOVD.
@@ -31,8 +32,8 @@
 define('ROOT_PATH', '../');
 require ROOT_PATH . 'inc-init.php';
 
-// Set the variant to be confirmed (or not), for selected variants from a ViewList.
-if (!empty($_GET['id']) && $_AUTH && ACTION && in_array(ACTION, array('set', 'unset'))) {
+// Set the curation status for selected variants from a ViewList.
+if (!empty($_GET['id']) && $_AUTH && ACTION !== false && (in_array(ACTION, array_keys($_SETT['curation_status'])) || ACTION == 'clear')) {
     // The easiest thing to do is just run the query, and just dump the result.
     if ($_GET['id'] == 'selected') {
         $aIDs = array_values($_SESSION['viewlists']['CustomVL_AnalysisRunResults_for_I_VE']['checked']);
@@ -64,12 +65,16 @@ if (!empty($_GET['id']) && $_AUTH && ACTION && in_array(ACTION, array('set', 'un
     }
 
     $nSwitched = 0;
-    $q = $_DB->query('UPDATE ' . TABLE_VARIANTS . ' SET to_be_confirmed = CAST(? AS UNSIGNED) WHERE id IN (?' . str_repeat(', ?', count($aIDs) - 1) . ')', array_merge(array((ACTION == 'set'? 1 : 0)), $aIDs), false);
+    $q = $_DB->query('UPDATE ' . TABLE_VARIANTS . ' SET curation_statusid = ' . (ACTION == 'clear' ? '?' : 'CAST(? AS UNSIGNED)') . ' WHERE id IN (?' . str_repeat(', ?', count($aIDs) - 1) . ')', array_merge(array((ACTION == 'clear' ? NULL : ACTION)), $aIDs), false);
     if ($q) {
         $nSwitched = $q->rowCount();
         if ($_GET['id'] == 'selected') {
             $_SESSION['viewlists']['CustomVL_AnalysisRunResults_for_I_VE']['checked'] = array(); // To clean up.
         }
+    }
+    foreach ($aIDs as $nID) {
+        // Write to log...
+        lovd_writeLog('Event', 'CurationStatus', 'Updated curation status for variant #' . $nID . ' to "' . (ACTION == 'clear' ? 'Clear curation status' : $_SETT['curation_status'][ACTION]) . '".');
     }
     die((string) ($nSwitched > 0) . ' ' . $nSwitched);
 }

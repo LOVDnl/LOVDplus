@@ -465,6 +465,14 @@ if ($_SERVER['SERVER_ADMIN'] == 'i.f.a.c.fokkema@lumc.nl' && $_SERVER['HTTP_HOST
     $nInstallSQL += $nStatuses;
 
 
+    // (5c) Registering LOVD curation statuses.
+    $nStatuses = count($_SETT['curation_status']);
+    foreach ($_SETT['curation_status'] as $nStatus => $sStatus) {
+        $aInstallSQL['Registering LOVD curation statuses...'][] = 'INSERT INTO ' . TABLE_CURATION_STATUS . ' VALUES (' . $nStatus . ', "' . $sStatus . '")';
+    }
+    $nInstallSQL += $nStatuses;
+
+
     // (6) Registering LOVD allele values.
     require ROOT_PATH . 'install/inc-sql-alleles.php';
     $aInstallSQL['Registering LOVD allele values...'][] = $aAlleleSQL[0];

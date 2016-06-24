@@ -95,6 +95,14 @@ define('STATUS_HIDDEN', 4);
 define('STATUS_MARKED', 7);
 define('STATUS_OK', 9);
 
+define('CUR_STATUS_VARIANT_OF_INTEREST', 10);
+define('CUR_STATUS_FOR_CURATION', 20);
+define('CUR_STATUS_REQUIRES_CONFIRMATION', 30);
+define('CUR_STATUS_CONFIRMED', 40);
+define('CUR_STATUS_CURATED_REPORTABLE', 70);
+define('CUR_STATUS_CURATED_NOT_REPORTABLE', 80);
+define('CUR_STATUS_NOT_FOR_CURATION', 90);
+
 define('AJAX_FALSE', '0');
 define('AJAX_TRUE', '1');
 define('AJAX_UNKNOWN_RESPONSE', '6');
@@ -137,7 +145,7 @@ $aRequired =
 $_SETT = array(
                 'system' =>
                      array(
-                            'version' => '3.0-12t',
+                            'version' => '3.0-12u',
                           ),
                 'user_levels' =>
                      array(
@@ -179,6 +187,16 @@ $_SETT = array(
                             STATUS_HIDDEN => 'Non public',
                             STATUS_MARKED => 'Marked',
                             STATUS_OK => 'Public',
+                          ),
+                'curation_status' =>
+                     array(
+                            CUR_STATUS_VARIANT_OF_INTEREST => 'Variant of Interest',
+                            CUR_STATUS_NOT_FOR_CURATION => 'Not for Curation',
+                            CUR_STATUS_FOR_CURATION => 'For Curation',
+                            CUR_STATUS_REQUIRES_CONFIRMATION => 'Requires Confirmation',
+                            CUR_STATUS_CONFIRMED => 'Confirmed',
+                            CUR_STATUS_CURATED_REPORTABLE => 'Curated & Reportable',
+                            CUR_STATUS_CURATED_NOT_REPORTABLE => 'Curated & Not Reportable',
                           ),
                 'update_levels' =>
                      array(
@@ -533,6 +551,7 @@ $_TABLES =
                 'TABLE_DISEASES' => TABLEPREFIX . '_diseases',
                 'TABLE_GEN2DIS' => TABLEPREFIX . '_genes2diseases',
                 'TABLE_DATA_STATUS' => TABLEPREFIX . '_data_status',
+                'TABLE_CURATION_STATUS' => TABLEPREFIX . '_curation_status',
                 'TABLE_ANALYSIS_STATUS' => TABLEPREFIX . '_analysis_status',
                 'TABLE_ALLELES' => TABLEPREFIX . '_alleles',
                 'TABLE_EFFECT' => TABLEPREFIX . '_variant_effect',

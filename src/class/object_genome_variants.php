@@ -71,7 +71,8 @@ class LOVD_GenomeVariant extends LOVD_Custom {
                                            'GROUP_CONCAT(s2v.screeningid SEPARATOR "|") AS screeningids, ' .
                                            'uo.name AS owned_by_, ' .
                                            'uc.name AS created_by_, ' .
-                                           'ue.name AS edited_by_';
+                                           'ue.name AS edited_by_, ' .
+                                           'cs.name AS curation_status_';
         $this->aSQLViewEntry['FROM']     = TABLE_VARIANTS . ' AS vog ' .
                                            'LEFT OUTER JOIN ' . TABLE_SCR2VAR . ' AS s2v ON (vog.id = s2v.variantid) ' .
                                            'LEFT OUTER JOIN ' . TABLE_SCREENINGS . ' AS s ON (s.id = s2v.screeningid) ' .
@@ -79,7 +80,8 @@ class LOVD_GenomeVariant extends LOVD_Custom {
                                            'LEFT OUTER JOIN ' . TABLE_ALLELES . ' AS a ON (vog.allele = a.id) ' .
                                            'LEFT OUTER JOIN ' . TABLE_USERS . ' AS uo ON (vog.owned_by = uo.id) ' .
                                            'LEFT OUTER JOIN ' . TABLE_USERS . ' AS uc ON (vog.created_by = uc.id) ' .
-                                           'LEFT OUTER JOIN ' . TABLE_USERS . ' AS ue ON (vog.edited_by = ue.id)';
+                                           'LEFT OUTER JOIN ' . TABLE_USERS . ' AS ue ON (vog.edited_by = ue.id) ' .
+                                           'LEFT OUTER JOIN ' . TABLE_CURATION_STATUS . ' AS cs ON (vog.curation_statusid = cs.id)';
         $this->aSQLViewEntry['GROUP_BY'] = 'vog.id';
 
         // SQL code for viewing the list of variants
@@ -118,6 +120,7 @@ class LOVD_GenomeVariant extends LOVD_Custom {
                         'allele_' => 'Allele',
                         'effect_reported' => 'Affects function (reported)',
                         'effect_concluded' => 'Affects function (concluded)',
+                        'curation_status_' => 'Curation status',
                       ),
                  $this->buildViewEntry(),
                  array(
@@ -439,6 +442,11 @@ class LOVD_GenomeVariant extends LOVD_Custom {
             } else {
                 $zData['average_frequency_'] = round($zData['average_frequency'], 5) . ' <SPAN style="float: right"><A href="http://databases.lovd.nl/whole_genome/variants/chr' . $zData['chromosome'] . '?search_VariantOnGenome/DNA=' . $zData['VariantOnGenome/DNA'] . '" title="" target="_blank">View details</A></SPAN>';
             }
+            if (!empty($zData['curation_status_'])) {
+                // Add a link to the curation status to show the curation status history for this variant.
+                $zData['curation_status_'] .= '<SPAN style="float: right"><A href="#" onclick="lovd_openWindow(\'' . lovd_getInstallURL(). 'variants/' . $zData['id'] . '?curation_status_log&in_window\', \'curationStatusHistory\', 1050, 450);return false;">View History</A></SPAN>';
+            }
+
         }
         // Replace rs numbers with dbSNP links.
         if (!empty($zData['VariantOnGenome/dbSNP'])) {

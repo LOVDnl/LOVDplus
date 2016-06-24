@@ -583,6 +583,12 @@ if ($sCalcVersionFiles != $sCalcVersionDB) {
                          'PREPARE Statement FROM @sSQL',
                          'EXECUTE Statement',
                      ),
+                 '3.0-12u' =>
+                 // TODO This might cause a merge conflict with the summary annotation record as I am trying to bundle this change with that one to re use this release version as we are running out of letters. Remove this line when merging.
+                     array(
+                         'CREATE TABLE IF NOT EXISTS ' . TABLE_CURATION_STATUS . ' (id TINYINT(2) UNSIGNED ZEROFILL NOT NULL, name VARCHAR(50) NOT NULL, PRIMARY KEY (id)) ENGINE=InnoDB, DEFAULT CHARACTER SET utf8', // We are inserting the curation status records below by using array merge to add them into this array.
+                         'ALTER TABLE ' . TABLE_VARIANTS . ' DROP COLUMN to_be_confirmed, ADD curation_statusid TINYINT(2) UNSIGNED NULL AFTER statusid, ADD INDEX (curation_statusid), ADD CONSTRAINT ' . TABLE_VARIANTS . '_fk_curation_statusid FOREIGN KEY (curation_statusid) REFERENCES ' . TABLE_CURATION_STATUS . ' (id) ON DELETE SET NULL ON UPDATE CASCADE',
+                     ),
              );
 
     if ($sCalcVersionDB < lovd_calculateVersion('3.0-alpha-01')) {
@@ -673,9 +679,14 @@ if ($sCalcVersionFiles != $sCalcVersionDB) {
         );
     }
 
-
-
-
+    if (LOVD_plus && $sCalcVersionDB < lovd_calculateVersion('3.0-12u')) {
+        // Insert the curation status records.
+        $aCurationStatusSQL = array();
+        foreach ($_SETT['curation_status'] as $nStatus => $sStatus) { // TODO AM Do we need to check before inserting these records in case they already exist? In theory they shouldn't exist before now unless we have been manually changing the version back and forth.
+            $aCurationStatusSQL[] = 'INSERT INTO ' . TABLE_CURATION_STATUS . ' VALUES (' . $nStatus . ', "' . $sStatus . '")';
+        }
+        $aUpdates['3.0-12u'] = array_merge($aUpdates['3.0-12u'],$aCurationStatusSQL);
+    }
 
     // To make sure we upgrade the database correctly, we add the current version to the list...
     if (!isset($aUpdates[$_SETT['system']['version']])) {

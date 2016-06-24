@@ -300,6 +300,7 @@ if (PATH_COUNT >= 2 && ctype_digit($_PE[1]) && !ACTION && (PATH_COUNT == 2 || PA
       <DIV id="analyses">
         <TABLE id="analysesTable" border="0" cellpadding="0" cellspacing="0">
           <TR>');
+        $aAnalysisRunIDs = array();
         foreach ($zAnalyses as $key => $zAnalysis) {
             if (!$zAnalysis) {
                 // This is the separation between run and non-run filters.
@@ -329,6 +330,7 @@ if (PATH_COUNT >= 2 && ctype_digit($_PE[1]) && !ACTION && (PATH_COUNT == 2 || PA
                     $sAnalysisClassName = 'analysis_running analysis_half_run';
                 } else {
                     $sAnalysisClassName = 'analysis_run';
+                    $aAnalysisRunIDs[] = $zAnalysis['runid'];
                 }
             } else {
                 $sAnalysisClassName = 'analysis_not_run';
@@ -418,9 +420,16 @@ if (PATH_COUNT >= 2 && ctype_digit($_PE[1]) && !ACTION && (PATH_COUNT == 2 || PA
       </SCRIPT>
 
 
-      <DIV id="analysis_results_VL" style="display: none;">' . "\n");
+      <DIV id="analysis_results_VL"' . ($_INI['instance']['name'] == 'mgha' && $aAnalysisRunIDs ? '' : ' style="display: none;"') . '>' . "\n");
         $_GET['search_runid'] = '0'; // Will for sure not return anything.
         $_GET['search_vog_effect'] = '!-'; // We always want to exclude the (probably) non-pathogenic ones by default.
+
+        if ($_INI['instance']['name'] == 'mgha') {
+            // Find all the possible run ids for this screening and use them to display the variants of interest.
+            $_GET['search_runid'] = (!$aAnalysisRunIDs ? '0' : implode($aAnalysisRunIDs,'|')); // Show all variants in all the analyses for this screening. If no analyses have been run then pick analysis 0 which should always be empty.
+            $_GET['search_vog_effect'] = ''; // Don't hide any variants based on the effect.
+            $_GET['search_curation_statusid'] = '!="" !' . CUR_STATUS_NOT_FOR_CURATION; // Show variants with a curation status other than "Not for curation".
+        }
 
         require ROOT_PATH . 'class/object_custom_viewlists.mod.php';
         // VOG needs to be first, so it groups by the VOG ID.
@@ -428,23 +437,29 @@ if (PATH_COUNT >= 2 && ctype_digit($_PE[1]) && !ACTION && (PATH_COUNT == 2 || PA
         // Define menu, to set pathogenicity flags of multiple variants in one go.
         $_DATA->setRowLink('CustomVL_AnalysisRunResults_for_I_VE', 'javascript:lovd_openWindow(\'' . lovd_getInstallURL() . 'variants/{{ID}}?&in_window\', \'VarVE_{{ID}}\', 1000); return false;');
         $bMenu         = true; // Show the gear-menu, with which users can mark and label variants?
-        $bConfirmation = true; // Are users allowed to set the confirmation status of variants? Value is ignored when $bMenu = false.
+        $bCurationStatus = true; // Are users allowed to set the curation status of variants? Value is ignored when $bMenu = false.
         if (!($_AUTH['level'] >= LEVEL_OWNER && $zScreening['analysis_statusid'] < ANALYSIS_STATUS_CLOSED) &&
             !($_AUTH['level'] >= LEVEL_MANAGER && $zScreening['analysis_statusid'] < ANALYSIS_STATUS_WAIT_CONFIRMATION)) {
             $bMenu = false;
             if ($_AUTH['level'] >= LEVEL_ADMIN && $zScreening['analysis_statusid'] < ANALYSIS_STATUS_CONFIRMED) {
                 $bMenu = true;
-                $bConfirmation = false;
+                $bCurationStatus = false;
             }
         }
         print('      <UL id="viewlistMenu_CustomVL_AnalysisRunResults_for_I_VE" class="jeegoocontext jeegooviewlist">' . "\n");
-        foreach ($_SETT['var_effect'] as $nEffectID => $sEffect) {
-            print('        <LI class="icon"><A click="lovd_AJAX_viewListSubmit(\'CustomVL_AnalysisRunResults_for_I_VE\', function(){$.get(\'ajax/set_variant_effect.php?' . $nEffectID . '&id=selected\', function(sResponse){if(sResponse.substring(0,1) == \'1\'){alert(\'Successfully set reported variant effect of \' + sResponse.substring(2) + \' variants to \\\'' . $sEffect . '\\\'.\');lovd_AJAX_viewListSubmit(\'CustomVL_AnalysisRunResults_for_I_VE\');}else if(sResponse.substring(0,1) == \'9\'){alert(\'Error: \' + sResponse.substring(2));}}).error(function(){alert(\'Error while setting variant effect.\');});});"><SPAN class="icon" style="background-image: url(gfx/menu_edit.png);"></SPAN>Set variant effect to "' . $sEffect . '"</A></LI>' . "\n");
+        if (LOVD_plus && $_INI['instance']['name'] != 'mgha') {
+            // Show the options to set variant effect from the viewlist.
+            foreach ($_SETT['var_effect'] as $nEffectID => $sEffect) {
+                print('        <LI class="icon"><A click="lovd_AJAX_viewListSubmit(\'CustomVL_AnalysisRunResults_for_I_VE\', function(){$.get(\'ajax/set_variant_effect.php?' . $nEffectID . '&id=selected\', function(sResponse){if(sResponse.substring(0,1) == \'1\'){alert(\'Successfully set reported variant effect of \' + sResponse.substring(2) + \' variants to \\\'' . $sEffect . '\\\'.\');lovd_AJAX_viewListSubmit(\'CustomVL_AnalysisRunResults_for_I_VE\');}else if(sResponse.substring(0,1) == \'9\'){alert(\'Error: \' + sResponse.substring(2));}}).error(function(){alert(\'Error while setting variant effect.\');});});"><SPAN class="icon" style="background-image: url(gfx/menu_edit.png);"></SPAN>Set variant effect to "' . $sEffect . '"</A></LI>' . "\n");
+            }
         }
-        if ($bConfirmation) {
-            // Link for marking variant to be (un)confirmed.
-            print('        <LI class="icon"><A click="lovd_AJAX_viewListSubmit(\'CustomVL_AnalysisRunResults_for_I_VE\', function(){$.get(\'ajax/set_to_be_confirmed.php?set&id=selected\', function(sResponse){if(sResponse.substring(0,1) == \'1\'){alert(\'Successfully set \' + sResponse.substring(2) + \' variants to be confirmed.\');lovd_AJAX_viewListSubmit(\'CustomVL_AnalysisRunResults_for_I_VE\');lovd_AJAX_viewEntryLoad();}else if(sResponse.substring(0,1) == \'9\'){alert(\'Error: \' + sResponse.substring(2));}}).error(function(){alert(\'Error while setting variant status.\');});});"><SPAN class="icon" style="background-image: url(gfx/menu_confirm.png);"></SPAN>Set variant to be confirmed</A></LI>' . "\n" .
-                  '        <LI class="icon"><A click="lovd_AJAX_viewListSubmit(\'CustomVL_AnalysisRunResults_for_I_VE\', function(){$.get(\'ajax/set_to_be_confirmed.php?unset&id=selected\', function(sResponse){if(sResponse.substring(0,1) == \'1\'){alert(\'Successfully unset \' + sResponse.substring(2) + \' variants to be confirmed.\');lovd_AJAX_viewListSubmit(\'CustomVL_AnalysisRunResults_for_I_VE\');lovd_AJAX_viewEntryLoad();}else if(sResponse.substring(0,1) == \'9\'){alert(\'Error: \' + sResponse.substring(2));}}).error(function(){alert(\'Error while unsetting variant status.\');});});"><SPAN class="icon" style="background-image: url(gfx/menu_unconfirm.png);"></SPAN>Set variant to <I>not</I> be confirmed</A></LI>' . "\n");
+        if ($bCurationStatus) {
+            print('        <LI class="icon"><SPAN class="icon" style="background-image: url(gfx/menu_edit.png);"></SPAN>Set curation status' . "\n" . '          <UL>' . "\n");
+            foreach ($_SETT['curation_status'] as $nCurationStatusID => $sCurationStatus) {
+                print('            <LI class="icon"><A click="lovd_AJAX_viewListSubmit(\'CustomVL_AnalysisRunResults_for_I_VE\', function(){$.get(\'ajax/set_curation_status.php?' . $nCurationStatusID . '&id=selected\', function(sResponse){if(sResponse.substring(0,1) == \'1\'){alert(\'Successfully set curation status of \' + sResponse.substring(2) + \' variants to \\\'' . $sCurationStatus . '\\\'.\');lovd_AJAX_viewListSubmit(\'CustomVL_AnalysisRunResults_for_I_VE\');lovd_AJAX_viewEntryLoad();}else if(sResponse.substring(0,1) == \'9\'){alert(\'Error: \' + sResponse.substring(2));}}).error(function(){alert(\'Error while setting curation status.\');});});"><SPAN class="icon" style="background-image: url(gfx/menu_edit.png);"></SPAN>' . $sCurationStatus . '</A></LI>' . "\n");
+            }
+            print('            <LI class="icon"><A click="if(window.confirm(\'Are you sure you want to clear the selected variants curation status?\')){lovd_AJAX_viewListSubmit(\'CustomVL_AnalysisRunResults_for_I_VE\', function(){$.get(\'ajax/set_curation_status.php?clear&id=selected\', function(sResponse){if(sResponse.substring(0,1) == \'1\'){alert(\'Successfully cleared the curation status of \' + sResponse.substring(2) + \' variants.\');lovd_AJAX_viewListSubmit(\'CustomVL_AnalysisRunResults_for_I_VE\');lovd_AJAX_viewEntryLoad();}else if(sResponse.substring(0,1) == \'9\'){alert(\'Error: \' + sResponse.substring(2));}}).error(function(){alert(\'Error while setting curation status.\');});});}else{alert(\'The selected variants curation status have not been changed.\');}"><SPAN class="icon" style="background-image: url(gfx/cross.png);"></SPAN>Clear curation status</A></LI>' . "\n");
+            print('          </UL>' . "\n" . '        </LI>' . "\n");
         }
         print('      </UL>' . "\n\n");
         $_DATA->viewList('CustomVL_AnalysisRunResults_for_I_VE', array(), false, false, $bMenu);

@@ -1020,11 +1020,23 @@ function lovd_showJGNavigation ($aOptions, $sID, $nPrefix = 3)
           $sPrefix . '<UL id="viewentryMenu_' . $sID . '" class="jeegoocontext jeegooviewlist">' . "\n");
     foreach ($aOptions as $sURL => $aLink) {
         list($sIMG, $sName, $bShown) = $aLink;
+        $sSubMenu = '';
+        if (!empty($aLink['sub_menu'])) {
+            // Allow for one level of sub menus.
+            $sSubMenu = "\n" . $sPrefix . '    <UL>' . "\n";
+            foreach ($aLink['sub_menu'] as $sSubURL => $aSubMenu) {
+                list($sSubIMG, $sSubName) = $aSubMenu;
+                $sSubMenu .= $sPrefix . '      <LI' . (!$sSubIMG? '' : ' class="icon"') . '><A ' . (substr($sSubURL, 0, 11) == 'javascript:'? 'click="' : 'href="' . lovd_getInstallURL(false)) . ltrim($sSubURL, '/') . '">' .
+                    (!$sIMG? '' : '<SPAN class="icon" style="background-image: url(gfx/' . $sSubIMG . ');"></SPAN>') . $sSubName .
+                    '</A></LI>' . "\n";
+            }
+            $sSubMenu .= $sPrefix . '    </UL>' . "\n  " . $sPrefix;
+        }
         if ($bShown) {
             // IE (who else) refuses to respect the BASE href tag when using JS. So we have no other option than to include the full path here.
-            print($sPrefix . '  <LI' . (!$sIMG? '' : ' class="icon"') . '><A ' . (substr($sURL, 0, 11) == 'javascript:'? 'click="' : 'href="' . lovd_getInstallURL(false)) . ltrim($sURL, '/') . '">' .
+            print($sPrefix . '  <LI' . (!$sIMG? '' : ' class="icon"') . '><A ' . (substr($sURL, 0, 11) == 'javascript:'? 'click="' : 'href="' . ($sSubMenu ? '' : lovd_getInstallURL(false))) . ($sSubMenu ? '' : ltrim($sURL, '/')) . '">' .
                                 (!$sIMG? '' : '<SPAN class="icon" style="background-image: url(gfx/' . $sIMG . ');"></SPAN>') . $sName .
-                                '</A></LI>' . "\n");
+                                '</A>' . $sSubMenu . '</LI>' . "\n");
         } else {
             print($sPrefix . '  <LI class="disabled' . (!$sIMG? '' : ' icon') . '">' . (!$sIMG? '' : '<SPAN class="icon" style="background-image: url(gfx/' . preg_replace('/(\.[a-z]+)$/', '_disabled' . "$1", $sIMG) . ');"></SPAN>') . $sName . '</LI>' . "\n");
         }
@@ -1036,7 +1048,7 @@ function lovd_showJGNavigation ($aOptions, $sID, $nPrefix = 3)
           $sPrefix . '      event: "click",' . "\n" .
           $sPrefix . '      openBelowContext: true,' . "\n" .
           $sPrefix . '      autoHide: true,' . "\n" .
-          $sPrefix . '      delay: 1000,' . "\n" .
+          $sPrefix . '      delay: 100,' . "\n" .
           $sPrefix . '      onSelect: function(e, context) {' . "\n" .
           $sPrefix . '        if ($(this).hasClass("disabled")) {' . "\n" .
           $sPrefix . '          return false;' . "\n" .
