@@ -4,7 +4,7 @@
  * LEIDEN OPEN VARIATION DATABASE (LOVD)
  *
  * Created     : 2016-03-01
- * Modified    : 2016-05-25
+ * Modified    : 2016-06-02
  * For LOVD    : 3.0-13
  *
  * Copyright   : 2004-2016 Leiden University Medical Center; http://www.LUMC.nl/
@@ -88,7 +88,8 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && !ACTION) {
         // Authorized user is logged in. Provide tools.
         $aNavigation[CURRENT_PATH . '?edit']            = array('menu_edit.png', 'Edit gene panel information', 1);
         $aNavigation[CURRENT_PATH . '?manage_genes']    = array('menu_plus.png', 'Manage gene panel\'s genes', 1);
-        $aNavigation[CURRENT_PATH . '?history']         = array('menu_clock.png', 'View history of genes in this gene panel', 1);
+        $aNavigation[CURRENT_PATH . '?history']         = array('menu_clock.png', 'View differences between two dates', 1);
+        $aNavigation[CURRENT_PATH . '?history_full']    = array('menu_clock.png', 'View full history of this gene panel', 1);
         $aNavigation['download/' . CURRENT_PATH]        = array('menu_save.png', 'Download this gene panel and its genes', 1);
         if ($_AUTH['level'] >= LEVEL_ADMIN) {
             $aNavigation[CURRENT_PATH . '?delete']      = array('cross.png', 'Delete gene panel entry', 1);
@@ -96,15 +97,15 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && !ACTION) {
     }
     lovd_showJGNavigation($aNavigation, 'GenePanel');
 
-    // Display the genes in this gene panel
+    // Display the genes in this gene panel.
     print('<BR><BR>' . "\n\n");
     $_T->printTitle('Genes in gene panel', 'H4');
     require ROOT_PATH . 'class/object_gene_panel_genes.php';
     $_DATA = new LOVD_GenePanelGene();
-    // Only show the genes in this gene panel by setting the genepanelid to the current gene panel id
+    // Only show the genes in this gene panel by setting the genepanelid to the current gene panel id.
     $_GET['search_genepanelid'] = $nID;
     $sGPGViewListID = 'GenePanelGene';
-    // Add a menu item to allow the user to download the whole gene panel
+    // Add a menu item to allow the user to download the whole gene panel.
     print('      <UL id="viewlistMenu_' . $sGPGViewListID . '" class="jeegoocontext jeegooviewlist">' . "\n" .
           '        <LI class="icon"><A click="lovd_AJAX_viewListSubmit(\'' . $sGPGViewListID . '\', function(){lovd_AJAX_viewListDownload(\'' . $sGPGViewListID . '\', true);});"><SPAN class="icon" style="background-image: url(gfx/menu_save.png);"></SPAN>Download gene panel\'s genes</A></LI>' . "\n" .
           '      </UL>' . "\n\n");
@@ -1036,12 +1037,12 @@ if (PATH_COUNT == 3 && preg_match('/^[a-z][a-z0-9#@-]+$/i', rawurldecode($_PE[2]
 
 
 
-if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && ACTION == 'history') {
-    // URL: /gene_panels/00001?history
+if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && ACTION == 'history_full') {
+    // URL: /gene_panels/00001?history_detailed
     // Show the history for this gene panel.
 
     $nID = sprintf('%05d', $_PE[1]);
-    define('PAGE_TITLE', 'View history for gene panel #' . $nID);
+    define('PAGE_TITLE', 'View full history for gene panel #' . $nID);
 
     lovd_requireAUTH();
 
@@ -1098,6 +1099,62 @@ if (PATH_COUNT == 1 && ACTION == 'add') {
     // Set the row link URL to point to the gene panel genes management along with the required $_GET values.
     $_DATA->setRowLink('GenePanelSelect', 'javascript:window.location.href=\'' . lovd_getInstallURL() . 'gene_panels/{{id}}?manage_genes&select_genes_from=' . $sViewListID . '\'; return false');
     $_DATA->viewList('GenePanelSelect', array(), false, false, true);
+
+    $_T->printFooter();
+    exit;
+}
+
+
+
+
+
+if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && ACTION == 'history') {
+    // URL: /gene_panels/00001?history
+    // URL: /gene_panels/00001?history&from=2013-09-06%2014:15:09&to=2016-06-02%2016:27:29
+    // Show the history of this gene panel between two dates.
+
+    // When no dates are given, take defaults and refresh.
+    $bReload = false;
+    require ROOT_PATH . 'inc-lib-form.php';
+    if (empty($_GET['from']) || (!lovd_matchDate($_GET['from']) && !lovd_matchDate($_GET['from'], true))) {
+        // From date empty or rejected. Set to t=0.
+        $_GET['from'] = date('Y-m-d', 0);
+        $bReload = true;
+    }
+    if (empty($_GET['to']) || (!lovd_matchDate($_GET['to']) && !lovd_matchDate($_GET['to'], true))) {
+        // To date empty or rejected. Set to t=time().
+        $_GET['to'] = date('Y-m-d');
+        $bReload = true;
+    }
+    if ($bReload) {
+        // One of the times had to be filled in by us, let's reload.
+        header('Location: ' . lovd_getInstallURL() . CURRENT_PATH . '?' . ACTION . '&from=' . $_GET['from'] . '&to=' . $_GET['to']);
+        exit;
+    }
+
+    $nID = sprintf('%05d', $_PE[1]);
+    define('PAGE_TITLE', 'View changes to gene panel #' . $nID . ' between dates');
+
+    lovd_requireAUTH();
+
+    $_T->printHeader();
+    $_T->printTitle();
+
+    print('    <FORM action="' . CURRENT_PATH . '?history" method="get" id="dateRangeForm" onsubmit="lovd_changeDateRange(\'gene_panels/' . $nID . '?history\'); return false;">
+      <TABLE border="0" cellpadding="10" cellspacing="1" width="750" class="data" style="font-size : 13px;">
+        <TR>
+          <TD>
+            <SPAN>From date: <INPUT type="text" id="fromDate" readonly="true" value="' . $_GET['from'] . '" style="font-size : 13px;"></SPAN>
+            <SPAN>To date: <INPUT type="text" id="toDate" readonly="true" value="' . $_GET['to'] . '" style="font-size : 13px;"></SPAN>
+            <INPUT type="submit" value="View changes" style="font-size : 13px;">
+          </TD>
+        </TR>
+      </TABLE>
+    </FORM><BR>' . "\n");
+
+    require ROOT_PATH . 'class/object_gene_panel_genes.rev.php';
+    $_DATA = new LOVD_GenePanelGeneREV();
+    $_DATA->displayGenePanelHistory($nID, $_GET['from'], $_GET['to']);
 
     $_T->printFooter();
     exit;
