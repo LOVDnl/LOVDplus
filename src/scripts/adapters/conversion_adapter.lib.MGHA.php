@@ -40,7 +40,7 @@ function lovd_prepareMappings()
         'MLEAF' => 'VariantOnGenome/Sequencing/Max_Likelihood_Exp_Allele_Freq',
         'MQ' => 'VariantOnGenome/Sequencing/Mapping_Quality',
         'MQRankSum' => 'VariantOnGenome/Sequencing/Mapping_Quality_Score',
-        'OND' => 'VariantOnGenome/Sequencing/Non-diploid_Ratio',
+        'OND' => 'VariantOnGenome/Sequencing/Non_diploid_Ratio',
         'PG' => 'VariantOnGenome/Sequencing/Genotype_Likelihood_Prior',
         'QD' => 'VariantOnGenome/Sequencing/Quality_by_depth',
         'ReadPosRankSum' => 'VariantOnGenome/Sequencing/Read_Position_Bias_Score',
@@ -124,7 +124,7 @@ function lovd_prepareMappings()
         'MutationAssessor_score' => 'VariantOnTranscript/Prediction/MutationAssessor_Score',
         'MutationTaster_converted_rankscore' => 'VariantOnTranscript/Prediction/MutationTaster_Ranked_Score',
         'MutationTaster_pred' => 'VariantOnTranscript/Prediction/MutationTaster',
-        'MutationTaster_score' => 'VariantOnTranscript/Prediction/MutationTaster/Score',
+        'MutationTaster_score' => 'VariantOnTranscript/Prediction/MutationTaster_Score',
         'PROVEAN_converted_rankscore' => 'VariantOnTranscript/Prediction/PROVEAN_Ranked_Score',
         'PROVEAN_pred' => 'VariantOnTranscript/Prediction/PROVEAN',
         'PROVEAN_score' => 'VariantOnTranscript/Prediction/PROVEAN_Score',
@@ -142,7 +142,7 @@ function lovd_prepareMappings()
         'UniSNP_ids' => 'VariantOnTranscript/UniSNP_IDs',
         'VEST3_rankscore' => 'VariantOnTranscript/Prediction/VEST3_Ranked_Score',
         'VEST3_score' => 'VariantOnTranscript/Prediction/VEST3_Score',
-        'phastCons100way_vertebrate' => 'VariantOnTranscript/Prediction/phastCons100way_Vertebrate_Score',
+        'phastCons100way_vertebrate' => 'VariantOnTranscript/Prediction/phastCons100way_Vert_Score',
         'phastCons100way_vertebrate_rankscore' => 'VariantOnTranscript/Prediction/phastCons100way_Vert_Ranked_Score',
         'phastCons46way_placental' => 'VariantOnTranscript/Prediction/phastCons46way_Plac_Score',
         'phastCons46way_placental_rankscore' => 'VariantOnTranscript/Prediction/phastCons46way_Plac_Ranked_Score',
@@ -159,27 +159,27 @@ function lovd_prepareMappings()
         'Child_DP' => 'VariantOnGenome/Sequencing/Depth/Total',
         'Child_GQ' => 'VariantOnGenome/Sequencing/Genotype/Quality',
         'Child_GT' => 'allele', // this is in the form of A/A, A/T etc. This is converted to 0/0, 1/0 later on
-        'Child_JL' => 'VariantOnGenome/Sequencing/Genotype/Phredscaled_Joint_Likelihood',
-        'Child_JP' => 'VariantOnGenome/Sequencing/Genotype/Phredscaled_Joint_Probability',
-        'Child_PID' => 'VariantOnGenome/Sequencing/Physcial_Phasing',
+        'Child_JL' => 'VariantOnGenome/Sequencing/Phredscaled_Joint_Likelihood',
+        'Child_JP' => 'VariantOnGenome/Sequencing/Phredscaled_Joint_Probability',
+        'Child_PID' => 'VariantOnGenome/Sequencing/Physical_Phasing_ID',
         'Child_PL' => 'VariantOnGenome/Sequencing/Phredscaled_Likelihoods',
         'Child_PP' => 'VariantOnGenome/Sequencing/Phredscaled_Probabilities',
         // father fields
         'Father_DP' => 'VariantOnGenome/Sequencing/Father/Depth/Total',// we actually do not receive a value for depth in this column, we need to calculate this using AD & PL
         'Father_GQ' => 'VariantOnGenome/Sequencing/Father/Genotype/Quality',
         'Father_GT' => 'VariantOnGenome/Sequencing/Father/GenoType',
-        'Father_JL' => 'VariantOnGenome/Sequencing/Father/Genotype/Phredscaled_Joint_Likelihood',
-        'Father_JP' => 'VariantOnGenome/Sequencing/Father/Genotype/Phredscaled_Joint_Probability',
-        'Father_PID' => 'VariantOnGenome/Sequencing/Father/Physcial_Phasing',// used to calculate the allele value
+        'Father_JL' => 'VariantOnGenome/Sequencing/Father/Phredscaled_Joint_Likelihood',
+        'Father_JP' => 'VariantOnGenome/Sequencing/Father/Phredscaled_Joint_Probability',
+        'Father_PID' => 'VariantOnGenome/Sequencing/Father/Physical_Phasing_ID',// used to calculate the allele value
         'Father_PL' => 'VariantOnGenome/Sequencing/Father/Phredscaled_Likelihoods',// used to calculate the allele value
         'Father_PP' => 'VariantOnGenome/Sequencing/Father/Phredscaled_Probabilities',// used to calculate the allele value
         // mother fields
         'Mother_DP' => 'VariantOnGenome/Sequencing/Mother/Depth/Total',// we actually do not receive a value for depth in this column, we need to calculate this using AD & PL
         'Mother_GQ' => 'VariantOnGenome/Sequencing/Mother/Genotype/Quality',
         'Mother_GT' => 'VariantOnGenome/Sequencing/Mother/GenoType',
-        'Mother_JL' => 'VariantOnGenome/Sequencing/Mother/Genotype/Phredscaled_Joint_Likelihood',
-        'Mother_JP' => 'VariantOnGenome/Sequencing/Mother/Genotype/Phredscaled_Joint_Probability',
-        'Mother_PID' => 'VariantOnGenome/Sequencing/Mother/Physcial_Phasing',// used to calculate the allele value
+        'Mother_JL' => 'VariantOnGenome/Sequencing/Mother/Phredscaled_Joint_Likelihood',
+        'Mother_JP' => 'VariantOnGenome/Sequencing/Mother/Phredscaled_Joint_Probability',
+        'Mother_PID' => 'VariantOnGenome/Sequencing/Mother/Physical_Phasing_ID',// used to calculate the allele value
         'Mother_PL' => 'VariantOnGenome/Sequencing/Mother/Phredscaled_Likelihoods',// used to calculate the allele value
         'Mother_PP' => 'VariantOnGenome/Sequencing/Mother/Phredscaled_Probabilities',// used to calculate the allele value
 
@@ -192,10 +192,10 @@ function lovd_prepareMappings()
         'Mother_Depth_Alt' => 'VariantOnGenome/Sequencing/Mother/Depth/Alt', // derived from Mother_AD
         'Mother_Alt_Percentage' => 'VariantOnGenome/Sequencing/Mother/Depth/Alt/Fraction', // derived from Mother_AD
         'Mother_VarPresent' => 'VariantOnGenome/Sequencing/Mother/VarPresent',
-        'PolyPhen_Text' => 'VariantOnTranscript/PolyPhen',
-        'PolyPhen_Value' => 'VariantOnTranscript/PolyPhen/Score',
-        'SIFT_Text' => 'VariantOnTranscript/Prediction/SIFT',
-        'SIFT_Value' => 'VariantOnTranscript/Prediction/SIFT/Score'
+        'PolyPhen_Text' => 'VariantOnTranscript/Prediction/PolyPhen_VEP',
+        'PolyPhen_Value' => 'VariantOnTranscript/Prediction/PolyPhen_Score_VEP',
+        'SIFT_Text' => 'VariantOnTranscript/Prediction/SIFT_VEP',
+        'SIFT_Value' => 'VariantOnTranscript/Prediction/SIFT_Score_VEP'
 
     );
 
@@ -283,9 +283,10 @@ function lovd_prepareVariantData($aLine)
                 // set the alt percentage in $aLine
                 $aLine[$parent . '_Alt_Percentage'] = $parentAltPercentage;
 
-                if ($aLine[$parent . '_PL'] == '') {
+                if ($aLine[$parent . '_PL'] == '' | $aLine[$parent . '_PL'] == 'unknown') {
                     $parentPLAlt = 'unknown';
                 } else {
+
                     $parentPL = explode(',', $aLine[$parent . '_PL']);
                     // parent PLAlt = Parent_PL(b)
                     $parentPLAlt = $parentPL[1];

@@ -1531,7 +1531,6 @@ print('Can\'t load UD for gene ' . $aGeneInfo['symbol'] . '.' . "\n");
                     // Not getting an UD no longer kills the script, so...
                     if ($sRefseqUD) {
 
-                        //return;
                         if (!$_DB->query('INSERT INTO ' . TABLE_GENES . ' (id, name, chromosome, chrom_band, refseq_genomic, refseq_UD, id_hgnc, id_entrez, id_omim, created_by, created_date, updated_by, updated_date) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), ?, NOW())',
                             array($aGeneInfo['symbol'], $aGeneInfo['name'], $aGeneInfo['chromosome'], $aGeneInfo['chrom_band'], $_SETT['human_builds'][$_CONF['refseq_build']]['ncbi_sequences'][$aGeneInfo['chromosome']], $sRefseqUD, $aGeneInfo['hgnc_id'], $aGeneInfo['entrez_id'], $aGeneInfo['omim_id'], 0, 0))) {
                             die('Can\'t create gene ' . $aVariant['symbol'] . '.' . "\n");
@@ -1862,7 +1861,7 @@ print('Mutalyzer returned EREF error, hg19/hg38 error?' . "\n");
         }
 
         // Some reporting of where we are...
-        if (!($nLine % 500)) {
+        if (!($nLine % 100)) {
             print('------- Line ' . $nLine . ' -------' . str_repeat(' ', 7-strlen($nLine)) . date('Y-m-d H:i:s') . "\n");
             flush();
         }
