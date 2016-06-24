@@ -17,6 +17,7 @@ function lovd_prepareMappings()
         'REF' => 'ref',
         'ALT' => 'alt',
         'Existing_variation' => 'existingvariation',
+        'Feature' => 'transcriptid',
         // VariantOnGenome/DNA - constructed by the lovd_getVariantDescription function later on
         'CHROM' => 'chromosome',
         'POS' => 'position', // lovd_getVariantDescription() needs this.
