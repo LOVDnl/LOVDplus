@@ -102,7 +102,6 @@ if ($argc != 1 && in_array($argv[1], array('--help', '-help', '-h', '-?'))) {
     $aDefaultValues = array(
         'Screening/Template' => 'DNA',
         'Screening/Technique' => 'SEQ-NG',
-        'Screening/Analysis_restricted' => 0,
         'variants_found' => 1,
         'id' => 1,
         'id_sample' => 1

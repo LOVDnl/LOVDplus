@@ -1,3 +1,4 @@
 .idea
 src/config.ini.php
 src/scripts/adapter.php
+src/scripts/adapter.lib.php
