@@ -141,6 +141,25 @@ class LOVD_CustomViewListMOD extends LOVD_CustomViewList {
                             'VariantOnGenome/Sequencing/GATKcaller',
                         );
                     $aSQL['SELECT'] .= (!$aSQL['SELECT']? '' : ', ') . 'vog.*, a.name AS allele_, eg.name AS vog_effect';
+                    // Observation count columns.
+                    // Find the diseases that this individual has assigned using the analysis run ID in $_GET.
+                    $sDiseaseIDs = implode(',',$_DB->query('SELECT i2d.diseaseid FROM ' . TABLE_IND2DIS . ' AS i2d INNER JOIN ' . TABLE_SCREENINGS . ' AS scr ON (i2d.individualid = scr.individualid) INNER JOIN ' . TABLE_ANALYSES_RUN . ' AS ar ON (scr.id = ar.screeningid) WHERE ar.id = ?', array($_GET['search_runid']))->fetchAllColumn());
+
+                    // Check if we have found any diseases and set the boolean flag accordingly.
+                    $bDiseases = ($sDiseaseIDs != ''?true:false);
+                    
+                    $aSQL['SELECT'] .= ', COUNT(DISTINCT os.individualid) AS obs_variant';
+                    $aSQL['SELECT'] .= ', COUNT(DISTINCT os.individualid) / ' . $_DB->query('SELECT COUNT(*) FROM ' . TABLE_INDIVIDUALS)->fetchColumn() . ' AS obs_var_ind_ratio';
+
+                    if ($bDiseases) {
+                        // If this individual has diseases then setup the disease specific observation count columns.
+                        $aSQL['SELECT'] .= ', COUNT(DISTINCT odi2d.individualid) AS obs_disease';
+                        $aSQL['SELECT'] .= ', COUNT(DISTINCT odi2d.individualid) / ' . $_DB->query('SELECT COUNT(DISTINCT i2d.individualid) FROM ' . TABLE_IND2DIS . ' AS i2d WHERE i2d.diseaseid in(' . $sDiseaseIDs . ')')->fetchColumn() . ' AS obs_var_dis_ind_ratio';
+                    } else {
+                        // Otherwise do not do anything for the disease specific observation count columns.
+                        $aSQL['SELECT'] .= ', NULL AS obs_disease, NULL AS obs_var_dis_ind_ratio';
+                    }
+
                     if (!$aSQL['FROM']) {
                         // First data table in query.
                         $aSQL['SELECT'] .= ', vog.id AS row_id'; // To ensure other table's id columns don't interfere.
@@ -163,6 +182,20 @@ class LOVD_CustomViewListMOD extends LOVD_CustomViewList {
                     }
                     $aSQL['FROM'] .= ' LEFT OUTER JOIN ' . TABLE_ALLELES . ' AS a ON (vog.allele = a.id)';
                     $aSQL['FROM'] .= ' LEFT OUTER JOIN ' . TABLE_EFFECT . ' AS eg ON (vog.effectid = eg.id)';
+
+                    // Outer joins for the observation counts.
+                    // Join the variants table using the DBID to get all of the variants that are the same as this one.
+                    $aSQL['FROM'] .= ' LEFT OUTER JOIN ' . TABLE_VARIANTS . ' AS ovog USING (`VariantOnGenome/DBID`)';
+                    // Join the screening2variants table to get the screening IDs for all these variants.
+                    $aSQL['FROM'] .= ' LEFT OUTER JOIN ' . TABLE_SCR2VAR . ' AS os2v ON (ovog.id = os2v.variantid)';
+                    // Join the screening table to to get the individual IDs for these variants as we count the DISTINCT individualids.
+                    $aSQL['FROM'] .= ' LEFT OUTER JOIN ' . TABLE_SCREENINGS . ' AS os ON (os2v.screeningid = os.id)';
+
+                    // Outer join for the disease specific observation counts.
+                    if ($bDiseases) {
+                        // Join the individuals2diseases table to get the individuals with this variant and this individuals diseases.
+                        $aSQL['FROM'] .= ' LEFT OUTER JOIN ' . TABLE_IND2DIS . ' AS odi2d ON (os.individualid = odi2d.individualid AND odi2d.diseaseid in(' . $sDiseaseIDs . '))';
+                    }
                     break;
 
                 case 'VariantOnTranscript':
@@ -317,6 +350,32 @@ class LOVD_CustomViewListMOD extends LOVD_CustomViewList {
                             'gene_OMIM_' => array(
                                 'view' => array('OMIM links', 100),
                                 'db'   => array('__gene_OMIM', 'ASC', 'TEXT')),
+                        ));
+                    break;
+                case 'VariantOnGenome':
+                    // The fixed columns.
+                    $this->aColumnsViewList = array_merge($this->aColumnsViewList,
+                        array(
+                            'obs_variant' => array(
+                                'view' => array('#Ind. w/ var.', 70),
+                                'db'   => array('obs_variant', 'ASC', 'INT'),
+                                'legend' => array('The number of individuals with this variant within this database.',
+                                    'The number of individuals with this variant within this database.')),
+                            'obs_var_ind_ratio' => array(
+                                'view' => array('Var. ind. ratio', 70),
+                                'db'   => array('obs_var_ind_ratio', 'ASC', 'DECIMAL'),
+                                'legend' => array('The ratio of the number of individuals with this variant divided by the total number of individuals within this database.',
+                                    'The ratio of the number of individuals with this variant divided by the total number of individuals within this database.')),
+                            'obs_disease' => array(
+                                'view' => array('#Ind. w/ var & dis.', 70),
+                                'db'   => array('obs_disease', 'ASC', 'INT'),
+                                'legend' => array('The number of individuals with this variant within this database that have at least one of the diseases in common as this individual.',
+                                    'The number of individuals with this variant within this database that have at least one of the diseases in common as this individual.')),
+                            'obs_var_dis_ind_ratio' => array(
+                                'view' => array('Var. dis. ind. ratio', 70),
+                                'db'   => array('obs_var_dis_ind_ratio', 'ASC', 'DECIMAL'),
+                                'legend' => array('The ratio of the number of individuals with this variant and this disease divided by the total number of individuals with this disease within this database.',
+                                    'The ratio of the number of individuals with this variant and this disease divided by the total number of individuals with this disease within this database.')),
                         ));
                     break;
             }
