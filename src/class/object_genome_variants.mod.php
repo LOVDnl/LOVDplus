@@ -55,17 +55,17 @@ class LOVD_GenomeVariant extends LOVD_Custom {
         $aForm = parent::buildForm($sPrefix);
         // Remove all except the remarks.
         $aFormFiltered = array();
-        if (isset($aForm['VariantOnGenome/Remarks'])) {
-            $aFormFiltered['VariantOnGenome/Remarks'] = $aForm['VariantOnGenome/Remarks'];
-        }
-
-        // todo: check if column is enabled.
 
         foreach( $aForm as $sCol => $val ) {
             if (strpos($sCol, 'VariantOnGenome/Curation/') !== false) {
                 $aFormFiltered[$sCol] = $aForm[$sCol];
             }
         }
+
+        if (isset($aForm['VariantOnGenome/Remarks'])) {
+            $aFormFiltered['VariantOnGenome/Remarks'] = $aForm['VariantOnGenome/Remarks'];
+        }
+
         return $aFormFiltered;
     }
 

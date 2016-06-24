@@ -2877,8 +2877,7 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && ACTION == 'curate') {
     define('LOG_EVENT', 'VariantCuration');
 
     lovd_isAuthorized('variant', $nID);
-    //lovd_requireAUTH(LEVEL_OWNER);
-    lovd_requireAUTH(LEVEL_ANALYZER);
+    lovd_requireAUTH(LEVEL_OWNER);
 
     // However, depending on the status of the screening, we might not have the rights to edit the variant.
     $zScreenings = $_DB->query('SELECT s.* FROM ' . TABLE_SCREENINGS . ' AS s INNER JOIN ' . TABLE_SCR2VAR . ' AS s2v ON (s.id = s2v.screeningid) WHERE s2v.variantid = ? GROUP BY s.id', array($nID))->fetchAllAssoc();
