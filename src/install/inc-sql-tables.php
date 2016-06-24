@@ -337,7 +337,6 @@ $aTableSQL =
     id INT(10) UNSIGNED ZEROFILL NOT NULL AUTO_INCREMENT,
     allele TINYINT(2) UNSIGNED NOT NULL,
     effectid TINYINT(2) UNSIGNED ZEROFILL,
-    to_be_confirmed BOOLEAN NOT NULL DEFAULT 0,
     chromosome VARCHAR(2),
     position_g_start INT(10) UNSIGNED,
     position_g_end INT(10) UNSIGNED,

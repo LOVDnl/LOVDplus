@@ -248,9 +248,9 @@ class LOVD_ScreeningMOD extends LOVD_Screening {
                 $zData['analysis_status'] .= ' (<A href="individuals/' . $zData['individualid'] . '/analyze/' . $zData['id'] . '?close">' . $sClose . '</A>)';
             }
         }
-        if ($_INI['instance']['name'] != 'mgha') {
+        if ($_INI['instance']['name'] == 'leiden') {
             // Just do a separate query for the variants to be confirmed (instead of modifying the VE query).
-            $zData['variants_to_be_confirmed_'] = $_DB->query('SELECT COUNT(*) FROM ' . TABLE_VARIANTS . ' AS vog INNER JOIN ' . TABLE_SCR2VAR . ' AS s2v ON (vog.id = s2v.variantid) WHERE vog.to_be_confirmed = 1 AND s2v.screeningid = ?', array($zData['id']))->fetchColumn();
+            $zData['variants_to_be_confirmed_'] = $_DB->query('SELECT COUNT(*) FROM ' . TABLE_VARIANTS . ' AS vog INNER JOIN ' . TABLE_SCR2VAR . ' AS s2v ON (vog.id = s2v.variantid) WHERE vog.curation_statusid IS NOT NULL AND s2v.screeningid = ?', array($zData['id']))->fetchColumn();
             if ($zData['variants_to_be_confirmed_']) {
                 $zData['variants_to_be_confirmed_'] .= ' (<A href="screenings/' . $zData['id'] . '?downloadToBeConfirmed">download</A>)';
                 if (($_AUTH['level'] >= LEVEL_OWNER && $zData['analysis_statusid'] < ANALYSIS_STATUS_CLOSED) ||
