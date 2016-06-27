@@ -466,6 +466,8 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && !ACTION) {
         }
      //   $aNavigation[CURRENT_PATH . '?edit_remarks' . (isset($_GET['in_window'])? '&amp;in_window' : '')] = array('menu_edit.png', 'Edit remarks', 1);
         $aNavigation[CURRENT_PATH . '?curate' . (isset($_GET['in_window'])? '&amp;in_window' : '')] = array('menu_edit.png', 'Curate this variant', 1);
+        $aNavigation['javascript:lovd_openWindow(\'' . lovd_getInstallURL() . CURRENT_PATH . '?curation_log&in_window\', \'curation_log\', 1050, 450);'] = array('menu_clock.png', 'Show curation history', 1);
+
         if ($zData['statusid'] < STATUS_OK && $_AUTH['level'] >= LEVEL_CURATOR) {
             $aNavigation[CURRENT_PATH . '?publish'] = array('check.png', ($zData['statusid'] == STATUS_MARKED ? 'Remove mark from' : 'Publish (curate)') . ' variant entry', 1);
         }
@@ -3441,6 +3443,29 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && ACTION == 'map') {
         }
       </SCRIPT>
 <?php
+    $_T->printFooter();
+    exit;
+}
+
+
+
+
+
+if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && ACTION == 'curation_log') {
+    // URL: /variants/0000000001?curation_log
+    // Show the logs for the changes of curation data for this variant.
+
+    $nID = sprintf('%010d', $_PE[1]);
+    define('PAGE_TITLE', 'Curation history for variant #' . $nID);
+    $_T->printHeader();
+    $_T->printTitle();
+    $_GET['page_size'] = 10;
+    $_GET['search_event'] = 'VariantCuration';
+    $_GET['search_entry_'] = '"variant #' . $nID . '"';
+    require_once ROOT_PATH . 'class/object_logs.php';
+    $_DATA = new LOVD_Log();
+    $_DATA->viewList('Logs_for_curation_data', array('name', 'event', 'del'), true);
+    unset($_GET['page_size'], $_GET['search_event'], $_GET['search_entry_']);
     $_T->printFooter();
     exit;
 }
