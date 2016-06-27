@@ -2904,20 +2904,37 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && ACTION == 'curate') {
         $_DATA['Genome']->checkFields($_POST);
 
         if (!lovd_error()) {
+            // Setup logging to show any changes to the curation data.
+            $sCurationLog = '';
+            if ($zData['effectid']{0} != $_POST['effect_reported']) {
+            $sCurationLog .= 'Effect reported: "' . $_SETT['var_effect'][$zData['effectid']{0}] . '" => "' . $_SETT['var_effect'][$_POST['effect_reported']] . '"' . "\n";
+            }
+            if ($zData['effectid']{1} != ($_AUTH['level'] >= LEVEL_CURATOR? $_POST['effect_concluded'] : substr($_SETT['var_effect_default'], -1))) {
+            $sCurationLog .= 'Effect concluded: "' . $_SETT['var_effect'][$zData['effectid']{1}] . '" => "' . $_SETT['var_effect'][($_AUTH['level'] >= LEVEL_CURATOR? $_POST['effect_concluded'] : substr($_SETT['var_effect_default'], -1))] . '"' . "\n";
+            }
+            if (trim($zData['VariantOnGenome/Remarks']) != trim($zData['VariantOnGenome/Remarks'])) {
+            $sCurationLog .= 'VariantOnGenome/Remarks: "' . (!trim($zData['VariantOnGenome/Remarks'])? '<empty>' : str_replace(array("\r", "\n", "\t"), array('\r', '\n', '\t'), $zData['VariantOnGenome/Remarks'])) . '" => "' . (!trim($_POST['VariantOnGenome/Remarks'])? '<empty>' : str_replace(array("\r", "\n", "\t"), array('\r', '\n', '\t'), $_POST['VariantOnGenome/Remarks'])) . '"' . "\n";
+            }
+
             // Manual query, because updateEntry() empties the whole VOG.
             $_DB->query('UPDATE ' . TABLE_VARIANTS . ' SET `VariantOnGenome/Remarks` = ? WHERE id = ?', array($_POST['VariantOnGenome/Remarks'], $nID), true, true);
 
             $_DB->query('UPDATE ' . TABLE_VARIANTS . ' SET `effectid` = ? WHERE id = ?', array($_POST['effect_reported'] . ($_AUTH['level'] >= LEVEL_CURATOR? $_POST['effect_concluded'] : substr($_SETT['var_effect_default'], -1)), $nID), true, true);   // todo: for MGHA, do we need the AUTH check here?
 
-            foreach( $_POST as $sCol => $val ) {
+            foreach($_POST as $sCol => $val) {
                 if (strpos($sCol, 'VariantOnGenome/Curation/') !== false) {
-                       $_DB->query('UPDATE ' . TABLE_VARIANTS . " SET `" . $sCol . "` = ? WHERE id = ?", array( $val, $nID), true, true);
+                    $_DB->query('UPDATE ' . TABLE_VARIANTS . " SET `" . $sCol . "` = ? WHERE id = ?", array( $val, $nID), true, true);
+                    if (trim($zData[$sCol]) != trim($_POST[$sCol])) {
+                        // Log any changes to these custom curation columns.
+                        $sCurationLog .= $sCol . ': "' . (!trim($zData[$sCol])? '<empty>' : str_replace(array("\r", "\n", "\t"), array('\r', '\n', '\t'), $zData[$sCol])) . '" => "' . (!trim($_POST[$sCol])? '<empty>' : str_replace(array("\r", "\n", "\t"), array('\r', '\n', '\t'), $_POST[$sCol])) . '"' . "\n";
+                    }
                 }
             }
 
-
-            // Write to log...
-            lovd_writeLog('Event', LOG_EVENT, 'Edited remarks for variant entry ' . $nID . ' - ' . (!trim($_POST['VariantOnGenome/Remarks'])? '<empty>' : str_replace(array("\r", "\n", "\t"), array('\r', '\n', '\t'), $_POST['VariantOnGenome/Remarks'])));
+            if ($sCurationLog) {
+                // Write to log if any changes were detected.
+                lovd_writeLog('Event', LOG_EVENT, 'Curated variant #' . $nID . "\n" . $sCurationLog);
+            }
 
             // Thank the user...
             header('Location: ' . lovd_getInstallURL() . CURRENT_PATH . (isset($_GET['in_window'])? '?&in_window' : ''));
