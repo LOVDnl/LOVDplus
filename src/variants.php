@@ -464,10 +464,8 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && !ACTION) {
         if (!LOVD_plus) {
             $aNavigation[CURRENT_PATH . '?edit']       = array('menu_edit.png', 'Edit variant entry', 1);
         }
-     //   $aNavigation[CURRENT_PATH . '?edit_remarks' . (isset($_GET['in_window'])? '&amp;in_window' : '')] = array('menu_edit.png', 'Edit remarks', 1);
         $aNavigation[CURRENT_PATH . '?curate' . (isset($_GET['in_window'])? '&amp;in_window' : '')] = array('menu_edit.png', 'Curate this variant', 1);
         $aNavigation['javascript:lovd_openWindow(\'' . lovd_getInstallURL() . CURRENT_PATH . '?curation_log&in_window\', \'curation_log\', 1050, 450);'] = array('menu_clock.png', 'Show curation history', 1);
-
         if ($zData['statusid'] < STATUS_OK && $_AUTH['level'] >= LEVEL_CURATOR) {
             $aNavigation[CURRENT_PATH . '?publish'] = array('check.png', ($zData['statusid'] == STATUS_MARKED ? 'Remove mark from' : 'Publish (curate)') . ' variant entry', 1);
         }
@@ -2872,7 +2870,7 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && in_array(ACTION, array('edit', 'p
 
 if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && ACTION == 'curate') {
     // URL: /variants/0000000001?curate
-    // Edit the remarks of an entry, hide all other fields.
+    // Edit the curation data for an entry, hide all other fields.
 
     $nID = sprintf('%010d', $_PE[1]);
     define('PAGE_TITLE', 'Curate variant entry #' . $nID);
@@ -2919,19 +2917,24 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && ACTION == 'curate') {
             }
 
             // Manual query, because updateEntry() empties the whole VOG.
-            $_DB->query('UPDATE ' . TABLE_VARIANTS . ' SET `VariantOnGenome/Remarks` = ? WHERE id = ?', array($_POST['VariantOnGenome/Remarks'], $nID), true, true);
-
-            $_DB->query('UPDATE ' . TABLE_VARIANTS . ' SET `effectid` = ? WHERE id = ?', array($_POST['effect_reported'] . ($_AUTH['level'] >= LEVEL_CURATOR? $_POST['effect_concluded'] : substr($_SETT['var_effect_default'], -1)), $nID), true, true);   // todo: for MGHA, do we need the AUTH check here?
+            $sSQL = 'UPDATE ' . TABLE_VARIANTS . ' SET `VariantOnGenome/Remarks` = ?, `effectid` = ?';
+            $aSQL = array($_POST['VariantOnGenome/Remarks'], $_POST['effect_reported'] . ($_AUTH['level'] >= LEVEL_CURATOR? $_POST['effect_concluded'] : substr($_SETT['var_effect_default'], -1)));
 
             foreach($_POST as $sCol => $val) {
+                // Process any of the curation custom columns.
                 if (strpos($sCol, 'VariantOnGenome/Curation/') !== false) {
-                    $_DB->query('UPDATE ' . TABLE_VARIANTS . " SET `" . $sCol . "` = ? WHERE id = ?", array( $val, $nID), true, true);
+                    $sSQL .= ', `' . $sCol . '` = ?';
+                    $aSQL[] = $val;
                     if (trim($zData[$sCol]) != trim($_POST[$sCol])) {
                         // Log any changes to these custom curation columns.
                         $sCurationLog .= $sCol . ': "' . (!trim($zData[$sCol])? '<empty>' : str_replace(array("\r", "\n", "\t"), array('\r', '\n', '\t'), $zData[$sCol])) . '" => "' . (!trim($_POST[$sCol])? '<empty>' : str_replace(array("\r", "\n", "\t"), array('\r', '\n', '\t'), $_POST[$sCol])) . '"' . "\n";
                     }
                 }
             }
+
+            $sSQL .= ' WHERE id = ?';
+            $aSQL[] = $nID;
+            $_DB->query($sSQL, array_values($aSQL), true, true);
 
             if ($sCurationLog) {
                 // Write to log if any changes were detected.

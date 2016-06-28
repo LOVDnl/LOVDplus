@@ -56,7 +56,7 @@ class LOVD_GenomeVariant extends LOVD_Custom {
         // Remove all except the remarks.
         $aFormFiltered = array();
 
-        foreach( $aForm as $sCol => $val ) {
+        foreach($aForm as $sCol => $val) {
             if (strpos($sCol, 'VariantOnGenome/Curation/') !== false) {
                 $aFormFiltered[$sCol] = $aForm[$sCol];
             }
@@ -65,7 +65,6 @@ class LOVD_GenomeVariant extends LOVD_Custom {
         if (isset($aForm['VariantOnGenome/Remarks'])) {
             $aFormFiltered['VariantOnGenome/Remarks'] = $aForm['VariantOnGenome/Remarks'];
         }
-
         return $aFormFiltered;
     }
 
@@ -100,7 +99,7 @@ class LOVD_GenomeVariant extends LOVD_Custom {
                  array(
                         array('POST', '', '', '', '50%', '14', '50%'),
                         array('Affects function (reported)', '', 'select', 'effect_reported', 1, $_SETT['var_effect'], false, false, false),
-                        'effect' => array('Affects function (concluded)', '', 'select', 'effect_concluded', 1, $_SETT['var_effect'], false, false, false)
+                        array('Affects function (concluded)', '', 'select', 'effect_concluded', 1, $_SETT['var_effect'], false, false, false)
                       ),
                  $this->buildForm());
 
