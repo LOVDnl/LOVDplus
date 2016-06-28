@@ -468,6 +468,8 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && !ACTION) {
         if (!LOVD_plus) {
             $aNavigation[CURRENT_PATH . '?edit']       = array('menu_edit.png', 'Edit variant entry', 1);
         }
+        $aNavigation[CURRENT_PATH . '?curate' . (isset($_GET['in_window'])? '&amp;in_window' : '')] = array('menu_edit.png', 'Curate this variant', 1);
+        $aNavigation['javascript:lovd_openWindow(\'' . lovd_getInstallURL() . CURRENT_PATH . '?curation_log&in_window\', \'curation_log\', 1050, 450);'] = array('menu_clock.png', 'Show curation history', 1);
         // Menu items for setting the curation status.
         foreach ($_SETT['curation_status'] as $nCurationStatusID => $sCurationStatus) {
             $aCurationStatusMenu['javascript:$.get(\'ajax/set_curation_status.php?' . $nCurationStatusID . '&id=' . $nID . '\', function(sResponse){if(sResponse.substring(0,1) == \'1\'){alert(\'Successfully set curation status of this variant to \\\'' . $sCurationStatus . '\\\'.\');window.location.reload();' . (!isset($_GET['in_window'])? '' : 'window.opener.lovd_AJAX_viewListSubmit(\'CustomVL_AnalysisRunResults_for_I_VE\');window.opener.lovd_AJAX_viewEntryLoad();') . '}else if(sResponse.substring(0,1) == \'9\'){alert(\'Error: \' + sResponse.substring(2));}}).error(function(){alert(\'Error while setting curation status.\');});'] = array('menu_edit.png', $sCurationStatus);
@@ -2910,13 +2912,13 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && in_array(ACTION, array('edit', 'p
 
 
 
-if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && ACTION == 'edit_remarks') {
-    // URL: /variants/0000000001?edit_remarks
-    // Edit the remarks of an entry, hide all other fields.
+if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && ACTION == 'curate') {
+    // URL: /variants/0000000001?curate
+    // Edit the curation data for an entry, hide all other fields.
 
     $nID = sprintf('%010d', $_PE[1]);
-    define('PAGE_TITLE', 'Edit remarks for variant entry #' . $nID);
-    define('LOG_EVENT', 'VariantRemarksEdit');
+    define('PAGE_TITLE', 'Curate variant entry #' . $nID);
+    define('LOG_EVENT', 'VariantCuration');
 
     lovd_isAuthorized('variant', $nID);
     lovd_requireAUTH(LEVEL_OWNER);
@@ -2946,11 +2948,42 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && ACTION == 'edit_remarks') {
         $_DATA['Genome']->checkFields($_POST);
 
         if (!lovd_error()) {
-            // Manual query, because updateEntry() empties the whole VOG.
-            $_DB->query('UPDATE ' . TABLE_VARIANTS . ' SET `VariantOnGenome/Remarks` = ? WHERE id = ?', array($_POST['VariantOnGenome/Remarks'], $nID), true, true);
+            // Setup logging to show any changes to the curation data.
+            $sCurationLog = '';
+            if ($zData['effectid']{0} != $_POST['effect_reported']) {
+            $sCurationLog .= 'Effect reported: "' . $_SETT['var_effect'][$zData['effectid']{0}] . '" => "' . $_SETT['var_effect'][$_POST['effect_reported']] . '"' . "\n";
+            }
+            if ($zData['effectid']{1} != ($_AUTH['level'] >= LEVEL_CURATOR? $_POST['effect_concluded'] : substr($_SETT['var_effect_default'], -1))) {
+            $sCurationLog .= 'Effect concluded: "' . $_SETT['var_effect'][$zData['effectid']{1}] . '" => "' . $_SETT['var_effect'][($_AUTH['level'] >= LEVEL_CURATOR? $_POST['effect_concluded'] : substr($_SETT['var_effect_default'], -1))] . '"' . "\n";
+            }
+            if (trim($zData['VariantOnGenome/Remarks']) != trim($zData['VariantOnGenome/Remarks'])) {
+            $sCurationLog .= 'VariantOnGenome/Remarks: "' . (!trim($zData['VariantOnGenome/Remarks'])? '<empty>' : str_replace(array("\r", "\n", "\t"), array('\r', '\n', '\t'), $zData['VariantOnGenome/Remarks'])) . '" => "' . (!trim($_POST['VariantOnGenome/Remarks'])? '<empty>' : str_replace(array("\r", "\n", "\t"), array('\r', '\n', '\t'), $_POST['VariantOnGenome/Remarks'])) . '"' . "\n";
+            }
 
-            // Write to log...
-            lovd_writeLog('Event', LOG_EVENT, 'Edited remarks for variant entry ' . $nID . ' - ' . (!trim($_POST['VariantOnGenome/Remarks'])? '<empty>' : str_replace(array("\r", "\n", "\t"), array('\r', '\n', '\t'), $_POST['VariantOnGenome/Remarks'])));
+            // Manual query, because updateEntry() empties the whole VOG.
+            $sSQL = 'UPDATE ' . TABLE_VARIANTS . ' SET `VariantOnGenome/Remarks` = ?, `effectid` = ?';
+            $aSQL = array($_POST['VariantOnGenome/Remarks'], $_POST['effect_reported'] . ($_AUTH['level'] >= LEVEL_CURATOR? $_POST['effect_concluded'] : substr($_SETT['var_effect_default'], -1)));
+
+            foreach($_POST as $sCol => $val) {
+                // Process any of the curation custom columns.
+                if (strpos($sCol, 'VariantOnGenome/Curation/') !== false) {
+                    $sSQL .= ', `' . $sCol . '` = ?';
+                    $aSQL[] = $val;
+                    if (trim($zData[$sCol]) != trim($_POST[$sCol])) {
+                        // Log any changes to these custom curation columns.
+                        $sCurationLog .= $sCol . ': "' . (!trim($zData[$sCol])? '<empty>' : str_replace(array("\r", "\n", "\t"), array('\r', '\n', '\t'), $zData[$sCol])) . '" => "' . (!trim($_POST[$sCol])? '<empty>' : str_replace(array("\r", "\n", "\t"), array('\r', '\n', '\t'), $_POST[$sCol])) . '"' . "\n";
+                    }
+                }
+            }
+
+            $sSQL .= ' WHERE id = ?';
+            $aSQL[] = $nID;
+            $_DB->query($sSQL, array_values($aSQL), true, true);
+
+            if ($sCurationLog) {
+                // Write to log if any changes were detected.
+                lovd_writeLog('Event', LOG_EVENT, 'Curated variant #' . $nID . "\n" . $sCurationLog);
+            }
 
             // Thank the user...
             header('Location: ' . lovd_getInstallURL() . CURRENT_PATH . (isset($_GET['in_window'])? '?&in_window' : ''));
@@ -2966,6 +2999,8 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && ACTION == 'edit_remarks') {
         foreach ($zData as $key => $val) {
             $_POST[$key] = $val;
         }
+        $_POST['effect_reported'] = $zData['effectid']{0};
+        $_POST['effect_concluded'] = $zData['effectid']{1};
     }
 
 
@@ -3477,6 +3512,29 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && ACTION == 'curation_status_log') 
     require_once ROOT_PATH . 'class/object_logs.php';
     $_DATA = new LOVD_Log();
     $_DATA->viewList('Logs_for_curation_status', array('name', 'event', 'del'), true);
+    unset($_GET['page_size'], $_GET['search_event'], $_GET['search_entry_']);
+    $_T->printFooter();
+    exit;
+}
+
+
+
+
+
+if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && ACTION == 'curation_log') {
+    // URL: /variants/0000000001?curation_log
+    // Show the logs for the changes of curation data for this variant.
+
+    $nID = sprintf('%010d', $_PE[1]);
+    define('PAGE_TITLE', 'Curation history for variant #' . $nID);
+    $_T->printHeader();
+    $_T->printTitle();
+    $_GET['page_size'] = 10;
+    $_GET['search_event'] = 'VariantCuration';
+    $_GET['search_entry_'] = '"variant #' . $nID . '"';
+    require_once ROOT_PATH . 'class/object_logs.php';
+    $_DATA = new LOVD_Log();
+    $_DATA->viewList('Logs_for_curation_data', array('name', 'event', 'del'), true);
     unset($_GET['page_size'], $_GET['search_event'], $_GET['search_entry_']);
     $_T->printFooter();
     exit;
