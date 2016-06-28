@@ -4,7 +4,7 @@
  * LEIDEN OPEN VARIATION DATABASE (LOVD)
  *
  * Created     : 2010-01-13
- * Modified    : 2013-05-13
+ * Modified    : 2016-06-08
  * For LOVD    : 3.0-05
  *
  * Copyright   : 2004-2013 Leiden University Medical Center; http://www.LUMC.nl/
@@ -150,12 +150,7 @@ if (!empty($_POST)) {
                 }
             }
             $nTables = count($aTables);
-            // FIXME. remove later when TABLE_PATHOGENIC and TABLE_HITS are exterminated in all LOVD installations.
-            //print('  Found ' . $nTables . '/' . count($_TABLES) . ' tables.' . "\n");
-            $_TABLES_cleaned = $_TABLES;
-            unset($_TABLES_cleaned['TABLE_PATHOGENIC']);
-            unset($_TABLES_cleaned['TABLE_HITS']);
-            print('  Found ' . $nTables . '/' . count($_TABLES_cleaned) . ' tables.' . "\n");
+            print('  Found ' . $nTables . '/' . count($_TABLES) . ' tables.' . "\n");
 
             // FIXME; add more later.
             // General statistics...

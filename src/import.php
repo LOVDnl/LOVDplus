@@ -4,8 +4,8 @@
  * LEIDEN OPEN VARIATION DATABASE (LOVD)
  *
  * Created     : 2012-09-19
- * Modified    : 2016-03-03
- * For LOVD    : 3.0-15
+ * Modified    : 2016-05-26
+ * For LOVD    : 3.0-16
  *
  * Copyright   : 2004-2016 Leiden University Medical Center; http://www.LUMC.nl/
  * Programmer  : Ing. Ivo F.A.C. Fokkema <I.F.A.C.Fokkema@LUMC.nl>
@@ -34,6 +34,7 @@ define('TAB_SELECTED', 'setup');
 require ROOT_PATH . 'inc-init.php';
 ini_set('auto_detect_line_endings', true); // So we can work with Mac files also...
 set_time_limit(0); // Disable time limit, parsing may take a long time.
+session_write_close(); // Also don't care about the session (in fact, it locks the whole LOVD while this page is running).
 ini_set('memory_limit', '4294967296'); // 4GB.
 
 // FIXME: How do we implement authorization? First parse everything, THEN using the parsed data we check if user has rights to insert this data?
@@ -222,7 +223,7 @@ if (ACTION == 'autoupload_scheduled_file' && PATH_COUNT == 1 && FORMAT == 'text/
 
     // This should not happen (we already checked if there was something to do), but just in case...
     if (!$sFile) {
-        die(':Error: Failed to retrieved filename from database.' . "\n");
+        die(':Error: Failed to retrieve a filename from the database.' . "\n");
     }
 
     // Load necessary authorisation.
@@ -248,6 +249,9 @@ if (ACTION == 'autoupload_scheduled_file' && PATH_COUNT == 1 && FORMAT == 'text/
 
     print(':Preparing to upload ' . $sFile . ' into database...' . "\n" .
           ':Current time: ' . date('Y-m-d H:i:s.') . "\n");
+
+    // If we're running automatically, ignore user aborts (dying caller script).
+    ignore_user_abort(true);
 }
 
 
@@ -1750,9 +1754,20 @@ if (!lovd_isCurator($_SESSION['currdb'])) {
                 lovd_writeLog('Event', LOG_EVENT, 'Imported ' . $sMessage . '; ran ' . $nDone . ' queries' . (!$aGenes? '' : ' (' . ($nGenes > 100? $nGenes . ' genes' : implode(', ', $aGenes)) . ')') . (ACTION != 'autoupload_scheduled_file' || !$sFile? '' : ' (' . $sFile . ')') . '.');
                 lovd_setUpdatedDate($aGenes); // FIXME; regardless of variant status... oh, well...
 
-                // DIAGNOSTICS: Remove the lock.
-                if (ACTION == 'autoupload_scheduled_file' && $sFile) {
-                    $_DB->query('DELETE FROM ' . TABLE_SCHEDULED_IMPORTS . ' WHERE filename = ? AND in_progress = 1', array($sFile));
+                if (LOVD_plus) {
+                    // Tasks for LOVD+, LOVD for diagnostics.
+                    if (ACTION == 'autoupload_scheduled_file' && $sFile) {
+                        // Remove the file from the schedule.
+                        $_DB->query('DELETE FROM ' . TABLE_SCHEDULED_IMPORTS . ' WHERE filename = ? AND in_progress = 1', array($sFile));
+
+                        // Also, if we have an archive folder, move it there, including all its sibling files.
+                        if (is_writable($_INI['paths']['data_files_archive'])) {
+                            $sFilePrefix = $sFilePrefix = substr($sFile, 0, strpos($sFile . '.', '.'));
+                            // Doing this the proper PHP way, would be to open the dir, loop the files, find matching files, and then rename them one by one.
+                            // Instead, I'm doing this in a Linux-specific way, by just calling a simple mv command.
+                            @exec('mv -i ' . $_INI['paths']['data_files'] . '/' . $sFilePrefix . '.* ' . $_INI['paths']['data_files_archive'] . '/');
+                        }
+                    }
                 }
             }
             // FIXME: Why is this not empty?

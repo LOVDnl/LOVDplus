@@ -4,8 +4,8 @@
  * LEIDEN OPEN VARIATION DATABASE (LOVD)
  *
  * Created     : 2014-11-28
- * Modified    : 2016-04-15
- * For LOVD+   : 3.0-15
+ * Modified    : 2016-06-03
+ * For LOVD+   : 3.0-16
  *
  * Copyright   : 2004-2016 Leiden University Medical Center; http://www.LUMC.nl/
  * Programmer  : Ing. Ivo F.A.C. Fokkema <I.F.A.C.Fokkema@LUMC.nl>
@@ -879,6 +879,15 @@ $aColumnMappings = array(
     'Grantham' => 'VariantOnTranscript/Prediction/Grantham',
     'INDB_COUNT_UG' => 'VariantOnGenome/InhouseDB/Count/UG',
     'INDB_COUNT_HC' => 'VariantOnGenome/InhouseDB/Count/HC',
+    'GLOBAL_VN' => 'VariantOnGenome/InhouseDB/Position/Global/Samples_with_coverage',
+    'GLOBAL_VF_HET' => 'VariantOnGenome/InhouseDB/Count/Global/Heterozygotes',
+    'GLOBAL_VF_HOM' => 'VariantOnGenome/InhouseDB/Count/Global/Homozygotes',
+    'WITHIN_PANEL_VN' => 'VariantOnGenome/InhouseDB/Position/InPanel/Samples_with_coverage',
+    'WITHIN_PANEL_VF_HET' => 'VariantOnGenome/InhouseDB/Count/InPanel/Heterozygotes',
+    'WITHIN_PANEL_VF_HOM' => 'VariantOnGenome/InhouseDB/Count/InPanel/Homozygotes',
+    'OUTSIDE_PANEL_VN' => 'VariantOnGenome/InhouseDB/Position/OutOfPanel/Samples_with_coverage',
+    'OUTSIDE_PANEL_VF_HET' => 'VariantOnGenome/InhouseDB/Count/OutOfPanel/Heterozygotes',
+    'OUTSIDE_PANEL_VF_HOM' => 'VariantOnGenome/InhouseDB/Count/OutOfPanel/Homozygotes',
     'AF1000G' => 'VariantOnGenome/Frequency/1000G',
     'rsID' => 'VariantOnGenome/dbSNP',
     'AFESP5400' => 'VariantOnGenome/Frequency/EVS', // Will be divided by 100 later.
@@ -896,6 +905,8 @@ $aColumnMappings = array(
     'scorePhastCons' => 'VariantOnGenome/Conservation_score/Phast',
     'GT_Child' => 'allele',
     'GT_Patient' => 'allele',
+    'GQ_Child' => 'VariantOnGenome/Sequencing/GenoType/Quality',
+    'GQ_Patient' => 'VariantOnGenome/Sequencing/GenoType/Quality',
     'DP_Child' => 'VariantOnGenome/Sequencing/Depth/Total',
     'DP_Patient' => 'VariantOnGenome/Sequencing/Depth/Total',
     'DPREF_Child' => 'VariantOnGenome/Sequencing/Depth/Ref',
@@ -905,10 +916,12 @@ $aColumnMappings = array(
     'ALTPERC_Child' => 'VariantOnGenome/Sequencing/Depth/Alt/Fraction', // Will be divided by 100 later.
     'ALTPERC_Patient' => 'VariantOnGenome/Sequencing/Depth/Alt/Fraction', // Will be divided by 100 later.
     'GT_Father' => 'VariantOnGenome/Sequencing/Father/GenoType',
+    'GQ_Father' => 'VariantOnGenome/Sequencing/Father/GenoType/Quality',
     'DP_Father' => 'VariantOnGenome/Sequencing/Father/Depth/Total',
     'ALTPERC_Father' => 'VariantOnGenome/Sequencing/Father/Depth/Alt/Fraction', // Will be divided by 100 later.
     'ISPRESENT_Father' => 'VariantOnGenome/Sequencing/Father/VarPresent',
     'GT_Mother' => 'VariantOnGenome/Sequencing/Mother/GenoType',
+    'GQ_Mother' => 'VariantOnGenome/Sequencing/Mother/GenoType/Quality',
     'DP_Mother' => 'VariantOnGenome/Sequencing/Mother/Depth/Total',
     'ALTPERC_Mother' => 'VariantOnGenome/Sequencing/Mother/Depth/Alt/Fraction', // Will be divided by 100 later.
     'ISPRESENT_Mother' => 'VariantOnGenome/Sequencing/Mother/VarPresent',
@@ -1082,7 +1095,7 @@ function lovd_getVariantPosition ($sVariant, $aTranscript = array())
         'end_intron' => 0,
     );
 
-    if (preg_match('/^[cgmn]\.((?:\-|\*)?\d+)([-+]\d+)?(?:[ACGT]>[ACGT]|(?:_((?:\-|\*)?\d+)([-+]\d+)?)?(?:d(?:el(?:ins)?|up)|inv|ins)(?:[ACGT])*|\[[0-9]+\])$/', $sVariant, $aRegs)) {
+    if (preg_match('/^[cgmn]\.((?:\-|\*)?\d+)([-+]\d+)?(?:[ACGT]>[ACGT]|(?:_((?:\-|\*)?\d+)([-+]\d+)?)?(?:d(?:el(?:ins)?|up)|inv|ins)(?:[ACGT])*|\[[0-9]+\](?:[ACGT]+)?)$/', $sVariant, $aRegs)) {
         foreach (array(1, 3) as $i) {
             if (isset($aRegs[$i]) && $aRegs[$i]{0} == '*') {
                 // Position in 3'UTR. Add CDS offset.
@@ -1463,7 +1476,7 @@ foreach ($aFiles as $sID) {
         }
 
         // Fixing some other VOG fields.
-        foreach (array('VariantOnGenome/Sequencing/Father/GenoType', 'VariantOnGenome/Sequencing/Mother/GenoType') as $sCol) {
+        foreach (array('VariantOnGenome/Sequencing/Father/GenoType', 'VariantOnGenome/Sequencing/Father/GenoType/Quality', 'VariantOnGenome/Sequencing/Mother/GenoType', 'VariantOnGenome/Sequencing/Mother/GenoType/Quality') as $sCol) {
             if ($aVariant[$sCol] && $aVariant[$sCol] == 'None') {
                 $aVariant[$sCol] = '';
             }

@@ -46,6 +46,9 @@ table_prefix = lovd
 # The following path contains data files to load into LOVD+.
 data_files =
 
+# The following path is where LOVD+ will write imported files to.
+data_files_archive =
+
 # The following path contains alternative IDs for the patients in the database.
 alternative_ids =
 

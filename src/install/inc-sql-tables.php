@@ -272,6 +272,7 @@ $aTableSQL =
     created_date DATETIME NOT NULL,
     edited_by SMALLINT(5) UNSIGNED ZEROFILL,
     edited_date DATETIME,
+    custom_panel TEXT NOT NULL,
 
     id_miracle BIGINT UNSIGNED,
     id_zis MEDIUMINT UNSIGNED,
@@ -364,7 +365,7 @@ $aTableSQL =
 //   'CREATE TABLE ' . TABLE_VARIANTS_REV . ' (
 //    id INT(10) UNSIGNED ZEROFILL NOT NULL AUTO_INCREMENT,
 //    allele TINYINT(2) UNSIGNED NOT NULL,
-//    pathogenicid TINYINT(2) UNSIGNED ZEROFILL,
+//    effectid TINYINT(2) UNSIGNED ZEROFILL,
 //    chromosome VARCHAR(2) NOT NULL,
 //    position_g_start INT(10) UNSIGNED,
 //    position_g_end INT(10) UNSIGNED,
@@ -379,13 +380,13 @@ $aTableSQL =
 //    PRIMARY KEY (id, valid_from),
 //    INDEX (valid_to),
 //    INDEX (allele),
-//    INDEX (pathogenicid),
+//    INDEX (effectid),
 //    INDEX (chromosome, position_g_start, position_g_end),
 //    INDEX (owned_by),
 //    INDEX (statusid),
 //    INDEX (edited_by),
 //    INDEX (deleted_by),
-//    CONSTRAINT ' . TABLE_VARIANTS . '_fk_pathogenicid FOREIGN KEY (pathogenicid) REFERENCES ' . TABLE_PATHOGENIC . ' (id) ON DELETE SET NULL ON UPDATE CASCADE,
+//    CONSTRAINT ' . TABLE_VARIANTS . '_fk_effectid FOREIGN KEY (effectid) REFERENCES ' . TABLE_ALLELES . ' (id) ON DELETE SET NULL ON UPDATE CASCADE,
 //    CONSTRAINT ' . TABLE_VARIANTS . '_fk_owned_by FOREIGN KEY (owned_by) REFERENCES ' . TABLE_USERS . ' (id) ON DELETE SET NULL ON UPDATE CASCADE,
 //    CONSTRAINT ' . TABLE_VARIANTS . '_fk_statusid FOREIGN KEY (statusid) REFERENCES ' . TABLE_DATA_STATUS . ' (id) ON DELETE SET NULL ON UPDATE CASCADE,
 //    CONSTRAINT ' . TABLE_VARIANTS . '_fk_edited_by FOREIGN KEY (edited_by) REFERENCES ' . TABLE_USERS . ' (id) ON DELETE SET NULL ON UPDATE CASCADE,
@@ -415,7 +416,7 @@ $aTableSQL =
 //   'CREATE TABLE ' . TABLE_VARIANTS_ON_TRANSCRIPTS_REV . ' (
 //    id INT(10) UNSIGNED ZEROFILL NOT NULL,
 //    transcriptid SMALLINT(5) UNSIGNED ZEROFILL NOT NULL,
-//    pathogenicid TINYINT(2) UNSIGNED ZEROFILL,
+//    effectid TINYINT(2) UNSIGNED ZEROFILL,
 //    position_c_start MEDIUMINT(8),
 //    position_c_start_intron INT(10),
 //    position_c_end MEDIUMINT(8),
@@ -423,12 +424,12 @@ $aTableSQL =
 //    valid_from DATETIME NOT NULL,
 //    PRIMARY KEY (id, valid_from, transcriptid),
 //    INDEX (transcriptid),
-//    INDEX (pathogenicid),
+//    INDEX (effectid),
 //    INDEX (position_c_start, position_c_end),
 //    INDEX (position_c_start, position_c_start_intron, position_c_end, position_c_end_intron),
 //    CONSTRAINT ' . TABLE_VARIANTS_ON_TRANSCRIPTS . '_fk_id FOREIGN KEY (id) REFERENCES ' . TABLE_VARIANTS . ' (id) ON DELETE CASCADE ON UPDATE CASCADE,
 //    CONSTRAINT ' . TABLE_VARIANTS_ON_TRANSCRIPTS . '_fk_transcriptid FOREIGN KEY (transcriptid) REFERENCES ' . TABLE_TRANSCRIPTS . ' (id) ON DELETE CASCADE ON UPDATE CASCADE,
-//    CONSTRAINT ' . TABLE_VARIANTS_ON_TRANSCRIPTS . '_fk_pathogenicid FOREIGN KEY (pathogenicid) REFERENCES ' . TABLE_PATHOGENIC . ' (id) ON DELETE SET NULL ON UPDATE CASCADE)
+//    CONSTRAINT ' . TABLE_VARIANTS_ON_TRANSCRIPTS . '_fk_effectid FOREIGN KEY (effectid) REFERENCES ' . TABLE_ALLELES . ' (id) ON DELETE SET NULL ON UPDATE CASCADE)
 //    ' . $sSettings
 
          , 'TABLE_PHENOTYPES' =>
@@ -742,83 +743,6 @@ $aTableSQL =
 
 
 
-        , 'TABLE_ANALYSES' =>
-   'CREATE TABLE ' . TABLE_ANALYSES . ' (
-    id TINYINT(3) UNSIGNED ZEROFILL NOT NULL AUTO_INCREMENT,
-    sortid TINYINT(3) UNSIGNED NOT NULL,
-    name VARCHAR(50) NOT NULL,
-    description TEXT NOT NULL,
-    filters TEXT NOT NULL,
-    created_by SMALLINT(5) UNSIGNED ZEROFILL,
-    created_date DATETIME NOT NULL,
-    edited_by SMALLINT(5) UNSIGNED ZEROFILL,
-    edited_date DATETIME,
-    PRIMARY KEY (id),
-    INDEX (created_by),
-    INDEX (edited_by),
-    CONSTRAINT ' . TABLE_ANALYSES . '_fk_created_by FOREIGN KEY (created_by) REFERENCES ' . TABLE_USERS . ' (id) ON DELETE SET NULL ON UPDATE CASCADE,
-    CONSTRAINT ' . TABLE_ANALYSES . '_fk_edited_by FOREIGN KEY (edited_by) REFERENCES ' . TABLE_USERS . ' (id) ON DELETE SET NULL ON UPDATE CASCADE)
-    ' . $sSettings
-
-        , 'TABLE_ANALYSES_RUN' =>
-   'CREATE TABLE ' . TABLE_ANALYSES_RUN . ' (
-    id SMALLINT(5) UNSIGNED ZEROFILL NOT NULL AUTO_INCREMENT,
-    analysisid TINYINT(3) UNSIGNED ZEROFILL,
-    screeningid INT(10) UNSIGNED ZEROFILL NOT NULL,
-    modified BOOLEAN NOT NULL,
-    created_by SMALLINT(5) UNSIGNED ZEROFILL,
-    created_date DATETIME NOT NULL,
-    PRIMARY KEY (id),
-    INDEX (screeningid),
-    INDEX (created_by),
-    CONSTRAINT ' . TABLE_ANALYSES_RUN . '_fk_analysisid FOREIGN KEY (analysisid) REFERENCES ' . TABLE_ANALYSES . ' (id) ON DELETE SET NULL ON UPDATE CASCADE,
-    CONSTRAINT ' . TABLE_ANALYSES_RUN . '_fk_screeningid FOREIGN KEY (screeningid) REFERENCES ' . TABLE_SCREENINGS . ' (id) ON DELETE CASCADE ON UPDATE CASCADE,
-    CONSTRAINT ' . TABLE_ANALYSES_RUN . '_fk_created_by FOREIGN KEY (created_by) REFERENCES ' . TABLE_USERS . ' (id) ON DELETE SET NULL ON UPDATE CASCADE)
-    ' . $sSettings
-
-        , 'TABLE_ANALYSES_RUN_FILTERS' =>
-   'CREATE TABLE ' . TABLE_ANALYSES_RUN_FILTERS . ' (
-    runid SMALLINT(5) UNSIGNED ZEROFILL NOT NULL,
-    filterid VARCHAR(50) NOT NULL,
-    filter_order TINYINT UNSIGNED NOT NULL,
-    filtered_out MEDIUMINT UNSIGNED,
-    run_time TINYINT UNSIGNED,
-    PRIMARY KEY (runid, filterid),
-    UNIQUE (runid, filter_order),
-    INDEX (filterid),
-    CONSTRAINT ' . TABLE_ANALYSES_RUN_FILTERS . '_fk_runid FOREIGN KEY (runid) REFERENCES ' . TABLE_ANALYSES_RUN . ' (id) ON DELETE CASCADE ON UPDATE CASCADE)
-    ' . $sSettings
-
-        , 'TABLE_ANALYSES_RUN_RESULTS' =>
-   'CREATE TABLE ' . TABLE_ANALYSES_RUN_RESULTS . ' (
-    runid SMALLINT(5) UNSIGNED ZEROFILL NOT NULL,
-    variantid INT(10) UNSIGNED ZEROFILL NOT NULL,
-    PRIMARY KEY (runid, variantid),
-    INDEX (runid),
-    INDEX (variantid),
-    CONSTRAINT ' . TABLE_ANALYSES_RUN_RESULTS . '_fk_runid FOREIGN KEY (runid) REFERENCES ' . TABLE_ANALYSES_RUN . ' (id) ON DELETE CASCADE ON UPDATE CASCADE,
-    CONSTRAINT ' . TABLE_ANALYSES_RUN_RESULTS . '_fk_variantid FOREIGN KEY (variantid) REFERENCES ' . TABLE_VARIANTS . ' (id) ON DELETE CASCADE ON UPDATE CASCADE)
-    ' . $sSettings
-
-        , 'TABLE_SCHEDULED_IMPORTS' =>
-   'CREATE TABLE ' . TABLE_SCHEDULED_IMPORTS . ' (
-    filename VARCHAR(255) NOT NULL,
-    in_progress BOOLEAN NOT NULL DEFAULT 0,
-    scheduled_by SMALLINT(5) UNSIGNED ZEROFILL,
-    scheduled_date DATETIME NOT NULL,
-    processed_by SMALLINT(5) UNSIGNED ZEROFILL,
-    processed_date DATETIME,
-    PRIMARY KEY (filename),
-    INDEX (scheduled_by),
-    INDEX (processed_by),
-    CONSTRAINT ' . TABLE_SCHEDULED_IMPORTS . '_fk_scheduled_by FOREIGN KEY (scheduled_by) REFERENCES ' . TABLE_USERS . ' (id) ON DELETE SET NULL ON UPDATE CASCADE,
-    CONSTRAINT ' . TABLE_SCHEDULED_IMPORTS . '_fk_processed_by FOREIGN KEY (processed_by) REFERENCES ' . TABLE_USERS . ' (id) ON DELETE SET NULL ON UPDATE CASCADE)
-    ' . $sSettings
-
-
-
-
-
         , 'TABLE_GENE_PANELS' =>
     'CREATE TABLE ' . TABLE_GENE_PANELS . ' (
     id SMALLINT(5) UNSIGNED ZEROFILL NOT NULL AUTO_INCREMENT,
@@ -926,7 +850,6 @@ $aTableSQL =
     'CREATE TABLE ' . TABLE_IND2GP . ' (
     individualid MEDIUMINT(8) UNSIGNED ZEROFILL NOT NULL,
     genepanelid SMALLINT(5) UNSIGNED ZEROFILL NOT NULL,
-    priority TINYINT(2) UNSIGNED NOT NULL DEFAULT 1,
     created_by SMALLINT(5) UNSIGNED ZEROFILL,
     created_date DATETIME NOT NULL,
     PRIMARY KEY (individualid, genepanelid),
@@ -945,6 +868,91 @@ $aTableSQL =
     INDEX (diseaseid),
     CONSTRAINT ' . TABLE_GP2DIS . '_fk_genepanelid FOREIGN KEY (genepanelid) REFERENCES ' . TABLE_GENE_PANELS . ' (id) ON DELETE CASCADE ON UPDATE CASCADE,
     CONSTRAINT ' . TABLE_GP2DIS . '_fk_diseaseid FOREIGN KEY (diseaseid) REFERENCES ' . TABLE_DISEASES . ' (id) ON DELETE CASCADE ON UPDATE CASCADE)
+    ' . $sSettings
+
+        , 'TABLE_ANALYSES' =>
+   'CREATE TABLE ' . TABLE_ANALYSES . ' (
+    id TINYINT(3) UNSIGNED ZEROFILL NOT NULL AUTO_INCREMENT,
+    sortid TINYINT(3) UNSIGNED NOT NULL,
+    name VARCHAR(50) NOT NULL,
+    description TEXT NOT NULL,
+    filters TEXT NOT NULL,
+    created_by SMALLINT(5) UNSIGNED ZEROFILL,
+    created_date DATETIME NOT NULL,
+    edited_by SMALLINT(5) UNSIGNED ZEROFILL,
+    edited_date DATETIME,
+    PRIMARY KEY (id),
+    INDEX (created_by),
+    INDEX (edited_by),
+    CONSTRAINT ' . TABLE_ANALYSES . '_fk_created_by FOREIGN KEY (created_by) REFERENCES ' . TABLE_USERS . ' (id) ON DELETE SET NULL ON UPDATE CASCADE,
+    CONSTRAINT ' . TABLE_ANALYSES . '_fk_edited_by FOREIGN KEY (edited_by) REFERENCES ' . TABLE_USERS . ' (id) ON DELETE SET NULL ON UPDATE CASCADE)
+    ' . $sSettings
+
+        , 'TABLE_ANALYSES_RUN' =>
+   'CREATE TABLE ' . TABLE_ANALYSES_RUN . ' (
+    id SMALLINT(5) UNSIGNED ZEROFILL NOT NULL AUTO_INCREMENT,
+    analysisid TINYINT(3) UNSIGNED ZEROFILL,
+    screeningid INT(10) UNSIGNED ZEROFILL NOT NULL,
+    modified BOOLEAN NOT NULL,
+    custom_panel TEXT NOT NULL,
+    created_by SMALLINT(5) UNSIGNED ZEROFILL,
+    created_date DATETIME NOT NULL,
+    PRIMARY KEY (id),
+    INDEX (screeningid),
+    INDEX (created_by),
+    CONSTRAINT ' . TABLE_ANALYSES_RUN . '_fk_analysisid FOREIGN KEY (analysisid) REFERENCES ' . TABLE_ANALYSES . ' (id) ON DELETE SET NULL ON UPDATE CASCADE,
+    CONSTRAINT ' . TABLE_ANALYSES_RUN . '_fk_screeningid FOREIGN KEY (screeningid) REFERENCES ' . TABLE_SCREENINGS . ' (id) ON DELETE CASCADE ON UPDATE CASCADE,
+    CONSTRAINT ' . TABLE_ANALYSES_RUN . '_fk_created_by FOREIGN KEY (created_by) REFERENCES ' . TABLE_USERS . ' (id) ON DELETE SET NULL ON UPDATE CASCADE)
+    ' . $sSettings
+
+        , 'TABLE_AR2GP' =>
+    'CREATE TABLE ' . TABLE_AR2GP . ' (
+    runid SMALLINT(5) UNSIGNED ZEROFILL NOT NULL,
+    genepanelid SMALLINT(5) UNSIGNED ZEROFILL NOT NULL,
+    PRIMARY KEY (runid, genepanelid),
+    INDEX (runid),
+    INDEX (genepanelid),
+    CONSTRAINT ' . TABLE_AR2GP . '_fk_runid FOREIGN KEY (runid) REFERENCES ' . TABLE_ANALYSES_RUN . ' (id) ON DELETE CASCADE ON UPDATE CASCADE,
+    CONSTRAINT ' . TABLE_AR2GP . '_fk_genepanelid FOREIGN KEY (genepanelid) REFERENCES ' . TABLE_GENE_PANELS . ' (id) ON DELETE CASCADE ON UPDATE CASCADE)
+    ' . $sSettings
+
+        , 'TABLE_ANALYSES_RUN_FILTERS' =>
+   'CREATE TABLE ' . TABLE_ANALYSES_RUN_FILTERS . ' (
+    runid SMALLINT(5) UNSIGNED ZEROFILL NOT NULL,
+    filterid VARCHAR(50) NOT NULL,
+    filter_order TINYINT UNSIGNED NOT NULL,
+    filtered_out MEDIUMINT UNSIGNED,
+    run_time TINYINT UNSIGNED,
+    PRIMARY KEY (runid, filterid),
+    UNIQUE (runid, filter_order),
+    INDEX (filterid),
+    CONSTRAINT ' . TABLE_ANALYSES_RUN_FILTERS . '_fk_runid FOREIGN KEY (runid) REFERENCES ' . TABLE_ANALYSES_RUN . ' (id) ON DELETE CASCADE ON UPDATE CASCADE)
+    ' . $sSettings
+
+        , 'TABLE_ANALYSES_RUN_RESULTS' =>
+   'CREATE TABLE ' . TABLE_ANALYSES_RUN_RESULTS . ' (
+    runid SMALLINT(5) UNSIGNED ZEROFILL NOT NULL,
+    variantid INT(10) UNSIGNED ZEROFILL NOT NULL,
+    PRIMARY KEY (runid, variantid),
+    INDEX (runid),
+    INDEX (variantid),
+    CONSTRAINT ' . TABLE_ANALYSES_RUN_RESULTS . '_fk_runid FOREIGN KEY (runid) REFERENCES ' . TABLE_ANALYSES_RUN . ' (id) ON DELETE CASCADE ON UPDATE CASCADE,
+    CONSTRAINT ' . TABLE_ANALYSES_RUN_RESULTS . '_fk_variantid FOREIGN KEY (variantid) REFERENCES ' . TABLE_VARIANTS . ' (id) ON DELETE CASCADE ON UPDATE CASCADE)
+    ' . $sSettings
+
+        , 'TABLE_SCHEDULED_IMPORTS' =>
+   'CREATE TABLE ' . TABLE_SCHEDULED_IMPORTS . ' (
+    filename VARCHAR(255) NOT NULL,
+    in_progress BOOLEAN NOT NULL DEFAULT 0,
+    scheduled_by SMALLINT(5) UNSIGNED ZEROFILL,
+    scheduled_date DATETIME NOT NULL,
+    processed_by SMALLINT(5) UNSIGNED ZEROFILL,
+    processed_date DATETIME,
+    PRIMARY KEY (filename),
+    INDEX (scheduled_by),
+    INDEX (processed_by),
+    CONSTRAINT ' . TABLE_SCHEDULED_IMPORTS . '_fk_scheduled_by FOREIGN KEY (scheduled_by) REFERENCES ' . TABLE_USERS . ' (id) ON DELETE SET NULL ON UPDATE CASCADE,
+    CONSTRAINT ' . TABLE_SCHEDULED_IMPORTS . '_fk_processed_by FOREIGN KEY (processed_by) REFERENCES ' . TABLE_USERS . ' (id) ON DELETE SET NULL ON UPDATE CASCADE)
     ' . $sSettings
 
         , 'TABLE_GENE_STATISTICS' =>
