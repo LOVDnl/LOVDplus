@@ -161,7 +161,7 @@ if (LOVD_plus) {
     }
 }
 
-if (strtoupper($_INI['instance']['name']) == 'MGHA') {
+if ($_INI['instance']['name'] == 'mgha') {
 // Site specific columns for Melbourne Genomics Health Alliance (MGHA).
 $aColSQL = array (
 

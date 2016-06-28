@@ -35,7 +35,11 @@ require ROOT_PATH . 'inc-init.php';
 ini_set('auto_detect_line_endings', true); // So we can work with Mac files also...
 set_time_limit(0); // Disable time limit, parsing may take a long time.
 session_write_close(); // Also don't care about the session (in fact, it locks the whole LOVD while this page is running).
-ini_set('memory_limit', '4294967296'); // 4GB.
+if ($_INI['instance']['name'] == 'mgha') {
+    ini_set('memory_limit', '4294967296'); // 4GB.
+} else {
+    ini_set('memory_limit', '4096M'); // 4GB.
+}
 
 // FIXME: How do we implement authorization? First parse everything, THEN using the parsed data we check if user has rights to insert this data?
 
