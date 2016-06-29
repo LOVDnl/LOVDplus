@@ -112,10 +112,8 @@ if ($argc != 1 && in_array($argv[1], array('--help', '-help', '-h', '-?'))) {
         die(51);
     }
 
-    // check if the path for the data files has a trailing \ and if not add it
-    if (substr($_INI['paths']['data_files'], -1) !== "\\"){
-        $_INI['paths']['data_files'] = $_INI['paths']['data_files'] . "\\";
-    }
+    // Fix any trailing slashes in the path to the data files.
+    $_INI['paths']['data_files'] = rtrim($_INI['paths']['data_files'], "\\/") . "/";
 
     // need to find the sample meta data file (SMDF) first. There may be multiple SMDF as we do not move files after they are processed.
     // However once processed they are renamed to .ARK so we are able to find files to process based on this
