@@ -43,7 +43,12 @@ $_T->printTitle();
 
 // Require manager clearance.
 lovd_requireAUTH(LEVEL_MANAGER);
-
+require 'inc-lib-form.php';
+$aData = array(
+    'VariantOnGenome/DNA' => 'g.79422965C>G',
+    'chromosome' => '2'
+);
+print('Returned from lovd_fetchDBID:' . lovd_fetchDBID($aData) . '<BR><BR><BR>');
 
 
 
