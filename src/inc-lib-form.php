@@ -395,7 +395,7 @@ function lovd_fetchDBID ($aData)
                 $aArgs[] = $aData['position_g_start'];
             }
         }
-        if (!LOVD_plus && !empty($aTranscriptVariants)) {
+        if (false && !empty($aTranscriptVariants)) {
             if (!empty($sGenomeVariant)) {
                 $sSQL .= ' UNION ';
             }
@@ -445,6 +445,12 @@ function lovd_fetchDBID ($aData)
                     $sDBID = $sDBIDoption;
                 }
             }
+        }
+        if (LOVD_plus && $sDBID == 'chr' . $aData['chromosome'] . '_999999') {
+            // For LOVD+ we need to be able to increment the DBID but we do not want to change it to the gene symbol.
+            $sSymbol = 'chr' . $aData['chromosome'];
+            $nDBIDnewNumber = $_DB->query('SELECT IFNULL(RIGHT(MAX(`VariantOnGenome/DBID`), 6), 0) + 1 FROM ' . TABLE_VARIANTS . ' AS vog WHERE vog.chromosome = ? AND `VariantOnGenome/DBID` LIKE ? AND `VariantOnGenome/DBID` REGEXP ?', array($aData['chromosome'], $sSymbol . '\_%', '^' . $sSymbol . '_[0-9]{6}$'))->fetchColumn();
+            $sDBID = $sSymbol . '_' . sprintf('%06d', $nDBIDnewNumber);
         }
         if (!LOVD_plus && ((substr($sDBID, 0, 3) == 'chr' && !empty($aGenes)) || $sDBID == 'chr' . $aData['chromosome'] . '_999999')) {
             // Either this variant has a DBID with chr, but also a VOT that we want to change to, or
