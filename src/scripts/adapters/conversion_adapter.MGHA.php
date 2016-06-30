@@ -288,7 +288,7 @@ if ($argc != 1 && in_array($argv[1], array('--help', '-help', '-h', '-?'))) {
                 }
 
                 $variantFileArr[0] = $variantHeader;
-                file_put_contents($variantFile, $variantFileArr);
+                file_put_contents($variantFile, implode(PHP_EOL, $variantFileArr));
                 // ********** error handling to check the contents were updated
             }
         }
