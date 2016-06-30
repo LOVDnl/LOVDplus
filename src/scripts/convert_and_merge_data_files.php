@@ -1477,7 +1477,7 @@ foreach ($aFiles as $sID) {
 
         // Fixing some other VOG fields.
         foreach (array('VariantOnGenome/Sequencing/Father/GenoType', 'VariantOnGenome/Sequencing/Father/GenoType/Quality', 'VariantOnGenome/Sequencing/Mother/GenoType', 'VariantOnGenome/Sequencing/Mother/GenoType/Quality') as $sCol) {
-            if ($aVariant[$sCol] && $aVariant[$sCol] == 'None') {
+            if (!empty($aVariant[$sCol]) && $aVariant[$sCol] == 'None') {
                 $aVariant[$sCol] = '';
             }
         }
