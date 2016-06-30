@@ -6,7 +6,8 @@
  * Programmer: Candice McGregor
  *************/
 
-define('ROOT_PATH', dirname(__FILE__) . '/../');
+// We are using a symlink to include this file so any further includes relative to this file needs to use the symlink path instead of the actual files path.
+define('ROOT_PATH', realpath(dirname($_SERVER["SCRIPT_FILENAME"])) . '/../');
 define('FORMAT_ALLOW_TEXTPLAIN', true);
 $_GET['format'] = 'text/plain';
 // To prevent notices when running inc-init.php.
