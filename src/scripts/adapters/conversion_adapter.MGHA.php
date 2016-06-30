@@ -44,7 +44,6 @@ if ($argc != 1 && in_array($argv[1], array('--help', '-help', '-h', '-?'))) {
     $vFiles = array(); // array(ID => array(files), ...);
     $metaFile = '';
 
-
     // create mapping arrays for singleton/child record, mother and father
     $aColumnMappings = array(
         'Pipeline_Run_ID' => 'Screening/Pipeline/Run_ID',
@@ -100,11 +99,9 @@ if ($argc != 1 && in_array($argv[1], array('--help', '-help', '-h', '-?'))) {
 
     // Screening Default values.
     $aDefaultValues = array(
-        'Screening/Template' => 'DNA',
-        'Screening/Technique' => 'SEQ-NG',
         'variants_found' => 1,
         'id' => 1,
-        'id_sample' => 1
+        'id_sample' => 0
     );
 
     // open the data files folder and process files
@@ -114,6 +111,9 @@ if ($argc != 1 && in_array($argv[1], array('--help', '-help', '-h', '-?'))) {
         print('Can\'t open directory.' . "\n");
         die(51);
     }
+
+    // Fix any trailing slashes in the path to the data files.
+    $_INI['paths']['data_files'] = rtrim($_INI['paths']['data_files'], "\\/") . "/";
 
     // need to find the sample meta data file (SMDF) first. There may be multiple SMDF as we do not move files after they are processed.
     // However once processed they are renamed to .ARK so we are able to find files to process based on this
@@ -125,15 +125,17 @@ if ($argc != 1 && in_array($argv[1], array('--help', '-help', '-h', '-?'))) {
 
         // get the SMDF, it is possible there could be more than one, but we are only going to take the first one
         // we have discussed that this means there is the potential that any subsequent SMDF will not be processed until any issues with the first one are addressed, at this stage we are not concerned with this
-        // the naming of the file has not yet been confirmed, for testing we are using "SMDF"
-        if (preg_match('/^.+?\.SMDF$/', $xFile)) {
+
+        if (preg_match('/^.+?\.meta$/', $xFile)) {
 
             $metaFile = $_INI['paths']['data_files'] . $xFile;
         }
 
         // get all the variant files into an array
         if (preg_match('/^(.+?)\.tsv/', $xFile, $vRegs)) {
-            $sID = $vRegs[1];
+            $variantFilePrefix = explode('_', $vRegs[1]);
+            $fileSampleID = explode('.', $variantFilePrefix[3]);
+            $sID = $fileSampleID[0];
             $vFiles[$sID] = $xFile;
 
         }
@@ -169,7 +171,7 @@ if ($argc != 1 && in_array($argv[1], array('--help', '-help', '-h', '-?'))) {
     fclose($fInput);
 
     // open the sample meta data file into an array
-    $sFile = file($metaFile);
+    $sFile = file($metaFile,FILE_IGNORE_NEW_LINES);
 
     // Create an array of headers from the first line
     $sHeader = explode("\t", $sFile[0]);
@@ -183,6 +185,9 @@ if ($argc != 1 && in_array($argv[1], array('--help', '-help', '-h', '-?'))) {
             $sValues['mother_id'] = null;
             $sValues['father_id'] = null;
             $sDataArr[$sValues['Sample_ID']] = $sValues;
+
+            // get the pipeline run ID
+            $pipelineRunID = $sValues['Pipeline_Run_ID'];
         }
     }
 
@@ -270,7 +275,7 @@ if ($argc != 1 && in_array($argv[1], array('--help', '-help', '-h', '-?'))) {
             } else {
                 // update the headers in the variant file for the singleton/child
                 $variantFile = $_INI['paths']['data_files'] . $vFiles[$sID];
-                $variantFileArr = file($variantFile);
+                $variantFileArr = file($variantFile,FILE_IGNORE_NEW_LINES);
                 // use preg_replace to update the column headers using child, father and mother sample IDs.
                 $variantHeader = preg_replace("/" . $sID . "\./", "Child_", $variantFileArr[0]);
 
@@ -375,7 +380,7 @@ if ($argc != 1 && in_array($argv[1], array('--help', '-help', '-h', '-?'))) {
 
 
     // Now rename the SMDF to .ARK
-    $archiveMetaFile = $metaFile . '.ARK';
+    $archiveMetaFile = $pipelineRunID . '_' . $metaFile . '.ARK';
     if (!rename($metaFile, $archiveMetaFile)) {
         print('Error archiving SMDF to: ' . $archiveMetaFile . ".\n");
         die(51);

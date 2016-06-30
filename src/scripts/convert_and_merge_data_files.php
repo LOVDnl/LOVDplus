@@ -49,7 +49,7 @@ ignore_user_abort(true);
 // This script will be called from localhost by a cron job.
 
 // call adapter script first for MGHA
-if (strtoupper($_INI['instance']['name']) == 'MGHA') {
+if ($_INI['instance']['name'] == 'mgha') {
     require ROOT_PATH . 'scripts/adapter.lib.php';
     $cmd = 'php adapter.php';
     passthru($cmd, $adapterResult);
@@ -1138,7 +1138,7 @@ while (($sFile = readdir($h)) !== false) {
     }
 
     // get files into array. different file format for MGHA
-    if (strtoupper($_INI['instance']['name']) == 'MGHA') {
+    if ($_INI['instance']['name'] == 'mgha') {
         if (preg_match('/^(\d+)\.(' . implode('|', array_map('preg_quote', array_values($aSuffixes))) . ')$/', $sFile, $aRegs)) {
             // Files we need to merge.
             list(, $sID, $sFileType) = $aRegs;
@@ -1242,7 +1242,7 @@ foreach ($aFiles as $sID) {
 
     $sHeaders = fgets($fInput);
 
-    if (strtoupper($_INI['instance']['name']) == 'MGHA') {
+    if ($_INI['instance']['name'] == 'mgha') {
         if (substr($sHeaders, 0, 32) != "CHROM\tPOS\tID\tREF\tALT\tQUAL\tFILTER") {
             // Not a fatal error, because otherwise we can't import anything anymore if this ever happens...
             print('Ignoring file, does not conform to format: ' . $sFileToConvert . ".\n");
@@ -1290,7 +1290,7 @@ foreach ($aFiles as $sID) {
     $nMiracleID = 0;
 
     // MGHA do not use MiracleID and screening ID is always 1
-    if (strtoupper($_INI['instance']['name']) == 'MGHA') {
+    if ($_INI['instance']['name'] == 'mgha') {
         $nScreeningID = 1;
     }else{
         foreach ($aMetaData as $nLine => $sLine) {
@@ -1367,7 +1367,7 @@ foreach ($aFiles as $sID) {
     $aHeaders = explode("\t", rtrim($sHeaders, "\r\n"));
     // $aHeaders = array_map('trim', $aHeaders, array_fill(0, count($aHeaders), '"')); // In case we ever need to trim off quotes.
 
-    if (!strtoupper($_INI['instance']['name']) == 'MGHA') {
+    if (!$_INI['instance']['name'] == 'mgha') {
         // Verify the identity of this file. Some columns are appended by the Miracle ID.
         // Check the child's Miracle ID with that we have in the meta data file, and remove all the IDs so the headers are recognized normally.
         foreach ($aHeaders as $key => $sHeader) {
@@ -1400,7 +1400,7 @@ foreach ($aFiles as $sID) {
          // $aLine = array_map('trim', $aLine, array_fill(0, count($aLine), '"')); // In case we ever need to trim off quotes.
 
         // check if adapter script exists and if it does then call functions lovd_prepareMappings and lovd_prepareVariantData
-        if (strtoupper($_INI['instance']['name']) == 'MGHA') {
+        if ($_INI['instance']['name'] == 'mgha') {
             unset($aColumnMappings);
             $aColumnMappings = array();
             $aColumnMappings = lovd_prepareMappings();

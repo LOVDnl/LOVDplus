@@ -319,9 +319,16 @@ function lovd_prepareVariantData($aLine)
         $aLine['SIFT_Value'] = $sRegs[2];
     }
 
-    //process EVS (combination of AA_MAF & EA_MAF - to be confirmed by Gayle
+    //process EVS (EA_MAF) multiple values can be present, take the highest frequency
+    if (preg_match('/(.)&(.)/',$aLine['EA_MAF'],$EVS)){
 
-    //process GMAF (1000G) A:0.4545 - take the frequency only
+    }
+    //process 1000G (1000Gp1_AF) A:0.4545 - take the frequency only
+
+    //process ExAC (ExAC_Adj_MAF) multiple values and scientific values. Taken the highest frequency
+
+    //variant priority
+
 
     return $aLine;
 }
