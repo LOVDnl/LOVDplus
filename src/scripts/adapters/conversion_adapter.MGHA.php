@@ -129,6 +129,7 @@ if ($argc != 1 && in_array($argv[1], array('--help', '-help', '-h', '-?'))) {
         if (preg_match('/^.+?\.meta$/', $xFile)) {
 
             $metaFile = $_INI['paths']['data_files'] . $xFile;
+            $archiveMetaFile = $xFile . '.ARK';
         }
 
         // get all the variant files into an array
@@ -380,7 +381,7 @@ if ($argc != 1 && in_array($argv[1], array('--help', '-help', '-h', '-?'))) {
 
 
     // Now rename the SMDF to .ARK
-    $archiveMetaFile = $pipelineRunID . '_' . $metaFile . '.ARK';
+    $archiveMetaFile = $_INI['paths']['data_files'] . $pipelineRunID . '_' . $archiveMetaFile;
     if (!rename($metaFile, $archiveMetaFile)) {
         print('Error archiving SMDF to: ' . $archiveMetaFile . ".\n");
         die(51);
