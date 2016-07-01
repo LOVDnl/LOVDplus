@@ -1423,8 +1423,17 @@ foreach ($aFiles as $sID) {
                 // Never mind then!
                 continue;
             }
+
             if (empty($aLine[$sVEPColumn]) || $aLine[$sVEPColumn] == 'unknown' || $aLine[$sVEPColumn] == '.') {
-                $aVariant[$sLOVDColumn] = '';
+                if ($_INI['instance']['name'] == 'mgha') {
+                    if ($sLOVDColumn == 'VariantOnGenome/Variant_priority') {
+                        $aVariant['VariantOnGenome/Variant_priority'] = 0;
+                    } else {
+                        $aVariant[$sLOVDColumn] = '';
+                    }
+                }else{
+                    $aVariant[$sLOVDColumn] = '';
+                }
             } else {
                 $aVariant[$sLOVDColumn] = $aLine[$sVEPColumn];
             }
@@ -1857,6 +1866,15 @@ print('Mutalyzer returned EREF error, hg19/hg38 error?' . "\n");
                 }
             }
             $aData[$sKey] = array($aVOG);
+        }else{
+            // for MGHA we need to check if the variant priority is higher for subsequent transcipts and if so, update the variant on genome record
+            if ($_INI['instance']['name'] == 'mgha') {
+
+                if ($aVariant['VariantOnGenome/Variant_priority'] > $aData[$sKey][0]['VariantOnGenome/Variant_priority']){
+                    // update the VOG record to have the higher variant priority
+                    $aData[$sKey][0]['VariantOnGenome/Variant_priority'] = $aVariant['VariantOnGenome/Variant_priority'];
+                }
+            }
         }
 
         // Now, store VOT data. Because I had received test files with repeated lines, and allowing repeated lines will break import, also here we will check for the key.
