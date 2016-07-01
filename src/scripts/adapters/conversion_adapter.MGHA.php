@@ -85,7 +85,7 @@ if ($argc != 1 && in_array($argv[1], array('--help', '-help', '-h', '-?'))) {
         'Sequencing_Contact' => 'Screening/Sequencing_contact',
         'Pipeline_Contact' => 'Screening/Pipeline_contact',
         'Notes' => 'Screening/Notes',
-        'Pipeline_Notes' => 'Screening/Pipeline/Notes',
+        'Pipeline_Notes' => 'Screening/Pipeline/Notes'
 
     );
 
@@ -200,7 +200,7 @@ if ($argc != 1 && in_array($argv[1], array('--help', '-help', '-h', '-?'))) {
         // if Pedigree_File column is not empty, then it is a trio and we need to get the parent IDs, work out who is mother and father based on sex and update child's record
         If (!empty($sample['Pedigree_File'])) {
 
-            if (preg_match('/^fid\d+\=(.+)/', $sample['Pedigree_File'], $pRegs)) {
+            if (preg_match('/^f\d+\=(.+)/', $sample['Pedigree_File'], $pRegs)) {
                 // can combine this into the above regex
                 $parentIDs = explode(",", $pRegs[1]);
                 $fatherCount = 0;
