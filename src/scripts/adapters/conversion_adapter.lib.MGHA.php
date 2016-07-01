@@ -68,41 +68,41 @@ function lovd_prepareMappings()
         'CANONICAL' => 'VariantOnTranscript/Canonical_Transcript',
         'ENSP' => 'VariantOnTranscript/Embsembl_Protein_Identifier',
         'HGVS_OFFSET' => 'VariantOnTranscript/HGVS_Offset',
-        'GMAF' => 'VariantOnTranscript/Frequency/1000G/VEP',
-        'AFR_MAF' => 'VariantOnTranscript/Frequency/1000G/VEP/African',
-        'AMR_MAF' => 'VariantOnTranscript/Frequency/1000G/VEP/American',
-        'EAS_MAF' => 'VariantOnTranscript/Frequency/1000G/VEP/East_Asian',
-        'EUR_MAF' => 'VariantOnTranscript/Frequency/1000G/VEP/European',
-        'SAS_MAF' => 'VariantOnTranscript/Frequency/1000G/VEP/South_Asian',
-        'AA_MAF' => 'VariantOnTranscript/Frequency/EVS/VEP/African_American',
-        'ExAC_Adj_MAF' => 'VariantOnTranscript/Frequency/ExAC/Adjusted',
-        'ExAC_AFR_MAF' => 'VariantOnTranscript/Frequency/ExAC/African_American',
-        'ExAC_AMR_MAF' => 'VariantOnTranscript/Frequency/ExAC/American',
-        'ExAC_EAS_MAF' => 'VariantOnTranscript/Frequency/ExAC/East_Asian',
-        'ExAC_FIN_MAF' => 'VariantOnTranscript/Frequency/ExAC/Finnish',
-        'ExAC_NFE_MAF' => 'VariantOnTranscript/Frequency/ExAC/Non_Finnish',
-        'ExAC_OTH_MAF' => 'VariantOnTranscript/Frequency/ExAC/Other',
-        'ExAC_SAS_MAF' => 'VariantOnTranscript/Frequency/ExAC/South_Asian',
+        'GMAF' => 'VariantOnGenome/Frequency/1000G/VEP',
+        'AFR_MAF' => 'VariantOnGenome/Frequency/1000G/VEP/African',
+        'AMR_MAF' => 'VariantOnGenome/Frequency/1000G/VEP/American',
+        'EAS_MAF' => 'VariantOnGenome/Frequency/1000G/VEP/East_Asian',
+        'EUR_MAF' => 'VariantOnGenome/Frequency/1000G/VEP/European',
+        'SAS_MAF' => 'VariantOnGenome/Frequency/1000G/VEP/South_Asian',
+        'AA_MAF' => 'VariantOnGenome/Frequency/EVS/VEP/African_American',
+        'ExAC_Adj_MAF' => 'VariantOnGenome/Frequency/ExAC/Adjusted',
+        'ExAC_AFR_MAF' => 'VariantOnGenome/Frequency/ExAC/African_American',
+        'ExAC_AMR_MAF' => 'VariantOnGenome/Frequency/ExAC/American',
+        'ExAC_EAS_MAF' => 'VariantOnGenome/Frequency/ExAC/East_Asian',
+        'ExAC_FIN_MAF' => 'VariantOnGenome/Frequency/ExAC/Finnish',
+        'ExAC_NFE_MAF' => 'VariantOnGenome/Frequency/ExAC/Non_Finnish',
+        'ExAC_OTH_MAF' => 'VariantOnGenome/Frequency/ExAC/Other',
+        'ExAC_SAS_MAF' => 'VariantOnGenome/Frequency/ExAC/South_Asian',
         'CLIN_SIG' => 'VariantOnTranscript/Clinical_Significance',
         'SOMATIC' => 'VariantOnTranscript/Somatic_Status',
         'PHENO' => 'VariantOnTranscript/Phenotype',
         'PUBMED' => 'VariantOnTranscript/Pubmed',
         'Condel' => 'VariantOnTranscript/Prediction/Condel_Score',
-        '1000Gp1_AC' => 'VariantOnTranscript/Frequency/1000G/dbNSFP/Allele_Count',
-        '1000Gp1_AF' => 'VariantOnTranscript/Frequency/1000G/dbNSFP',
-        '1000Gp1_AFR_AC' => 'VariantOnTranscript/Frequency/1000G/dbNSFP/African/Allele_Count',
-        '1000Gp1_AFR_AF' => 'VariantOnTranscript/Frequency/1000G/dbNSFP/African',
-        '1000Gp1_AMR_AC' => 'VariantOnTranscript/Frequency/1000G/dbNSFP/American/Allele_Count',
-        '1000Gp1_AMR_AF' => 'VariantOnTranscript/Frequency/1000G/dbNSFP/American',
-        '1000Gp1_ASN_AC' => 'VariantOnTranscript/Frequency/1000G/dbNSFP/Asian/Allele_Count',
-        '1000Gp1_ASN_AF' => 'VariantOnTranscript/Frequency/1000G/dbNSFP/Asian',
-        '1000Gp1_EUR_AC' => 'VariantOnTranscript/Frequency/1000G/dbNSFP/European/Allele_Count',
-        '1000Gp1_EUR_AF' => 'VariantOnTranscript/Frequency/1000G/dbNSFP/European',
+        '1000Gp1_AC' => 'VariantOnGenome/Frequency/1000G/dbNSFP/Allele_Count',
+        '1000Gp1_AF' => 'VariantOnGenome/Frequency/1000G/dbNSFP',
+        '1000Gp1_AFR_AC' => 'VariantOnGenome/Frequency/1000G/dbNSFP/African/Allele_Count',
+        '1000Gp1_AFR_AF' => 'VariantOnGenome/Frequency/1000G/dbNSFP/African',
+        '1000Gp1_AMR_AC' => 'VariantOnGenome/Frequency/1000G/dbNSFP/American/Allele_Count',
+        '1000Gp1_AMR_AF' => 'VariantOnGenome/Frequency/1000G/dbNSFP/American',
+        '1000Gp1_ASN_AC' => 'VariantOnGenome/Frequency/1000G/dbNSFP/Asian/Allele_Count',
+        '1000Gp1_ASN_AF' => 'VariantOnGenome/Frequency/1000G/dbNSFP/Asian',
+        '1000Gp1_EUR_AC' => 'VariantOnGenome/Frequency/1000G/dbNSFP/European/Allele_Count',
+        '1000Gp1_EUR_AF' => 'VariantOnGenome/Frequency/1000G/dbNSFP/European',
         'CADD_phred' => 'VariantOnTranscript/Prediction/CADD_Phredlike',
         'CADD_raw' => 'VariantOnTranscript/Prediction/CADD_Raw',
         'CADD_raw_rankscore' => 'VariantOnTranscript/Prediction/CADD_Raw_Ranked',
-        'ESP6500_AA_AF' => 'VariantOnTranscript/Frequency/ESP6500/American',
-        'ESP6500_EA_AF' => 'VariantOnTranscript/Frequency/ESP6500/European_American',
+        'ESP6500_AA_AF' => 'VariantOnGenome/Frequency/ESP6500/American',
+        'ESP6500_EA_AF' => 'VariantOnGenome/Frequency/ESP6500/European_American',
         'FATHMM_pred' => 'VariantOnTranscript/Prediction/FATHMM',
         'FATHMM_rankscore' => 'VariantOnTranscript/Prediction/FATHMM_Ranked_Score',
         'FATHMM_score' => 'VariantOnTranscript/Prediction/FATHMM_Score',
@@ -197,9 +197,10 @@ function lovd_prepareMappings()
         'PolyPhen_Value' => 'VariantOnTranscript/Prediction/PolyPhen_Score_VEP',
         'SIFT_Text' => 'VariantOnTranscript/Prediction/SIFT_VEP',
         'SIFT_Value' => 'VariantOnTranscript/Prediction/SIFT_Score_VEP',
-        '1000G' => 'VariantOnTranscript/Frequency/1000G/VEP',
-        'EVS' => 'VariantOnTranscript/Frequency/EVS/VEP/European_American',
-        'ExAC' => 'VariantOnTranscript/Frequency/ExAC',
+        '1000G' => 'VariantOnGenome/Frequency/1000G/VEP',
+        'EVS' => 'VariantOnGenome/Frequency/EVS/VEP/European_American',
+        'ExAC' => 'VariantOnGenome/Frequency/ExAC',
+        'Variant_Priority' => 'VariantOnGenome/Variant_priority'
 
 
     );
@@ -326,29 +327,53 @@ function lovd_prepareVariantData($aLine)
 
     //process EVS (EA_MAF) multiple values can be present, take the highest frequency
     $EVSArr = explode("&",$aLine['EA_MAF']);
-    $EVS = 0;
+    $EVSValArray = array();
     foreach($EVSArr as $EVS_Data){
         if (preg_match('/^\D+:(.+)$/',$EVS_Data,$EVS_Freq)) {
             $EVS = $EVS_Freq[1];
         }
         if(is_numeric($EVS)){
-            $EVS_Value = max($EVS,);
+            array_push($EVSValArray,$EVS);
         }
     }
+    $EVS_Value = max($EVSValArray);
+    $aLine['EVS'] = $EVS_Value;
 
     //process 1000G (GMAF) A:0.4545 - take the frequency only
     if (preg_match('/^\D+:(.+)$/',$aLine['GMAF'],$G1000)) {
-        $aLine['1000G'] = $G1000[1];
+        $GMAF = $G1000[1];
+        $aLine['1000G'] = $GMAF;
     }
 
     //process ExAC (ExAC_MAF) multiple values and scientific values. Taken the highest frequency
-    $ExAC = explode("&",$aLine['ExAC_Adj_MAF']);
+    $ExACArr = explode("&",$aLine['ExAC_MAF']);
+    $ExACValArray = array();
+    foreach($ExACArr as $ExAC_Data){
+        if (preg_match('/^\D+:(.+)$/',$ExAC_Data,$ExAC_Freq)) {
+            $ExAC = $ExAC_Freq[1];
+        }
+        if(is_numeric($ExAC)){
+            array_push($ExACValArray,$ExAC);
+        }
+    }
+    $ExAC_Value = max($ExACValArray);
+    $aLine['ExAC'] = $ExAC_Value;
 
+    // get maximum frequency using EA_MAF, GMAF, ExAC_MAF
+    $max_Freq = max($GMAF,$ExAC_Value,$EVS_Value);
 
     //variant priority
+    if ($aLine['IMPACT'] == 'HIGH'){
+        // check if novel - SNP138 ($aLine['ID']) is = '.' or '' and there is no frequency
+        if ($aLine['ID'] == '.' | $aLine == '') {
+
+        } else if($max_Freq < 0.0005){
+            $aLine['Variant_Priority'] = 4;
+        }
+    }
 
 
-    return $aLine;
+return $aLine;
 }
 
 
