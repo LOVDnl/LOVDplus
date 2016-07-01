@@ -45,6 +45,7 @@ if ($argc != 1 && in_array($argv[1], array('--help', '-help', '-h', '-?'))) {
     $vFiles = array(); // array(ID => array(files), ...);
     $metaFile = '';
 
+
     // create mapping arrays for singleton/child record, mother and father
     $aColumnMappings = array(
         'Pipeline_Run_ID' => 'Screening/Pipeline/Run_ID',
