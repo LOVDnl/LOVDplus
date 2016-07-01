@@ -86,7 +86,8 @@ if ($argc != 1 && in_array($argv[1], array('--help', '-help', '-h', '-?'))) {
         'Sequencing_Contact' => 'Screening/Sequencing_contact',
         'Pipeline_Contact' => 'Screening/Pipeline_contact',
         'Notes' => 'Screening/Notes',
-        'Pipeline_Notes' => 'Screening/Pipeline/Notes'
+        'Pipeline_Notes' => 'Screening/Pipeline/Notes',
+        'Analysis_Type' => 'Screening/Analysis_type'
 
     );
 
