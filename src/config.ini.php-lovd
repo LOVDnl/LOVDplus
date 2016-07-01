@@ -49,6 +49,9 @@ data_files =
 # The following path is where LOVD+ will write imported files to.
 data_files_archive =
 
+# The following path is where users will save screenshot files.
+screenshot_files =
+
 # The following path contains alternative IDs for the patients in the database.
 alternative_ids =
 

@@ -440,6 +440,45 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && !ACTION) {
             );
             return false;
         }
+
+
+        (function() {
+
+  'use strict';
+
+  // click events
+  document.body.addEventListener('click', screenshot_file, true);
+
+  // event handler
+  function screenshot_file(e) {
+
+    // find target element
+    var
+      t = e.target,
+      c = t.dataset.copytarget,
+      inp = (c ? document.querySelector(c) : null);
+
+    // is element selectable?
+    if (inp && inp.select) {
+
+      // select text
+      inp.select();
+
+      try {
+        // copy text
+        document.execCommand('copy');
+        inp.blur();
+      }
+      catch (err) {
+        alert('please press Ctrl/Cmd+C to copy');
+      }
+
+    }
+
+  }
+
+})();
+
       </SCRIPT>
 <?php
 
@@ -525,6 +564,10 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && !ACTION) {
         $aNavigation['summary_annotations/' . $sSummaryAnnotationsID . '?edit&variant_id=' . $nID . (isset($_GET['in_window'])? '&amp;in_window' : '')]       = array('menu_edit.png', 'Edit summary annotations entry', 1);
         $aNavigation['summary_annotations/' . $sSummaryAnnotationsID . '?history&variant_id=' . $nID . (isset($_GET['in_window'])? '&amp;in_window' : '')]       = array('menu_clock.png', 'View history of this entry', 1);
         lovd_showJGNavigation($aNavigation, 'SummaryAnnotations');
+
+       // echo ' <input type="text" id="screenshotAddress" value="c:\Example_Directory\Temp\\' . $sSummaryAnnotationsID . '.png" />';
+        echo ' <input type="text" id="screenshotAddress" value="' . $_INI['paths']['screenshot_files'] .'\\' . $sSummaryAnnotationsID . '.png" />';
+	    echo '<button data-copytarget="#screenshotAddress">copy screenshot filename</button>';
 
     } else {
         // Otherwise show a button that can be used to create a new summary annotation record.
