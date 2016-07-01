@@ -49,7 +49,7 @@ class LOVD_ScreeningMOD extends LOVD_Screening {
     function __construct ()
     {
         // Default constructor.
-        global $_AUTH, $_SETT;
+        global $_AUTH, $_SETT, $_INI;
 
         // Run parent constructor to find out about the custom columns.
         parent::__construct();
@@ -151,27 +151,76 @@ class LOVD_ScreeningMOD extends LOVD_Screening {
                          'db'   => array('s.analysis_approved_date', 'DESC', true)),
                       ));
         $this->sSortDefault = 'id';
-
-        // Hide some custom columns from view.
-        // FIXME: Better would be perhaps a positive selection instead?
-        unset($this->aColumnsViewList['Screening/Template']);
-        unset($this->aColumnsViewList['Screening/Technique']);
-        unset($this->aColumnsViewList['Screening/SNP_overlap']);
-        unset($this->aColumnsViewList['Screening/Derived_gender']);
-        unset($this->aColumnsViewList['Screening/Covered_exome/Fraction']);
-        unset($this->aColumnsViewList['Screening/Father/Covered_exome/Fraction']);
-        unset($this->aColumnsViewList['Screening/Mother/Covered_exome/Fraction']);
-        unset($this->aColumnsViewList['Screening/Reads_on_target/Fraction']);
-        unset($this->aColumnsViewList['Screening/Father/Reads_on_target/Fraction']);
-        unset($this->aColumnsViewList['Screening/Mother/Reads_on_target/Fraction']);
-        unset($this->aColumnsViewList['Screening/Analysis_restricted']);
-        unset($this->aColumnsViewList['Screening/Trio_check/De_novo']);
-        unset($this->aColumnsViewList['Screening/Trio_check/Mendelian']);
-        unset($this->aColumnsViewList['analysis_by_']);
-        unset($this->aColumnsViewList['analysis_date_']);
-        unset($this->aColumnsViewList['analysis_approved_by_']);
-        unset($this->aColumnsViewList['analysis_approved_date_']);
-
+        if ($_INI['instance']['name'] == 'mgha') {
+            // TODO MGHA Ideally this should be an inclusive list and we need to store the array of columns to include in the adapter library so as it can be site specific.
+            // Hide columns from the individuals screening viewlist.
+//            unset($this->aColumnsViewList['Screening/Pipeline/Run_ID']);
+//            unset($this->aColumnsViewList['Screening/Mother/Sample_ID']);
+            unset($this->aColumnsViewList['Screening/Mother/Origin/Ethnic']);
+//            unset($this->aColumnsViewList['Screening/Father/Sample_ID']);
+            unset($this->aColumnsViewList['Screening/Father/Origin/Ethnic']);
+            unset($this->aColumnsViewList['Screening/Pipeline/Notes']);
+            unset($this->aColumnsViewList['Screening/Notes']);
+            unset($this->aColumnsViewList['Screening/Mother/Notes']);
+            unset($this->aColumnsViewList['Screening/Father/Notes']);
+//            unset($this->aColumnsViewList['Screening/Batch']);
+            unset($this->aColumnsViewList['Screening/DNA/Tube_ID']);
+            unset($this->aColumnsViewList['Screening/Mother/DNA/Tube_ID']);
+            unset($this->aColumnsViewList['Screening/Father/DNA/Tube_ID']);
+            unset($this->aColumnsViewList['Screening/DNA/Concentration']);
+            unset($this->aColumnsViewList['Screening/DNA/Volume']);
+            unset($this->aColumnsViewList['Screening/DNA/Quantity']);
+            unset($this->aColumnsViewList['Screening/DNA/Quality']);
+            unset($this->aColumnsViewList['Screening/DNA/Date']);
+            unset($this->aColumnsViewList['Screening/Sample/Type']);
+            unset($this->aColumnsViewList['Screening/FastQ_files']);
+            unset($this->aColumnsViewList['Screening/Variants_file']);
+            unset($this->aColumnsViewList['Screening/Pedigree_file']);
+            unset($this->aColumnsViewList['Screening/Variant_call_group']);
+            unset($this->aColumnsViewList['Screening/Capture_date']);
+            unset($this->aColumnsViewList['Screening/Sequencing_date']);
+//            unset($this->aColumnsViewList['Screening/Mean_coverage']);
+            unset($this->aColumnsViewList['Screening/Duplicate_percentage']);
+            unset($this->aColumnsViewList['Screening/Machine_ID']);
+            unset($this->aColumnsViewList['Screening/DNA_extraction_lab']);
+            unset($this->aColumnsViewList['Screening/Sequencing_lab']);
+            unset($this->aColumnsViewList['Screening/Exome_capture']);
+            unset($this->aColumnsViewList['Screening/Library_preparation']);
+            unset($this->aColumnsViewList['Screening/Barcode_pool_size']);
+            unset($this->aColumnsViewList['Screening/Read_type']);
+            unset($this->aColumnsViewList['Screening/Machine_type']);
+            unset($this->aColumnsViewList['Screening/Sequencing_chemistry']);
+            unset($this->aColumnsViewList['Screening/Sequencing_software']);
+            unset($this->aColumnsViewList['Screening/Demultiplex_software']);
+            unset($this->aColumnsViewList['Screening/Sequencing_contact']);
+            unset($this->aColumnsViewList['Screening/Pipeline_contact']);
+            unset($this->aColumnsViewList['Screening/Pipeline_files']);
+            unset($this->aColumnsViewList['Screening/Analysis_type']);
+            unset($this->aColumnsViewList['analysis_by_']);
+            unset($this->aColumnsViewList['analysis_date_']);
+            unset($this->aColumnsViewList['analysis_approved_by_']);
+            unset($this->aColumnsViewList['analysis_approved_date_']);
+        } else {
+            // Hide some custom columns from view.
+            // FIXME: Better would be perhaps a positive selection instead?
+            unset($this->aColumnsViewList['Screening/Template']);
+            unset($this->aColumnsViewList['Screening/Technique']);
+            unset($this->aColumnsViewList['Screening/SNP_overlap']);
+            unset($this->aColumnsViewList['Screening/Derived_gender']);
+            unset($this->aColumnsViewList['Screening/Covered_exome/Fraction']);
+            unset($this->aColumnsViewList['Screening/Father/Covered_exome/Fraction']);
+            unset($this->aColumnsViewList['Screening/Mother/Covered_exome/Fraction']);
+            unset($this->aColumnsViewList['Screening/Reads_on_target/Fraction']);
+            unset($this->aColumnsViewList['Screening/Father/Reads_on_target/Fraction']);
+            unset($this->aColumnsViewList['Screening/Mother/Reads_on_target/Fraction']);
+            unset($this->aColumnsViewList['Screening/Analysis_restricted']);
+            unset($this->aColumnsViewList['Screening/Trio_check/De_novo']);
+            unset($this->aColumnsViewList['Screening/Trio_check/Mendelian']);
+            unset($this->aColumnsViewList['analysis_by_']);
+            unset($this->aColumnsViewList['analysis_date_']);
+            unset($this->aColumnsViewList['analysis_approved_by_']);
+            unset($this->aColumnsViewList['analysis_approved_date_']);
+        }
         // Also make sure the custom cols are not searchable, if they're visible.
         // (we need the invisible individualid column to be searchable)
         foreach ($this->aColumnsViewList as $sCol => $aCol) {
