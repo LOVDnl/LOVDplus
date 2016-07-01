@@ -50,7 +50,7 @@ class LOVD_CustomViewListMOD extends LOVD_CustomViewList {
     function __construct ($aObjects = array(), $sOtherID = '')
     {
         // Default constructor.
-        global $_DB, $_AUTH;
+        global $_DB, $_AUTH, $_INI;
 
         if (!is_array($aObjects)) {
             $aObjects = explode(',', $aObjects);
@@ -130,16 +130,26 @@ class LOVD_CustomViewListMOD extends LOVD_CustomViewList {
                     break;
 
                 case 'VariantOnGenome':
-                    $aColumnsToShow['VariantOnGenome'] =
-                        array(
-                            'VariantOnGenome/DNA',
-                            'VariantOnGenome/Alamut',
-                            'VariantOnGenome/Conservation_score/PhyloP',
-                            'VariantOnGenome/HGMD/Association',
-                            'VariantOnGenome/Sequencing/Depth/Alt/Fraction',
-                            'VariantOnGenome/Sequencing/Quality',
-                            'VariantOnGenome/Sequencing/GATKcaller',
-                        );
+                    if ($_INI['instance']['name'] == 'mgha') {
+                        // TODO MGHA AM This needs to be configurable in the adapter library so as it can be site specific.
+                        $aColumnsToShow['VariantOnGenome'] =
+                            array(
+                                'VariantOnGenome/DNA',
+                                'VariantOnGenome/Sequencing/Depth/Alt/Fraction',
+                                'VariantOnGenome/Sequencing/Quality',
+                            );
+                    } else {
+                        $aColumnsToShow['VariantOnGenome'] =
+                            array(
+                                'VariantOnGenome/DNA',
+                                'VariantOnGenome/Alamut',
+                                'VariantOnGenome/Conservation_score/PhyloP',
+                                'VariantOnGenome/HGMD/Association',
+                                'VariantOnGenome/Sequencing/Depth/Alt/Fraction',
+                                'VariantOnGenome/Sequencing/Quality',
+                                'VariantOnGenome/Sequencing/GATKcaller',
+                            );
+                    }
                     $aSQL['SELECT'] .= (!$aSQL['SELECT']? '' : ', ') . 'vog.*, a.name AS allele_, eg.name AS vog_effect, CONCAT(cs.id, cs.name) AS curation_status_';
                     // Observation count columns.
                     // Find the diseases that this individual has assigned using the analysis run ID in $_GET.
@@ -200,12 +210,23 @@ class LOVD_CustomViewListMOD extends LOVD_CustomViewList {
                     break;
 
                 case 'VariantOnTranscript':
-                    $aColumnsToShow['VariantOnTranscript'] =
-                        array(
-                            'VariantOnTranscript/DNA',
-                            'VariantOnTranscript/Protein',
-                            'VariantOnTranscript/GVS/Function',
-                        );
+                    if ($_INI['instance']['name'] == 'mgha') {
+                        // TODO MGHA AM This needs to be configurable in the adapter library so as it can be site specific.
+                        $aColumnsToShow['VariantOnTranscript'] =
+                            array(
+                                'VariantOnTranscript/DNA',
+                                'VariantOnTranscript/Protein',
+                                'VariantOnTranscript/Consequence_Type',
+                                'VariantOnTranscript/Consequence_Impact',
+                            );
+                    } else {
+                        $aColumnsToShow['VariantOnTranscript'] =
+                            array(
+                                'VariantOnTranscript/DNA',
+                                'VariantOnTranscript/Protein',
+                                'VariantOnTranscript/GVS/Function',
+                            );
+                    }
                     $nKeyVOG = array_search('VariantOnGenome', $aObjects);
                     if (!$aSQL['FROM']) {
                         // First data table in query.
