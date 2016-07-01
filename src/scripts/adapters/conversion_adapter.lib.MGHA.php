@@ -74,8 +74,6 @@ function lovd_prepareMappings()
         'EUR_MAF' => 'VariantOnTranscript/Frequency/1000G/VEP/European',
         'SAS_MAF' => 'VariantOnTranscript/Frequency/1000G/VEP/South_Asian',
         'AA_MAF' => 'VariantOnTranscript/Frequency/1000G/VEP/African_American',
-        'EA_MAF' => 'VariantOnTranscript/Frequency/1000G/VEP/European_American',
-        'ExAC_Adj_MAF' => 'VariantOnTranscript/Frequency/ExAC/Adjusted',
         'ExAC_AFR_MAF' => 'VariantOnTranscript/Frequency/ExAC/African_American',
         'ExAC_AMR_MAF' => 'VariantOnTranscript/Frequency/ExAC/American',
         'ExAC_EAS_MAF' => 'VariantOnTranscript/Frequency/ExAC/East_Asian',
@@ -89,7 +87,6 @@ function lovd_prepareMappings()
         'PUBMED' => 'VariantOnTranscript/Pubmed',
         'Condel' => 'VariantOnTranscript/Prediction/Condel_Score',
         '1000Gp1_AC' => 'VariantOnTranscript/Frequency/1000G/dbNSFP/Allele_Count',
-        '1000Gp1_AF' => 'VariantOnTranscript/Frequency/1000G/dbNSFP',
         '1000Gp1_AFR_AC' => 'VariantOnTranscript/Frequency/1000G/dbNSFP/African/Allele_Count',
         '1000Gp1_AFR_AF' => 'VariantOnTranscript/Frequency/1000G/dbNSFP/African',
         '1000Gp1_AMR_AC' => 'VariantOnTranscript/Frequency/1000G/dbNSFP/American/Allele_Count',
@@ -155,6 +152,7 @@ function lovd_prepareMappings()
         'phyloP46way_primate' => 'VariantOnTranscript/Prediction/phyloP46way_Prim_Score',
         'phyloP46way_primate_rankscore' => 'VariantOnTranscript/Prediction/phyloP46way_Prim_Ranked_Score',
         'Grantham' => 'VariantOnTranscript/Prediction/Grantham',
+        'CPIPE_BED' => 'VariantOnTranscript/Pipeline_V6_bed_file',
         // child/singleton fields
         'Child_DP' => 'VariantOnGenome/Sequencing/Depth/Total',
         'Child_GQ' => 'VariantOnGenome/Sequencing/Genotype/Quality',
@@ -195,7 +193,10 @@ function lovd_prepareMappings()
         'PolyPhen_Text' => 'VariantOnTranscript/Prediction/PolyPhen_VEP',
         'PolyPhen_Value' => 'VariantOnTranscript/Prediction/PolyPhen_Score_VEP',
         'SIFT_Text' => 'VariantOnTranscript/Prediction/SIFT_VEP',
-        'SIFT_Value' => 'VariantOnTranscript/Prediction/SIFT_Score_VEP'
+        'SIFT_Value' => 'VariantOnTranscript/Prediction/SIFT_Score_VEP',
+        'EVS' => 'VariantOnTranscript/Frequency/1000G/VEP/European_American',
+        'ExAC' => 'VariantOnTranscript/Frequency/ExAC/Adjusted',
+        '1000G' => 'VariantOnTranscript/Frequency/1000G/dbNSFP'
 
     );
 
@@ -320,12 +321,15 @@ function lovd_prepareVariantData($aLine)
     }
 
     //process EVS (EA_MAF) multiple values can be present, take the highest frequency
-    if (preg_match('/(.)&(.)/',$aLine['EA_MAF'],$EVS)){
+    //$EVS = explode("&",$aLine['EA_MAF']);
 
-    }
     //process 1000G (1000Gp1_AF) A:0.4545 - take the frequency only
+    if (preg_match('/^\D+:(.+)$/',$aLine['1000Gp1_AF'],$G1000)) {
+        $aLine['1000G'] = $G1000[1];
+    }
 
     //process ExAC (ExAC_Adj_MAF) multiple values and scientific values. Taken the highest frequency
+    //$ExAC = explode("&",$aLine['EA_MAF']);
 
     //variant priority
 
