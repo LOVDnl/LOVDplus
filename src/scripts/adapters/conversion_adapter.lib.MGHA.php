@@ -326,54 +326,105 @@ function lovd_prepareVariantData($aLine)
     }
 
     //process EVS (EA_MAF) multiple values can be present, take the highest frequency
-    $EVSArr = explode("&",$aLine['EA_MAF']);
-    $EVSValArray = array();
-    foreach($EVSArr as $EVS_Data){
-        if (preg_match('/^\D+:(.+)$/',$EVS_Data,$EVS_Freq)) {
-            $EVS = $EVS_Freq[1];
+    if ($aLine['EA_MAF'] == 'unknown' | $aLine['EA_MAF'] == ''){
+        $EVS_Value = '';
+    }elseif (strpos($aLine['EA_MAF'], '&') !== false) {
+        $EVSArr = explode("&", $aLine['EA_MAF']);
+        $EVSValArray = array();
+        foreach ($EVSArr as $EVS_Data) {
+            if (preg_match('/^\D+:(.+)$/', $EVS_Data, $EVS_Freq)) {
+                $EVS = $EVS_Freq[1];
+            }
+            if (is_numeric($EVS)) {
+                array_push($EVSValArray, $EVS);
+            }
         }
-        if(is_numeric($EVS)){
-            array_push($EVSValArray,$EVS);
-        }
+        $EVS_Value = max($EVSValArray);
+    }elseif(preg_match('/^\D+:(.+)$/',$aLine['EA_MAF'],$EVS_Freq)){
+        $EVS_Value = $EVS_Freq[1];
+    }else{
+        $EVS_Value = '';
     }
-    $EVS_Value = max($EVSValArray);
     $aLine['EVS'] = $EVS_Value;
 
     //process 1000G (GMAF) A:0.4545 - take the frequency only
-    if (preg_match('/^\D+:(.+)$/',$aLine['GMAF'],$G1000)) {
+    //if unknown or empty leave value as empty
+    if ($aLine['GMAF'] == 'unknown' | $aLine['GMAF'] == ''){
+        $GMAF = '';
+    }elseif (preg_match('/^\D+:(.+)$/',$aLine['GMAF'],$G1000)) {
         $GMAF = $G1000[1];
-        $aLine['1000G'] = $GMAF;
+    }else{
+        $GMAF = '';
     }
+    $aLine['1000G'] = $GMAF;
 
     //process ExAC (ExAC_MAF) multiple values and scientific values. Taken the highest frequency
-    $ExACArr = explode("&",$aLine['ExAC_MAF']);
-    $ExACValArray = array();
-    foreach($ExACArr as $ExAC_Data){
-        if (preg_match('/^\D+:(.+)$/',$ExAC_Data,$ExAC_Freq)) {
-            $ExAC = $ExAC_Freq[1];
+    //if unknown or empty, leave value as empty
+    if ($aLine['ExAC_MAF'] == 'unknown' || $aLine['ExAC_MAF'] == ''){
+        $ExAC_Value = '';
+    }elseif (strpos($aLine['ExAC_MAF'], '&') !== false) {
+        $ExACArr = explode("&", $aLine['ExAC_MAF']);
+        $ExACValArray = array();
+        foreach ($ExACArr as $ExAC_Data) {
+            if (preg_match('/^\D+:(.+)$/', $ExAC_Data, $ExAC_Freq)) {
+                $ExAC = $ExAC_Freq[1];
+            }
+            if (is_numeric($ExAC)) {
+                array_push($ExACValArray, $ExAC);
+            }
         }
-        if(is_numeric($ExAC)){
-            array_push($ExACValArray,$ExAC);
-        }
+        $ExAC_Value = max($ExACValArray);
+    }elseif (preg_match('/^\D+:(.+)$/',$aLine['ExAC_MAF'],$ExAC_Freq)) {
+        $ExAC_Value = $ExAC_Freq[1];
+
+    }else{
+        $ExAC_Value = '';
     }
-    $ExAC_Value = max($ExACValArray);
     $aLine['ExAC'] = $ExAC_Value;
 
     // get maximum frequency using EA_MAF, GMAF, ExAC_MAF
     $max_Freq = max($GMAF,$ExAC_Value,$EVS_Value);
 
-    //variant priority
+    //VARIANT PRIORITY
     if ($aLine['IMPACT'] == 'HIGH'){
         // check if novel - SNP138 ($aLine['ID']) is = '.' or '' and there is no frequency
-        if ($aLine['ID'] == '.' | $aLine == '') {
-
-        } else if($max_Freq < 0.0005){
+        if (($aLine['ID'] == '.' || $aLine == '') && $max_Freq == ''){
+            // novel
+            $aLine['Variant_Priority'] = 5;
+        } elseif ($max_Freq <= 0.0005){
             $aLine['Variant_Priority'] = 4;
+        } elseif ($max_Freq <= 0.01){
+            $aLine['Variant_Priority'] = 3;
+        } else {
+            $aLine['Variant_Priority'] = 1;
         }
+    }elseif ($aLine['IMPACT'] == 'MODERATE') {
+        // check if it is rare
+        if ($max_Freq <= 0.01) {
+            // check if novel - SNP138 ($aLine['ID']) is = '.' or '' and there is no frequency OR if very rare (<0.0005)
+            if ((($aLine['ID'] == '.' || $aLine == '') && $max_Freq == '') || $max_Freq <= 0.0005) {
+                // check if it is conserved - condel >= 0.07
+                if ($aLine['Condel'] >= 0.07) {
+                    $aLine['Variant_Priority'] = 4;
+                } else {
+                    $aLine['Variant_Priority'] = 3;
+                }
+            }else{
+                $aLine['Variant_Priority'] = 2;
+            }
+        }else{
+            $aLine['Variant_Priority'] = 1;
+        }
+    }elseif ($aLine['IMPACT'] == 'LOW'){
+        $aLine['Variant_Priority'] = 0;
+    }elseif ($aLine['IMPACT'] == 'MODIFIER'){
+        $aLine['Variant_Priority'] = 0;
+    }else{
+        $aLine['Variant_Priority'] = 0;
     }
 
 
-return $aLine;
+    return $aLine;
 }
 
 
