@@ -386,43 +386,46 @@ function lovd_prepareVariantData($aLine)
     $max_Freq = max($GMAF,$ExAC_Value,$EVS_Value);
 
     //VARIANT PRIORITY
-    if ($aLine['IMPACT'] == 'HIGH'){
-        // check if novel - SNP138 ($aLine['ID']) is = '.' or '' and there is no frequency
-        if (($aLine['ID'] == '.' || $aLine == '') && $max_Freq == ''){
-            // novel
-            $aLine['Variant_Priority'] = 5;
-        } elseif ($max_Freq <= 0.0005){
-            $aLine['Variant_Priority'] = 4;
-        } elseif ($max_Freq <= 0.01){
-            $aLine['Variant_Priority'] = 3;
-        } else {
-            $aLine['Variant_Priority'] = 1;
-        }
-    }elseif ($aLine['IMPACT'] == 'MODERATE') {
-        // check if it is rare
-        if ($max_Freq <= 0.01) {
-            // check if novel - SNP138 ($aLine['ID']) is = '.' or '' and there is no frequency OR if very rare (<0.0005)
-            if ((($aLine['ID'] == '.' || $aLine == '') && $max_Freq == '') || $max_Freq <= 0.0005) {
-                // check if it is conserved - condel >= 0.07
-                if ($aLine['Condel'] >= 0.07) {
-                    $aLine['Variant_Priority'] = 4;
-                } else {
-                    $aLine['Variant_Priority'] = 3;
-                }
-            }else{
-                $aLine['Variant_Priority'] = 2;
+    if (!empty($aLine['CPIPE_BED'])) {
+        $aLine['Variant_Priority'] = 6;
+    }else {
+        if ($aLine['IMPACT'] == 'HIGH') {
+            // check if novel - SNP138 ($aLine['ID']) is = '.' or '' and there is no frequency
+            if (($aLine['ID'] == '.' || $aLine == '') && $max_Freq == '') {
+                // novel
+                $aLine['Variant_Priority'] = 5;
+            } elseif ($max_Freq <= 0.0005) {
+                $aLine['Variant_Priority'] = 4;
+            } elseif ($max_Freq <= 0.01) {
+                $aLine['Variant_Priority'] = 3;
+            } else {
+                $aLine['Variant_Priority'] = 1;
             }
-        }else{
-            $aLine['Variant_Priority'] = 1;
+        } elseif ($aLine['IMPACT'] == 'MODERATE') {
+            // check if it is rare
+            if ($max_Freq <= 0.01) {
+                // check if novel - SNP138 ($aLine['ID']) is = '.' or '' and there is no frequency OR if very rare (<0.0005)
+                if ((($aLine['ID'] == '.' || $aLine == '') && $max_Freq == '') || $max_Freq <= 0.0005) {
+                    // check if it is conserved - condel >= 0.07
+                    if ($aLine['Condel'] >= 0.07) {
+                        $aLine['Variant_Priority'] = 4;
+                    } else {
+                        $aLine['Variant_Priority'] = 3;
+                    }
+                } else {
+                    $aLine['Variant_Priority'] = 2;
+                }
+            } else {
+                $aLine['Variant_Priority'] = 1;
+            }
+        } elseif ($aLine['IMPACT'] == 'LOW') {
+            $aLine['Variant_Priority'] = 0;
+        } elseif ($aLine['IMPACT'] == 'MODIFIER') {
+            $aLine['Variant_Priority'] = 0;
+        } else {
+            $aLine['Variant_Priority'] = 0;
         }
-    }elseif ($aLine['IMPACT'] == 'LOW'){
-        $aLine['Variant_Priority'] = 0;
-    }elseif ($aLine['IMPACT'] == 'MODIFIER'){
-        $aLine['Variant_Priority'] = 0;
-    }else{
-        $aLine['Variant_Priority'] = 0;
     }
-
 
     return $aLine;
 }
