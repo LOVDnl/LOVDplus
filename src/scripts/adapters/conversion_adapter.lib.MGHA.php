@@ -328,7 +328,7 @@ function lovd_prepareVariantData($aLine)
     //process EVS (EA_MAF) multiple values can be present, take the highest frequency
     if ($aLine['EA_MAF'] == 'unknown' | $aLine['EA_MAF'] == ''){
         $EVS_Value = '';
-    }elseif (strpos($aLine['EA_MAF'], '&') !== false) {
+    } elseif (strpos($aLine['EA_MAF'], '&') !== false) {
         $EVSArr = explode("&", $aLine['EA_MAF']);
         $EVSValArray = array();
         foreach ($EVSArr as $EVS_Data) {
@@ -340,9 +340,9 @@ function lovd_prepareVariantData($aLine)
             }
         }
         $EVS_Value = max($EVSValArray);
-    }elseif(preg_match('/^\D+:(.+)$/',$aLine['EA_MAF'],$EVS_Freq)){
+    } elseif (preg_match('/^\D+:(.+)$/',$aLine['EA_MAF'],$EVS_Freq)){
         $EVS_Value = $EVS_Freq[1];
-    }else{
+    } else {
         $EVS_Value = '';
     }
     $aLine['EVS'] = $EVS_Value;
@@ -351,9 +351,9 @@ function lovd_prepareVariantData($aLine)
     //if unknown or empty leave value as empty
     if ($aLine['GMAF'] == 'unknown' | $aLine['GMAF'] == ''){
         $GMAF = '';
-    }elseif (preg_match('/^\D+:(.+)$/',$aLine['GMAF'],$G1000)) {
+    } elseif (preg_match('/^\D+:(.+)$/',$aLine['GMAF'],$G1000)) {
         $GMAF = $G1000[1];
-    }else{
+    } else {
         $GMAF = '';
     }
     $aLine['1000G'] = $GMAF;
@@ -362,7 +362,7 @@ function lovd_prepareVariantData($aLine)
     //if unknown or empty, leave value as empty
     if ($aLine['ExAC_MAF'] == 'unknown' || $aLine['ExAC_MAF'] == ''){
         $ExAC_Value = '';
-    }elseif (strpos($aLine['ExAC_MAF'], '&') !== false) {
+    } elseif (strpos($aLine['ExAC_MAF'], '&') !== false) {
         $ExACArr = explode("&", $aLine['ExAC_MAF']);
         $ExACValArray = array();
         foreach ($ExACArr as $ExAC_Data) {
@@ -374,10 +374,10 @@ function lovd_prepareVariantData($aLine)
             }
         }
         $ExAC_Value = max($ExACValArray);
-    }elseif (preg_match('/^\D+:(.+)$/',$aLine['ExAC_MAF'],$ExAC_Freq)) {
+    } elseif (preg_match('/^\D+:(.+)$/',$aLine['ExAC_MAF'],$ExAC_Freq)) {
         $ExAC_Value = $ExAC_Freq[1];
 
-    }else{
+    } else {
         $ExAC_Value = '';
     }
     $aLine['ExAC'] = $ExAC_Value;
@@ -388,10 +388,10 @@ function lovd_prepareVariantData($aLine)
     //VARIANT PRIORITY
     if (!empty($aLine['CPIPE_BED'])) {
         $aLine['Variant_Priority'] = 6;
-    }else {
+    } else {
         if ($aLine['IMPACT'] == 'HIGH') {
             // check if novel - SNP138 ($aLine['ID']) is = '.' or '' and there is no frequency
-            if (($aLine['ID'] == '.' || $aLine == '') && $max_Freq == '') {
+            if (($aLine['ID'] == '.' || $aLine['ID'] == '') && $max_Freq == '') {
                 // novel
                 $aLine['Variant_Priority'] = 5;
             } elseif ($max_Freq <= 0.0005) {
