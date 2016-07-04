@@ -307,6 +307,9 @@ if ($argc != 1 && in_array($argv[1], array('--help', '-help', '-h', '-?'))) {
             $aColumnsForScreening['individualid'] = $sVal['Sample_ID'];
             $aColumnsForIndividual['id'] = $sVal['Sample_ID'];
 
+            // Create the custom link data for the pipeline files.
+            // TODO MGHA AM - How do we know if we are creating the singleton or the trio screening here when this sample is run for both? We need to know this for the summary file name as it could have .trio in it.
+            $aColumnsForScreening['Screening/Pipeline_files'] = '{gap:' . $sVal['Pipeline_Run_ID'] . '_' . $sVal['Sample_ID']  . '.gap.csv} {prov:' . $sVal['Pipeline_Run_ID'] . '_' . $sVal['Sample_ID']  . '.provenance.pdf} {summary:' . $sVal['Pipeline_Run_ID'] . '_' . $sVal['Sample_ID']  . '.summary.htm}';
 
             // add default values, we currently only have them for screening, if we get some for individual we need to handle this below.
             foreach ($aDefaultValues as $dKey => $dVal) {
