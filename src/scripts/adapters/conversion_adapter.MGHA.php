@@ -439,23 +439,14 @@ if ($argc != 1 && in_array($argv[1], array('--help', '-help', '-h', '-?'))) {
                 }
                 //write the output data to a variable
                 $OutputData =
+                $sSMDF =
                     '### LOVD-version 3000-080 ### Full data download ### To import, do not remove or alter this header ###' . "\r\n" .
                     '# charset = UTF-8' . "\r\n\r\n" .
                     '## Diseases ## Do not remove or alter this header ##' . "\r\n\r\n" .
-                    '## Individuals ## Do not remove or alter this header ##' . "\r\n";
-
-                // if CN and sample existing - comment out the individual line
-                if (!$bIndExists) {
-                    $OutputData .=
-                        '"{{' . implode("}}\"\t\"{{", array_keys($aColumnsForIndividual)) . '}}"' . "\r\n" .
-                        '"' . implode("\"\t\"", array_values($aColumnsForIndividual)) . '"' . "\r\n\r\n";
-                } elseif ($sVal['Cohort'] == 'CN') {
-                    $OutputData .=
-                        '# "{{' . implode("}}\"\t\"{{", array_keys($aColumnsForIndividual)) . '}}"' . "\r\n" .
-                        '# "' . implode("\"\t\"", array_values($aColumnsForIndividual)) . '"' . "\r\n\r\n";
-                }
-
-                $OutputData .=
+                    '## Individuals ## Do not remove or alter this header ##' . "\r\n" .
+                    '"{{' . implode("}}\"\t\"{{", array_keys($aColumnsForIndividual)) . '}}"' . "\r\n" .
+                    ($bIndExists || ($bTrio && $sVal['Cohort'] != 'CN') ? '# ' : '') . // If the individual exists or its a trio and not CN then we will comment out the individual record.
+                    '"' . implode("\"\t\"", array_values($aColumnsForIndividual)) . '"' . "\r\n\r\n" .
                     '## Individuals_To_Diseases ## Do not remove or alter this header ##' . "\r\n\r\n" .
                     '## Screenings ## Do not remove or alter this header ##' . "\r\n" .
                     '"{{' . implode("}}\"\t\"{{", array_keys($aColumnsForScreening)) . '}}"' . "\r\n" .
