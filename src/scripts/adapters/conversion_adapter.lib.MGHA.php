@@ -232,7 +232,7 @@ function lovd_prepareVariantData($aLine)
     }
 
     // check whether the mother or father's genotype is present. If so we are dealing with a trio and we need to calculate the following
-    if (!empty($aLine['Mother_GT']) || !empty($aLine['Father_GT'])) {
+    if (in_array('Mother_GT', $aLine) && in_array('Father_GT', $aLine)) {
         for ($parentCount = 1; $parentCount <= 2; $parentCount++) {
             if ($parentCount == 1) {
                 $parent = 'Father';
