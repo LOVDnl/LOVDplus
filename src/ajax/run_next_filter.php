@@ -49,12 +49,12 @@ if (empty($_GET['runid']) || !ctype_digit($_GET['runid'])) {
 // Check if run exists.
 $nRunID = $_DB->query('SELECT CAST(id AS UNSIGNED) FROM ' . TABLE_ANALYSES_RUN . ' WHERE id = ?', array($_GET['runid']))->fetchColumn();
 if (!$nRunID) {
-    die('Analysis run not recognized. If the analysis is defined properly, this is an error in the software.');
+    die(json_encode(array('result' => false, 'msg' => 'Analysis run not recognized. If the analysis is defined properly, this is an error in the software.')));
 }
 
 // Check if session var exists.
 if (empty($_SESSION['analyses'][$nRunID]) || empty($_SESSION['analyses'][$nRunID]['filters']) || !isset($_SESSION['analyses'][$nRunID]['IDsLeft'])) {
-    die('Analysis run data not found. It\'s either not your analysis run, it\'s already done, or you have been logged out.');
+    die(json_encode(array('result' => false, 'msg' => 'Analysis run data not found. It\'s either not your analysis run, it\'s already done, or you have been logged out.')));
 }
 
 
@@ -72,6 +72,15 @@ $tStart = microtime(true);
 if ($aVariantIDs) {
     $aVariantIDsFiltered = false;
     switch ($sFilter) {
+
+        // MGHA specific filters.
+        // TODO MGHA AM - We really should separate these filters out into a site specific configuration area as most of them depend on custom columns.
+        case 'remove_variant_priority_lte_3':
+            $aVariantIDsFiltered = $_DB->query('SELECT CAST(id AS UNSIGNED) FROM ' . TABLE_VARIANTS . ' WHERE `VariantOnGenome/Variant_priority` > 3 AND id IN (?' . str_repeat(', ?', count($aVariantIDs) - 1) . ')', $aVariantIDs, false)->fetchAllColumn();
+            break;
+        // End MGHA specific filters. You need to be careful when using anything below this line as it might not work with MGHA custom columns. The following filters are known to work:
+        // chromosome_X, is_present_father_1, is_present_father_lte_4, is_present_mother_1, is_present_mother_lte_4, remove_by_quality_lte_100, select_homozygous_or_compound_heterozygous
+
         case 'chromosome_X':
             $aVariantIDsFiltered = $_DB->query('SELECT CAST(id AS UNSIGNED) FROM ' . TABLE_VARIANTS . ' WHERE chromosome = "X" AND id IN (?' . str_repeat(', ?', count($aVariantIDs) - 1) . ')', $aVariantIDs, false)->fetchAllColumn();
             break;
@@ -314,11 +323,11 @@ if ($aVariantIDs) {
             break;
         default:
             // Filter not recognized... Oh, dear... We didn't define it yet?
-            die('Filter \'' . $sFilter . '\' not recognized. Are you sure it\'s defined? If it is, this is an error in the software.');
+            die(json_encode(array('result' => false, 'msg' => 'Filter \'' . $sFilter . '\' not recognized. Are you sure it\'s defined? If it is, this is an error in the software.')));
     }
     if ($aVariantIDsFiltered === false) {
         // Query error...
-        die('Software error: Filter \'' . $sFilter . '\' returned a query error. Please tell support to check the logs.');
+        die(json_encode(array('result' => false, 'msg' => 'Software error: Filter \'' . $sFilter . '\' returned a query error. Please tell support to check the logs.')));
     }
 } else {
     $aVariantIDsFiltered = array();
@@ -328,7 +337,7 @@ $nTimeSpent = round($tEnd - $tStart);
 
 // Update database.
 if (!$_DB->query('UPDATE ' . TABLE_ANALYSES_RUN_FILTERS . ' SET filtered_out = ?, run_time = ? WHERE runid = ? AND filterid = ?', array((count($aVariantIDs) - count($aVariantIDsFiltered)), $nTimeSpent, $nRunID, $sFilter), false)) {
-    die('Software error: Error saving filter step results. Please tell support to check the logs.');
+    die(json_encode(array('result' => false, 'msg' => 'Software error: Error saving filter step results. Please tell support to check the logs.')));
 }
 
 // Now update the session.

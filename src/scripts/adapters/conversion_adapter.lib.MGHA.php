@@ -232,7 +232,7 @@ function lovd_prepareVariantData($aLine)
     }
 
     // check whether the mother or father's genotype is present. If so we are dealing with a trio and we need to calculate the following
-    if ($aLine['Mother_GT'] | $aLine['Father_GT']) {
+    if (!empty($aLine['Mother_GT']) || !empty($aLine['Father_GT'])) {
         for ($parentCount = 1; $parentCount <= 2; $parentCount++) {
             if ($parentCount == 1) {
                 $parent = 'Father';
@@ -289,7 +289,7 @@ function lovd_prepareVariantData($aLine)
                 // set the alt percentage in $aLine
                 $aLine[$parent . '_Alt_Percentage'] = $parentAltPercentage;
 
-                if ($aLine[$parent . '_PL'] == '' | $aLine[$parent . '_PL'] == 'unknown') {
+                if ($aLine[$parent . '_PL'] == '' || $aLine[$parent . '_PL'] == 'unknown') {
                     $parentPLAlt = 'unknown';
                 } else {
 
@@ -326,7 +326,7 @@ function lovd_prepareVariantData($aLine)
     }
 
     //process EVS (EA_MAF) multiple values can be present, take the highest frequency
-    if ($aLine['EA_MAF'] == 'unknown' | $aLine['EA_MAF'] == ''){
+    if ($aLine['EA_MAF'] == 'unknown' || $aLine['EA_MAF'] == ''){
         $EVS_Value = '';
     } elseif (strpos($aLine['EA_MAF'], '&') !== false) {
         $EVSArr = explode("&", $aLine['EA_MAF']);
@@ -349,7 +349,7 @@ function lovd_prepareVariantData($aLine)
 
     //process 1000G (GMAF) A:0.4545 - take the frequency only
     //if unknown or empty leave value as empty
-    if ($aLine['GMAF'] == 'unknown' | $aLine['GMAF'] == ''){
+    if ($aLine['GMAF'] == 'unknown' || $aLine['GMAF'] == ''){
         $GMAF = '';
     } elseif (preg_match('/^\D+:(.+)$/',$aLine['GMAF'],$G1000)) {
         $GMAF = $G1000[1];
