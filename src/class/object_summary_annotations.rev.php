@@ -72,6 +72,10 @@ class LOVD_SummaryAnnotationREV extends LOVD_SummaryAnnotation {
             ),
             $this->buildViewList(),
             array(
+                'effectid_' => array(
+                    'view' => array('Effect', 110),
+                    'db'   => array('sa.effectid', 'DESC', true),
+                    'legend' => array('The variant effect')),
                 'created_by_' => array(
                     'view' => array('Added By', 110),
                     'db'   => array('uc.name', 'DESC', true),
@@ -119,6 +123,7 @@ class LOVD_SummaryAnnotationREV extends LOVD_SummaryAnnotation {
 
     function prepareData ($zData = '', $sView = 'list') {
         // Prepares the data by "enriching" the variable received with links, pictures, etc.
+        global $_SETT;
         if (!in_array($sView, array('list', 'entry'))) {
             $sView = 'list';
         }
@@ -128,6 +133,11 @@ class LOVD_SummaryAnnotationREV extends LOVD_SummaryAnnotation {
 
         $zData['reason'] = str_replace("\r\n", '<BR>', $zData['reason']);
         $zData['deleted_'] = '';
+        if (isset($zData['effectid']) && $zData['effectid'] != '') {
+            $zData['effectid_'] = $_SETT['var_effect'][$zData['effectid']];
+        } else {
+            $zData['effectid_'] = '';
+        }
 
         // Changes dependent on version.
         if ($zData['valid_to'] == '9999-12-31 00:00:00') {
