@@ -167,7 +167,9 @@ function lovd_runNextFilter (nAnalysisID, nRunID)
                     // Failure, we're in trouble, reload view.
                     alert('Filter step not valid or no authorization to start a new filter step. Refreshing the page...');
                     location.reload();
-
+                } else if (dataObj.result == false) {
+                    alert(dataObj.msg);
+                    location.reload();
                 } else if (dataObj.result) {
                     // Success! Mark line and continue to the next, or stop if we're done...
                     oTR = $('#' + sClassName + '_filter_' + dataObj.sFilterID);

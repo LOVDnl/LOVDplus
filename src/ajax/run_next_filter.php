@@ -49,12 +49,12 @@ if (empty($_GET['runid']) || !ctype_digit($_GET['runid'])) {
 // Check if run exists.
 $nRunID = $_DB->query('SELECT CAST(id AS UNSIGNED) FROM ' . TABLE_ANALYSES_RUN . ' WHERE id = ?', array($_GET['runid']))->fetchColumn();
 if (!$nRunID) {
-    die('Analysis run not recognized. If the analysis is defined properly, this is an error in the software.');
+    die(json_encode(array('result' => false, 'msg' => 'Analysis run not recognized. If the analysis is defined properly, this is an error in the software.')));
 }
 
 // Check if session var exists.
 if (empty($_SESSION['analyses'][$nRunID]) || empty($_SESSION['analyses'][$nRunID]['filters']) || !isset($_SESSION['analyses'][$nRunID]['IDsLeft'])) {
-    die('Analysis run data not found. It\'s either not your analysis run, it\'s already done, or you have been logged out.');
+    die(json_encode(array('result' => false, 'msg' => 'Analysis run data not found. It\'s either not your analysis run, it\'s already done, or you have been logged out.')));
 }
 
 
@@ -314,11 +314,11 @@ if ($aVariantIDs) {
             break;
         default:
             // Filter not recognized... Oh, dear... We didn't define it yet?
-            die('Filter \'' . $sFilter . '\' not recognized. Are you sure it\'s defined? If it is, this is an error in the software.');
+            die(json_encode(array('result' => false, 'msg' => 'Filter \'' . $sFilter . '\' not recognized. Are you sure it\'s defined? If it is, this is an error in the software.')));
     }
     if ($aVariantIDsFiltered === false) {
         // Query error...
-        die('Software error: Filter \'' . $sFilter . '\' returned a query error. Please tell support to check the logs.');
+        die(json_encode(array('result' => false, 'msg' => 'Software error: Filter \'' . $sFilter . '\' returned a query error. Please tell support to check the logs.')));
     }
 } else {
     $aVariantIDsFiltered = array();
@@ -328,7 +328,7 @@ $nTimeSpent = round($tEnd - $tStart);
 
 // Update database.
 if (!$_DB->query('UPDATE ' . TABLE_ANALYSES_RUN_FILTERS . ' SET filtered_out = ?, run_time = ? WHERE runid = ? AND filterid = ?', array((count($aVariantIDs) - count($aVariantIDsFiltered)), $nTimeSpent, $nRunID, $sFilter), false)) {
-    die('Software error: Error saving filter step results. Please tell support to check the logs.');
+    die(json_encode(array('result' => false, 'msg' => 'Software error: Error saving filter step results. Please tell support to check the logs.')));
 }
 
 // Now update the session.
