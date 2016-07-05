@@ -620,17 +620,12 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && !ACTION) {
                     // Set the correct status for the TRs in the viewList (highlight the active TR).
                     $( '#VOT_' + prevHash ).attr('class', 'data');
                     $( '#VOT_' + hash ).attr('class', 'data bold');
-
-                    if (!($.browser.msie && $.browser.version < 9.0)) {
-                        $( '#viewentryDiv' ).stop().css('opacity','0'); // Stop execution of actions, set opacity = 0 (hidden, but not taken out of the flow).
-                    }
+                    $( '#viewentryDiv' ).stop().css('opacity','0'); // Stop execution of actions, set opacity = 0 (hidden, but not taken out of the flow).
                     $.get('ajax/viewentry.php', { object: 'Transcript_Variant', id: '<?php echo $nID; ?>,' + hash },
                         function(sData) {
                             if (sData.length > 2) {
                                 $( '#viewentryDiv' ).html('\n' + sData);
-                                if (!($.browser.msie && $.browser.version < 9.0)) {
-                                    $( '#viewentryDiv' ).fadeTo(1000, 1);
-                                }
+                                $( '#viewentryDiv' ).fadeTo(1000, 1);
                             }
                         });
                     prevHash = hash;
