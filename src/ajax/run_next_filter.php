@@ -72,6 +72,15 @@ $tStart = microtime(true);
 if ($aVariantIDs) {
     $aVariantIDsFiltered = false;
     switch ($sFilter) {
+
+        // MGHA specific filters.
+        // TODO MGHA AM - We really should separate these filters out into a site specific configuration area as most of them depend on custom columns.
+        case 'remove_variant_priority_lte_3':
+            $aVariantIDsFiltered = $_DB->query('SELECT CAST(id AS UNSIGNED) FROM ' . TABLE_VARIANTS . ' WHERE `VariantOnGenome/Variant_priority` > 3 AND id IN (?' . str_repeat(', ?', count($aVariantIDs) - 1) . ')', $aVariantIDs, false)->fetchAllColumn();
+            break;
+        // End MGHA specific filters. You need to be careful when using anything below this line as it might not work with MGHA custom columns. The following filters are known to work:
+        // chromosome_X, is_present_father_1, is_present_father_lte_4, is_present_mother_1, is_present_mother_lte_4, remove_by_quality_lte_100, select_homozygous_or_compound_heterozygous
+
         case 'chromosome_X':
             $aVariantIDsFiltered = $_DB->query('SELECT CAST(id AS UNSIGNED) FROM ' . TABLE_VARIANTS . ' WHERE chromosome = "X" AND id IN (?' . str_repeat(', ?', count($aVariantIDs) - 1) . ')', $aVariantIDs, false)->fetchAllColumn();
             break;
