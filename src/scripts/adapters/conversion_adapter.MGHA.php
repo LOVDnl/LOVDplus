@@ -98,6 +98,11 @@ if ($argc != 1 && in_array($argv[1], array('--help', '-help', '-h', '-?'))) {
         'Notes' => 'Screening/Parent/Notes'
     );
 
+    // Individual Default Values if injecting record into the database
+    $aIndDefaultValues = array(
+        'panel_size' => 3,
+        'custom_panel' => ''
+    );
 
     // Screening Default values.
     $aDefaultValues = array(
@@ -342,43 +347,56 @@ if ($argc != 1 && in_array($argv[1], array('--help', '-help', '-h', '-?'))) {
         }else{
             $bTrio = false;
         }
+
+        // set the IDs for each section, since we are generating one meta data file per child/singleton, there will only ever be 1 individual record and screening
+        // look up sample ID in the database to check if it exists. If it does, then use the database ID as the individualid and id to link the new screening information
+        if ($existingSampArr = $_DB->query('SELECT id FROM ' . TABLE_INDIVIDUALS . ' WHERE `Individual/Sample_ID` = ' . $sVal['Sample_ID'])->fetchAssoc()) {
+            $bIndExists = true;
+            if ($bTrio && $sVal['Cohort'] == 'CN') {
+                // individual trio files for CN patients go into a separate LOVD+ database, since we do not know that specific database ID we cannot continue and need to rename this file and alert user
+                print('Cannot process individual variant file for sample ' . $sVal['Sample_ID'] . ' as the sample is for cohort CN and has already been imported into the database. Please handle manually' . "\n");
+
+            } else {
+                $aColumnsForScreening['individualid'] = $existingSampArr['id'];
+                $aColumnsForIndividual['id'] = $existingSampArr['id'];
+            }
+
+        } elseif ($bTrio && $sVal['Cohort'] !== 'CN') {
+            // need to insert a database record so we can get the database ID for the meta data files
+            // we only do this if the cohort is not CN, as we need the individual info to be created during import as the file is imported into another database
+            $sSQL = 'INSERT INTO ' . TABLE_INDIVIDUALS . ' (created_date,';
+            $aSQL = array();
+            $keyCount = 0;
+            foreach ($aIndDefaultValues as $iColumn => $iValue){
+                $sSQL .= '`' . $iColumn . '`, ';
+                $aSQL[] = $iValue;
+            }
+            $keyCount = 0;
+            foreach ($aColumnsForIndividual as $aColumn => $aValue) {
+                $keyCount++;
+                $sSQL .= ($keyCount > 1 ? ', ' : '') . '`' . $aColumn . '`';
+                $aSQL[] = $aValue;
+            }
+            $sSQL .= ') VALUES (NOW(), ?' . str_repeat(', ?', count($aIndDefaultValues) - 1) . str_repeat(', ?', count($aColumnsForIndividual)) . ')';
+            if ($newDBID = $_DB->query($sSQL, $aSQL, true, true)){
+                $individualID = $_DB->lastInsertId();
+                $aColumnsForScreening['individualid'] = $individualID;
+                $bIndExists = true;
+            } else {
+                // check with anthony whether we should error out  *************FIX
+                print('Can\'t create individual record in database for ' . $sVal['Sample_ID'] . '.' . "\n");
+            }
+        } else {
+            $bIndExists = false;
+            $aColumnsForScreening['individualid'] = $sVal['Sample_ID'];
+            $aColumnsForIndividual['id'] = $sVal['Sample_ID'];
+        }
+
         // If trio then we always create an individual and trio SMDF otherwise just individual.
         $aTypes = ($bTrio ? array('individual','trio') : array('individual'));
 
         if (empty($sVal['parent'])) {
             foreach ($aTypes as $sType) {
-
-                // set the IDs for each section, since we are generating one meta data file per child/singleton, there will only ever be 1 individual record and screening
-                // look up sample ID in the database to check if it exists. If it does, then use the database ID as the individualid and id to link the new screening information
-                if ($existingSampArr = $_DB->query('SELECT id FROM ' . TABLE_INDIVIDUALS . ' WHERE `Individual/Sample_ID` = ' . $sVal['Sample_ID'])->fetchAssoc()) {
-                    $bIndExists = true;
-                    if ($bTrio && $sVal['Cohort'] == 'CN') {
-                        // individual trio files for CN patients go into a separate LOVD+ database, since we do not know that specific database ID we cannot continue and need to rename this file and alert user
-                        print('Cannot process individual variant file for sample ' . $sVal['Sample_ID'] . ' as the sample is for cohort CN and has already been imported into the database. Please handle manually' . "\n");
-
-                    } else {
-                        $aColumnsForScreening['individualid'] = $existingSampArr['id'];
-                    }
-
-                } elseif ($bTrio && $sVal['Cohort'] !== 'CN') {
-                    // need to insert a database record so we can get the database ID for the meta data files
-                    // we only do this if the cohort is not CN, as we need the individual info to be created during import as the file is imported into another database
-
-                    // current custom columns are: Sample_ID, Consanguinity, Hospital_centre, Cohort
-                    if ($newDBID = $_DB->query('INSERT INTO ' . TABLE_INDIVIDUALS . ' (panel_size, custom_panel, created_date, `Individual/Sample_ID`,`Individual/Consanguinity`,`Individual/Hospital_centre`,`Individual/Cohort`) VALUES (?, ?, NOW(), ?, ?, ?, ?)', array(3, '', $sVal['Sample_ID'], $sVal['Consanguinity'], $sVal['Hospital_Centre'], $sVal['Cohort']))) {
-                        $individualID = $_DB->lastInsertId();
-                        $aColumnsForScreening['individualid'] = $individualID;
-                        $bIndExists = true;
-                    } else {
-                        // check with anthony whether we should error out  *************FIX
-                        print('Can\'t create individual record in database for ' . $sVal['Sample_ID'] . '.' . "\n");
-
-                    }
-                } else {
-                    $bIndExists = false;
-                    $aColumnsForScreening['individualid'] = $sVal['Sample_ID'];
-                    $aColumnsForIndividual['id'] = $sVal['Sample_ID'];
-                }
 
                 // add default values, we currently only have them for screening, if we get some for individual we need to handle this below.
                 foreach ($aDefaultValues as $dKey => $dVal) {
@@ -421,6 +439,7 @@ if ($argc != 1 && in_array($argv[1], array('--help', '-help', '-h', '-?'))) {
                 } else {
                     $aColumnsForIndividual['panel_size'] = 1;
                 }
+
 
                 //set the temp file name
                 $sFileNamePrefix = $sVal['Pipeline_Run_ID'] . '_' . $sVal['Sample_ID'] . '.' . $sType; // Lets use the full file name here so as we don't get duplicates when importing the same sample again in the future.
