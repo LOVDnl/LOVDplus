@@ -45,7 +45,6 @@ if ($argc != 1 && in_array($argv[1], array('--help', '-help', '-h', '-?'))) {
     $vFiles = array(); // array(ID => array(files), ...);
     $metaFile = '';
 
-
     // create mapping arrays for singleton/child record, mother and father
     $aColumnMappings = array(
         'Pipeline_Run_ID' => 'Screening/Pipeline/Run_ID',
@@ -107,6 +106,10 @@ if ($argc != 1 && in_array($argv[1], array('--help', '-help', '-h', '-?'))) {
         'id_sample' => 0
     );
 
+
+    // file type array - if trio, then add trio to array so we can loop through to create two meta data files
+    $runTypeArr = array('individual');
+
     // open the data files folder and process files
     $h = opendir($_INI['paths']['data_files']);
 
@@ -136,11 +139,13 @@ if ($argc != 1 && in_array($argv[1], array('--help', '-help', '-h', '-?'))) {
         }
 
         // get all the variant files into an array
+        // fileType is trio or individual
         if (preg_match('/^(.+?)\.tsv/', $xFile, $vRegs)) {
             $variantFilePrefix = explode('_', $vRegs[1]);
-            $fileSampleID = explode('.', $variantFilePrefix[3]);
-            $sID = $fileSampleID[0];
-            $vFiles[$sID] = $xFile;
+            $fileSampleIDs = explode('.', $variantFilePrefix[3]);
+            $sID = $fileSampleIDs[0];
+            $fileType = $fileSampleIDs[1];
+            $vFiles[$sID][$fileType] = $xFile;
 
         }
 
@@ -150,7 +155,7 @@ if ($argc != 1 && in_array($argv[1], array('--help', '-help', '-h', '-?'))) {
     if (!$metaFile && !empty($vFiles)) {
         print('Variant files found without a sample meta data file' . ".\n");
         die(52);
-    }elseif(!$metaFile){
+    } elseif (!$metaFile) {
         return;
     }
 
@@ -175,7 +180,7 @@ if ($argc != 1 && in_array($argv[1], array('--help', '-help', '-h', '-?'))) {
     fclose($fInput);
 
     // open the sample meta data file into an array
-    $sFile = file($metaFile,FILE_IGNORE_NEW_LINES);
+    $sFile = file($metaFile, FILE_IGNORE_NEW_LINES);
 
     // Create an array of headers from the first line
     $sHeader = explode("\t", $sFile[0]);
@@ -185,6 +190,7 @@ if ($argc != 1 && in_array($argv[1], array('--help', '-help', '-h', '-?'))) {
         if ($nKey > 0) { // Skips the first line
             $sValues = explode("\t", $sValue);
             $sValues = array_combine($sHeader, $sValues);
+            $sValues['trio'] = null;
             $sValues['parent'] = null;
             $sValues['mother_id'] = null;
             $sValues['father_id'] = null;
@@ -202,9 +208,9 @@ if ($argc != 1 && in_array($argv[1], array('--help', '-help', '-h', '-?'))) {
         // if Pedigree_File column is not empty, then it is a trio and we need to get the parent IDs, work out who is mother and father based on sex and update child's record
         If (!empty($sample['Pedigree_File'])) {
 
-            if (preg_match('/^f\d+\=(.+)/', $sample['Pedigree_File'], $pRegs)) {
+            if (preg_match('/^(.+?)\=(.+)/', $sample['Pedigree_File'], $pRegs)) {
                 // can combine this into the above regex
-                $parentIDs = explode(",", $pRegs[1]);
+                $parentIDs = explode(",", $pRegs[2]);
                 $fatherCount = 0;
                 $motherCount = 0;
 
@@ -243,11 +249,16 @@ if ($argc != 1 && in_array($argv[1], array('--help', '-help', '-h', '-?'))) {
                 // update the father ID and mother ID on the child's record
                 $sDataArr[$sampleID]['father_id'] = $fatherID;
                 $sDataArr[$sampleID]['mother_id'] = $motherID;
+
+                // update the trio flag on the child record
+                $sDataArr[$sampleID]['trio'] = "T";
+
             }
         }
 
+
         // convert unknown to ? for Consanguinity otherwise will not import into LOVD
-        if (strtoupper($sample['Consanguinity']) == 'UNKNOWN') {
+        if (strtoupper($sample['Consanguinity']) == 'UNKNOWN' | $sample['Consanguinity'] == '') {
             $sDataArr[$sampleID]['Consanguinity'] = '?';
         } else {
             $sDataArr[$sampleID]['Consanguinity'] = strtolower($sDataArr[$sampleID]['Consanguinity']);
@@ -255,7 +266,7 @@ if ($argc != 1 && in_array($argv[1], array('--help', '-help', '-h', '-?'))) {
 
     }
 
-    // remove any tsv files that are not for a singleton or child listed in the SMDF
+    // remove any tsv files that are not for a sample listed in the SMDF
     foreach ($vFiles as $vFileSampleID => $variantFileName) {
 
         If (!in_array($vFileSampleID, array_keys($sDataArr))) {
@@ -269,6 +280,8 @@ if ($argc != 1 && in_array($argv[1], array('--help', '-help', '-h', '-?'))) {
     foreach ($sDataArr as $sKeys) {
         $sID = $sKeys['Sample_ID'];
         $parent = $sKeys['parent'];
+        $trio = $sKeys['trio'];
+
         // update the gender (sex) to only store the first character. M = Male  F = Female
         $sDataArr[$sID]['Sex'] = strtoupper(substr($sKeys['Sex'], 0, 1));
 
@@ -277,114 +290,188 @@ if ($argc != 1 && in_array($argv[1], array('--help', '-help', '-h', '-?'))) {
                 print('There is no variant file for Sample ID ' . $sID . "\n");
                 die(52);
             } else {
-                // update the headers in the variant file for the singleton/child
-                $variantFile = $_INI['paths']['data_files'] . $vFiles[$sID];
-                $variantFileArr = file($variantFile,FILE_IGNORE_NEW_LINES);
-                // use preg_replace to update the column headers using child, father and mother sample IDs.
-                $variantHeader = preg_replace("/" . $sID . "\./", "Child_", $variantFileArr[0]);
+                if ($trio == 'T') {
 
-                if (!empty($sKeys['mother_id'])) {
-                    $variantHeader = preg_replace("/" . $sKeys['mother_id'] . "\./", "Mother_", $variantHeader);
-                }
-                if (!empty($sKeys['father_id'])) {
-                    $variantHeader = preg_replace("/" . $sKeys['father_id'] . "\./", "Father_", $variantHeader);
-                }
+                    if (!in_array('trio', array_keys($vFiles[$sID]))) {
+                        print('There is no trio variant file for Sample ID ' . $sID . "\n");
+                        die(52);
+                    } else {
 
-                $variantFileArr[0] = $variantHeader;
-                file_put_contents($variantFile, implode(PHP_EOL, $variantFileArr));
-                // ********** error handling to check the contents were updated
-            }
-        }
-    }
+                        // use preg_replace to update the column headers using child, father and mother sample IDs.
+                        $variantFile = $_INI['paths']['data_files'] . $vFiles[$sID]['trio'];
+                        $variantFileArr = file($variantFile, FILE_IGNORE_NEW_LINES);
+                        $variantHeader = preg_replace("/" . $sID . "\./", "Child_", $variantFileArr[0]);
 
-    $zDataArr = array(); // output data array
+                        if (!empty($sKeys['mother_id'])) {
+                            $variantHeader = preg_replace("/" . $sKeys['mother_id'] . "\./", "Mother_", $variantHeader);
+                        }
+                        if (!empty($sKeys['father_id'])) {
+                            $variantHeader = preg_replace("/" . $sKeys['father_id'] . "\./", "Father_", $variantHeader);
+                        }
 
-    // Prepare Individuals and Screenings, include the found columns.
-    foreach ($sDataArr as $sKey => $sVal) {
-        if (empty($sVal['parent'])) {
-
-            // set the IDs for each section, since we are generating one meta data file per child/singleton, there will only ever be 1 individual record and screening
-            $aColumnsForScreening['individualid'] = $sVal['Sample_ID'];
-            $aColumnsForIndividual['id'] = $sVal['Sample_ID'];
-
-            // Create the custom link data for the pipeline files.
-            // TODO MGHA AM - How do we know if we are creating the singleton or the trio screening here when this sample is run for both? We need to know this for the summary file name as it could have .trio in it.
-            $aColumnsForScreening['Screening/Pipeline_files'] = '{gap:' . $sVal['Pipeline_Run_ID'] . '_' . $sVal['Sample_ID']  . '.gap.csv} {prov:' . $sVal['Pipeline_Run_ID'] . '_' . $sVal['Sample_ID']  . '.provenance.pdf} {summary:' . $sVal['Pipeline_Run_ID'] . '_' . $sVal['Sample_ID']  . '.summary.htm}';
-
-            // add default values, we currently only have them for screening, if we get some for individual we need to handle this below.
-            foreach ($aDefaultValues as $dKey => $dVal) {
-                $aColumnsForScreening[$dKey] = $dVal;
-            }
-
-            // Map pipeline columns to LOVD columns.
-            foreach ($aColumnMappings as $pipelineColumn => $sLOVDColumn) {
-
-                if (empty($sVal[$pipelineColumn]) || $sVal[$pipelineColumn] == '.') {
-                    $sVal[$pipelineColumn] = '';
-                }
-
-                if (substr($sLOVDColumn, 0, 11) == 'Individual/') {
-                    $aColumnsForIndividual[$sLOVDColumn] = $sVal[$pipelineColumn];
-                } elseif (substr($sLOVDColumn, 0, 10) == 'Screening/') {
-                    $aColumnsForScreening[$sLOVDColumn] = $sVal[$pipelineColumn];
-                }
-
-            }
-
-            // if trio then add the parent columns and mark panel size as trio
-            if (!empty($sVal['mother_id']) || !empty($sVal['father_id'])) {
-                $aColumnsForIndividual['panel_size'] = 3;
-                foreach ($parentArr as $cKey => $pVal) {
-                    if ($cKey == $sKey) {
-                        $aColumnsForScreening = array_merge($aColumnsForScreening, $pVal);
-                        // Need to add code here to check if column name is Individual or Screening to make it more robust.
+                        $variantFileArr[0] = $variantHeader;
+                        file_put_contents($variantFile, implode(PHP_EOL, $variantFileArr));
+                        // ********** error handling to check the contents were updated
                     }
                 }
-            } else {
-                // not a trio, so must be a singleton
-                $aColumnsForIndividual['panelsize'] = 1;
+                // we should have a tsv file for the singleton(individual)
+                if (!in_array('individual', array_keys($vFiles[$sID]))) {
+                    print('There is no individual variant file for Sample ID ' . $sID . "\n");
+                    die(52);
+                } else {
+                    // use preg_replace to update the column headers using child, father and mother sample IDs.
+                    $variantFile = $_INI['paths']['data_files'] . $vFiles[$sID]['individual'];
+                    $variantFileArr = file($variantFile, FILE_IGNORE_NEW_LINES);
+                    $variantHeader = preg_replace("/" . $sID . "\./", "Child_", $variantFileArr[0]);
+
+                    $variantFileArr[0] = $variantHeader;
+                    file_put_contents($variantFile, implode(PHP_EOL, $variantFileArr));
+                    // ********** error handling to check the contents were updated
+                }
+
             }
 
-
-            // for each singleton and/or child we need to create a meta file
-            // create a temp file first while we write out the records
-            // file formats are in line with Lieden
-            $xFileTmp = $_INI['paths']['data_files'] . $sVal['Sample_ID'] . '.meta.lovd.tmp';;
-            $xFileDone = $_INI['paths']['data_files'] . $sVal['Sample_ID'] . '.meta.lovd';
-
-
-            // open the temporary file for writing
-            $fOutput = fopen($xFileTmp, 'w');
-            if ($fOutput === false) {
-                print('Error opening the temporary output file: ' . $xFileTmp . ".\n");
-                die(51);
-            }
-
-            // write out the heading information for the meta data file
-            fputs($fOutput,
-                '### LOVD-version 3000-080 ### Full data download ### To import, do not remove or alter this header ###' . "\r\n" .
-                '# charset = UTF-8' . "\r\n\r\n" .
-                '## Diseases ## Do not remove or alter this header ##' . "\r\n\r\n" .
-                '## Individuals ## Do not remove or alter this header ##' . "\r\n" .
-                '"{{' . implode("}}\"\t\"{{", array_keys($aColumnsForIndividual)) . '}}"' . "\r\n" .
-                '"' . implode("\"\t\"", array_values($aColumnsForIndividual)) . '"' . "\r\n\r\n" .
-                '## Individuals_To_Diseases ## Do not remove or alter this header ##' . "\r\n\r\n" .
-                '## Screenings ## Do not remove or alter this header ##' . "\r\n" .
-                '"{{' . implode("}}\"\t\"{{", array_keys($aColumnsForScreening)) . '}}"' . "\r\n" .
-                '"' . implode("\"\t\"", array_values($aColumnsForScreening)) . '"' . "\r\n"
-
-            );
-
-            fclose($fOutput);
-
-            // Now rename the tmp to the final file, and close this loop.
-            if (!rename($xFileTmp, $xFileDone)) {
-                print('Error renaming temp file to target: ' . $xFileDone . ".\n");
-                die(51);
-            }
         }
     }
 
+
+    // loop through all the samples in the SMDF and include individual and screening columns
+    foreach ($sDataArr as $sKey => $sVal) {
+        if ($sVal['trio'] == 'T') {
+            $bTrio = true;
+        }else{
+            $bTrio = false;
+        }
+        // If trio then we always create an individual and trio SMDF otherwise just individual.
+        $aTypes = ($bTrio ? array('individual','trio') : array('individual'));
+
+        if (empty($sVal['parent'])) {
+            foreach ($aTypes as $sType) {
+
+                // set the IDs for each section, since we are generating one meta data file per child/singleton, there will only ever be 1 individual record and screening
+                // look up sample ID in the database to check if it exists. If it does, then use the database ID as the individualid and id to link the new screening information
+                if ($existingSampArr = $_DB->query('SELECT id FROM ' . TABLE_INDIVIDUALS . ' WHERE `Individual/Sample_ID` = ' . $sVal['Sample_ID'])->fetchAssoc()) {
+                    $bIndExists = true;
+                    if ($bTrio && $sVal['Cohort'] == 'CN') {
+                        // individual trio files for CN patients go into a separate LOVD+ database, since we do not know that specific database ID we cannot continue and need to rename this file and alert user
+                        print('Cannot process individual variant file for sample ' . $sVal['Sample_ID'] . ' as the sample is for cohort CN and has already been imported into the database. Please handle manually' . "\n");
+
+                    } else {
+                        $aColumnsForScreening['individualid'] = $existingSampArr['id'];
+                    }
+
+                } elseif ($bTrio && $sVal['Cohort'] !== 'CN') {
+                    // need to insert a database record so we can get the database ID for the meta data files
+                    // we only do this if the cohort is not CN, as we need the individual info to be created during import as the file is imported into another database
+
+                    // current custom columns are: Sample_ID, Consanguinity, Hospital_centre, Cohort
+                    if ($newDBID = $_DB->query('INSERT INTO ' . TABLE_INDIVIDUALS . ' (panel_size, custom_panel, created_date, `Individual/Sample_ID`,`Individual/Consanguinity`,`Individual/Hospital_centre`,`Individual/Cohort`) VALUES (?, ?, NOW(), ?, ?, ?, ?)', array(3, '', $sVal['Sample_ID'], $sVal['Consanguinity'], $sVal['Hospital_Centre'], $sVal['Cohort']))) {
+                        $individualID = $_DB->lastInsertId();
+                        $aColumnsForScreening['individualid'] = $individualID;
+                        $bIndExists = true;
+                    } else {
+                        // check with anthony whether we should error out  *************FIX
+                        print('Can\'t create individual record in database for ' . $sVal['Sample_ID'] . '.' . "\n");
+
+                    }
+                } else {
+                    $bIndExists = false;
+                    $aColumnsForScreening['individualid'] = $sVal['Sample_ID'];
+                    $aColumnsForIndividual['id'] = $sVal['Sample_ID'];
+                }
+
+                // add default values, we currently only have them for screening, if we get some for individual we need to handle this below.
+                foreach ($aDefaultValues as $dKey => $dVal) {
+                    $aColumnsForScreening[$dKey] = $dVal;
+                }
+
+                // Create the custom link data for the pipeline files.
+                // TODO MGHA AM - How do we know if we are creating the singleton or the trio screening here when this sample is run for both? We need to know this for the summary file name as it could have .trio in it.
+                $aColumnsForScreening['Screening/Pipeline_files'] = '{gap:' . $sVal['Pipeline_Run_ID'] . '_' . $sVal['Sample_ID'] . '.gap.csv} {prov:' . $sVal['Pipeline_Run_ID'] . '_' . $sVal['Sample_ID'] . '.provenance.pdf} {summary:' . $sVal['Pipeline_Run_ID'] . '_' . $sVal['Sample_ID'] . '.summary.htm}';
+
+                // Map pipeline columns to LOVD columns.
+                foreach ($aColumnMappings as $pipelineColumn => $sLOVDColumn) {
+
+                    if (empty($sVal[$pipelineColumn]) || $sVal[$pipelineColumn] == '.') {
+                        $sVal[$pipelineColumn] = '';
+                    }
+
+                    if (substr($sLOVDColumn, 0, 11) == 'Individual/') {
+                        $aColumnsForIndividual[$sLOVDColumn] = $sVal[$pipelineColumn];
+                    } elseif (substr($sLOVDColumn, 0, 10) == 'Screening/') {
+                        $aColumnsForScreening[$sLOVDColumn] = $sVal[$pipelineColumn];
+                    }
+
+                }
+
+                // SET FORMAT FOR META DATA FILE
+                // create a temp file first while we write out the records
+                // for trios we also need to create meta file for individual and trio variant files
+                // if trio then add the parent columns and mark panel size as trio
+
+                if ($sType == 'trio') {
+                    $aColumnsForIndividual['panel_size'] = 3;
+                    foreach ($parentArr as $cKey => $pVal) {
+                        if ($cKey == $sKey) {
+                            $aColumnsForScreening = array_merge($aColumnsForScreening, $pVal);
+                            // Need to add code here to check if column name is Individual or Screening to make it more robust.
+                        }
+                    }
+
+                } else {
+                    $aColumnsForIndividual['panel_size'] = 1;
+                }
+
+                //set the temp file name
+                $sFileNamePrefix = $sVal['Pipeline_Run_ID'] . '_' . $sVal['Sample_ID'] . '.' . $sType; // Lets use the full file name here so as we don't get duplicates when importing the same sample again in the future.
+                $sFileNameSuffix = (!$bTrio || $sVal['Cohort'] != 'CN' || $sType != 'individual' ? '' : '.CN' . (!$bIndExists ? '' : 'REPLACEID')); // Handle when to add the CN suffix and what type to add.
+
+                $sFileNameSMDFTemp = $_INI['paths']['data_files'] . $sFileNamePrefix . '.meta.lovd' . $sFileNameSuffix . '.tmp';
+                $sFileNameSMDF = $_INI['paths']['data_files'] . $sFileNamePrefix . '.meta.lovd' . $sFileNameSuffix;
+                $sFileNameTSV = $_INI['paths']['data_files'] . $sFileNamePrefix . '.directvep.data.lovd' . $sFileNameSuffix;
+
+
+                // open the temporary file for writing
+                $fOutput = fopen($sFileNameSMDFTemp, 'w');
+                if ($fOutput === false) {
+                    print('Error opening the temporary output file: ' . $xFileTmp . ".\n");
+                    die(51);
+                }
+                //write the output data to a variable
+                $OutputData =
+                $sSMDF =
+                    '### LOVD-version 3000-080 ### Full data download ### To import, do not remove or alter this header ###' . "\r\n" .
+                    '# charset = UTF-8' . "\r\n\r\n" .
+                    '## Diseases ## Do not remove or alter this header ##' . "\r\n\r\n" .
+                    '## Individuals ## Do not remove or alter this header ##' . "\r\n" .
+                    '"{{' . implode("}}\"\t\"{{", array_keys($aColumnsForIndividual)) . '}}"' . "\r\n" .
+                    ($bIndExists || ($bTrio && $sVal['Cohort'] != 'CN') ? '# ' : '') . // If the individual exists or its a trio and not CN then we will comment out the individual record.
+                    '"' . implode("\"\t\"", array_values($aColumnsForIndividual)) . '"' . "\r\n\r\n" .
+                    '## Individuals_To_Diseases ## Do not remove or alter this header ##' . "\r\n\r\n" .
+                    '## Screenings ## Do not remove or alter this header ##' . "\r\n" .
+                    '"{{' . implode("}}\"\t\"{{", array_keys($aColumnsForScreening)) . '}}"' . "\r\n" .
+                    '"' . implode("\"\t\"", array_values($aColumnsForScreening)) . '"' . "\r\n";
+
+                // write out the heading information for the meta data file
+                fputs($fOutput, $OutputData);
+
+                fclose($fOutput);
+
+                // Now rename the tmp to the final file, and close this loop.
+                if (!rename($sFileNameSMDFTemp, $sFileNameSMDF)) {
+                    print('Error renaming temp file to target: ' . $sFileNameSMDF . ".\n");
+                    die(51);
+                }
+
+                // Rename the corresponding variant file
+                $sFileNameTSVOld = $_INI['paths']['data_files'] . $vFiles[$sVal['Sample_ID']][$sType];
+                if (!rename($sFileNameTSVOld, $sFileNameTSV)) {
+                    print('Error renaming variant file: ' . $sFileNameTSVOld . ".\n");
+                    die(51);
+                }
+            }
+        }
+    }
 
     // Now rename the SMDF to .ARK
     $archiveMetaFile = $_INI['paths']['data_files'] . $pipelineRunID . '_' . $archiveMetaFile;
@@ -393,15 +480,6 @@ if ($argc != 1 && in_array($argv[1], array('--help', '-help', '-h', '-?'))) {
         die(51);
     }
 
-    // Now rename all the variant .tsv files to .ARK
-    foreach ($vFiles as $vID => $vFileName) {
-        $oldVariantFile = $_INI['paths']['data_files'] . $vFileName;
-        $newVariantFile = $_INI['paths']['data_files'] . $vID . '.directvep.data.lovd';
-        if (!rename($oldVariantFile, $newVariantFile)) {
-            print('Error renaming tsv variant file to: ' . $newVariantFile . "\n");
-            die(51);
-        }
-    }
 
     print('Adapter Process Complete' . "\n" . 'Current time: ' . date('Y-m-d H:i:s') . ".\n\n");
 }
