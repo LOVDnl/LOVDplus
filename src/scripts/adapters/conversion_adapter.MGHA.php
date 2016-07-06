@@ -355,7 +355,7 @@ if ($argc != 1 && in_array($argv[1], array('--help', '-help', '-h', '-?'))) {
 
         // set the IDs for each section, since we are generating one meta data file per child/singleton, there will only ever be 1 individual record and screening
         // look up sample ID in the database to check if it exists. If it does, then use the database ID as the individualid and id to link the new screening information
-        if ($existingSampArr = $_DB->query('SELECT id FROM ' . TABLE_INDIVIDUALS . ' WHERE `Individual/Sample_ID` = ' . $sVal['Sample_ID'])->fetchAssoc()) {
+        if ($existingSampArr = $_DB->query('SELECT `id` FROM ' . TABLE_INDIVIDUALS . ' WHERE `Individual/Sample_ID` = ' . $sVal['Sample_ID'])->fetchAssoc()) {
             $bIndExists = true;
             if ($bTrio && $sVal['Cohort'] == 'CN') {
                 // individual trio files for CN patients go into a separate LOVD+ database, since we do not know that specific database ID we cannot continue and need to rename this file and alert user
@@ -372,7 +372,7 @@ if ($argc != 1 && in_array($argv[1], array('--help', '-help', '-h', '-?'))) {
             // if column id was previously set we need to unset to create the record
             unset($aColumnsForIndividual['id']);
 
-            $sSQL = 'INSERT INTO ' . TABLE_INDIVIDUALS . ' (created_date,';
+            $sSQL = 'INSERT INTO ' . TABLE_INDIVIDUALS . ' (`created_date`,';
             $aSQL = array();
             $keyCount = 0;
             foreach ($aIndDefaultValues as $iColumn => $iValue){
