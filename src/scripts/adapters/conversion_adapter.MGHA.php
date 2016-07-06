@@ -388,7 +388,7 @@ if ($argc != 1 && in_array($argv[1], array('--help', '-help', '-h', '-?'))) {
             }
             // Insert the individual record and return the new individual record ID.
             $_DB->query('INSERT INTO ' . TABLE_INDIVIDUALS . ' (`' . implode('`, `', array_keys($aIndFields)) . '`) VALUES (?' . str_repeat(', ?', count($aIndFields) - 1) . ')', array_values($aIndFields));
-            $individualID = $_DB->lastInsertId();
+            $individualID = sprintf('%08d', $_DB->lastInsertId());
             $aColumnsForScreening['individualid'] = $individualID;
             $aColumnsForIndividual['id'] = $individualID;
             $bIndExists = true;            
