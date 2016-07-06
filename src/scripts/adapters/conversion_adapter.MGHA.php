@@ -98,9 +98,8 @@ if ($argc != 1 && in_array($argv[1], array('--help', '-help', '-h', '-?'))) {
         'Notes' => 'Screening/Parent/Notes'
     );
 
-    // Individual Default Values if injecting record into the database
+    // Individual Default Values if injecting record into the database for trios
     $aIndDefaultValues = array(
-        'panel_size' => 3,
         'custom_panel' => ''
     );
 
@@ -287,8 +286,12 @@ if ($argc != 1 && in_array($argv[1], array('--help', '-help', '-h', '-?'))) {
         $parent = $sKeys['parent'];
         $trio = $sKeys['trio'];
 
-        // update the gender (sex) to only store the first character. M = Male  F = Female
-        $sDataArr[$sID]['Sex'] = strtoupper(substr($sKeys['Sex'], 0, 1));
+        // update the gender (sex) to only store the first character. M = Male  F = Female, if unknown = ?
+        if (strtoupper(substr($sKeys['Sex'], 0, 1) == 'U')){
+            $sDataArr[$sID]['Sex'] = '?';
+        }else{
+            $sDataArr[$sID]['Sex'] = strtoupper(substr($sKeys['Sex'], 0, 1));
+        }
 
         if (!$parent) {
             If (!in_array($sID, array_keys($vFiles))) {
@@ -344,52 +347,56 @@ if ($argc != 1 && in_array($argv[1], array('--help', '-help', '-h', '-?'))) {
     foreach ($sDataArr as $sKey => $sVal) {
         if ($sVal['trio'] == 'T') {
             $bTrio = true;
+            $aColumnsForIndividual['panel_size'] = 3;
         }else{
             $bTrio = false;
+            $aColumnsForIndividual['panel_size'] = 1;
         }
 
         // set the IDs for each section, since we are generating one meta data file per child/singleton, there will only ever be 1 individual record and screening
         // look up sample ID in the database to check if it exists. If it does, then use the database ID as the individualid and id to link the new screening information
-        if ($existingSampArr = $_DB->query('SELECT id FROM ' . TABLE_INDIVIDUALS . ' WHERE `Individual/Sample_ID` = ' . $sVal['Sample_ID'])->fetchAssoc()) {
+        if ($sIndDBID = $_DB->query('SELECT `id` FROM ' . TABLE_INDIVIDUALS . ' WHERE `Individual/Sample_ID` = ?', array($sVal['Sample_ID']))->fetchColumn()) {
             $bIndExists = true;
             if ($bTrio && $sVal['Cohort'] == 'CN') {
                 // individual trio files for CN patients go into a separate LOVD+ database, since we do not know that specific database ID we cannot continue and need to rename this file and alert user
                 print('Cannot process individual variant file for sample ' . $sVal['Sample_ID'] . ' as the sample is for cohort CN and has already been imported into the database. Please handle manually' . "\n");
 
             } else {
-                $aColumnsForScreening['individualid'] = $existingSampArr['id'];
-                $aColumnsForIndividual['id'] = $existingSampArr['id'];
+                $aColumnsForScreening['individualid'] = $sIndDBID;
+                $aColumnsForIndividual['id'] = $sIndDBID;
             }
 
         } elseif ($bTrio && $sVal['Cohort'] !== 'CN') {
             // need to insert a database record so we can get the database ID for the meta data files
             // we only do this if the cohort is not CN, as we need the individual info to be created during import as the file is imported into another database
-            $sSQL = 'INSERT INTO ' . TABLE_INDIVIDUALS . ' (created_date,';
-            $aSQL = array();
-            $keyCount = 0;
-            foreach ($aIndDefaultValues as $iColumn => $iValue){
-                $sSQL .= '`' . $iColumn . '`, ';
-                $aSQL[] = $iValue;
+            // if column id was previously set we need to unset to create the record
+
+            // Prepare the columns for inserting the individual record.
+            $aIndFields = array(
+                'panel_size' => $aColumnsForIndividual['panel_size'],
+                'owned_by' => 0,
+                'custom_panel' => '',
+                'statusid' => 4,
+                'created_by' => 0,
+                'created_date' => date('Y-m-d H:i:s'),
+                );
+            // Add in any custom columns for the individual.
+            foreach ($aColumnMappings as $sPipelineColumn => $sLOVDColumn) {
+                if (substr($sLOVDColumn, 0, 11) == 'Individual/') {
+                    $aIndFields[$sLOVDColumn] = (empty($sVal[$sPipelineColumn]) || $sVal[$sPipelineColumn] == '.' ? '' : $sVal[$sPipelineColumn]);
+                }
             }
-            $keyCount = 0;
-            foreach ($aColumnsForIndividual as $aColumn => $aValue) {
-                $keyCount++;
-                $sSQL .= ($keyCount > 1 ? ', ' : '') . '`' . $aColumn . '`';
-                $aSQL[] = $aValue;
-            }
-            $sSQL .= ') VALUES (NOW(), ?' . str_repeat(', ?', count($aIndDefaultValues) - 1) . str_repeat(', ?', count($aColumnsForIndividual)) . ')';
-            if ($newDBID = $_DB->query($sSQL, $aSQL, true, true)){
-                $individualID = $_DB->lastInsertId();
-                $aColumnsForScreening['individualid'] = $individualID;
-                $bIndExists = true;
-            } else {
-                // check with anthony whether we should error out  *************FIX
-                print('Can\'t create individual record in database for ' . $sVal['Sample_ID'] . '.' . "\n");
-            }
+            // Insert the individual record and return the new individual record ID.
+            $_DB->query('INSERT INTO ' . TABLE_INDIVIDUALS . ' (`' . implode('`, `', array_keys($aIndFields)) . '`) VALUES (?' . str_repeat(', ?', count($aIndFields) - 1) . ')', array_values($aIndFields));
+            $individualID = $_DB->lastInsertId();
+            $aColumnsForScreening['individualid'] = $individualID;
+            $aColumnsForIndividual['id'] = $individualID;
+            $bIndExists = true;            
+
         } else {
             $bIndExists = false;
-            $aColumnsForScreening['individualid'] = $sVal['Sample_ID'];
-            $aColumnsForIndividual['id'] = $sVal['Sample_ID'];
+            $aColumnsForScreening['individualid'] = 1;
+            $aColumnsForIndividual['id'] = 1; // We should only ever be importing one individual at a time so it should be safe to hard code this to 1.
         }
 
         // If trio then we always create an individual and trio SMDF otherwise just individual.
@@ -403,8 +410,7 @@ if ($argc != 1 && in_array($argv[1], array('--help', '-help', '-h', '-?'))) {
                     $aColumnsForScreening[$dKey] = $dVal;
                 }
 
-                // Create the custom link data for the pipeline files.
-                // TODO MGHA AM - How do we know if we are creating the singleton or the trio screening here when this sample is run for both? We need to know this for the summary file name as it could have .trio in it.
+                // Create the custom link data for the pipeline files for singleton.
                 $aColumnsForScreening['Screening/Pipeline_files'] = '{gap:' . $sVal['Pipeline_Run_ID'] . '_' . $sVal['Sample_ID'] . '.gap.csv} {prov:' . $sVal['Pipeline_Run_ID'] . '_' . $sVal['Sample_ID'] . '.provenance.pdf} {summary:' . $sVal['Pipeline_Run_ID'] . '_' . $sVal['Sample_ID'] . '.summary.htm}';
 
                 // Map pipeline columns to LOVD columns.
@@ -422,24 +428,22 @@ if ($argc != 1 && in_array($argv[1], array('--help', '-help', '-h', '-?'))) {
 
                 }
 
-                // SET FORMAT FOR META DATA FILE
-                // create a temp file first while we write out the records
-                // for trios we also need to create meta file for individual and trio variant files
-                // if trio then add the parent columns and mark panel size as trio
-
+                // add trio specific columns
                 if ($sType == 'trio') {
-                    $aColumnsForIndividual['panel_size'] = 3;
                     foreach ($parentArr as $cKey => $pVal) {
                         if ($cKey == $sKey) {
                             $aColumnsForScreening = array_merge($aColumnsForScreening, $pVal);
                             // Need to add code here to check if column name is Individual or Screening to make it more robust.
                         }
                     }
-
-                } else {
-                    $aColumnsForIndividual['panel_size'] = 1;
+                    // Create the custom link data for the pipeline files for trio.
+                    $aColumnsForScreening['Screening/Pipeline_files'] = '{gap:' . $sVal['Pipeline_Run_ID'] . '_' . $sVal['Sample_ID'] . '.gap.csv} {prov:' . $sVal['Pipeline_Run_ID'] . '_' . $sVal['Sample_ID'] . '.provenance.pdf} {summary:' . $sVal['Pipeline_Run_ID'] . '_' . $sVal['Sample_ID'] . '.trio.summary.htm}';
                 }
 
+                // SET FORMAT FOR META DATA FILE
+                // create a temp file first while we write out the records
+                // for trios we also need to create meta file for individual and trio variant files
+                // if trio then add the parent columns and mark panel size as trio
 
                 //set the temp file name
                 $sFileNamePrefix = $sVal['Pipeline_Run_ID'] . '_' . $sVal['Sample_ID'] . '.' . $sType; // Lets use the full file name here so as we don't get duplicates when importing the same sample again in the future.

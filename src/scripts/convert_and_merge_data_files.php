@@ -1139,7 +1139,7 @@ while (($sFile = readdir($h)) !== false) {
 
     // get files into array. different file format for MGHA
     if ($_INI['instance']['name'] == 'mgha') {
-        if (preg_match('/^(\d+\.\w+)\.(' . implode('|', array_map('preg_quote', array_values($aSuffixes))) . ')$/', $sFile, $aRegs)) {
+        if (preg_match('/^(.+)\.(' . implode('|', array_map('preg_quote', array_values($aSuffixes))) . ')$/', $sFile, $aRegs)) {
             // Files we need to merge.
             list(, $sID, $sFileType) = $aRegs;
             if (!isset($aFiles[$sID])) {
