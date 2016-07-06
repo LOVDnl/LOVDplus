@@ -98,9 +98,8 @@ if ($argc != 1 && in_array($argv[1], array('--help', '-help', '-h', '-?'))) {
         'Notes' => 'Screening/Parent/Notes'
     );
 
-    // Individual Default Values if injecting record into the database
+    // Individual Default Values if injecting record into the database for trios
     $aIndDefaultValues = array(
-        'panel_size' => 3,
         'custom_panel' => ''
     );
 
@@ -287,8 +286,12 @@ if ($argc != 1 && in_array($argv[1], array('--help', '-help', '-h', '-?'))) {
         $parent = $sKeys['parent'];
         $trio = $sKeys['trio'];
 
-        // update the gender (sex) to only store the first character. M = Male  F = Female
-        $sDataArr[$sID]['Sex'] = strtoupper(substr($sKeys['Sex'], 0, 1));
+        // update the gender (sex) to only store the first character. M = Male  F = Female, if unknown = ?
+        if (strtoupper(substr($sKeys['Sex'], 0, 1) == 'U')){
+            $sDataArr[$sID]['Sex'] = '?';
+        }else{
+            $sDataArr[$sID]['Sex'] = strtoupper(substr($sKeys['Sex'], 0, 1));
+        }
 
         if (!$parent) {
             If (!in_array($sID, array_keys($vFiles))) {
@@ -344,8 +347,10 @@ if ($argc != 1 && in_array($argv[1], array('--help', '-help', '-h', '-?'))) {
     foreach ($sDataArr as $sKey => $sVal) {
         if ($sVal['trio'] == 'T') {
             $bTrio = true;
+            $aColumnsForIndividual['panel_size'] = 3;
         }else{
             $bTrio = false;
+            $aColumnsForIndividual['panel_size'] = 1;
         }
 
         // set the IDs for each section, since we are generating one meta data file per child/singleton, there will only ever be 1 individual record and screening
@@ -364,6 +369,9 @@ if ($argc != 1 && in_array($argv[1], array('--help', '-help', '-h', '-?'))) {
         } elseif ($bTrio && $sVal['Cohort'] !== 'CN') {
             // need to insert a database record so we can get the database ID for the meta data files
             // we only do this if the cohort is not CN, as we need the individual info to be created during import as the file is imported into another database
+            // if column id was previously set we need to unset to create the record
+            unset($aColumnsForIndividual['id']);
+
             $sSQL = 'INSERT INTO ' . TABLE_INDIVIDUALS . ' (created_date,';
             $aSQL = array();
             $keyCount = 0;
@@ -422,13 +430,8 @@ if ($argc != 1 && in_array($argv[1], array('--help', '-help', '-h', '-?'))) {
 
                 }
 
-                // SET FORMAT FOR META DATA FILE
-                // create a temp file first while we write out the records
-                // for trios we also need to create meta file for individual and trio variant files
-                // if trio then add the parent columns and mark panel size as trio
-
+                // add trio specific columns
                 if ($sType == 'trio') {
-                    $aColumnsForIndividual['panel_size'] = 3;
                     foreach ($parentArr as $cKey => $pVal) {
                         if ($cKey == $sKey) {
                             $aColumnsForScreening = array_merge($aColumnsForScreening, $pVal);
@@ -436,10 +439,12 @@ if ($argc != 1 && in_array($argv[1], array('--help', '-help', '-h', '-?'))) {
                         }
                     }
 
-                } else {
-                    $aColumnsForIndividual['panel_size'] = 1;
                 }
 
+                // SET FORMAT FOR META DATA FILE
+                // create a temp file first while we write out the records
+                // for trios we also need to create meta file for individual and trio variant files
+                // if trio then add the parent columns and mark panel size as trio
 
                 //set the temp file name
                 $sFileNamePrefix = $sVal['Pipeline_Run_ID'] . '_' . $sVal['Sample_ID'] . '.' . $sType; // Lets use the full file name here so as we don't get duplicates when importing the same sample again in the future.
