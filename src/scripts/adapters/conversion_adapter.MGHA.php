@@ -224,7 +224,7 @@ if ($argc != 1 && in_array($argv[1], array('--help', '-help', '-h', '-?'))) {
                     $parentGender = $sDataArr[$parentID]['Sex'];
                     $sDataArr[$parentID]['parent'] = "T";
 
-                    if ($parentGender == 'Male') {
+                    if (substr($parentGender,0,1) == 'M') {
                         $fatherID = $parentID;
                         $parent = 'Father';
                         $fatherCount++;
@@ -232,7 +232,7 @@ if ($argc != 1 && in_array($argv[1], array('--help', '-help', '-h', '-?'))) {
                             print('We have 2 parent IDs with the gender Male for sample ID ' . $sampleID . ".\n");
                             die(54);
                         }
-                    } elseif ($parentGender == 'Female') {
+                    } elseif (substr($parentGender,0,1) == 'F') {
                         $motherID = $parentID;
                         $parent = 'Mother';
                         $motherCount++;
