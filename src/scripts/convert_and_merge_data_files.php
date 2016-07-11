@@ -68,7 +68,8 @@ $aSuffixes = array(
     'total' => 'total.data.lovd',
 );
 
-
+// The number of times we retry the Mutalyzer API call if the connection fails.
+$nMutalyzerRetries = 5;
 
 // Define list of genes to ignore, because they can't be found by the HGNC.
 // LOC* genes are always ignored, because they never work (HGNC doesn't know them).
@@ -1592,7 +1593,20 @@ print('Can\'t load UD for gene ' . $aGeneInfo['symbol'] . '.' . "\n");
 print('Loading transcript information for ' . $aGenes[$aVariant['symbol']]['id'] . '...' . "\n");
 
                     $aTranscriptInfo = array();
-                    $sJSONResponse = file_get_contents('https://mutalyzer.nl/json/getTranscriptsAndInfo?genomicReference=' . $aGenes[$aVariant['symbol']]['refseq_UD'] . '&geneName=' . $aGenes[$aVariant['symbol']]['id']);
+                    $sJSONResponse = false;
+                    $nSleepTime = 2;
+                    for($i=0; $i <= $nMutalyzerRetries; $i++){ // Retry Mutalyzer call several times until successful.
+                        $sJSONResponse = file_get_contents('https://mutalyzer.nl/json/getTranscriptsAndInfo?genomicReference=' . $aGenes[$aVariant['symbol']]['refseq_UD'] . '&geneName=' . $aGenes[$aVariant['symbol']]['id']);
+                        if ($sJSONResponse === false) { // The Mutalyzer call has failed.
+                            sleep($nSleepTime); // Sleep for some time.
+                            $nSleepTime = $nSleepTime * 2; // Double the amount of time that we sleep each time.
+                        } else {
+                            break;
+                        }
+                    }
+                    if ($sJSONResponse === false) {
+                        print('>>>>> Attempted to call Mutalyzer ' . $iMutalyzerRetries . ' times to getTranscriptsAndInfo and failed on line ' . $nLine . '.' . "\n");
+                    }
                     if ($sJSONResponse && $aResponse = json_decode($sJSONResponse, true)) {
                         // Before we had to go two layers deep; through the result, then read out the info.
                         // But now apparently this service just returns the string with quotes (the latter are removed by json_decode()).
@@ -1662,7 +1676,20 @@ print('No available transcripts for gene ' . $aGenes[$aVariant['symbol']]['id'] 
                 if (!isset($aMappings[$aVariant['chromosome'] . ':' . $aVariant['VariantOnGenome/DNA']])) {
                     $aMappings[$aVariant['chromosome'] . ':' . $aVariant['VariantOnGenome/DNA']] = array();
 //print('Running position converter, DNA was: "' . $aVariant['VariantOnTranscript/DNA'] . '"' . "\n");
-                    $sJSONResponse = file_get_contents('https://mutalyzer.nl/json/numberConversion?build=' . $_CONF['refseq_build'] . '&variant=' . $_SETT['human_builds'][$_CONF['refseq_build']]['ncbi_sequences'][$aVariant['chromosome']] . ':' . $aVariant['VariantOnGenome/DNA']);
+                    $sJSONResponse = false;
+                    $nSleepTime = 2;
+                    for($i=0; $i <= $nMutalyzerRetries; $i++){ // Retry Mutalyzer call several times until successful.
+                        $sJSONResponse = file_get_contents('https://mutalyzer.nl/json/numberConversion?build=' . $_CONF['refseq_build'] . '&variant=' . $_SETT['human_builds'][$_CONF['refseq_build']]['ncbi_sequences'][$aVariant['chromosome']] . ':' . $aVariant['VariantOnGenome/DNA']);
+                        if ($sJSONResponse === false) { // The Mutalyzer call has failed.
+                            sleep($nSleepTime); // Sleep for some time.
+                            $nSleepTime = $nSleepTime * 2; // Double the amount of time that we sleep each time.
+                        } else {
+                            break;
+                        }
+                    }
+                    if ($sJSONResponse === false) {
+                        print('>>>>> Attempted to call Mutalyzer ' . $iMutalyzerRetries . ' times for numberConversion and failed on line ' . $nLine . '.' . "\n");
+                    }                        
                     if ($sJSONResponse && $aResponse = json_decode($sJSONResponse, true)) {
                         // Before we had to go two layers deep; through the result, then read out the string.
                         // But now apparently this service just returns the string with quotes (the latter are removed by json_decode()).
@@ -1736,7 +1763,20 @@ print('No available transcripts for gene ' . $aGenes[$aVariant['symbol']]['id'] 
                     // Normally, we would implement a cache here, but we rarely run Mutalyzer, and if we do, we will not likely run it on a variant on the same transcript.
                     // So, first just check if we still don't have a Mutalyzer ID.
 print('Reloading Mutalyzer ID for ' . $aTranscripts[$aVariant['transcriptid']]['id_ncbi'] . ' in ' . $aVariant[$aVariant['symbol']]['refseq_UD'] . ' (' . $aGenes[$aVariant['symbol']]['id'] . ')' . "\n");
-                    $sJSONResponse = file_get_contents('https://mutalyzer.nl/json/getTranscriptsAndInfo?genomicReference=' . rawurlencode($aGenes[$aVariant['symbol']]['refseq_UD']) . '&geneName=' . rawurlencode($aGenes[$aVariant['symbol']]['id']));
+                    $sJSONResponse = false;
+                    $nSleepTime = 2;
+                    for($i=0; $i <= $nMutalyzerRetries; $i++){ // Retry Mutalyzer call several times until successful.
+                        $sJSONResponse = file_get_contents('https://mutalyzer.nl/json/getTranscriptsAndInfo?genomicReference=' . rawurlencode($aGenes[$aVariant['symbol']]['refseq_UD']) . '&geneName=' . rawurlencode($aGenes[$aVariant['symbol']]['id']));
+                        if ($sJSONResponse === false) { // The Mutalyzer call has failed.
+                            sleep($nSleepTime); // Sleep for some time.
+                            $nSleepTime = $nSleepTime * 2; // Double the amount of time that we sleep each time.
+                        } else {
+                            break;
+                        }
+                    }
+                    if ($sJSONResponse === false) {
+                        print('>>>>> Attempted to call Mutalyzer ' . $iMutalyzerRetries . ' times to getTranscriptsAndInfo and failed on line ' . $nLine . '.' . "\n");
+                    }                   
                     if ($sJSONResponse && $aResponse = json_decode($sJSONResponse, true)) {
                         // Loop transcripts, find the one in question, then isolate Mutalyzer ID.
                         foreach ($aResponse as $aTranscript) {
@@ -1753,7 +1793,20 @@ print('Reloading Mutalyzer ID for ' . $aTranscripts[$aVariant['transcriptid']]['
                 }
 
 print('Running mutalyzer to predict protein change for ' . $aGenes[$aVariant['symbol']]['refseq_UD'] . '(' . $aGenes[$aVariant['symbol']]['id'] . '_v' . $aTranscripts[$aVariant['transcriptid']]['id_mutalyzer'] . '):' . $aVariant['VariantOnTranscript/DNA'] . "\n");
-                $sJSONResponse = file_get_contents('https://mutalyzer.nl/json/runMutalyzer?variant=' . rawurlencode($aGenes[$aVariant['symbol']]['refseq_UD'] . '(' . $aGenes[$aVariant['symbol']]['id'] . '_v' . $aTranscripts[$aVariant['transcriptid']]['id_mutalyzer'] . '):' . $aVariant['VariantOnTranscript/DNA']));
+                $sJSONResponse = false;
+                $nSleepTime = 2;
+                for($i=0; $i <= $nMutalyzerRetries; $i++){ // Retry Mutalyzer call several times until successful.
+                    $sJSONResponse = file_get_contents('https://mutalyzer.nl/json/runMutalyzer?variant=' . rawurlencode($aGenes[$aVariant['symbol']]['refseq_UD'] . '(' . $aGenes[$aVariant['symbol']]['id'] . '_v' . $aTranscripts[$aVariant['transcriptid']]['id_mutalyzer'] . '):' . $aVariant['VariantOnTranscript/DNA']));
+                    if ($sJSONResponse === false) { // The Mutalyzer call has failed.
+                        sleep($nSleepTime); // Sleep for some time.
+                        $nSleepTime = $nSleepTime * 2; // Double the amount of time that we sleep each time.
+                    } else {
+                        break;
+                    }
+                }
+                if ($sJSONResponse === false) {
+                    print('>>>>> Attempted to call Mutalyzer ' . $iMutalyzerRetries . ' times to runMutalyzer and failed on line ' . $nLine . '.' . "\n");
+                }
 //var_dump('https://mutalyzer.nl/json/runMutalyzer?variant=' . rawurlencode($aGenes[$aLine['SYMBOL']]['refseq_UD'] . '(' . $aGenes[$aLine['SYMBOL']]['id'] . '_v' . $aTranscripts[$aLine['Feature']]['id_mutalyzer'] . '):' . $aVariant['VariantOnTranscript/DNA']));
                 if ($sJSONResponse && $aResponse = json_decode($sJSONResponse, true)) {
                     if (!isset($aResponse['proteinDescriptions'])) {
