@@ -54,7 +54,7 @@ class LOVD_GenomeVariant extends LOVD_Custom {
     function __construct ()
     {
         // Default constructor.
-        global $_AUTH;
+        global $_AUTH, $_INI;
 
         // SQL code for loading an entry for an edit form.
         // FIXME; change owner to owned_by_ in the load entry query below.
@@ -116,13 +116,15 @@ class LOVD_GenomeVariant extends LOVD_Custom {
         parent::__construct();
 
         // List of columns and (default?) order for viewing an entry.
+        $sEffect_reported = ($_INI['instance']['name'] == 'mgha' ? 'Classification proposed' : 'Affects function (reported)');
+        $sEffect_concluded = ($_INI['instance']['name'] == 'mgha' ? 'Classification final' : 'Affects function (concluded)');
         $this->aColumnsViewEntry = array_merge(
                  array(
                         'individualid_' => 'Individual ID',
                         'chromosome' => 'Chromosome',
                         'allele_' => 'Allele',
-                        'effect_reported' => 'Affects function (reported)',
-                        'effect_concluded' => 'Affects function (concluded)',
+                        'effect_reported' => $sEffect_reported,
+                        'effect_concluded' => $sEffect_concluded,
                         'curation_status_' => 'Curation status',
                       ),
                  $this->buildViewEntry(),

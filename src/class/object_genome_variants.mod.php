@@ -98,8 +98,8 @@ class LOVD_GenomeVariant extends LOVD_Custom {
         $this->aFormData = array_merge(
                  array(
                         array('POST', '', '', '', '50%', '14', '50%'),
-                        array('Affects function (reported)', '', 'select', 'effect_reported', 1, $_SETT['var_effect'], false, false, false),
-                        array('Affects function (concluded)', '', 'select', 'effect_concluded', 1, $_SETT['var_effect'], false, false, false)
+                        array('Classification proposed', '', 'select', 'effect_reported', 1, $_SETT['var_effect'], false, false, false),
+                        array('Classification final', '', 'select', 'effect_concluded', 1, $_SETT['var_effect'], false, false, false)
                       ),
                  $this->buildForm());
 
