@@ -99,6 +99,7 @@ define('CUR_STATUS_VARIANT_OF_INTEREST', 10);
 define('CUR_STATUS_FOR_CURATION', 20);
 define('CUR_STATUS_REQUIRES_CONFIRMATION', 30);
 define('CUR_STATUS_CONFIRMED', 40);
+define('CUR_STATUS_PROPOSED', 50);
 define('CUR_STATUS_CURATED_REPORTABLE', 70);
 define('CUR_STATUS_CURATED_NOT_REPORTABLE', 80);
 define('CUR_STATUS_NOT_FOR_CURATION', 90);
@@ -195,6 +196,7 @@ $_SETT = array(
                             CUR_STATUS_FOR_CURATION => 'For Curation',
                             CUR_STATUS_REQUIRES_CONFIRMATION => 'Requires Confirmation',
                             CUR_STATUS_CONFIRMED => 'Confirmed',
+                            CUR_STATUS_PROPOSED => 'Proposed Classification',
                             CUR_STATUS_CURATED_REPORTABLE => 'Curated & Reportable',
                             CUR_STATUS_CURATED_NOT_REPORTABLE => 'Curated & Not Reportable',
                           ),
