@@ -144,30 +144,22 @@ if ($argc != 1 && in_array($argv[1], array('--help', '-help', '-h', '-?'))) {
 
         // get all the variant files into an array
         // fileType is trio or individual
-        if (preg_match('/^(.+?)\.tsv/', $xFile, $vRegs)) {
-            if (in_array("_", $vRegs)) {
-                print('Invalid variant file name for file ' . $xFile . ' expecting underscores' . ".\n" .
+        if (preg_match('/^(.+?)\.tsv$/', $xFile, $vRegs)) {
+            $variantFilePrefix = explode('_', $vRegs[1]);
+            if (count($variantFilePrefix) !== 4) {
+                print('Invalid number of underscores used in variant file name for file ' . $xFile . "\n" .
                     'Format should be site_n.n.n_batchnumber_sampleID.individual|trio.lovd.tsv');
                 die(52);
             } else {
-                $variantFilePrefix = explode('_', $vRegs[1]);
-                $numUnderscore = count($variantFilePrefix);
-                if ($numUnderscore !== 4) {
-                    print('Invalid number of underscores used in variant file name for file ' . $xFile . "\n" .
+                $fileSampleIDs = explode('.', $variantFilePrefix[3]);
+                if (count($fileSampleIDs) !== 3) {
+                    print('Invalid number of periods used in variant file name for file ' . $xFile . "\n" .
                         'Format should be site_n.n.n_batchnumber_sampleID.individual|trio.lovd.tsv');
                     die(52);
                 } else {
-                    $fileSampleIDs = explode('.', $variantFilePrefix[3]);
-                    $numberPeriods = count($fileSampleIDs);
-                    if ($numberPeriods !== 3) {
-                        print('Invalid number of periods used in variant file name for file ' . $xFile . "\n" .
-                            'Format should be site_n.n.n_batchnumber_sampleID.individual|trio.lovd.tsv');
-                        die(52);
-                    } else {
-                        $sID = $fileSampleIDs[0];
-                        $fileType = $fileSampleIDs[1];
-                        $vFiles[$sID][$fileType] = $xFile;
-                    }
+                    $sID = $fileSampleIDs[0];
+                    $fileType = $fileSampleIDs[1];
+                    $vFiles[$sID][$fileType] = $xFile;
                 }
             }
         }
