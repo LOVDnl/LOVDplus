@@ -74,7 +74,9 @@ function lovd_prepareMappings()
         'EAS_MAF' => 'VariantOnGenome/Frequency/1000G/VEP/East_Asian',
         'EUR_MAF' => 'VariantOnGenome/Frequency/1000G/VEP/European',
         'SAS_MAF' => 'VariantOnGenome/Frequency/1000G/VEP/South_Asian',
+        'EA_MAF' => 'VariantOnGenome/Frequency/EVS/VEP/European_American',
         'AA_MAF' => 'VariantOnGenome/Frequency/EVS/VEP/African_American',
+        'ExAC_MAF' => 'VariantOnGenome/Frequency/ExAC',
         'ExAC_Adj_MAF' => 'VariantOnGenome/Frequency/ExAC/Adjusted',
         'ExAC_AFR_MAF' => 'VariantOnGenome/Frequency/ExAC/African_American',
         'ExAC_AMR_MAF' => 'VariantOnGenome/Frequency/ExAC/American',
@@ -197,9 +199,6 @@ function lovd_prepareMappings()
         'PolyPhen_Value' => 'VariantOnTranscript/Prediction/PolyPhen_Score_VEP',
         'SIFT_Text' => 'VariantOnTranscript/Prediction/SIFT_VEP',
         'SIFT_Value' => 'VariantOnTranscript/Prediction/SIFT_Score_VEP',
-        '1000G' => 'VariantOnGenome/Frequency/1000G/VEP',
-        'EVS' => 'VariantOnGenome/Frequency/EVS/VEP/European_American',
-        'ExAC' => 'VariantOnGenome/Frequency/ExAC',
         'Variant_Priority' => 'VariantOnGenome/Variant_priority'
 
 
@@ -325,65 +324,93 @@ function lovd_prepareVariantData($aLine)
         $aLine['SIFT_Value'] = $sRegs[2];
     }
 
-    //process EVS (EA_MAF) multiple values can be present, take the highest frequency
-    if ($aLine['EA_MAF'] == 'unknown' || $aLine['EA_MAF'] == ''){
-        $EVS_Value = '';
-    } elseif (strpos($aLine['EA_MAF'], '&') !== false) {
-        $EVSArr = explode("&", $aLine['EA_MAF']);
-        $EVSValArray = array();
-        foreach ($EVSArr as $EVS_Data) {
-            if (preg_match('/^\D+:(.+)$/', $EVS_Data, $EVS_Freq)) {
-                $EVS = $EVS_Freq[1];
+
+    // FREQUENCIES
+    // Make all bases uppercase.
+    $sRef = strtoupper($aLine['REF']);
+    $sAlt = strtoupper($aLine['ALT']);
+
+    // 'Eat' letters from either end - first left, then right - to isolate the difference.
+    while (strlen($sRef) > 0 && strlen($sAlt) > 0 && $sRef{0} == $sAlt{0}) {
+        $sRef = substr($sRef, 1);
+        $sAlt = substr($sAlt, 1);
+    }
+    while (strlen($sRef) > 0 && strlen($sAlt) > 0 && $sRef[strlen($sRef) - 1] == $sAlt[strlen($sAlt) - 1]) {
+        $sRef = substr($sRef, 0, -1);
+        $sAlt = substr($sAlt, 0, -1);
+    }
+
+    // Insertions/duplications, deletions, inversions, indels.
+    // We do not want to display the frequencies for these, set frequency columns to empty.
+    if (strlen($sRef) != 1 || strlen($sAlt) != 1) {
+        $sAlt = '';
+    }
+
+    // Set frequency columns array, this is using the column names from the file before they are mapped to LOVD columns names.
+    $freqColumns = array(
+        'GMAF',
+        'AFR_MAF',
+        'AMR_MAF',
+        'EAS_MAF',
+        'EUR_MAF',
+        'SAS_MAF',
+        'EA_MAF',
+        'AA_MAF',
+        'ExAC_MAF',
+        'ExAC_Adj_MAF',
+        'ExAC_AFR_MAF',
+        'ExAC_AMR_MAF',
+        'ExAC_EAS_MAF',
+        'ExAC_FIN_MAF',
+        'ExAC_NFE_MAF',
+        'ExAC_OTH_MAF',
+        'ExAC_SAS_MAF',
+        'ESP6500_AA_AF',
+        'ESP6500_EA_AF'
+    );
+
+    // Array of frequency columns used for variant priority calculation. The maximum frequency of all these columns is used.
+    $freqCalcColumns = array(
+        'GMAF',
+        'EA_MAF',
+        'ExAC_MAF'
+    );
+
+    $freqCalcValues = array();
+
+    foreach($freqColumns as $freqColumn) {
+
+        if ($aLine[$freqColumn] == 'unknown' || $aLine[$freqColumn] == '' || $sAlt == '' || empty($sAlt) || strlen($sAlt) == 0) {
+            $aLine[$freqColumn] = '';
+        } else {
+            $freqArr = explode("&", $aLine[$freqColumn]);
+            $freqValArray = array();
+            foreach ($freqArr as $freqData) {
+                if (preg_match('/^(\D+)\:(.+)$/', $freqData, $freqCalls)) {
+                    $freqPrefix = $freqCalls[1];
+                    if ($freqPrefix == $sAlt && is_numeric($freqCalls[2])){
+                        array_push($freqValArray, $freqCalls[2]);
+                    }
+                }
             }
-            if (is_numeric($EVS)) {
-                array_push($EVSValArray, $EVS);
+            // Check there are values in the array before taking max.
+            $freqCheck = array_filter($freqValArray);
+
+            if (!empty($freqCheck)){
+                $aLine[$freqColumn] = max($freqValArray);
+            } else {
+                $aLine[$freqColumn] = '';
             }
         }
-        $EVS_Value = max($EVSValArray);
-    } elseif (preg_match('/^\D+:(.+)$/',$aLine['EA_MAF'],$EVS_Freq)){
-        $EVS_Value = $EVS_Freq[1];
-    } else {
-        $EVS_Value = '';
-    }
-    $aLine['EVS'] = $EVS_Value;
 
-    //process 1000G (GMAF) A:0.4545 - take the frequency only
-    //if unknown or empty leave value as empty
-    if ($aLine['GMAF'] == 'unknown' || $aLine['GMAF'] == ''){
-        $GMAF = '';
-    } elseif (preg_match('/^\D+:(.+)$/',$aLine['GMAF'],$G1000)) {
-        $GMAF = $G1000[1];
-    } else {
-        $GMAF = '';
-    }
-    $aLine['1000G'] = $GMAF;
-
-    //process ExAC (ExAC_MAF) multiple values and scientific values. Taken the highest frequency
-    //if unknown or empty, leave value as empty
-    if ($aLine['ExAC_MAF'] == 'unknown' || $aLine['ExAC_MAF'] == ''){
-        $ExAC_Value = '';
-    } elseif (strpos($aLine['ExAC_MAF'], '&') !== false) {
-        $ExACArr = explode("&", $aLine['ExAC_MAF']);
-        $ExACValArray = array();
-        foreach ($ExACArr as $ExAC_Data) {
-            if (preg_match('/^\D+:(.+)$/', $ExAC_Data, $ExAC_Freq)) {
-                $ExAC = $ExAC_Freq[1];
-            }
-            if (is_numeric($ExAC)) {
-                array_push($ExACValArray, $ExAC);
-            }
+        // If column is required for calculating variant priority then add to array.
+        if(in_array($freqColumn,$freqCalcColumns)){
+            array_push($freqCalcValues,$aLine[$freqColumn]);
         }
-        $ExAC_Value = max($ExACValArray);
-    } elseif (preg_match('/^\D+:(.+)$/',$aLine['ExAC_MAF'],$ExAC_Freq)) {
-        $ExAC_Value = $ExAC_Freq[1];
-
-    } else {
-        $ExAC_Value = '';
     }
-    $aLine['ExAC'] = $ExAC_Value;
 
-    // get maximum frequency using EA_MAF, GMAF, ExAC_MAF
-    $max_Freq = max($GMAF,$ExAC_Value,$EVS_Value);
+    // get maximum frequency
+    $max_Freq = max($freqCalcValues);
 
     //VARIANT PRIORITY
     if (!empty($aLine['CPIPE_BED'])) {
@@ -405,7 +432,7 @@ function lovd_prepareVariantData($aLine)
             // check if it is rare
             if ($max_Freq <= 0.01) {
                 // check if novel - SNP138 ($aLine['ID']) is = '.' or '' and there is no frequency OR if very rare (<0.0005)
-                if ((($aLine['ID'] == '.' || $aLine == '') && $max_Freq == '') || $max_Freq <= 0.0005) {
+                if ((($aLine['ID'] == '.' || $aLine['ID'] == '') && $max_Freq == '') || $max_Freq <= 0.0005) {
                     // check if it is conserved - condel >= 0.07
                     if ($aLine['Condel'] >= 0.07) {
                         $aLine['Variant_Priority'] = 4;

@@ -144,15 +144,25 @@ if ($argc != 1 && in_array($argv[1], array('--help', '-help', '-h', '-?'))) {
 
         // get all the variant files into an array
         // fileType is trio or individual
-        if (preg_match('/^(.+?)\.tsv/', $xFile, $vRegs)) {
+        if (preg_match('/^(.+?)\.tsv$/', $xFile, $vRegs)) {
             $variantFilePrefix = explode('_', $vRegs[1]);
-            $fileSampleIDs = explode('.', $variantFilePrefix[3]);
-            $sID = $fileSampleIDs[0];
-            $fileType = $fileSampleIDs[1];
-            $vFiles[$sID][$fileType] = $xFile;
-
+            if (count($variantFilePrefix) !== 4) {
+                print('Invalid number of underscores used in variant file name for file ' . $xFile . "\n" .
+                    'Format should be site_n.n.n_batchnumber_sampleID.individual|trio.lovd.tsv');
+                die(52);
+            } else {
+                $fileSampleIDs = explode('.', $variantFilePrefix[3]);
+                if (count($fileSampleIDs) !== 3) {
+                    print('Invalid number of periods used in variant file name for file ' . $xFile . "\n" .
+                        'Format should be site_n.n.n_batchnumber_sampleID.individual|trio.lovd.tsv');
+                    die(52);
+                } else {
+                    $sID = $fileSampleIDs[0];
+                    $fileType = $fileSampleIDs[1];
+                    $vFiles[$sID][$fileType] = $xFile;
+                }
+            }
         }
-
     }
 
     // If no SMDF found and tsv variant files are found, do not continue
@@ -379,7 +389,7 @@ if ($argc != 1 && in_array($argv[1], array('--help', '-help', '-h', '-?'))) {
                 'statusid' => 4,
                 'created_by' => 0,
                 'created_date' => date('Y-m-d H:i:s'),
-                );
+            );
             // Add in any custom columns for the individual.
             foreach ($aColumnMappings as $sPipelineColumn => $sLOVDColumn) {
                 if (substr($sLOVDColumn, 0, 11) == 'Individual/') {
@@ -391,7 +401,7 @@ if ($argc != 1 && in_array($argv[1], array('--help', '-help', '-h', '-?'))) {
             $individualID = sprintf('%08d', $_DB->lastInsertId());
             $aColumnsForScreening['individualid'] = $individualID;
             $aColumnsForIndividual['id'] = $individualID;
-            $bIndExists = true;            
+            $bIndExists = true;
 
         } else {
             $bIndExists = false;
