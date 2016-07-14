@@ -248,6 +248,9 @@ class LOVD_CustomViewListMOD extends LOVD_CustomViewList {
                                 'curation_statusid' => array(
                                         'view' => false,
                                         'db'   => array('vog.curation_statusid', 'ASC', true)),
+                                'variantid' => array(
+                                        'view' => false,
+                                        'db'   => array('vog.id', 'ASC', true)),
                                 'vog_effect' => array(
                                         'view' => array('Effect', 70),
                                         'db'   => array('eg.name', 'ASC', true),
