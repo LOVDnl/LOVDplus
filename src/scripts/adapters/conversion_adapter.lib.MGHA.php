@@ -330,34 +330,23 @@ function lovd_prepareVariantData($aLine)
     $sRef = strtoupper($aLine['REF']);
     $sAlt = strtoupper($aLine['ALT']);
 
-    // Even substitutions are sometimes mentioned as longer Refs and Alts, so we'll always need to isolate the actual difference.
-    $startPos = $aLine['POS'];
-    $endPos = $aLine['POS'] + strlen($sRef) - 1;
-
     // 'Eat' letters from either end - first left, then right - to isolate the difference.
-
     while (strlen($sRef) > 0 && strlen($sAlt) > 0 && $sRef{0} == $sAlt{0}) {
         $sRef = substr($sRef, 1);
         $sAlt = substr($sAlt, 1);
-        $startPos ++;
     }
     while (strlen($sRef) > 0 && strlen($sAlt) > 0 && $sRef[strlen($sRef) - 1] == $sAlt[strlen($sAlt) - 1]) {
         $sRef = substr($sRef, 0, -1);
         $sAlt = substr($sAlt, 0, -1);
-        $endPos --;
     }
 
-    // Substitution, or something else?
-    if (strlen($sRef) == 1 && strlen($sAlt) == 1) {
-        // Substitutions.
-        $altFreqPrefix = $sAlt;
-    } else {
-        // Insertions/duplications, deletions, inversions, indels.
-        // we do not want to display the frequencies for these, set frequency columns to empty
-        $altFreqPrefix = '';
+    // Insertions/duplications, deletions, inversions, indels.
+    // We do not want to display the frequencies for these, set frequency columns to empty.
+    if (strlen($sRef) != 1 || strlen($sAlt) != 1) {
+        $sAlt = '';
     }
 
-    // set frequency columns array, this is using the column names from the file before they are mapped to LOVD columns names
+    // Set frequency columns array, this is using the column names from the file before they are mapped to LOVD columns names.
     $freqColumns = array(
         'GMAF',
         'AFR_MAF',
@@ -380,7 +369,7 @@ function lovd_prepareVariantData($aLine)
         'ESP6500_EA_AF'
     );
 
-    // array of frequency columns used for variant priority calculation. The maximum frequency of all these columns is used
+    // Array of frequency columns used for variant priority calculation. The maximum frequency of all these columns is used.
     $freqCalcColumns = array(
         'GMAF',
         'EA_MAF',
@@ -391,45 +380,33 @@ function lovd_prepareVariantData($aLine)
 
     foreach($freqColumns as $freqColumn) {
 
-        if ($aLine[$freqColumn] == 'unknown' || $aLine[$freqColumn] == '' || $altFreqPrefix == '' || empty($altFreqPrefix) || strlen($altFreqPrefix) == 0){
+        if ($aLine[$freqColumn] == 'unknown' || $aLine[$freqColumn] == '' || $sAlt == '' || empty($sAlt) || strlen($sAlt) == 0) {
             $aLine[$freqColumn] = '';
-
-        } elseif (strpos($aLine[$freqColumn], '&') !== false) {
+        } else {
             $freqArr = explode("&", $aLine[$freqColumn]);
             $freqValArray = array();
             foreach ($freqArr as $freqData) {
                 if (preg_match('/^(\D+)\:(.+)$/', $freqData, $freqCalls)) {
                     $freqPrefix = $freqCalls[1];
-                    if ($freqPrefix == $altFreqPrefix && is_numeric($freqCalls[2])){
+                    if ($freqPrefix == $sAlt && is_numeric($freqCalls[2])){
                         array_push($freqValArray, $freqCalls[2]);
                     }
                 }
             }
-
-            // check there are values in the array before taking max
+            // Check there are values in the array before taking max.
             $freqCheck = array_filter($freqValArray);
 
             if (!empty($freqCheck)){
                 $aLine[$freqColumn] = max($freqValArray);
-            }else{
+            } else {
                 $aLine[$freqColumn] = '';
             }
-        } elseif (preg_match('/^(\D+)\:(.+)$/',$aLine[$freqColumn],$freqCalls)){
-            $freqPrefix = $freqCalls[1];
-            if ($freqPrefix == $altFreqPrefix && is_numeric($freqCalls[2])){
-                $aLine[$freqColumn] = $freqCalls[2];
-            }else{
-                $aLine[$freqColumn] = '';
-            }
-        } else {
-            $aLine[$freqColumn] = '';
         }
 
-        // if column is required for calculating variant priority then add to array
+        // If column is required for calculating variant priority then add to array.
         if(in_array($freqColumn,$freqCalcColumns)){
             array_push($freqCalcValues,$aLine[$freqColumn]);
         }
-
     }
 
     // get maximum frequency
