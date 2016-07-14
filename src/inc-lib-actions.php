@@ -42,6 +42,11 @@ function lovd_addAllDefaultCustomColumns ($sObjectType, $ID, $nUserID = false)
     // This function enables all (HGVS)standard custom columns for the given gene or disease.
     global $_AUTH, $_DB;
 
+    // for some object type, we don't want to create shared columns entries
+    // update this $aDisableSharedColumns array if there are more objects where we don't want to
+    $aDisableSharedColumns = (LOVD_plus) ? array('gene' => true) : array();
+    $bInsertSharedColumns = (!empty($aDisableSharedColumns[$sObjectType])) ? false : true;
+
     if ($sObjectType == 'gene') {
         $sCategory = 'VariantOnTranscript';
         $sTableName = TABLE_VARIANTS_ON_TRANSCRIPTS;
@@ -74,9 +79,11 @@ function lovd_addAllDefaultCustomColumns ($sObjectType, $ID, $nUserID = false)
     }
 
     // Then, actually add the column(s) to the specified object's data.
-    foreach ($aCols as $aCol) {
-        $q = $_DB->query('INSERT IGNORE INTO ' . TABLE_SHARED_COLS . ' VALUES (' . $sSQLCols . ', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), NULL, NULL)', array($ID, $aCol['id'], $aCol['col_order'], $aCol['width'], $aCol['mandatory'], $aCol['description_form'], $aCol['description_legend_short'], $aCol['description_legend_full'], $aCol['select_options'], $aCol['public_view'], $aCol['public_add'], $nUserID));
-        $nAdded += $q->rowCount();
+    if ($bInsertSharedColumns) {
+        foreach ($aCols as $aCol) {
+            $q = $_DB->query('INSERT IGNORE INTO ' . TABLE_SHARED_COLS . ' VALUES (' . $sSQLCols . ', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), NULL, NULL)', array($ID, $aCol['id'], $aCol['col_order'], $aCol['width'], $aCol['mandatory'], $aCol['description_form'], $aCol['description_legend_short'], $aCol['description_legend_full'], $aCol['select_options'], $aCol['public_view'], $aCol['public_add'], $nUserID));
+            $nAdded += $q->rowCount();
+        }
     }
 
     return $nAdded;
