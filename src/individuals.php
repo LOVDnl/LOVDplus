@@ -295,6 +295,7 @@ if (PATH_COUNT >= 2 && ctype_digit($_PE[1]) && !ACTION && (PATH_COUNT == 2 || PA
                                                            FROM ' . TABLE_ANALYSES_RUN . ' AS ar
                                                            WHERE ar.screeningid = ? AND ar.modified = 0) ORDER BY a.sortid, a.id', array($nScreeningToAnalyze))->fetchAllAssoc();
         $zAnalyses = array_merge($zAnalysesRun, array(''), $zAnalysesNotRun);
+        $aScreeningVariantIDs = $_DB->query('SELECT CAST(s2v.variantid AS UNSIGNED) FROM ' . TABLE_SCR2VAR . ' s2v INNER JOIN ' . TABLE_VARIANTS . ' AS vog ON (s2v.variantid = vog.id) WHERE s2v.screeningid = ? AND vog.curation_statusid IS NOT NULL', array($nScreeningToAnalyze))->fetchAllColumn();
         require ROOT_PATH . 'inc-lib-analyses.php';
         print('
       <DIV id="analyses">
@@ -420,20 +421,23 @@ if (PATH_COUNT >= 2 && ctype_digit($_PE[1]) && !ACTION && (PATH_COUNT == 2 || PA
       </SCRIPT>
 
 
-      <DIV id="analysis_results_VL"' . ($_INI['instance']['name'] == 'mgha' && $aAnalysisRunIDs ? '' : ' style="display: none;"') . '>' . "\n");
+      <DIV id="analysis_results_VL"' . ($_INI['instance']['name'] == 'mgha' && $aScreeningVariantIDs ? '' : ' style="display: none;"') . '>' . "\n");
         $_GET['search_runid'] = '0'; // Will for sure not return anything.
         $_GET['search_vog_effect'] = '!-'; // We always want to exclude the (probably) non-pathogenic ones by default.
 
         if ($_INI['instance']['name'] == 'mgha') {
-            // Find all the possible run ids for this screening and use them to display the variants of interest.
-            $_GET['search_runid'] = (!$aAnalysisRunIDs ? '0' : implode($aAnalysisRunIDs,'|')); // Show all variants in all the analyses for this screening. If no analyses have been run then pick analysis 0 which should always be empty.
+            // The default behaviour for MGHA is to show a viewlist with any variants that have a curation status.
             $_GET['search_vog_effect'] = ''; // Don't hide any variants based on the effect.
             $_GET['search_curation_statusid'] = '!="" !' . CUR_STATUS_NOT_FOR_CURATION; // Show variants with a curation status other than "Not for curation".
+            $_GET['search_runid'] = ''; // We are not using the run id to limit the variants as some variants may not be in a run.
+            $_GET['search_variantid'] = (!$aScreeningVariantIDs ? '0' : implode($aScreeningVariantIDs,'|')); // Use all the variant IDs for variants with a curation status.
+            $aAnalysisRunResultsVL = array('VariantOnGenome', 'VariantOnTranscript'); // We can not add in the AnalysisRunResults object as this will hide variants that are not in an analysis.
+        } else {
+            $aAnalysisRunResultsVL = array('AnalysisRunResults', 'VariantOnGenome', 'VariantOnTranscript');
         }
 
         require ROOT_PATH . 'class/object_custom_viewlists.mod.php';
-        // VOG needs to be first, so it groups by the VOG ID.
-        $_DATA = new LOVD_CustomViewListMOD(array('AnalysisRunResults', 'VariantOnGenome', 'VariantOnTranscript'));
+        $_DATA = new LOVD_CustomViewListMOD($aAnalysisRunResultsVL);
         // Define menu, to set pathogenicity flags of multiple variants in one go.
         $_DATA->setRowLink('CustomVL_AnalysisRunResults_for_I_VE', 'javascript:lovd_openWindow(\'' . lovd_getInstallURL() . 'variants/{{ID}}?&in_window\', \'VarVE_{{ID}}\', 1250); return false;');
         $bMenu         = true; // Show the gear-menu, with which users can mark and label variants?
