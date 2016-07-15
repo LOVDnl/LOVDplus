@@ -552,6 +552,16 @@ if ($_SERVER['SERVER_ADMIN'] == 'i.f.a.c.fokkema@lumc.nl' && $_SERVER['HTTP_HOST
     $nInstallSQL += $nSources;
 
 
+    if (LOVD_plus) {
+        // (14) Creating the analyses if we are an LOVD+ instance.
+        require 'inc-sql-analyses.php';
+        if ($aAnalysesSQL) {
+            $aInstallSQL['Creating analyses...'] = $aAnalysesSQL;
+            $nInstallSQL++;
+        }
+    }
+
+
 
 
 
