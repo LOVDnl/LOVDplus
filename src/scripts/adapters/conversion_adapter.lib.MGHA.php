@@ -7,18 +7,19 @@
  *************/
 
 
-// updates the $aColumnMapping array with site specific mappings
 function lovd_prepareMappings()
 {
 
+    // Updates the $aColumnMapping array with site specific mappings.
+
     $aColumnMappings = array(
-        // Mappings for fields used to process other fields but not imported into the database
+        // Mappings for fields used to process other fields but not imported into the database.
         'SYMBOL' => 'symbol',
         'REF' => 'ref',
         'ALT' => 'alt',
         'Existing_variation' => 'existingvariation',
         'Feature' => 'transcriptid',
-        // VariantOnGenome/DNA - constructed by the lovd_getVariantDescription function later on
+        // VariantOnGenome/DNA - constructed by the lovd_getVariantDescription function later on.
         'CHROM' => 'chromosome',
         'POS' => 'position', // lovd_getVariantDescription() needs this.
         'ID' => 'VariantOnGenome/dbSNP',
@@ -158,7 +159,8 @@ function lovd_prepareMappings()
         'phyloP46way_primate_rankscore' => 'VariantOnTranscript/Prediction/phyloP46way_Prim_Ranked_Score',
         'Grantham' => 'VariantOnTranscript/Prediction/Grantham',
         'CPIPE_BED' => 'VariantOnTranscript/Pipeline_V6_bed_file',
-        // child/singleton fields
+
+        // Child/Singleton fields.
         'Child_DP' => 'VariantOnGenome/Sequencing/Depth/Total',
         'Child_GQ' => 'VariantOnGenome/Sequencing/Genotype/Quality',
         'Child_GT' => 'allele', // this is in the form of A/A, A/T etc. This is converted to 0/0, 1/0 later on
@@ -167,33 +169,35 @@ function lovd_prepareMappings()
         'Child_PID' => 'VariantOnGenome/Sequencing/Physical_Phasing_ID',
         'Child_PL' => 'VariantOnGenome/Sequencing/Phredscaled_Likelihoods',
         'Child_PP' => 'VariantOnGenome/Sequencing/Phredscaled_Probabilities',
-        // father fields
-        'Father_DP' => 'VariantOnGenome/Sequencing/Father/Depth/Total',// we actually do not receive a value for depth in this column, we need to calculate this using AD & PL
+
+        // Father fields.
+        'Father_DP' => 'VariantOnGenome/Sequencing/Father/Depth/Total',// We actually do not receive a value for depth in this column, we need to calculate this using AD & PL.
         'Father_GQ' => 'VariantOnGenome/Sequencing/Father/Genotype/Quality',
         'Father_GT' => 'VariantOnGenome/Sequencing/Father/GenoType',
         'Father_JL' => 'VariantOnGenome/Sequencing/Father/Phredscaled_Joint_Likelihood',
         'Father_JP' => 'VariantOnGenome/Sequencing/Father/Phredscaled_Joint_Probability',
-        'Father_PID' => 'VariantOnGenome/Sequencing/Father/Physical_Phasing_ID',// used to calculate the allele value
-        'Father_PL' => 'VariantOnGenome/Sequencing/Father/Phredscaled_Likelihoods',// used to calculate the allele value
-        'Father_PP' => 'VariantOnGenome/Sequencing/Father/Phredscaled_Probabilities',// used to calculate the allele value
-        // mother fields
-        'Mother_DP' => 'VariantOnGenome/Sequencing/Mother/Depth/Total',// we actually do not receive a value for depth in this column, we need to calculate this using AD & PL
+        'Father_PID' => 'VariantOnGenome/Sequencing/Father/Physical_Phasing_ID',
+        'Father_PL' => 'VariantOnGenome/Sequencing/Father/Phredscaled_Likelihoods',// Used to calculate the allele value.
+        'Father_PP' => 'VariantOnGenome/Sequencing/Father/Phredscaled_Probabilities',
+
+        // Mother fields.
+        'Mother_DP' => 'VariantOnGenome/Sequencing/Mother/Depth/Total',// We actually do not receive a value for depth in this column, we need to calculate this using AD & PL.
         'Mother_GQ' => 'VariantOnGenome/Sequencing/Mother/Genotype/Quality',
         'Mother_GT' => 'VariantOnGenome/Sequencing/Mother/GenoType',
         'Mother_JL' => 'VariantOnGenome/Sequencing/Mother/Phredscaled_Joint_Likelihood',
         'Mother_JP' => 'VariantOnGenome/Sequencing/Mother/Phredscaled_Joint_Probability',
-        'Mother_PID' => 'VariantOnGenome/Sequencing/Mother/Physical_Phasing_ID',// used to calculate the allele value
-        'Mother_PL' => 'VariantOnGenome/Sequencing/Mother/Phredscaled_Likelihoods',// used to calculate the allele value
-        'Mother_PP' => 'VariantOnGenome/Sequencing/Mother/Phredscaled_Probabilities',// used to calculate the allele value
+        'Mother_PID' => 'VariantOnGenome/Sequencing/Mother/Physical_Phasing_ID',
+        'Mother_PL' => 'VariantOnGenome/Sequencing/Mother/Phredscaled_Likelihoods',// Used to calculate the allele value.
+        'Mother_PP' => 'VariantOnGenome/Sequencing/Mother/Phredscaled_Probabilities',
 
-        // columns that are created when processing data in lovd_prepareVariantData function
-        'Father_Depth_Ref' => 'VariantOnGenome/Sequencing/Father/Depth/Ref', // derived from Father_AD
-        'Father_Depth_Alt' => 'VariantOnGenome/Sequencing/Father/Depth/Alt', // derived from Father_AD
-        'Father_Alt_Percentage' => 'VariantOnGenome/Sequencing/Father/Depth/Alt/Fraction', // derived from Father_AD
+        // Columns that are created when processing data in lovd_prepareVariantData function.
+        'Father_Depth_Ref' => 'VariantOnGenome/Sequencing/Father/Depth/Ref', // Derived from Father_AD.
+        'Father_Depth_Alt' => 'VariantOnGenome/Sequencing/Father/Depth/Alt', // Derived from Father_AD.
+        'Father_Alt_Percentage' => 'VariantOnGenome/Sequencing/Father/Depth/Alt/Fraction', // Derived from Father_AD.
         'Father_VarPresent' => 'VariantOnGenome/Sequencing/Father/VarPresent',
-        'Mother_Depth_Ref' => 'VariantOnGenome/Sequencing/Mother/Depth/Ref', // derived from Mother_AD
-        'Mother_Depth_Alt' => 'VariantOnGenome/Sequencing/Mother/Depth/Alt', // derived from Mother_AD
-        'Mother_Alt_Percentage' => 'VariantOnGenome/Sequencing/Mother/Depth/Alt/Fraction', // derived from Mother_AD
+        'Mother_Depth_Ref' => 'VariantOnGenome/Sequencing/Mother/Depth/Ref', // Derived from Mother_AD.
+        'Mother_Depth_Alt' => 'VariantOnGenome/Sequencing/Mother/Depth/Alt', // Derived from Mother_AD.
+        'Mother_Alt_Percentage' => 'VariantOnGenome/Sequencing/Mother/Depth/Alt/Fraction', // Derived from Mother_AD.
         'Mother_VarPresent' => 'VariantOnGenome/Sequencing/Mother/VarPresent',
         'PolyPhen_Text' => 'VariantOnTranscript/Prediction/PolyPhen_VEP',
         'PolyPhen_Value' => 'VariantOnTranscript/Prediction/PolyPhen_Score_VEP',
@@ -207,121 +211,151 @@ function lovd_prepareMappings()
     return $aColumnMappings;
 }
 
-// processes the variant data file for MGHA
-// cleans up data in existing columns and splits some columns out to two columns
+
 function lovd_prepareVariantData($aLine)
 {
+    // Processes the variant data file for MGHA.
+    // Cleans up data in existing columns and splits some columns out to two columns.
 
     // For MGHA the allele column is in the format A/A, C/T etc. Leiden have converted this to 1/1, 0/1, etc.
     // MGHA also need to calculate the VarPresent for Father and Mother as this is required later on when assigning a value to allele
-    $childGenotypes = explode('/', $aLine['Child_GT']);
+    $aChildGenotypes = explode('/', $aLine['Child_GT']);
 
     if ($aLine['Child_GT'] == './.') {
-        // we set it to '' as this is what Leiden do
+        // We set it to '' as this is what Leiden do.
         $aLine['Child_GT'] = '';
-    } elseif ($childGenotypes[0] !== $childGenotypes[1]) {
-        //het
+
+    } elseif ($aChildGenotypes[0] !== $aChildGenotypes[1]) {
+        // Het.
         $aLine['Child_GT'] = '0/1';
-    } elseif ($childGenotypes[0] == $childGenotypes[1] && $childGenotypes[0] == $aLine['ALT']) {
-        // homo alt
+
+    } elseif ($aChildGenotypes[0] == $aChildGenotypes[1] && $aChildGenotypes[0] == $aLine['ALT']) {
+        // Homo alt.
         $aLine['Child_GT'] = '1/1';
-    } elseif ($childGenotypes[0] == $childGenotypes[1] && $childGenotypes[0] == $aLine['REF']) {
-        // homo ref
+
+    } elseif ($aChildGenotypes[0] == $aChildGenotypes[1] && $aChildGenotypes[0] == $aLine['REF']) {
+        // Homo ref.
         $aLine['Child_GT'] = '0/0';
     }
 
-    // check whether the mother or father's genotype is present. If so we are dealing with a trio and we need to calculate the following
+
     if (!empty($aLine['Mother_GT']) || !empty($aLine['Father_GT'])){
-        for ($parentCount = 1; $parentCount <= 2; $parentCount++) {
-            if ($parentCount == 1) {
-                $parent = 'Father';
+        // Check whether the mother or father's genotype is present.
+        // If so we are dealing with a trio and we need to calculate the following.
+
+        for ($nParentCount = 1; $nParentCount <= 2; $nParentCount++) {
+
+            if ($nParentCount == 1) {
+                $sParent = 'Father';
+
             } else {
-                $parent = 'Mother';
-            }
-            // get the genotypes for the parents and compare them to each other
-            // data is separated by a / or a |
-            if (strpos($aLine[$parent . '_GT'], '|') !== false) {
-                $parentGenotypes = explode('|', $aLine[$parent . '_GT']);
-            } elseif (strpos($aLine[$parent . '_GT'], '/') !== false) {
-                $parentGenotypes = explode('/', $aLine[$parent . '_GT']);
-            } else {
-                print('Unexpected delimiter in ' . $parent . '_GT column. Current time: ' . date('Y-m-d H:i:s') . ".\n");
-                // DIE ??
+                $sParent = 'Mother';
             }
 
-            if ($parentGenotypes[0] == $parentGenotypes[1] && $parentGenotypes[0] == $aLine['ALT']) {
-                // homo alt
-                $aLine[$parent . '_GT'] = '1/1';
-                $aLine[$parent . '_VarPresent'] = 6;
-            } elseif ($parentGenotypes[0] !== $parentGenotypes[1]) {
-                // het
-                $aLine[$parent . '_GT'] = '0/1';
-                $aLine[$parent . '_VarPresent'] = 6;
+
+            // Get the genotypes for the parents and compare them to each other.
+            // Data is separated by a / or a |.
+            if (strpos($aLine[$sParent . '_GT'], '|') !== false) {
+                $aParentGenotypes = explode('|', $aLine[$sParent . '_GT']);
+
+            } elseif (strpos($aLine[$sParent . '_GT'], '/') !== false) {
+                $aParentGenotypes = explode('/', $aLine[$sParent . '_GT']);
+
             } else {
-                if ($parentGenotypes[0] == $parentGenotypes[1] && $parentGenotypes[0] == $aLine['REF']) {
-                    // homo ref
-                    $aLine[$parent . '_GT'] = '0/0';
-                }
-                if ($aLine[$parent . '_GT'] = './.') {
-                    // we set it to '' as this is what Leiden do.
-                    $aLine[$parent . '_GT'] = '';
+                die('Unexpected delimiter in ' . $sParent . '_GT column. We cannot process the file as values from this column are required to calculate the allele.' . ".\n");
+            }
+
+
+
+            if ($aParentGenotypes[0] == $aParentGenotypes[1] && $aParentGenotypes[0] == $aLine['ALT']) {
+                // Homo alt.
+                $aLine[$sParent . '_GT'] = '1/1';
+                $aLine[$sParent . '_VarPresent'] = 6;
+
+            } elseif ($aParentGenotypes[0] !== $aParentGenotypes[1]) {
+                // Het.
+                $aLine[$sParent . '_GT'] = '0/1';
+                $aLine[$sParent . '_VarPresent'] = 6;
+
+            } else {
+
+
+                if ($aParentGenotypes[0] == $aParentGenotypes[1] && $aParentGenotypes[0] == $aLine['REF']) {
+                    // Homo ref.
+                    $aLine[$sParent . '_GT'] = '0/0';
                 }
 
-                // calculate the VarPresent for the mother and the father using the allelic depths (Parent_AD) and Phred-scaled Likelihoods (Parent_PL)
+                if ($aLine[$sParent . '_GT'] = './.') {
+                    // We set it to '' as this is what Leiden do.
+                    $aLine[$sParent . '_GT'] = '';
+                }
+
+                // Calculate the VarPresent for the mother and the father using the allelic depths (Parent_AD) and Phred-scaled Likelihoods (Parent_PL)
                 // Parent_AD(x,y)   Parent_PL(a,b,c)
-                // calculate the alt depth as fraction (/100)
-                $parentAllelicDepths = explode(',', $aLine[$parent . '_AD']);
+                // Calculate the alt depth as fraction (/100).
+                $aParentAllelicDepths = explode(',', $aLine[$sParent . '_AD']);
 
-                // set the ref and alt values in $aLine
-                $aLine[$parent . '_Depth_Ref'] = $parentAllelicDepths[0];
-                $aLine[$parent . '_Depth_Alt'] = $parentAllelicDepths[1];
+                // Set the ref and alt values in $aLine.
+                $aLine[$sParent . '_Depth_Ref'] = $aParentAllelicDepths[0];
+                $aLine[$sParent . '_Depth_Alt'] = $aParentAllelicDepths[1];
 
-                if ($parentAllelicDepths[1] == 0) {
-                    $parentAltPercentage = 0;
-                    $aLine[$parent . '_Depth_Alt_Frac'] = 0;
+
+                if ($aParentAllelicDepths[1] == 0) {
+                    $sParentAltPercentage = 0;
+                    $aLine[$sParent . '_Depth_Alt_Frac'] = 0;
+
                 } else {
                     // alt percentage = Parent_AD(y) / (Parent.AD(x) + Parent.AD(y))
-                    $aLine[$parent . '_Depth_Alt_Frac'] = $parentAllelicDepths[1]/100;
-                    $parentAltPercentage = $parentAllelicDepths[1] / ($parentAllelicDepths[0] + $parentAllelicDepths[1]);
+                    $aLine[$sParent . '_Depth_Alt_Frac'] = $aParentAllelicDepths[1]/100;
+                    $sParentAltPercentage = $aParentAllelicDepths[1] / ($aParentAllelicDepths[0] + $aParentAllelicDepths[1]);
                 }
 
-                // set the alt percentage in $aLine
-                $aLine[$parent . '_Alt_Percentage'] = $parentAltPercentage;
+                // Set the alt percentage in $aLine.
+                $aLine[$sParent . '_Alt_Percentage'] = $sParentAltPercentage;
 
-                if ($aLine[$parent . '_PL'] == '' || $aLine[$parent . '_PL'] == 'unknown') {
-                    $parentPLAlt = 'unknown';
+                if ($aLine[$sParent . '_PL'] == '' || $aLine[$sParent . '_PL'] == 'unknown') {
+                    $sParentPLAlt = 'unknown';
+
                 } else {
-
-                    $parentPL = explode(',', $aLine[$parent . '_PL']);
-                    // parent PLAlt = Parent_PL(b)
-                    $parentPLAlt = $parentPL[1];
+                    $aParentPL = explode(',', $aLine[$sParent . '_PL']);
+                    $sParentPLAlt = $aParentPL[1]; // Parent PLAlt = Parent_PL(b)
                 }
 
-                if ($parentAltPercentage > 10) {
-                    $aLine[$parent . '_VarPresent'] = 5;
-                } elseif ($parentAltPercentage > 0 && $parentAltPercentage <= 10) {
-                    $aLine[$parent . '_VarPresent'] = 4;
-                } elseif ($parentPLAlt < 30 || $parentPLAlt == 'unknown') {
-                    $aLine[$parent . '_VarPresent'] = 3;
-                } elseif ($parentPLAlt >= 30 && $parentPLAlt < 60) {
-                    $aLine[$parent . '_VarPresent'] = 2;
+
+
+                if ($sParentAltPercentage > 10) {
+                    $aLine[$sParent . '_VarPresent'] = 5;
+
+                } elseif ($sParentAltPercentage > 0 && $sParentAltPercentage <= 10) {
+                    $aLine[$sParent . '_VarPresent'] = 4;
+
+                } elseif ($sParentPLAlt < 30 || $sParentPLAlt == 'unknown') {
+                    $aLine[$sParent . '_VarPresent'] = 3;
+
+                } elseif ($sParentPLAlt >= 30 && $sParentPLAlt < 60) {
+                    $aLine[$sParent . '_VarPresent'] = 2;
+
                 } else {
-                    $aLine[$parent . '_VarPresent'] = 1;
+                    $aLine[$sParent . '_VarPresent'] = 1;
                 }
+
+
             }
         }
     }
 
-    //split up PolyPhen to extract text and value
-    if (preg_match('/(\D+)\((.+)\)/',$aLine['PolyPhen'],$pRegs)){
-        $aLine['PolyPhen_Text'] = $pRegs[1];
-        $aLine['PolyPhen_Value'] = $pRegs[2];
+
+    // Split up PolyPhen to extract text and value.
+    if (preg_match('/(\D+)\((.+)\)/',$aLine['PolyPhen'],$aPoly)){
+        $aLine['PolyPhen_Text'] = $aPoly[1];
+        $aLine['PolyPhen_Value'] = $aPoly[2];
     }
 
-    //split up SIFT to extract text and value
-    if (preg_match('/(\D+)\((.+)\)/',$aLine['SIFT'],$sRegs)){
-        $aLine['SIFT_Text'] = $sRegs[1];
-        $aLine['SIFT_Value'] = $sRegs[2];
+
+    // Split up SIFT to extract text and value.
+    if (preg_match('/(\D+)\((.+)\)/',$aLine['SIFT'],$aSIFT)){
+        $aLine['SIFT_Text'] = $aSIFT[1];
+        $aLine['SIFT_Value'] = $aSIFT[2];
     }
 
 
@@ -335,6 +369,7 @@ function lovd_prepareVariantData($aLine)
         $sRef = substr($sRef, 1);
         $sAlt = substr($sAlt, 1);
     }
+
     while (strlen($sRef) > 0 && strlen($sAlt) > 0 && $sRef[strlen($sRef) - 1] == $sAlt[strlen($sAlt) - 1]) {
         $sRef = substr($sRef, 0, -1);
         $sAlt = substr($sAlt, 0, -1);
@@ -347,7 +382,7 @@ function lovd_prepareVariantData($aLine)
     }
 
     // Set frequency columns array, this is using the column names from the file before they are mapped to LOVD columns names.
-    $freqColumns = array(
+    $aFreqColumns = array(
         'GMAF',
         'AFR_MAF',
         'AMR_MAF',
@@ -370,88 +405,111 @@ function lovd_prepareVariantData($aLine)
     );
 
     // Array of frequency columns used for variant priority calculation. The maximum frequency of all these columns is used.
-    $freqCalcColumns = array(
+    $aFreqCalcColumns = array(
         'GMAF',
         'EA_MAF',
         'ExAC_MAF'
     );
 
-    $freqCalcValues = array();
+    $aFreqCalcValues = array();
 
-    foreach($freqColumns as $freqColumn) {
+    foreach($aFreqColumns as $sFreqColumn) {
 
-        if ($aLine[$freqColumn] == 'unknown' || $aLine[$freqColumn] == '' || $sAlt == '' || empty($sAlt) || strlen($sAlt) == 0) {
-            $aLine[$freqColumn] = '';
+        if ($aLine[$sFreqColumn] == 'unknown' || $aLine[$sFreqColumn] == '' || $sAlt == '' || empty($sAlt) || strlen($sAlt) == 0) {
+            $aLine[$sFreqColumn] = '';
+
         } else {
-            $freqArr = explode("&", $aLine[$freqColumn]);
-            $freqValArray = array();
-            foreach ($freqArr as $freqData) {
+            $aFreqArr = explode("&", $aLine[$sFreqColumn]);
+            $aFreqValArray = array();
+
+
+            foreach ($aFreqArr as $freqData) {
+
                 if (preg_match('/^(\D+)\:(.+)$/', $freqData, $freqCalls)) {
-                    $freqPrefix = $freqCalls[1];
-                    if ($freqPrefix == $sAlt && is_numeric($freqCalls[2])){
-                        array_push($freqValArray, $freqCalls[2]);
+                    $sFreqPrefix = $freqCalls[1];
+
+                    if ($sFreqPrefix == $sAlt && is_numeric($freqCalls[2])){
+                        array_push($aFreqValArray, $freqCalls[2]);
                     }
+
                 }
             }
             // Check there are values in the array before taking max.
-            $freqCheck = array_filter($freqValArray);
+            $sFreqCheck = array_filter($aFreqValArray);
 
-            if (!empty($freqCheck)){
-                $aLine[$freqColumn] = max($freqValArray);
+            if (!empty($sFreqCheck)){
+                $aLine[$sFreqColumn] = max($aFreqValArray);
             } else {
-                $aLine[$freqColumn] = '';
+                $aLine[$sFreqColumn] = '';
             }
         }
 
         // If column is required for calculating variant priority then add to array.
-        if(in_array($freqColumn,$freqCalcColumns)){
-            array_push($freqCalcValues,$aLine[$freqColumn]);
+        if(in_array($sFreqColumn,$aFreqCalcColumns)){
+            array_push($aFreqCalcValues,$aLine[$sFreqColumn]);
         }
     }
 
-    // get maximum frequency
-    $max_Freq = max($freqCalcValues);
 
-    //VARIANT PRIORITY
+
+    // Get maximum frequency.
+    $sMaxFreq = max($aFreqCalcValues);
+
+    // Variant Priority.
     if (!empty($aLine['CPIPE_BED'])) {
         $aLine['Variant_Priority'] = 6;
+
     } else {
         if ($aLine['IMPACT'] == 'HIGH') {
-            // check if novel - SNP138 ($aLine['ID']) is = '.' or '' and there is no frequency
-            if (($aLine['ID'] == '.' || $aLine['ID'] == '') && $max_Freq == '') {
-                // novel
+
+            if (($aLine['ID'] == '.' || $aLine['ID'] == '') && $sMaxFreq == '') {
+                // If novel - SNP138 ($aLine['ID']) is = '.' or '' and there is no frequency.
                 $aLine['Variant_Priority'] = 5;
-            } elseif ($max_Freq <= 0.0005) {
+
+            } elseif ($sMaxFreq <= 0.0005) {
                 $aLine['Variant_Priority'] = 4;
-            } elseif ($max_Freq <= 0.01) {
+
+            } elseif ($sMaxFreq <= 0.01) {
                 $aLine['Variant_Priority'] = 3;
+
             } else {
                 $aLine['Variant_Priority'] = 1;
             }
+
         } elseif ($aLine['IMPACT'] == 'MODERATE') {
-            // check if it is rare
-            if ($max_Freq <= 0.01) {
-                // check if novel - SNP138 ($aLine['ID']) is = '.' or '' and there is no frequency OR if very rare (<0.0005)
-                if ((($aLine['ID'] == '.' || $aLine['ID'] == '') && $max_Freq == '') || $max_Freq <= 0.0005) {
-                    // check if it is conserved - condel >= 0.07
+
+            if ($sMaxFreq <= 0.01) {
+                // Check if it is rare.
+
+                if ((($aLine['ID'] == '.' || $aLine['ID'] == '') && $sMaxFreq == '') || $sMaxFreq <= 0.0005) {
+                    // check if novel - SNP138 ($aLine['ID']) is = '.' or '' and there is no frequency OR if very rare (<0.0005).
+
                     if ($aLine['Condel'] >= 0.07) {
+                        // Check if it is conserved - condel >= 0.07.
                         $aLine['Variant_Priority'] = 4;
+
                     } else {
                         $aLine['Variant_Priority'] = 3;
                     }
+
                 } else {
                     $aLine['Variant_Priority'] = 2;
                 }
+
             } else {
                 $aLine['Variant_Priority'] = 1;
             }
+
         } elseif ($aLine['IMPACT'] == 'LOW') {
             $aLine['Variant_Priority'] = 0;
+
         } elseif ($aLine['IMPACT'] == 'MODIFIER') {
             $aLine['Variant_Priority'] = 0;
+
         } else {
             $aLine['Variant_Priority'] = 0;
         }
+
     }
 
     return $aLine;
