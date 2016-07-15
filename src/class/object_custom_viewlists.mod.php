@@ -199,6 +199,10 @@ class LOVD_CustomViewListMOD extends LOVD_CustomViewList {
                         // Join to transcripts for the NM number, but also to genes to show the gene's OMIM ID.
                         $aSQL['FROM'] .= ' LEFT JOIN ' . TABLE_TRANSCRIPTS . ' AS t ON (vot.transcriptid = t.id) LEFT JOIN ' . TABLE_GENES . ' AS g ON (t.geneid = g.id)';
                         // We have no fallback, so we'll easily detect an error if we messed up somewhere.
+
+                        // Display the gene panels that this variant is found in.
+                        $aSQL['FROM'] .= ' LEFT JOIN ' . TABLE_GP2GENE . ' AS gp2g ON (t.geneid = gp2g.geneid) LEFT JOIN ' . TABLE_GENE_PANELS . ' AS gp ON (gp2g.genepanelid = gp.id)';
+                        $aSQL['SELECT'] .= (!$aSQL['SELECT']? '' : ', ') . 'GROUP_CONCAT(gp.name SEPARATOR ", ") AS gene_panels';
                     }
                     break;
             }
@@ -317,6 +321,9 @@ class LOVD_CustomViewListMOD extends LOVD_CustomViewList {
                             'gene_OMIM_' => array(
                                 'view' => array('OMIM links', 100),
                                 'db'   => array('__gene_OMIM', 'ASC', 'TEXT')),
+                            'gene_panels' => array(
+                                'view' => array('Gene panels', 150),
+                                'db'   => array('gene_panels', 'DESC', 'TEXT')),
                         ));
                     break;
             }
