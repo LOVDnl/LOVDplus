@@ -583,6 +583,10 @@ if ($sCalcVersionFiles != $sCalcVersionDB) {
                          'PREPARE Statement FROM @sSQL',
                          'EXECUTE Statement',
                      ),
+                 '3.0-12v' =>
+                     array(
+                         'DELETE FROM ' . TABLE_SHARED_COLS . ' WHERE colid LIKE "VariantOnTranscript/%"',
+                     ),
              );
 
     if ($sCalcVersionDB < lovd_calculateVersion('3.0-alpha-01')) {
