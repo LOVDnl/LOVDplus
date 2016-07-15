@@ -42,10 +42,10 @@ function lovd_addAllDefaultCustomColumns ($sObjectType, $ID, $nUserID = false)
     // This function enables all (HGVS)standard custom columns for the given gene or disease.
     global $_AUTH, $_DB;
 
-    // for some object type, we don't want to create shared columns entries
-    // update this $aDisableSharedColumns array if there are more objects where we don't want to
-    $aDisableSharedColumns = (LOVD_plus) ? array('gene' => true) : array();
-    $bInsertSharedColumns = (!empty($aDisableSharedColumns[$sObjectType])) ? false : true;
+    // For some object type, we don't want to create shared columns entries.
+    // Update $aDisableSharedColumns array if there are more objects where we don't want to add rows to shared_columns.
+    $aDisableSharedColumns = (!LOVD_plus? array() : array('gene'));
+    $bInsertSharedColumns = (in_array($sObjectType, $aDisableSharedColumns)? false : true);
 
     if ($sObjectType == 'gene') {
         $sCategory = 'VariantOnTranscript';

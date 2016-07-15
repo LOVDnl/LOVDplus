@@ -100,7 +100,7 @@ function lovd_getTableInfoByCategory ($sCategory)
                      array(
                             'table_sql' => TABLE_VARIANTS_ON_TRANSCRIPTS,
                             'table_name' => 'Transcript Variant',
-                            'shared' => false,
+                            'shared' => (LOVD_plus? false : true),
                             'unit' => 'gene', // Is also used to determine the key (geneid).
                           ),
               );
