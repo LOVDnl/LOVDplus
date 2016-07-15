@@ -163,7 +163,7 @@ class LOVD_ScreeningMOD extends LOVD_Screening {
             unset($this->aColumnsViewList['Screening/Notes']);
             unset($this->aColumnsViewList['Screening/Mother/Notes']);
             unset($this->aColumnsViewList['Screening/Father/Notes']);
-//            unset($this->aColumnsViewList['Screening/Batch']);
+            unset($this->aColumnsViewList['Screening/Batch']);
             unset($this->aColumnsViewList['Screening/DNA/Tube_ID']);
             unset($this->aColumnsViewList['Screening/Mother/DNA/Tube_ID']);
             unset($this->aColumnsViewList['Screening/Father/DNA/Tube_ID']);
@@ -185,7 +185,7 @@ class LOVD_ScreeningMOD extends LOVD_Screening {
             unset($this->aColumnsViewList['Screening/DNA_extraction_lab']);
             unset($this->aColumnsViewList['Screening/Sequencing_lab']);
             unset($this->aColumnsViewList['Screening/Exome_capture']);
-            unset($this->aColumnsViewList['Screening/Library_preparation']);
+//            unset($this->aColumnsViewList['Screening/Library_preparation']);
             unset($this->aColumnsViewList['Screening/Barcode_pool_size']);
             unset($this->aColumnsViewList['Screening/Read_type']);
             unset($this->aColumnsViewList['Screening/Machine_type']);
@@ -196,6 +196,7 @@ class LOVD_ScreeningMOD extends LOVD_Screening {
             unset($this->aColumnsViewList['Screening/Pipeline_contact']);
             unset($this->aColumnsViewList['Screening/Pipeline_files']);
             unset($this->aColumnsViewList['Screening/Analysis_type']);
+            unset($this->aColumnsViewList['Screening/Prioritised_genes']);
             unset($this->aColumnsViewList['analysis_by_']);
             unset($this->aColumnsViewList['analysis_date_']);
             unset($this->aColumnsViewList['analysis_approved_by_']);

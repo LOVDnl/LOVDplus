@@ -135,8 +135,11 @@ class LOVD_CustomViewListMOD extends LOVD_CustomViewList {
                         $aColumnsToShow['VariantOnGenome'] =
                             array(
                                 'VariantOnGenome/DNA',
-                                'VariantOnGenome/Sequencing/Depth/Alt/Fraction',
                                 'VariantOnGenome/Sequencing/Quality',
+                                'VariantOnGenome/Variant_priority',
+                                'VariantOnGenome/Frequency/1000G/VEP',
+                                'VariantOnGenome/Frequency/EVS/VEP/European_American',
+                                'VariantOnGenome/Frequency/ExAC',
                             );
                     } else {
                         $aColumnsToShow['VariantOnGenome'] =
@@ -306,11 +309,16 @@ class LOVD_CustomViewListMOD extends LOVD_CustomViewList {
                                 'variantid' => array(
                                         'view' => false,
                                         'db'   => array('vog.id', 'ASC', true)),
+                                'allele_' => array(
+                                        'view' => array('Allele', 120),
+                                        'db'   => array('a.name', 'ASC', true),
+                                        'legend' => array('On which allele is the variant located? Does not necessarily imply inheritance!',
+                                            'On which allele is the variant located? Does not necessarily imply inheritance! \'Paternal\' (confirmed or inferred), \'Maternal\' (confirmed or inferred), \'Parent #1\' or #2 for compound heterozygosity without having screened the parents, \'Unknown\' for heterozygosity without having screened the parents, \'Both\' for homozygozity.')),
                                 'vog_effect' => array(
                                         'view' => array('Effect', 70),
                                         'db'   => array('eg.name', 'ASC', true),
                                         'legend' => array('The variant\'s effect on a protein\'s function, in the format Reported/Curator concluded; ranging from \'+\' (variant affects function) to \'-\' (does not affect function).',
-                                                          'The variant\'s affect on a protein\'s function, in the format Reported/Curator concluded; \'+\' indicating the variant affects function, \'+?\' probably affects function, \'-\' does not affect function, \'-?\' probably does not affect function, \'?\' effect unknown.')),
+                                            'The variant\'s affect on a protein\'s function, in the format Reported/Curator concluded; \'+\' indicating the variant affects function, \'+?\' probably affects function, \'-\' does not affect function, \'-?\' probably does not affect function, \'?\' effect unknown.')),
                                 'chromosome' => array(
                                         'view' => array('Chr', 50),
                                         'db'   => array('vog.chromosome', 'ASC', true)),
