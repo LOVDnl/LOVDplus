@@ -583,10 +583,6 @@ if ($sCalcVersionFiles != $sCalcVersionDB) {
                          'PREPARE Statement FROM @sSQL',
                          'EXECUTE Statement',
                      ),
-                 '3.0-12v' =>
-                     array(
-                         'DELETE FROM ' . TABLE_SHARED_COLS . ' WHERE colid LIKE "VariantOnTranscript/%"',
-                     ),
              );
 
     if ($sCalcVersionDB < lovd_calculateVersion('3.0-alpha-01')) {
@@ -677,9 +673,10 @@ if ($sCalcVersionFiles != $sCalcVersionDB) {
         );
     }
 
-
-
-
+    if (LOVD_plus && $sCalcVersionDB < lovd_calculateVersion('3.0-12u')) {
+        $aUpdates['3.0-12u'] = (!isset($aUpdates['3.0-12u'])? array() : $aUpdates['3.0-12u']);
+        $aUpdates['3.0-12u'][] = 'DELETE FROM ' . TABLE_SHARED_COLS . ' WHERE colid LIKE "VariantOnTranscript/%"';
+    }
 
     // To make sure we upgrade the database correctly, we add the current version to the list...
     if (!isset($aUpdates[$_SETT['system']['version']])) {
