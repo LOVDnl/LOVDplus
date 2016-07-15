@@ -131,9 +131,12 @@ class LOVD_ScreeningMOD extends LOVD_Screening {
                       ),
                  $this->buildViewList(),
                  array(
-                        'variants_found_' => array(
-                                    'view' => array('Variants found', 100),
-                                    'db'   => array('variants_found_', 'ASC', 'INT_UNSIGNED')),
+                     'curation_progress_' => array(
+                         'view' => array('Curation progress', 100),
+                         'db'   => array('curation_progress_', false, 'TEXT')),
+                     'variants_found_' => array(
+                         'view' => array('Variants found', 100),
+                         'db'   => array('variants_found_', 'ASC', 'INT_UNSIGNED')),
                      'analysis_status' => array(
                          'view' => array('Analysis status', 120),
                          'db'   => array('ds.name', false, true)),
