@@ -687,6 +687,9 @@ if ($sCalcVersionFiles != $sCalcVersionDB) {
         foreach ($_SETT['curation_status'] as $nStatus => $sStatus) { // TODO AM Do we need to check before inserting these records in case they already exist? In theory they shouldn't exist before now unless we have been manually changing the version back and forth.
             $aCurationStatusSQL[] = 'INSERT INTO ' . TABLE_CURATION_STATUS . ' VALUES (' . $nStatus . ', "' . $sStatus . '")';
         }
+        // Remove the shared columns for the VOT.
+        $aUpdates['3.0-12u'] = (!isset($aUpdates['3.0-12u'])? array() : $aUpdates['3.0-12u']);
+        $aUpdates['3.0-12u'][] = 'DELETE FROM ' . TABLE_SHARED_COLS . ' WHERE colid LIKE "VariantOnTranscript/%"';
         $aUpdates['3.0-12u'] = array_merge($aUpdates['3.0-12u'],$aCurationStatusSQL);
     }
 

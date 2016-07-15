@@ -49,13 +49,12 @@ class LOVD_TranscriptVariant extends LOVD_Custom {
     var $aTranscripts = array();
 
 
-
-
-
     function __construct ($sObjectID = '', $nID = '')
     {
         // Default constructor.
         global $_DB;
+
+        $this->bShared = (LOVD_plus? false: true);
 
         // SQL code for loading an entry for an edit form.
         $this->sSQLLoadEntry = 'SELECT vot.* ' .
