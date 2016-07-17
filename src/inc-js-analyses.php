@@ -301,19 +301,10 @@ function lovd_showAnalysisResults (nRunID)
     $('#viewlistDiv_CustomVL_AnalysisRunResults_for_I_VE').html('<IMG src="gfx/ajax_loading.gif" alt="Loading..." width="100" height="100">');
     $('#analysis_results_VL').show();
 
-    // If the search_runid does not exist then lets add it now. This happens for MGHA as they do not have AnalysisRunResults object when the viewlist is first created.
-    if (!$('#viewlistForm_CustomVL_AnalysisRunResults_for_I_VE').children('input[name="search_runid"]').length) {
-        $('<input>').attr({type: 'hidden', name: 'search_runid', value: ''}).appendTo('#viewlistForm_CustomVL_AnalysisRunResults_for_I_VE');
-        $('<input>').attr({type: 'hidden', name: 'skip[runid]', value: 'runid'}).appendTo('#viewlistForm_CustomVL_AnalysisRunResults_for_I_VE');
-    }
-
     // Set new search value.
     $('#viewlistForm_CustomVL_AnalysisRunResults_for_I_VE').children('input[name="search_runid"]').attr('value', nRunID);
     // Sometimes it's disabled...
     $('#viewlistForm_CustomVL_AnalysisRunResults_for_I_VE').children('input[name="search_runid"]')[0].disabled = false;
-
-    // These changes are required for MGHA.
-    $('#viewlistForm_CustomVL_AnalysisRunResults_for_I_VE').children('input[name="object_id"]').attr('value', 'AnalysisRunResults,VariantOnGenome,VariantOnTranscript');
     $('#viewlistForm_CustomVL_AnalysisRunResults_for_I_VE').children('input[name="search_curation_statusid"]').remove();
     $('#viewlistForm_CustomVL_AnalysisRunResults_for_I_VE').children('input[name="search_variantid"]').remove();
 

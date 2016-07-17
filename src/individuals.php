@@ -431,13 +431,11 @@ if (PATH_COUNT >= 2 && ctype_digit($_PE[1]) && !ACTION && (PATH_COUNT == 2 || PA
             $_GET['search_curation_statusid'] = '!="" !' . CUR_STATUS_NOT_FOR_CURATION; // Show variants with a curation status other than "Not for curation".
             $_GET['search_runid'] = ''; // We are not using the run id to limit the variants as some variants may not be in a run.
             $_GET['search_variantid'] = (!$aScreeningVariantIDs ? '0' : implode($aScreeningVariantIDs,'|')); // Use all the variant IDs for variants with a curation status.
-            $aAnalysisRunResultsVL = array('VariantOnGenome', 'VariantOnTranscript'); // We can not add in the AnalysisRunResults object as this will hide variants that are not in an analysis.
-        } else {
-            $aAnalysisRunResultsVL = array('AnalysisRunResults', 'VariantOnGenome', 'VariantOnTranscript');
         }
 
         require ROOT_PATH . 'class/object_custom_viewlists.mod.php';
-        $_DATA = new LOVD_CustomViewListMOD($aAnalysisRunResultsVL);
+        // VOG needs to be first, so it groups by the VOG ID.
+        $_DATA = new LOVD_CustomViewListMOD(array('VariantOnGenome', 'VariantOnTranscript', 'AnalysisRunResults'));
         // Define menu, to set pathogenicity flags of multiple variants in one go.
         $_DATA->setRowLink('CustomVL_AnalysisRunResults_for_I_VE', 'javascript:lovd_openWindow(\'' . lovd_getInstallURL() . 'variants/{{ID}}?&in_window\', \'VarVE_{{ID}}\', 1250); return false;');
         $bMenu         = true; // Show the gear-menu, with which users can mark and label variants?
