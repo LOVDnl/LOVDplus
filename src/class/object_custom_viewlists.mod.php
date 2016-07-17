@@ -117,6 +117,7 @@ class LOVD_CustomViewListMOD extends LOVD_CustomViewList {
             switch ($sObject) {
                 case 'AnalysisRunResults':
                     $aSQL['SELECT'] .= (!$aSQL['SELECT']? '' : ', ') . 'arr.*';
+                    $nKeyVOG = array_search('VariantOnGenome', $aObjects);
                     if (!$aSQL['FROM']) {
                         // First data table in query.
                         $aSQL['FROM'] = TABLE_ANALYSES_RUN_RESULTS . ' AS arr';
@@ -126,6 +127,9 @@ class LOVD_CustomViewListMOD extends LOVD_CustomViewList {
                         if (array_search('VariantOnGenome', $aObjects)) {
                             $aSQL['GROUP_BY'] = 'vog.id'; // Necessary for GROUP_CONCAT().
                         }
+                    } elseif ($nKeyVOG !== false && $nKeyVOG < $nKey) { // Adding the analysis run results later.
+                        $aSQL['FROM'] .= ' LEFT JOIN ' . TABLE_ANALYSES_RUN_RESULTS . ' AS arr ON (';
+                        $aSQL['FROM'] .= 'arr.variantid = vog.id)';
                     }
                     break;
 
