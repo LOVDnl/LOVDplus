@@ -35,7 +35,6 @@ foreach ($aPath as $sDirName) {
 }
 require ROOT_PATH . 'inc-init.php';
 require ROOT_PATH . 'inc-lib-genes.php';
-
 // 128MB was not enough for a 100MB file. We're already no longer using file(), now we're using fgets().
 // But still, loading all the gene and transcript data, uses too much memory. After some 18000 lines, the thing dies.
 // Setting to 1.5GB, but still maybe we'll run into problems. Do we need to reset the genes and transcripts arrays after each chromosome?
@@ -45,6 +44,10 @@ ini_set('memory_limit', '4294967296');
 session_write_close();
 set_time_limit(0);
 ignore_user_abort(true);
+
+
+
+
 
 // This script will be called from localhost by a cron job.
 
@@ -863,8 +866,10 @@ $aGeneAliases = array(
 );
 
 
-// Define list of columns that we are recognizing.
 
+
+
+// Define list of columns that we are recognizing.
 $aColumnMappings = array(
     'chromosome' => 'chromosome',
     'position' => 'position', // lovd_getVariantDescription() needs this.
@@ -874,7 +879,7 @@ $aColumnMappings = array(
     'Feature' => 'transcriptid',
     'GVS' => 'VariantOnTranscript/GVS/Function',
     'CDS_position' => 'VariantOnTranscript/Position',
-    //    'PolyPhen' => 'VariantOnTranscript/PolyPhen', // We don't use this anymore.
+//    'PolyPhen' => 'VariantOnTranscript/PolyPhen', // We don't use this anymore.
     'HGVSc' => 'VariantOnTranscript/DNA',
     'HGVSp' => 'VariantOnTranscript/Protein',
     'Grantham' => 'VariantOnTranscript/Prediction/Grantham',
@@ -935,9 +940,6 @@ $aColumnMappings = array(
     'Existing_variation' => 'existingvariation'
 
 );
-
-
-
 // These columns will be taken out of $aVariant and stored as the VOG data.
 // This array is also used to build the LOVD file.
 $aColumnsForVOG = array(
@@ -982,6 +984,9 @@ $aDefaultValues = array(
 
 
 
+
+
+
 $nFilesBeingMerged = 0; // We're counting how many files are being merged at the time, because we don't want to stress the system too much.
 $nMaxFilesBeingMerged = 5; // We're allowing only five processes working concurrently on merging files (or so many failed attempts that have not been cleaned up).
 $aFiles = array(); // array(ID => array(files), ...);
@@ -1002,12 +1007,9 @@ function lovd_getVariantDescription (&$aVariant, $sRef, $sAlt)
 
     // Use the right prefix for the numbering scheme.
     $sHGVSPrefix = 'g.';
-
-
     if ($aVariant['chromosome'] == 'M') {
         $sHGVSPrefix = 'm.';
     }
-
 
     // Even substitutions are sometimes mentioned as longer Refs and Alts, so we'll always need to isolate the actual difference.
     $aVariant['position_g_start'] = $aVariant['position'];
@@ -1127,6 +1129,8 @@ function lovd_getVariantPosition ($sVariant, $aTranscript = array())
 
 
 
+
+
 // Loop through the files in the dir and try and find a meta and data file, that match but have no total data file.
 $h = opendir($_INI['paths']['data_files']);
 if (!$h) {
@@ -1242,20 +1246,18 @@ foreach ($aFiles as $sID) {
     }
 
     $sHeaders = fgets($fInput);
-
-    if ($_INI['instance']['name'] == 'mgha') {
+    if ($_INI['instance']['name'] == 'mgha') { // TODO MGHA AM - I don't like the way the file is checked here, we need to make this more robust as the column order doesn't really matter. Maybe we can check for some required columns in a loop rather than hard coding the first line?
         if (substr($sHeaders, 0, 32) != "CHROM\tPOS\tID\tREF\tALT\tQUAL\tFILTER") {
             // Not a fatal error, because otherwise we can't import anything anymore if this ever happens...
             print('Ignoring file, does not conform to format: ' . $sFileToConvert . ".\n");
             continue; // Continue to try the next file.
         }
-    }else{
+    } else {
         if (substr($sHeaders, 0, 53) != "chromosome\tposition\tREF\tALT\tQUAL\tFILTERvcf\tGATKCaller")
             // Not a fatal error, because otherwise we can't import anything anymore if this ever happens...
             print('Ignoring file, does not conform to format: ' . $sFileToConvert . ".\n");
             continue; // Continue to try the next file.
     }
-
 
     // Start creating the output file, based on the meta file. We just add the analysis_status, so the analysis can start directly after importing.
     $aFileMeta = file($sFileMeta, FILE_IGNORE_NEW_LINES);
@@ -1293,7 +1295,7 @@ foreach ($aFiles as $sID) {
     // MGHA do not use MiracleID and screening ID is always 1
     if ($_INI['instance']['name'] == 'mgha') {
         $nScreeningID = 1;
-    }else{
+    } else {
         foreach ($aMetaData as $nLine => $sLine) {
             if (!trim($sLine)) {
                 continue;
@@ -1356,10 +1358,12 @@ foreach ($aFiles as $sID) {
             continue; // Continue to try the next file.
         }
     }
-
     $nScreeningID = sprintf('%010d', $nScreeningID);
     print('Isolated Screening ID: ' . $nScreeningID . "...\n");
     flush();
+
+
+
 
 
     // Now open and parse the file for real, appending to the temporary file.
@@ -1398,7 +1402,8 @@ foreach ($aFiles as $sID) {
         }
 
         $aLine = array_combine($aHeaders, explode("\t", rtrim($sLine, "\r\n")));
-         // $aLine = array_map('trim', $aLine, array_fill(0, count($aLine), '"')); // In case we ever need to trim off quotes.
+        $aVariant = array(); // Will contain the mapped, possibly modified, data.
+        // $aLine = array_map('trim', $aLine, array_fill(0, count($aLine), '"')); // In case we ever need to trim off quotes.
 
         // check if adapter script exists and if it does then call functions lovd_prepareMappings and lovd_prepareVariantData
         if ($_INI['instance']['name'] == 'mgha') {
@@ -1408,14 +1413,6 @@ foreach ($aFiles as $sID) {
             $aLine = lovd_prepareVariantData($aLine);
         }
 
-
-
-        // set arrays
-        $aVariant = array(); // Will contain the mapped, possibly modified, data.
-        $aGenes = array(); // GENE => array(<gene_info_from_database>)
-        $aTranscripts = array(); // NM_000001.1 => array(<transcript_info>)
-        $aMappings = array(); // chrX:g.123456del => array(NM_000001.1 => 'c.123del', ...); // To prevent us from running numberConversion too many times.
-
         // Map VEP columns to LOVD columns.
         foreach ($aColumnMappings as $sVEPColumn => $sLOVDColumn) {
             // 2015-10-28; But don't let columns overwrite each other! Problem because we have double mappings; two MAGPIE columns pointing to the same LOVD column.
@@ -1424,7 +1421,6 @@ foreach ($aFiles as $sID) {
                 // Never mind then!
                 continue;
             }
-
             if (empty($aLine[$sVEPColumn]) || $aLine[$sVEPColumn] == 'unknown' || $aLine[$sVEPColumn] == '.') {
                 if ($_INI['instance']['name'] == 'mgha') {
                     if ($sLOVDColumn == 'VariantOnGenome/Variant_priority') {
@@ -1442,14 +1438,15 @@ foreach ($aFiles as $sID) {
 
 
         // When seeing a new chromosome, reset these variables. We don't want them too big; it's useless and takes up a lot of memory.
-
         if ($sLastChromosome != $aVariant['chromosome']) {
             $sLastChromosome = $aVariant['chromosome'];
+            $aGenes = array(); // GENE => array(<gene_info_from_database>)
+            $aTranscripts = array(); // NM_000001.1 => array(<transcript_info>)
+            $aMappings = array(); // chrX:g.123456del => array(NM_000001.1 => 'c.123del', ...); // To prevent us from running numberConversion too many times.
         }
 
         // Now "fix" certain values.
         // First, VOG fields.
-
         // Allele.
         if ($aVariant['allele'] == '1/1') {
             $aVariant['allele'] = 3; // Homozygous.
@@ -1462,10 +1459,8 @@ foreach ($aFiles as $sID) {
         } else {
             $aVariant['allele'] = 0;
         }
-
         // Chromosome.
         $aVariant['chromosome'] = substr($aVariant['chromosome'], 3); // chr1 -> 1
-
         // VOG/DNA and the position fields.
         lovd_getVariantDescription($aVariant, $aVariant['ref'], $aVariant['alt']);
         // dbSNP.
@@ -1482,7 +1477,6 @@ foreach ($aFiles as $sID) {
                 }
             }
         }
-
         // Fixing some other VOG fields.
         foreach (array('VariantOnGenome/Sequencing/Father/GenoType', 'VariantOnGenome/Sequencing/Father/GenoType/Quality', 'VariantOnGenome/Sequencing/Mother/GenoType', 'VariantOnGenome/Sequencing/Mother/GenoType/Quality') as $sCol) {
             if (!empty($aVariant[$sCol]) && $aVariant[$sCol] == 'None') {
@@ -1498,7 +1492,6 @@ foreach ($aFiles as $sID) {
                 $aVariant[$sLOVDColumn] /= 100;
             }
         }
-
 
         // Now, VOT fields.
         // Find gene && transcript in database. When not found, try to create it. Otherwise, throw a fatal error.
@@ -1551,7 +1544,6 @@ print('Can\'t load UD for gene ' . $aGeneInfo['symbol'] . '.' . "\n");
 
                     // Not getting an UD no longer kills the script, so...
                     if ($sRefseqUD) {
-
                         if (!$_DB->query('INSERT INTO ' . TABLE_GENES . ' (id, name, chromosome, chrom_band, refseq_genomic, refseq_UD, id_hgnc, id_entrez, id_omim, created_by, created_date, updated_by, updated_date) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), ?, NOW())',
                             array($aGeneInfo['symbol'], $aGeneInfo['name'], $aGeneInfo['chromosome'], $aGeneInfo['chrom_band'], $_SETT['human_builds'][$_CONF['refseq_build']]['ncbi_sequences'][$aGeneInfo['chromosome']], $sRefseqUD, $aGeneInfo['hgnc_id'], $aGeneInfo['entrez_id'], $aGeneInfo['omim_id'], 0, 0))) {
                             die('Can\'t create gene ' . $aVariant['symbol'] . '.' . "\n");
@@ -1571,6 +1563,7 @@ print('Can\'t load UD for gene ' . $aGeneInfo['symbol'] . '.' . "\n");
                 }
             }
         }
+
 
 
         if (!isset($aGenes[$aVariant['symbol']]) || !$aGenes[$aVariant['symbol']]) {
@@ -1672,7 +1665,6 @@ print('No available transcripts for gene ' . $aGenes[$aVariant['symbol']]['id'] 
                 // Also, sometimes a delins is simply a substitution, when the VCF file is all messed up (ACGT to ACCT for example).
                 // No other option, call Mutalyzer.
                 // But first check if I did that before.
-
                 if (!isset($aMappings[$aVariant['chromosome'] . ':' . $aVariant['VariantOnGenome/DNA']])) {
                     $aMappings[$aVariant['chromosome'] . ':' . $aVariant['VariantOnGenome/DNA']] = array();
 //print('Running position converter, DNA was: "' . $aVariant['VariantOnTranscript/DNA'] . '"' . "\n");
@@ -1720,8 +1712,6 @@ print('No available transcripts for gene ' . $aGenes[$aVariant['symbol']]['id'] 
                 }
                 $aVariant['VariantOnTranscript/DNA'] = $aMappings[$aVariant['chromosome'] . ':' . $aVariant['VariantOnGenome/DNA']][$aTranscripts[$aVariant['transcriptid']]['id_ncbi']];
             }
-
-
             // For the position fields, there is VariantOnTranscript/Position (coming from CDS_position), but it's hardly usable. Calculate ourselves.
             list($aVariant['position_c_start'], $aVariant['position_c_start_intron'], $aVariant['position_c_end'], $aVariant['position_c_end_intron']) = array_values(lovd_getVariantPosition($aVariant['VariantOnTranscript/DNA'], $aTranscripts[$aVariant['transcriptid']]));
 
@@ -1919,7 +1909,7 @@ print('Mutalyzer returned EREF error, hg19/hg38 error?' . "\n");
                 }
             }
             $aData[$sKey] = array($aVOG);
-        }else{
+        } else {
             // for MGHA we need to check if the variant priority is higher for subsequent transcipts and if so, update the variant on genome record
             if ($_INI['instance']['name'] == 'mgha') {
 
