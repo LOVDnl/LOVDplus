@@ -444,6 +444,9 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && !ACTION) {
 
     require ROOT_PATH . 'class/object_genome_variants.php';
     lovd_isAuthorized('variant', $nID);
+    print('  <TABLE cellpadding="0" cellspacing="0" border="0">
+    <TR>
+      <TD valign="top">' . "\n");
     $_DATA = new LOVD_GenomeVariant();
     $zData = $_DATA->viewEntry($nID);
 
@@ -498,6 +501,41 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && !ACTION) {
         }
     }
     lovd_showJGNavigation($aNavigation, 'Variants');
+
+    // Table to display the number of variant instances with the same DB-ID for each final classification.
+    $sSQLCount = 'SELECT SUBSTRING(effectid, -1, 1) as classification_final, COUNT(effectid) as count 
+                  FROM ' . TABLE_VARIANTS .
+                ' WHERE `VariantOnGenome/DBID` = ?
+                  GROUP BY SUBSTRING(effectid, -1, 1)';
+    $zResult = $_DB->query($sSQLCount, array($zData['VariantOnGenome/DBID_raw']))->fetchAllAssoc();
+    $aClassificationsCount = array();
+    foreach ($zResult as $aClassification) {
+        $aClassificationsCount[$aClassification['classification_final']] = $aClassification['count'];
+    }
+
+    print('
+      </TD>
+      <TD valign="top" id="summary_annotation_view_entry" style="padding-left: 10px;">' . "\n");
+      print('<TABLE class="data">');
+      print('    <TR>
+                   <TH>Final Classification</TH>
+                   <TH>Number of variants with the same DB-ID</TH>
+                 </TR>'
+           );
+      // We want to always print the classification rows in the same order as stored in $_SETT
+      foreach ($_SETT['var_effect'] as $sClassificationId => $sClassification) {
+          print('<TR>
+                   <TD>'. $sClassification . '</TD>
+                   <TD>'. (isset($aClassificationsCount[$sClassificationId])? $aClassificationsCount[$sClassificationId] : 0) . '</TD>
+                 </TR>'
+          );
+      }
+      print('</TABLE>');
+    print('      </TD>
+    </TR>
+  </TABLE>' . "\n");
+
+
 
     print('      <BR><BR>' . "\n\n" .
           '      <DIV id="viewentryDiv">' . "\n" .
