@@ -420,7 +420,7 @@ if (PATH_COUNT >= 2 && ctype_digit($_PE[1]) && !ACTION && (PATH_COUNT == 2 || PA
 
       <DIV id="analysis_results_VL" style="display: none;">' . "\n");
         $_GET['search_runid'] = '0'; // Will for sure not return anything.
-        $_GET['search_vog_effect'] = '!-'; // We always want to exclude the (probably) non-pathogenic ones by default.
+        $_GET['search_vog_effect'] = ''; // Needs other search term to show the VL framework, though (saying "No results have been found that match your criteria").
 
         require ROOT_PATH . 'class/object_custom_viewlists.mod.php';
         // VOG needs to be first, so it groups by the VOG ID.
