@@ -295,7 +295,7 @@ if ($argc != 1 && in_array($argv[1], array('--help', '-help', '-h', '-?'))) {
 
         } elseif (in_array(trim(strtolower(substr($aSamples['Pedigree_File'],0,3))), $aPedigreeArray)) {
             // Check if the value of pedigree_file meets expected values.
-            $aDataArr[$sDataSample]['parent'] = $aSamples['Pedigree_File'];
+            $aDataArr[$sDataSample]['parent'] = strtolower($aSamples['Pedigree_File']);
 
         } elseif (trim(empty($aSamples['Pedigree_File']))) {
             // We have an empty value which is not valid.
@@ -348,8 +348,8 @@ if ($argc != 1 && in_array($argv[1], array('--help', '-help', '-h', '-?'))) {
 
 
 
-        if ($sParent != 'exclude') {
-            If (!in_array($sID, array_keys($aVariantFiles))) {
+        if (substr($sParent,0,3) != 'exc') {
+            if (!in_array($sID, array_keys($aVariantFiles))) {
                 print('There is no variant file for Sample ID ' . $sID . "\n");
                 die(52);
 
