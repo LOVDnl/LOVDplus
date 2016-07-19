@@ -72,7 +72,8 @@ class LOVD_GenomeVariant extends LOVD_Custom {
                                            'uo.name AS owned_by_, ' .
                                            'uc.name AS created_by_, ' .
                                            'ue.name AS edited_by_, ' .
-                                           'cs.name AS curation_status_';
+                                           'cs.name AS curation_status_, ' .
+                                           'IF (l.log IS NOT NULL, "Confirmed", "Not confirmed") AS confirmation_status';
         $this->aSQLViewEntry['FROM']     = TABLE_VARIANTS . ' AS vog ' .
                                            'LEFT OUTER JOIN ' . TABLE_SCR2VAR . ' AS s2v ON (vog.id = s2v.variantid) ' .
                                            'LEFT OUTER JOIN ' . TABLE_SCREENINGS . ' AS s ON (s.id = s2v.screeningid) ' .
@@ -81,7 +82,8 @@ class LOVD_GenomeVariant extends LOVD_Custom {
                                            'LEFT OUTER JOIN ' . TABLE_USERS . ' AS uo ON (vog.owned_by = uo.id) ' .
                                            'LEFT OUTER JOIN ' . TABLE_USERS . ' AS uc ON (vog.created_by = uc.id) ' .
                                            'LEFT OUTER JOIN ' . TABLE_USERS . ' AS ue ON (vog.edited_by = ue.id) ' .
-                                           'LEFT OUTER JOIN ' . TABLE_CURATION_STATUS . ' AS cs ON (vog.curation_statusid = cs.id)';
+                                           'LEFT OUTER JOIN ' . TABLE_CURATION_STATUS . ' AS cs ON (vog.curation_statusid = cs.id)' .
+                                           'LEFT OUTER JOIN ' . TABLE_LOGS . ' AS l ON (l.event = "CurationStatus" AND l.log LIKE CONCAT(\'%variant #\', vog.id, \' to "Confirmed".\'))';
         $this->aSQLViewEntry['GROUP_BY'] = 'vog.id';
 
         // SQL code for viewing the list of variants
@@ -121,6 +123,7 @@ class LOVD_GenomeVariant extends LOVD_Custom {
                         'effect_reported' => 'Affects function (reported)',
                         'effect_concluded' => 'Affects function (concluded)',
                         'curation_status_' => 'Curation status',
+                        'confirmation_status' => 'Confirmation status',
                       ),
                  $this->buildViewEntry(),
                  array(
