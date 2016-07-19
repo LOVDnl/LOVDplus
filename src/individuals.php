@@ -428,7 +428,6 @@ if (PATH_COUNT >= 2 && ctype_digit($_PE[1]) && !ACTION && (PATH_COUNT == 2 || PA
         if ($_INI['instance']['name'] == 'mgha') {
             // The default behaviour for MGHA is to show a viewlist with any variants that have a curation status.
             $_GET['search_vog_effect'] = ''; // Don't hide any variants based on the effect.
-            $_GET['search_curation_statusid'] = '!="" !' . CUR_STATUS_NOT_FOR_CURATION; // Show variants with a curation status other than "Not for curation".
             $_GET['search_runid'] = ''; // We are not using the run id to limit the variants as some variants may not be in a run.
             $_GET['search_variantid'] = (!$aScreeningVariantIDs ? '0' : implode($aScreeningVariantIDs,'|')); // Use all the variant IDs for variants with a curation status.
         }
