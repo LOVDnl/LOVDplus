@@ -1732,5 +1732,19 @@ class LOVD_Object {
 
         return $nTotal;
     }
+
+    // Turn off search functionality on viewlist table
+    public function turnOffSearch($exclude = array()) {
+        foreach ($this->aColumnsViewList as $sCol => $aCol) {
+            if (in_array($sCol, $exclude)) {
+                continue;
+            }
+
+            if ( isset($aCol['db'][2]) && $aCol['view']) {
+                $aCol['db'][2] = false;
+            }
+            $this->aColumnsViewList[$sCol] = $aCol;
+        }
+    }
 }
 ?>
