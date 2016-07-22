@@ -1733,10 +1733,15 @@ class LOVD_Object {
         return $nTotal;
     }
 
-    // Turn off search functionality on viewlist table
-    public function turnOffSearch($exclude = array()) {
+
+
+
+
+    function disableVLSearch($aExclude = array())
+    {
+        // Disables the search functionality in the VL.
         foreach ($this->aColumnsViewList as $sCol => $aCol) {
-            if (in_array($sCol, $exclude)) {
+            if (in_array($sCol, $aExclude)) {
                 continue;
             }
 

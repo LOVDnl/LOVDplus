@@ -381,6 +381,8 @@ class LOVD_GenomeVariant extends LOVD_Custom {
             $zData['effect_concluded'] = $_SETT['var_effect'][$zData['effectid']{1}];
 
             if (!empty($zData['VariantOnGenome/DBID'])) {
+                // We need a copy of the DBID as it gets modified later.
+                $zData['VariantOnGenome/DBID_raw'] = $zData['VariantOnGenome/DBID'];
                 // Allow linking to view of all these variants.
                 $sQ = 'SELECT COUNT(*) FROM ' . TABLE_VARIANTS . ' WHERE chromosome = ? AND `VariantOnGenome/DBID` = ?';
                 $aArgs = array($zData['chromosome'], $zData['VariantOnGenome/DBID']);
@@ -394,7 +396,6 @@ class LOVD_GenomeVariant extends LOVD_Custom {
                     $sLink = '<A href="' . (substr($sPrefix, 0, 3) == 'chr'? 'variants' : 'view/' . $sPrefix) . '?search_VariantOnGenome%2FDBID=%3D%22' . $zData['VariantOnGenome/DBID'] . '%22">See all ' . $n . ' reported entries</A>';
                     // This is against our coding policy of never modifying actual contents of values (we always create a copy with _ appended), but now I simply can't without
                     // modifying the column list manually. If only array_splice() would work on associative arrays... I'm not going to create a workaround here.
-                    $zData['VariantOnGenome/DBID_raw'] = $zData['VariantOnGenome/DBID'];
                     $zData['VariantOnGenome/DBID'] .= ' <SPAN style="float:right">' . $sLink . '</SPAN>';
                 }
             }

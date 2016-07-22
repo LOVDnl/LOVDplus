@@ -512,17 +512,16 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && !ACTION) {
     foreach ($zResult as $aClassification) {
         $aClassificationsCount[$aClassification['classification_final']] = $aClassification['count'];
     }
-
     print('
       </TD>
       <TD valign="top" id="summary_annotation_view_entry" style="padding-left: 10px;">' . "\n");
       print('<TABLE class="data">');
       print('    <TR>
                    <TH>Final Classification</TH>
-                   <TH>Number of variants with the same DB-ID</TH>
+                   <TH>Occurrences</TH>
                  </TR>'
            );
-      // We want to always print the classification rows in the same order as stored in $_SETT
+      // We want to always print the classification rows in the same order as stored in $_SETT.
       foreach ($_SETT['var_effect'] as $sClassificationId => $sClassification) {
           print('<TR>
                    <TD>'. $sClassification . '</TD>
@@ -3028,7 +3027,7 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && ACTION == 'curate') {
     $_T->printTitle('Variant on transcripts', 'H4');
     $zData = new LOVD_TranscriptVariant('', $nID);
     $_GET['search_id_'] = $nID;
-    $zData->turnOffSearch(array('id_')); // We have to keep id_ as searchable so that we can generate viewList for $nID
+    $zData->disableVLSearch(array('id_')); // We have to keep id_ as searchable so that we can generate viewList for $nID.
     $aColsToShow = array('id_ncbi', 'geneid', 'VariantOnTranscript/DNA', 'VariantOnTranscript/Protein');
     $aColsToSkip = array_diff(array_keys($zData->aColumnsViewList), $aColsToShow);
     $zData->viewList('', $aColsToSkip, true, true);
