@@ -3025,12 +3025,13 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && ACTION == 'curate') {
 
     require ROOT_PATH . 'class/object_transcript_variants.php';
     $_T->printTitle('Variant on transcripts', 'H4');
-    $zData = new LOVD_TranscriptVariant('', $nID);
+    $zData = new LOVD_TranscriptVariant('VOT_for_curation', $nID);
     $_GET['search_id_'] = $nID;
     $zData->disableVLSearch(array('id_')); // We have to keep id_ as searchable so that we can generate viewList for $nID.
+    $zData->setRowLink('VOT_for_curation', 'javascript:return false;');
     $aColsToShow = array('id_ncbi', 'geneid', 'VariantOnTranscript/DNA', 'VariantOnTranscript/Protein');
     $aColsToSkip = array_diff(array_keys($zData->aColumnsViewList), $aColsToShow);
-    $zData->viewList('', $aColsToSkip, true, true);
+    $zData->viewList('VOT_for_curation', $aColsToSkip, true, true);
 
     $_T->printFooter();
     exit;
