@@ -154,7 +154,16 @@ if (in_array($_GET['object'], array('Custom_ViewList', 'Custom_ViewListMOD', 'Ph
 require $sFile;
 $_GET['object'] = 'LOVD_' . str_replace('_', '', $_GET['object']); // FIXME; test dit op een windows, test case-insensitivity.
 $aColsToSkip = (!empty($_GET['skip'])? $_GET['skip'] : array());
+$aColsToShow = (!empty($_GET['show'])? $_GET['show'] : array());
 $_DATA = new $_GET['object']($sObjectID, $nID);
+if (empty($aColsToSkip) && !empty($aColsToShow)) {
+    $aColsToSkip = array_diff(array_keys($_DATA->aColumnsViewList), $aColsToShow);
+}
+
+// Check if search forms need to be disabled.
+if (!empty($_GET['disableVLSearch'])) {
+    $_DATA->disableVLSearch($_GET['disableVLSearchExclude']);
+}
 // Set $bHideNav to false always, since this ajax request could only have been sent if there were navigation buttons.
 $_DATA->viewList($_GET['viewlistid'], $aColsToSkip, (!empty($_GET['nohistory'])? true : false), (!empty($_GET['hidenav'])? true : false), (!empty($_GET['options'])? true : false), (!empty($_GET['only_rows'])? true : false));
 ?>
