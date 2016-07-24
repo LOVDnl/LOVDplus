@@ -38,7 +38,7 @@ require ROOT_PATH . 'inc-lib-genes.php';
 // 128MB was not enough for a 100MB file. We're already no longer using file(), now we're using fgets().
 // But still, loading all the gene and transcript data, uses too much memory. After some 18000 lines, the thing dies.
 // Setting to 1.5GB, but still maybe we'll run into problems. Do we need to reset the genes and transcripts arrays after each chromosome?
-ini_set('memory_limit', '4294967296');
+ini_set('memory_limit', '4294967296'); // MGHA AM - This may need to be site specific so you can adjust this to your servers available resources. We have set it to bytes here to avoid some issues with our dev environment.
 
 // But we don't care about your session (in fact, it locks the whole LOVD if we keep this page running).
 session_write_close();
@@ -933,7 +933,7 @@ $aColumnMappings = array(
     'ISPRESENT_Mother' => 'VariantOnGenome/Sequencing/Mother/VarPresent',
 //    'distanceToSplice' => 'VariantOnTranscript/Distance_to_splice_site',
 
-    // Mappings for fields used to process other fields but not imported into the database
+    // Mappings for fields used to process other fields but not imported into the database.
     'SYMBOL' => 'symbol',
     'REF' => 'ref',
     'ALT' => 'alt',
@@ -1142,7 +1142,7 @@ while (($sFile = readdir($h)) !== false) {
         continue;
     }
 
-    // get files into array. different file format for MGHA
+    // Get files into array. different file format for MGHA.
     if ($_INI['instance']['name'] == 'mgha') {
         if (preg_match('/^(.+)\.(' . implode('|', array_map('preg_quote', array_values($aSuffixes))) . ')$/', $sFile, $aRegs)) {
             // Files we need to merge.
@@ -1152,7 +1152,7 @@ while (($sFile = readdir($h)) !== false) {
             }
             $aFiles[$sID][] = $sFileType;
         }
-    }else{
+    } else {
         if (preg_match('/^((?:Child|Patient)_(?:\d+))\.(' . implode('|', array_map('preg_quote', array_values($aSuffixes))) . ')$/', $sFile, $aRegs)) {
 
             // Files we need to merge.
@@ -1163,7 +1163,6 @@ while (($sFile = readdir($h)) !== false) {
             $aFiles[$sID][] = $sFileType;
         }
     }
-
 }
 
 // Die here, if we have nothing to work with.
@@ -1292,8 +1291,8 @@ foreach ($aFiles as $sID) {
     $nScreeningID = 0;
     $nMiracleID = 0;
 
-    // MGHA do not use MiracleID and screening ID is always 1
     if ($_INI['instance']['name'] == 'mgha') {
+        // MGHA do not use MiracleID and screening ID is always 1. The else part of this statement is for Leiden but we should move it to an adapter script if possible.
         $nScreeningID = 1;
     } else {
         foreach ($aMetaData as $nLine => $sLine) {
@@ -1405,7 +1404,7 @@ foreach ($aFiles as $sID) {
         $aVariant = array(); // Will contain the mapped, possibly modified, data.
         // $aLine = array_map('trim', $aLine, array_fill(0, count($aLine), '"')); // In case we ever need to trim off quotes.
 
-        // check if adapter script exists and if it does then call functions lovd_prepareMappings and lovd_prepareVariantData
+        // Check if adapter script exists and if it does then call functions lovd_prepareMappings and lovd_prepareVariantData.
         if ($_INI['instance']['name'] == 'mgha') {
             unset($aColumnMappings);
             $aColumnMappings = array();
@@ -1639,7 +1638,6 @@ print('No available transcripts for gene ' . $aGenes[$aVariant['symbol']]['id'] 
                         flush();
 
                         // Store in memory.
-                        $aTranscripts[$aVariant['transcriptid']] = array_merge($aTranscript, array('id' => $_DB->lastInsertId())); // Contains a lot more info than needed, but whatever.
                         $aTranscripts[$aVariant['transcriptid']] = array_merge($aTranscript, array('id' => $_DB->lastInsertId())); // Contains a lot more info than needed, but whatever.
                     }
                 }
@@ -1891,7 +1889,10 @@ print('Mutalyzer returned EREF error, hg19/hg38 error?' . "\n");
                 $aVariant[$sField] = str_replace('ins' . $aRegs[1], 'ins' . strlen($aRegs[1]), $aVariant[$sField]);
             }
 
-            // Translate to correct ID.
+            // Replace the ncbi ID with the transcripts LOVD database ID to be used when creating the VOT record.
+            // This used to be done at the start of this else statement but since we have switched from using the headers in the file
+            // to using the column mappings (much more robust) we no longer had the ncbi ID available as it was overwritten.
+            // By moving this code down here we retain the ncbi ID for use and then overwrite at the last step.
             $aVariant['transcriptid'] = $aTranscripts[$aVariant['transcriptid']]['id'];
         }
 
