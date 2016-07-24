@@ -4,7 +4,7 @@
  * LEIDEN OPEN VARIATION DATABASE (LOVD)
  *
  * Created     : 2013-11-05
- * Modified    : 2016-05-24
+ * Modified    : 2016-07-19
  * For LOVD    : 3.0-13
  *
  * Copyright   : 2004-2016 Leiden University Medical Center; http://www.LUMC.nl/
@@ -305,14 +305,6 @@ function lovd_showAnalysisResults (nRunID)
     $('#viewlistForm_CustomVL_AnalysisRunResults_for_I_VE').children('input[name="search_runid"]').attr('value', nRunID);
     // Sometimes it's disabled...
     $('#viewlistForm_CustomVL_AnalysisRunResults_for_I_VE').children('input[name="search_runid"]')[0].disabled = false;
-
-    // The ViewList normally loads only hidden input fields for skipped columns (like runid). But we want
-    // to have a default filter on variant effect, and can only do that if we have a search field.
-    if (!$('#viewlistForm_CustomVL_AnalysisRunResults_for_I_VE').children('input[name="search_vog_effect"]').length) {
-        $('#viewlistForm_CustomVL_AnalysisRunResults_for_I_VE').prepend('<INPUT type="hidden" name="search_vog_effect" value="!-">');
-    } else {
-        $('#viewlistForm_CustomVL_AnalysisRunResults_for_I_VE').children('input[name="search_vog_effect"]').attr('value', '!-');
-    }
 
     // Mark the currently selected filter.
     $('#analysesTable td').css('background', '');
