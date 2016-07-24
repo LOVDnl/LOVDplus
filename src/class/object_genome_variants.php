@@ -390,6 +390,8 @@ class LOVD_GenomeVariant extends LOVD_Custom {
             $zData['effect_concluded'] = $_SETT['var_effect'][$zData['effectid']{1}];
 
             if (!empty($zData['VariantOnGenome/DBID'])) {
+                // We need a copy of the DBID as it gets modified later.
+                $zData['VariantOnGenome/DBID_raw'] = $zData['VariantOnGenome/DBID'];
                 // Allow linking to view of all these variants.
                 $sQ = 'SELECT COUNT(*) FROM ' . TABLE_VARIANTS . ' WHERE chromosome = ? AND `VariantOnGenome/DBID` = ?';
                 $aArgs = array($zData['chromosome'], $zData['VariantOnGenome/DBID']);

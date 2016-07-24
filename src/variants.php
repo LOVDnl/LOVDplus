@@ -548,6 +548,17 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && !ACTION) {
     }
     lovd_showJGNavigation($aNavigation, 'Variants');
 
+    // Table to display the number of variant instances with the same DB-ID for each final classification.
+    $sSQLCount = 'SELECT SUBSTRING(effectid, -1, 1) as classification_final, COUNT(effectid) as count 
+                  FROM ' . TABLE_VARIANTS .
+                ' WHERE `VariantOnGenome/DBID` = ?
+                  GROUP BY SUBSTRING(effectid, -1, 1)';
+    $zResult = $_DB->query($sSQLCount, array($zData['VariantOnGenome/DBID_raw']))->fetchAllAssoc();
+    $aClassificationsCount = array();
+    foreach ($zResult as $aClassification) {
+        $aClassificationsCount[$aClassification['classification_final']] = $aClassification['count'];
+    }
+
     print('
       </TD>
       <TD valign="top" id="summary_annotation_view_entry" style="padding-left: 10px;">' . "\n");
@@ -581,11 +592,27 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && !ACTION) {
               '        </TABLE><BR>' . "\n\n");
     }
 
+      print('<TABLE class="data">');
+      print('    <TR>
+                   <TH>Final Classification</TH>
+                   <TH>Occurrences</TH>
+                 </TR>'
+           );
+      // We want to always print the classification rows in the same order as stored in $_SETT.
+      foreach ($_SETT['var_effect'] as $sClassificationId => $sClassification) {
+          print('<TR>
+                   <TD>'. $sClassification . '</TD>
+                   <TD>'. (isset($aClassificationsCount[$sClassificationId])? $aClassificationsCount[$sClassificationId] : 0) . '</TD>
+                 </TR>'
+          );
+      }
+      print('</TABLE>');
+
     print('      </TD>
     </TR>
   </TABLE>' . "\n");
 
-    print('      <BR>' . "\n" .
+    print('      <BR><BR>' . "\n\n" .
           '      <DIV id="viewentryDiv">' . "\n" .
           '      </DIV>' . "\n\n");
 
@@ -3066,6 +3093,16 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && ACTION == 'curate') {
 
     print("\n" .
           '      </FORM>' . "\n\n");
+
+    require ROOT_PATH . 'class/object_transcript_variants.php';
+    $_T->printTitle('Variant on transcripts', 'H4');
+    $zData = new LOVD_TranscriptVariant('VOT_for_curation', $nID);
+    $_GET['search_id_'] = $nID;
+    $zData->disableVLSearch(array('id_')); // We have to keep id_ as searchable so that we can generate viewList for $nID.
+    $zData->setRowLink('VOT_for_curation', 'javascript:return false;');
+    $aColsToShow = array('id_ncbi', 'geneid', 'VariantOnTranscript/DNA', 'VariantOnTranscript/Protein');
+    $aColsToSkip = array_diff(array_keys($zData->aColumnsViewList), $aColsToShow);
+    $zData->viewList('VOT_for_curation', $aColsToSkip, true, true);
 
     $_T->printFooter();
     exit;
