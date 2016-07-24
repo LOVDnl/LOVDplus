@@ -119,7 +119,7 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && in_array(ACTION, array('downloadT
             default:
                 $aVariant['allele'] = 'Heterozygous';
         }
-        if ($aVariant['is_present_father'] <= 2 && $aVariant['is_present_mother'] <= 2) {
+        if (in_array($aVariant['is_present_father'], array(1, 2)) && in_array($aVariant['is_present_mother'], array(1, 2))) {
             $aVariant['VariantOnGenome/Genetic_origin'] = 'De novo';
         } elseif ($aVariant['is_present_father'] >= 5 || $aVariant['is_present_mother'] >= 5) {
             $aVariant['VariantOnGenome/Genetic_origin'] = 'Germline (inherited)';

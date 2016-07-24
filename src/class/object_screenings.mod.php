@@ -4,7 +4,7 @@
  * LEIDEN OPEN VARIATION DATABASE (LOVD)
  *
  * Created     : 2014-01-03
- * Modified    : 2016-05-04
+ * Modified    : 2016-07-19
  * For LOVD    : 3.0-13
  *
  * Copyright   : 2004-2016 Leiden University Medical Center; http://www.LUMC.nl/
@@ -259,7 +259,7 @@ class LOVD_ScreeningMOD extends LOVD_Screening {
                 $zData['individualid_'] .= ' <SPAN style="color : #' . $this->getStatusColor($zData['individual_statusid']) . '">(' . $_SETT['data_status'][$zData['individual_statusid']] . ')</SPAN>';
             }
             $zData['variants_found_link'] = $zData['variants_found_'];
-            if ($_PE[0] == 'individuals' && $zData['variants_found_'] > 0) {
+            if (in_array($_PE[0], array('ajax', 'individuals')) && $zData['variants_found_'] > 0) {
                 // Screenings VE op Individuals VE.
                 $zData['variants_found_link'] .= ' (<A href="screenings/' . $zData['id'] . '">See all</A>)';
             }
