@@ -423,7 +423,7 @@ if (PATH_COUNT >= 2 && ctype_digit($_PE[1]) && !ACTION && (PATH_COUNT == 2 || PA
 
       <DIV id="analysis_results_VL"' . ($_INI['instance']['name'] == 'mgha' && $aScreeningVariantIDs ? '' : ' style="display: none;"') . '>' . "\n");
         $_GET['search_runid'] = '0'; // Will for sure not return anything.
-        $_GET['search_vog_effect'] = '!-'; // We always want to exclude the (probably) non-pathogenic ones by default.
+        $_GET['search_vog_effect'] = ''; // Needs other search term to show the VL framework, though (saying "No results have been found that match your criteria").
 
         if ($_INI['instance']['name'] == 'mgha') {
             // The default behaviour for MGHA is to show a viewlist with any variants that have a curation status.
