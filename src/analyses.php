@@ -159,15 +159,6 @@ if (PATH_COUNT == 3 && $_PE[1] == 'run' && ctype_digit($_PE[2]) && ACTION == 'mo
     $zData['filters'] = $_DB->query('SELECT filterid FROM ' . TABLE_ANALYSES_RUN_FILTERS . ' WHERE runid = ? ORDER BY filter_order', array($nID))->fetchAllColumn();
     $nFilters = count($zData['filters']);
 
-    if (count($zData['filters']) <= 1) {
-        // Column has already been removed from everything it can be removed from.
-        $_T->printHeader();
-        $_T->printTitle();
-        lovd_showInfoTable('This analysis run already has no filters left to remove.', 'stop');
-        $_T->printFooter();
-        exit;
-    }
-
     if (POST) {
 
         // If 'clone' option is selected.
@@ -245,17 +236,23 @@ if (PATH_COUNT == 3 && $_PE[1] == 'run' && ctype_digit($_PE[2]) && ACTION == 'mo
     );
 
     $aForm[] = array('<B>Option 1:</B> Clone this analysis', '', 'submit', 'clone', 'clone');
-    $aForm[] = array('<B>Option 2:</B> Please select the filters that you would like to <B>remove</B> from the analysis.<BR><BR>', '', 'print', '');
+    $aForm[] = array('<B>Option 2:</B> Remove filters<BR><BR>', '', 'print', '');
 
-    $nOptions = ($nFilters > 15? 15 : $nFilters);
-    $aForm[] = array('Remove the following filters', '', 'select', 'remove_filters', $nOptions, array_combine(array_values($zData['filters']), $zData['filters']), false, true, false);
-    $aForm[] = 'skip';
+    if ($nFilters > 1) {
+        $aForm[] = array('Please select the filters that you would like to <B>remove</B> from the analysis.<BR><BR>', '', 'print', '');
+        $nOptions = ($nFilters > 15? 15 : $nFilters);
+        $aForm[] = array('Remove the following filters', '', 'select', 'remove_filters', $nOptions, array_combine(array_values($zData['filters']), $zData['filters']), false, true, false);
+        $aForm[] = 'skip';
 
-    $aForm = array_merge($aForm,
-             array(
-                    array('', '', 'submit', 'Remove filters'),
-                  )
-                       );
+        $aForm = array_merge($aForm,
+            array(
+                array('', '', 'submit', 'Remove filters'),
+            )
+        );
+    } else {
+        $aForm[] = array('This analysis run already has no filters left to remove.', '', 'print', '');
+    }
+
     lovd_viewForm($aForm);
 
     print('</FORM>' . "\n\n");
