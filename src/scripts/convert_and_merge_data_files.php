@@ -1394,6 +1394,25 @@ foreach ($aFiles as $sID) {
 
     $nLine = 0;
     $sLastChromosome = '';
+    $aGenes = array(); // GENE => array(<gene_info_from_database>)
+    $aTranscripts = array(); // NM_000001.1 => array(<transcript_info>)
+
+    // Get all the genes related data in one database call.
+    $aResult = $_DB->query('SELECT g.id, g.refseq_UD, g.name FROM ' . TABLE_GENES . ' AS g')->fetchAllAssoc();
+    foreach ($aResult as $key => $aGene) {
+        $aGene['transcripts_in_UD'] = array();
+        $aGenes[$aGene['id']] = $aGene;
+    }
+
+    // Get all the transcripts related data in one database call.
+    $aResult = $_DB->query('SELECT id, geneid, id_mutalyzer, id_ncbi, position_c_cds_end, position_g_mrna_start, position_g_mrna_end FROM ' . TABLE_TRANSCRIPTS . ' ORDER BY id_ncbi DESC, id DESC')->fetchAllAssoc();
+    foreach ($aResult as $key => $aTranscript) {
+        $sTranscriptId = $aTranscript['id_ncbi'];
+        if (empty($aTranscripts[$sTranscriptId])) {
+            $aTranscripts[$sTranscriptId] = $aTranscript;
+        }
+    }
+
     while ($sLine = fgets($fInput)) {
         $nLine ++;
         if (!trim($sLine)) {
@@ -1439,9 +1458,8 @@ foreach ($aFiles as $sID) {
         // When seeing a new chromosome, reset these variables. We don't want them too big; it's useless and takes up a lot of memory.
         if ($sLastChromosome != $aVariant['chromosome']) {
             $sLastChromosome = $aVariant['chromosome'];
-            $aGenes = array(); // GENE => array(<gene_info_from_database>)
-            $aTranscripts = array(); // NM_000001.1 => array(<transcript_info>)
             $aMappings = array(); // chrX:g.123456del => array(NM_000001.1 => 'c.123del', ...); // To prevent us from running numberConversion too many times.
+
         }
 
         // Now "fix" certain values.
