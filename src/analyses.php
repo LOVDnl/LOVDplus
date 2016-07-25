@@ -171,7 +171,7 @@ if (PATH_COUNT == 3 && $_PE[1] == 'run' && ctype_digit($_PE[2]) && ACTION == 'mo
     if (POST) {
 
         // If 'clone' option is selected.
-        if ($_POST['clone']) {
+        if (!empty($_POST['clone'])) {
             $aRemovedFilters = array();
         // If 'Remove filters' option is selected.
         // Should have selected at least one filter.
