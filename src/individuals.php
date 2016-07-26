@@ -262,8 +262,8 @@ if (PATH_COUNT >= 2 && ctype_digit($_PE[1]) && !ACTION && (PATH_COUNT == 2 || PA
             // Add the gene panel to the form.
             print('
             <TR>
-              <TD><INPUT type="checkbox" name="gene_panel" value="' . $aGenePanel[0] . '"' . ($aGenePanel[2] == 'mendeliome'? '' : ' checked') . '></TD>
-              <TD>' . $aGenePanel[1] . '</TD>
+              <TD><INPUT type="checkbox" name="gene_panel"  id="gene_panel_' . $nKey . '" value="' . $aGenePanel[0] . '"' . ($aGenePanel[2] == 'mendeliome'? '' : ' checked') . '></TD>
+              <TD><LABEL for="gene_panel_'. $nKey .'">' . $aGenePanel[1] . '</LABEL></TD>
             </TR>');
         }
 
@@ -274,9 +274,17 @@ if (PATH_COUNT >= 2 && ctype_digit($_PE[1]) && !ACTION && (PATH_COUNT == 2 || PA
               <TD class="gpheader" colspan="2">Custom panel</TD>
             </TR>
             <TR>
-              <TD><INPUT type="checkbox" name="gene_panel" value="custom_panel" checked></TD>
-              <TD>' . $zData['custom_panel'] . '</TD>
+              <TD><INPUT type="checkbox" name="gene_panel" value="custom_panel" id="custom_panel" checked></TD>
+              <TD><LABEL for="custom_panel">' . $zData['custom_panel'] . '</LABEL></TD>
             </TR>');
+        }
+
+        if (empty($zData['gene_panels']) && empty($zData['custom_panel'] )) {
+            print('<P>There is no Gene Panel assigned to this individual. To continue running this analysis, please try one of the following options: </P>');
+            print('<UL>
+                     <LI>Add a gene panel to this individual, OR</LI>
+                     <LI>Remove apply_selected_gene_panels filter from this analysis.</LI>
+                   </UL>');
         }
 
         print('
@@ -336,17 +344,31 @@ if (PATH_COUNT >= 2 && ctype_digit($_PE[1]) && !ACTION && (PATH_COUNT == 2 || PA
             } else {
                 $sAnalysisClassName = 'analysis_not_run';
             }
+
+            // Select a js function to be executed when an analysis table is clicked.
+            $sJsAction = '';
+            $bHasGenePanel = isset($aFiltersRun['apply_selected_gene_panels']);
+            $bCanRunAnalysis = ($_AUTH['level'] >= LEVEL_OWNER && $zScreening['analysis_statusid'] < ANALYSIS_STATUS_CLOSED);
+            if ($zAnalysis['analysis_run']) {
+                $sJsAction = 'lovd_showAnalysisResults(\''. $zAnalysis['runid'] .'\')';
+            } elseif ($bCanRunAnalysis) {
+                $sFunctionName = ($bHasGenePanel? 'lovd_popoverGenePanelSelectionForm' : 'lovd_runAnalysis');
+                $sRunId = (!$zAnalysis['runid']? '' : $zAnalysis['runid']);
+                $sJsAction = $sFunctionName . '(\''. $nScreeningToAnalyze  .'\', \''. $zAnalysis['id'] .'\', \'' . $sRunId . '\')';
+            }
+
+            $bCanRemoveAnalysis = $zAnalysis['runid'] || $zAnalysis['modified'];
+
             print('
             <TD class="analysis" valign="top">
-              <TABLE border="0" cellpadding="0" cellspacing="1" id="' . ($zAnalysis['runid']? 'run_' . $zAnalysis['runid'] : 'analysis_' . $zAnalysis['id']) . '" class="analysis ' . $sAnalysisClassName . '" onclick="' .
-                ($zAnalysis['analysis_run']? 'lovd_showAnalysisResults(\'' . $zAnalysis['runid'] . '\');' : ($_AUTH['level'] < LEVEL_OWNER || $zScreening['analysis_statusid'] >= ANALYSIS_STATUS_CLOSED? '' : 'lovd_popoverGenePanelSelectionForm(\'' . $nScreeningToAnalyze . '\', \'' . $zAnalysis['id'] . '\'' . (!$zAnalysis['runid']? '' : ', \'' . $zAnalysis['runid'] . '\'') . ');')) . '">
+              <TABLE border="0" cellpadding="0" cellspacing="1" id="' . ($zAnalysis['runid']? 'run_' . $zAnalysis['runid'] : 'analysis_' . $zAnalysis['id']) . '" class="analysis ' . $sAnalysisClassName . '" onclick="'. $sJsAction .';">
                 <TR>
                   <TH colspan="3">
                     <DIV style="position : relative">
                       ' . $zAnalysis['name'] . (!$zAnalysis['modified']? '' : ' (modified)') .
-                ($_AUTH['level'] < LEVEL_OWNER || $zScreening['analysis_statusid'] >= ANALYSIS_STATUS_CLOSED? '' :
+                (!$bCanRunAnalysis? '' :
                 // FIXME: Probably an Ajax call would be better maybe? The window opening with refresh is ugly... we could just let this table disappear when successful (which may not work for the last run analysis because of the divider)...
-                (!$zAnalysis['runid']? '' : '
+                (!$bCanRemoveAnalysis? '' : '
                       <IMG src="gfx/cross.png" alt="Remove" onclick="if(window.confirm(\'Are you sure you want to remove this analysis run? The variants will not be deleted.\')){lovd_openWindow(\'' . lovd_getInstallURL() . 'analyses/run/' . $zAnalysis['runid'] . '?delete&amp;in_window\', \'DeleteAnalysisRun\', 780, 400);} cancelParentEvent(event);" width="16" height="16" class="remove">') . '
                       <IMG src="gfx/menu_edit.png" alt="Modify" onclick="lovd_openWindow(\'' . lovd_getInstallURL() . 'analyses/' . ($zAnalysis['runid']? 'run/' . $zAnalysis['runid'] : $zAnalysis['id']) . '?modify&amp;in_window\', \'ModifyAnalysisRun\', 780, 400); cancelParentEvent(event);" width="16" height="16" class="modify">') . '
                       <IMG src="gfx/lovd_form_question.png" alt="" onmouseover="lovd_showToolTip(\'' . $zAnalysis['description'] . '\');" onmouseout="lovd_hideToolTip();" width="14" height="14" class="help" style="position: absolute; top: -4px; right: 0px;">
@@ -373,11 +395,8 @@ if (PATH_COUNT >= 2 && ctype_digit($_PE[1]) && !ACTION && (PATH_COUNT == 2 || PA
                 }
 
                 // Display the information for the gene panels used in this analysis.
-                $sGenePanelsInfo = '';
-                if ($sFilter == 'apply_selected_gene_panels' && !empty($zAnalysis['runid']) && $zAnalysis['analysis_run']) {
-                    // Check to see if this is the right filter to show the info under and that we actually have some gene panels or custom panel assigned.
-                    $sGenePanelsInfo = getSelectedGenePanelsByRunID($zAnalysis['runid']);
-                }
+                $bDisplayGenePanelInfo = ($sFilter == 'apply_selected_gene_panels' && isset($aFiltersRun['apply_selected_gene_panels']) && !empty($zAnalysis['runid']) && $zAnalysis['analysis_run']);
+                $sGenePanelsInfo = ($bDisplayGenePanelInfo? getSelectedGenePanelsByRunID($zAnalysis['runid']) : '');
 
                 print('
                 <TR id="' . ($zAnalysis['runid']? 'run_' . $zAnalysis['runid'] : 'analysis_' . $zAnalysis['id']) . '_filter_' . preg_replace('/[^a-z0-9_]/i', '_', $sFilter) . '"' . (!$sFilterClassName? '' : ' class="' . $sFilterClassName . '"') . ' valign="top">

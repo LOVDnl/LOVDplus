@@ -57,20 +57,29 @@ function getSelectedGenePanelsByRunID ($nRunID)
 
     foreach ($aGenePanelsFormatted as $sType => $aGenePanels) {
         // Format each of the gene panel types into the info table.
+        $sDisplayText = '';
         $nGenePanelCount = count($aGenePanels);
         $sToolTip = '<B>' . ucfirst(str_replace('_', '&nbsp;', $sType)) . ($nGenePanelCount > 1? 's' : '') . '</B><BR>';
 
         foreach ($aGenePanels as $aGenePanel) {
             $sToolTip .= '<A href="gene_panels/' . $aGenePanel['id'] . '">' . str_replace(' ', '&nbsp;', addslashes($aGenePanel['name'])) . '</A><BR>';
+            $sDisplayText = $aGenePanel['name'];
         }
-        $sGenePanelsInfo .= '<TR onmouseover="lovd_showToolTip(\'' . htmlspecialchars($sToolTip) . '\', this, [100, -10]);"><TD>' . $nGenePanelCount . '</TD><TD>' . ucfirst(str_replace('_', ' ', $sType)) . ($nGenePanelCount > 1? 's' : '') . '</TD><TD>&nbsp;</TD></TR>' . "\n";
+
+        // If there is more than 1 of each type of gene panel selected, then display the summary.
+        if ($nGenePanelCount > 1) {
+            $sDisplayText = $nGenePanelCount . ' ' . ucfirst(str_replace('_', ' ', $sType)) . 's';
+        }
+
+        $sGenePanelsInfo .= '<TR onmouseover="lovd_showToolTip(\'' . htmlspecialchars($sToolTip) . '\', this, [100, -10]);"><TD>' . $sDisplayText . '</TD><TD>&nbsp;</TD></TR>' . "\n";
     }
 
     if ($sCustomPanel) {
         // Add the custom panel info to the table.
-        $aCustomPanelGenes = explode(', ', $sCustomPanel);
         $sToolTip = '<B>Custom&nbsp;panel</B><BR>' . $sCustomPanel;
-        $sGenePanelsInfo .= '<TR onmouseover="lovd_showToolTip(\'' . htmlspecialchars($sToolTip) . '\', this, [100, -10]);"><TD>1</TD><TD>Custom panel</TD><TD>(' . count($aCustomPanelGenes) . ' genes)</TD></TR>' . "\n";
+        $aCustomPanelGenes = explode(', ', $sCustomPanel);
+        $sCustomPanelDisplayText = (count($aCustomPanelGenes) <= 5? ': ' . $sCustomPanel : '(' . count($aCustomPanelGenes) . ' genes)');
+        $sGenePanelsInfo .= '<TR onmouseover="lovd_showToolTip(\'' . htmlspecialchars($sToolTip) . '\', this, [100, -10]);"><TD>Custom panel '. $sCustomPanelDisplayText .'</TD></TR>' . "\n";
     }
 
     if (!$sGenePanelsInfo) {
