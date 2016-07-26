@@ -264,22 +264,6 @@ function lovd_popoverGenePanelSelectionForm (nScreeningID, nAnalysisID, nRunID)
         }
     );
 
-    // Enable/Disable Run Analysis button based on whether any gene panel is selected.
-    if(!$('input[type="checkbox"]:checked').length) {
-        $('#run_analysis').prop('disabled', true);
-        $('#run_analysis').addClass('ui-state-disabled');
-    }
-
-    $('input[type="checkbox"]').change(function() {
-        if (!$('input[type="checkbox"]:checked').length) {
-            $('#run_analysis').prop('disabled', true);
-            $('#run_analysis').addClass('ui-state-disabled');
-        } else {
-            $('#run_analysis').prop('disabled', false);
-            $('#run_analysis').removeClass('ui-state-disabled');
-        }
-    });
-
     // Add the values passed to this function to the hidden inputs.
     $("#gene_panel_selection_form input[name=nScreeningID]").val(nScreeningID);
     $("#gene_panel_selection_form input[name=nAnalysisID]").val(nAnalysisID);
