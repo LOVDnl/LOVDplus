@@ -341,10 +341,22 @@ if (PATH_COUNT >= 2 && ctype_digit($_PE[1]) && !ACTION && (PATH_COUNT == 2 || PA
             } else {
                 $sAnalysisClassName = 'analysis_not_run';
             }
+
+            // Select a js function to be executed when an analysis table is clicked.
+            $sJsAction = '';
+            $bHasGenePanel = isset($aFiltersRun['apply_selected_gene_panels']);
+            $bCanRunAnalysis = ($_AUTH['level'] >= LEVEL_OWNER && $zScreening['analysis_statusid'] < ANALYSIS_STATUS_CLOSED);
+            if ($zAnalysis['analysis_run']) {
+                $sJsAction = 'lovd_showAnalysisResults(\''. $zAnalysis['runid'] .'\')';
+            } elseif ($bCanRunAnalysis) {
+                $sFunctionName = ($bHasGenePanel? 'lovd_popoverGenePanelSelectionForm' : 'lovd_runAnalysis');
+                $sRunId = (!$zAnalysis['runid']? '' : $zAnalysis['runid']);
+                $sJsAction = $sFunctionName . '(\''. $nScreeningToAnalyze  .'\', \''. $zAnalysis['id'] .'\', \'' . $sRunId . '\')';
+            }
+
             print('
             <TD class="analysis" valign="top">
-              <TABLE border="0" cellpadding="0" cellspacing="1" id="' . ($zAnalysis['runid']? 'run_' . $zAnalysis['runid'] : 'analysis_' . $zAnalysis['id']) . '" class="analysis ' . $sAnalysisClassName . '" onclick="' .
-                ($zAnalysis['analysis_run']? 'lovd_showAnalysisResults(\'' . $zAnalysis['runid'] . '\');' : ($_AUTH['level'] < LEVEL_OWNER || $zScreening['analysis_statusid'] >= ANALYSIS_STATUS_CLOSED? '' : 'lovd_popoverGenePanelSelectionForm(\'' . $nScreeningToAnalyze . '\', \'' . $zAnalysis['id'] . '\'' . (!$zAnalysis['runid']? '' : ', \'' . $zAnalysis['runid'] . '\'') . ');')) . '">
+              <TABLE border="0" cellpadding="0" cellspacing="1" id="' . ($zAnalysis['runid']? 'run_' . $zAnalysis['runid'] : 'analysis_' . $zAnalysis['id']) . '" class="analysis ' . $sAnalysisClassName . '" onclick="'. $sJsAction .';">
                 <TR>
                   <TH colspan="3">
                     <DIV style="position : relative">
