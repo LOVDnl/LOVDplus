@@ -279,6 +279,14 @@ if (PATH_COUNT >= 2 && ctype_digit($_PE[1]) && !ACTION && (PATH_COUNT == 2 || PA
             </TR>');
         }
 
+        if (empty($zData['gene_panels']) && empty($zData['custom_panel'] )) {
+            print('<P>There is no Gene Panel assigned to this individual. To continue running this analysis, please try one of the following options: </P>');
+            print('<UL>
+                     <LI>Add a gene panel to this individual, OR</LI>
+                     <LI>Remove apply_selected_gene_panels filter from his analysis.</LI>
+                   </UL>');
+        }
+
         print('
           </TABLE>
         </FORM>
