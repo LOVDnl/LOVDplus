@@ -390,11 +390,8 @@ if (PATH_COUNT >= 2 && ctype_digit($_PE[1]) && !ACTION && (PATH_COUNT == 2 || PA
                 }
 
                 // Display the information for the gene panels used in this analysis.
-                $sGenePanelsInfo = '';
-                if ($sFilter == 'apply_selected_gene_panels' && !empty($zAnalysis['runid']) && $zAnalysis['analysis_run']) {
-                    // Check to see if this is the right filter to show the info under and that we actually have some gene panels or custom panel assigned.
-                    $sGenePanelsInfo = getSelectedGenePanelsByRunID($zAnalysis['runid']);
-                }
+                $bDisplayGenePanelInfo = ($sFilter == 'apply_selected_gene_panels' && isset($aFiltersRun['apply_selected_gene_panels']) && !empty($zAnalysis['runid']) && $zAnalysis['analysis_run']);
+                $sGenePanelsInfo = ($bDisplayGenePanelInfo? getSelectedGenePanelsByRunID($zAnalysis['runid']) : '');
 
                 print('
                 <TR id="' . ($zAnalysis['runid']? 'run_' . $zAnalysis['runid'] : 'analysis_' . $zAnalysis['id']) . '_filter_' . preg_replace('/[^a-z0-9_]/i', '_', $sFilter) . '"' . (!$sFilterClassName? '' : ' class="' . $sFilterClassName . '"') . ' valign="top">
