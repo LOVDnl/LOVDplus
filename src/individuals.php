@@ -262,8 +262,8 @@ if (PATH_COUNT >= 2 && ctype_digit($_PE[1]) && !ACTION && (PATH_COUNT == 2 || PA
             // Add the gene panel to the form.
             print('
             <TR>
-              <TD><INPUT type="checkbox" name="gene_panel" value="' . $aGenePanel[0] . '"' . ($aGenePanel[2] == 'mendeliome'? '' : ' checked') . '></TD>
-              <TD>' . $aGenePanel[1] . '</TD>
+              <TD><INPUT type="checkbox" name="gene_panel"  id="gene_panel_' . $nKey . '" value="' . $aGenePanel[0] . '"' . ($aGenePanel[2] == 'mendeliome'? '' : ' checked') . '></TD>
+              <TD><LABEL for="gene_panel_'. $nKey .'">' . $aGenePanel[1] . '</LABEL></TD>
             </TR>');
         }
 
@@ -274,8 +274,8 @@ if (PATH_COUNT >= 2 && ctype_digit($_PE[1]) && !ACTION && (PATH_COUNT == 2 || PA
               <TD class="gpheader" colspan="2">Custom panel</TD>
             </TR>
             <TR>
-              <TD><INPUT type="checkbox" name="gene_panel" value="custom_panel" checked></TD>
-              <TD>' . $zData['custom_panel'] . '</TD>
+              <TD><INPUT type="checkbox" name="gene_panel" value="custom_panel" id="custom_panel" checked></TD>
+              <TD><LABEL for="custom_panel">' . $zData['custom_panel'] . '</LABEL></TD>
             </TR>');
         }
 
@@ -283,7 +283,7 @@ if (PATH_COUNT >= 2 && ctype_digit($_PE[1]) && !ACTION && (PATH_COUNT == 2 || PA
             print('<P>There is no Gene Panel assigned to this individual. To continue running this analysis, please try one of the following options: </P>');
             print('<UL>
                      <LI>Add a gene panel to this individual, OR</LI>
-                     <LI>Remove apply_selected_gene_panels filter from his analysis.</LI>
+                     <LI>Remove apply_selected_gene_panels filter from this analysis.</LI>
                    </UL>');
         }
 
