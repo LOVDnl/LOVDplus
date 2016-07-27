@@ -66,8 +66,6 @@ table.analysis_not_run td    {background: #EEEEEE;}
 
 table.analysis_not_run th
 img.remove                 {display: inline; cursor: pointer;}
-table.analysis_not_run th
-img.modify                 {display: inline; cursor: pointer;}
 
 table.analysis_running       {border: 3px double #000; margin: 0px;}
 table.analysis_running
