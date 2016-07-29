@@ -347,7 +347,7 @@ if (PATH_COUNT >= 2 && ctype_digit($_PE[1]) && !ACTION && (PATH_COUNT == 2 || PA
 
             // Select a js function to be executed when an analysis table is clicked.
             $sJsAction = '';
-            $bHasGenePanel = isset($aFiltersRun['apply_selected_gene_panels']);
+            $bHasGenePanel = in_array('apply_selected_gene_panels', $aFilters);
             $bCanRunAnalysis = ($_AUTH['level'] >= LEVEL_OWNER && $zScreening['analysis_statusid'] < ANALYSIS_STATUS_CLOSED);
             if ($zAnalysis['analysis_run']) {
                 $sJsAction = 'lovd_showAnalysisResults(\''. $zAnalysis['runid'] .'\')';
@@ -395,7 +395,8 @@ if (PATH_COUNT >= 2 && ctype_digit($_PE[1]) && !ACTION && (PATH_COUNT == 2 || PA
                 }
 
                 // Display the information for the gene panels used in this analysis.
-                $bDisplayGenePanelInfo = ($sFilter == 'apply_selected_gene_panels' && isset($aFiltersRun['apply_selected_gene_panels']) && !empty($zAnalysis['runid']) && $zAnalysis['analysis_run']);
+                $bGenePanelHasRun = isset($aFiltersRun['apply_selected_gene_panels']);
+                $bDisplayGenePanelInfo = ($sFilter == 'apply_selected_gene_panels' && $bGenePanelHasRun && !empty($zAnalysis['runid']) && $zAnalysis['analysis_run']);
                 $sGenePanelsInfo = ($bDisplayGenePanelInfo? getSelectedGenePanelsByRunID($zAnalysis['runid']) : '');
 
                 print('
