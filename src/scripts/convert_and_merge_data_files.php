@@ -1398,6 +1398,8 @@ foreach ($aFiles as $sID) {
     $sLastChromosome = '';
     $aGenes = array(); // GENE => array(<gene_info_from_database>)
     $aTranscripts = array(); // NM_000001.1 => array(<transcript_info>)
+    $nHGNC = 0; // Count the number of times HGNC is called.
+    $nMutalyzer = 0; // Count the number of times Mutalyzer is called.
 
     // Get all the genes related data in one database call.
     $aResult = $_DB->query('SELECT g.id, g.refseq_UD, g.name FROM ' . TABLE_GENES . ' AS g')->fetchAllAssoc();
@@ -1536,6 +1538,7 @@ foreach ($aFiles as $sID) {
 print('Loading gene information for ' . $aVariant['symbol'] . '...' . "\n");
                 // Getting all gene information from the HGNC takes a few seconds.
                 $aGeneInfo = lovd_getGeneInfoFromHGNC($aVariant['symbol'], true);
+                $nHGNC++;
                 if (!$aGeneInfo) {
                     // We can't gene information from the HGNC, so we can't add them.
                     // This is a major problem and we can't just continue.
@@ -1609,6 +1612,7 @@ print('Loading transcript information for ' . $aGenes[$aVariant['symbol']]['id']
                     $nSleepTime = 2;
                     for($i=0; $i <= $nMutalyzerRetries; $i++){ // Retry Mutalyzer call several times until successful.
                         $sJSONResponse = file_get_contents('https://mutalyzer.nl/json/getTranscriptsAndInfo?genomicReference=' . $aGenes[$aVariant['symbol']]['refseq_UD'] . '&geneName=' . $aGenes[$aVariant['symbol']]['id']);
+                        $nMutalyzer++;
                         if ($sJSONResponse === false) { // The Mutalyzer call has failed.
                             sleep($nSleepTime); // Sleep for some time.
                             $nSleepTime = $nSleepTime * 2; // Double the amount of time that we sleep each time.
@@ -1690,6 +1694,7 @@ print('No available transcripts for gene ' . $aGenes[$aVariant['symbol']]['id'] 
                     $nSleepTime = 2;
                     for($i=0; $i <= $nMutalyzerRetries; $i++){ // Retry Mutalyzer call several times until successful.
                         $sJSONResponse = file_get_contents('https://mutalyzer.nl/json/numberConversion?build=' . $_CONF['refseq_build'] . '&variant=' . $_SETT['human_builds'][$_CONF['refseq_build']]['ncbi_sequences'][$aVariant['chromosome']] . ':' . $aVariant['VariantOnGenome/DNA']);
+                        $nMutalyzer++;
                         if ($sJSONResponse === false) { // The Mutalyzer call has failed.
                             sleep($nSleepTime); // Sleep for some time.
                             $nSleepTime = $nSleepTime * 2; // Double the amount of time that we sleep each time.
@@ -1775,6 +1780,7 @@ print('Reloading Mutalyzer ID for ' . $aTranscripts[$aVariant['transcriptid']]['
                     $nSleepTime = 2;
                     for($i=0; $i <= $nMutalyzerRetries; $i++){ // Retry Mutalyzer call several times until successful.
                         $sJSONResponse = file_get_contents('https://mutalyzer.nl/json/getTranscriptsAndInfo?genomicReference=' . rawurlencode($aGenes[$aVariant['symbol']]['refseq_UD']) . '&geneName=' . rawurlencode($aGenes[$aVariant['symbol']]['id']));
+                        $nMutalyzer++;
                         if ($sJSONResponse === false) { // The Mutalyzer call has failed.
                             sleep($nSleepTime); // Sleep for some time.
                             $nSleepTime = $nSleepTime * 2; // Double the amount of time that we sleep each time.
@@ -1805,6 +1811,7 @@ print('Running mutalyzer to predict protein change for ' . $aGenes[$aVariant['sy
                 $nSleepTime = 2;
                 for($i=0; $i <= $nMutalyzerRetries; $i++){ // Retry Mutalyzer call several times until successful.
                     $sJSONResponse = file_get_contents('https://mutalyzer.nl/json/runMutalyzer?variant=' . rawurlencode($aGenes[$aVariant['symbol']]['refseq_UD'] . '(' . $aGenes[$aVariant['symbol']]['id'] . '_v' . $aTranscripts[$aVariant['transcriptid']]['id_mutalyzer'] . '):' . $aVariant['VariantOnTranscript/DNA']));
+                    $nMutalyzer++;
                     if ($sJSONResponse === false) { // The Mutalyzer call has failed.
                         sleep($nSleepTime); // Sleep for some time.
                         $nSleepTime = $nSleepTime * 2; // Double the amount of time that we sleep each time.
@@ -1962,6 +1969,9 @@ print('Mutalyzer returned EREF error, hg19/hg38 error?' . "\n");
     fclose($fInput); // Close input file.
 
     print('Done parsing file. Current time: ' . date('Y-m-d H:i:s') . ".\n");
+    // Show the number of times HGNC and Mutalyzer were called.
+    print('Number of times HGNC called: ' . $nHGNC . ".\n");
+    print('Number of times Mutalyzer called: ' . $nMutalyzer . ".\n");
     if (!$aData) {
         // No variants!
         print('No variants found to import.' . "\n");
