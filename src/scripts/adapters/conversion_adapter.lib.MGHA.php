@@ -212,6 +212,9 @@ function lovd_prepareMappings()
 }
 
 
+
+
+
 function lovd_prepareVariantData($aLine)
 {
     // Processes the variant data file for MGHA.
@@ -515,5 +518,27 @@ function lovd_prepareVariantData($aLine)
     return $aLine;
 }
 
+
+
+
+
+function lovd_prepareGeneAliases()
+{
+    // Prepare the $aGeneAliases array with a site specific gene alias list.
+    // The convert and merge script will provide suggested gene alias key value pairs to add to this array.
+    $aGeneAliases = array();
+    return $aGeneAliases;
+}
+
+
+
+
+
+function lovd_prepareGenesToIgnore()
+{
+    // Prepare the $aGenesToIgnore array with a site specific gene list.
+    $aGenesToIgnore = array();
+    return $aGenesToIgnore;
+}
 
 ?>
