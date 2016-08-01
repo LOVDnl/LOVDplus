@@ -85,6 +85,11 @@ class LOVD_GenomeVariant extends LOVD_Custom {
         // SQL code for viewing the list of variants
         // FIXME: we should implement this in a different way
         $this->aSQLViewList['SELECT']   = 'vog.*, ' .
+                                ($_INI['instance']['name'] == 'mgha'?
+                                    'i.`Individual/Sample_ID`, i.`Individual/Clinical_indication`, GROUP_CONCAT(DISTINCT d.name SEPARATOR ", " ) AS diseases, 
+                                    s.`Screening/Library_preparation`, s.`Screening/Sequencing_chemistry`, s.`Screening/Sequencing_chemistry`,
+                                    vot.`VariantOnTranscript/DNA`, vot.`VariantOnTranscript/Protein`, t.geneid, '
+                                    : '') .
                                           // FIXME; de , is niet de standaard.
                                           'GROUP_CONCAT(s2v.screeningid SEPARATOR ",") AS screeningids, ' .
                                           'a.name AS allele_, ' .
@@ -95,18 +100,23 @@ class LOVD_GenomeVariant extends LOVD_Custom {
                                           'CASE vog.statusid WHEN ' . STATUS_MARKED . ' THEN "marked" WHEN ' . STATUS_HIDDEN .' THEN "del" WHEN ' . STATUS_PENDING .' THEN "del" END AS class_name,'
                                         : '') .
                                           'ds.name AS status';
+
         $this->aSQLViewList['FROM']     = TABLE_VARIANTS . ' AS vog ' .
                                 // Added so that Curators and Collaborators can view the variants for which they have viewing rights in the genomic variant viewlist.
-                                ($_AUTH['level'] == LEVEL_SUBMITTER && (count($_AUTH['curates']) || count($_AUTH['collaborates']))?
+                                ($_INI['instance']['name'] == 'mgha' ||  ($_AUTH['level'] == LEVEL_SUBMITTER && (count($_AUTH['curates']) || count($_AUTH['collaborates'])))?
                                           'LEFT OUTER JOIN ' . TABLE_VARIANTS_ON_TRANSCRIPTS . ' AS vot ON (vog.id = vot.id) ' .
                                           'LEFT OUTER JOIN ' . TABLE_TRANSCRIPTS . ' AS t ON (vot.transcriptid = t.id) '
                                         : '') .
                                           'LEFT OUTER JOIN ' . TABLE_SCR2VAR . ' AS s2v ON (vog.id = s2v.variantid) ' .
+                                          'LEFT OUTER JOIN ' . TABLE_SCREENINGS . ' AS s ON (s.id = s2v.screeningid) ' .
+                                          'LEFT OUTER JOIN ' . TABLE_INDIVIDUALS . ' AS i ON (s.individualid = i.id) ' .
+                                          'LEFT OUTER JOIN ' . TABLE_IND2DIS . ' AS i2d ON(i2d.individualid = i.id) ' .
+                                          'LEFT OUTER JOIN ' . TABLE_DISEASES . ' AS d ON(i2d.diseaseid = d.id) ' .
                                           'LEFT OUTER JOIN ' . TABLE_ALLELES . ' AS a ON (vog.allele = a.id) ' .
                                           'LEFT OUTER JOIN ' . TABLE_EFFECT . ' AS e ON (vog.effectid = e.id) ' .
                                           'LEFT OUTER JOIN ' . TABLE_USERS . ' AS uo ON (vog.owned_by = uo.id) ' .
                                           'LEFT OUTER JOIN ' . TABLE_DATA_STATUS . ' AS ds ON (vog.statusid = ds.id)';
-        $this->aSQLViewList['GROUP_BY'] = 'vog.id';
+        $this->aSQLViewList['GROUP_BY'] = 'vog.id' . ($_INI['instance']['name'] == 'mgha'? ', vot.id, t.id' : '');
 
         parent::__construct();
 
@@ -133,6 +143,48 @@ class LOVD_GenomeVariant extends LOVD_Custom {
                         'edited_date_' => array('Date last edited', LEVEL_COLLABORATOR),
                       ));
 
+        // Additional columns to be listed for MGHA
+        $aCustomViewList = array();
+        if ($_INI['instance']['name'] == 'mgha') {
+            $aCustomViewList = array(
+                'Individual/Sample_ID' => array(
+                    'view' => array('Sample ID', 50),
+                    'db' => array('i.Individual/Sample_ID', 'ASC', true)
+                ),
+                'Individual/Clinical_indication' => array(
+                    'view' => array('Clinical Indication', 50),
+                    'db' => array('i.Individual/Clinical_indication', 'ASC', true)
+                ),
+                'Screening/Library_preparation' => array(
+                    'view' => array('Library Preparation', 50),
+                    'db' => array('s.Screening/Library_preparation', 'ASC', true)
+                ),
+                'Screening/Sequencing_chemistry' => array(
+                    'view' => array('Sequencing Chemistry', 50),
+                    'db' => array('s.Screening/Sequencing_chemistry', 'ASC', true)
+                ),
+                'Screening/Pipeline/Run_ID' => array(
+                    'view' => array('Pipeline Run ID', 50),
+                    'db' => array('s.Screening/Pipeline/Run_ID', 'ASC', true)
+                ),
+                'VariantOnTranscript/DNA' => array(
+                    'view' => array('DNA change (cDNA)', 50),
+                    'db' => array('vot.VariantOnTranscript/DNA', 'ASC', true)
+                ),
+                'VariantOnTranscript/Protein' => array(
+                    'view' => array('Protein', 50),
+                    'db' => array('vot.VariantOnTranscript/Protein', 'ASC', true)
+                ),
+                'geneid' => array(
+                    'view' => array('Gene', 50),
+                    'db' => array('t.geneid', 'ASC', true)
+                ),
+                'diseases' => array(
+                    'view' => array('Diseases', 50),
+                    'db' => array('diseases', 'ASC', true)
+                )
+            );
+        }
         // List of columns and (default?) order for viewing a list of entries.
         $this->aColumnsViewList = array_merge(
                  array(
@@ -156,6 +208,7 @@ class LOVD_GenomeVariant extends LOVD_Custom {
                                     'view' => array('Chr', 50),
                                     'db'   => array('vog.chromosome', 'ASC', true)),
                       ),
+                 $aCustomViewList,
                  $this->buildViewList(),
                  array(
                         'owned_by_' => array(
@@ -355,7 +408,7 @@ class LOVD_GenomeVariant extends LOVD_Custom {
     {
         // Prepares the data by "enriching" the variable received with links, pictures, etc.
 
-        global $_AUTH, $_DB, $_SETT;
+        global $_AUTH, $_DB, $_SETT, $_INI;
 
         if (!in_array($sView, array('list', 'entry'))) {
             $sView = 'list';
@@ -394,6 +447,9 @@ class LOVD_GenomeVariant extends LOVD_Custom {
                 if ($n > 1) {
                     list($sPrefix,) = explode('_', $zData['VariantOnGenome/DBID'], 2);
                     $sLink = '<A href="' . (substr($sPrefix, 0, 3) == 'chr'? 'variants' : 'view/' . $sPrefix) . '?search_VariantOnGenome%2FDBID=%3D%22' . $zData['VariantOnGenome/DBID'] . '%22">See all ' . $n . ' reported entries</A>';
+                    if ($_INI['instance']['name'] == 'mgha') {
+                        $sLink = '<A href="' . (substr($sPrefix, 0, 3) == 'chr'? 'variants/DBID/' . $zData['VariantOnGenome/DBID']  : 'view/' . $sPrefix . '?search_VariantOnGenome%2FDBID=%3D%22' . $zData['VariantOnGenome/DBID'] . '%22') .'">See all ' . $n . ' reported entries</A>';
+                    }
                     // This is against our coding policy of never modifying actual contents of values (we always create a copy with _ appended), but now I simply can't without
                     // modifying the column list manually. If only array_splice() would work on associative arrays... I'm not going to create a workaround here.
                     $zData['VariantOnGenome/DBID'] .= ' <SPAN style="float:right">' . $sLink . '</SPAN>';
