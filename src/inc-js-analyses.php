@@ -202,6 +202,11 @@ function lovd_runNextFilter (nAnalysisID, nRunID)
                     sOnClickLink = $('#run_' + nRunID + ' img.modify').attr('onclick');
                     $('#run_' + nRunID + ' img.modify').attr('onclick', sOnClickLink.replace('analyses/' + nAnalysisID, 'analyses/run/' + nRunID));
 
+                    // Display remove link and replace url with the run ID after successful run.
+                    sRemoveOnClickLink = $('#run_' + nRunID + ' div.analysis-tools img.remove').attr('onclick');
+                    $('#run_' + nRunID + ' div.analysis-tools img.remove').attr('onclick', sRemoveOnClickLink.replace('run/0?', 'run/' + nRunID + '?'));
+                    $('#run_' + nRunID + ' div.analysis-tools img.remove').show();
+
                     // Now load the VL.
                     lovd_showAnalysisResults(nRunID);
                     return true;
