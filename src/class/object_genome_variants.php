@@ -87,7 +87,7 @@ class LOVD_GenomeVariant extends LOVD_Custom {
         $this->aSQLViewList['SELECT']   = 'vog.*, ' .
                                 ($_INI['instance']['name'] == 'mgha'?
                                     'i.`Individual/Sample_ID`, i.`Individual/Clinical_indication`, GROUP_CONCAT(DISTINCT d.name SEPARATOR ", " ) AS diseases, 
-                                    s.`Screening/Library_preparation`, s.`Screening/Sequencing_chemistry`, s.`Screening/Sequencing_chemistry`,
+                                    s.`Screening/Library_preparation`, s.`Screening/Sequencing_chemistry`, s.`Screening/Sequencing_chemistry`, s.`Screening/Pipeline/Run_ID`,
                                     vot.`VariantOnTranscript/DNA`, vot.`VariantOnTranscript/Protein`, t.geneid, '
                                     : '') .
                                           // FIXME; de , is niet de standaard.
