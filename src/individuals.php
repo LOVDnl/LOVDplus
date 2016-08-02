@@ -344,7 +344,13 @@ if (PATH_COUNT >= 2 && ctype_digit($_PE[1]) && !ACTION && (PATH_COUNT == 2 || PA
 
             // Select a js function to be executed when an analysis table is clicked.
             $sJsAction = '';
-            $bHasGenePanel = in_array('apply_selected_gene_panels', $aFilters);
+
+            // $aFilters contains ALL the filters this analysis has before it was modified.
+            // $aFiltersRun contains all the filters that have been run or prepared to be run.
+            // $aFiltersRun is always empty before a non-modified analysis is run, but it is pre-populated before a modified analysis is run.
+            $bNonModifiedAnalysisHasGenePanel = in_array('apply_selected_gene_panels', $aFilters) && empty($aFiltersRun);
+            $bModifiedAnalysisHasGenePanel = isset($aFiltersRun['apply_selected_gene_panels']);
+            $bHasGenePanel = $bNonModifiedAnalysisHasGenePanel || $bModifiedAnalysisHasGenePanel;
             $bCanRunAnalysis = ($_AUTH['level'] >= LEVEL_OWNER && $zScreening['analysis_statusid'] < ANALYSIS_STATUS_CLOSED);
             if ($zAnalysis['analysis_run']) {
                 $sJsAction = 'lovd_showAnalysisResults(\''. $zAnalysis['runid'] .'\')';
