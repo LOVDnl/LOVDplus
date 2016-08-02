@@ -185,6 +185,35 @@ class LOVD_GenomeVariant extends LOVD_Custom {
                 )
             );
         }
+
+        $sEffect_legend = '<P>The variant&#39;s affect on a protein&#39;s function, in the format <STRONG>[Reported]/[Curator concluded]</STRONG> indicating:</P>
+                             <TABLE border="0" cellpadding="3" cellspacing="2">
+                                <TR>
+                                    <TD>+</TD>
+                                    <TD>The variant affects function</TD>
+                                </TR>
+                                <TR>
+                                    <TD>+?</TD>
+                                    <TD>The variant probably affects function</TD>
+                                </TR>
+                                <TR>
+                                    <TD>-</TD>
+                                    <TD>The variant does not affect function</TD>
+                                </TR>
+                                <TR>
+                                    <TD>-?</TD>
+                                    <TD>The variant probably does not affect function</TD>
+                                </TR>
+                                <TR>
+                                    <TD>?</TD>
+                                    <TD>Effect unknown</TD>
+                                </TR>
+                                <TR>
+                                    <TD>.</TD>
+                                    <TD>Effect not classified</TD>
+                                </TR>
+                            </TABLE>';
+
         // List of columns and (default?) order for viewing a list of entries.
         $this->aColumnsViewList = array_merge(
                  array(
@@ -197,8 +226,10 @@ class LOVD_GenomeVariant extends LOVD_Custom {
                         'effect' => array(
                                     'view' => array('Effect', 70),
                                     'db'   => array('e.name', 'ASC', true),
-                                    'legend' => array('The variant\'s effect on a protein\'s function, in the format Reported/Curator concluded; ranging from \'+\' (variant affects function) to \'-\' (does not affect function).',
-                                                      'The variant\'s affect on a protein\'s function, in the format Reported/Curator concluded; \'+\' indicating the variant affects function, \'+?\' probably affects function, \'-\' does not affect function, \'-?\' probably does not affect function, \'?\' effect unknown, \'.\' effect not classified.')),
+                        'legend' => array(
+                            str_replace(array("\r", "\n"), '', $sEffect_legend),
+                            $sEffect_legend
+                        )),
                         'allele_' => array(
                                     'view' => array('Allele', 120),
                                     'db'   => array('a.name', 'ASC', true),
