@@ -459,7 +459,7 @@ if (LOVD_plus) {
                 'path_is_readable' => true,
                 'path_is_writable' => true,
             ),
-        'screenshot_files' =>
+        'curation_files' =>
             array(
                 'required' => false,
                 'path_is_readable' => false,
