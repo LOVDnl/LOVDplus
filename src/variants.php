@@ -851,7 +851,7 @@ if (PATH_COUNT == 2 && ACTION == 'curation_upload') {
                    lovd_errorAdd('import', 'Failed to move uploaded file.');
             }
                 // Write to log...
-                lovd_writeLog('Event', LOG_EVENT, 'File uploaded for variant #' . $nid . ' - DBID: ' . $saID );
+                lovd_writeLog('Event', LOG_EVENT, 'File uploaded for variant #' . $nID . ' - DBID: ' . $saID );
 
                 echo 'File uploaded successfully.';
 
