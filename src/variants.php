@@ -575,9 +575,10 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && !ACTION) {
     $_T->printTitle('Variant on transcripts', 'H4');
     require ROOT_PATH . 'class/object_transcript_variants.php';
     $_DATA = new LOVD_TranscriptVariant('', $nID);
-    $_DATA->setRowID('VOT_for_VOG_VE', 'VOT_{{transcriptid}}');
-    $_DATA->setRowLink('VOT_for_VOG_VE', 'javascript:window.location.hash = \'{{transcriptid}}\'; return false');
-    $_DATA->viewList('VOT_for_VOG_VE', array('id_', 'transcriptid', 'status'), true, true);
+    $sViewListID = 'VOT_for_VOG_VE';
+    $_DATA->setRowID($sViewListID, 'VOT_{{transcriptid}}');
+    $_DATA->setRowLink($sViewListID, 'javascript:window.location.hash = \'{{transcriptid}}\'; return false');
+    $_DATA->viewList($sViewListID, array('id_', 'transcriptid', 'status'), true, true);
     unset($_GET['search_id_']);
 ?>
 
@@ -586,6 +587,7 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && !ACTION) {
         $( function () {
             lovd_AJAX_viewEntryLoad();
             setInterval(lovd_AJAX_viewEntryLoad, 250);
+            displayOneTranscript();
         });
 
 
@@ -618,6 +620,13 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && !ACTION) {
                     // The viewList could have been resubmitted now, so reset this value (not very efficient).
                     $( '#VOT_' + hash ).attr('class', 'data bold');
                 }
+            }
+        }
+
+        function displayOneTranscript() {
+            // If there is only one row of VOT, then trigger click on the first row so that it is the details of that transcript is displayed.
+            if ($('#viewlistTable_<?php echo $sViewListID?> tr').length === 2) { // Table heading + first row.
+                $('#viewlistTable_<?php echo $sViewListID?> tr')[1].click();
             }
         }
       </SCRIPT>
