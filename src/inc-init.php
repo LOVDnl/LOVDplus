@@ -478,6 +478,9 @@ foreach ($aConfigValues as $sSection => $aVars) {
             } elseif (isset($aVar['required']) && $aVar['required']) {
                 // No default value, required setting not filled in.
                 lovd_displayError('Init', 'Error parsing config file: missing required value for setting \'' . $sVar . '\' in section [' . $sSection . ']');
+            } elseif (!isset($_INI[$sSection][$sVar])){
+                // Add the setting to the $_INI array to avoid notices.
+                $_INI[$sSection][$sVar] = false;
             }
 
         } else {
