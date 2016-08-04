@@ -1054,4 +1054,23 @@ function lovd_wrapText ($s, $l = 70, $sCut = ' ')
 
     return $s;
 }
+
+
+
+
+
+function lovd_authorizeByPassword($request) {
+    global $_AUTH, $_ERROR;
+
+    $sEmptyErrorMsg = 'Please fill in the \'Enter your password for authorization\' field.';
+    $sInvalidPasswordErrorMsg = 'Please enter your correct password for authorization.';
+    if (empty($request['password']) && !in_array($sEmptyErrorMsg, $_ERROR['messages'])) {
+        lovd_errorAdd('password', $sEmptyErrorMsg);
+    }
+
+    // User had to enter his/her password for authorization.
+    if (!empty($request['password']) && !lovd_verifyPassword($request['password'], $_AUTH['password'])) {
+        lovd_errorAdd('password', $sInvalidPasswordErrorMsg);
+    }
+}
 ?>

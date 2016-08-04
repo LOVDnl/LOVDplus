@@ -2976,6 +2976,7 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && ACTION == 'curate') {
 
     if (POST) {
         lovd_errorClean();
+        lovd_authorizeByPassword($_POST);
 
         $_DATA['Genome']->checkFields($_POST);
 
@@ -3055,6 +3056,7 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && ACTION == 'curate') {
     $aForm = array_merge(
                  $_DATA['Genome']->getForm(),
                  array(
+                        array('Enter your password for authorization', '', 'password', 'password', 20),
                         array('', '', 'print', '<INPUT type="submit" value="Edit variant entry">'),
                       ));
     lovd_viewForm($aForm);
