@@ -62,6 +62,7 @@ if (PATH_COUNT == 2 && ACTION == 'edit') {
     require ROOT_PATH . 'inc-lib-form.php';
     if (!empty($_POST)) {
         lovd_errorClean();
+        lovd_authorizeByPassword($_POST);
 
         $_DATA->checkFields($_POST, $zData);
         if (!lovd_error()) {
@@ -80,17 +81,21 @@ if (PATH_COUNT == 2 && ACTION == 'edit') {
             // Write to log...
             lovd_writeLog('Event', LOG_EVENT, 'Edited summary annotation entry - ' . $DBID);
 
-        }
-
             // Thank the user...
             header('Refresh: 3; url=' . lovd_getInstallURL() . 'variants/' . $nVariantID . (isset($_GET['in_window'])? '?&in_window' : ''));
 
             $_T->printHeader();
             $_T->printTitle();
             lovd_showInfoTable('Successfully edited the summary annotation entry!', 'success');
+            lovd_errorPrint();
 
             $_T->printFooter();
             exit;
+
+        } else {
+            // Because we're sending the data back to the form, I need to unset the password fields!
+            unset($_POST['password']);
+        }
 
     } else {
         // Load current values.
@@ -115,6 +120,7 @@ if (PATH_COUNT == 2 && ACTION == 'edit') {
     $aForm = array_merge(
         $_DATA->getForm(),
         array(
+            array('Enter your password for authorization', '', 'password', 'password', 20),
             array('', '', 'submit', 'Edit summary annotation entry'),
         ));
     lovd_viewForm($aForm);
