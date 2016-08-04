@@ -226,9 +226,9 @@ class LOVD_GenomeVariant extends LOVD_Custom {
                         'effect' => array(
                                     'view' => array('Effect', 70),
                                     'db'   => array('e.name', 'ASC', true),
-                        'legend' => array(
-                            str_replace(array("\r", "\n"), '', $sEffect_legend),
-                            $sEffect_legend
+                                    'legend' => array(
+                                        str_replace(array("\r", "\n"), '', $sEffect_legend),
+                                        $sEffect_legend
                         )),
                         'allele_' => array(
                                     'view' => array('Allele', 120),

@@ -1543,8 +1543,9 @@ class LOVD_Object {
                         $sAlt = ($aOrder[1] == 'DESC'? 'Descending' : 'Ascending');
                     }
                     $sColId = 'vl-head-' . $sField;
-                    $sOnMouseOver = (empty($aCol['legend'][0])? '' :'lovd_showToolTip(\'' . htmlspecialchars($aCol['legend'][0]) . '\');');
-                    $sOnMouseOut =  (empty($aCol['legend'][0])? '' : 'lovd_hideToolTip();');
+                    $sLegend = (empty($aCol['legend'])? '' : addslashes(htmlspecialchars($aCol['legend'][0])));
+                    $sOnMouseOver = (empty($aCol['legend'][0])? '' : 'lovd_showToolTip(\'' . $sLegend . '\');');
+                    $sOnMouseOut = (empty($aCol['legend'][0])? '' : 'lovd_hideToolTip();');
                     print("\n" . '          <TH id="' . $sColId . '" onmouseover="' . $sOnMouseOver . '" onmouseout="'. $sOnMouseOut .'" valign="top"' . (!empty($aCol['view'][2])? ' ' . $aCol['view'][2] : '') . ($bSortable? ' class="order' . ($aOrder[0] == $sField? 'ed' : '') . '"' : '') . '>' . "\n" .
                                  '            <IMG src="gfx/trans.png" alt="" width="' . $aCol['view'][1] . '" height="1" id="viewlistTable_' . $sViewListID . '_colwidth_' . $sField . '"><BR>' .
                             (!$bSortable? str_replace(' ', '&nbsp;', $aCol['view'][0]) . '<BR>' :
