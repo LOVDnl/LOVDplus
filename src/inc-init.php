@@ -95,14 +95,14 @@ define('STATUS_HIDDEN', 4);
 define('STATUS_MARKED', 7);
 define('STATUS_OK', 9);
 
-define('CUR_STATUS_VARIANT_OF_INTEREST', 10);
-define('CUR_STATUS_FOR_CURATION', 20);
-define('CUR_STATUS_REQUIRES_CONFIRMATION', 30);
-define('CUR_STATUS_CONFIRMED', 40);
-define('CUR_STATUS_PROPOSED', 50);
-define('CUR_STATUS_CURATED_REPORTABLE', 70);
-define('CUR_STATUS_CURATED_NOT_REPORTABLE', 80);
-define('CUR_STATUS_NOT_FOR_CURATION', 90);
+define('CUR_STATUS_VARIANT_OF_INTEREST', 10); // A curator has determined that this variant requires curation. We still need a second person to confirm this before any curation takes place.
+define('CUR_STATUS_FOR_CURATION', 20); // A second curator has confirmed that this variant should be curated so the curation can begin.
+define('CUR_STATUS_REQUIRES_CONFIRMATION', 30); // Needs additional labwork to confirm the variant is correct, e.g. sanger.
+define('CUR_STATUS_CONFIRMED', 40); // Additional labwork has been completed and the variant is confirmed to be correct. (We don't have a status if the variant turns out to be incorrect, maybe we need one?)
+define('CUR_STATUS_PROPOSED', 50); // A curator has completed the curation process and proposed a classification. It will be discussed at a meeting before a final classification is decided.
+define('CUR_STATUS_CURATED_REPORTABLE', 70); // A final classification has been determined and this variant is to appear on a report. The curation process is now finished.
+define('CUR_STATUS_CURATED_NOT_REPORTABLE', 80); // A final classification has been determined but this variant is not to appear on a report. The curation process is now finished.
+define('CUR_STATUS_NOT_FOR_CURATION', 90); // A curator has determined that this variant does not require curation and no further action will be taken on this variant.
 
 define('AJAX_FALSE', '0');
 define('AJAX_TRUE', '1');
