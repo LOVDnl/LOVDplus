@@ -133,7 +133,7 @@ class LOVD_ScreeningMOD extends LOVD_Screening {
                  array(
                      'curation_progress_' => array(
                          'view' => array('Curation progress', 100),
-                         'db'   => array('curation_progress_', false, 'TEXT')),
+                         'db'   => array('curation_progress_', false)),
                      'variants_found_' => array(
                          'view' => array('Variants found', 100),
                          'db'   => array('variants_found_', 'ASC', 'INT_UNSIGNED')),

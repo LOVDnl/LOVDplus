@@ -682,14 +682,18 @@ if ($sCalcVersionFiles != $sCalcVersionDB) {
     if (LOVD_plus && $sCalcVersionDB < lovd_calculateVersion('3.0-12u')) {
         // Insert the curation status records.
         $aCurationStatusSQL = array();
-        foreach ($_SETT['curation_status'] as $nStatus => $sStatus) { // TODO AM Do we need to check before inserting these records in case they already exist? In theory they shouldn't exist before now unless we have been manually changing the version back and forth.
-            $aCurationStatusSQL[] = 'INSERT INTO ' . TABLE_CURATION_STATUS . ' VALUES (' . $nStatus . ', "' . $sStatus . '")';
+        foreach ($_SETT['curation_status'] as $nStatus => $sStatus) {
+            $aCurationStatusSQL[] = 'INSERT IGNORE INTO ' . TABLE_CURATION_STATUS . ' VALUES (' . $nStatus . ', "' . $sStatus . '")';
         }
         $aUpdates['3.0-12u'] = array_merge($aUpdates['3.0-12u'],$aCurationStatusSQL);
         // Finish the updates that can only be done now that these are run...
         $aUpdates['3.0-12u'][] = 'UPDATE ' . TABLE_VARIANTS . ' SET curation_statusid = ' . CUR_STATUS_REQUIRES_CONFIRMATION . ' WHERE to_be_confirmed = 1';
         $aUpdates['3.0-12u'][] = 'ALTER TABLE ' . TABLE_VARIANTS . ' DROP COLUMN to_be_confirmed';
     }
+
+
+
+
 
     // To make sure we upgrade the database correctly, we add the current version to the list...
     if (!isset($aUpdates[$_SETT['system']['version']])) {

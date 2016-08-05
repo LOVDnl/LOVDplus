@@ -128,8 +128,7 @@ class LOVD_CustomViewListMOD extends LOVD_CustomViewList {
                             $aSQL['GROUP_BY'] = 'vog.id'; // Necessary for GROUP_CONCAT().
                         }
                     } elseif ($nKeyVOG !== false && $nKeyVOG < $nKey) { // Adding the analysis run results later.
-                        $aSQL['FROM'] .= ' LEFT JOIN ' . TABLE_ANALYSES_RUN_RESULTS . ' AS arr ON (';
-                        $aSQL['FROM'] .= 'arr.variantid = vog.id)';
+                        $aSQL['FROM'] .= ' LEFT JOIN ' . TABLE_ANALYSES_RUN_RESULTS . ' AS arr ON (arr.variantid = vog.id)';
                     }
                     break;
 
@@ -359,7 +358,6 @@ class LOVD_CustomViewListMOD extends LOVD_CustomViewList {
     function prepareData ($zData = '', $sView = 'list')
     {
         // Prepares the data by "enriching" the variable received with links, pictures, etc.
-        global $_SETT;
 
         // Needs to be done before the custom links are rendered.
         if (isset($this->aColumnsViewList['VariantOnGenome/Alamut'])) {
@@ -416,7 +414,7 @@ class LOVD_CustomViewListMOD extends LOVD_CustomViewList {
             }
         }
         if (!empty($zData['curation_status_'])) {
-            $zData['curation_status_'] = $_SETT['curation_status'][$zData['curation_statusid']];
+            $zData['curation_status_'] = substr($zData['curation_status_'], 2);
         }
 
         return $zData;

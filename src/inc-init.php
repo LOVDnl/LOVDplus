@@ -884,4 +884,22 @@ if (!defined('NOT_INSTALLED')) {
 } else {
     define('ACTION', false);
 }
+
+
+
+
+
+// Additions for Diagnostics.
+if (LOVD_plus) {
+    // For Leiden specifically, restrict set of curation status options.
+    if ($_INI['instance']['name'] == 'leiden') {
+        // Restrict the set of curation status values, but only after installation and/or upgrade.
+        if (substr(lovd_getProjectFile(), 0, 9) != '/install/' && $_STAT['version'] >= '3.0-12u') {
+            $_SETT['curation_status'] = array(
+                CUR_STATUS_VARIANT_OF_INTEREST => $_SETT['curation_status'][CUR_STATUS_VARIANT_OF_INTEREST],
+                CUR_STATUS_REQUIRES_CONFIRMATION => $_SETT['curation_status'][CUR_STATUS_REQUIRES_CONFIRMATION],
+            );
+        }
+    }
+}
 ?>

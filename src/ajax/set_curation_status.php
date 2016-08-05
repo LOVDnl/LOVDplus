@@ -4,7 +4,7 @@
  * LEIDEN OPEN VARIATION DATABASE (LOVD)
  *
  * Created     : 2016-06-17
- * Modified    : 2016-06-17
+ * Modified    : 2016-08-05
  * For LOVD    : 3.0-13
  *
  * Copyright   : 2004-2016 Leiden University Medical Center; http://www.LUMC.nl/
@@ -33,7 +33,7 @@ define('ROOT_PATH', '../');
 require ROOT_PATH . 'inc-init.php';
 
 // Set the curation status for selected variants from a ViewList.
-if (!empty($_GET['id']) && $_AUTH && ACTION !== false && (in_array(ACTION, array_keys($_SETT['curation_status'])) || ACTION == 'clear')) {
+if (!empty($_GET['id']) && $_AUTH && ACTION !== false && (isset($_SETT['curation_status'][ACTION]) || ACTION == 'clear')) {
     // The easiest thing to do is just run the query, and just dump the result.
     if ($_GET['id'] == 'selected') {
         $aIDs = array_values($_SESSION['viewlists']['CustomVL_AnalysisRunResults_for_I_VE']['checked']);
