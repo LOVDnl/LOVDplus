@@ -279,7 +279,7 @@ class LOVD_CustomViewListMOD extends LOVD_CustomViewList {
                                         'view' => array('Effect', 70),
                                         'db'   => array('eg.name', 'ASC', true),
                                         'legend' => array(
-                                                str_replace(array("\r", "\n"), '', $sEffect_legend,
+                                                str_replace(array("\r", "\n"), '', $sEffect_legend),
                                                 $sEffect_legend)),
                               ));
 
