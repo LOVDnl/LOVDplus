@@ -442,42 +442,13 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && !ACTION) {
         }
 
 
-  //      (function() {
+    function popUp(form) {
 
- // 'use strict';
-
-  // click events
-  //document.body.addEventListener('click', copyFilename, true);
-
-  // event handler
-  //function copyFilename(e) {
-
-    // find target element
-   // var
-    //  t = e.target,
-    //  c = t.dataset.copytarget,
-    //  inp = (c ? document.querySelector(c) : null);
-
-    // is element selectable?
-    //if (inp && inp.select) {
-
-      // select text
-     // inp.select();
-
-     // try {
-        // copy text
-      //  document.execCommand('copy');
-      //  inp.blur();
-      //}
-      //catch (err) {
-      //  alert('please press Ctrl/Cmd+C to copy');
-      //}
-
-    //}
-
-//  }
-
-//})();
+     // Unfortunately, lovd_openWindow doesn't all for this popup to work properly because it changes the form name based on the time, so use window.open instead.
+     // lovd_openWindow('', 'formpopup', 1050, 450 );
+        window.open('', 'formpopup', 'width=640,height=400,resizeable,scrollbars');
+        form.target = 'formpopup';
+    }
 
       </SCRIPT>
 <?php
@@ -612,13 +583,15 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && !ACTION) {
     array(
          '' => '--select--',
         'screenshot_IGV' => 'IGV screenshot',
-        'screenshot_other' => 'Other screenshot',
+        'screenshot_UCSC' => 'UCSC screenshot',
+        'screenshot_Confirmation' => 'Confirmation screenshot',
         'excel' => 'Excel file',
     );
 
     require ROOT_PATH . 'inc-lib-form.php';
-
-    print('      <br><FORM action="' . CURRENT_PATH . '?' . 'curation_upload&said=' . $sSummaryAnnotationsID . '" method="post" enctype="multipart/form-data">' . "\n" .
+    //print('      <br><FORM action="' . CURRENT_PATH . '?' . 'curation_upload&said=' . $sSummaryAnnotationsID . '" method="post" enctype="multipart/form-data">' . "\n" .
+    print('      <br><FORM action="' . CURRENT_PATH . '?' . 'curation_upload&said=' . $sSummaryAnnotationsID . '&in_window" onSubmit="popUp(this)" method="post" enctype="multipart/form-data">' . "\n" .
+    ' <TABLE border="0" cellpadding="10" cellspacing="1"  class="data"  style="font-size : 13px;" ><TR> <TH style="font-size : 13px;">Curation files</TH> </TR><TD style="font-size : 13px;">' .
           '        <INPUT type="hidden" name="MAX_FILE_SIZE" value="' . $nMaxSize . '">' . "\n");
 
     $aForm =
@@ -628,33 +601,37 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && !ACTION) {
             array('Upload a file', '', 'file', 'import', 40),
          //   array('', 'Current file size limits:<BR>LOVD: ' . ($nMaxSizeLOVD/(1024*1024)) . 'M<BR>PHP (upload_max_filesize): ' . ini_get('upload_max_filesize') . '<BR>PHP (post_max_size): ' . ini_get('post_max_size'), 'note', 'The maximum file size accepted is ' . round($nMaxSize/pow(1024, 2), 1) . ' MB' . ($nMaxSize == $nMaxSizeLOVD? '' : ', due to restrictions on this server. If you wish to have it increased, contact the server\'s system administrator') . '.'),
            // 'skip',
-            array('File type','Uploaded files will overwrite existing files!! <BR> IGV screenshot = 1 file per patient variant <BR> other screenshot = 1 file per variant summary <BR> excel file = 1 file per patient variant', 'select', 'mode', 1, $aModes, false, false, false),
-
+            array('File type','', 'select', 'mode', 1, $aModes, false, false, false),
+            array( 'Replace existing file', 'Check here if you want to replace existing file', 'checkbox', 'overwrite', 1),
             array('', '', 'submit', 'Upload file'));
 
     lovd_viewForm($aForm);
-
+    print('</TR></TD></TABLE>');
     print('</FORM><br>' . "\n\n");
 
 // https://chrome.google.com/webstore/detail/locallinks/jllpkdkcdjndhggodimiphkghogcpida  chrome extension allows opening of local links. there should be something like that for firefox.
 
-//   echo ' <input type="text" id="screenshotAddress" value="c:\Example_Directory\Temp\\' . $sSummaryAnnotationsID . '.png" />';
-//    print(' <input type="text" id="screenshotAddress" value="' . $_INI['paths']['screenshot_files'] .'\\' . 'UCSC_' . $sSummaryAnnotationsID . '.png" />' .
-//         '<button data-copytarget="#screenshotAddress">copy UCSC screenshot filename</button>');
-//    print(' <a href="file:///C:/Temp/test.bmp" target="_BLANK">view</a><br>');
-//    print(' <input type="text" id="screenshotAddress" value="' . $_INI['paths']['screenshot_files'] .'\\' . 'IGV_' . $sSummaryAnnotationsID . '.png" />' .
-//          '<button data-copytarget="#screenshotAddress">copy IGV screenshot filename</button>');
-//    print(' <a href="file:///C:/Temp/test.bmp" target="_BLANK">view</a><br>');
+    // Search for curations files and display links to files if they exist in the curation files directory. This uses the glob php function to perform search.
+    // This searches for IGV image file named using the nID.
+    foreach (glob($_INI['paths']['curation_files'] . "\\" . $nID . "_IGV.*", GLOB_BRACE) as $filename) {
+          print(' <a href="file:///' . $filename . '"  target="_BLANK">view IGV</a><br>');
+    }
 
+    // This searches for an excel type file named using the nID.
+    foreach (glob($_INI['paths']['curation_files'] . "\\" . $nID  . "_workfile.*", GLOB_BRACE) as $filename) {
+          print(' <a href="file:///' . $filename . '"  target="_BLANK">view workfile</a><br>');
+    }
 
-    $sFileName = $nID . '_IGV' . '.png';
-    print(' <a href="file:///' . $_INI['paths']['curation_files'] .'\\' . $sFileName . '"  target="_BLANK">view IGV</a><br>');
+    // This searches for an image file named using the nID.
+    foreach (glob($_INI['paths']['curation_files'] . "\\" . $nID . "_confirmation.*", GLOB_BRACE) as $filename) {
+          print(' <a href="file:///' . $filename . '"  target="_BLANK">view confirmation</a><br>');
+    }
 
-    $sFileName = $sSummaryAnnotationsID . '_image' . '.png';
-    print(' <a href="file:///' . $_INI['paths']['curation_files'] .'\\' . $sFileName . '" target="_BLANK">view image</a><br>');
+    // This searches for an UCSC image file named using the summary annotation ID.
+    foreach (glob($_INI['paths']['curation_files'] . "\\" . $sSummaryAnnotationsID . "_UCSC.*", GLOB_BRACE) as $filename) {
+          print(' <a href="file:///' . $filename . '"  target="_BLANK">view UCSC</a><br>');
+    }
 
-    $sFileName = $nID . '.xlsx';
-    print(' <a href="file:///' . $_INI['paths']['curation_files'] .'\\' . $sFileName . '" target="_BLANK">view excel</a><br><br>');
 
     print('      </TD>
     </TR>
@@ -740,6 +717,9 @@ if (PATH_COUNT == 2 && ACTION == 'curation_upload') {
 
     lovd_errorClean();
 
+    $_T->printHeader();
+    // $_T->printTitle();
+
     if (!isset($_GET['said'])) {
         lovd_errorAdd('import', 'Summary annotation ID not set.');
     }
@@ -781,68 +761,78 @@ if (PATH_COUNT == 2 && ACTION == 'curation_upload') {
 
         }
 
-        $fInput = @fopen($_FILES['import']['tmp_name'], 'r');
-        if (!$fInput) {
-            lovd_errorAdd('import', 'Cannot open file after it was received by the server.');
-
-        }
-
-
-        // DO NOT TRUST $_FILES['upfile']['mime'] VALUE !!
-        $finfo = new finfo(FILEINFO_MIME_TYPE);
-
-
-        if ( $_POST['mode'] == "screenshot_IGV" || $_POST['mode'] == "screenshot_other"  ) {
-            if (false === $ext = array_search(
-                $finfo->file($_FILES['import']['tmp_name']),
-                array(
-                 //   'jpg' => 'image/jpeg',
-                    'png' => 'image/png',
-                 //  'gif' => 'image/gif',
-                ),
-                true
-            )) {
-             //   throw new RuntimeException('Invalid file format.');
-               lovd_errorAdd('import', 'Invalid file format. Expecting .png image file.');
-            }
-        }
-
-        elseif ( $_POST['mode'] == "excel"  ) {
-            if (false === $ext = array_search(
-                $finfo->file($_FILES['import']['tmp_name']),
-                array(
-                   //  'xls' => 'application/vnd.ms-excel',
-                   'xlsx' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-                   'xlsx' => 'application/vnd.ms-excel',
-                //     'txt' => 'text/plain',
-                ),
-                true
-            )) {
-             //   throw new RuntimeException('Invalid file format.');
-               lovd_errorAdd('import', 'Invalid file format. Expecting .xlsx excel file.');
-            }
-        }
-        else {
-            lovd_errorAdd('import', 'Error: File type not recognised');
-        }
-
-        $sFileName = "";
-        if ( $_POST['mode'] == "screenshot_IGV" ) {
-            $sFileName = $nID . '_IGV' . '.png'; // . $ext;
-        }
-
-        if ( $_POST['mode'] == "screenshot_other" ) {
-            $sFileName =  $saID . '_image' . '.png'; // .$ext;
-        }
-
-        if ( $_POST['mode'] == "excel" ) {
-            $sFileName =  $nID . '.xlsx'; //. $ext;
-        }
-
         if (!lovd_error()) {
+
+            // DO NOT TRUST $_FILES['upfile']['mime'] VALUE !!
+            $finfo = new finfo(FILEINFO_MIME_TYPE);
+
+
+            if ( $_POST['mode'] == "screenshot_IGV" || $_POST['mode'] == "screenshot_UCSC" || $_POST['mode'] == "screenshot_Confirmation" ) {
+                if (false === $ext = array_search(
+                    $finfo->file($_FILES['import']['tmp_name']),
+                    array(
+                        'jpg' => 'image/jpeg',
+                        'png' => 'image/png',
+                     //  'gif' => 'image/gif',
+                    ),
+                    true
+                )) {
+                 //   throw new RuntimeException('Invalid file format.');
+                   lovd_errorAdd('import', 'Invalid file format. Expecting image type file.');
+                }
+            }
+
+            elseif ( $_POST['mode'] == "excel"  ) {
+                if (false === $ext = array_search(
+                    $finfo->file($_FILES['import']['tmp_name']),
+                    array(
+                       'xls' => 'application/vnd.ms-excel',
+                       'xlsx' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+                       'xlsx' => 'application/vnd.ms-excel',
+                       'txt' => 'text/plain',
+                    ),
+                    true
+                )) {
+                 //   throw new RuntimeException('Invalid file format.');
+                   lovd_errorAdd('import', 'Invalid file format. Expecting excel type file.');
+                }
+            }
+            else {
+                lovd_errorAdd('import', 'Error: File type not recognised');
+            }
+
+            $sFileName = "";
+            if ( $_POST['mode'] == "screenshot_IGV" ) {
+               $sFileName = $nID . '_IGV.' . $ext;
+            }
+
+            if ( $_POST['mode'] == "screenshot_Confirmation" ) {
+               $sFileName =  $nID . '_confirmation.' .$ext;
+            }
+
+            if ( $_POST['mode'] == "excel" ) {
+              $sFileName =  $nID . '_workfile.' . $ext;
+            }
+
+            if ( $_POST['mode'] == "screenshot_UCSC" ) {
+               $sFileName =  $saID . '_UCSC.' .$ext;
+            }
+        }
+
+       if (!lovd_error()) {
+             $newFileName = $_INI['paths']['curation_files'] . '\\' . $sFileName;
+            if(file_exists($newFileName) && !$_POST['overwrite']) {
+                lovd_showInfoTable('File already exists! Check file replace option if you wish to replace existing file.<BR>', 'warning', 600);
+                exit;
+            }
+
+            if(file_exists($newFileName) && $_POST['overwrite']) {
+                rename($newFileName,$_INI['paths']['curation_files'] . '\\' . "_" . $sFileName . ".old" );   // prefix file name with "_" so GLOB search doesn't return these old files
+            }
+
             if (!move_uploaded_file(
                 $_FILES['import']['tmp_name'],
-                $_INI['paths']['curation_files'] . '\\' . $sFileName
+                $newFileName
                // sprintf('c:/%s.%s',
                //     sha1_file($_FILES['import']['tmp_name']),
                //     $ext
@@ -851,21 +841,26 @@ if (PATH_COUNT == 2 && ACTION == 'curation_upload') {
                    lovd_errorAdd('import', 'Failed to move uploaded file.');
             }
                 // Write to log...
-                lovd_writeLog('Event', LOG_EVENT, 'File uploaded for variant #' . $nID . ' - DBID: ' . $saID );
+                lovd_writeLog('Event', LOG_EVENT, 'File ' . $newFileName . ' uploaded for variant #' . $nID . ' - DBID: ' . $saID );
 
-                echo 'File uploaded successfully.';
+                lovd_showInfoTable('File uploaded successfully.<BR>', 'success', 600);
 
-                header('Refresh: 0; url=' . lovd_getInstallURL() . CURRENT_PATH . '?&variant_id=' . $nID . (isset($_GET['in_window'])? '&in_window' : ''));
+                $_T->printFooter();
+              //  header('Refresh: 0; url=' . lovd_getInstallURL() . CURRENT_PATH . '?&variant_id=' . $nID . (isset($_GET['in_window'])? '&in_window' : ''));
                 exit;
         }
         else {
-            echo 'Error occurred. File did not upload!<br>';
+
+            lovd_showInfoTable('Error occurred. File did not upload!<br>', 'stop', 600);
 
             lovd_errorPrint();
-
+            $_T->printFooter();
             exit;
         }
     }
+
+    $_T->printFooter();
+
 }
 
 
