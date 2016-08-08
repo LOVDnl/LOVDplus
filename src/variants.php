@@ -254,6 +254,36 @@ if (!ACTION && (empty($_PE[1]) || preg_match('/^chr[0-9A-Z]{1,2}$/', $_PE[1]))) 
 
 
 
+if (PATH_COUNT == 3 && $_PE[1] == 'DBID' && preg_match('/^chr/', $_PE[2]) && !ACTION) {
+    // URL: /variants/DBID/chr_00001
+    // View all genomic variant entries with the same DBID
+
+    $sDbId = $_PE[2];
+
+    define('PAGE_TITLE', 'View genomic variants');
+    $_T->printHeader();
+    $_T->printTitle();
+
+    require ROOT_PATH . 'class/object_genome_variants.php';
+    $_DATA = new LOVD_GenomeVariant();
+    $aColsToShow = array (
+        'id_', 'effect', 'allele_', 'Individual/Sample_ID', 'Individual/Clinical_indication',
+        'Screening/Library_preparation', 'Screening/Sequencing_chemistry', 'Screening/Pipeline/Run_ID',
+        'VariantOnGenome/Curation/Classification','VariantOnGenome/Sequencing/IGV', 'VariantOnGenome/Reference',
+        'VariantOnTranscript/DNA', 'VariantOnTranscript/Protein', 'geneid', 'diseases'
+        );
+    $aColsToHide = array_diff(array_keys($_DATA->aColumnsViewList), $aColsToShow);
+    $_GET['search_VariantOnGenome/DBID'] = $sDbId;
+    $_DATA->viewList('', $aColsToHide, false, false, false);
+
+    $_T->printFooter();
+    exit;
+}
+
+
+
+
+
 if (PATH_COUNT == 2 && $_PE[1] == 'in_gene' && !ACTION) {
     // URL: /variants/in_gene
     // View all entries effecting a transcript.
@@ -646,9 +676,10 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && !ACTION) {
     $_T->printTitle('Variant on transcripts', 'H4');
     require ROOT_PATH . 'class/object_transcript_variants.php';
     $_DATA = new LOVD_TranscriptVariant('', $nID);
-    $_DATA->setRowID('VOT_for_VOG_VE', 'VOT_{{transcriptid}}');
-    $_DATA->setRowLink('VOT_for_VOG_VE', 'javascript:window.location.hash = \'{{transcriptid}}\'; return false');
-    $_DATA->viewList('VOT_for_VOG_VE', array('id_', 'transcriptid', 'status'), true, true);
+    $sViewListID = 'VOT_for_VOG_VE';
+    $_DATA->setRowID($sViewListID, 'VOT_{{transcriptid}}');
+    $_DATA->setRowLink($sViewListID, 'javascript:window.location.hash = \'{{transcriptid}}\'; return false');
+    $_DATA->viewList($sViewListID, array('id_', 'transcriptid', 'status'), true, true);
     unset($_GET['search_id_']);
 ?>
 
@@ -657,6 +688,7 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && !ACTION) {
         $( function () {
             lovd_AJAX_viewEntryLoad();
             setInterval(lovd_AJAX_viewEntryLoad, 250);
+            displayOneTranscript();
         });
 
 
@@ -684,6 +716,13 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && !ACTION) {
                     // The viewList could have been resubmitted now, so reset this value (not very efficient).
                     $( '#VOT_' + hash ).attr('class', 'data bold');
                 }
+            }
+        }
+
+        function displayOneTranscript() {
+            // If there is only one row of VOT, then trigger click on the first row so that it is the details of that transcript is displayed.
+            if ($('#viewlistTable_<?php echo $sViewListID?> tr').length === 2) { // Table heading + first row.
+                $('#viewlistTable_<?php echo $sViewListID?> tr')[1].click();
             }
         }
       </SCRIPT>
@@ -3194,6 +3233,7 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && ACTION == 'curate') {
 
     if (POST) {
         lovd_errorClean();
+        lovd_authorizeByPassword($_POST);
 
         $_DATA['Genome']->checkFields($_POST);
 
@@ -3273,6 +3313,7 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && ACTION == 'curate') {
     $aForm = array_merge(
                  $_DATA['Genome']->getForm(),
                  array(
+                        array('Enter your password for authorization', '', 'password', 'password', 20),
                         array('', '', 'print', '<INPUT type="submit" value="Edit variant entry">'),
                       ));
     lovd_viewForm($aForm);
