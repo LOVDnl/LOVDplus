@@ -6,6 +6,32 @@
  * Programmer: Candice McGregor
  *************/
 
+$_INSTANCE_CONFIG = array();
+
+$_INSTANCE_CONFIG['screenings'] = array(
+    'viewList' => array(
+        'colsToShow' => array(
+            // We can have view list id as key here if needed.
+            // 0 here means the viewList columns seen by the constructor (at the point where we don't know VL id yet.
+            0 => array(
+                // Invisible.
+                'individualid',
+
+                // Visible.
+                'id',
+                'Screening/Father/Sample_ID',
+                'Screening/Mother/Sample_ID',
+                'Screening/Mean_coverage',
+                'Screening/Library_preparation',
+                'Screening/Pipeline/Run_ID',
+                'variants_found_',
+                'analysis_status'
+
+            )
+        )
+    )
+);
+
 
 function lovd_prepareMappings()
 {

@@ -37,6 +37,11 @@ if (!defined('ROOT_PATH')) {
 // Require library standard functions.
 require ROOT_PATH . 'inc-lib-init.php';
 
+// Load any instance specific functions and variables.
+if (file_exists(ROOT_PATH . 'scripts/adapter.lib.php')) {
+    require ROOT_PATH . 'scripts/adapter.lib.php';
+}
+
 // Define module path.
 // FIXME; do we still need this?
 define('MODULE_PATH', ROOT_PATH . 'modules/');
