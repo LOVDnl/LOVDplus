@@ -5,10 +5,10 @@
  * LEIDEN OPEN VARIATION DATABASE (LOVD)
  *
  * Created     : 2009-10-19
- * Modified    : 2016-06-09
+ * Modified    : 2016-08-05
  * For LOVD    : 3.0-13
  *
- * Copyright   : 2004-2015 Leiden University Medical Center; http://www.LUMC.nl/
+ * Copyright   : 2004-2016 Leiden University Medical Center; http://www.LUMC.nl/
  * Programmers : Ing. Ivo F.A.C. Fokkema <I.F.A.C.Fokkema@LUMC.nl>
  *               Ing. Ivar C. Lugtenburg <I.C.Lugtenburg@LUMC.nl>
  *
@@ -557,7 +557,7 @@ if ($_SERVER['SERVER_ADMIN'] == 'i.f.a.c.fokkema@lumc.nl' && $_SERVER['HTTP_HOST
         require 'inc-sql-analyses.php';
         if ($aAnalysesSQL) {
             $aInstallSQL['Creating analyses...'] = $aAnalysesSQL;
-            $nInstallSQL++;
+            $nInstallSQL += count($aAnalysesSQL);
         }
     }
 
