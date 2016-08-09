@@ -620,7 +620,7 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && !ACTION) {
     );
 
     require ROOT_PATH . 'inc-lib-form.php';
-    print('      <br><FORM action="' . CURRENT_PATH . '?' . 'curation_upload&said=' . $sSummaryAnnotationsID . '&in_window" onSubmit="popUp(this)" method="post" enctype="multipart/form-data">' . "\n" .
+    print('      <br><FORM action="' . CURRENT_PATH . '?' . 'curation_upload&said=' . (empty($sSummaryAnnotationsID) ? '' : $sSummaryAnnotationsID) . '&in_window" onSubmit="popUp(this)" method="post" enctype="multipart/form-data">' . "\n" .
     ' <TABLE border="0" cellpadding="10" cellspacing="1"  class="data"  style="font-size : 13px;" ><TR> <TH style="font-size : 13px;">Curation files</TH> </TR><TD style="font-size : 13px;">' . "\n");
 
     $aForm =
@@ -653,6 +653,7 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && !ACTION) {
     }
 
     // This searches for an UCSC image file named using the summary annotation ID.
+    // TODO MGHA - Only do this if we have a summary annotation ID! It is currently showing a notice if we haven't created a summary annotation record.
     foreach (glob($_INI['paths']['curation_files'] . "\\" . $sSummaryAnnotationsID . "_UCSC.*", GLOB_BRACE) as $filename) {
           print(' <a href="file:///' . $filename . '"  target="_BLANK">view UCSC</a><br>');
     }
@@ -754,7 +755,8 @@ if (PATH_COUNT == 2 && ACTION == 'curation_upload') {
     $_T->printHeader();
     // $_T->printTitle();
 
-    if (!isset($_GET['said'])) {
+    if (empty($_GET['said'])) {
+        // TODO MGHA - We only need to check if we have a summary annotation ID if they user is trying to upload a UCSC screen shot otherwise it doesn't matter.
         lovd_errorAdd('import', 'Summary annotation ID not set.');
     }
     else {
@@ -775,10 +777,9 @@ if (PATH_COUNT == 2 && ACTION == 'curation_upload') {
     define('LOG_EVENT', 'curation_upload');
 
     $nWarnings = 0;
+    // TODO MGHA - Are we ever not posting to this section? Is there any need to check for this?
     if (POST || $_FILES) { // || $_FILES is in use for the automatic loading of files.
         // Form sent, first check the file itself.
-        lovd_errorClean();
-
         // If the file does not arrive (too big), it doesn't exist in $_FILES.
         if (empty($_FILES['import']) || ($_FILES['import']['error'] > 0 && $_FILES['import']['error'] < 4)) {
             lovd_errorAdd('import', 'There was a problem with the file transfer. Please try again. The file cannot be larger than ' . round($nMaxSize/pow(1024, 2), 1) . ' MB' . ($nMaxSize == $nMaxSizeLOVD? '' : ', due to restrictions on this server') . '.');
