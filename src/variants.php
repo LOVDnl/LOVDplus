@@ -610,6 +610,7 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && !ACTION) {
 
 
     $aModes =
+    // TODO MGHA - It would be good to create a single array that held everything that we needed and that master array created any subsequent arrays.  It would make it easy to then add files types to this script.
     array(
          '' => '--select--',
         'screenshot_IGV' => 'IGV screenshot',
@@ -619,18 +620,13 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && !ACTION) {
     );
 
     require ROOT_PATH . 'inc-lib-form.php';
-    //print('      <br><FORM action="' . CURRENT_PATH . '?' . 'curation_upload&said=' . $sSummaryAnnotationsID . '" method="post" enctype="multipart/form-data">' . "\n" .
     print('      <br><FORM action="' . CURRENT_PATH . '?' . 'curation_upload&said=' . $sSummaryAnnotationsID . '&in_window" onSubmit="popUp(this)" method="post" enctype="multipart/form-data">' . "\n" .
-    ' <TABLE border="0" cellpadding="10" cellspacing="1"  class="data"  style="font-size : 13px;" ><TR> <TH style="font-size : 13px;">Curation files</TH> </TR><TD style="font-size : 13px;">' .
-          '        <INPUT type="hidden" name="MAX_FILE_SIZE" value="' . $nMaxSize . '">' . "\n");
+    ' <TABLE border="0" cellpadding="10" cellspacing="1"  class="data"  style="font-size : 13px;" ><TR> <TH style="font-size : 13px;">Curation files</TH> </TR><TD style="font-size : 13px;">' . "\n");
 
     $aForm =
         array(
             array('POST', '', '', '', '15%', '14', '85%'),
-            //array('', '', 'print', '<B>IGV screenshot</B>'),
             array('Upload a file', '', 'file', 'import', 40),
-         //   array('', 'Current file size limits:<BR>LOVD: ' . ($nMaxSizeLOVD/(1024*1024)) . 'M<BR>PHP (upload_max_filesize): ' . ini_get('upload_max_filesize') . '<BR>PHP (post_max_size): ' . ini_get('post_max_size'), 'note', 'The maximum file size accepted is ' . round($nMaxSize/pow(1024, 2), 1) . ' MB' . ($nMaxSize == $nMaxSizeLOVD? '' : ', due to restrictions on this server. If you wish to have it increased, contact the server\'s system administrator') . '.'),
-           // 'skip',
             array('File type','', 'select', 'mode', 1, $aModes, false, false, false),
             array( 'Replace existing file', 'Check here if you want to replace existing file', 'checkbox', 'overwrite', 1),
             array('', '', 'submit', 'Upload file'));
@@ -639,8 +635,7 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && !ACTION) {
     print('</TR></TD></TABLE>');
     print('</FORM><br>' . "\n\n");
 
-// https://chrome.google.com/webstore/detail/locallinks/jllpkdkcdjndhggodimiphkghogcpida  chrome extension allows opening of local links. there should be something like that for firefox.
-
+// TODO MGHA - We need to change these from file:/// urls to normal urls to where these files are located on the web server.
     // Search for curations files and display links to files if they exist in the curation files directory. This uses the glob php function to perform search.
     // This searches for IGV image file named using the nID.
     foreach (glob($_INI['paths']['curation_files'] . "\\" . $nID . "_IGV.*", GLOB_BRACE) as $filename) {
@@ -841,6 +836,7 @@ if (PATH_COUNT == 2 && ACTION == 'curation_upload') {
             }
 
             $sFileName = "";
+            // TODO MGHA - We should probably store these in an array and loop over that to rename the files, this would make it easier to add new files later. Also keep the file names to lowercase.
             if ( $_POST['mode'] == "screenshot_IGV" ) {
                $sFileName = $nID . '_IGV.' . $ext;
             }
@@ -860,12 +856,13 @@ if (PATH_COUNT == 2 && ACTION == 'curation_upload') {
 
        if (!lovd_error()) {
              $newFileName = $_INI['paths']['curation_files'] . '\\' . $sFileName;
-            if(file_exists($newFileName) && !$_POST['overwrite']) {
+             // TODO MGHA - This file exists checks to see if this exact file already exists including the file extension but each mode allows for multipele file extensions so it allows uploading of multiple files (eg image.png, image.jpg) We might need to only check for the file name minus the extension or allow multiple file uploads per mode.
+            if(file_exists($newFileName) && empty($_POST['overwrite'])) {
                 lovd_showInfoTable('File already exists! Check file replace option if you wish to replace existing file.<BR>', 'warning', 600);
                 exit;
             }
 
-            if(file_exists($newFileName) && $_POST['overwrite']) {
+            if(file_exists($newFileName) && !empty($_POST['overwrite'])) {
                 rename($newFileName,$_INI['paths']['curation_files'] . '\\' . "_" . $sFileName . ".old" );   // prefix file name with "_" so GLOB search doesn't return these old files
             }
 
@@ -885,6 +882,7 @@ if (PATH_COUNT == 2 && ACTION == 'curation_upload') {
                 lovd_showInfoTable('File uploaded successfully.<BR>', 'success', 600);
 
                 $_T->printFooter();
+               // TODO MGHA - Can we set this popup to close after a few seconds and then refresh the variant VE to show the new file has bee uploaded. There should be heaps of examples of this already in LOVD+.
               //  header('Refresh: 0; url=' . lovd_getInstallURL() . CURRENT_PATH . '?&variant_id=' . $nID . (isset($_GET['in_window'])? '&in_window' : ''));
                 exit;
         }
