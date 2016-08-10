@@ -608,16 +608,20 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && !ACTION) {
       }
       print('</TABLE>');
 
+    // This is the array of file types to build the form.  There is a similar array in the form processing code below to handle file renaming.
+    $aFileTypes =
+    array(
+        'igv' => 'IGV screenshot',
+        'ucsc' => 'UCSC screenshot',
+        'confirmation' => 'Confirmation screenshot',
+        'workfile' => 'Excel file',
+    );
 
     $aModes =
-    // TODO MGHA - It would be good to create a single array that held everything that we needed and that master array created any subsequent arrays.  It would make it easy to then add files types to this script.
-    array(
-         '' => '--select--',
-        'screenshot_IGV' => 'IGV screenshot',
-        'screenshot_UCSC' => 'UCSC screenshot',
-        'screenshot_Confirmation' => 'Confirmation screenshot',
-        'excel' => 'Excel file',
-    );
+    array_merge(array(
+         '' => '--select--'),
+        $aFileTypes);
+
 
     require ROOT_PATH . 'inc-lib-form.php';
     print('      <br><FORM action="' . CURRENT_PATH . '?' . 'curation_upload&said=' . (empty($sSummaryAnnotationsID) ? '' : $sSummaryAnnotationsID) . '&in_window" onSubmit="popUp(this)" method="post" enctype="multipart/form-data">' . "\n" .
@@ -635,29 +639,17 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && !ACTION) {
     print('</TR></TD></TABLE>');
     print('</FORM><br>' . "\n\n");
 
-// TODO MGHA - We need to change these from file:/// urls to normal urls to where these files are located on the web server.
     // Search for curations files and display links to files if they exist in the curation files directory. This uses the glob php function to perform search.
-    // This searches for IGV image file named using the nID.
-    foreach (glob($_INI['paths']['curation_files'] . "\\" . $nID . "_IGV.*", GLOB_BRACE) as $filename) {
-          print(' <a href="file:///' . $filename . '"  target="_BLANK">view IGV</a><br>');
+    foreach ( $aFileTypes as $sFileType => $sFileDesc) {
+        foreach (glob($_INI['paths']['curation_files'] . "\\" . $nID . "_" . $sFileType . ".*", GLOB_BRACE) as $sFileName) {
+              print(' <a href="' . lovd_getInstallURL() . $sFileName . '"  target="_BLANK">view ' . $sFileDesc . '</a><br>');
+        }
+        if ( !empty($sSummaryAnnotationsID)) {
+           foreach (glob($_INI['paths']['curation_files'] . "\\" . $sSummaryAnnotationsID . "_" . $sFileType . ".*", GLOB_BRACE) as $sFileName) {
+              print(' <a href="' . lovd_getInstallURL() . $sFileName . '"  target="_BLANK">view ' . $sFileDesc . '</a><br>');
+           }
+        }
     }
-
-    // This searches for an excel type file named using the nID.
-    foreach (glob($_INI['paths']['curation_files'] . "\\" . $nID  . "_workfile.*", GLOB_BRACE) as $filename) {
-          print(' <a href="file:///' . $filename . '"  target="_BLANK">view workfile</a><br>');
-    }
-
-    // This searches for an image file named using the nID.
-    foreach (glob($_INI['paths']['curation_files'] . "\\" . $nID . "_confirmation.*", GLOB_BRACE) as $filename) {
-          print(' <a href="file:///' . $filename . '"  target="_BLANK">view confirmation</a><br>');
-    }
-
-    // This searches for an UCSC image file named using the summary annotation ID.
-    // TODO MGHA - Only do this if we have a summary annotation ID! It is currently showing a notice if we haven't created a summary annotation record.
-    foreach (glob($_INI['paths']['curation_files'] . "\\" . $sSummaryAnnotationsID . "_UCSC.*", GLOB_BRACE) as $filename) {
-          print(' <a href="file:///' . $filename . '"  target="_BLANK">view UCSC</a><br>');
-    }
-
 
     print('      </TD>
     </TR>
@@ -755,13 +747,7 @@ if (PATH_COUNT == 2 && ACTION == 'curation_upload') {
     $_T->printHeader();
     // $_T->printTitle();
 
-    if (empty($_GET['said'])) {
-        // TODO MGHA - We only need to check if we have a summary annotation ID if they user is trying to upload a UCSC screen shot otherwise it doesn't matter.
-        lovd_errorAdd('import', 'Summary annotation ID not set.');
-    }
-    else {
-        $saID = $_GET['said'];
-    }
+   $saID = $_GET['said'];
 
     if ($_POST['mode'] == '' ) {
         lovd_errorAdd('mode', 'The file type is not set!');
@@ -777,8 +763,7 @@ if (PATH_COUNT == 2 && ACTION == 'curation_upload') {
     define('LOG_EVENT', 'curation_upload');
 
     $nWarnings = 0;
-    // TODO MGHA - Are we ever not posting to this section? Is there any need to check for this?
-    if (POST || $_FILES) { // || $_FILES is in use for the automatic loading of files.
+    if ($_FILES) { // || $_FILES is in use for the automatic loading of files.
         // Form sent, first check the file itself.
         // If the file does not arrive (too big), it doesn't exist in $_FILES.
         if (empty($_FILES['import']) || ($_FILES['import']['error'] > 0 && $_FILES['import']['error'] < 4)) {
@@ -796,13 +781,23 @@ if (PATH_COUNT == 2 && ACTION == 'curation_upload') {
 
         }
 
+        // This array stores the file extensions and file types and whether the file is to be saved using nID or saID.
+         $aFileTypes =
+         array(
+             'igv' => array('image' , 'nid'),
+             'ucsc' => array('image' , 'said'),   // this file is stored using the saID.
+             'confirmation' => array('image' , 'nid'),
+             'workfile' => array('excel' , 'nid'),
+         );
+
+
         if (!lovd_error()) {
 
             // DO NOT TRUST $_FILES['upfile']['mime'] VALUE !!
             $finfo = new finfo(FILEINFO_MIME_TYPE);
 
-
-            if ( $_POST['mode'] == "screenshot_IGV" || $_POST['mode'] == "screenshot_UCSC" || $_POST['mode'] == "screenshot_Confirmation" ) {
+            // check the file type received from POST and see if the file MIME type is correct, depending on the values in the aFileTypes array.
+            if ( $aFileTypes[$_POST['mode']][0] == 'image') {
                 if (false === $ext = array_search(
                     $finfo->file($_FILES['import']['tmp_name']),
                     array(
@@ -812,12 +807,10 @@ if (PATH_COUNT == 2 && ACTION == 'curation_upload') {
                     ),
                     true
                 )) {
-                 //   throw new RuntimeException('Invalid file format.');
                    lovd_errorAdd('import', 'Invalid file format. Expecting image type file.');
                 }
             }
-
-            elseif ( $_POST['mode'] == "excel"  ) {
+            elseif ( $aFileTypes[$_POST['mode']][0] == 'excel') {
                 if (false === $ext = array_search(
                     $finfo->file($_FILES['import']['tmp_name']),
                     array(
@@ -828,7 +821,6 @@ if (PATH_COUNT == 2 && ACTION == 'curation_upload') {
                     ),
                     true
                 )) {
-                 //   throw new RuntimeException('Invalid file format.');
                    lovd_errorAdd('import', 'Invalid file format. Expecting excel type file.');
                 }
             }
@@ -837,34 +829,51 @@ if (PATH_COUNT == 2 && ACTION == 'curation_upload') {
             }
 
             $sFileName = "";
-            // TODO MGHA - We should probably store these in an array and loop over that to rename the files, this would make it easier to add new files later. Also keep the file names to lowercase.
-            if ( $_POST['mode'] == "screenshot_IGV" ) {
-               $sFileName = $nID . '_IGV.' . $ext;
+
+            // Generate the new file name based on the file type and the ID to be used
+            // First, check if POST file type exists in the aFiletypes array
+            if ( $aFileTypes[$_POST['mode']] ) {
+                //
+                if ( $aFileTypes[$_POST['mode']][1] == 'nid') {
+                    $sFileName = $nID . '_' . $_POST['mode'];
+                }
+                elseif ($aFileTypes[$_POST['mode']][1] == 'said' ) {
+                    if ( empty($saID)) {
+                        lovd_errorAdd('import', 'Summary annotation ID required for this file type.');
+                    }
+                    else {
+                        $sFileName = $saID . '_' . $_POST['mode'];
+                    }
+                }
+                else {
+                    lovd_errorAdd('import', 'Error: could not generate file name - missing ID value.');
+                }
+
+            } else {
+               lovd_errorAdd('import', 'Error: File type not recognised');
             }
 
-            if ( $_POST['mode'] == "screenshot_Confirmation" ) {
-               $sFileName =  $nID . '_confirmation.' .$ext;
-            }
-
-            if ( $_POST['mode'] == "excel" ) {
-              $sFileName =  $nID . '_workfile.' . $ext;
-            }
-
-            if ( $_POST['mode'] == "screenshot_UCSC" ) {
-               $sFileName =  $saID . '_UCSC.' .$ext;
-            }
         }
 
-       if (!lovd_error()) {
-             $newFileName = $_INI['paths']['curation_files'] . '\\' . $sFileName;
-             // TODO MGHA - This file exists checks to see if this exact file already exists including the file extension but each mode allows for multipele file extensions so it allows uploading of multiple files (eg image.png, image.jpg) We might need to only check for the file name minus the extension or allow multiple file uploads per mode.
-            if(file_exists($newFileName) && empty($_POST['overwrite'])) {
+        if (!lovd_error()) {
+             $newFileName = $_INI['paths']['curation_files'] . '\\' . $sFileName . '.' . $ext;
+
+            // Check if file exists regardless of extension.
+            $aExistingFiles = glob($_INI['paths']['curation_files'] . '\\' . $sFileName . "*" );
+            if ( $aExistingFiles && empty($_POST['overwrite'] ))  {
+           // if(file_exists($newFileName) && empty($_POST['overwrite'])) {  // cant use file_exists function because it depends on the file extension, we want to search for a file regardless of extension.
                 lovd_showInfoTable('File already exists! Check file replace option if you wish to replace existing file.<BR>', 'warning', 600);
                 exit;
             }
 
-            if(file_exists($newFileName) && !empty($_POST['overwrite'])) {
-                rename($newFileName,$_INI['paths']['curation_files'] . '\\' . "_" . $sFileName . ".old" );   // prefix file name with "_" so GLOB search doesn't return these old files
+            // Rename existing file to the archived "old" file - only 1 archived file per file type. This code is assuming there is only a maximum of 1 existing files - which is the normal case. In a situation with more than 1 existing file, then only one of them will be renamed.
+            if( $aExistingFiles && !empty($_POST['overwrite'])) {
+                if ( false === rename( $aExistingFiles[0], $_INI['paths']['curation_files'] . '\\' . "_" . basename($aExistingFiles[0]) . ".old" )) {   // prefix existing file name with "_" so GLOB search doesn't return these old files when displaying list of viewable files.
+                         lovd_errorAdd('import', 'Failed to rename existing file. Cannot import new file.');
+                         lovd_errorPrint();
+                         $_T->printFooter();
+                         exit;
+                }
             }
 
             if (!move_uploaded_file(
@@ -875,17 +884,24 @@ if (PATH_COUNT == 2 && ACTION == 'curation_upload') {
                //     $ext
                // )
             )) {
-                   lovd_errorAdd('import', 'Failed to move uploaded file.');
-            }
-                // Write to log...
-                lovd_writeLog('Event', LOG_EVENT, 'File ' . $newFileName . ' uploaded for variant #' . $nID . ' - DBID: ' . $saID );
-
-                lovd_showInfoTable('File uploaded successfully.<BR>', 'success', 600);
-
+                lovd_errorAdd('import', 'Failed to move uploaded file.');
+                lovd_errorPrint();
                 $_T->printFooter();
-               // TODO MGHA - Can we set this popup to close after a few seconds and then refresh the variant VE to show the new file has bee uploaded. There should be heaps of examples of this already in LOVD+.
-              //  header('Refresh: 0; url=' . lovd_getInstallURL() . CURRENT_PATH . '?&variant_id=' . $nID . (isset($_GET['in_window'])? '&in_window' : ''));
                 exit;
+            }
+
+            // Write to log...
+            lovd_writeLog('Event', LOG_EVENT, 'File ' . $newFileName . ' uploaded for variant #' . $nID . ' - DBID: ' . $saID );
+
+            lovd_showInfoTable('File uploaded successfully.<BR>', 'success', 600);
+
+            $_T->printFooter();
+            //  Set this popup to close after a few seconds and then refresh the variant VE to show the new file has bee uploaded.
+            if (isset($_GET['in_window'])) {
+                // We're in a new window, refresh opener and close window.
+                print('      <SCRIPT type="text/javascript">setTimeout(\'opener.location.reload();self.close();\', 1000);</SCRIPT>' . "\n\n");
+            }
+            exit;
         }
         else {
 
