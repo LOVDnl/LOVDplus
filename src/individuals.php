@@ -302,7 +302,6 @@ if (PATH_COUNT >= 2 && ctype_digit($_PE[1]) && !ACTION && (PATH_COUNT == 2 || PA
       <DIV id="analyses">
         <TABLE id="analysesTable" border="0" cellpadding="0" cellspacing="0">
           <TR>');
-        $aAnalysisRunIDs = array();
         foreach ($zAnalyses as $key => $zAnalysis) {
             if (!$zAnalysis) {
                 // This is the separation between run and non-run filters.
@@ -332,7 +331,6 @@ if (PATH_COUNT >= 2 && ctype_digit($_PE[1]) && !ACTION && (PATH_COUNT == 2 || PA
                     $sAnalysisClassName = 'analysis_running analysis_half_run';
                 } else {
                     $sAnalysisClassName = 'analysis_run';
-                    $aAnalysisRunIDs[] = $zAnalysis['runid'];
                 }
             } else {
                 $sAnalysisClassName = 'analysis_not_run';
