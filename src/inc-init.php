@@ -898,6 +898,7 @@ if (LOVD_plus) {
             $_SETT['curation_status'] = array(
                 CUR_STATUS_VARIANT_OF_INTEREST => $_SETT['curation_status'][CUR_STATUS_VARIANT_OF_INTEREST],
                 CUR_STATUS_REQUIRES_CONFIRMATION => $_SETT['curation_status'][CUR_STATUS_REQUIRES_CONFIRMATION],
+                CUR_STATUS_CONFIRMED => $_SETT['curation_status'][CUR_STATUS_CONFIRMED],
             );
         }
     }
