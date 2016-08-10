@@ -589,7 +589,7 @@ if ($sCalcVersionFiles != $sCalcVersionDB) {
                          'CREATE TABLE IF NOT EXISTS ' . TABLE_SUMMARY_ANNOTATIONS . ' (id VARCHAR(50) NOT NULL, effectid TINYINT(1) UNSIGNED ZEROFILL, created_by SMALLINT(5) UNSIGNED ZEROFILL, created_date DATETIME NOT NULL, edited_by SMALLINT(5) UNSIGNED ZEROFILL, edited_date DATETIME, PRIMARY KEY (id), INDEX (effectid), INDEX (created_by), INDEX (edited_by), CONSTRAINT ' . TABLE_SUMMARY_ANNOTATIONS . '_fk_created_by FOREIGN KEY (created_by) REFERENCES ' . TABLE_USERS . ' (id) ON DELETE SET NULL ON UPDATE CASCADE, CONSTRAINT ' . TABLE_SUMMARY_ANNOTATIONS . '_fk_edited_by FOREIGN KEY (edited_by) REFERENCES ' . TABLE_USERS . ' (id) ON DELETE SET NULL ON UPDATE CASCADE) ENGINE=InnoDB, DEFAULT CHARACTER SET utf8',
                          'CREATE TABLE IF NOT EXISTS ' . TABLE_SUMMARY_ANNOTATIONS_REV . ' (id VARCHAR(50) NOT NULL, effectid TINYINT(1) UNSIGNED ZEROFILL, created_by SMALLINT(5) UNSIGNED ZEROFILL, created_date DATETIME NOT NULL, edited_by SMALLINT(5) UNSIGNED ZEROFILL, edited_date DATETIME, valid_from DATETIME NOT NULL, valid_to DATETIME NOT NULL DEFAULT "9999-12-31", deleted BOOLEAN NOT NULL, deleted_by SMALLINT(5) UNSIGNED ZEROFILL, reason TEXT, PRIMARY KEY (id, valid_from), INDEX (effectid), INDEX (created_by), INDEX (edited_by), INDEX (deleted_by), CONSTRAINT ' . TABLE_SUMMARY_ANNOTATIONS_REV . '_fk_created_by FOREIGN KEY (created_by) REFERENCES ' . TABLE_USERS . ' (id) ON DELETE SET NULL ON UPDATE CASCADE, CONSTRAINT ' . TABLE_SUMMARY_ANNOTATIONS_REV . '_fk_edited_by FOREIGN KEY (edited_by) REFERENCES ' . TABLE_USERS . ' (id) ON DELETE SET NULL ON UPDATE CASCADE, CONSTRAINT ' . TABLE_SUMMARY_ANNOTATIONS_REV . '_fk_deleted_by FOREIGN KEY (deleted_by) REFERENCES ' . TABLE_USERS . ' (id) ON DELETE SET NULL ON UPDATE CASCADE) ENGINE=InnoDB, DEFAULT CHARACTER SET utf8',
                          'CREATE TABLE IF NOT EXISTS ' . TABLE_CURATION_STATUS . ' (id TINYINT(2) UNSIGNED ZEROFILL NOT NULL, name VARCHAR(50) NOT NULL, PRIMARY KEY (id)) ENGINE=InnoDB, DEFAULT CHARACTER SET utf8', // We are inserting the curation status records below by using array merge to add them into this array.
-                         'ALTER TABLE ' . TABLE_VARIANTS . ' DROP COLUMN to_be_confirmed, ADD curation_statusid TINYINT(2) UNSIGNED NULL AFTER statusid, ADD INDEX (curation_statusid), ADD CONSTRAINT ' . TABLE_VARIANTS . '_fk_curation_statusid FOREIGN KEY (curation_statusid) REFERENCES ' . TABLE_CURATION_STATUS . ' (id) ON DELETE SET NULL ON UPDATE CASCADE',
+                         'ALTER TABLE ' . TABLE_VARIANTS . ' ADD COLUMN curation_statusid TINYINT(2) UNSIGNED NULL AFTER statusid, ADD INDEX (curation_statusid), ADD CONSTRAINT ' . TABLE_VARIANTS . '_fk_curation_statusid FOREIGN KEY (curation_statusid) REFERENCES ' . TABLE_CURATION_STATUS . ' (id) ON DELETE SET NULL ON UPDATE CASCADE',
                      ),
              );
 
@@ -684,14 +684,21 @@ if ($sCalcVersionFiles != $sCalcVersionDB) {
     if (LOVD_plus && $sCalcVersionDB < lovd_calculateVersion('3.0-12u')) {
         // Insert the curation status records.
         $aCurationStatusSQL = array();
-        foreach ($_SETT['curation_status'] as $nStatus => $sStatus) { // TODO AM Do we need to check before inserting these records in case they already exist? In theory they shouldn't exist before now unless we have been manually changing the version back and forth.
-            $aCurationStatusSQL[] = 'INSERT INTO ' . TABLE_CURATION_STATUS . ' VALUES (' . $nStatus . ', "' . $sStatus . '")';
+        foreach ($_SETT['curation_status'] as $nStatus => $sStatus) {
+            $aCurationStatusSQL[] = 'INSERT IGNORE INTO ' . TABLE_CURATION_STATUS . ' VALUES (' . $nStatus . ', "' . $sStatus . '")';
         }
         // Remove the shared columns for the VOT.
         $aUpdates['3.0-12u'] = (!isset($aUpdates['3.0-12u'])? array() : $aUpdates['3.0-12u']);
         $aUpdates['3.0-12u'][] = 'DELETE FROM ' . TABLE_SHARED_COLS . ' WHERE colid LIKE "VariantOnTranscript/%"';
         $aUpdates['3.0-12u'] = array_merge($aUpdates['3.0-12u'],$aCurationStatusSQL);
+        // Finish the updates that can only be done now that these are run...
+        $aUpdates['3.0-12u'][] = 'UPDATE ' . TABLE_VARIANTS . ' SET curation_statusid = ' . CUR_STATUS_REQUIRES_CONFIRMATION . ' WHERE to_be_confirmed = 1';
+        $aUpdates['3.0-12u'][] = 'ALTER TABLE ' . TABLE_VARIANTS . ' DROP COLUMN to_be_confirmed';
     }
+
+
+
+
 
     // To make sure we upgrade the database correctly, we add the current version to the list...
     if (!isset($aUpdates[$_SETT['system']['version']])) {
