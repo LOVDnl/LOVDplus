@@ -639,13 +639,15 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && !ACTION) {
     print('</TR></TD></TABLE>');
     print('</FORM><br>' . "\n\n");
 
+    $curationFilesPath = $_INI['paths']['curation_files'];
+
     // Search for curations files and display links to files if they exist in the curation files directory. This uses the glob php function to perform search.
     foreach ( $aFileTypes as $sFileType => $sFileDesc) {
-        foreach (glob($_INI['paths']['curation_files'] . "\\" . $nID . "_" . $sFileType . ".*", GLOB_BRACE) as $sFileName) {
+        foreach (glob($curationFilesPath . "\\" . $nID . "_" . $sFileType . ".*", GLOB_BRACE) as $sFileName) {
               print(' <a href="' . lovd_getInstallURL() . $sFileName . '"  target="_BLANK">view ' . $sFileDesc . '</a><br>');
         }
         if ( !empty($sSummaryAnnotationsID)) {
-           foreach (glob($_INI['paths']['curation_files'] . "\\" . $sSummaryAnnotationsID . "_" . $sFileType . ".*", GLOB_BRACE) as $sFileName) {
+           foreach (glob($curationFilesPath . "\\" . $sSummaryAnnotationsID . "_" . $sFileType . ".*", GLOB_BRACE) as $sFileName) {
               print(' <a href="' . lovd_getInstallURL() . $sFileName . '"  target="_BLANK">view ' . $sFileDesc . '</a><br>');
            }
         }
@@ -795,11 +797,11 @@ if (PATH_COUNT == 2 && ACTION == 'curation_upload') {
 
             // DO NOT TRUST $_FILES['upfile']['mime'] VALUE !!
             $finfo = new finfo(FILEINFO_MIME_TYPE);
-
+            $importFile = $_FILES['import']['tmp_name'];
             // check the file type received from POST and see if the file MIME type is correct, depending on the values in the aFileTypes array.
             if ( $aFileTypes[$_POST['mode']][0] == 'image') {
                 if (false === $ext = array_search(
-                    $finfo->file($_FILES['import']['tmp_name']),
+                    $finfo->file($importFile),
                     array(
                         'jpg' => 'image/jpeg',
                         'png' => 'image/png',
@@ -812,12 +814,12 @@ if (PATH_COUNT == 2 && ACTION == 'curation_upload') {
             }
             elseif ( $aFileTypes[$_POST['mode']][0] == 'excel') {
                 if (false === $ext = array_search(
-                    $finfo->file($_FILES['import']['tmp_name']),
+                    $finfo->file($importFile),
                     array(
-                       'xls' => 'application/vnd.ms-excel',
                        'xlsx' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-                       'xlsx' => 'application/vnd.ms-excel',
-                       'txt' => 'text/plain',
+                       'xls' => 'application/vnd.ms-excel',
+                   //    'xlsx' => 'application/vnd.ms-excel',
+                   //    'txt' => 'text/plain',
                     ),
                     true
                 )) {
@@ -856,10 +858,11 @@ if (PATH_COUNT == 2 && ACTION == 'curation_upload') {
         }
 
         if (!lovd_error()) {
-             $newFileName = $_INI['paths']['curation_files'] . '\\' . $sFileName . '.' . $ext;
+             $curationFilesPath = $_INI['paths']['curation_files'];
+             $newFileName = $curationFilesPath . '\\' . $sFileName . '.' . $ext;
 
             // Check if file exists regardless of extension.
-            $aExistingFiles = glob($_INI['paths']['curation_files'] . '\\' . $sFileName . "*" );
+            $aExistingFiles = glob($curationFilesPath . '\\' . $sFileName . "*" );
             if ( $aExistingFiles && empty($_POST['overwrite'] ))  {
            // if(file_exists($newFileName) && empty($_POST['overwrite'])) {  // cant use file_exists function because it depends on the file extension, we want to search for a file regardless of extension.
                 lovd_showInfoTable('File already exists! Check file replace option if you wish to replace existing file.<BR>', 'warning', 600);
@@ -868,7 +871,7 @@ if (PATH_COUNT == 2 && ACTION == 'curation_upload') {
 
             // Rename existing file to the archived "old" file - only 1 archived file per file type. This code is assuming there is only a maximum of 1 existing files - which is the normal case. In a situation with more than 1 existing file, then only one of them will be renamed.
             if( $aExistingFiles && !empty($_POST['overwrite'])) {
-                if ( false === rename( $aExistingFiles[0], $_INI['paths']['curation_files'] . '\\' . "_" . basename($aExistingFiles[0]) . ".old" )) {   // prefix existing file name with "_" so GLOB search doesn't return these old files when displaying list of viewable files.
+                if ( false === rename( $aExistingFiles[0], $curationFilesPath . '\\' . "_" . basename($aExistingFiles[0]) . ".old" )) {   // prefix existing file name with "_" so GLOB search doesn't return these old files when displaying list of viewable files.
                          lovd_errorAdd('import', 'Failed to rename existing file. Cannot import new file.');
                          lovd_errorPrint();
                          $_T->printFooter();
@@ -877,7 +880,7 @@ if (PATH_COUNT == 2 && ACTION == 'curation_upload') {
             }
 
             if (!move_uploaded_file(
-                $_FILES['import']['tmp_name'],
+                $importFile,
                 $newFileName
                // sprintf('c:/%s.%s',
                //     sha1_file($_FILES['import']['tmp_name']),
