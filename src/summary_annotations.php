@@ -62,7 +62,6 @@ if (PATH_COUNT == 2 && ACTION == 'edit') {
     require ROOT_PATH . 'inc-lib-form.php';
     if (!empty($_POST)) {
         lovd_errorClean();
-        lovd_authorizeByPassword($_POST);
 
         $_DATA->checkFields($_POST, $zData);
         if (!lovd_error()) {
@@ -120,7 +119,6 @@ if (PATH_COUNT == 2 && ACTION == 'edit') {
     $aForm = array_merge(
         $_DATA->getForm(),
         array(
-            array('Enter your password for authorization', '', 'password', 'password', 20),
             array('', '', 'submit', 'Edit summary annotation entry'),
         ));
     lovd_viewForm($aForm);
