@@ -35,6 +35,27 @@ if (!defined('ROOT_PATH')) {
     require ROOT_PATH . 'inc-init.php';
 }
 
+require ROOT_PATH . 'inc-lib-columns.php';
+
+function lovd_getActivateCustomColumnQuery($aValues) {
+    $sColId = stripslashes(trim($aValues[0], ' "'));
+    $sColType = stripslashes(trim($aValues[10], ' "'));
+
+    list($sCategory) = explode('/', $sColId);
+    $aTableInfo = lovd_getTableInfoByCategory($sCategory);
+
+    $aSql = array(
+        'INSERT INTO ' . TABLE_ACTIVE_COLS . ' VALUES ("' . $sColId . '", "00000", NOW())',
+        'ALTER TABLE ' . $aTableInfo['table_sql'] . ' ADD COLUMN `' . $sColId . '` ' . $sColType
+    );
+
+    if (!empty($aTableInfo['table_sql_rev'])) {
+        $aSql[] = 'ALTER TABLE ' . $aTableInfo['table_sql_rev'] . ' ADD COLUMN `' . $sColId . '` ' . $sColType;
+    }
+    
+    return $aSql;
+}
+
 $aColSQL =
          array(
                 //                                       COL ID,                                   ORDER,WIDTH,HGVS,STND,MAND.,TITLE,             FORM DESCRIPTION,                                                                                                               SHORT LEGEND,                                                                                        FULL LEGEND,                                                                                                                                                                                                                                                                                       MYSQL          FORM DEFINITION                                                                                                                                                                                                         SELECT OPTIONS, REGEXP,                                 PUBLIC (VIEW,ADD), COUNT?, CREATED_BY, CREATED DATE, EDITED BY, EDITED DATE.
@@ -86,6 +107,8 @@ $aColSQL =
                 'INSERT INTO ' . TABLE_COLS . ' VALUES ("VariantOnTranscript/Protein",                  7, 200, 1, 1, 1, "Protein",              "", "Description of variant at protein level (following HGVS recommendations).", "Description of variant at protein level (following HGVS recommendations).<BR>\r\n<UL style=\"margin-top : 0px;\">\r\n  <LI>p.(Arg345Pro) = change predicted from DNA (RNA not analysed)</LI>\r\n  <LI>p.Arg345Pro = change derived from RNA analysis</LI>\r\n  <LI>p.? = unknown effect</LI>\r\n  <LI>p.0? = probably no protein produced</LI>\r\n</UL>", "VARCHAR(100)", "Protein change (HGVS format)|Description of variant at protein level (following HGVS recommendations); e.g. p.(Arg345Pro) = change predicted from DNA (RNA not analysed), p.Arg345Pro = change derived from RNA analysis, p.0 (no protein produced), p.? (unknown effect).|text|30", "", "", 1, 1, 1, 0, NOW(), NULL, NULL)',
                 'INSERT INTO ' . TABLE_COLS . ' VALUES ("VariantOnTranscript/Published_as",             4, 200, 0, 0, 0, "Published as",         "Variant as originally reported (e.g. 521delT); provide only when different from \"DNA change\".", "Variant as originally reported (e.g. 521delT); listed only when different from \"DNA change\". Variants seen in animal models, tested in vitro, predicted from RNA analysis, etc. are described between brackets like c.(456C>G).", "Variant as originally reported (e.g. 521delT); listed only when different from \"DNA change\". Variants seen in animal models, tested in vitro, predicted from RNA analysis, etc. are described between brackets like c.(456C>G).", "VARCHAR(100)", "Published as|Variants seen in animal models, tested in vitro, predicted from RNA analysis, etc. are described between brackets like c.(456C>G).|text|30", "", "", 1, 1, 1, 0, NOW(), NULL, NULL)',
                 'INSERT INTO ' . TABLE_COLS . ' VALUES ("VariantOnTranscript/RNA",                      6, 200, 1, 1, 1, "RNA change",           "", "Description of variant at RNA level (following HGVS recommendations).", "Description of variant at RNA level (following HGVS recommendations).<BR>\r\n<UL style=\"margin-top : 0px;\">\r\n  <LI>r.123c>u</LI>\r\n  <LI>r.? = unknown</LI>\r\n  <LI>r.(?) = RNA not analysed but probably transcribed copy of DNA variant</LI>\r\n  <LI>r.spl? = RNA not analysed but variant probably affects splicing</LI>\r\n  <LI>r.(spl?) = RNA not analysed but variant may affect splicing</LI>\r\n  <LI>r.0? = change expected to abolish transcription</LI>\r\n</UL>", "VARCHAR(100)", "RNA change (HGVS format)|Description of variant at RNA level (following HGVS recommendations); e.g. r.123c>u, r.? = unknown, r.(?) = RNA not analysed but probably transcribed copy of DNA variant, r.spl? = RNA not analysed but variant probably affects splicing, r.(spl?) = RNA not analysed but variant may affect splicing.|text|30", "", "", 1, 1, 1, 0, NOW(), NULL, NULL)',
+
+
               );
 
 if (LOVD_plus) {
@@ -142,6 +165,9 @@ if (LOVD_plus) {
             'INSERT INTO ' . TABLE_COLS . ' VALUES ("VariantOnTranscript/Prediction/MutationTaster/Score",  255, 100, 0, 1, 0, "MutationTaster score", "", "MutationTaster score.", "The MutationTaster score, predicting the effect of the DNA variant on the function of the protein.", "FLOAT", "MutationTaster score||text|6", "", "", 0, 0, 1, 0, NOW(), NULL, NULL)',
             'INSERT INTO ' . TABLE_COLS . ' VALUES ("VariantOnTranscript/Prediction/SIFT",                  255, 100, 0, 1, 0, "SIFT score", "", "SIFT score.", "The SIFT score, predicting the effect of the DNA variant on the function of the protein.", "VARCHAR(50)", "SIFT score||text|6", "", "", 0, 0, 1, 0, NOW(), NULL, NULL)',
             'INSERT INTO ' . TABLE_COLS . ' VALUES ("VariantOnTranscript/Prediction/Grantham",              255, 100, 0, 1, 0, "Grantham score", "", "Grantham score.", "The Grantham score, predicting the effect of the DNA variant on the function of the protein.", "TINYINT UNSIGNED", "Grantham score||text|6", "", "", 0, 0, 1, 0, NOW(), NULL, NULL)',
+            'INSERT INTO ' . TABLE_COLS . ' VALUES ("SummaryAnnotation/Remarks",                             10, 200, 0, 1, 0, "Variant remarks",                               "Remarks regarding the variant described, e.g. germline mosaicism in mother, 345 kb deletion, muscle RNA analysed, not in 200 control chromosomes tested, on founder haplotype, etc.", "Remarks regarding the variant described.", "Remarks regarding the variant described, e.g. germline mosaicism in mother, 345 kb deletion, muscle RNA analysed, not in 200 control chromosomes tested, on founder haplotype, etc.", "TEXT", "Remarks||textarea|50|3", "", "", 0, 0, 1, 0, NOW(), NULL, NULL)',
+            'INSERT INTO ' . TABLE_COLS . ' VALUES ("SummaryAnnotation/Curation/Interpretation",            255, 200, 0, 1, 0, "Interpretation", "", "Interpretation of variant for reporting", "Interpretation of variant for reporting", "TEXT", "Interpretation||textarea|40|4", "", "", 0, 0, 1, 0, NOW(), NULL, NULL)',
+
         ));
 
     if ($_INI['instance']['name'] == 'leiden') {
