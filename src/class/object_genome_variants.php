@@ -54,7 +54,7 @@ class LOVD_GenomeVariant extends LOVD_Custom {
     function __construct ()
     {
         // Default constructor.
-        global $_AUTH, $_INI;
+        global $_AUTH, $_INI, $_SETT;
 
         // SQL code for loading an entry for an edit form.
         // FIXME; change owner to owned_by_ in the load entry query below.
@@ -86,7 +86,7 @@ class LOVD_GenomeVariant extends LOVD_Custom {
                                            'LEFT OUTER JOIN ' . TABLE_USERS . ' AS uc ON (vog.created_by = uc.id) ' .
                                            'LEFT OUTER JOIN ' . TABLE_USERS . ' AS ue ON (vog.edited_by = ue.id) ' .
                                            'LEFT OUTER JOIN ' . TABLE_CURATION_STATUS . ' AS cs ON (vog.curation_statusid = cs.id)' .
-                                           'LEFT OUTER JOIN ' . TABLE_LOGS . ' AS l ON (l.event = "CurationStatus" AND l.log LIKE CONCAT(\'%variant #\', vog.id, \' to "Confirmed".\'))';
+                                           'LEFT OUTER JOIN ' . TABLE_LOGS . ' AS l ON (l.event = "CurationStatus" AND l.log LIKE CONCAT(\'%#\', vog.id, \' to "' . $_SETT['curation_status'][CUR_STATUS_CONFIRMED] . '"%\'))';
         $this->aSQLViewEntry['GROUP_BY'] = 'vog.id';
 
         // SQL code for viewing the list of variants

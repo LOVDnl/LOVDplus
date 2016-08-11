@@ -303,13 +303,13 @@ if (PATH_COUNT >= 2 && ctype_digit($_PE[1]) && !ACTION && (PATH_COUNT == 2 || PA
                                                            FROM ' . TABLE_ANALYSES_RUN . ' AS ar
                                                            WHERE ar.screeningid = ? AND ar.modified = 0) ORDER BY a.sortid, a.id', array($nScreeningToAnalyze))->fetchAllAssoc();
         $zAnalyses = array_merge($zAnalysesRun, array(''), $zAnalysesNotRun);
+        // Fetch all (numeric) variant IDs of all variants that have a curation status. They will be shown by default, when no analysis has been selected yet.
         $aScreeningVariantIDs = $_DB->query('SELECT CAST(s2v.variantid AS UNSIGNED) FROM ' . TABLE_SCR2VAR . ' s2v INNER JOIN ' . TABLE_VARIANTS . ' AS vog ON (s2v.variantid = vog.id) WHERE s2v.screeningid = ? AND vog.curation_statusid IS NOT NULL', array($nScreeningToAnalyze))->fetchAllColumn();
         require ROOT_PATH . 'inc-lib-analyses.php';
         print('
       <DIV id="analyses">
         <TABLE id="analysesTable" border="0" cellpadding="0" cellspacing="0">
           <TR>');
-        $aAnalysisRunIDs = array();
         foreach ($zAnalyses as $key => $zAnalysis) {
             if (!$zAnalysis) {
                 // This is the separation between run and non-run filters.
@@ -339,7 +339,6 @@ if (PATH_COUNT >= 2 && ctype_digit($_PE[1]) && !ACTION && (PATH_COUNT == 2 || PA
                     $sAnalysisClassName = 'analysis_running analysis_half_run';
                 } else {
                     $sAnalysisClassName = 'analysis_run';
-                    $aAnalysisRunIDs[] = $zAnalysis['runid'];
                 }
             } else {
                 $sAnalysisClassName = 'analysis_not_run';
@@ -437,7 +436,7 @@ if (PATH_COUNT >= 2 && ctype_digit($_PE[1]) && !ACTION && (PATH_COUNT == 2 || PA
       <SCRIPT type="text/javascript">
         function lovd_AJAX_viewEntryLoad () {
           $.get(\'ajax/viewentry.php\', {object: \'ScreeningMOD\', id: \'' . $nScreeningToAnalyze . '\'},
-            function(sData) {
+            function (sData) {
               if (sData.length > 2) {
                 $(\'#screeningViewEntry\').html(\'\n\' + sData);
               }
@@ -446,16 +445,11 @@ if (PATH_COUNT >= 2 && ctype_digit($_PE[1]) && !ACTION && (PATH_COUNT == 2 || PA
       </SCRIPT>
 
 
-      <DIV id="analysis_results_VL"' . ($_INI['instance']['name'] == 'mgha' && $aScreeningVariantIDs ? '' : ' style="display: none;"') . '>' . "\n");
-        $_GET['search_runid'] = '0'; // Will for sure not return anything.
-        $_GET['search_vog_effect'] = ''; // Needs other search term to show the VL framework, though (saying "No results have been found that match your criteria").
-
-        if ($_INI['instance']['name'] == 'mgha') {
-            // The default behaviour for MGHA is to show a viewlist with any variants that have a curation status.
-            $_GET['search_vog_effect'] = ''; // Don't hide any variants based on the effect.
-            $_GET['search_runid'] = ''; // We are not using the run id to limit the variants as some variants may not be in a run.
-            $_GET['search_variantid'] = (!$aScreeningVariantIDs ? '0' : implode($aScreeningVariantIDs,'|')); // Use all the variant IDs for variants with a curation status.
-        }
+      <DIV id="analysis_results_VL"' . ($aScreeningVariantIDs ? '' : ' style="display: none;"') . '>' . "\n");
+        // The default behaviour is to show a viewlist with any variants that have a curation status.
+        $_GET['search_variantid'] = (!$aScreeningVariantIDs ? '0' : implode($aScreeningVariantIDs, '|')); // Use all the variant IDs for variants with a curation status.
+        $_GET['search_vog_effect'] = ''; // Needs search term on visible column to show the VL framework, though (saying "No results have been found that match your criteria").
+        $_GET['search_runid'] = ''; // To create the input field, that the JS code is referring to, so we can switch to viewing analysis results.
 
         require ROOT_PATH . 'class/object_custom_viewlists.mod.php';
         // VOG needs to be first, so it groups by the VOG ID.
@@ -473,13 +467,14 @@ if (PATH_COUNT >= 2 && ctype_digit($_PE[1]) && !ACTION && (PATH_COUNT == 2 || PA
             }
         }
         print('      <UL id="viewlistMenu_CustomVL_AnalysisRunResults_for_I_VE" class="jeegoocontext jeegooviewlist">' . "\n");
-        if (LOVD_plus && $_INI['instance']['name'] != 'mgha') {
+        if ($_INI['instance']['name'] != 'mgha') {
             // Show the options to set variant effect from the viewlist.
             foreach ($_SETT['var_effect'] as $nEffectID => $sEffect) {
                 print('        <LI class="icon"><A click="lovd_AJAX_viewListSubmit(\'CustomVL_AnalysisRunResults_for_I_VE\', function(){$.get(\'ajax/set_variant_effect.php?' . $nEffectID . '&id=selected\', function(sResponse){if(sResponse.substring(0,1) == \'1\'){alert(\'Successfully set reported variant effect of \' + sResponse.substring(2) + \' variants to \\\'' . $sEffect . '\\\'.\');lovd_AJAX_viewListSubmit(\'CustomVL_AnalysisRunResults_for_I_VE\');}else if(sResponse.substring(0,1) == \'9\'){alert(\'Error: \' + sResponse.substring(2));}}).error(function(){alert(\'Error while setting variant effect.\');});});"><SPAN class="icon" style="background-image: url(gfx/menu_edit.png);"></SPAN>Set variant effect to "' . $sEffect . '"</A></LI>' . "\n");
             }
         }
         if ($bCurationStatus) {
+            // Links for setting the curation statuses, in a submenu.
             print('        <LI class="icon"><SPAN class="icon" style="background-image: url(gfx/menu_edit.png);"></SPAN>Set curation status' . "\n" . '          <UL>' . "\n");
             foreach ($_SETT['curation_status'] as $nCurationStatusID => $sCurationStatus) {
                 print('            <LI class="icon"><A click="lovd_AJAX_viewListSubmit(\'CustomVL_AnalysisRunResults_for_I_VE\', function(){$.get(\'ajax/set_curation_status.php?' . $nCurationStatusID . '&id=selected\', function(sResponse){if(sResponse.substring(0,1) == \'1\'){alert(\'Successfully set curation status of \' + sResponse.substring(2) + \' variants to \\\'' . $sCurationStatus . '\\\'.\');lovd_AJAX_viewListSubmit(\'CustomVL_AnalysisRunResults_for_I_VE\');lovd_AJAX_viewEntryLoad();}else if(sResponse.substring(0,1) == \'9\'){alert(\'Error: \' + sResponse.substring(2));}}).error(function(){alert(\'Error while setting curation status.\');});});"><SPAN class="icon" style="background-image: url(gfx/menu_edit.png);"></SPAN>' . $sCurationStatus . '</A></LI>' . "\n");
