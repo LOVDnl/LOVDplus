@@ -269,9 +269,7 @@ class LOVD_Object {
 
             if ($sName == 'password') {
                 // Password is in the form, it must be checked. Assuming here that it is also considered mandatory.
-                if (!empty($aData['password']) && !lovd_verifyPassword($aData['password'], $_AUTH['password'])) {
-                    lovd_errorAdd('password', 'Please enter your correct password for authorization.');
-                }
+                lovd_authorizeByPassword();
             }
         }
         return $aData;
