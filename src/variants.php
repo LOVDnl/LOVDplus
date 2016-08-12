@@ -40,6 +40,32 @@ if ($_AUTH) {
     require ROOT_PATH . 'inc-upgrade.php';
 }
 
+
+
+
+
+
+if ($_PE[0] == 'curation_files') {
+    // Let user download curation files if they are logged in
+    if (ACTION == md5($_AUTH['phpsessid'])) {
+        $sCurationFilesPath =  $_INI['paths']['curation_files'];
+        $sFileName = explode('?', basename($_SERVER['REQUEST_URI']))[0];
+        $sAbsoluteFileName = realpath($sCurationFilesPath . '/' . $sFileName);
+
+        header('Content-Description: File Transfer');
+        header('Content-Type: application/octet-stream');
+        header('Content-Disposition: attachment; filename=' . $sFileName);
+        header('Content-Length: ' . filesize($sAbsoluteFileName));
+        readfile($sAbsoluteFileName);
+    } else {
+        header('Location: ' . lovd_getInstallURL());
+    }
+}
+
+
+
+
+
 // DIAGNOSTICS: AUTO LOAD VARIANT FILES.
 // Autoload is random string, just an extra requirement, since we're giving away Manager authorization here...
 if (PATH_COUNT == 2 && $_PE[1] == 'upload' && ACTION == 'create' && isset($_GET['autoload']) && $_GET['autoload'] == 'auth9hj9@U' && FORMAT == 'text/plain') {
@@ -625,7 +651,7 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && !ACTION) {
 
     require ROOT_PATH . 'inc-lib-form.php';
     print('      <br><FORM action="' . CURRENT_PATH . '?' . 'curation_upload&said=' . (empty($sSummaryAnnotationsID) ? '' : $sSummaryAnnotationsID) . '&in_window" onSubmit="popUp(this)" method="post" enctype="multipart/form-data">' . "\n" .
-    ' <TABLE border="0" cellpadding="10" cellspacing="1"  class="data"  style="font-size : 13px;" ><TR> <TH style="font-size : 13px;">Curation files</TH> </TR><TD style="font-size : 13px;">' . "\n");
+    ' <TABLE border="0" cellpadding="10" cellspacing="1"  class="data"  style="font-size : 13px;" ><TR> <TH style="font-size : 13px;">Upload curation files</TH> </TR><TD style="font-size : 13px;">' . "\n");
 
     $aForm =
         array(
@@ -639,16 +665,19 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && !ACTION) {
     print('</TR></TD></TABLE>');
     print('</FORM><br>' . "\n\n");
 
-    $curationFilesPath = $_INI['paths']['curation_files'];
+    $sCurationFilesPath = $_INI['paths']['curation_files'];
 
     // Search for curations files and display links to files if they exist in the curation files directory. This uses the glob php function to perform search.
+    print('<H3>Existing curation files</H3>');
     foreach ( $aFileTypes as $sFileType => $sFileDesc) {
-        foreach (glob($curationFilesPath . "\\" . $nID . "_" . $sFileType . ".*", GLOB_BRACE) as $sFileName) {
-              print(' <a href="' . lovd_getInstallURL() . $sFileName . '"  target="_BLANK">view ' . $sFileDesc . '</a><br>');
+        foreach (glob($sCurationFilesPath . "/" . $nID . "_" . $sFileType . ".*", GLOB_BRACE) as $sFileName) {
+            $sFileUrl = lovd_getInstallURL() . 'curation_files/' . basename($sFileName) . '?' . md5($_AUTH['phpsessid']);
+            print(' <a href="' . $sFileUrl . '"  target="_BLANK">Download ' . $sFileDesc . '</a> '. date('d-m-Y H:i:s', filemtime($sFileName)) .' <br/>');
         }
         if ( !empty($sSummaryAnnotationsID)) {
-           foreach (glob($curationFilesPath . "\\" . $sSummaryAnnotationsID . "_" . $sFileType . ".*", GLOB_BRACE) as $sFileName) {
-              print(' <a href="' . lovd_getInstallURL() . $sFileName . '"  target="_BLANK">view ' . $sFileDesc . '</a><br>');
+           foreach (glob($sCurationFilesPath . "/" . $sSummaryAnnotationsID . "_" . $sFileType . ".*", GLOB_BRACE) as $sFileName) {
+              $sFileUrl = lovd_getInstallURL() . 'curation_files/' . basename($sFileName) . '?' . md5($_AUTH['phpsessid']);
+              print(' <a href="' . $sFileUrl . '"  target="_BLANK">Download ' . $sFileDesc . '</a>'. date('d-m-Y H:i:s', filemtime($sFileName)) .'<br/>');
            }
         }
     }
@@ -858,20 +887,19 @@ if (PATH_COUNT == 2 && ACTION == 'curation_upload') {
         }
 
         if (!lovd_error()) {
-             $curationFilesPath = $_INI['paths']['curation_files'];
-             $newFileName = $curationFilesPath . '\\' . $sFileName . '.' . $ext;
+             $sCurationFilesPath = $_INI['paths']['curation_files'];
+             $sNewFileName = $sCurationFilesPath . '/' . $sFileName . '.' . $ext;
 
             // Check if file exists regardless of extension.
-            $aExistingFiles = glob($curationFilesPath . '\\' . $sFileName . "*" );
+            $aExistingFiles = glob($sCurationFilesPath . '/' . $sFileName . "*" );
             if ( $aExistingFiles && empty($_POST['overwrite'] ))  {
-           // if(file_exists($newFileName) && empty($_POST['overwrite'])) {  // cant use file_exists function because it depends on the file extension, we want to search for a file regardless of extension.
                 lovd_showInfoTable('File already exists! Check file replace option if you wish to replace existing file.<BR>', 'warning', 600);
                 exit;
             }
 
             // Rename existing file to the archived "old" file - only 1 archived file per file type. This code is assuming there is only a maximum of 1 existing files - which is the normal case. In a situation with more than 1 existing file, then only one of them will be renamed.
             if( $aExistingFiles && !empty($_POST['overwrite'])) {
-                if ( false === rename( $aExistingFiles[0], $curationFilesPath . '\\' . "_" . basename($aExistingFiles[0]) . ".old" )) {   // prefix existing file name with "_" so GLOB search doesn't return these old files when displaying list of viewable files.
+                if ( false === rename( $aExistingFiles[0], $sCurationFilesPath . '/' . "_" . basename($aExistingFiles[0]) . ".old" )) {   // prefix existing file name with "_" so GLOB search doesn't return these old files when displaying list of viewable files.
                          lovd_errorAdd('import', 'Failed to rename existing file. Cannot import new file.');
                          lovd_errorPrint();
                          $_T->printFooter();
@@ -879,22 +907,15 @@ if (PATH_COUNT == 2 && ACTION == 'curation_upload') {
                 }
             }
 
-            if (!move_uploaded_file(
-                $importFile,
-                $newFileName
-               // sprintf('c:/%s.%s',
-               //     sha1_file($_FILES['import']['tmp_name']),
-               //     $ext
-               // )
-            )) {
+            if (!move_uploaded_file($importFile, $sNewFileName)) {
                 lovd_errorAdd('import', 'Failed to move uploaded file.');
                 lovd_errorPrint();
                 $_T->printFooter();
                 exit;
             }
 
-            // Write to log...
-            lovd_writeLog('Event', LOG_EVENT, 'File ' . $newFileName . ' uploaded for variant #' . $nID . ' - DBID: ' . $saID );
+            // Write to log.
+            lovd_writeLog('Event', LOG_EVENT, 'File ' . $sNewFileName . ' uploaded for variant #' . $nID . ' - DBID: ' . $saID );
 
             lovd_showInfoTable('File uploaded successfully.<BR>', 'success', 600);
 
