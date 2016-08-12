@@ -103,6 +103,7 @@ define('CUR_STATUS_PROPOSED', 50); // A curator has completed the curation proce
 define('CUR_STATUS_CURATED_REPORTABLE', 70); // A final classification has been determined and this variant is to appear on a report. The curation process is now finished.
 define('CUR_STATUS_CURATED_NOT_REPORTABLE', 80); // A final classification has been determined but this variant is not to appear on a report. The curation process is now finished.
 define('CUR_STATUS_NOT_FOR_CURATION', 90); // A curator has determined that this variant does not require curation and no further action will be taken on this variant.
+define('CUR_STATUS_ARTEFACT', 91); // A curator has determined that this variant does not exist as a result of a sequencing error.
 
 define('AJAX_FALSE', '0');
 define('AJAX_TRUE', '1');
@@ -173,14 +174,14 @@ $_SETT = array(
                           ),
                 'var_effect' =>
                      array(
-                            0 => 'Artefact',
+                            0 => 'Not curated',
                             5 => 'VUS',
                             9 => 'Pathogenic',
                             7 => 'Likely pathogenic',
                             3 => 'Likely benign',
                             1 => 'Benign',
                           ),
-                'var_effect_default' => '55',
+                'var_effect_default' => '00',
                 'data_status' =>
                      array(
                             STATUS_IN_PROGRESS => 'In progress',
@@ -193,6 +194,7 @@ $_SETT = array(
                      array(
                             CUR_STATUS_VARIANT_OF_INTEREST => 'Variant of Interest',
                             CUR_STATUS_NOT_FOR_CURATION => 'Not for Curation',
+                            CUR_STATUS_ARTEFACT => 'Artefact',
                             CUR_STATUS_FOR_CURATION => 'For Curation',
                             CUR_STATUS_REQUIRES_CONFIRMATION => 'Requires Confirmation',
                             CUR_STATUS_CONFIRMED => 'Confirmed',
@@ -899,6 +901,7 @@ if (LOVD_plus) {
                 CUR_STATUS_VARIANT_OF_INTEREST => $_SETT['curation_status'][CUR_STATUS_VARIANT_OF_INTEREST],
                 CUR_STATUS_REQUIRES_CONFIRMATION => $_SETT['curation_status'][CUR_STATUS_REQUIRES_CONFIRMATION],
                 CUR_STATUS_CONFIRMED => $_SETT['curation_status'][CUR_STATUS_CONFIRMED],
+                CUR_STATUS_ARTEFACT => $_SETT['curation_status'][CUR_STATUS_ARTEFACT],
             );
         }
     }
