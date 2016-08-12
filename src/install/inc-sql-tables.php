@@ -244,6 +244,13 @@ $aTableSQL =
     PRIMARY KEY (id))
     ' . $sSettings
 
+         , 'TABLE_CONFIRMATION_STATUS' =>
+   'CREATE TABLE ' . TABLE_CONFIRMATION_STATUS . ' (
+    id TINYINT(1) UNSIGNED NOT NULL,
+    name VARCHAR(50) NOT NULL,
+    PRIMARY KEY (id))
+    ' . $sSettings
+
          , 'TABLE_ANALYSIS_STATUS' =>
          'CREATE TABLE ' . TABLE_ANALYSIS_STATUS . ' (
     id TINYINT(1) UNSIGNED NOT NULL,
@@ -346,6 +353,7 @@ $aTableSQL =
     owned_by SMALLINT(5) UNSIGNED ZEROFILL,
     statusid TINYINT(1) UNSIGNED,
     curation_statusid TINYINT(2) UNSIGNED NULL,
+    confirmation_statusid TINYINT(1) UNSIGNED NULL DEFAULT 0,
     created_by SMALLINT(5) UNSIGNED ZEROFILL,
     created_date DATETIME NOT NULL,
     edited_by SMALLINT(5) UNSIGNED ZEROFILL,
@@ -358,6 +366,7 @@ $aTableSQL =
     INDEX (owned_by),
     INDEX (statusid),
     INDEX (curation_statusid),
+    INDEX (confirmation_statusid),
     INDEX (created_by),
     INDEX (edited_by),
     CONSTRAINT ' . TABLE_VARIANTS . '_fk_allele FOREIGN KEY (allele) REFERENCES ' . TABLE_ALLELES . ' (id) ON UPDATE CASCADE,
@@ -366,6 +375,7 @@ $aTableSQL =
     CONSTRAINT ' . TABLE_VARIANTS . '_fk_owned_by FOREIGN KEY (owned_by) REFERENCES ' . TABLE_USERS . ' (id) ON DELETE SET NULL ON UPDATE CASCADE,
     CONSTRAINT ' . TABLE_VARIANTS . '_fk_statusid FOREIGN KEY (statusid) REFERENCES ' . TABLE_DATA_STATUS . ' (id) ON DELETE SET NULL ON UPDATE CASCADE,
     CONSTRAINT ' . TABLE_VARIANTS . '_fk_curation_statusid FOREIGN KEY (curation_statusid) REFERENCES ' . TABLE_CURATION_STATUS . ' (id) ON DELETE SET NULL ON UPDATE CASCADE,
+    CONSTRAINT ' . TABLE_VARIANTS . '_fk_confirmation_statusid FOREIGN KEY (confirmation_statusid) REFERENCES ' . TABLE_CONFIRMATION_STATUS . ' (id) ON DELETE SET NULL ON UPDATE CASCADE,
     CONSTRAINT ' . TABLE_VARIANTS . '_fk_created_by FOREIGN KEY (created_by) REFERENCES ' . TABLE_USERS . ' (id) ON DELETE SET NULL ON UPDATE CASCADE,
     CONSTRAINT ' . TABLE_VARIANTS . '_fk_edited_by FOREIGN KEY (edited_by) REFERENCES ' . TABLE_USERS . ' (id) ON DELETE SET NULL ON UPDATE CASCADE)
     ' . $sSettings

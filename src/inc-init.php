@@ -105,6 +105,12 @@ define('CUR_STATUS_CURATED_NOT_REPORTABLE', 80); // A final classification has b
 define('CUR_STATUS_NOT_FOR_CURATION', 90); // A curator has determined that this variant does not require curation and no further action will be taken on this variant.
 define('CUR_STATUS_ARTEFACT', 91); // A curator has determined that this variant does not exist as a result of a sequencing error.
 
+define('CON_STATUS_NOT_PERFORMED', 0); // The default confirmation status, the variant has not yet been assessed.
+define('CON_STATUS_NOT_REQUIRED', 1); // A curator has determined that this variant does not require confirmation so curation can begin immediately.
+define('CON_STATUS_REQUIRED', 3); // A curator has determined that this variant requires confirmation.
+define('CON_STATUS_PASSED', 5); // This variant has been confirmed to be real and passes the confirmation process.
+define('CON_STATUS_FAILED', 7); // This variant has been confirmed to not be real and fails the confirmation process.
+
 define('AJAX_FALSE', '0');
 define('AJAX_TRUE', '1');
 define('AJAX_UNKNOWN_RESPONSE', '6');
@@ -201,6 +207,14 @@ $_SETT = array(
                             CUR_STATUS_PROPOSED => 'Proposed Classification',
                             CUR_STATUS_CURATED_REPORTABLE => 'Curated & Reportable',
                             CUR_STATUS_CURATED_NOT_REPORTABLE => 'Curated & Not Reportable',
+                          ),
+                'confirmation_status' =>
+                     array(
+                            CON_STATUS_NOT_PERFORMED => 'Not performed',
+                            CON_STATUS_NOT_REQUIRED => 'Not required',
+                            CON_STATUS_REQUIRED => 'Required',
+                            CON_STATUS_PASSED => 'Passed',
+                            CON_STATUS_FAILED => 'Failed',
                           ),
                 'update_levels' =>
                      array(
@@ -556,6 +570,7 @@ $_TABLES =
                 'TABLE_GEN2DIS' => TABLEPREFIX . '_genes2diseases',
                 'TABLE_DATA_STATUS' => TABLEPREFIX . '_data_status',
                 'TABLE_CURATION_STATUS' => TABLEPREFIX . '_curation_status',
+                'TABLE_CONFIRMATION_STATUS' => TABLEPREFIX . '_confirmation_status',
                 'TABLE_ANALYSIS_STATUS' => TABLEPREFIX . '_analysis_status',
                 'TABLE_ALLELES' => TABLEPREFIX . '_alleles',
                 'TABLE_EFFECT' => TABLEPREFIX . '_variant_effect',

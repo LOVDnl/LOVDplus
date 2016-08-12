@@ -588,6 +588,8 @@ if ($sCalcVersionFiles != $sCalcVersionDB) {
                      array(
                          'CREATE TABLE IF NOT EXISTS ' . TABLE_CURATION_STATUS . ' (id TINYINT(2) UNSIGNED ZEROFILL NOT NULL, name VARCHAR(50) NOT NULL, PRIMARY KEY (id)) ENGINE=InnoDB, DEFAULT CHARACTER SET utf8', // We are inserting the curation status records below by using array merge to add them into this array.
                          'ALTER TABLE ' . TABLE_VARIANTS . ' ADD COLUMN curation_statusid TINYINT(2) UNSIGNED NULL AFTER statusid, ADD INDEX (curation_statusid), ADD CONSTRAINT ' . TABLE_VARIANTS . '_fk_curation_statusid FOREIGN KEY (curation_statusid) REFERENCES ' . TABLE_CURATION_STATUS . ' (id) ON DELETE SET NULL ON UPDATE CASCADE',
+                         'CREATE TABLE IF NOT EXISTS ' . TABLE_CONFIRMATION_STATUS . ' (id TINYINT(1) UNSIGNED NOT NULL, name VARCHAR(50) NOT NULL, PRIMARY KEY (id)) ENGINE=InnoDB, DEFAULT CHARACTER SET utf8', // We are inserting the confirmation status records below by using array merge to add them into this array.
+                         'ALTER TABLE ' . TABLE_VARIANTS . ' ADD COLUMN confirmation_statusid TINYINT(1) UNSIGNED NULL AFTER curation_statusid, ADD INDEX (confirmation_statusid), ADD CONSTRAINT ' . TABLE_VARIANTS . '_fk_confirmation_statusid FOREIGN KEY (confirmation_statusid) REFERENCES ' . TABLE_CONFIRMATION_STATUS . ' (id) ON DELETE SET NULL ON UPDATE CASCADE',
                          'UPDATE ' . TABLE_EFFECT . ' SET `name` = REPLACE(`name`,"ar",".")',
                          // TODO MGHA - We are only updating variants that have a concluded effect (second number) set to Artefact. Do we have to consider the first number at all (reported Leiden / proposed MGHA)?
                          'UPDATE ' . TABLE_VARIANTS . ' SET curation_statusid = ' . CUR_STATUS_ARTEFACT . ' WHERE effectid in (0, 10, 30, 50, 70, 90)',
@@ -688,10 +690,16 @@ if ($sCalcVersionFiles != $sCalcVersionDB) {
         foreach ($_SETT['curation_status'] as $nStatus => $sStatus) {
             $aCurationStatusSQL[] = 'INSERT IGNORE INTO ' . TABLE_CURATION_STATUS . ' VALUES (' . $nStatus . ', "' . $sStatus . '")';
         }
-        $aUpdates['3.0-12u'] = array_merge($aUpdates['3.0-12u'],$aCurationStatusSQL);
+        // Insert the confirmation status records.
+        $aConfirmationStatusSQL = array();
+        foreach ($_SETT['confirmation_status'] as $nStatus => $sStatus) {
+            $aConfirmationStatusSQL[] = 'INSERT IGNORE INTO ' . TABLE_CONFIRMATION_STATUS . ' VALUES (' . $nStatus . ', "' . $sStatus . '")';
+        }
+        $aUpdates['3.0-12u'] = array_merge($aUpdates['3.0-12u'],$aCurationStatusSQL,$aConfirmationStatusSQL);
         // Finish the updates that can only be done now that these are run...
-        $aUpdates['3.0-12u'][] = 'UPDATE ' . TABLE_VARIANTS . ' SET curation_statusid = ' . CUR_STATUS_REQUIRES_CONFIRMATION . ' WHERE to_be_confirmed = 1';
-        $aUpdates['3.0-12u'][] = 'ALTER TABLE ' . TABLE_VARIANTS . ' DROP COLUMN to_be_confirmed';
+        $aUpdates['3.0-12u'][] = 'UPDATE ' . TABLE_VARIANTS . ' SET curation_statusid = ' . CUR_STATUS_REQUIRES_CONFIRMATION . ', confirmation_status = ' . CON_STATUS_REQUIRED . ' WHERE to_be_confirmed = 1';
+        $aUpdates['3.0-12u'][] = 'UPDATE ' . TABLE_VARIANTS . ' SET confirmation_status = ' . CON_STATUS_NOT_PERFORMED . ' WHERE confirmation_status IS NULL';
+        $aUpdates['3.0-12u'][] = 'ALTER TABLE ' . TABLE_VARIANTS . ' DROP COLUMN to_be_confirmed, ALTER COLUMN confirmation_statusid SET DEFAULT 0';
     }
 
 

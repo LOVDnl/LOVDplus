@@ -950,7 +950,7 @@ $aColumnsForVOT = array(
 );
 // Default values.
 $aDefaultValues = array(
-    'effectid' => '55',
+    'effectid' => '00',
     'mapping_flags' => '0',
 //    'owned_by' => 0, // '0' is not a valid value, because "LOVD" is removed from the selection list. When left empty, it will default to the user running LOVD, though.
     'statusid' => STATUS_HIDDEN,
