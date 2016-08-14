@@ -46,7 +46,7 @@ if ($_AUTH) {
 
 
 if ($_PE[0] == 'curation_files' && ACTION == 'download') {
-    // /curation_files/[curation file name]?preview
+    // /curation_files/[curation file name]?download
 
     // Let user download curation files if they are logged in.
     if ($_AUTH) {
@@ -105,6 +105,7 @@ if ($_PE[0] == 'curation_files' && ACTION == 'remove') {
         require ROOT_PATH . 'inc-lib-form.php';
         $sCurationFileName = $_PE[1];
 
+        define('LOG_EVENT', 'curation_file_remove');
         define('PAGE_TITLE', 'Delete curation file');
         $_T->printHeader();
         $_T->printTitle();
@@ -130,6 +131,14 @@ if ($_PE[0] == 'curation_files' && ACTION == 'remove') {
                 $sAbsoluteFileName = realpath($sCurationFilesPath . '/' . $sCurationFileName);
                 if (file_exists($sAbsoluteFileName) && unlink($sAbsoluteFileName)) {
                     lovd_showInfoTable('File deleted successfully.<BR>', 'success', 600);
+
+                    list($nID) = explode('-', $sCurationFileName);
+                    if (strpos($nID, 'chr') === false) {
+                        $sLogMessage = 'variant #' . $nID;
+                    } else {
+                        $sLogMessage = 'summary annotation DBID #' . $nID;
+                    }
+                    lovd_writeLog('Event', LOG_EVENT, 'File ' . $sCurationFileName . ' deleted for ' . $sLogMessage);
                 } else {
                     lovd_errorAdd('delete', 'Failed to delete curation file ' . $sCurationFileName);
                 }
@@ -768,7 +777,7 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && !ACTION) {
         $nFiles = 0;
         foreach ($aLabels as $sFileType => $sFileDesc) {
             $nFileID = ($sFileType == 'ucsc' && !empty($sSummaryAnnotationsID)? $sSummaryAnnotationsID : $nID);
-            foreach (glob($sCurationFilesPath . "/" . $nFileID . "_" . $sFileType . "_*.*", GLOB_BRACE) as $sFileName) {
+            foreach (glob($sCurationFilesPath . "/" . $nFileID . "-" . $sFileType . "-*.*", GLOB_BRACE) as $sFileName) {
                 $nFiles++;
                 if ($nFiles == 1) {
                 print('<TABLE border="0" cellpadding="10" cellspacing="1" width="772px" class="data" style="font-size: 13px;">');
@@ -978,14 +987,14 @@ if (PATH_COUNT == 2 && ACTION == 'curation_upload') {
             if ( $aFileTypes[$_POST['mode']] ) {
                 //
                 if ( $aFileTypes[$_POST['mode']]['id'] == 'nid') {
-                    $sFileName = $nID . '_' . $_POST['mode'];
+                    $sFileName = $nID . '-' . $_POST['mode'];
                 }
                 elseif ($aFileTypes[$_POST['mode']]['id'] == 'said' ) {
                     if ( empty($saID)) {
                         lovd_errorAdd('import', 'Summary annotation ID required for this file type.');
                     }
                     else {
-                        $sFileName = $saID . '_' . $_POST['mode'];
+                        $sFileName = $saID . '-' . $_POST['mode'];
                     }
                 }
                 else {
@@ -1000,7 +1009,7 @@ if (PATH_COUNT == 2 && ACTION == 'curation_upload') {
 
         if (!lovd_error()) {
              $sCurationFilesPath = $_INI['paths']['curation_files'];
-             $sNewFileName = $sCurationFilesPath . '/' . $sFileName . '_' . time() . '.' . $ext;
+             $sNewFileName = $sCurationFilesPath . '/' . $sFileName . '-' . time() . '.' . $ext;
 
             if (!move_uploaded_file($importFile, $sNewFileName)) {
                 lovd_errorAdd('import', 'Failed to move uploaded file.');
