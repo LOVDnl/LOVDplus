@@ -697,8 +697,8 @@ if ($sCalcVersionFiles != $sCalcVersionDB) {
         }
         $aUpdates['3.0-12u'] = array_merge($aUpdates['3.0-12u'],$aCurationStatusSQL,$aConfirmationStatusSQL);
         // Finish the updates that can only be done now that these are run...
-        $aUpdates['3.0-12u'][] = 'UPDATE ' . TABLE_VARIANTS . ' SET curation_statusid = ' . CUR_STATUS_REQUIRES_CONFIRMATION . ', confirmation_status = ' . CON_STATUS_REQUIRED . ' WHERE to_be_confirmed = 1';
-        $aUpdates['3.0-12u'][] = 'UPDATE ' . TABLE_VARIANTS . ' SET confirmation_status = ' . CON_STATUS_NOT_PERFORMED . ' WHERE confirmation_status IS NULL';
+        $aUpdates['3.0-12u'][] = 'UPDATE ' . TABLE_VARIANTS . ' SET curation_statusid = ' . CUR_STATUS_REQUIRES_CONFIRMATION . ', confirmation_statusid = ' . CON_STATUS_REQUIRED . ' WHERE to_be_confirmed = 1';
+        $aUpdates['3.0-12u'][] = 'UPDATE ' . TABLE_VARIANTS . ' SET confirmation_statusid = ' . CON_STATUS_NOT_PERFORMED . ' WHERE confirmation_statusid IS NULL';
         $aUpdates['3.0-12u'][] = 'ALTER TABLE ' . TABLE_VARIANTS . ' DROP COLUMN to_be_confirmed, ALTER COLUMN confirmation_statusid SET DEFAULT 0';
     }
 
