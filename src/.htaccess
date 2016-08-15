@@ -23,7 +23,6 @@ php_flag mysql.trace_mode Off
     RewriteRule ^check_update(.*)$ check_update.php
     RewriteRule ^columns(.*)$ columns.php
     RewriteRule ^configuration(.*)$ configuration.php
-    RewriteRule ^curation_files(.*)$ variants.php
     RewriteRule ^diseases(.*)$ diseases.php
     RewriteRule ^download(.*)$ download.php
     RewriteRule ^genes(.*)$ genes.php

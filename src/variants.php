@@ -44,14 +44,13 @@ if ($_AUTH) {
 
 
 
-if ($_PE[0] == 'curation_files' && ACTION == 'download') {
-    // /curation_files/[curation file name]?download
+if ($_PE[1] == 'curation_files' && ACTION == 'download') {
+    // /variants/curation_files/[curation file name]?download
 
     // Let user download curation files if they are logged in.
     if ($_AUTH) {
         $sCurationFilesPath =  $_INI['paths']['curation_files'];
-        $sURLFileName = explode('?', basename($_SERVER['REQUEST_URI']));
-        $sFileName = $sURLFileName[0];
+        $sFileName = $_PE[2];
         $sAbsoluteFileName = realpath($sCurationFilesPath . '/' . $sFileName);
 
         header('Content-Description: File Transfer');
@@ -71,11 +70,11 @@ if ($_PE[0] == 'curation_files' && ACTION == 'download') {
 
 
 
-if ($_PE[0] == 'curation_files' && ACTION == 'preview') {
-    // /curation_files/[image file name]?preview
+if ($_PE[1] == 'curation_files' && ACTION == 'preview') {
+    // /variants/curation_files/[image file name]?preview
 
     if ($_AUTH) {
-        $sCurationFileName = $_PE[1];
+        $sCurationFileName = $_PE[2];
         define('PAGE_TITLE', 'Preview curation file');
         $_T->printHeader();
         $_T->printTitle();
@@ -96,12 +95,12 @@ if ($_PE[0] == 'curation_files' && ACTION == 'preview') {
 
 
 
-if ($_PE[0] == 'curation_files' && ACTION == 'remove') {
-    // /curation_files/[image file name]?remove
+if ($_PE[1] == 'curation_files' && ACTION == 'remove') {
+    // /variants/curation_files/[image file name]?remove
 
     if ($_AUTH) {
         require ROOT_PATH . 'inc-lib-form.php';
-        $sCurationFileName = $_PE[1];
+        $sCurationFileName = $_PE[2];
 
         define('LOG_EVENT', 'CurationFileRemove');
         define('PAGE_TITLE', 'Delete curation file');
@@ -787,7 +786,7 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && !ACTION) {
                 }
 
                 $sDisableLink = ($aFileTypes[$sFileType]['type'] == 'image'? '' : 'style="pointer-events: none; text-decoration: none; color: grey;"');
-                $sFileUrl = lovd_getInstallURL() . 'curation_files/' . basename($sFileName);
+                $sFileUrl = lovd_getInstallURL() . 'variants/curation_files/' . basename($sFileName);
                 print('<TR>');
                 print('<TD>' . $sFileDesc . '</TD>');
                 print('<TD>' . date('d M Y H:i A', filemtime($sFileName)) . '</TD>');
