@@ -44,7 +44,6 @@ if ($_AUTH) {
 
 
 
-
 if ($_PE[0] == 'curation_files' && ACTION == 'download') {
     // /curation_files/[curation file name]?download
 
@@ -66,7 +65,6 @@ if ($_PE[0] == 'curation_files' && ACTION == 'download') {
 
     exit;
 }
-
 
 
 
@@ -97,7 +95,6 @@ if ($_PE[0] == 'curation_files' && ACTION == 'preview') {
 
 
 
-
 if ($_PE[0] == 'curation_files' && ACTION == 'remove') {
     // /curation_files/[image file name]?remove
 
@@ -105,12 +102,12 @@ if ($_PE[0] == 'curation_files' && ACTION == 'remove') {
         require ROOT_PATH . 'inc-lib-form.php';
         $sCurationFileName = $_PE[1];
 
-        define('LOG_EVENT', 'curation_file_remove');
+        define('LOG_EVENT', 'CurationFileRemove');
         define('PAGE_TITLE', 'Delete curation file');
         $_T->printHeader();
         $_T->printTitle();
 
-        print('<P>Please enter password to confirm that you want to delete this curation file <STRONG>' . $sCurationFileName . '</STRONG></P>');
+        print('<P>Please enter your password to confirm that you want to delete this curation file <STRONG>' . $sCurationFileName . '</STRONG></P>' . "\n");
         $aForm =
             array(
                 array('POST', '', '', '', '', '', ''),
@@ -119,7 +116,7 @@ if ($_PE[0] == 'curation_files' && ACTION == 'remove') {
                 array('', '', 'submit', 'Delete file')
             );
 
-        print('<FORM action="" method="POST"');
+        print('<FORM action="" method="POST">' . "\n");
         lovd_viewForm($aForm);
         print('</FORM>');
 
@@ -165,7 +162,6 @@ if ($_PE[0] == 'curation_files' && ACTION == 'remove') {
 
     exit;
 }
-
 
 
 
@@ -793,10 +789,10 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && !ACTION) {
                 $sFileUrl = lovd_getInstallURL() . 'curation_files/' . basename($sFileName);
                 print('<TR>');
                 print('<TD>' . $sFileDesc . '</TD>');
-                print('<TD>' . date('d M Y H:i', filemtime($sFileName)) . '</TD>');
-                print('<TD><A '. $sDisableLink .' href="#" onclick="lovd_openWindow(\'' . $sFileUrl . '?preview&amp;in_window\', \'\', 580, 300); return false;">Preview</A>
+                print('<TD>' . date('d M Y H:i A', filemtime($sFileName)) . '</TD>');
+                print('<TD><A '. $sDisableLink .' href="#" onclick="lovd_openWindow(\'' . $sFileUrl . '?preview&amp;in_window\', \'\', 1280, 720); return false;">Preview</A>
                          | <A href="' . $sFileUrl . '?download"  target="_BLANK">Download</A> 
-                         | <A href="#" onclick="lovd_openWindow(\''. $sFileUrl .'?remove&amp;in_window\', \'\', 580, 300); return false;">Delete</A></TD>');
+                         | <A href="#" onclick="lovd_openWindow(\''. $sFileUrl .'?remove&amp;in_window\', \'\', 780, 250); return false;">Delete</A></TD>');
                 print('</TR>');
             }
         }
@@ -888,15 +884,12 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && !ACTION) {
 
 if (PATH_COUNT == 2 && ACTION == 'curation_upload') {
     // URL: variants?curation_upload&said=chrX_XXXXXX
-    // Upload a file during variant curation
+    // Upload a file during variant curation.
 
     // We already called lovd_requireAUTH().
     require ROOT_PATH . 'inc-lib-form.php';
-
     $nID = sprintf('%010d', $_PE[1]);
-
     lovd_errorClean();
-
     $_T->printHeader();
 
     if (empty($_INSTANCE_CONFIG['variants']['curation_files'])) {
@@ -918,7 +911,7 @@ if (PATH_COUNT == 2 && ACTION == 'curation_upload') {
     lovd_convertIniValueToBytes(ini_get('upload_max_filesize')),
     lovd_convertIniValueToBytes(ini_get('post_max_size')));
 
-    define('LOG_EVENT', 'curation_upload');
+    define('LOG_EVENT', 'CurationFileUpload');
 
     $nWarnings = 0;
     if ($_FILES) { // || $_FILES is in use for the automatic loading of files.
@@ -936,7 +929,6 @@ if (PATH_COUNT == 2 && ACTION == 'curation_upload') {
         } elseif ($_FILES['import']['error']) {
             // Various errors available from 4.3.0 or later.
             lovd_errorAdd('import', 'There was an unknown problem with receiving the file properly, possibly because of the current server settings. If the problem persists, please contact the database administrator.');
-
         }
 
         // This array stores the file extensions and file types and whether the file is to be saved using nID or saID.
@@ -947,8 +939,8 @@ if (PATH_COUNT == 2 && ACTION == 'curation_upload') {
             // DO NOT TRUST $_FILES['upfile']['mime'] VALUE !!
             $finfo = new finfo(FILEINFO_MIME_TYPE);
             $importFile = $_FILES['import']['tmp_name'];
-            // check the file type received from POST and see if the file MIME type is correct, depending on the values in the aFileTypes array.
-            if ( $aFileTypes[$_POST['mode']]['type'] == 'image') {
+            // Check the file type received from POST and see if the file MIME type is correct, depending on the values in the aFileTypes array.
+            if ($aFileTypes[$_POST['mode']]['type'] == 'image') {
                 if (false === $ext = array_search(
                     $finfo->file($importFile),
                     array(
@@ -962,7 +954,7 @@ if (PATH_COUNT == 2 && ACTION == 'curation_upload') {
                    lovd_errorAdd('import', 'Invalid file format. Expecting image type file.');
                 }
             }
-            elseif ( $aFileTypes[$_POST['mode']]['type'] == 'excel') {
+            elseif ($aFileTypes[$_POST['mode']]['type'] == 'excel') {
                 if (false === $ext = array_search(
                     $finfo->file($importFile),
                     array(
@@ -982,15 +974,15 @@ if (PATH_COUNT == 2 && ACTION == 'curation_upload') {
 
             $sFileName = "";
 
-            // Generate the new file name based on the file type and the ID to be used
-            // First, check if POST file type exists in the aFiletypes array
-            if ( $aFileTypes[$_POST['mode']] ) {
+            // Generate the new file name based on the file type and the ID to be used.
+            // First, check if POST file type exists in the aFiletypes array.
+            if ($aFileTypes[$_POST['mode']]) {
                 //
-                if ( $aFileTypes[$_POST['mode']]['id'] == 'nid') {
+                if ($aFileTypes[$_POST['mode']]['id'] == 'nid') {
                     $sFileName = $nID . '-' . $_POST['mode'];
                 }
-                elseif ($aFileTypes[$_POST['mode']]['id'] == 'said' ) {
-                    if ( empty($saID)) {
+                elseif ($aFileTypes[$_POST['mode']]['id'] == 'said') {
+                    if (empty($saID)) {
                         lovd_errorAdd('import', 'Summary annotation ID required for this file type.');
                     }
                     else {
@@ -1000,11 +992,9 @@ if (PATH_COUNT == 2 && ACTION == 'curation_upload') {
                 else {
                     lovd_errorAdd('import', 'Error: could not generate file name - missing ID value.');
                 }
-
             } else {
                lovd_errorAdd('import', 'Error: File type not recognised');
             }
-
         }
 
         if (!lovd_error()) {
@@ -1032,17 +1022,13 @@ if (PATH_COUNT == 2 && ACTION == 'curation_upload') {
             exit;
         }
         else {
-
             lovd_showInfoTable('Error occurred. File did not upload!<br>', 'stop', 600);
-
             lovd_errorPrint();
             $_T->printFooter();
             exit;
         }
     }
-
     $_T->printFooter();
-
 }
 
 
