@@ -437,7 +437,8 @@ if (!empty($aVariants)) {
                                 $sTranscriptNum = $_DB->query('SELECT id_mutalyzer FROM ' . TABLE_TRANSCRIPTS . ' WHERE id_ncbi = ?', array($sTranscriptNM))->fetchColumn();
                                 // This takes about 0.9-1.1 second...
                                 try {
-                                    $aOutput = get_object_vars($_Mutalyzer->runMutalyzer(array('variant' => $sRefseqUD . '(' . $aTranscript['gene'] . '_v' . $sTranscriptNum . '):' . $aSQL[1][7]))->runMutalyzerResult);
+                                    $sFullVariantDescription = $sRefseqUD . '(' . $sTranscriptNM . '):' . $aSQL[1][7];
+                                    $aOutput = get_object_vars($_Mutalyzer->runMutalyzer(array('variant' => $sFullVariantDescription))->runMutalyzerResult);
                                     // FIXME: Notice: Undefined property: stdClass::$string in /www/svn/LOVD3/trunk/src/ajax/map_variants.php on line 433
                                     if (!empty($aOutput['proteinDescriptions']->string)) {
                                         $aVariantsOnProtein = $aOutput['proteinDescriptions']->string;
@@ -706,7 +707,8 @@ if (!empty($aVariants)) {
 
                     // Get the p. description too.
                     try {
-                        $aOutput = get_object_vars($_Mutalyzer->runMutalyzer(array('variant' => $sRefseqUD . '(' . $sSymbol . '_v' . $aFieldsTranscript['id_mutalyzer'] . '):' . $aVariantOnTranscriptSQL[1][7]))->runMutalyzerResult);
+                        $sFullVariantDescription = $sRefseqUD . '(' . $aFieldsTranscript['id_ncbi'] . '):' . $aVariantOnTranscriptSQL[1][7];
+                        $aOutput = get_object_vars($_Mutalyzer->runMutalyzer(array('variant' => $sFullVariantDescription))->runMutalyzerResult);
                         // FIXME: Notice: Undefined property: stdClass::$string in /www/svn/LOVD3/trunk/src/ajax/map_variants.php on line 433
                         if (!empty($aOutput['proteinDescriptions']->string)) {
                             $aVariantsOnProtein = $aOutput['proteinDescriptions']->string;
