@@ -79,7 +79,7 @@ if ($_PE[1] == 'curation_files' && ACTION == 'preview') {
         $_T->printHeader();
         $_T->printTitle();
 
-        $sFileUrl = lovd_getInstallURL() . 'curation_files/' . basename($sCurationFileName) . '?download';
+        $sFileUrl = lovd_getInstallURL() . 'variants/curation_files/' . basename($sCurationFileName) . '?download';
         print('<IMG src="' . $sFileUrl . '" />');
 
         $_T->printFooter();
