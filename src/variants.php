@@ -50,7 +50,8 @@ if ($_PE[0] == 'curation_files' && ACTION == 'download') {
     // Let user download curation files if they are logged in.
     if ($_AUTH) {
         $sCurationFilesPath =  $_INI['paths']['curation_files'];
-        $sFileName = explode('?', basename($_SERVER['REQUEST_URI']))[0];
+        $sURLFileName = explode('?', basename($_SERVER['REQUEST_URI']));
+        $sFileName = $sURLFileName[0];
         $sAbsoluteFileName = realpath($sCurationFilesPath . '/' . $sFileName);
 
         header('Content-Description: File Transfer');
