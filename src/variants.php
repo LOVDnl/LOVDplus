@@ -643,6 +643,11 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && !ACTION) {
         }
         $aCurationStatusMenu['javascript:if(window.confirm(\'Are you sure you want to clear this variants curation status?\')){$.get(\'ajax/set_curation_status.php?clear&id=' . $nID . '\', function(sResponse){if(sResponse.substring(0,1) == \'1\'){alert(\'Successfully cleared the curation status of this variant.\');window.location.reload();' . (!isset($_GET['in_window'])? '' : 'window.opener.lovd_AJAX_viewListSubmit(\'CustomVL_AnalysisRunResults_for_I_VE\');window.opener.lovd_AJAX_viewEntryLoad();') . '}else if(sResponse.substring(0,1) == \'9\'){alert(\'Error: \' + sResponse.substring(2));}}).error(function(){alert(\'Error while setting curation status.\');});}else{alert(\'This variants curation status has not been changed.\');}'] = array('cross.png', 'Clear curation status');
         $aNavigation['curation_status'] = array('menu_edit.png', 'Set curation status', 1, 'sub_menu' => $aCurationStatusMenu);
+        // Menu items for setting the confirmation status.
+        foreach ($_SETT['confirmation_status'] as $nConfirmationStatusID => $sConfirmationStatus) {
+            $aConfirmationStatusMenu['javascript:$.get(\'ajax/set_confirmation_status.php?' . $nConfirmationStatusID . '&id=' . $nID . '\', function(sResponse){if(sResponse.substring(0,1) == \'1\'){alert(\'Successfully set confirmation status of this variant to \\\'' . $sConfirmationStatus . '\\\'.\');window.location.reload();' . (!isset($_GET['in_window'])? '' : 'window.opener.lovd_AJAX_viewListSubmit(\'CustomVL_AnalysisRunResults_for_I_VE\');window.opener.lovd_AJAX_viewEntryLoad();') . '}else if(sResponse.substring(0,1) == \'9\'){alert(\'Error: \' + sResponse.substring(2));}}).error(function(){alert(\'Error while setting confirmation status.\');});'] = array('menu_edit.png', $sConfirmationStatus);
+        }
+        $aNavigation['confirmation_status'] = array('menu_edit.png', 'Set confirmation status', 1, 'sub_menu' => $aConfirmationStatusMenu);
         if ($zData['statusid'] < STATUS_OK && $_AUTH['level'] >= LEVEL_CURATOR) {
             $aNavigation[CURRENT_PATH . '?publish'] = array('check.png', ($zData['statusid'] == STATUS_MARKED ? 'Remove mark from' : 'Publish (curate)') . ' variant entry', 1);
         }
@@ -3965,6 +3970,29 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && ACTION == 'curation_log') {
     require_once ROOT_PATH . 'class/object_logs.php';
     $_DATA = new LOVD_Log();
     $_DATA->viewList('Logs_for_curation_data', array('name', 'event', 'del'), true);
+    unset($_GET['page_size'], $_GET['search_event'], $_GET['search_entry_']);
+    $_T->printFooter();
+    exit;
+}
+
+
+
+
+
+if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && ACTION == 'confirmation_status_log') {
+    // URL: /variants/0000000001?confirmation_status_log
+    // Show the logs for the changes of confirmation status for this variant.
+
+    $nID = sprintf('%010d', $_PE[1]);
+    define('PAGE_TITLE', 'Confirmation status history for variant #' . $nID);
+    $_T->printHeader();
+    $_T->printTitle();
+    $_GET['page_size'] = 10;
+    $_GET['search_event'] = 'ConfirmationStatus';
+    $_GET['search_entry_'] = '"variant #' . $nID . '"';
+    require_once ROOT_PATH . 'class/object_logs.php';
+    $_DATA = new LOVD_Log();
+    $_DATA->viewList('Logs_for_confirmation_status', array('name', 'event', 'del'), true);
     unset($_GET['page_size'], $_GET['search_event'], $_GET['search_entry_']);
     $_T->printFooter();
     exit;
