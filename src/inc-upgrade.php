@@ -698,8 +698,9 @@ if ($sCalcVersionFiles != $sCalcVersionDB) {
         $aUpdates['3.0-12u'] = array_merge($aUpdates['3.0-12u'],$aCurationStatusSQL,$aConfirmationStatusSQL);
         // Finish the updates that can only be done now that these are run...
         $aUpdates['3.0-12u'][] = 'UPDATE ' . TABLE_VARIANTS . ' SET curation_statusid = ' . CUR_STATUS_REQUIRES_CONFIRMATION . ', confirmation_statusid = ' . CON_STATUS_REQUIRED . ' WHERE to_be_confirmed = 1';
-        $aUpdates['3.0-12u'][] = 'UPDATE ' . TABLE_VARIANTS . ' SET confirmation_statusid = ' . CON_STATUS_NOT_PERFORMED . ' WHERE confirmation_statusid IS NULL';
-        $aUpdates['3.0-12u'][] = 'ALTER TABLE ' . TABLE_VARIANTS . ' DROP COLUMN to_be_confirmed, ALTER COLUMN confirmation_statusid SET DEFAULT 0';
+        // Replaces all the current "VUS" with "Not curated" if the variant is not part of an analysis result.
+        $aUpdates['3.0-12u'][] = 'UPDATE ' . TABLE_VARIANTS . ' vog LEFT OUTER JOIN ' . TABLE_ANALYSES_RUN_RESULTS . ' arr ON (vog.id = arr.variantid) SET vog.effectid = CAST(REPLACE(vog.effectid,5,0) AS UNSIGNED) WHERE arr.variantid IS NULL';
+        $aUpdates['3.0-12u'][] = 'ALTER TABLE ' . TABLE_VARIANTS . ' DROP COLUMN to_be_confirmed';
     }
 
 

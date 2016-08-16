@@ -105,7 +105,7 @@ define('CUR_STATUS_CURATED_NOT_REPORTABLE', 80); // A final classification has b
 define('CUR_STATUS_NOT_FOR_CURATION', 90); // A curator has determined that this variant does not require curation and no further action will be taken on this variant.
 define('CUR_STATUS_ARTEFACT', 91); // A curator has determined that this variant does not exist as a result of a sequencing error.
 
-define('CON_STATUS_NOT_PERFORMED', 0); // The default confirmation status, the variant has not yet been assessed.
+define('CON_STATUS_NOT_PERFORMED', 0); // The variant has not yet been assessed.
 define('CON_STATUS_NOT_REQUIRED', 1); // A curator has determined that this variant does not require confirmation so curation can begin immediately.
 define('CON_STATUS_REQUIRED', 3); // A curator has determined that this variant requires confirmation.
 define('CON_STATUS_PASSED', 5); // This variant has been confirmed to be real and passes the confirmation process.

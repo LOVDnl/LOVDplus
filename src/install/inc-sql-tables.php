@@ -353,7 +353,7 @@ $aTableSQL =
     owned_by SMALLINT(5) UNSIGNED ZEROFILL,
     statusid TINYINT(1) UNSIGNED,
     curation_statusid TINYINT(2) UNSIGNED NULL,
-    confirmation_statusid TINYINT(1) UNSIGNED NULL DEFAULT 0,
+    confirmation_statusid TINYINT(1) UNSIGNED NULL,
     created_by SMALLINT(5) UNSIGNED ZEROFILL,
     created_date DATETIME NOT NULL,
     edited_by SMALLINT(5) UNSIGNED ZEROFILL,
