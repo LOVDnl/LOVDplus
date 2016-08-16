@@ -113,8 +113,10 @@ class LOVD_SummaryAnnotation extends LOVD_Custom {
                 array('POST', '', '', '', '50%', '14', '50%'),
             ),
             $this->buildForm(),
-
-            array(array('Affects function', '', 'select', 'effectid', 6, $_SETT['var_effect'], false, false, false))
+            array(
+                array('Affects function', '', 'select', 'effectid', 6, $_SETT['var_effect'], false, false, false),
+                array('Enter your password for authorization', '', 'password', 'password', 20)
+            )
         );
 
         return parent::getForm();
