@@ -3367,7 +3367,7 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && ACTION == 'curate') {
 
     if (POST) {
         lovd_errorClean();
-        lovd_authorizeByPassword($_POST);
+        lovd_authorizeByPassword();
 
         $_DATA['Genome']->checkFields($_POST);
 
