@@ -4,7 +4,7 @@
  * LEIDEN OPEN VARIATION DATABASE (LOVD)
  *
  * Created     : 2016-03-01
- * Modified    : 2016-05-25
+ * Modified    : 2016-08-17
  * For LOVD    : 3.0-13
  *
  * Copyright   : 2004-2016 Leiden University Medical Center; http://www.LUMC.nl/
@@ -1069,30 +1069,26 @@ if (PATH_COUNT == 1 && ACTION == 'add') {
     define('PAGE_TITLE', 'Select gene panel to add selected genes to');
     define('LOG_EVENT', 'GenePanelSelect');
 
+    $_T->printHeader();
+    $_T->printTitle();
+
+    lovd_requireAUTH();
+
     if (!empty($_GET['select_genes_from'])) {
         $sViewListID = $_GET['select_genes_from'];
     } else {
         // We have not been provided with a viewlistid.
-        $_T->printHeader();
-        $_T->printTitle();
         lovd_showInfoTable('Must supply a view list ID!', 'stop');
         $_T->printFooter();
         exit;
     }
 
     if (empty($_SESSION['viewlists'][$sViewListID]['checked']) || count($_SESSION['viewlists'][$sViewListID]['checked']) == 0) {
-        // We have a viewlistid but there are no selected gene.
-        $_T->printHeader();
-        $_T->printTitle();
+        // We have a viewlistid but there are no selected genes.
         lovd_showInfoTable('No genes have been selected!', 'stop');
         $_T->printFooter();
         exit;
     }
-
-    $_T->printHeader();
-    $_T->printTitle();
-
-    lovd_requireAUTH();
 
     require ROOT_PATH . 'class/object_gene_panels.php';
     $_DATA = new LOVD_GenePanel();
