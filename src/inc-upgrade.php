@@ -590,9 +590,10 @@ if ($sCalcVersionFiles != $sCalcVersionDB) {
                          'ALTER TABLE ' . TABLE_VARIANTS . ' ADD COLUMN curation_statusid TINYINT(2) UNSIGNED NULL AFTER statusid, ADD INDEX (curation_statusid), ADD CONSTRAINT ' . TABLE_VARIANTS . '_fk_curation_statusid FOREIGN KEY (curation_statusid) REFERENCES ' . TABLE_CURATION_STATUS . ' (id) ON DELETE SET NULL ON UPDATE CASCADE',
                          'CREATE TABLE IF NOT EXISTS ' . TABLE_CONFIRMATION_STATUS . ' (id TINYINT(1) UNSIGNED NOT NULL, name VARCHAR(50) NOT NULL, PRIMARY KEY (id)) ENGINE=InnoDB, DEFAULT CHARACTER SET utf8', // We are inserting the confirmation status records below by using array merge to add them into this array.
                          'ALTER TABLE ' . TABLE_VARIANTS . ' ADD COLUMN confirmation_statusid TINYINT(1) UNSIGNED NULL AFTER curation_statusid, ADD INDEX (confirmation_statusid), ADD CONSTRAINT ' . TABLE_VARIANTS . '_fk_confirmation_statusid FOREIGN KEY (confirmation_statusid) REFERENCES ' . TABLE_CONFIRMATION_STATUS . ' (id) ON DELETE SET NULL ON UPDATE CASCADE',
-                         'UPDATE ' . TABLE_EFFECT . ' SET `name` = REPLACE(`name`,"ar",".")',
-                         // TODO MGHA - We are only updating variants that have a concluded effect (second number) set to Artefact. Do we have to consider the first number at all (reported Leiden / proposed MGHA)?
-                         'UPDATE ' . TABLE_VARIANTS . ' SET curation_statusid = ' . CUR_STATUS_ARTEFACT . ' WHERE effectid in (0, 10, 30, 50, 70, 90)',
+                         'UPDATE ' . TABLE_EFFECT . ' SET name = REPLACE(name, "ar", ".")',
+                         'UPDATE ' . TABLE_VARIANTS . ' SET curation_statusid = ' . CUR_STATUS_ARTEFACT . ' WHERE effectid LIKE "0_" OR effectid LIKE "_0"',
+                         'UPDATE ' . TABLE_VARIANTS . ' SET effectid = CAST(CONCAT("0", RIGHT(effectid, 1)) AS UNSIGNED) WHERE effectid LIKE "5_" AND NOT EXISTS (SELECT 1 FROM ' . TABLE_ANALYSES_RUN_RESULTS . ' WHERE variantid = id)',
+                         'UPDATE ' . TABLE_VARIANTS . ' SET effectid = CAST(CONCAT(LEFT(effectid, 1), "0") AS UNSIGNED) WHERE effectid LIKE "_5" AND NOT EXISTS (SELECT 1 FROM ' . TABLE_ANALYSES_RUN_RESULTS . ' WHERE variantid = id)',
                      ),
              );
 
@@ -695,12 +696,13 @@ if ($sCalcVersionFiles != $sCalcVersionDB) {
         foreach ($_SETT['confirmation_status'] as $nStatus => $sStatus) {
             $aConfirmationStatusSQL[] = 'INSERT IGNORE INTO ' . TABLE_CONFIRMATION_STATUS . ' VALUES (' . $nStatus . ', "' . $sStatus . '")';
         }
-        $aUpdates['3.0-12u'] = array_merge($aUpdates['3.0-12u'],$aCurationStatusSQL,$aConfirmationStatusSQL);
+        $aUpdates['3.0-12u'] = array_merge($aUpdates['3.0-12u'], $aCurationStatusSQL, $aConfirmationStatusSQL);
         // Finish the updates that can only be done now that these are run...
-        $aUpdates['3.0-12u'][] = 'UPDATE ' . TABLE_VARIANTS . ' SET curation_statusid = ' . CUR_STATUS_REQUIRES_CONFIRMATION . ', confirmation_statusid = ' . CON_STATUS_REQUIRED . ' WHERE to_be_confirmed = 1';
+        $aUpdates['3.0-12u'][] = 'UPDATE ' . TABLE_VARIANTS . ' SET curation_statusid = ' . CUR_STATUS_REQUIRES_CONFIRMATION . ' WHERE to_be_confirmed = 1';
         // Replaces all the current "VUS" with "Not curated" if the variant is not part of an analysis result.
         $aUpdates['3.0-12u'][] = 'UPDATE ' . TABLE_VARIANTS . ' vog LEFT OUTER JOIN ' . TABLE_ANALYSES_RUN_RESULTS . ' arr ON (vog.id = arr.variantid) SET vog.effectid = CAST(REPLACE(vog.effectid,5,0) AS UNSIGNED) WHERE arr.variantid IS NULL';
         $aUpdates['3.0-12u'][] = 'ALTER TABLE ' . TABLE_VARIANTS . ' DROP COLUMN to_be_confirmed';
+        $aUpdates['3.0-12u'][] = 'UPDATE ' . TABLE_VARIANTS . ' SET confirmation_statusid = ' . CON_STATUS_REQUIRED . ' WHERE curation_statusid = ' . CUR_STATUS_REQUIRES_CONFIRMATION;
     }
 
 
