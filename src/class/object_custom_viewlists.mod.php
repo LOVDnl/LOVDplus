@@ -148,25 +148,25 @@ class LOVD_CustomViewListMOD extends LOVD_CustomViewList {
                     // Find the diseases that this individual has assigned using the analysis run ID in $_GET.
                     if (!empty($_GET['search_runid'])) {
                         // We have selected an analyses and have to use the runid to find out the diseases this individual has.
-                        $sDiseaseIDs = implode(',',$_DB->query('SELECT i2d.diseaseid FROM ' . TABLE_IND2DIS . ' AS i2d INNER JOIN ' . TABLE_SCREENINGS . ' AS scr ON (i2d.individualid = scr.individualid) INNER JOIN ' . TABLE_ANALYSES_RUN . ' AS ar ON (scr.id = ar.screeningid) WHERE ar.id = ?', array($_GET['search_runid']))->fetchAllColumn());
+                        $sDiseaseIDs = implode(',', $_DB->query('SELECT i2d.diseaseid FROM ' . TABLE_IND2DIS . ' AS i2d INNER JOIN ' . TABLE_SCREENINGS . ' AS scr ON (i2d.individualid = scr.individualid) INNER JOIN ' . TABLE_ANALYSES_RUN . ' AS ar ON (scr.id = ar.screeningid) WHERE ar.id = ?', array($_GET['search_runid']))->fetchAllColumn());
                     } elseif (!empty($_GET['search_variantid'])) {
                         // We are viewing the default VL that does not contain the runid but it does have some variants to find out the diseases this individual has.
-                        preg_match('/^\d+/',$_GET['search_variantid'],$nVariantID); // Find the first variant ID in the list of variants.
-                        $sDiseaseIDs = implode(',',$_DB->query('SELECT i2d.diseaseid FROM ' . TABLE_IND2DIS . ' AS i2d INNER JOIN ' . TABLE_SCREENINGS . ' AS scr ON (i2d.individualid = scr.individualid) INNER JOIN ' . TABLE_SCR2VAR . ' AS s2v ON (scr.id = s2v.screeningid) WHERE s2v.variantid = ?', array($nVariantID[0]))->fetchAllColumn());
+                        preg_match('/^\d+/', $_GET['search_variantid'], $aRegs); // Find the first variant ID in the list of variants.
+                        $sDiseaseIDs = implode(',', $_DB->query('SELECT i2d.diseaseid FROM ' . TABLE_IND2DIS . ' AS i2d INNER JOIN ' . TABLE_SCREENINGS . ' AS scr ON (i2d.individualid = scr.individualid) INNER JOIN ' . TABLE_SCR2VAR . ' AS s2v ON (scr.id = s2v.screeningid) WHERE s2v.variantid = ?', array($aRegs[0]))->fetchAllColumn());
                     } else {
                         // There is no data we can use to find this individuals diseases.
                         $sDiseaseIDs = '';
                     }
                     // Check if we have found any diseases and set the boolean flag accordingly.
-                    $bDiseases = ($sDiseaseIDs != ''?true:false);
-                    
+                    $bDiseases = (bool) $sDiseaseIDs;
+
                     $aSQL['SELECT'] .= ', COUNT(DISTINCT os.individualid) AS obs_variant';
                     $aSQL['SELECT'] .= ', COUNT(DISTINCT os.individualid) / ' . $_DB->query('SELECT COUNT(*) FROM ' . TABLE_INDIVIDUALS)->fetchColumn() . ' AS obs_var_ind_ratio';
 
                     if ($bDiseases) {
                         // If this individual has diseases then setup the disease specific observation count columns.
                         $aSQL['SELECT'] .= ', COUNT(DISTINCT odi2d.individualid) AS obs_disease';
-                        $aSQL['SELECT'] .= ', COUNT(DISTINCT odi2d.individualid) / ' . $_DB->query('SELECT COUNT(DISTINCT i2d.individualid) FROM ' . TABLE_IND2DIS . ' AS i2d WHERE i2d.diseaseid in(' . $sDiseaseIDs . ')')->fetchColumn() . ' AS obs_var_dis_ind_ratio';
+                        $aSQL['SELECT'] .= ', COUNT(DISTINCT odi2d.individualid) / ' . $_DB->query('SELECT COUNT(DISTINCT i2d.individualid) FROM ' . TABLE_IND2DIS . ' AS i2d WHERE i2d.diseaseid IN (' . $sDiseaseIDs . ')')->fetchColumn() . ' AS obs_var_dis_ind_ratio';
                     } else {
                         // Otherwise do not do anything for the disease specific observation count columns.
                         $aSQL['SELECT'] .= ', NULL AS obs_disease, NULL AS obs_var_dis_ind_ratio';
