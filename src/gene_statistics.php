@@ -31,7 +31,7 @@
 
 define('ROOT_PATH', './');
 require ROOT_PATH . 'inc-init.php';
-define('TAB_SELECTED', 'genes');
+define('TAB_SELECTED', 'gene_panels');
 
 if ($_AUTH) {
     // If authorized, check for updates.

@@ -31,7 +31,6 @@
 
 define('ROOT_PATH', './');
 require ROOT_PATH . 'inc-init.php';
-define('TAB_SELECTED', 'genes');
 // TODO Modify the log entries to include URLS to the affected records
 
 if ($_AUTH) {
