@@ -2989,7 +2989,7 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && ACTION == 'curate') {
             if ($zData['effectid']{1} != ($_AUTH['level'] >= LEVEL_CURATOR? $_POST['effect_concluded'] : substr($_SETT['var_effect_default'], -1))) {
             $sCurationLog .= 'Effect concluded: "' . $_SETT['var_effect'][$zData['effectid']{1}] . '" => "' . $_SETT['var_effect'][($_AUTH['level'] >= LEVEL_CURATOR? $_POST['effect_concluded'] : substr($_SETT['var_effect_default'], -1))] . '"' . "\n";
             }
-            if (trim($zData['VariantOnGenome/Remarks']) != trim($zData['VariantOnGenome/Remarks'])) {
+            if (trim($zData['VariantOnGenome/Remarks']) != trim($_POST['VariantOnGenome/Remarks'])) {
             $sCurationLog .= 'VariantOnGenome/Remarks: "' . (!trim($zData['VariantOnGenome/Remarks'])? '<empty>' : str_replace(array("\r", "\n", "\t"), array('\r', '\n', '\t'), $zData['VariantOnGenome/Remarks'])) . '" => "' . (!trim($_POST['VariantOnGenome/Remarks'])? '<empty>' : str_replace(array("\r", "\n", "\t"), array('\r', '\n', '\t'), $_POST['VariantOnGenome/Remarks'])) . '"' . "\n";
             }
 
