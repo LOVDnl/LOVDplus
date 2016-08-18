@@ -4,13 +4,15 @@
  * LEIDEN OPEN VARIATION DATABASE (LOVD)
  *
  * Created     : 2010-01-15
- * Modified    : 2014-12-11
+ * Modified    : 2016-08-18
  * For LOVD    : 3.0-13
  *
- * Copyright   : 2004-2014 Leiden University Medical Center; http://www.LUMC.nl/
+ * Copyright   : 2004-2016 Leiden University Medical Center; http://www.LUMC.nl/
  * Programmers : Jerry Hoogenboom <J.Hoogenboom@LUMC.nl>
  *               Ivar Lugtenburg <I.C.Lugtenburg@LUMC.nl>
  *               Ing. Ivo F.A.C. Fokkema <I.F.A.C.Fokkema@LUMC.nl>
+ *               Msc. Daan Asscheman <D.Asscheman@LUMC.nl>
+ *               M. Kroon <m.kroon@lumc.nl>
  *
  *
  * This file is part of LOVD.
@@ -29,12 +31,14 @@
  * along with LOVD.  If not, see <http://www.gnu.org/licenses/>.
  *
  *************/
+
 define('ROOT_PATH', '../');
 require ROOT_PATH . 'inc-init.php';
 require ROOT_PATH . 'inc-lib-actions.php';
 require ROOT_PATH . 'inc-lib-genes.php';
 require ROOT_PATH . 'inc-lib-form.php';
 require ROOT_PATH . 'class/soap_client.php';
+require ROOT_PATH . 'inc-lib-variants.php';
 $_Mutalyzer = new LOVD_SoapClient();
 define('LOG_EVENT', 'AutomaticMapping');
 //header('Content-type: text/javascript; charset=UTF-8'); // When this header is enabled, jQuery doesn't like the script anymore because it assumes JSON, see the dataType setting.
@@ -335,7 +339,7 @@ if (!empty($aVariants)) {
     // We'll need a list of transcripts in the database on this chromosome.
     $aTranscriptsInLOVD = array();
     // FIXME: Restrict range somewhat based on variant's range? Query takes 0.03s with 22K transcripts, but we have $nStart and $nEnd available.
-    $qTranscriptsInLOVD = $_DB->query('SELECT t.id, geneid, id_ncbi FROM ' . TABLE_TRANSCRIPTS . ' AS t JOIN ' . TABLE_GENES . ' AS g ON (g.id = t.geneid) WHERE chromosome = ?', array($sChromosome));
+    $qTranscriptsInLOVD = $_DB->query('SELECT t.id, geneid, id_ncbi FROM ' . TABLE_TRANSCRIPTS . ' AS t INNER JOIN ' . TABLE_GENES . ' AS g ON (g.id = t.geneid) WHERE chromosome = ?', array($sChromosome));
     while ($aTranscriptInLOVD = $qTranscriptsInLOVD->fetchAssoc()) {
         $aTranscriptsInLOVD[$aTranscriptInLOVD['geneid']][$aTranscriptInLOVD['id']] = array('id' => $aTranscriptInLOVD['id'], 'id_ncbi' => $aTranscriptInLOVD['id_ncbi']);
     }
@@ -395,7 +399,7 @@ if (!empty($aVariants)) {
 
         // Find out on which transcripts this variant has been mapped already.
         $aVariant['alreadyMappedTranscripts'] = array();
-        $zVariantInfo = $_DB->query('SELECT t.id, id_ncbi, geneid, `VariantOnTranscript/DNA` AS dna FROM ' . TABLE_TRANSCRIPTS . ' AS t JOIN ' . TABLE_VARIANTS_ON_TRANSCRIPTS . ' AS vot ON (t.id = vot.transcriptid AND vot.id = ' . $aVariant['id'] . ')')->fetchAllAssoc();
+        $zVariantInfo = $_DB->query('SELECT t.id, id_ncbi, geneid, `VariantOnTranscript/DNA` AS dna FROM ' . TABLE_TRANSCRIPTS . ' AS t INNER JOIN ' . TABLE_VARIANTS_ON_TRANSCRIPTS . ' AS vot ON (t.id = vot.transcriptid AND vot.id = ' . $aVariant['id'] . ')')->fetchAllAssoc();
         foreach ($zVariantInfo as $a) {
             $aVariant['alreadyMappedTranscripts'][] = $a['id_ncbi'];
             // Fake the POST variables that DBID needs to make a better prediction.
@@ -433,60 +437,11 @@ if (!empty($aVariants)) {
                                 }
 
                                 // Get the p. description too.
-                                // FIXME: When mapping multiple variants in one gene, this query is repeated for each variants. Store ID?
-                                $sTranscriptNum = $_DB->query('SELECT id_mutalyzer FROM ' . TABLE_TRANSCRIPTS . ' WHERE id_ncbi = ?', array($sTranscriptNM))->fetchColumn();
                                 // This takes about 0.9-1.1 second...
-                                try {
-                                    $sFullVariantDescription = $sRefseqUD . '(' . $sTranscriptNM . '):' . $aSQL[1][7];
-                                    $aOutput = get_object_vars($_Mutalyzer->runMutalyzer(array('variant' => $sFullVariantDescription))->runMutalyzerResult);
-                                    // FIXME: Notice: Undefined property: stdClass::$string in /www/svn/LOVD3/trunk/src/ajax/map_variants.php on line 433
-                                    if (!empty($aOutput['proteinDescriptions']->string)) {
-                                        $aVariantsOnProtein = $aOutput['proteinDescriptions']->string;
-                                    } else {
-                                        $aVariantsOnProtein = array();
-                                    }
-                                } catch (SoapFault $e) {
-                                    $aOutput = $aVariantsOnProtein = array();
-                                }
-                                if (isset($aOutput['messages']->SoapMessage)) {
-                                    $aVariantsOnProteinErrors = $aOutput['messages']->SoapMessage;
-                                } else {
-                                    $aVariantsOnProteinErrors = array();
-                                }
+                                $aPrediction = lovd_getRNAProteinPrediction($sRefseqUD, $aTranscript['gene'], $sTranscriptNM, $aSQL[1][7]);
 
-                                $sRNA = '';
-                                $sProtein = '';
-                                foreach ($aVariantsOnProteinErrors as $oError) {
-                                    $aError = get_object_vars($oError);
-                                    // FIXME; We should include ERANGE error handling here too, when we can expect large deletions etc.
-                                    if (isset($aError['errorcode']) && $aError['errorcode'] == 'WSPLICE') {
-                                        $sRNA = 'r.spl?';
-                                        $sProtein = 'p.?';
-                                        break;
-                                    }
-                                }
-
-                                if (!$sProtein && !empty($aVariantsOnProtein)) {
-                                    foreach ($aVariantsOnProtein as $sVariantOnProtein) {
-                                        // 2014-12-05; 3.0-13; Fixed bug: When multiple genes exist in the UD, make sure we are reading out the right protein change here.
-                                        if (($nPos = strpos($sVariantOnProtein, $aTranscript['gene'] . '_i' . $sTranscriptNum . '):p.')) !== false) {
-                                            // FIXME: Since this code is the same as the code used for transcripts newly created in LOVD, better make a function out of it.
-                                            $sProtein = substr($sVariantOnProtein, $nPos + strlen($aTranscript['gene'] . '_i' . $sTranscriptNum . '):'));
-                                            if ($sProtein == 'p.?') {
-                                                $sRNA = 'r.?';
-                                            } elseif ($sProtein == 'p.(=)') {
-                                                // FIXME: Not correct in case of substitutions e.g. in the third position of the codon, not leading to a protein change.
-                                                $sRNA = 'r.(=)';
-                                            } else {
-                                                // RNA will default to r.(?).
-                                                $sRNA = 'r.(?)';
-                                            }
-                                            break;
-                                        }
-                                    }
-                                }
-                                $aSQL[1][8] = $sRNA;
-                                $aSQL[1][9] = $sProtein;
+                                $aSQL[1][8] = (empty($aPrediction['predict']['RNA'])? '' : $aPrediction['predict']['RNA']);
+                                $aSQL[1][9] = (empty($aPrediction['predict']['protein'])? '' : $aPrediction['predict']['protein']);
                                 if ($_DB->query($aSQL[0], $aSQL[1], false)) {
                                     // If the insert succeeded, save some data in the variant array for lovd_fetchDBID().
                                     $aVariant['aTranscripts'][$aSQL[1][1]] = array($sTranscriptNM, $aTranscript['gene']);
@@ -706,57 +661,11 @@ if (!empty($aVariants)) {
                     }
 
                     // Get the p. description too.
-                    try {
-                        $sFullVariantDescription = $sRefseqUD . '(' . $aFieldsTranscript['id_ncbi'] . '):' . $aVariantOnTranscriptSQL[1][7];
-                        $aOutput = get_object_vars($_Mutalyzer->runMutalyzer(array('variant' => $sFullVariantDescription))->runMutalyzerResult);
-                        // FIXME: Notice: Undefined property: stdClass::$string in /www/svn/LOVD3/trunk/src/ajax/map_variants.php on line 433
-                        if (!empty($aOutput['proteinDescriptions']->string)) {
-                            $aVariantsOnProtein = $aOutput['proteinDescriptions']->string;
-                        } else {
-                            $aVariantsOnProtein = array();
-                        }
-                    } catch (SoapFault $e) {
-                        $aOutput = $aVariantsOnProtein = array();
-                    }
-                    if (isset($aOutput['messages']->SoapMessage)) {
-                        $aVariantsOnProteinErrors = $aOutput['messages']->SoapMessage;
-                    } else {
-                        $aVariantsOnProteinErrors = array();
-                    }
+                    $aPrediction = lovd_getRNAProteinPrediction($sRefseqUD, $sSymbol,
+                        $aFieldsTranscript['id_ncbi'], $aVariantOnTranscriptSQL[1][7]);
 
-                    $sRNA = '';
-                    $sProtein = '';
-                    foreach ($aVariantsOnProteinErrors as $oError) {
-                        $aError = get_object_vars($oError);
-                        // FIXME; We should include ERANGE error handling here too, when we can expect large deletions etc.
-                        if (isset($aError['errorcode']) && $aError['errorcode'] == 'WSPLICE') {
-                            $sRNA = 'r.spl?';
-                            $sProtein = 'p.?';
-                            break;
-                        }
-                    }
-
-                    if (!$sProtein && !empty($aVariantsOnProtein)) {
-                        foreach ($aVariantsOnProtein as $sVariantOnProtein) {
-                            // 2014-12-05; 3.0-13; Fixed bug: When multiple genes exist in the UD, make sure we are reading out the right protein change here.
-                            if (($nPos = strpos($sVariantOnProtein, $aTranscript['gene'] . '_i' . $aFieldsTranscript['id_mutalyzer'] . '):p.')) !== false) {
-                                // FIXME: Since this code is the same as the code used for transcripts already in LOVD, better make a function out of it.
-                                $sProtein = substr($sVariantOnProtein, $nPos + strlen($aTranscript['gene'] . '_i' . $aFieldsTranscript['id_mutalyzer'] . '):'));
-                                if ($sProtein == 'p.?') {
-                                    $sRNA = 'r.?';
-                                } elseif ($sProtein == 'p.(=)') {
-                                    // FIXME: Not correct in case of substitutions e.g. in the third position of the codon, not leading to a protein change.
-                                    $sRNA = 'r.(=)';
-                                } else {
-                                    // RNA will default to r.(?).
-                                    $sRNA = 'r.(?)';
-                                }
-                                break;
-                            }
-                        }
-                    }
-                    $aVariantOnTranscriptSQL[1][8] = $sRNA;
-                    $aVariantOnTranscriptSQL[1][9] = $sProtein;
+                    $aVariantOnTranscriptSQL[1][8] = (empty($aPrediction['predict']['RNA'])? '' : $aPrediction['predict']['RNA']);
+                    $aVariantOnTranscriptSQL[1][9] = (empty($aPrediction['predict']['protein'])? '' : $aPrediction['predict']['protein']);
 
                     // Map the variant to the newly inserted transcript.
                     $aVariantOnTranscriptSQL[1][1] = $nID;
