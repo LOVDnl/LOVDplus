@@ -588,6 +588,8 @@ if ($sCalcVersionFiles != $sCalcVersionDB) {
                      array(
                         'CREATE TABLE IF NOT EXISTS ' . TABLE_SUMMARY_ANNOTATIONS . ' (id VARCHAR(50) NOT NULL, effectid TINYINT(1) UNSIGNED ZEROFILL, created_by SMALLINT(5) UNSIGNED ZEROFILL, created_date DATETIME NOT NULL, edited_by SMALLINT(5) UNSIGNED ZEROFILL, edited_date DATETIME, PRIMARY KEY (id), INDEX (effectid), INDEX (created_by), INDEX (edited_by), CONSTRAINT ' . TABLE_SUMMARY_ANNOTATIONS . '_fk_created_by FOREIGN KEY (created_by) REFERENCES ' . TABLE_USERS . ' (id) ON DELETE SET NULL ON UPDATE CASCADE, CONSTRAINT ' . TABLE_SUMMARY_ANNOTATIONS . '_fk_edited_by FOREIGN KEY (edited_by) REFERENCES ' . TABLE_USERS . ' (id) ON DELETE SET NULL ON UPDATE CASCADE) ENGINE=InnoDB, DEFAULT CHARACTER SET utf8',
                         'CREATE TABLE IF NOT EXISTS ' . TABLE_SUMMARY_ANNOTATIONS_REV . ' (id VARCHAR(50) NOT NULL, effectid TINYINT(1) UNSIGNED ZEROFILL, created_by SMALLINT(5) UNSIGNED ZEROFILL, created_date DATETIME NOT NULL, edited_by SMALLINT(5) UNSIGNED ZEROFILL, edited_date DATETIME, valid_from DATETIME NOT NULL, valid_to DATETIME NOT NULL DEFAULT "9999-12-31", deleted BOOLEAN NOT NULL, deleted_by SMALLINT(5) UNSIGNED ZEROFILL, reason TEXT, PRIMARY KEY (id, valid_from), INDEX (effectid), INDEX (created_by), INDEX (edited_by), INDEX (deleted_by), CONSTRAINT ' . TABLE_SUMMARY_ANNOTATIONS_REV . '_fk_created_by FOREIGN KEY (created_by) REFERENCES ' . TABLE_USERS . ' (id) ON DELETE SET NULL ON UPDATE CASCADE, CONSTRAINT ' . TABLE_SUMMARY_ANNOTATIONS_REV . '_fk_edited_by FOREIGN KEY (edited_by) REFERENCES ' . TABLE_USERS . ' (id) ON DELETE SET NULL ON UPDATE CASCADE, CONSTRAINT ' . TABLE_SUMMARY_ANNOTATIONS_REV . '_fk_deleted_by FOREIGN KEY (deleted_by) REFERENCES ' . TABLE_USERS . ' (id) ON DELETE SET NULL ON UPDATE CASCADE) ENGINE=InnoDB, DEFAULT CHARACTER SET utf8',
+                        'CREATE TABLE IF NOT EXISTS ' . TABLE_CURATION_STATUS . ' (id TINYINT(2) UNSIGNED ZEROFILL NOT NULL, name VARCHAR(50) NOT NULL, PRIMARY KEY (id)) ENGINE=InnoDB, DEFAULT CHARACTER SET utf8', // We are inserting the curation status records below by using array merge to add them into this array.
+                        'ALTER TABLE ' . TABLE_VARIANTS . ' ADD COLUMN curation_statusid TINYINT(2) UNSIGNED NULL AFTER statusid, ADD INDEX (curation_statusid), ADD CONSTRAINT ' . TABLE_VARIANTS . '_fk_curation_statusid FOREIGN KEY (curation_statusid) REFERENCES ' . TABLE_CURATION_STATUS . ' (id) ON DELETE SET NULL ON UPDATE CASCADE',
                      )
              );
 
@@ -688,6 +690,18 @@ if ($sCalcVersionFiles != $sCalcVersionDB) {
                 'INSERT INTO ' . TABLE_COLS . ' VALUES ("VariantOnGenome/InhouseDB/Position/OutOfPanel/Samples_w_coverage", 255, 100, 0, 1, 0, "INDB Out Of Panel Samples", "", "The number of samples in the Inhouse Database, not having the same indication as the individual that is analyzed, that have enough coverage on the position of the variant.", "The number of samples in the Inhouse Database, not having the same indication as the individual that is analyzed, that have enough coverage on the position of the variant.", "MEDIUMINT UNSIGNED", "INDB Out Of Panel Samples||text|6", "", "", 0, 0, 1, 0, NOW(), NULL, NULL)',
             )
         );
+    }
+
+    if (LOVD_plus && $sCalcVersionDB < lovd_calculateVersion('3.0-12u')) {
+        // Insert the curation status records.
+        $aCurationStatusSQL = array();
+        foreach ($_SETT['curation_status'] as $nStatus => $sStatus) {
+            $aCurationStatusSQL[] = 'INSERT IGNORE INTO ' . TABLE_CURATION_STATUS . ' VALUES (' . $nStatus . ', "' . $sStatus . '")';
+        }
+        $aUpdates['3.0-12u'] = array_merge($aUpdates['3.0-12u'],$aCurationStatusSQL);
+        // Finish the updates that can only be done now that these are run...
+        $aUpdates['3.0-12u'][] = 'UPDATE ' . TABLE_VARIANTS . ' SET curation_statusid = ' . CUR_STATUS_REQUIRES_CONFIRMATION . ' WHERE to_be_confirmed = 1';
+        $aUpdates['3.0-12u'][] = 'ALTER TABLE ' . TABLE_VARIANTS . ' DROP COLUMN to_be_confirmed';
     }
 
 
