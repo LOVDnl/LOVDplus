@@ -4,7 +4,7 @@
  * LEIDEN OPEN VARIATION DATABASE (LOVD)
  *
  * Created     : 2014-11-28
- * Modified    : 2016-06-03
+ * Modified    : 2016-08-17
  * For LOVD+   : 3.0-16
  *
  * Copyright   : 2004-2016 Leiden University Medical Center; http://www.LUMC.nl/
@@ -982,7 +982,7 @@ $aColumnsForVOT = array(
 );
 // Default values.
 $aDefaultValues = array(
-    'effectid' => '00',
+    'effectid' => $_SETT['var_effect_default'],
     'mapping_flags' => '0',
 //    'owned_by' => 0, // '0' is not a valid value, because "LOVD" is removed from the selection list. When left empty, it will default to the user running LOVD, though.
     'statusid' => STATUS_HIDDEN,
