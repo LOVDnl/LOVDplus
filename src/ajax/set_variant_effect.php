@@ -4,8 +4,8 @@
  * LEIDEN OPEN VARIATION DATABASE (LOVD)
  *
  * Created     : 2013-11-27
- * Modified    : 2016-05-04
- * For LOVD    : 3.0-12
+ * Modified    : 2016-08-05
+ * For LOVD    : 3.0-13
  *
  * Copyright   : 2004-2016 Leiden University Medical Center; http://www.LUMC.nl/
  * Programmer  : Ing. Ivo F.A.C. Fokkema <I.F.A.C.Fokkema@LUMC.nl>
@@ -32,7 +32,7 @@ define('ROOT_PATH', '../');
 require ROOT_PATH . 'inc-init.php';
 
 // Set the variant effect value for selected variants from a ViewList.
-if (!empty($_GET['id']) && $_AUTH && ACTION !== false && in_array(ACTION, array_keys($_SETT['var_effect']))) {
+if (!empty($_GET['id']) && $_AUTH && ACTION !== false && isset($_SETT['var_effect'][ACTION])) {
     // The easiest thing to do is just run the query, and just dump the result.
     if ($_GET['id'] == 'selected') {
         $aIDs = array_values($_SESSION['viewlists']['CustomVL_AnalysisRunResults_for_I_VE']['checked']);

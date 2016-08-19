@@ -437,7 +437,7 @@ function lovd_activateMenu (sViewListID)
                 event: "click",
                 openBelowContext: true,
                 autoHide: true,
-                delay: 1000,
+                delay: 100,
                 onSelect: function(e, context) {
                     // e.stopPropagation(); // Doesn't do anything... :(
                     if ($(this).hasClass("disabled")) {
