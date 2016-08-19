@@ -955,7 +955,6 @@ $aColumnsForVOG = array(
     'id',
     'allele',
     'effectid',
-    'to_be_confirmed',
     'chromosome',
     'position_g_start',
     'position_g_end',
@@ -987,7 +986,6 @@ $aDefaultValues = array(
     'mapping_flags' => '0',
 //    'owned_by' => 0, // '0' is not a valid value, because "LOVD" is removed from the selection list. When left empty, it will default to the user running LOVD, though.
     'statusid' => STATUS_HIDDEN,
-    'to_be_confirmed' => 0,
     'created_by' => 0,
     'created_date' => date('Y-m-d H:i:s'),
 );
