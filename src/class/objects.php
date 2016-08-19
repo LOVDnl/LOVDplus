@@ -1007,11 +1007,7 @@ class LOVD_Object {
             if ($bOnlyRows) {
                 die('0'); // Silent error.
             }
-            if ($sViewListID == 'GeneStatistic') {
-                lovd_showInfoTable('No gene statistics have been imported into this database. Please <A href="gene_statistics?import">click here</A> to import them.', 'stop');
-            } else {
-                lovd_showInfoTable('No entries in the database yet!', 'stop');
-            }
+            lovd_showInfoTable('No entries in the database yet!', 'stop');
             return 0;
         }
 
@@ -1627,9 +1623,6 @@ class LOVD_Object {
                         }
                     }
                     $sMessage .= $sWhere;
-                }
-                if ($sUnit == 'gene_statistics') {
-                    $sMessage = 'No gene statistics have been imported into this database. Please <A href="gene_statistics?import">click here</A> to import them';
                 }
                 lovd_showInfoTable($sMessage . '!', 'stop');
 

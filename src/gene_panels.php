@@ -467,6 +467,7 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && ACTION == 'manage_genes') {
         $_T->printFooter();
         exit;
     }
+    define('PAGE_TITLE', 'Manage genes for gene panel: ' . htmlspecialchars($zData['name']));
     $aSelectedGenes = array();
     if (!empty($_GET['select_genes_from']) && (empty($_SESSION['viewlists'][$_GET['select_genes_from']]['checked']) || count($_SESSION['viewlists'][$_GET['select_genes_from']]['checked']) == 0)) {
         // A viewlistid has been specified with the intention of adding selected genes in that viewlistid but there are no selected genes or the viewlistid is incorrect.
@@ -479,7 +480,6 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && ACTION == 'manage_genes') {
         // Selected genes in the viewlist are added to this array for further processing.
         $aSelectedGenes = $_SESSION['viewlists'][$_GET['select_genes_from']]['checked'];
     }
-    define('PAGE_TITLE', 'Manage genes for gene panel: ' . htmlspecialchars($zData['name']));
 
     require ROOT_PATH . 'inc-lib-form.php';
 

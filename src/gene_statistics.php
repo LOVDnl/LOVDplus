@@ -209,7 +209,9 @@ if (PATH_COUNT == 1 && !ACTION) {
         <LI class="icon"><A click="lovd_AJAX_viewListSubmit(\'' . $sViewListID . '\', function(){window.location.href=\'' . lovd_getInstallURL() . 'gene_panels?add&select_genes_from=' . $sViewListID . '\'; return false;});"><SPAN class="icon" style="background-image: url(gfx/menu_plus.png);"></SPAN>Add selected genes to gene panel</A></LI>
         <LI class="icon"><A href="' . CURRENT_PATH . '?import"><SPAN class="icon" style="background-image: url(gfx/menu_import.png);"></SPAN>Import gene statistics</A></LI>
       </UL>' . "\n\n");
-    $_DATA->viewList($sViewListID, array(), false, false, (bool) ($_AUTH['level'] >= LEVEL_SUBMITTER));
+    if (!$_DATA->viewList($sViewListID, array(), false, false, (bool) ($_AUTH['level'] >= LEVEL_SUBMITTER))) {
+        lovd_showInfoTable('No gene statistics have been imported into this database. Please <A href="gene_statistics?import">click here</A> to import them.', 'information');
+    }
 
     $_T->printFooter();
     exit;
