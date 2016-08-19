@@ -117,6 +117,7 @@ class LOVD_CustomViewListMOD extends LOVD_CustomViewList {
             switch ($sObject) {
                 case 'AnalysisRunResults':
                     $aSQL['SELECT'] .= (!$aSQL['SELECT']? '' : ', ') . 'arr.*';
+                    $nKeyVOG = array_search('VariantOnGenome', $aObjects);
                     if (!$aSQL['FROM']) {
                         // First data table in query.
                         $aSQL['FROM'] = TABLE_ANALYSES_RUN_RESULTS . ' AS arr';
@@ -126,6 +127,8 @@ class LOVD_CustomViewListMOD extends LOVD_CustomViewList {
                         if (array_search('VariantOnGenome', $aObjects)) {
                             $aSQL['GROUP_BY'] = 'vog.id'; // Necessary for GROUP_CONCAT().
                         }
+                    } elseif ($nKeyVOG !== false && $nKeyVOG < $nKey) { // Adding the analysis run results later.
+                        $aSQL['FROM'] .= ' LEFT JOIN ' . TABLE_ANALYSES_RUN_RESULTS . ' AS arr ON (arr.variantid = vog.id)';
                     }
                     break;
 
@@ -140,7 +143,35 @@ class LOVD_CustomViewListMOD extends LOVD_CustomViewList {
                             'VariantOnGenome/Sequencing/Quality',
                             'VariantOnGenome/Sequencing/GATKcaller',
                         );
-                    $aSQL['SELECT'] .= (!$aSQL['SELECT']? '' : ', ') . 'vog.*, a.name AS allele_, eg.name AS vog_effect';
+                    $aSQL['SELECT'] .= (!$aSQL['SELECT']? '' : ', ') . 'vog.*, a.name AS allele_, eg.name AS vog_effect, CONCAT(cs.id, cs.name) AS curation_status_';
+                    // Observation count columns.
+                    // Find the diseases that this individual has assigned using the analysis run ID in $_GET.
+                    if (!empty($_GET['search_runid'])) {
+                        // We have selected an analyses and have to use the runid to find out the diseases this individual has.
+                        $sDiseaseIDs = implode(',', $_DB->query('SELECT i2d.diseaseid FROM ' . TABLE_IND2DIS . ' AS i2d INNER JOIN ' . TABLE_SCREENINGS . ' AS scr ON (i2d.individualid = scr.individualid) INNER JOIN ' . TABLE_ANALYSES_RUN . ' AS ar ON (scr.id = ar.screeningid) WHERE ar.id = ?', array($_GET['search_runid']))->fetchAllColumn());
+                    } elseif (!empty($_GET['search_variantid'])) {
+                        // We are viewing the default VL that does not contain the runid but it does have some variants to find out the diseases this individual has.
+                        preg_match('/^\d+/', $_GET['search_variantid'], $aRegs); // Find the first variant ID in the list of variants.
+                        $sDiseaseIDs = implode(',', $_DB->query('SELECT i2d.diseaseid FROM ' . TABLE_IND2DIS . ' AS i2d INNER JOIN ' . TABLE_SCREENINGS . ' AS scr ON (i2d.individualid = scr.individualid) INNER JOIN ' . TABLE_SCR2VAR . ' AS s2v ON (scr.id = s2v.screeningid) WHERE s2v.variantid = ?', array($aRegs[0]))->fetchAllColumn());
+                    } else {
+                        // There is no data we can use to find this individuals diseases.
+                        $sDiseaseIDs = '';
+                    }
+                    // Check if we have found any diseases and set the boolean flag accordingly.
+                    $bDiseases = (bool) $sDiseaseIDs;
+
+                    $aSQL['SELECT'] .= ', COUNT(DISTINCT os.individualid) AS obs_variant';
+                    $aSQL['SELECT'] .= ', COUNT(DISTINCT os.individualid) / ' . $_DB->query('SELECT COUNT(*) FROM ' . TABLE_INDIVIDUALS)->fetchColumn() . ' AS obs_var_ind_ratio';
+
+                    if ($bDiseases) {
+                        // If this individual has diseases then setup the disease specific observation count columns.
+                        $aSQL['SELECT'] .= ', COUNT(DISTINCT odi2d.individualid) AS obs_disease';
+                        $aSQL['SELECT'] .= ', COUNT(DISTINCT odi2d.individualid) / ' . $_DB->query('SELECT COUNT(DISTINCT i2d.individualid) FROM ' . TABLE_IND2DIS . ' AS i2d WHERE i2d.diseaseid IN (' . $sDiseaseIDs . ')')->fetchColumn() . ' AS obs_var_dis_ind_ratio';
+                    } else {
+                        // Otherwise do not do anything for the disease specific observation count columns.
+                        $aSQL['SELECT'] .= ', NULL AS obs_disease, NULL AS obs_var_dis_ind_ratio';
+                    }
+
                     if (!$aSQL['FROM']) {
                         // First data table in query.
                         $aSQL['SELECT'] .= ', vog.id AS row_id'; // To ensure other table's id columns don't interfere.
@@ -163,6 +194,21 @@ class LOVD_CustomViewListMOD extends LOVD_CustomViewList {
                     }
                     $aSQL['FROM'] .= ' LEFT OUTER JOIN ' . TABLE_ALLELES . ' AS a ON (vog.allele = a.id)';
                     $aSQL['FROM'] .= ' LEFT OUTER JOIN ' . TABLE_EFFECT . ' AS eg ON (vog.effectid = eg.id)';
+                    $aSQL['FROM'] .= ' LEFT OUTER JOIN ' . TABLE_CURATION_STATUS . ' AS cs ON (vog.curation_statusid = cs.id)';
+
+                    // Outer joins for the observation counts.
+                    // Join the variants table using the DBID to get all of the variants that are the same as this one.
+                    $aSQL['FROM'] .= ' LEFT OUTER JOIN ' . TABLE_VARIANTS . ' AS ovog USING (`VariantOnGenome/DBID`)';
+                    // Join the screening2variants table to get the screening IDs for all these variants.
+                    $aSQL['FROM'] .= ' LEFT OUTER JOIN ' . TABLE_SCR2VAR . ' AS os2v ON (ovog.id = os2v.variantid)';
+                    // Join the screening table to to get the individual IDs for these variants as we count the DISTINCT individualids.
+                    $aSQL['FROM'] .= ' LEFT OUTER JOIN ' . TABLE_SCREENINGS . ' AS os ON (os2v.screeningid = os.id)';
+
+                    // Outer join for the disease specific observation counts.
+                    if ($bDiseases) {
+                        // Join the individuals2diseases table to get the individuals with this variant and this individuals diseases.
+                        $aSQL['FROM'] .= ' LEFT OUTER JOIN ' . TABLE_IND2DIS . ' AS odi2d ON (os.individualid = odi2d.individualid AND odi2d.diseaseid in(' . $sDiseaseIDs . '))';
+                    }
                     break;
 
                 case 'VariantOnTranscript':
@@ -240,21 +286,25 @@ class LOVD_CustomViewListMOD extends LOVD_CustomViewList {
                     $this->aColumnsViewList = array_merge($this->aColumnsViewList,
                          array(
                                 // NOTE: there are more columns defined a little further below.
-                                'chromosome' => array(
-                                        'view' => array('Chr', 50),
-                                        'db'   => array('vog.chromosome', 'ASC', true)),
-/*
-                                'allele_' => array(
-                                        'view' => array('Allele', 120),
-                                        'db'   => array('a.name', 'ASC', true),
-                                        'legend' => array('On which allele is the variant located? Does not necessarily imply inheritance!',
-                                                          'On which allele is the variant located? Does not necessarily imply inheritance! \'Paternal\' (confirmed or inferred), \'Maternal\' (confirmed or inferred), \'Parent #1\' or #2 for compound heterozygosity without having screened the parents, \'Unknown\' for heterozygosity without having screened the parents, \'Both\' for homozygozity.')),
-*/
+                                'curation_status_' => array(
+                                        'view' => array('Curation status', 70),
+                                        'db'   => array('curation_status_', 'ASC', 'TEXT'),
+                                        'legend' => array('The variant\'s curation status.',
+                                        'The variant\'s curation status.')),
+                                'curation_statusid' => array(
+                                        'view' => false,
+                                        'db'   => array('vog.curation_statusid', 'ASC', true)),
+                                'variantid' => array(
+                                        'view' => false,
+                                        'db'   => array('vog.id', 'ASC', true)),
                                 'vog_effect' => array(
                                         'view' => array('Effect', 70),
                                         'db'   => array('eg.name', 'ASC', true),
                                         'legend' => array('The variant\'s effect on a protein\'s function, in the format Reported/Curator concluded; ranging from \'+\' (variant affects function) to \'-\' (does not affect function).',
                                                           'The variant\'s affect on a protein\'s function, in the format Reported/Curator concluded; \'+\' indicating the variant affects function, \'+?\' probably affects function, \'-\' does not affect function, \'-?\' probably does not affect function, \'?\' effect unknown.')),
+                                'chromosome' => array(
+                                        'view' => array('Chr', 50),
+                                        'db'   => array('vog.chromosome', 'ASC', true)),
                               ));
 
                     if (!$this->sSortDefault) {
@@ -325,6 +375,32 @@ class LOVD_CustomViewListMOD extends LOVD_CustomViewList {
                                 'db'   => array('__gene_OMIM', 'ASC', 'TEXT')),
                         ));
                     break;
+                case 'VariantOnGenome':
+                    // The fixed columns.
+                    $this->aColumnsViewList = array_merge($this->aColumnsViewList,
+                        array(
+                            'obs_variant' => array(
+                                'view' => array('#Ind. w/ var.', 70),
+                                'db'   => array('obs_variant', 'ASC', 'INT'),
+                                'legend' => array('The number of individuals with this variant within this database.',
+                                    'The number of individuals with this variant within this database.')),
+                            'obs_var_ind_ratio' => array(
+                                'view' => array('Var. ind. ratio', 70),
+                                'db'   => array('obs_var_ind_ratio', 'ASC', 'DECIMAL'),
+                                'legend' => array('The ratio of the number of individuals with this variant divided by the total number of individuals within this database.',
+                                    'The ratio of the number of individuals with this variant divided by the total number of individuals within this database.')),
+                            'obs_disease' => array(
+                                'view' => array('#Ind. w/ var & dis.', 70),
+                                'db'   => array('obs_disease', 'ASC', 'INT'),
+                                'legend' => array('The number of individuals with this variant within this database that have at least one of the diseases in common as this individual.',
+                                    'The number of individuals with this variant within this database that have at least one of the diseases in common as this individual.')),
+                            'obs_var_dis_ind_ratio' => array(
+                                'view' => array('Var. dis. ind. ratio', 70),
+                                'db'   => array('obs_var_dis_ind_ratio', 'ASC', 'DECIMAL'),
+                                'legend' => array('The ratio of the number of individuals with this variant and this disease divided by the total number of individuals with this disease within this database.',
+                                    'The ratio of the number of individuals with this variant and this disease divided by the total number of individuals with this disease within this database.')),
+                        ));
+                    break;
             }
         }
 
@@ -391,8 +467,8 @@ class LOVD_CustomViewListMOD extends LOVD_CustomViewList {
                     break;
             }
         }
-        // Variants marked as "to be confirmed" are transparent a bit.
-        if ($zData['to_be_confirmed'] && empty($zData['confirmed'])) {
+        // Variants requiring confirmation are transparent a bit.
+        if (!empty($zData['curation_statusid']) && $zData['curation_statusid'] == CUR_STATUS_REQUIRES_CONFIRMATION) {
             $zData['class_name'] = (empty($zData['class_name'])? '' : $zData['class_name'] . ' ') . 'transparent50';
         }
 
@@ -410,6 +486,9 @@ class LOVD_CustomViewListMOD extends LOVD_CustomViewList {
                     $zData['gene_OMIM_'] .= (!$zData['gene_OMIM_']? '' : ', ') . '<SPAN class="anchor" onclick="lovd_openWindow(\'' . lovd_getExternalSource('omim', $nOMIMID) . '\', \'GeneOMIMPage\', 1100, 650); cancelParentEvent(event);">' . $sGene . '</SPAN>';
                 }
             }
+        }
+        if (!empty($zData['curation_status_'])) {
+            $zData['curation_status_'] = substr($zData['curation_status_'], 2);
         }
 
         return $zData;

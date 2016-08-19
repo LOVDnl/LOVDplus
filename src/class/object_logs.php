@@ -174,6 +174,7 @@ class LOVD_Log extends LOVD_Object {
             case 'VariantCreate':
             case 'VariantEdit':
             case 'VariantMap':
+            case 'CurationStatus':
                 $zData['entry'] = preg_replace('/(entry|variant) (#)?([0-9]+)( .+)?$/', '$1 $2<A href="variants/$3">$3</A>$4', $zData['entry']);
                 break;
         }

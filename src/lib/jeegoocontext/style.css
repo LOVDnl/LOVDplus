@@ -38,8 +38,8 @@ body ul.jeegoocontext li.hr{padding:2px 5px 2px 31px; cursor:default;}
 body ul.jeegoocontext li.hr hr {margin : 0px;}
 
 body ul.jeegoocontext li.disabled{color:#999; cursor:default;}
-body ul.jeegoocontext li span.submenu{display:block; width:4px; height:11px; float:right; background:url(lib/jeegoocontext/skins/images/submenu.gif) no-repeat 0 4px}
-body ul.jeegoocontext li.disabled span.submenu{background-image:url(lib/jeegoocontext/skins/images/submenu_dis.gif)}
+body ul.jeegoocontext li span.submenu{display:block; width:4px; height:11px; float:right; background:url(submenu.gif) no-repeat 0 4px}
+body ul.jeegoocontext li.disabled span.submenu{background-image:url(submenu_dis.gif)}
 body ul.jeegoocontext li.hover{background-color:#C8DCFA}
 body ul.jeegoocontext li.hover.disabled, body ul.jeegoocontext li.hover.hr{background-color:#FFFFFF}
 body ul.jeegooviewlist li.hover.disabled{background-color:#F0F3FF}
