@@ -237,6 +237,13 @@ $aTableSQL =
     PRIMARY KEY (id))
     ' . $sSettings
 
+         , 'TABLE_CURATION_STATUS' =>
+   'CREATE TABLE ' . TABLE_CURATION_STATUS . ' (
+    id TINYINT(2) UNSIGNED ZEROFILL NOT NULL,
+    name VARCHAR(50) NOT NULL,
+    PRIMARY KEY (id))
+    ' . $sSettings
+
          , 'TABLE_ANALYSIS_STATUS' =>
          'CREATE TABLE ' . TABLE_ANALYSIS_STATUS . ' (
     id TINYINT(1) UNSIGNED NOT NULL,
@@ -330,7 +337,6 @@ $aTableSQL =
     id INT(10) UNSIGNED ZEROFILL NOT NULL AUTO_INCREMENT,
     allele TINYINT(2) UNSIGNED NOT NULL,
     effectid TINYINT(2) UNSIGNED ZEROFILL,
-    to_be_confirmed BOOLEAN NOT NULL DEFAULT 0,
     chromosome VARCHAR(2),
     position_g_start INT(10) UNSIGNED,
     position_g_end INT(10) UNSIGNED,
@@ -339,6 +345,7 @@ $aTableSQL =
     average_frequency FLOAT UNSIGNED,
     owned_by SMALLINT(5) UNSIGNED ZEROFILL,
     statusid TINYINT(1) UNSIGNED,
+    curation_statusid TINYINT(2) UNSIGNED NULL,
     created_by SMALLINT(5) UNSIGNED ZEROFILL,
     created_date DATETIME NOT NULL,
     edited_by SMALLINT(5) UNSIGNED ZEROFILL,
@@ -350,6 +357,7 @@ $aTableSQL =
     INDEX (average_frequency),
     INDEX (owned_by),
     INDEX (statusid),
+    INDEX (curation_statusid),
     INDEX (created_by),
     INDEX (edited_by),
     CONSTRAINT ' . TABLE_VARIANTS . '_fk_allele FOREIGN KEY (allele) REFERENCES ' . TABLE_ALLELES . ' (id) ON UPDATE CASCADE,
@@ -357,6 +365,7 @@ $aTableSQL =
     CONSTRAINT ' . TABLE_VARIANTS . '_fk_chromosome FOREIGN KEY (chromosome) REFERENCES ' . TABLE_CHROMOSOMES . ' (name) ON DELETE SET NULL ON UPDATE CASCADE,
     CONSTRAINT ' . TABLE_VARIANTS . '_fk_owned_by FOREIGN KEY (owned_by) REFERENCES ' . TABLE_USERS . ' (id) ON DELETE SET NULL ON UPDATE CASCADE,
     CONSTRAINT ' . TABLE_VARIANTS . '_fk_statusid FOREIGN KEY (statusid) REFERENCES ' . TABLE_DATA_STATUS . ' (id) ON DELETE SET NULL ON UPDATE CASCADE,
+    CONSTRAINT ' . TABLE_VARIANTS . '_fk_curation_statusid FOREIGN KEY (curation_statusid) REFERENCES ' . TABLE_CURATION_STATUS . ' (id) ON DELETE SET NULL ON UPDATE CASCADE,
     CONSTRAINT ' . TABLE_VARIANTS . '_fk_created_by FOREIGN KEY (created_by) REFERENCES ' . TABLE_USERS . ' (id) ON DELETE SET NULL ON UPDATE CASCADE,
     CONSTRAINT ' . TABLE_VARIANTS . '_fk_edited_by FOREIGN KEY (edited_by) REFERENCES ' . TABLE_USERS . ' (id) ON DELETE SET NULL ON UPDATE CASCADE)
     ' . $sSettings

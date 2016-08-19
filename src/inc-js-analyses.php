@@ -313,6 +313,8 @@ function lovd_showAnalysisResults (nRunID)
     $('#viewlistForm_CustomVL_AnalysisRunResults_for_I_VE').children('input[name="search_runid"]').attr('value', nRunID);
     // Sometimes it's disabled...
     $('#viewlistForm_CustomVL_AnalysisRunResults_for_I_VE').children('input[name="search_runid"]')[0].disabled = false;
+    $('#viewlistForm_CustomVL_AnalysisRunResults_for_I_VE').children('input[name="search_curation_statusid"]').remove();
+    $('#viewlistForm_CustomVL_AnalysisRunResults_for_I_VE').children('input[name="search_variantid"]').remove();
 
     // Mark the currently selected filter.
     $('#analysesTable td').css('background', '');

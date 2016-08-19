@@ -4,7 +4,7 @@
  * LEIDEN OPEN VARIATION DATABASE (LOVD)
  *
  * Created     : 2013-11-06
- * Modified    : 2016-05-17
+ * Modified    : 2016-08-05
  * For LOVD    : 3.0-13
  *
  * Copyright   : 2004-2016 Leiden University Medical Center; http://www.LUMC.nl/
@@ -352,7 +352,7 @@ if ($aVariantIDs) {
             $aVariantIDsFiltered = $_DB->query('SELECT CAST(id AS UNSIGNED) FROM ' . TABLE_VARIANTS . ' WHERE (`VariantOnGenome/Sequencing/Filter` IS NULL OR `VariantOnGenome/Sequencing/Filter` = "" OR `VariantOnGenome/Sequencing/Filter` = "." OR `VariantOnGenome/Sequencing/Filter` = "PASS") AND id IN (?' . str_repeat(', ?', count($aVariantIDs) - 1) . ')', $aVariantIDs, false)->fetchAllColumn();
             break;
         case 'select_gatkcaller_ug_hc':
-            $aVariantIDsFiltered = $_DB->query('SELECT CAST(id AS UNSIGNED) FROM ' . TABLE_VARIANTS . ' WHERE (`VariantOnGenome/Sequencing/GATKcaller` = "UG,HC") AND id IN (?' . str_repeat(', ?', count($aVariantIDs) - 1) . ')', $aVariantIDs, false)->fetchAllColumn();
+            $aVariantIDsFiltered = $_DB->query('SELECT CAST(id AS UNSIGNED) FROM ' . TABLE_VARIANTS . ' WHERE (`VariantOnGenome/Sequencing/GATKcaller` REGEXP "[[:<:]]UG[[:>:]]" AND `VariantOnGenome/Sequencing/GATKcaller` REGEXP "[[:<:]]HC[[:>:]]") AND id IN (?' . str_repeat(', ?', count($aVariantIDs) - 1) . ')', $aVariantIDs, false)->fetchAllColumn();
             break;
         case 'select_homozygous_or_compound_heterozygous':
             // FIXME: Problem: Compound heterozygous check means I need the allele column.
