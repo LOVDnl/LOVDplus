@@ -53,7 +53,7 @@ ignore_user_abort(true);
 
 // call adapter script first for MGHA
 if ($_INI['instance']['name'] == 'mgha') {
-    require ROOT_PATH . 'scripts/adapter.lib.php';
+    require_once ROOT_PATH . 'scripts/adapter.lib.php';
     $cmd = 'php adapter.php';
     passthru($cmd, $adapterResult);
     if ($adapterResult !== 0){
