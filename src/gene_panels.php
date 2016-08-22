@@ -4,7 +4,7 @@
  * LEIDEN OPEN VARIATION DATABASE (LOVD)
  *
  * Created     : 2016-03-01
- * Modified    : 2016-06-02
+ * Modified    : 2016-08-17
  * For LOVD    : 3.0-13
  *
  * Copyright   : 2004-2016 Leiden University Medical Center; http://www.LUMC.nl/
@@ -31,7 +31,6 @@
 
 define('ROOT_PATH', './');
 require ROOT_PATH . 'inc-init.php';
-define('TAB_SELECTED', 'genes');
 // TODO Modify the log entries to include URLS to the affected records
 
 if ($_AUTH) {
@@ -469,6 +468,7 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && ACTION == 'manage_genes') {
         $_T->printFooter();
         exit;
     }
+    define('PAGE_TITLE', 'Manage genes for gene panel: ' . htmlspecialchars($zData['name']));
     $aSelectedGenes = array();
     if (!empty($_GET['select_genes_from']) && (empty($_SESSION['viewlists'][$_GET['select_genes_from']]['checked']) || count($_SESSION['viewlists'][$_GET['select_genes_from']]['checked']) == 0)) {
         // A viewlistid has been specified with the intention of adding selected genes in that viewlistid but there are no selected genes or the viewlistid is incorrect.
@@ -481,7 +481,6 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && ACTION == 'manage_genes') {
         // Selected genes in the viewlist are added to this array for further processing.
         $aSelectedGenes = $_SESSION['viewlists'][$_GET['select_genes_from']]['checked'];
     }
-    define('PAGE_TITLE', 'Manage genes for gene panel: ' . htmlspecialchars($zData['name']));
 
     require ROOT_PATH . 'inc-lib-form.php';
 
@@ -1071,30 +1070,26 @@ if (PATH_COUNT == 1 && ACTION == 'add') {
     define('PAGE_TITLE', 'Select gene panel to add selected genes to');
     define('LOG_EVENT', 'GenePanelSelect');
 
+    $_T->printHeader();
+    $_T->printTitle();
+
+    lovd_requireAUTH();
+
     if (!empty($_GET['select_genes_from'])) {
         $sViewListID = $_GET['select_genes_from'];
     } else {
         // We have not been provided with a viewlistid.
-        $_T->printHeader();
-        $_T->printTitle();
         lovd_showInfoTable('Must supply a view list ID!', 'stop');
         $_T->printFooter();
         exit;
     }
 
     if (empty($_SESSION['viewlists'][$sViewListID]['checked']) || count($_SESSION['viewlists'][$sViewListID]['checked']) == 0) {
-        // We have a viewlistid but there are no selected gene.
-        $_T->printHeader();
-        $_T->printTitle();
+        // We have a viewlistid but there are no selected genes.
         lovd_showInfoTable('No genes have been selected!', 'stop');
         $_T->printFooter();
         exit;
     }
-
-    $_T->printHeader();
-    $_T->printTitle();
-
-    lovd_requireAUTH();
 
     require ROOT_PATH . 'class/object_gene_panels.php';
     $_DATA = new LOVD_GenePanel();

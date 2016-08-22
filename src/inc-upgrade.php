@@ -590,12 +590,26 @@ if ($sCalcVersionFiles != $sCalcVersionDB) {
                          'CREATE TABLE IF NOT EXISTS ' . TABLE_SUMMARY_ANNOTATIONS_REV . ' (id VARCHAR(50) NOT NULL, effectid TINYINT(1) UNSIGNED ZEROFILL, created_by SMALLINT(5) UNSIGNED ZEROFILL, created_date DATETIME NOT NULL, edited_by SMALLINT(5) UNSIGNED ZEROFILL, edited_date DATETIME, valid_from DATETIME NOT NULL, valid_to DATETIME NOT NULL DEFAULT "9999-12-31", deleted BOOLEAN NOT NULL, deleted_by SMALLINT(5) UNSIGNED ZEROFILL, reason TEXT, PRIMARY KEY (id, valid_from), INDEX (effectid), INDEX (created_by), INDEX (edited_by), INDEX (deleted_by), CONSTRAINT ' . TABLE_SUMMARY_ANNOTATIONS_REV . '_fk_created_by FOREIGN KEY (created_by) REFERENCES ' . TABLE_USERS . ' (id) ON DELETE SET NULL ON UPDATE CASCADE, CONSTRAINT ' . TABLE_SUMMARY_ANNOTATIONS_REV . '_fk_edited_by FOREIGN KEY (edited_by) REFERENCES ' . TABLE_USERS . ' (id) ON DELETE SET NULL ON UPDATE CASCADE, CONSTRAINT ' . TABLE_SUMMARY_ANNOTATIONS_REV . '_fk_deleted_by FOREIGN KEY (deleted_by) REFERENCES ' . TABLE_USERS . ' (id) ON DELETE SET NULL ON UPDATE CASCADE) ENGINE=InnoDB, DEFAULT CHARACTER SET utf8',
                          'CREATE TABLE IF NOT EXISTS ' . TABLE_CURATION_STATUS . ' (id TINYINT(2) UNSIGNED ZEROFILL NOT NULL, name VARCHAR(50) NOT NULL, PRIMARY KEY (id)) ENGINE=InnoDB, DEFAULT CHARACTER SET utf8', // We are inserting the curation status records below by using array merge to add them into this array.
                          'ALTER TABLE ' . TABLE_VARIANTS . ' ADD COLUMN curation_statusid TINYINT(2) UNSIGNED NULL AFTER statusid, ADD INDEX (curation_statusid), ADD CONSTRAINT ' . TABLE_VARIANTS . '_fk_curation_statusid FOREIGN KEY (curation_statusid) REFERENCES ' . TABLE_CURATION_STATUS . ' (id) ON DELETE SET NULL ON UPDATE CASCADE',
+                         'CREATE TABLE IF NOT EXISTS ' . TABLE_CONFIRMATION_STATUS . ' (id TINYINT(1) UNSIGNED NOT NULL, name VARCHAR(50) NOT NULL, PRIMARY KEY (id)) ENGINE=InnoDB, DEFAULT CHARACTER SET utf8', // We are inserting the confirmation status records below by using array merge to add them into this array.
+                         'ALTER TABLE ' . TABLE_VARIANTS . ' ADD COLUMN confirmation_statusid TINYINT(1) UNSIGNED NULL AFTER curation_statusid, ADD INDEX (confirmation_statusid), ADD CONSTRAINT ' . TABLE_VARIANTS . '_fk_confirmation_statusid FOREIGN KEY (confirmation_statusid) REFERENCES ' . TABLE_CONFIRMATION_STATUS . ' (id) ON DELETE SET NULL ON UPDATE CASCADE',
+                         'UPDATE ' . TABLE_EFFECT . ' SET name = REPLACE(name, "ar", ".")',
                      ),
              );
 
+    require ROOT_PATH . 'install/inc-sql-columns.php';
+    // '3.0-12u'
+    $aValues = array(
+        array('"SummaryAnnotation/Curation/Interpretation"',    255, 200, 0, 1, 0, '"Interpretation"',    '""', '"Interpretation of variant for reporting"', '"Interpretation of variant for reporting"', '"TEXT"', '"Interpretation||textarea|40|4"', '""', '""', 0, 0, 1, 0, 'NOW()', 'NULL', 'NULL'),
+        array('"SummaryAnnotation/Curation/Remarks"',           10, 200, 0, 0, 1, '"Variant remarks"',      '"Remarks regarding the variant described, e.g. germline mosaicism in mother, 345 kb deletion, muscle RNA analysed, not in 200 control chromosomes tested, on founder haplotype, etc."', '"Remarks regarding the variant described."', '"Remarks regarding the variant described, e.g. germline mosaicism in mother, 345 kb deletion, muscle RNA analysed, not in 200 control chromosomes tested, on founder haplotype, etc."', '"TEXT"', '"Remarks||textarea|50|3"', '""', '""', 1, 1, 1, 0, 'NOW()', 'NULL', 'NULL')
+    );
+
+    foreach ($aValues as $sValues) {
+        $aUpdates['3.0-12u'][] = 'INSERT INTO ' . TABLE_COLS . ' VALUES ('. implode(', ', $sValues)  .')';
+        $aUpdates['3.0-12u'] = array_merge($aUpdates['3.0-12u'], lovd_getActivateCustomColumnQuery($sValues));
+    }
+
     if ($sCalcVersionDB < lovd_calculateVersion('3.0-alpha-01')) {
         // Simply reload all custom columns.
-        require ROOT_PATH . 'install/inc-sql-columns.php';
         $aUpdates['3.0-alpha-01'][] = 'DELETE FROM ' . TABLE_COLS . ' WHERE col_order < 255';
         $aUpdates['3.0-alpha-01'] = array_merge($aUpdates['3.0-alpha-01'], $aColSQL);
     }
@@ -691,9 +705,19 @@ if ($sCalcVersionFiles != $sCalcVersionDB) {
         $aUpdates['3.0-12u'] = (!isset($aUpdates['3.0-12u'])? array() : $aUpdates['3.0-12u']);
         $aUpdates['3.0-12u'][] = 'DELETE FROM ' . TABLE_SHARED_COLS . ' WHERE colid LIKE "VariantOnTranscript/%"';
         $aUpdates['3.0-12u'] = array_merge($aUpdates['3.0-12u'],$aCurationStatusSQL);
+        // Insert the confirmation status records.
+        $aConfirmationStatusSQL = array();
+        foreach ($_SETT['confirmation_status'] as $nStatus => $sStatus) {
+            $aConfirmationStatusSQL[] = 'INSERT IGNORE INTO ' . TABLE_CONFIRMATION_STATUS . ' VALUES (' . $nStatus . ', "' . $sStatus . '")';
+        }
+        $aUpdates['3.0-12u'] = array_merge($aUpdates['3.0-12u'], $aCurationStatusSQL, $aConfirmationStatusSQL);
         // Finish the updates that can only be done now that these are run...
         $aUpdates['3.0-12u'][] = 'UPDATE ' . TABLE_VARIANTS . ' SET curation_statusid = ' . CUR_STATUS_REQUIRES_CONFIRMATION . ' WHERE to_be_confirmed = 1';
+        // Replaces all the current "VUS" with "Not curated" if the variant is not part of an analysis result.
+        $aUpdates['3.0-12u'][] = 'UPDATE ' . TABLE_VARIANTS . ' vog LEFT OUTER JOIN ' . TABLE_ANALYSES_RUN_RESULTS . ' arr ON (vog.id = arr.variantid) SET vog.effectid = CAST(REPLACE(vog.effectid, 5, 0) AS UNSIGNED) WHERE arr.variantid IS NULL';
         $aUpdates['3.0-12u'][] = 'ALTER TABLE ' . TABLE_VARIANTS . ' DROP COLUMN to_be_confirmed';
+        $aUpdates['3.0-12u'][] = 'UPDATE ' . TABLE_VARIANTS . ' SET confirmation_statusid = ' . CON_STATUS_REQUIRED . ' WHERE curation_statusid = ' . CUR_STATUS_REQUIRES_CONFIRMATION;
+        $aUpdates['3.0-12u'][] = 'UPDATE ' . TABLE_VARIANTS . ' SET curation_statusid = ' . CUR_STATUS_ARTEFACT . ' WHERE effectid LIKE "0_" OR effectid LIKE "_0"';
     }
 
 
