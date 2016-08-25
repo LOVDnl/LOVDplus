@@ -1062,11 +1062,6 @@ function lovd_wrapText ($s, $l = 70, $sCut = ' ')
 function lovd_authorizeByPassword() {
     global $_AUTH, $_ERROR, $_POST;
 
-    // If password field is not included in the form, then don't worry about validating.
-    if (!isset($_POST['password'])) {
-        return true;
-    }
-
     $sEmptyErrorMsg = 'Please fill in the \'Enter your password for authorization\' field.';
     $sInvalidPasswordErrorMsg = 'Please enter your correct password for authorization.';
     if (empty($_POST['password']) && (empty($_ERROR) || !in_array($sEmptyErrorMsg, $_ERROR['messages']))) {
