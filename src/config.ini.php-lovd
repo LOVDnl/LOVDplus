@@ -39,6 +39,10 @@ database =
 #
 table_prefix = lovd
 
+# Flag to determine whether we allow multiple gene symbols that do not have HGNC ID
+#
+enforce_hgnc_gene = 1
+
 
 
 [paths]
