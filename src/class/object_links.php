@@ -283,7 +283,7 @@ class LOVD_Link extends LOVD_Object {
      'authorization' => array('Enter your password for authorization', '', 'password', 'password', 20),
                   );
 
-        if (ACTION != 'edit') {
+        if (ACTION != 'edit' || isset($_FILES['import'])) {
             unset($this->aFormData['authorization']);
         }
 
