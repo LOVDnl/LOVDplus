@@ -567,4 +567,48 @@ function lovd_prepareGenesToIgnore()
     return $aGenesToIgnore;
 }
 
+
+
+
+
+function lovd_prepareHeaders($aHeaders, $options) {
+    extract($options);
+
+    // Verify the identity of this file. Some columns are appended by the Miracle ID.
+    // Check the child's Miracle ID with that we have in the meta data file, and remove all the IDs so the headers are recognized normally.
+    foreach ($aHeaders as $key => $sHeader) {
+        if (preg_match('/(Child|Patient|Father|Mother)_(\d+)$/', $sHeader, $aRegs)) {
+            // If Child, check ID.
+            if ($nMiracleID && in_array($aRegs[1], array('Child', 'Patient')) && $aRegs[2] != $nMiracleID) {
+                // Here, we won't try and remove the temp file. We need it for diagnostics, and it will save us from running into the same error over and over again.
+                die('Fatal: Miracle ID of ' . $aRegs[1] . ' (' . $aRegs[2] . ') does not match that from the meta file (' . $nMiracleID . ')' . "\n");
+            }
+            // Clean ID from column.
+            $aHeaders[$key] = substr($sHeader, 0, -(strlen($aRegs[2]) + 1));
+        }
+    }
+
+    return $aHeaders;
+}
+
+function lovd_formatEmptyColumn($aLine, $sLOVDColumn, $aVariant) {
+    switch ($sLOVDColumn) {
+        case 'VariantOnGenome/Variant_priority':
+            $aVariant[$sLOVDColumn] = 0;
+            break;
+        default:
+            $aVariant[$sLOVDColumn] = '';
+    }
+
+    return $aVariant;
+}
+
+function lovd_postValueAssignmentUpdate($sKey, $aVariant, $aData) {
+    if ($aVariant['VariantOnGenome/Variant_priority'] > $aData[$sKey][0]['VariantOnGenome/Variant_priority']){
+        // update the VOG record to have the higher variant priority
+        $aData[$sKey][0]['VariantOnGenome/Variant_priority'] = $aVariant['VariantOnGenome/Variant_priority'];
+    }
+
+    return $aData;
+}
 ?>
