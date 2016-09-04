@@ -54,13 +54,13 @@ class LOVD_GeneStatistic extends LOVD_Object {
 
         // SQL code for viewing the list of genes
         $this->aSQLViewList['SELECT']   = 'g.name, gs.*, g.id, (CASE gs.vep_annotation WHEN 1 THEN "Yes" ELSE "No" END) AS vepyesno, ' .
-                                            'GROUP_CONCAT(DISTINCT gp.name ORDER BY gp.name DESC SEPARATOR ", ") AS gene_panels_ ';
+                                            'GROUP_CONCAT(DISTINCT gp.name ORDER BY gp.name DESC SEPARATOR ", ") AS gene_panels_, MAX(CASE WHEN gp.type = "blacklist" THEN 1 ELSE 0 END) AS blacklist_flag_ ';
         $this->aSQLViewList['FROM']     = TABLE_GENES . ' AS g LEFT OUTER JOIN ' . TABLE_GENE_STATISTICS . ' AS gs ON (g.id = gs.id) ' .
                                             'LEFT OUTER JOIN ' . TABLE_GP2GENE . ' AS gp2g ON (g.id = gp2g.geneid) ' .
                                             'LEFT OUTER JOIN ' . TABLE_GENE_PANELS . ' AS gp ON (gp2g.genepanelid = gp.id)';
         $this->aSQLViewList['GROUP_BY'] = 'g.id';
         // If we detect that the user wants to only show the checked genes and there are genes stored in the session variable then lets add them to the where clause here.
-        if (isset($_GET['viewlistid']) && isset($_GET['filterChecked']) && $_GET['filterChecked'] == 'true') {
+        if (isset($_GET['viewlistid']) && isset($_GET['filterChecked']) && $_GET['filterChecked'] == 'true' && $_SESSION['viewlists'][$_GET['viewlistid']]['checked']) {
             // Run the PDO:quote function over all the gene IDs to sanitize them
             $this->aSQLViewList['WHERE']     = 'g.id IN (' . implode(',', array_map(array($_DB, 'quote'),$_SESSION['viewlists'][$_GET['viewlistid']]['checked'])) . ')';
         }
@@ -73,6 +73,9 @@ class LOVD_GeneStatistic extends LOVD_Object {
                 'id_' => array(
                     'view' => array('Symbol<BR><BR>', 80),
                     'db'   => array('g.id', 'ASC', true)),
+                'blacklist_flag_' => array(
+                    'view' => false,
+                    'db'   => array('blacklist_flag_', 'ASC', 'INT')),
                 'name' => array(
                     'view' => array('Gene <BR><BR>', 100),
                     'db'   => array('g.name', 'ASC', true)),
@@ -159,6 +162,30 @@ class LOVD_GeneStatistic extends LOVD_Object {
         $this->unsetColsByAuthLevel();
 
         parent::__construct();
+    }
+
+
+
+
+
+    function prepareData ($zData = '', $sView = 'list')
+    {
+        // Prepares the data by "enriching" the variable received with links, pictures, etc.
+
+        if (!in_array($sView, array('list', 'entry'))) {
+            $sView = 'list';
+        }
+        // Makes sure it's an array and htmlspecialchars() all the values.
+        $zData = parent::prepareData($zData, $sView);
+
+        if ($sView == 'list') {
+            if ($zData['blacklist_flag_']) {
+                // Mark the genes that occur within a blacklist as red.
+                $zData['class_name'] = (empty($zData['class_name'])? '' : $zData['class_name'] . ' ') . 'marked';
+            }
+        }
+
+        return $zData;
     }
 }
 ?>
