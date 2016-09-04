@@ -456,6 +456,12 @@ if (PATH_COUNT >= 2 && ctype_digit($_PE[1]) && !ACTION && (PATH_COUNT == 2 || PA
             }
             print('            <LI class="icon"><A click="if(window.confirm(\'Are you sure you want to clear the selected variants curation status?\')){lovd_AJAX_viewListSubmit(\'CustomVL_AnalysisRunResults_for_I_VE\', function(){$.get(\'ajax/set_curation_status.php?clear&id=selected\', function(sResponse){if(sResponse.substring(0,1) == \'1\'){alert(\'Successfully cleared the curation status of \' + sResponse.substring(2) + \' variants.\');lovd_AJAX_viewListSubmit(\'CustomVL_AnalysisRunResults_for_I_VE\');lovd_AJAX_viewEntryLoad();}else if(sResponse.substring(0,1) == \'9\'){alert(\'Error: \' + sResponse.substring(2));}}).error(function(){alert(\'Error while setting curation status.\');});});}else{alert(\'The selected variants curation status have not been changed.\');}"><SPAN class="icon" style="background-image: url(gfx/cross.png);"></SPAN>Clear curation status</A></LI>' . "\n");
             print('          </UL>' . "\n" . '        </LI>' . "\n");
+            // Links for setting the confirmation statuses, in a submenu.
+            print('        <LI class="icon"><SPAN class="icon" style="background-image: url(gfx/menu_edit.png);"></SPAN>Set confirmation status' . "\n" . '          <UL>' . "\n");
+            foreach ($_SETT['confirmation_status'] as $nConfirmationStatusID => $sConfirmationStatus) {
+                print('            <LI class="icon"><A click="lovd_AJAX_viewListSubmit(\'CustomVL_AnalysisRunResults_for_I_VE\', function(){$.get(\'ajax/set_confirmation_status.php?' . $nConfirmationStatusID . '&id=selected\', function(sResponse){if(sResponse.substring(0,1) == \'1\'){alert(\'Successfully set confirmation status of \' + sResponse.substring(2) + \' variants to \\\'' . $sConfirmationStatus . '\\\'.\');lovd_AJAX_viewListSubmit(\'CustomVL_AnalysisRunResults_for_I_VE\');lovd_AJAX_viewEntryLoad();}else if(sResponse.substring(0,1) == \'9\'){alert(\'Error: \' + sResponse.substring(2));}}).error(function(){alert(\'Error while setting confirmation status.\');});});"><SPAN class="icon" style="background-image: url(gfx/menu_edit.png);"></SPAN>' . $sConfirmationStatus . '</A></LI>' . "\n");
+            }
+            print('          </UL>' . "\n" . '        </LI>' . "\n");
         }
         print('      </UL>' . "\n\n");
         $_DATA->viewList('CustomVL_AnalysisRunResults_for_I_VE', array(), false, false, $bMenu);
