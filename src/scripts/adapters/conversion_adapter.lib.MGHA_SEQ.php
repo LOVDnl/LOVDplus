@@ -1,5 +1,28 @@
 <?php
 
+$_INSTANCE_CONFIG = array();
+
+$_INSTANCE_CONFIG['screenings'] = array(
+    'viewList' => array(
+        'colsToShow' => array(
+            // We can have view list id as key here if needed.
+            // 0 here means the viewList columns seen by the constructor (at the point where we don't know VL id yet.
+            0 => array(
+                // Invisible.
+                'individualid',
+
+                // Visible.
+                'id',
+                'Screening/Tumor/Sample_ID',
+                'Screening/Normal/Sample_ID',
+                'Screening/Pipeline/Path',
+                'variants_found_',
+                'analysis_status'
+            )
+        )
+    )
+);
+
 function lovd_prepareMappings() {
 
     $aColumnMappings = array(

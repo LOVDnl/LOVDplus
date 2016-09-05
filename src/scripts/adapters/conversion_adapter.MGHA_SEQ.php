@@ -115,7 +115,8 @@ function getColumnMappings() {
         'Normal_Sample_ID' => 'Screening/Normal/Sample_ID',
         'Tumor_Sample_ID' => 'Screening/Tumor/Sample_ID',
         'Fastq_Files' => 'Screening/FastQ_files',
-        'Notes' => 'Screening/Notes'
+        'Notes' => 'Screening/Notes',
+        'pipeline_path' => 'Screening/Pipeline/Path'
     );
 
     return $aColumnMappings;
@@ -191,7 +192,7 @@ function createMetaFile($sType, $sBatch, $sIndividual, $aMetadata, $sIndDBID) {
         'variants_found' => '1',
         'id' => '1',
         'id_sample' => '0',
-        'pipeline_path' => $sType
+        'Screening/Pipeline/Path' => $sType
     );
     $aColumnsForScreening = $aColumnsForScreening + getCustomColumnsData('Screening/', $aMetadata);
 

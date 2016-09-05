@@ -600,7 +600,7 @@ print("LINE: " . $nLine . "\n");
             // Sometimes we get two dbSNP IDs. Store the first one, only.
             $aDbSNP = explode(';', $aVariant['VariantOnGenome/dbSNP']);
             $aVariant['VariantOnGenome/dbSNP'] = $aDbSNP[0];
-        } elseif (!$aVariant['VariantOnGenome/dbSNP'] && $aVariant['existingvariation'] && $aVariant['existingvariation'] != 'unknown') {
+        } elseif (!$aVariant['VariantOnGenome/dbSNP'] && !empty($aVariant['existingvariation']) && $aVariant['existingvariation'] != 'unknown') {
             $aIDs = explode('&', $aVariant['existingvariation']);
             foreach ($aIDs as $sID) {
                 if (substr($sID, 0, 2) == 'rs') {
