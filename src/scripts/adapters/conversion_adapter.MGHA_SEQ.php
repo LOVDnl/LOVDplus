@@ -113,7 +113,7 @@ function getColumnMappings() {
         'Individual_ID' => 'Individual/Sample_ID',
         'Sex' => 'Individual/Gender',
         'Normal_Sample_ID' => 'Screening/Normal/Sample_ID',
-        'Tumor_Sample_ID' => 'Screening/Tumor/Sample_ID',
+        'Tumor_Sample_ID' => 'Screening/Tumour/Sample_ID',
         'Fastq_Files' => 'Screening/FastQ_files',
         'Notes' => 'Screening/Notes',
         'pipeline_path' => 'Screening/Pipeline/Path'

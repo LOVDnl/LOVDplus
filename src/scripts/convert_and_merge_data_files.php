@@ -539,7 +539,6 @@ foreach ($aFiles as $sID) {
 
     while ($sLine = fgets($fInput)) {
         $nLine ++;
-print("LINE: " . $nLine . "\n");
         if (!trim($sLine)) {
             continue;
         }
