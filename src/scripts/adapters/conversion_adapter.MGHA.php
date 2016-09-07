@@ -348,7 +348,7 @@ if ($argc != 1 && in_array($argv[1], array('--help', '-help', '-h', '-?'))) {
 
 
 
-        if (substr($sParent,0,3) != 'exc') {
+        if (substr(strtolower(trim($sParent)),0,3) != 'exc') {
             if (!in_array($sID, array_keys($aVariantFiles))) {
                 print('There is no variant file for Sample ID ' . $sID . "\n");
                 die(52);
@@ -476,7 +476,7 @@ if ($argc != 1 && in_array($argv[1], array('--help', '-help', '-h', '-?'))) {
         // If trio then we always create an individual and trio SMDF otherwise just individual.
         $aTypes = ($bTrio ? array('individual','trio') : array('individual'));
 
-        if (substr(trim($sVal['parent']), 0, 3) != 'exc') {
+        if (substr(strtolower(trim($sVal['parent'])), 0, 3) != 'exc') {
 
             foreach ($aTypes as $sType) {
 
