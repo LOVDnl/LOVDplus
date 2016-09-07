@@ -476,7 +476,7 @@ if ($argc != 1 && in_array($argv[1], array('--help', '-help', '-h', '-?'))) {
         // If trio then we always create an individual and trio SMDF otherwise just individual.
         $aTypes = ($bTrio ? array('individual','trio') : array('individual'));
 
-        if (trim($sVal['parent']) != 'exclude') {
+        if (substr(trim($sVal['parent']), 0, 3) != 'exc') {
 
             foreach ($aTypes as $sType) {
 
