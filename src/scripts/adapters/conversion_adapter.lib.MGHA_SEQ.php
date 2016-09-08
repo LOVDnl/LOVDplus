@@ -76,6 +76,8 @@ function lovd_prepareMappings() {
         'STRAND' => 'VariantOnTranscript/DNA_Strand',
         'Feature_type' => 'VariantOnTranscript/Feature_Type',
 
+        'VT' => 'VariantOnGenome/Sequencing/Variant_Type',
+
         // made up columns
         'allele' => 'allele',
     );
