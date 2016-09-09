@@ -1007,6 +1007,30 @@ $aFiles = array(); // array(ID => array(files), ...);
 
 
 
+function lovd_handleAnnotationError($nAnnotationErrors, &$aVariant, $nLine, $sErrorMsg) {
+    $nAnnotationErrors++;
+
+    print("LINE " . $nLine . " - VariantOnTranscript data dropped: " . $sErrorMsg . "\n");
+
+    // We want to stop the script if there are too many lines of data with annotations issues.
+    // We want users to check their data before they continue.
+    if ($nAnnotationErrors > MAX_SKIPPED) {
+        die("ERROR: Script cannot continue because this file has too many lines of annotation data that this script cannot handle.\n"
+            . $nAnnotationErrors . " lines of transcripts data was dropped.\nPlease update your data and re-run this script.\n");
+    }
+
+    // Otherwise, keep the VariantOnGenome data only, and add some data in Remarks.
+    if (isset($aVariant['VariantOnGenome/Remarks'])) {
+        $aVariant['VariantOnGenome/Remarks'] .= $sErrorMsg;
+    }
+print($nAnnotationErrors. "\n");
+    return $nAnnotationErrors;
+}
+
+
+
+
+
 function lovd_getVariantDescription (&$aVariant, $sRef, $sAlt)
 {
     // Constructs a variant description from $sRef and $sAlt and adds it to $aVariant in a new 'VariantOnGenome/DNA' key.
@@ -1410,7 +1434,7 @@ foreach ($aFiles as $sID) {
     $aTranscripts = array(); // NM_000001.1 => array(<transcript_info>)
     $nHGNC = 0; // Count the number of times HGNC is called.
     $nMutalyzer = 0; // Count the number of times Mutalyzer is called.
-    $nSkippedLine = 0; // Count the number of line we cannot import.
+    $nAnnotationErrors = 0; // Count the number of line we cannot import.
 
     // Get all the genes related data in one database call.
     $aResult = $_DB->query('SELECT g.id, g.refseq_UD, g.name FROM ' . TABLE_GENES . ' AS g')->fetchAllAssoc();
@@ -1430,6 +1454,7 @@ foreach ($aFiles as $sID) {
 
     while ($sLine = fgets($fInput)) {
         $nLine ++;
+        $bDropTranscriptData = false;
         if (!trim($sLine)) {
             continue;
         }
@@ -1727,6 +1752,7 @@ print('No available transcripts for gene ' . $aGenes[$aVariant['symbol']]['id'] 
                         }
                     }
                 }
+
                 if (!isset($aMappings[$aVariant['chromosome'] . ':' . $aVariant['VariantOnGenome/DNA']][$aTranscripts[$aVariant['transcriptid']]['id_ncbi']])) {
                     // Somehow, we can't find the transcript in the mapping info.
                     // This sometimes happens when the slice has a newer transcript than the one we have in the position converter database.
@@ -1743,13 +1769,9 @@ print('No available transcripts for gene ' . $aGenes[$aVariant['symbol']]['id'] 
                     }
 
                     if (!isset($aMappings[$aVariant['chromosome'] . ':' . $aVariant['VariantOnGenome/DNA']][$aTranscripts[$aVariant['transcriptid']]['id_ncbi']])) {
-                        $nSkippedLine++;
-                        $sErrorMsg = 'LINE ' . $nLine . ': Can\'t map variant ' . $aVariant['VariantOnGenome/DNA'] . ' onto transcript ' . $aTranscripts[$aVariant['transcriptid']]['id_ncbi'] . '.' . "\n";
-                        if ($nSkippedLine > MAX_SKIPPED) {
-                            die($sErrorMsg);
-                        }
-                        print($sErrorMsg);
-                        continue;
+                        $sErrorMsg = 'Can\'t map variant ' . $aVariant['VariantOnGenome/DNA'] . ' onto transcript ' . $aTranscripts[$aVariant['transcriptid']]['id_ncbi'] . '.';
+                        $nAnnotationErrors = lovd_handleAnnotationError($nAnnotationErrors, $aVariant, $nLine, $sErrorMsg);
+                        $bDropTranscriptData = true;
                     }
                 }
                 $aVariant['VariantOnTranscript/DNA'] = $aMappings[$aVariant['chromosome'] . ':' . $aVariant['VariantOnGenome/DNA']][$aTranscripts[$aVariant['transcriptid']]['id_ncbi']];
@@ -1919,16 +1941,15 @@ print('Mutalyzer returned EREF error, hg19/hg38 error?' . "\n");
                 }
                 // Any errors related to the prediction of Exon, RNA or Protein are silently ignored.
             }
-
+;
             if (!$aVariant['VariantOnTranscript/RNA']) {
                 // Script dies here, because I want to know if I missed something. This happens with NR transcripts, but those were ignored anyway, right?
-                if (isset($aVariant['VariantOnGenome/Remarks'])) {
-                    $aVariant['VariantOnGenome/Remarks'] .= "MISSING VariantOnTranscript/RNA\n";
-                }
-
-                print("LINE " . $nLine . " is missing VariantOnTranscript/RNA\n");
                 //var_dump($aVariant);
                 //exit;
+
+                $sErrorMsg = "Missing VariantOnTranscript/RNA. Chromosome: ". $aVariant['chromosome'] . ". VariantOnGenome/DNA: " . $aVariant['VariantOnGenome/DNA'] . ".";
+                $nAnnotationErrors = lovd_handleAnnotationError($nAnnotationErrors, $aVariant, $nLine, $sErrorMsg);
+                $bDropTranscriptData = true;
             }
 
             // DNA fields and protein field can be super long with long inserts.
@@ -1976,7 +1997,7 @@ print('Mutalyzer returned EREF error, hg19/hg38 error?' . "\n");
 
         // Now, store VOT data. Because I had received test files with repeated lines, and allowing repeated lines will break import, also here we will check for the key.
         // Also check for a set transcriptid, because it can be empty (transcript could not be created).
-        if (!isset($aData[$sKey][$aVariant['transcriptid']]) && $aVariant['transcriptid']) {
+        if (!$bDropTranscriptData && !isset($aData[$sKey][$aVariant['transcriptid']]) && $aVariant['transcriptid']) {
             $aVOT = array();
             foreach ($aVariant as $sCol => $sVal) {
                 if (in_array($sCol, $aColumnsForVOT) || substr($sCol, 0, 20) == 'VariantOnTranscript/') {
@@ -1998,6 +2019,7 @@ print('Mutalyzer returned EREF error, hg19/hg38 error?' . "\n");
     // Show the number of times HGNC and Mutalyzer were called.
     print('Number of times HGNC called: ' . $nHGNC . ".\n");
     print('Number of times Mutalyzer called: ' . $nMutalyzer . ".\n");
+    print('Number of lines with annotation error: ' . $nAnnotationErrors . ".\n");
     if (!$aData) {
         // No variants!
         print('No variants found to import.' . "\n");
