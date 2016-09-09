@@ -244,12 +244,12 @@ function lovd_prepareMappings()
 
 
 
-function lovd_prepareVariantData($aLine, $options)
+function lovd_prepareVariantData($aLine, $options = array())
 {
     // Processes the variant data file for MGHA.
     // Cleans up data in existing columns and splits some columns out to two columns.
 
-    // expect to see $aGenes, $aTranscripts
+    // Expect to see $aGenes, $aTranscripts.
     extract($options);
     $aGenes = (!isset($aGenes)? array() : $aGenes);
     $aTranscripts = (!isset($aTranscripts)? array() : $aTranscripts);
@@ -257,9 +257,9 @@ function lovd_prepareVariantData($aLine, $options)
     // Move transcripts that are to be dropped into VariantOnGenome/Remarks
     $aLine['Variant_Remarks'] = '';
 
-    // Handle genes that start with 'LOC'
-    // Handle genes that are not found in our database
-    // Handle transcripts that are not found in our database
+    // Handle genes that start with 'LOC'.
+    // Handle genes that are not found in our database.
+    // Handle transcripts that are not found in our database.
     $bDropTranscript = false;
     if (!empty($aLine['SYMBOL']) && strpos(strtolower($aLine['SYMBOL']), 'loc') === 0) {
         $bDropTranscript = true;
@@ -270,7 +270,7 @@ function lovd_prepareVariantData($aLine, $options)
         $aLine['Variant_Remarks'] = "UNKNOWN TRANSCRIPT\n";
         $bDropTranscript = true;
     } elseif (!empty($aLine['HGVSc']) && strpos($aLine['HGVSc'], '*-') !== false) {
-        $aLine['Variant_Remarks'] = "UNKNOWN TRANSCRIPT\n";
+        $aLine['Variant_Remarks'] = "UNKNOWN CCHANGE NOMENCLATURE\n";
         $bDropTranscript = true;
     }
 
