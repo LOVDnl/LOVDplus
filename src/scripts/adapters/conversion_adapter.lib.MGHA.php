@@ -244,7 +244,7 @@ function lovd_prepareMappings()
 
 
 
-function lovd_prepareVariantData($aLine, $options)
+function lovd_prepareVariantData($aLine, $options = array())
 {
     // Processes the variant data file for MGHA.
     // Cleans up data in existing columns and splits some columns out to two columns.
