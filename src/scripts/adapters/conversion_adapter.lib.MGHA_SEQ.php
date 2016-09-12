@@ -85,7 +85,7 @@ function lovd_prepareMappings() {
         'RPA' => 'VariantOnGenome/Sequencing/Tandem/Repeat_Num',
         'RU' => 'VariantOnGenome/Sequencing/Tandem/Repeat_Unit',
         'STR' => 'VariantOnGenome/Sequencing/Tandem/Repeat_Short',
-        //'normal:AD' => '',
+        'normal:AD' => 'VariantOnGenome/Sequencing/Normal/Depth',
         'normal:DP' => 'VariantOnGenome/Sequencing/Normal/Depth/Total',
         'normal:GQ' => 'VariantOnGenome/Sequencing/Normal/Genotype/Quality',
         'normal:GT' => 'VariantOnGenome/Sequencing/Normal/GenoType',
@@ -100,7 +100,7 @@ function lovd_prepareMappings() {
         'normal:PMCRDF' => 'VariantOnGenome/Sequencing/Normal/BI/Depth/Ref/Forward',
         'normal:PMCRDR' => 'VariantOnGenome/Sequencing/Normal/BI/Depth/Ref/Reverse',
         'Consequence' => 'VariantOnGenome/Consequence',
-        //'Gene' => '',
+        'Gene' => 'VariantOnGenome/Gene_ID',
         'DISTANCE' => 'VariantOnTranscript/Distance',
         'dbSNP_ids' => 'VariantOnGenome/DbSNP_IDs',
         'COSMIC_ids' => 'VariantOnGenome/COSMIC_IDs',
@@ -113,24 +113,24 @@ function lovd_prepareMappings() {
         'MOTIF_SCORE_CHANGE' => 'VariantOnTranscript/TFBP/Motif_Score_Change',
 
         // Tumour
-        //'tumour:AD' => '',
+        'tumour:AD' => 'VariantOnGenome/Sequencing/Tumour/Depth',
         'tumour:DP' => 'VariantOnGenome/Sequencing/Tumour/Depth/Total',
         'tumour:GQ' => 'VariantOnGenome/Sequencing/Tumour/Genotype/Quality',
         'tumour:GT' => 'VariantOnGenome/Sequencing/Tumour/GenoType',
         'tumour:PL' => 'VariantOnGenome/Sequencing/Tumour/Phredscaled_Likelihoods',
-        'tumour:PMCAD' => 'VariantOnGenome/Sequencing/Tumour/Bioinformatics/Depth/Alt',
-        'tumour:PMCADF' => 'VariantOnGenome/Sequencing/Tumour/Bioinformatics/Depth/Alt/Forward',
-        'tumour:PMCADR' => 'VariantOnGenome/Sequencing/Tumour/Bioinformatics/Depth/Alt/Reverse',
-        'tumour:PMCBDIR' => 'VariantOnGenome/Sequencing/Tumour/Bioinformatics/Bidirectional',
-        'tumour:PMCDP' => 'VariantOnGenome/Sequencing/Tumour/Bioinformatics/Depth/Total',
-        'tumour:PMCFREQ' => 'VariantOnGenome/Sequencing/Tumour/Bioinformatics/Allele/Frequency',
-        'tumour:PMCRD' => 'VariantOnGenome/Sequencing/Tumour/Bioinformatics/Depth/Ref',
-        'tumour:PMCRDF' => 'VariantOnGenome/Sequencing/Tumour/Bioinformatics/Depth/Ref/Forward',
-        'tumour:PMCRDR' => 'VariantOnGenome/Sequencing/Tumour/Bioinformatics/Depth/Ref/Reverse',
+        'tumour:PMCAD' => 'VariantOnGenome/Sequencing/Tumour/BI/Depth/Alt',
+        'tumour:PMCADF' => 'VariantOnGenome/Sequencing/Tumour/BI/Depth/Alt/Forward',
+        'tumour:PMCADR' => 'VariantOnGenome/Sequencing/Tumour/BI/Depth/Alt/Reverse',
+        'tumour:PMCBDIR' => 'VariantOnGenome/Sequencing/Tumour/BI/Bidirectional',
+        'tumour:PMCDP' => 'VariantOnGenome/Sequencing/Tumour/BI/Depth/Total',
+        'tumour:PMCFREQ' => 'VariantOnGenome/Sequencing/Tumour/BI/Allele/Frequency',
+        'tumour:PMCRD' => 'VariantOnGenome/Sequencing/Tumour/BI/Depth/Ref',
+        'tumour:PMCRDF' => 'VariantOnGenome/Sequencing/Tumour/BI/Depth/Ref/Forward',
+        'tumour:PMCRDR' => 'VariantOnGenome/Sequencing/Tumour/BI/Depth/Ref/Reverse',
 
         // Tummour Normal Combined
         'GPV' => 'VariantOnGenome/Sequencing/Fisher/Germline',
-        'Identified' => 'VariantOnGenome/Sequencing/Identified',
+        'Identified' => 'VariantOnGenome/Sequencing/VCF_Source',
         'N_AC' => 'VariantOnGenome/Sequencing/Normal/Indel/Reads',
         'N_DP' => 'VariantOnGenome/Sequencing/Normal/Total_Coverage',
         'N_MM' => 'VariantOnGenome/Sequencing/Normal/Indel/Mismatches/Average',
@@ -173,8 +173,9 @@ function lovd_prepareMappings() {
         'tumour:RD' => 'VariantOnGenome/Sequencing/Tumour/Depth/Ref',
         'tumour:SS' => 'VariantOnGenome/Sequencing/Tumour/Somatic_Status',
 
-        // made up columns
+        // Columns we add.
         'allele' => 'allele',
+
     );
 
     return $aColumnMappings;
