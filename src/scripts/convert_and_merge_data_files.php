@@ -2130,6 +2130,8 @@ print('Mutalyzer returned EREF error, hg19/hg38 error?' . "\n");
     // OK, so file is done, and can be scheduled now. Just auto-schedule it.
     if ($_DB->query('INSERT IGNORE INTO ' . TABLE_SCHEDULED_IMPORTS . ' (filename, scheduled_by, scheduled_date) VALUES (?, 0, NOW())', array(basename($sFileDone)))->rowCount()) {
         print('File scheduled for import.' . "\n");
+    } elseif ($_DB->query('UPDATE ' . TABLE_SCHEDULED_IMPORTS . ' SET scheduled_date = NOW() WHERE filename = ?', array(basename($sFileDone)))->rowCount()) {
+        print('File scheduled for import.' . "\n");
     } else {
         print('Error scheduling file for import!' . "\n");
     }
