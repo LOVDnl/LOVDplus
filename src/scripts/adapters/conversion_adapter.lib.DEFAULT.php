@@ -16,7 +16,7 @@ class LOVD_DefaultDataConverter {
 
 
 
-    function lovd_applyAdapter() {
+    function convertInputFiles() {
         $this->aScriptVars = array();
 
         print("> Running " . static::$sAdapterName . " adapter\n");
@@ -43,7 +43,7 @@ class LOVD_DefaultDataConverter {
 
 
 
-    function lovd_prepareMappings()
+    function prepareMappings()
     {
 
         $aColumnMappings = array(
@@ -125,7 +125,7 @@ class LOVD_DefaultDataConverter {
 
 
 
-    function lovd_prepareVariantData($aLine)
+    function prepareVariantData($aLine)
     {
         return $aLine;
     }
@@ -135,7 +135,7 @@ class LOVD_DefaultDataConverter {
 
 
 
-    function lovd_prepareGeneAliases()
+    function prepareGeneAliases()
     {
         // Prepare the $aGeneAliases array with a site specific gene alias list.
         // The convert and merge script will provide suggested gene alias key value pairs to add to this array.
@@ -357,7 +357,7 @@ class LOVD_DefaultDataConverter {
 
 
 
-    function lovd_prepareGenesToIgnore()
+    function prepareGenesToIgnore()
     {
         // Prepare the $aGenesToIgnore array with a site specific gene list.
         $aGenesToIgnore = array(
@@ -937,7 +937,7 @@ class LOVD_DefaultDataConverter {
 
 
 
-    function lovd_prepareScreeningID($aMetaData)
+    function prepareScreeningID($aMetaData)
     {
         return '';
     }
@@ -947,7 +947,7 @@ class LOVD_DefaultDataConverter {
 
 
 
-    function lovd_getInputFilePrefixPattern()
+    function getInputFilePrefixPattern()
     {
         return '((?:Child|Patient)_(?:\d+))';
     }
@@ -957,7 +957,7 @@ class LOVD_DefaultDataConverter {
 
 
 
-    function lovd_getRequiredHeaderColumns()
+    function getRequiredHeaderColumns()
     {
         return array(
             'chromosome',
@@ -974,7 +974,7 @@ class LOVD_DefaultDataConverter {
 
 
 
-    function lovd_prepareHeaders($aHeaders)
+    function prepareHeaders($aHeaders)
     {
         return $aHeaders;
     }
@@ -984,7 +984,7 @@ class LOVD_DefaultDataConverter {
 
 
 
-    function lovd_formatEmptyColumn($aLine, $sLOVDColumn, $aVariant)
+    function formatEmptyColumn($aLine, $sLOVDColumn, $aVariant)
     {
         $aVariant[$sLOVDColumn] = '';
         return $aVariant;
@@ -995,7 +995,7 @@ class LOVD_DefaultDataConverter {
 
 
 
-    function lovd_postValueAssignmentUpdate($sKey, $aVariant, $aData)
+    function postValueAssignmentUpdate($sKey, $aVariant, $aData)
     {
         return $aData;
     }

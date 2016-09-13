@@ -39,7 +39,7 @@ class LOVD_MghaDataConverter extends LOVD_DefaultDataConverter {
 
     static $sAdapterName = 'MGHA';
 
-    function lovd_prepareMappings()
+    function prepareMappings()
     {
 
         // Updates the $aColumnMapping array with site specific mappings.
@@ -250,7 +250,7 @@ class LOVD_MghaDataConverter extends LOVD_DefaultDataConverter {
 
 
 
-    function lovd_prepareVariantData($aLine)
+    function prepareVariantData($aLine)
     {
         // Processes the variant data file for MGHA.
         // Cleans up data in existing columns and splits some columns out to two columns.
@@ -593,7 +593,7 @@ class LOVD_MghaDataConverter extends LOVD_DefaultDataConverter {
 
 
 
-    function lovd_prepareGeneAliases()
+    function prepareGeneAliases()
     {
         // Prepare the $aGeneAliases array with a site specific gene alias list.
         // The convert and merge script will provide suggested gene alias key value pairs to add to this array.
@@ -605,7 +605,7 @@ class LOVD_MghaDataConverter extends LOVD_DefaultDataConverter {
 
 
 
-    function lovd_prepareGenesToIgnore()
+    function prepareGenesToIgnore()
     {
         // Prepare the $aGenesToIgnore array with a site specific gene list.
         $aGenesToIgnore = array();
@@ -616,7 +616,7 @@ class LOVD_MghaDataConverter extends LOVD_DefaultDataConverter {
 
 
     
-    function lovd_prepareHeaders($aHeaders)
+    function prepareHeaders($aHeaders)
     {
         // Verify the identity of this file. Some columns are appended by the Miracle ID.
         // Check the child's Miracle ID with that we have in the meta data file, and remove all the IDs so the headers are recognized normally.
@@ -640,7 +640,7 @@ class LOVD_MghaDataConverter extends LOVD_DefaultDataConverter {
 
 
 
-    function lovd_formatEmptyColumn($aLine, $sLOVDColumn, $aVariant)
+    function formatEmptyColumn($aLine, $sLOVDColumn, $aVariant)
     {
         switch ($sLOVDColumn) {
             case 'VariantOnGenome/Variant_priority':
@@ -658,7 +658,7 @@ class LOVD_MghaDataConverter extends LOVD_DefaultDataConverter {
 
 
 
-    function lovd_postValueAssignmentUpdate($sKey, $aVariant, $aData)
+    function postValueAssignmentUpdate($sKey, $aVariant, $aData)
     {
         if ($aVariant['VariantOnGenome/Variant_priority'] > $aData[$sKey][0]['VariantOnGenome/Variant_priority']){
             // update the VOG record to have the higher variant priority
@@ -673,7 +673,7 @@ class LOVD_MghaDataConverter extends LOVD_DefaultDataConverter {
 
 
 
-    function lovd_prepareScreeningID($aMetaData)
+    function prepareScreeningID($aMetaData)
     {
         return 1;
     }
@@ -683,7 +683,7 @@ class LOVD_MghaDataConverter extends LOVD_DefaultDataConverter {
 
 
 
-    function lovd_getInputFilePrefixPattern()
+    function getInputFilePrefixPattern()
     {
         return '(.+)';
     }
@@ -693,7 +693,7 @@ class LOVD_MghaDataConverter extends LOVD_DefaultDataConverter {
 
 
 
-    function lovd_getRequiredHeaderColumns()
+    function getRequiredHeaderColumns()
     {
         return array(
             'CHROM',

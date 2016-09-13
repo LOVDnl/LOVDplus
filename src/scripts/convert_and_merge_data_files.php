@@ -67,17 +67,17 @@ $aSuffixes = array(
 
 // Define list of genes to ignore, because they can't be found by the HGNC.
 // LOC* genes are always ignored, because they never work (HGNC doesn't know them).
-$aGenesToIgnore = $zAdapter->lovd_prepareGenesToIgnore();
+$aGenesToIgnore = $zAdapter->prepareGenesToIgnore();
 
 
 // Define list of gene aliases. Genes not mentioned in here, are searched for in the database. If not found,
 // HGNC will be queried and gene will be added. If the symbols don't match, we'll get a duplicate key error.
 // Insert those genes here.
-$aGeneAliases = $zAdapter->lovd_prepareGeneAliases();
+$aGeneAliases = $zAdapter->prepareGeneAliases();
 
 
 // Define list of columns that we are recognizing.
-$aColumnMappings = $zAdapter->lovd_prepareMappings();
+$aColumnMappings = $zAdapter->prepareMappings();
 
 
 // These columns will be taken out of $aVariant and stored as the VOG data.
@@ -321,7 +321,7 @@ function lovd_getVariantPosition ($sVariant, $aTranscript = array())
 
 
 
-$zAdapter->lovd_applyAdapter();
+$zAdapter->convertInputFiles();
 
 // Loop through the files in the dir and try and find a meta and data file, that match but have no total data file.
 $h = opendir($_INI['paths']['data_files']);
@@ -335,7 +335,7 @@ while (($sFile = readdir($h)) !== false) {
     }
 
 
-    if (preg_match('/^'. $zAdapter->lovd_getInputFilePrefixPattern() .'\.(' . implode('|', array_map('preg_quote', array_values($aSuffixes))) . ')$/', $sFile, $aRegs)) {
+    if (preg_match('/^'. $zAdapter->getInputFilePrefixPattern() .'\.(' . implode('|', array_map('preg_quote', array_values($aSuffixes))) . ')$/', $sFile, $aRegs)) {
         // Files we need to merge.
         list(, $sID, $sFileType) = $aRegs;
         if (!isset($aFiles[$sID])) {
@@ -426,7 +426,7 @@ foreach ($aFiles as $sID) {
 
     $sHeaders = fgets($fInput);
     $aHeaders = explode("\t", rtrim($sHeaders, "\r\n"));
-    foreach ($zAdapter->lovd_getRequiredHeaderColumns() as $sColumn) {
+    foreach ($zAdapter->getRequiredHeaderColumns() as $sColumn) {
         if (!in_array($sColumn, $aHeaders, true)) {
             print('Ignoring file, does not conform to format: ' . $sFileToConvert . ".\n");
             continue 2; // Continue the $aFiles loop.
@@ -467,7 +467,7 @@ foreach ($aFiles as $sID) {
     $nMiracleID = 0;
 
 
-    $nScreeningID = $zAdapter->lovd_prepareScreeningID($aMetaData);
+    $nScreeningID = $zAdapter->prepareScreeningID($aMetaData);
     if (empty($nScreeningID)) {
         foreach ($aMetaData as $nLine => $sLine) {
             if (!trim($sLine)) {
@@ -545,7 +545,7 @@ foreach ($aFiles as $sID) {
     // It's usually a big file, and we don't want to use too much memory... so using fgets().
     // First line should be headers, we already read it out somewhere above here.
     // $aHeaders = array_map('trim', $aHeaders, array_fill(0, count($aHeaders), '"')); // In case we ever need to trim off quotes.
-    $aHeaders = $zAdapter->lovd_prepareHeaders($aHeaders);
+    $aHeaders = $zAdapter->prepareHeaders($aHeaders);
 
     // Now start parsing the file, reading it out line by line, building up the variant data in $aData.
     $aData = array(); // 'chr1:1234567C>G' => array(array(genomic_data), array(transcript1), array(transcript2), ...)
@@ -589,7 +589,7 @@ foreach ($aFiles as $sID) {
         // $aLine = array_map('trim', $aLine, array_fill(0, count($aLine), '"')); // In case we ever need to trim off quotes.
 
         // Reformat variant data if extra modification required by different instance of LOVD.
-        $aLine = $zAdapter->lovd_prepareVariantData($aLine);
+        $aLine = $zAdapter->prepareVariantData($aLine);
 
         // Map VEP columns to LOVD columns.
         foreach ($aColumnMappings as $sVEPColumn => $sLOVDColumn) {
@@ -601,7 +601,7 @@ foreach ($aFiles as $sID) {
             }
             
             if (empty($aLine[$sVEPColumn]) || $aLine[$sVEPColumn] == 'unknown' || $aLine[$sVEPColumn] == '.') {
-                $aVariant = $zAdapter->lovd_formatEmptyColumn($aLine, $sLOVDColumn, $aVariant);
+                $aVariant = $zAdapter->formatEmptyColumn($aLine, $sLOVDColumn, $aVariant);
             } else {
                 $aVariant[$sLOVDColumn] = $aLine[$sVEPColumn];
             }
@@ -1104,7 +1104,7 @@ print('Mutalyzer returned EREF error, hg19/hg38 error?' . "\n");
             $aData[$sKey] = array($aVOG);
         }
 
-        $aData = $zAdapter->lovd_postValueAssignmentUpdate($sKey, $aVariant, $aData);
+        $aData = $zAdapter->postValueAssignmentUpdate($sKey, $aVariant, $aData);
 
         // Now, store VOT data. Because I had received test files with repeated lines, and allowing repeated lines will break import, also here we will check for the key.
         // Also check for a set transcriptid, because it can be empty (transcript could not be created).

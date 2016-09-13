@@ -29,7 +29,7 @@ class LOVD_MghaSeqDataConverter extends LOVD_DefaultDataConverter {
 
     static $sAdapterName = 'MGHA_SEQ';
 
-    function lovd_prepareMappings()
+    function prepareMappings()
     {
 
         $aColumnMappings = array(
@@ -193,13 +193,13 @@ class LOVD_MghaSeqDataConverter extends LOVD_DefaultDataConverter {
 
 
 
-    function lovd_prepareVariantData($aLine)
+    function prepareVariantData($aLine)
     {
         global $_LINE_AGGREGATED;
         $_LINE_AGGREGATED = array();
 
         $aLine['CHROM'] = 'chr' . $aLine['CHROM'];
-        $aLine = $this->lovd_prepareFrequencyColumns($aLine);
+        $aLine = $this->prepareFrequencyColumns($aLine);
 
         return $aLine;
     }
@@ -209,7 +209,7 @@ class LOVD_MghaSeqDataConverter extends LOVD_DefaultDataConverter {
 
 
 
-    function lovd_prepareFrequencyColumns($aLine)
+    function prepareFrequencyColumns($aLine)
     {
         global $_LINE_AGGREGATED;
 
@@ -308,7 +308,7 @@ class LOVD_MghaSeqDataConverter extends LOVD_DefaultDataConverter {
 
 
 
-    function lovd_prepareGeneAliases()
+    function prepareGeneAliases()
     {
         // Prepare the $aGeneAliases array with a site specific gene alias list.
         // The convert and merge script will provide suggested gene alias key value pairs to add to this array.
@@ -321,7 +321,7 @@ class LOVD_MghaSeqDataConverter extends LOVD_DefaultDataConverter {
 
 
 
-    function lovd_prepareGenesToIgnore()
+    function prepareGenesToIgnore()
     {
         // Prepare the $aGenesToIgnore array with a site specific gene list.
         $aGenesToIgnore = array();
@@ -333,7 +333,7 @@ class LOVD_MghaSeqDataConverter extends LOVD_DefaultDataConverter {
 
 
 
-    function lovd_prepareScreeningID($aMetaData)
+    function prepareScreeningID($aMetaData)
     {
         return 1;
     }
@@ -342,7 +342,7 @@ class LOVD_MghaSeqDataConverter extends LOVD_DefaultDataConverter {
 
 
 
-    function lovd_getInputFilePrefixPattern()
+    function getInputFilePrefixPattern()
     {
         return '(.+)';
     }
@@ -352,7 +352,7 @@ class LOVD_MghaSeqDataConverter extends LOVD_DefaultDataConverter {
 
 
 
-    function lovd_getRequiredHeaderColumns()
+    function getRequiredHeaderColumns()
     {
         return array(
             'CHROM',
