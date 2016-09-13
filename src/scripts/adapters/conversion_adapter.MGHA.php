@@ -7,7 +7,7 @@
  *************/
 
 // We are using a symlink to include this file so any further includes relative to this file needs to use the symlink path instead of the actual files path.
-define('ROOT_PATH', realpath(dirname($_SERVER["SCRIPT_FILENAME"])) . '/../');
+define('ROOT_PATH', realpath(dirname($_SERVER["SCRIPT_FILENAME"])) . '/../../');
 define('FORMAT_ALLOW_TEXTPLAIN', true);
 $_GET['format'] = 'text/plain';
 
@@ -38,7 +38,6 @@ if ($argc != 1 && in_array($argv[1], array('--help', '-help', '-h', '-?'))) {
     54 - Unexpected gender for parent. Either two females, two males or gender other than male or female
     <?php
 } else {
-
 
     /*******************************************************************************/
     // Set variables.

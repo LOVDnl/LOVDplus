@@ -1,5 +1,6 @@
 #!/usr/bin/php
 <?php
+
 /*******************************************************************************
  * CREATE META DATA FILES FOR MGHA
  * Created: 2016-08-29
@@ -7,7 +8,7 @@
  *************/
 
 // We are using a symlink to include this file so any further includes relative to this file needs to use the symlink path instead of the actual files path.
-define('ROOT_PATH', realpath(dirname($_SERVER["SCRIPT_FILENAME"])) . '/../');
+define('ROOT_PATH', realpath(dirname($_SERVER["SCRIPT_FILENAME"])) . '/../../');
 define('FORMAT_ALLOW_TEXTPLAIN', true);
 
 define('MISSING_COL_INDEX', -1);

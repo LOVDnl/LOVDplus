@@ -55,7 +55,8 @@ ignore_user_abort(true);
 // This script will be called from localhost by a cron job.
 
 // Call adapter script to apply any instance specific re-formatting.
-lovd_applyAdapter();
+$zAdapter = lovd_iniAdapter();
+$zAdapter->lovd_applyAdapter();
 
 
 
@@ -71,17 +72,17 @@ $aSuffixes = array(
 
 // Define list of genes to ignore, because they can't be found by the HGNC.
 // LOC* genes are always ignored, because they never work (HGNC doesn't know them).
-$aGenesToIgnore = lovd_prepareGenesToIgnore();
+$aGenesToIgnore = $zAdapter->lovd_prepareGenesToIgnore();
 
 
 // Define list of gene aliases. Genes not mentioned in here, are searched for in the database. If not found,
 // HGNC will be queried and gene will be added. If the symbols don't match, we'll get a duplicate key error.
 // Insert those genes here.
-$aGeneAliases = lovd_prepareGeneAliases();
+$aGeneAliases = $zAdapter->lovd_prepareGeneAliases();
 
 
 // Define list of columns that we are recognizing.
-$aColumnMappings = lovd_prepareMappings();
+$aColumnMappings = $zAdapter->lovd_prepareMappings();
 
 
 // These columns will be taken out of $aVariant and stored as the VOG data.
@@ -140,16 +141,28 @@ $aFiles = array(); // array(ID => array(files), ...);
 
 
 
+function lovd_iniAdapter() {
+    global $_INI;
 
-function lovd_applyAdapter() {
-    require_once ROOT_PATH . 'scripts/adapter.lib.php';
-    $cmd = 'php adapter.php';
-    passthru($cmd, $adapterResult);
-    if ($adapterResult !== 0){
-        die('Adapter Failed');
+    $sAdaptersDir = ROOT_PATH . 'scripts/adapters/';
+    $sAdapterName = 'DEFAULT';
+
+    if (!empty($_INI['instance']['name'])) {
+        $sAdapterName = strtoupper($_INI['instance']['name']);
     }
-}
+    if (file_exists($sAdaptersDir . 'conversion_adapter.lib.'. $sAdapterName .'.php')) {
+        require_once $sAdaptersDir . 'conversion_adapter.lib.'. $sAdapterName .'.php';
+    }
 
+    // Camelcase the adapter name.
+    $sClassPrefix = ucwords(strtolower(str_replace('_', ' ', $sAdapterName)));
+    $sClassPrefix = str_replace(' ', '', $sClassPrefix);
+    $sClassName = 'LOVD_' . $sClassPrefix . 'DataConverter';
+
+    $zAdapter = new $sClassName($sAdaptersDir);
+
+    return $zAdapter;
+}
 
 
 
@@ -327,7 +340,7 @@ while (($sFile = readdir($h)) !== false) {
     }
 
 
-    if (preg_match('/^'. lovd_getInputFilePrefixPattern() .'\.(' . implode('|', array_map('preg_quote', array_values($aSuffixes))) . ')$/', $sFile, $aRegs)) {
+    if (preg_match('/^'. $zAdapter->lovd_getInputFilePrefixPattern() .'\.(' . implode('|', array_map('preg_quote', array_values($aSuffixes))) . ')$/', $sFile, $aRegs)) {
         // Files we need to merge.
         list(, $sID, $sFileType) = $aRegs;
         if (!isset($aFiles[$sID])) {
@@ -418,7 +431,7 @@ foreach ($aFiles as $sID) {
 
     $sHeaders = fgets($fInput);
     $aHeaders = explode("\t", rtrim($sHeaders, "\r\n"));
-    foreach (lovd_getRequiredHeaderColumns() as $sColumn) {
+    foreach ($zAdapter->lovd_getRequiredHeaderColumns() as $sColumn) {
         if (!in_array($sColumn, $aHeaders, true)) {
             print('Ignoring file, does not conform to format: ' . $sFileToConvert . ".\n");
             continue 2; // Continue the $aFiles loop.
@@ -459,7 +472,7 @@ foreach ($aFiles as $sID) {
     $nMiracleID = 0;
 
 
-    $nScreeningID = lovd_prepareScreeningID($aMetaData);
+    $nScreeningID = $zAdapter->lovd_prepareScreeningID($aMetaData);
     if (empty($nScreeningID)) {
         foreach ($aMetaData as $nLine => $sLine) {
             if (!trim($sLine)) {
@@ -536,7 +549,7 @@ foreach ($aFiles as $sID) {
     // It's usually a big file, and we don't want to use too much memory... so using fgets().
     // First line should be headers, we already read it out somewhere above here.
     // $aHeaders = array_map('trim', $aHeaders, array_fill(0, count($aHeaders), '"')); // In case we ever need to trim off quotes.
-    $aHeaders = lovd_prepareHeaders($aHeaders, array('nMiracleID' => $nMiracleID));
+    $aHeaders = $zAdapter->lovd_prepareHeaders($aHeaders, array('nMiracleID' => $nMiracleID));
 
     // Now start parsing the file, reading it out line by line, building up the variant data in $aData.
     $aData = array(); // 'chr1:1234567C>G' => array(array(genomic_data), array(transcript1), array(transcript2), ...)
@@ -579,7 +592,7 @@ foreach ($aFiles as $sID) {
         // $aLine = array_map('trim', $aLine, array_fill(0, count($aLine), '"')); // In case we ever need to trim off quotes.
 
         // Reformat variant data if extra modification required by different instance of LOVD.
-        $aLine = lovd_prepareVariantData($aLine, array('aGenes' => $aGenes, 'aTranscripts' => $aTranscripts));
+        $aLine = $zAdapter->lovd_prepareVariantData($aLine, array('aGenes' => $aGenes, 'aTranscripts' => $aTranscripts));
 
         // Map VEP columns to LOVD columns.
         foreach ($aColumnMappings as $sVEPColumn => $sLOVDColumn) {
@@ -591,7 +604,7 @@ foreach ($aFiles as $sID) {
             }
             
             if (empty($aLine[$sVEPColumn]) || $aLine[$sVEPColumn] == 'unknown' || $aLine[$sVEPColumn] == '.') {
-                $aVariant = lovd_formatEmptyColumn($aLine, $sLOVDColumn, $aVariant);
+                $aVariant = $zAdapter->lovd_formatEmptyColumn($aLine, $sLOVDColumn, $aVariant);
             } else {
                 $aVariant[$sLOVDColumn] = $aLine[$sVEPColumn];
             }
@@ -1095,12 +1108,12 @@ print('Mutalyzer returned EREF error, hg19/hg38 error?' . "\n");
             $aData[$sKey] = array($aVOG);
         }
 
-        $aData = lovd_postValueAssignmentUpdate($sKey, $aVariant, $aData);
+        $aData = $zAdapter->lovd_postValueAssignmentUpdate($sKey, $aVariant, $aData);
 
         // Now, store VOT data. Because I had received test files with repeated lines, and allowing repeated lines will break import, also here we will check for the key.
         // Also check for a set transcriptid, because it can be empty (transcript could not be created).
+        $aVOT = array();
         if (!$bDropTranscriptData && !isset($aData[$sKey][$aVariant['transcriptid']]) && $aVariant['transcriptid']) {
-            $aVOT = array();
             foreach ($aVariant as $sCol => $sVal) {
                 if (in_array($sCol, $aColumnsForVOT) || substr($sCol, 0, 20) == 'VariantOnTranscript/') {
                     $aVOT[$sCol] = $sVal;
