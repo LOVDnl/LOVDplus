@@ -48,14 +48,19 @@ session_write_close();
 set_time_limit(0);
 ignore_user_abort(true);
 
+$_CONFIG = array(
+    'user' => array(
+        'exit_on_annotation_error' => 'y'
+    )
+);
 
-
+lovd_verifySettings('exit_on_annotation_error', 'Do you want the script to EXIT when there is an annotation error in the variant data?', 'array', array('yes', 'no', 'y', 'n'));
 
 
 // This script will be called from localhost by a cron job.
 
 // Call adapter script to apply any instance specific re-formatting.
-$zAdapter = lovd_iniAdapter();
+$zAdapter = lovd_initAdapter();
 
 // Define the array of suffixes for the files names expected.
 $aSuffixes = array(
@@ -136,7 +141,123 @@ $aFiles = array(); // array(ID => array(files), ...);
 
 
 
-function lovd_iniAdapter() {
+function lovd_verifySettings ($sKeyName, $sMessage, $sVerifyType, $options)
+{
+    // Copied from Geneloader
+    // https://github.com/LOVDnl/geneloader/blob/master/geneloader.php
+
+    // Based on a function provided by Ileos.nl in the interest of Open Source.
+    // Check if settings match certain input.
+    global $_CONFIG;
+
+    switch($sVerifyType) {
+        case 'array':
+            $aOptions = $options;
+            if (!is_array($aOptions)) {
+                return false;
+            }
+            break;
+
+        case 'int':
+            // Integer, options define a range in the format '1,3' (1 to 3) or '1,' (1 or higher).
+            $aRange = explode(',', $options);
+            if (!is_array($aRange) ||
+                ($aRange[0] === '' && $aRange[1] === '') ||
+                ($aRange[0] !== '' && !ctype_digit($aRange[0])) ||
+                ($aRange[1] !== '' && !ctype_digit($aRange[1]))) {
+                return false;
+            }
+            break;
+    }
+
+    while (true) {
+        print('  ' . $sMessage .
+            ($sVerifyType != 'int' || ($aRange === array('', ''))? '' : ' (' . (int) $aRange[0] . '-' . $aRange[1] . ')') .
+            (empty($_CONFIG['user'][$sKeyName])? '' : ' [' . $_CONFIG['user'][$sKeyName] . ']') . ' : ');
+        $sInput = trim(fgets(STDIN));
+        if (!strlen($sInput) && !empty($_CONFIG['user'][$sKeyName])) {
+            $sInput = $_CONFIG['user'][$sKeyName];
+        }
+
+        switch ($sVerifyType) {
+            case 'array':
+                $sInput = strtolower($sInput);
+                if (in_array($sInput, $aOptions)) {
+                    $_CONFIG['user'][$sKeyName] = $sInput;
+                    return true;
+                }
+                break;
+
+            case 'int':
+                $sInput = (int) $sInput;
+                // Check if input is lower than minimum required value (if configured).
+                if ($aRange[0] !== '' && $sInput < $aRange[0]) {
+                    break;
+                }
+                // Check if input is higher than maximum required value (if configured).
+                if ($aRange[1] !== '' && $sInput > $aRange[1]) {
+                    break;
+                }
+                $_CONFIG['user'][$sKeyName] = $sInput;
+                return true;
+
+            case 'string':
+                $sInput = $sInput;
+                $_CONFIG['user'][$sKeyName] = $sInput;
+                return true;
+
+            case 'file':
+            case 'lovd_path':
+            case 'path':
+                // Always accept the default (if non-empty) or the given options.
+                if (($sInput && ($sInput == $_CONFIG['user'][$sKeyName] ||
+                            $sInput === $options)) ||
+                    (is_array($options) && in_array($sInput, $options))) {
+                    $_CONFIG['user'][$sKeyName] = $sInput; // In case an option was chosen that was not the default.
+                    return true;
+                }
+                if (in_array($sVerifyType, array('lovd_path', 'path')) && !is_dir($sInput)) {
+                    print('    Given path is not a directory.' . "\n");
+                    break;
+                } elseif (!is_readable($sInput)) {
+                    print('    Cannot read given path.' . "\n");
+                    break;
+                }
+
+                if ($sVerifyType == 'lovd_path') {
+                    if (!file_exists($sInput . '/config.ini.php')) {
+                        if (file_exists($sInput . '/src/config.ini.php')) {
+                            $sInput .= '/src';
+                        } else {
+                            print('    Cannot locate config.ini.php in given path.' . "\n" .
+                                '    Please check that the given path is a correct path to an LOVD installation.' . "\n");
+                            break;
+                        }
+                    }
+                    if (!is_readable($sInput . '/config.ini.php')) {
+                        print('    Cannot read configuration file in given LOVD directory.' . "\n");
+                        break;
+                    }
+                    // We'll set everything up later, because we don't want to
+                    // keep the $_DB open for as long as the user is answering questions.
+                }
+                $_CONFIG['user'][$sKeyName] = $sInput;
+                return true;
+
+            default:
+                return false;
+        }
+    }
+
+    return false; // We'd actually never get here.
+}
+
+
+
+
+
+
+function lovd_initAdapter() {
     global $_INI;
 
     $sAdaptersDir = ROOT_PATH . 'scripts/adapters/';
@@ -164,9 +285,16 @@ function lovd_iniAdapter() {
 
 
 function lovd_handleAnnotationError($nAnnotationErrors, &$aVariant, $nLine, $sErrorMsg) {
+    global $_CONFIG;
+
     $nAnnotationErrors++;
 
     print("LINE " . $nLine . " - VariantOnTranscript data dropped: " . $sErrorMsg . "\n");
+
+    $bExitOnError = (substr(strtolower($_CONFIG['user']['exit_on_annotation_error']), 0, 1) === 'y'? true : false);
+    if ($bExitOnError) {
+        die("ERROR: Please update your data and re-run this script.\n");
+    }
 
     // We want to stop the script if there are too many lines of data with annotations issues.
     // We want users to check their data before they continue.
@@ -668,7 +796,7 @@ foreach ($aFiles as $sID) {
         // Now, VOT fields.
         // Find gene && transcript in database. When not found, try to create it. Otherwise, throw a fatal error.
         // Trusting the gene symbol information from VEP is by far the easiest method, and the fastest. This can fail, therefore we also created an alias list.
-        if (isset($aGeneAliases[$aVariant['symbol']])) {
+        if (!empty($_INI['database']['enforce_hgnc_gene']) && isset($aGeneAliases[$aVariant['symbol']])) {
             $aVariant['symbol'] = $aGeneAliases[$aVariant['symbol']];
         }
         // Get gene information. LOC* genes always fail here, so those we don't try.
@@ -1059,7 +1187,7 @@ print('Mutalyzer returned EREF error, hg19/hg38 error?' . "\n");
                 }
                 // Any errors related to the prediction of Exon, RNA or Protein are silently ignored.
             }
-;
+
             if (!$aVariant['VariantOnTranscript/RNA']) {
                 // Script dies here, because I want to know if I missed something. This happens with NR transcripts, but those were ignored anyway, right?
                 //var_dump($aVariant);
