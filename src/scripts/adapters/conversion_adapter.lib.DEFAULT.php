@@ -3,14 +3,22 @@
 class LOVD_DefaultDataConverter {
 
     var $sAdapterPath;
+    var $aScriptVars;
     static $sAdapterName = 'DEFAULT';
 
-    public function __construct($sAdapterPath) {
+    public function __construct($sAdapterPath)
+    {
         $this->sAdapterPath = $sAdapterPath;
 
     }
 
+
+
+
+
     function lovd_applyAdapter() {
+        $this->aScriptVars = array();
+
         print("> Running " . static::$sAdapterName . " adapter\n");
         $cmd = 'php '. $this->sAdapterPath .'/conversion_adapter.' . static::$sAdapterName .'.php';
         passthru($cmd, $adapterResult);
@@ -23,7 +31,20 @@ class LOVD_DefaultDataConverter {
 
 
 
-    function lovd_prepareMappings() {
+    function setScriptVars($aVars = array())
+    {
+        // Keep track of the values of some variables defined in the script that calls this adapter object.
+
+        // Newly set vars overwrites existing vars.
+        $this->aScriptVars = $aVars + $this->aScriptVars;
+    }
+
+
+
+
+
+    function lovd_prepareMappings()
+    {
 
         $aColumnMappings = array(
             'chromosome' => 'chromosome',
@@ -99,11 +120,23 @@ class LOVD_DefaultDataConverter {
         return $aColumnMappings;
     }
 
-    function lovd_prepareVariantData($aLine) {
+
+
+
+
+
+    function lovd_prepareVariantData($aLine)
+    {
         return $aLine;
     }
 
-    function lovd_prepareGeneAliases() {
+
+
+
+
+
+    function lovd_prepareGeneAliases()
+    {
         // Prepare the $aGeneAliases array with a site specific gene alias list.
         // The convert and merge script will provide suggested gene alias key value pairs to add to this array.
         $aGeneAliases = array(
@@ -319,7 +352,13 @@ class LOVD_DefaultDataConverter {
         return $aGeneAliases;
     }
 
-    function lovd_prepareGenesToIgnore() {
+
+
+
+
+
+    function lovd_prepareGenesToIgnore()
+    {
         // Prepare the $aGenesToIgnore array with a site specific gene list.
         $aGenesToIgnore = array(
             // 2015-01-19; Not recognized by HGNC.
@@ -894,15 +933,32 @@ class LOVD_DefaultDataConverter {
     }
 
 
-    function lovd_prepareScreeningID($aMetaData) {
+
+
+
+
+    function lovd_prepareScreeningID($aMetaData)
+    {
         return '';
     }
 
-    function lovd_getInputFilePrefixPattern() {
+
+
+
+
+
+    function lovd_getInputFilePrefixPattern()
+    {
         return '((?:Child|Patient)_(?:\d+))';
     }
 
-    function lovd_getRequiredHeaderColumns() {
+
+
+
+
+
+    function lovd_getRequiredHeaderColumns()
+    {
         return array(
             'chromosome',
             'position',
@@ -915,18 +971,32 @@ class LOVD_DefaultDataConverter {
     }
 
 
-    function lovd_prepareHeaders($aHeaders, $options) {
+
+
+
+    function lovd_prepareHeaders($aHeaders)
+    {
         return $aHeaders;
     }
 
-    function lovd_formatEmptyColumn($aLine, $sLOVDColumn, $aVariant) {
+
+
+
+
+
+    function lovd_formatEmptyColumn($aLine, $sLOVDColumn, $aVariant)
+    {
         $aVariant[$sLOVDColumn] = '';
         return $aVariant;
     }
 
-    function lovd_postValueAssignmentUpdate($sKey, $aVariant, $aData) {
+
+
+
+
+
+    function lovd_postValueAssignmentUpdate($sKey, $aVariant, $aData)
+    {
         return $aData;
     }
-
-
 }

@@ -56,11 +56,6 @@ ignore_user_abort(true);
 
 // Call adapter script to apply any instance specific re-formatting.
 $zAdapter = lovd_iniAdapter();
-$zAdapter->lovd_applyAdapter();
-
-
-
-
 
 // Define the array of suffixes for the files names expected.
 $aSuffixes = array(
@@ -326,7 +321,7 @@ function lovd_getVariantPosition ($sVariant, $aTranscript = array())
 
 
 
-
+$zAdapter->lovd_applyAdapter();
 
 // Loop through the files in the dir and try and find a meta and data file, that match but have no total data file.
 $h = opendir($_INI['paths']['data_files']);
@@ -537,6 +532,7 @@ foreach ($aFiles as $sID) {
         }
     }
 
+    $zAdapter->setScriptVars(compact('nScreeningID', 'nMiracleID'));
     $nScreeningID = sprintf('%010d', $nScreeningID);
     print('Isolated Screening ID: ' . $nScreeningID . "...\n");
     flush();
@@ -549,7 +545,7 @@ foreach ($aFiles as $sID) {
     // It's usually a big file, and we don't want to use too much memory... so using fgets().
     // First line should be headers, we already read it out somewhere above here.
     // $aHeaders = array_map('trim', $aHeaders, array_fill(0, count($aHeaders), '"')); // In case we ever need to trim off quotes.
-    $aHeaders = $zAdapter->lovd_prepareHeaders($aHeaders, array('nMiracleID' => $nMiracleID));
+    $aHeaders = $zAdapter->lovd_prepareHeaders($aHeaders);
 
     // Now start parsing the file, reading it out line by line, building up the variant data in $aData.
     $aData = array(); // 'chr1:1234567C>G' => array(array(genomic_data), array(transcript1), array(transcript2), ...)
@@ -580,6 +576,7 @@ foreach ($aFiles as $sID) {
         }
     }
 
+    $zAdapter->setScriptVars(compact('aGenes', 'aTranscripts'));
     while ($sLine = fgets($fInput)) {
         $nLine ++;
         $bDropTranscriptData = false;
@@ -592,7 +589,7 @@ foreach ($aFiles as $sID) {
         // $aLine = array_map('trim', $aLine, array_fill(0, count($aLine), '"')); // In case we ever need to trim off quotes.
 
         // Reformat variant data if extra modification required by different instance of LOVD.
-        $aLine = $zAdapter->lovd_prepareVariantData($aLine, array('aGenes' => $aGenes, 'aTranscripts' => $aTranscripts));
+        $aLine = $zAdapter->lovd_prepareVariantData($aLine);
 
         // Map VEP columns to LOVD columns.
         foreach ($aColumnMappings as $sVEPColumn => $sLOVDColumn) {
@@ -994,7 +991,6 @@ print('Running mutalyzer to predict protein change for ' . $aGenes[$aVariant['sy
                         $aResponse['proteinDescriptions'] = array();
                     }
 
-//var_dump($aResponse);
                     // Predict RNA && Protein change.
                     // 'Intelligent' error handling.
                     foreach ($aResponse['messages'] as $aError) {

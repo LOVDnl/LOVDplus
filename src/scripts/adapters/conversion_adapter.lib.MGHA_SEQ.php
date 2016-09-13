@@ -29,7 +29,8 @@ class LOVD_MghaSeqDataConverter extends LOVD_DefaultDataConverter {
 
     static $sAdapterName = 'MGHA_SEQ';
 
-    function lovd_prepareMappings() {
+    function lovd_prepareMappings()
+    {
 
         $aColumnMappings = array(
             'CHROM' => 'chromosome',
@@ -187,7 +188,13 @@ class LOVD_MghaSeqDataConverter extends LOVD_DefaultDataConverter {
         return $aColumnMappings;
     }
 
-    function lovd_prepareVariantData($aLine) {
+
+
+
+
+
+    function lovd_prepareVariantData($aLine)
+    {
         global $_LINE_AGGREGATED;
         $_LINE_AGGREGATED = array();
 
@@ -197,7 +204,13 @@ class LOVD_MghaSeqDataConverter extends LOVD_DefaultDataConverter {
         return $aLine;
     }
 
-    function lovd_prepareFrequencyColumns($aLine) {
+
+
+
+
+
+    function lovd_prepareFrequencyColumns($aLine)
+    {
         global $_LINE_AGGREGATED;
 
         // FREQUENCIES
@@ -290,28 +303,57 @@ class LOVD_MghaSeqDataConverter extends LOVD_DefaultDataConverter {
         return $aLine;
     }
 
-    function lovd_prepareGeneAliases() {
+
+
+
+
+
+    function lovd_prepareGeneAliases()
+    {
         // Prepare the $aGeneAliases array with a site specific gene alias list.
         // The convert and merge script will provide suggested gene alias key value pairs to add to this array.
         $aGeneAliases = array();
         return $aGeneAliases;
     }
 
-    function lovd_prepareGenesToIgnore() {
+
+
+
+
+
+    function lovd_prepareGenesToIgnore()
+    {
         // Prepare the $aGenesToIgnore array with a site specific gene list.
         $aGenesToIgnore = array();
         return $aGenesToIgnore;
     }
 
-    function lovd_prepareScreeningID($aMetaData) {
+
+
+
+
+
+    function lovd_prepareScreeningID($aMetaData)
+    {
         return 1;
     }
 
-    function lovd_getInputFilePrefixPattern() {
+
+
+
+
+    function lovd_getInputFilePrefixPattern()
+    {
         return '(.+)';
     }
 
-    function lovd_getRequiredHeaderColumns() {
+
+
+
+
+
+    function lovd_getRequiredHeaderColumns()
+    {
         return array(
             'CHROM',
             'POS',
@@ -322,19 +364,4 @@ class LOVD_MghaSeqDataConverter extends LOVD_DefaultDataConverter {
             'FILTER'
         );
     }
-
-    function lovd_prepareHeaders($aHeaders, $options = array()) {
-        extract($options);
-        return $aHeaders;
-    }
-
-    function lovd_formatEmptyColumn($aLine, $sLOVDColumn, $aVariant) {
-        $aVariant[$sLOVDColumn] = '';
-        return $aVariant;
-    }
-
-    function lovd_postValueAssignmentUpdate($sKey, $aVariant, $aData) {
-        return $aData;
-    }
 }
-

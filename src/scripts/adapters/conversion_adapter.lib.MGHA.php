@@ -250,13 +250,13 @@ class LOVD_MghaDataConverter extends LOVD_DefaultDataConverter {
 
 
 
-    function lovd_prepareVariantData($aLine, $options = array())
+    function lovd_prepareVariantData($aLine)
     {
         // Processes the variant data file for MGHA.
         // Cleans up data in existing columns and splits some columns out to two columns.
 
         // Expect to see $aGenes, $aTranscripts.
-        extract($options);
+        extract($this->aScriptVars);
         $aGenes = (!isset($aGenes)? array() : $aGenes);
         $aTranscripts = (!isset($aTranscripts)? array() : $aTranscripts);
 
@@ -615,18 +615,17 @@ class LOVD_MghaDataConverter extends LOVD_DefaultDataConverter {
 
 
 
-
-    function lovd_prepareHeaders($aHeaders, $options) {
-        extract($options);
-
+    
+    function lovd_prepareHeaders($aHeaders)
+    {
         // Verify the identity of this file. Some columns are appended by the Miracle ID.
         // Check the child's Miracle ID with that we have in the meta data file, and remove all the IDs so the headers are recognized normally.
         foreach ($aHeaders as $key => $sHeader) {
             if (preg_match('/(Child|Patient|Father|Mother)_(\d+)$/', $sHeader, $aRegs)) {
                 // If Child, check ID.
-                if ($nMiracleID && in_array($aRegs[1], array('Child', 'Patient')) && $aRegs[2] != $nMiracleID) {
+                if (!empty($this->aScriptVars['nMiracleID']) && in_array($aRegs[1], array('Child', 'Patient')) && $aRegs[2] != $this->aScriptVars['nMiracleID']) {
                     // Here, we won't try and remove the temp file. We need it for diagnostics, and it will save us from running into the same error over and over again.
-                    die('Fatal: Miracle ID of ' . $aRegs[1] . ' (' . $aRegs[2] . ') does not match that from the meta file (' . $nMiracleID . ')' . "\n");
+                    die('Fatal: Miracle ID of ' . $aRegs[1] . ' (' . $aRegs[2] . ') does not match that from the meta file (' . $this->aScriptVars['nMiracleID'] . ')' . "\n");
                 }
                 // Clean ID from column.
                 $aHeaders[$key] = substr($sHeader, 0, -(strlen($aRegs[2]) + 1));
@@ -636,7 +635,13 @@ class LOVD_MghaDataConverter extends LOVD_DefaultDataConverter {
         return $aHeaders;
     }
 
-    function lovd_formatEmptyColumn($aLine, $sLOVDColumn, $aVariant) {
+
+
+
+
+
+    function lovd_formatEmptyColumn($aLine, $sLOVDColumn, $aVariant)
+    {
         switch ($sLOVDColumn) {
             case 'VariantOnGenome/Variant_priority':
                 $aVariant[$sLOVDColumn] = 0;
@@ -648,12 +653,56 @@ class LOVD_MghaDataConverter extends LOVD_DefaultDataConverter {
         return $aVariant;
     }
 
-    function lovd_postValueAssignmentUpdate($sKey, $aVariant, $aData) {
+
+
+
+
+
+    function lovd_postValueAssignmentUpdate($sKey, $aVariant, $aData)
+    {
         if ($aVariant['VariantOnGenome/Variant_priority'] > $aData[$sKey][0]['VariantOnGenome/Variant_priority']){
             // update the VOG record to have the higher variant priority
             $aData[$sKey][0]['VariantOnGenome/Variant_priority'] = $aVariant['VariantOnGenome/Variant_priority'];
         }
 
         return $aData;
+    }
+
+
+
+
+
+
+    function lovd_prepareScreeningID($aMetaData)
+    {
+        return 1;
+    }
+
+
+
+
+
+
+    function lovd_getInputFilePrefixPattern()
+    {
+        return '(.+)';
+    }
+
+
+
+
+
+
+    function lovd_getRequiredHeaderColumns()
+    {
+        return array(
+            'CHROM',
+            'POS',
+            'ID',
+            'REF',
+            'ALT',
+            'QUAL',
+            'FILTER'
+        );
     }
 }
