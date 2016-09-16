@@ -15,7 +15,6 @@
 //define('ROOT_PATH', '../');
 define('ROOT_PATH', dirname(__FILE__) . '/../');
 define('FORMAT_ALLOW_TEXTPLAIN', true);
-define('NO_TRANSCRIPT', '-----');
 define('MAX_SKIPPED', 10);
 
 $_GET['format'] = 'text/plain';
@@ -958,7 +957,7 @@ print('No available transcripts for gene ' . $aGenes[$aVariant['symbol']]['id'] 
         }
 
         // Now check, if we managed to get the transcript ID. If not, then we'll have to continue without it.
-        if ($aVariant['transcriptid'] === NO_TRANSCRIPT || !isset($aTranscripts[$aVariant['transcriptid']]) || !$aTranscripts[$aVariant['transcriptid']] || strpos($aVariant['transcriptid'], 'NR_') !== false) {
+        if ($zAdapter->ignoreTranscript($aVariant['transcriptid']) || !isset($aTranscripts[$aVariant['transcriptid']]) || !$aTranscripts[$aVariant['transcriptid']]) {
             // When the transcript still doesn't exist, or it evaluates to false (we don't have it, we can't get it), then skip it.
             $aVariant['transcriptid'] = '';
         } else {

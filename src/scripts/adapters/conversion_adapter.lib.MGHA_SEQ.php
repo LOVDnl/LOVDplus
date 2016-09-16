@@ -392,6 +392,30 @@ class LOVD_MghaSeqDataConverter extends LOVD_DefaultDataConverter {
 
 
 
+    function ignoreTranscript($sTranscriptId)
+    {
+        if (parent::ignoreTranscript($sTranscriptId)) {
+            return true;
+        }
+
+        // If transcript is NOT ignored by parent adapter, then we check further here.
+        // Prepare the transcript ID prefixes that we want to ignore.
+        $aTranscriptsPrefixToIgnore = array(
+            'NR_'
+        );
+
+        foreach ($aTranscriptsPrefixToIgnore as $sPrefix) {
+            if (strpos($sTranscriptId, $sPrefix) === 0) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+
+
+
 
     function prepareScreeningID($aMetaData)
     {

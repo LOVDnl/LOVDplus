@@ -5,6 +5,7 @@ class LOVD_DefaultDataConverter {
     var $sAdapterPath;
     var $aScriptVars;
     static $sAdapterName = 'DEFAULT';
+    static $NO_TRANSCRIPT = '-----';
 
     public function __construct($sAdapterPath)
     {
@@ -932,6 +933,31 @@ class LOVD_DefaultDataConverter {
         return $aGenesToIgnore;
     }
 
+
+
+
+
+    function ignoreTranscript($sTranscriptId)
+    {
+        if ($sTranscriptId === static::$NO_TRANSCRIPT) {
+            return true;
+        }
+
+        return false;
+    }
+
+
+
+
+
+    function prepareTranscriptsPrefixToIgnore()
+    {
+        // Prepare the $aGenesToIgnore array with a site specific gene list.
+        $aTranscriptsPrefixToIgnore = array(
+            'NR_'
+        );
+        return $aTranscriptsPrefixToIgnore;
+    }
 
 
 

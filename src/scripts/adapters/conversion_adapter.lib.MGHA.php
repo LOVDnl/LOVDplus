@@ -287,7 +287,7 @@ class LOVD_MghaDataConverter extends LOVD_DefaultDataConverter {
             $aLine['Variant_Remarks'] .= "Consequence: " . (!empty($aLine['Consequence'])? $aLine['Consequence'] : '')  . "\n";
             $aLine['Variant_Remarks'] .= "IMPACT: " . (!empty($aLine['IMPACT'])? $aLine['IMPACT'] : '')  . "\n";
 
-            $aLine['Feature'] = NO_TRANSCRIPT;
+            $aLine['Feature'] = static::$NO_TRANSCRIPT;
         }
 
 
