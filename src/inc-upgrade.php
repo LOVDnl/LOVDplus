@@ -5,7 +5,7 @@
  * LEIDEN OPEN VARIATION DATABASE (LOVD)
  *
  * Created     : 2010-01-14
- * Modified    : 2016-03-31
+ * Modified    : 2016-09-16
  * For LOVD    : 3.0-13
  *
  * Copyright   : 2004-2015 Leiden University Medical Center; http://www.LUMC.nl/
@@ -696,11 +696,11 @@ if ($sCalcVersionFiles != $sCalcVersionDB) {
         $aUpdates['3.0-12u'] = array_merge($aUpdates['3.0-12u'], $aCurationStatusSQL, $aConfirmationStatusSQL);
         // Finish the updates that can only be done now that these are run...
         $aUpdates['3.0-12u'][] = 'UPDATE ' . TABLE_VARIANTS . ' SET curation_statusid = ' . CUR_STATUS_REQUIRES_CONFIRMATION . ' WHERE to_be_confirmed = 1';
-        // Replaces all the current "VUS" with "Not curated" if the variant is not part of an analysis result.
-        $aUpdates['3.0-12u'][] = 'UPDATE ' . TABLE_VARIANTS . ' vog LEFT OUTER JOIN ' . TABLE_ANALYSES_RUN_RESULTS . ' arr ON (vog.id = arr.variantid) SET vog.effectid = CAST(REPLACE(vog.effectid, 5, 0) AS UNSIGNED) WHERE arr.variantid IS NULL';
         $aUpdates['3.0-12u'][] = 'ALTER TABLE ' . TABLE_VARIANTS . ' DROP COLUMN to_be_confirmed';
         $aUpdates['3.0-12u'][] = 'UPDATE ' . TABLE_VARIANTS . ' SET confirmation_statusid = ' . CON_STATUS_REQUIRED . ' WHERE curation_statusid = ' . CUR_STATUS_REQUIRES_CONFIRMATION;
         $aUpdates['3.0-12u'][] = 'UPDATE ' . TABLE_VARIANTS . ' SET curation_statusid = ' . CUR_STATUS_ARTEFACT . ' WHERE effectid LIKE "0_" OR effectid LIKE "_0"';
+        // Replaces all the current "VUS" with "Not curated" if the variant is not part of an analysis result.
+        $aUpdates['3.0-12u'][] = 'UPDATE ' . TABLE_VARIANTS . ' vog LEFT OUTER JOIN ' . TABLE_ANALYSES_RUN_RESULTS . ' arr ON (vog.id = arr.variantid) SET vog.effectid = CAST(REPLACE(vog.effectid, 5, 0) AS UNSIGNED) WHERE arr.variantid IS NULL';
     }
 
 
