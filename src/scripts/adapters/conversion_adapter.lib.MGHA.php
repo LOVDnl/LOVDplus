@@ -271,9 +271,8 @@ function lovd_prepareVariantData($aLine, $options = array())
     // Cleans up data in existing columns and splits some columns out to two columns.
 
     // Expect to see $aGenes, $aTranscripts.
-    extract($options);
-    $aGenes = (!isset($aGenes)? array() : $aGenes);
-    $aTranscripts = (!isset($aTranscripts)? array() : $aTranscripts);
+    $aGenes = (!isset($options['aGenes'])? array() : $options['aGenes']);
+    $aTranscripts = (!isset($options['aTranscripts'])? array() : $options['aTranscripts']);
 
     // Move transcripts that are to be dropped into VariantOnGenome/Remarks
     $aLine['Variant_Remarks'] = '';
