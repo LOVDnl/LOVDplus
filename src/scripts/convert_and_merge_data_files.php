@@ -256,7 +256,11 @@ function lovd_verifySettings ($sKeyName, $sMessage, $sVerifyType, $options)
 
 
 
-function lovd_initAdapter() {
+function lovd_initAdapter()
+{
+
+    // Run adapter script to convert input file formats.
+
     global $_INI;
 
     $sAdaptersDir = ROOT_PATH . 'scripts/adapters/';
@@ -283,7 +287,11 @@ function lovd_initAdapter() {
 
 
 
-function lovd_handleAnnotationError($nAnnotationErrors, &$aVariant, $nLine, $sErrorMsg) {
+function lovd_handleAnnotationError($nAnnotationErrors, &$aVariant, $nLine, $sErrorMsg)
+{
+    // When we encounter a line of data with annotation error,
+    // this function decides whether to exit or continue script depending on the option user chooses.
+
     global $_CONFIG;
 
     $nAnnotationErrors++;
