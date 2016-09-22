@@ -18,6 +18,8 @@ class LOVD_DefaultDataConverter {
 
 
     function convertInputFiles() {
+        // Run the adapter script for this instance.
+
         $this->aScriptVars = array();
 
         print("> Running " . static::$sAdapterName . " adapter\n");
@@ -46,6 +48,7 @@ class LOVD_DefaultDataConverter {
 
     function prepareMappings()
     {
+        // Returns an array that map VEP columns to LOVD columns.
 
         $aColumnMappings = array(
             'chromosome' => 'chromosome',
@@ -128,6 +131,8 @@ class LOVD_DefaultDataConverter {
 
     function prepareVariantData($aLine)
     {
+        // Reformat a line of raw variant data into the format that works for this instance.
+
         return $aLine;
     }
 
@@ -939,6 +944,8 @@ class LOVD_DefaultDataConverter {
 
     function ignoreTranscript($sTranscriptId)
     {
+        // Check if we want to skip importing the annotation for this transcript.
+
         if ($sTranscriptId === static::$NO_TRANSCRIPT) {
             return true;
         }
@@ -965,6 +972,8 @@ class LOVD_DefaultDataConverter {
 
     function prepareScreeningID($aMetaData)
     {
+        // Returns the screening ID.
+
         return '';
     }
 
@@ -975,6 +984,8 @@ class LOVD_DefaultDataConverter {
 
     function getInputFilePrefixPattern()
     {
+        // Returns the regex pattern of the prefix of variant input file names.
+
         return '((?:Child|Patient)_(?:\d+))';
     }
 
@@ -985,6 +996,8 @@ class LOVD_DefaultDataConverter {
 
     function getRequiredHeaderColumns()
     {
+        // Returns an array of required input variant file column headers. The order of these columns does NOT matter.
+
         return array(
             'chromosome',
             'position',
@@ -1002,6 +1015,8 @@ class LOVD_DefaultDataConverter {
 
     function prepareHeaders($aHeaders)
     {
+        // Returns an array of ordered column headers of the input files.
+
         return $aHeaders;
     }
 
@@ -1012,6 +1027,8 @@ class LOVD_DefaultDataConverter {
 
     function formatEmptyColumn($aLine, $sLOVDColumn, $aVariant)
     {
+        // Returns how we want to represent empty data in $aVariant array given a LOVD column name.
+
         $aVariant[$sLOVDColumn] = '';
         return $aVariant;
     }
@@ -1023,6 +1040,8 @@ class LOVD_DefaultDataConverter {
 
     function postValueAssignmentUpdate($sKey, $aVariant, $aData)
     {
+        // Update $aData if there is any aggregated data that we need to update after each input line is read.
+
         return $aData;
     }
 }

@@ -642,6 +642,8 @@ class LOVD_MghaDataConverter extends LOVD_DefaultDataConverter {
 
     function formatEmptyColumn($aLine, $sLOVDColumn, $aVariant)
     {
+        // Returns how we want to represent empty data in $aVariant array given a LOVD column name.
+
         switch ($sLOVDColumn) {
             case 'VariantOnGenome/Variant_priority':
                 $aVariant[$sLOVDColumn] = 0;
@@ -660,6 +662,8 @@ class LOVD_MghaDataConverter extends LOVD_DefaultDataConverter {
 
     function postValueAssignmentUpdate($sKey, $aVariant, $aData)
     {
+        // Update $aData if there is any aggregated data that we need to update after each input line is read.
+
         if ($aVariant['VariantOnGenome/Variant_priority'] > $aData[$sKey][0]['VariantOnGenome/Variant_priority']){
             // update the VOG record to have the higher variant priority
             $aData[$sKey][0]['VariantOnGenome/Variant_priority'] = $aVariant['VariantOnGenome/Variant_priority'];
@@ -675,6 +679,8 @@ class LOVD_MghaDataConverter extends LOVD_DefaultDataConverter {
 
     function prepareScreeningID($aMetaData)
     {
+        // Returns the screening ID.
+
         return 1;
     }
 
@@ -685,6 +691,8 @@ class LOVD_MghaDataConverter extends LOVD_DefaultDataConverter {
 
     function getInputFilePrefixPattern()
     {
+        // Returns the regex pattern of the prefix of variant input file names.
+
         return '(.+)';
     }
 
@@ -695,6 +703,8 @@ class LOVD_MghaDataConverter extends LOVD_DefaultDataConverter {
 
     function getRequiredHeaderColumns()
     {
+        // Returns an array of required input variant file column headers. The order of these columns does NOT matter.
+
         return array(
             'CHROM',
             'POS',

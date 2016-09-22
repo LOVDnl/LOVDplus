@@ -31,6 +31,7 @@ class LOVD_MghaSeqDataConverter extends LOVD_DefaultDataConverter {
 
     function prepareMappings()
     {
+        // Returns an array that map VEP columns to LOVD columns.
 
         $aColumnMappings = array(
             'CHROM' => 'chromosome',
@@ -219,6 +220,8 @@ class LOVD_MghaSeqDataConverter extends LOVD_DefaultDataConverter {
 
     function prepareVariantData($aLine)
     {
+        // Reformat a line of raw variant data into the format that works for this instance.
+
         global $_LINE_AGGREGATED;
         $_LINE_AGGREGATED = array();
 
@@ -236,6 +239,8 @@ class LOVD_MghaSeqDataConverter extends LOVD_DefaultDataConverter {
 
     function prepareFrequencyColumns($aLine)
     {
+        // Reformat frequency datas and map them into new columns that were not in the input file.
+
         global $_LINE_AGGREGATED;
 
         // FREQUENCIES
@@ -332,7 +337,10 @@ class LOVD_MghaSeqDataConverter extends LOVD_DefaultDataConverter {
 
 
 
-    function prepareAlleleDepthColumns($aLine) {
+    function prepareAlleleDepthColumns($aLine)
+    {
+        // Reformat columns related to allele depth and map them into new columns that were not in the input file.
+
         $aADColumns = array(
             'normal:AD' => 'Normal_Depth_',
             'tumour:AD' => 'Tumour_Depth_',
@@ -394,6 +402,8 @@ class LOVD_MghaSeqDataConverter extends LOVD_DefaultDataConverter {
 
     function ignoreTranscript($sTranscriptId)
     {
+        // Check if we want to skip importing the annotation for this transcript.
+
         if (parent::ignoreTranscript($sTranscriptId)) {
             return true;
         }
@@ -419,6 +429,8 @@ class LOVD_MghaSeqDataConverter extends LOVD_DefaultDataConverter {
 
     function prepareScreeningID($aMetaData)
     {
+        // Returns the screening ID.
+
         return 1;
     }
 
@@ -428,6 +440,8 @@ class LOVD_MghaSeqDataConverter extends LOVD_DefaultDataConverter {
 
     function getInputFilePrefixPattern()
     {
+        // Returns the regex pattern of the prefix of variant input file names.
+
         return '(.+)';
     }
 
@@ -438,6 +452,8 @@ class LOVD_MghaSeqDataConverter extends LOVD_DefaultDataConverter {
 
     function getRequiredHeaderColumns()
     {
+        // Returns an array of required input variant file column headers. The order of these columns does NOT matter.
+
         return array(
             'CHROM',
             'POS',
