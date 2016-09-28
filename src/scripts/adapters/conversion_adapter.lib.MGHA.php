@@ -250,7 +250,10 @@ function lovd_prepareMappings()
         'PolyPhen_Value' => 'VariantOnTranscript/Prediction/PolyPhen_Score_VEP',
         'SIFT_Text' => 'VariantOnTranscript/Prediction/SIFT_VEP',
         'SIFT_Value' => 'VariantOnTranscript/Prediction/SIFT_Score_VEP',
-        'Variant_Priority' => 'VariantOnGenome/Variant_priority'
+        'Variant_Priority' => 'VariantOnGenome/Variant_priority',
+
+        // Extra column for us to store data related to dropped transcripts
+        'Variant_Remarks' => 'VariantOnGenome/Remarks'
 
 
     );
@@ -262,10 +265,45 @@ function lovd_prepareMappings()
 
 
 
-function lovd_prepareVariantData($aLine)
+function lovd_prepareVariantData($aLine, $options = array())
 {
     // Processes the variant data file for MGHA.
     // Cleans up data in existing columns and splits some columns out to two columns.
+
+    // Expect to see $aGenes, $aTranscripts.
+    $aGenes = (!isset($options['aGenes'])? array() : $options['aGenes']);
+    $aTranscripts = (!isset($options['aTranscripts'])? array() : $options['aTranscripts']);
+
+    // Move transcripts that are to be dropped into VariantOnGenome/Remarks
+    $aLine['Variant_Remarks'] = '';
+
+    // Handle genes that start with 'LOC'.
+    // Handle genes that are not found in our database.
+    // Handle transcripts that are not found in our database.
+    $bDropTranscript = false;
+    if (!empty($aLine['SYMBOL']) && strpos(strtolower($aLine['SYMBOL']), 'loc') === 0) {
+        $bDropTranscript = true;
+    } elseif (!empty($aLine['SYMBOL']) && empty($aGenes[$aLine['SYMBOL']])) {
+        $aLine['Variant_Remarks'] = "UNKNOWN GENE\n";
+        $bDropTranscript = true;
+    } elseif (!empty($aLine['Feature']) && empty($aTranscripts[$aLine['Feature']])) {
+        $aLine['Variant_Remarks'] = "UNKNOWN TRANSCRIPT\n";
+        $bDropTranscript = true;
+    } elseif (!empty($aLine['HGVSc']) && strpos($aLine['HGVSc'], '*-') !== false) {
+        $aLine['Variant_Remarks'] = "UNKNOWN CCHANGE NOMENCLATURE\n";
+        $bDropTranscript = true;
+    }
+
+    if ($bDropTranscript) {
+        $aLine['Variant_Remarks'] .= "SYMBOL: " . (!empty($aLine['SYMBOL'])? $aLine['SYMBOL'] : '') . "\n";
+        $aLine['Variant_Remarks'] .= "HGVSc: " . (!empty($aLine['HGVSc'])? $aLine['HGVSc'] : '') . "\n";
+        $aLine['Variant_Remarks'] .= "HGVSp: " . (!empty($aLine['HGVSp'])? $aLine['HGVSp'] : '') . "\n";
+        $aLine['Variant_Remarks'] .= "Consequence: " . (!empty($aLine['Consequence'])? $aLine['Consequence'] : '')  . "\n";
+        $aLine['Variant_Remarks'] .= "IMPACT: " . (!empty($aLine['IMPACT'])? $aLine['IMPACT'] : '')  . "\n";
+
+        $aLine['Feature'] = NO_TRANSCRIPT;
+    }
+
 
     // For MGHA the allele column is in the format A/A, C/T etc. Leiden have converted this to 1/1, 0/1, etc.
     // MGHA also need to calculate the VarPresent for Father and Mother as this is required later on when assigning a value to allele
