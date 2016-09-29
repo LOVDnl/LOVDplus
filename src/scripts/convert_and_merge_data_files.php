@@ -4,7 +4,7 @@
  * LEIDEN OPEN VARIATION DATABASE (LOVD)
  *
  * Created     : 2014-11-28
- * Modified    : 2016-08-17
+ * Modified    : 2016-09-19
  * For LOVD+   : 3.0-16
  *
  * Copyright   : 2004-2016 Leiden University Medical Center; http://www.LUMC.nl/
@@ -57,7 +57,7 @@ ignore_user_abort(true);
 // call adapter script first for MGHA
 if ($_INI['instance']['name'] == 'mgha') {
     require_once ROOT_PATH . 'scripts/adapter.lib.php';
-    $cmd = 'php adapter.php';
+    $cmd = 'php '. ROOT_PATH . 'scripts/adapter.php';
     passthru($cmd, $adapterResult);
     if ($adapterResult !== 0){
         die('Adapter Failed');
@@ -1726,6 +1726,7 @@ print('No available transcripts for gene ' . $aGenes[$aVariant['symbol']]['id'] 
                 if (!isset($aMappings[$aVariant['chromosome'] . ':' . $aVariant['VariantOnGenome/DNA']])) {
                     $aMappings[$aVariant['chromosome'] . ':' . $aVariant['VariantOnGenome/DNA']] = array();
 //print('Running position converter, DNA was: "' . $aVariant['VariantOnTranscript/DNA'] . '"' . "\n");
+
                     $sJSONResponse = false;
                     $nSleepTime = 2;
                     for($i=0; $i <= $nMutalyzerRetries; $i++){ // Retry Mutalyzer call several times until successful.
@@ -1743,6 +1744,7 @@ print('No available transcripts for gene ' . $aGenes[$aVariant['symbol']]['id'] 
                     if ($sJSONResponse === false) {
                         print('>>>>> Attempted to call Mutalyzer ' . $iMutalyzerRetries . ' times for numberConversion and failed on line ' . $nLine . '.' . "\n");
                     }                        
+
                     if ($sJSONResponse && $aResponse = json_decode($sJSONResponse, true)) {
                         // Before we had to go two layers deep; through the result, then read out the string.
                         // But now apparently this service just returns the string with quotes (the latter are removed by json_decode()).
@@ -1941,7 +1943,7 @@ print('Mutalyzer returned EREF error, hg19/hg38 error?' . "\n");
                 }
                 // Any errors related to the prediction of Exon, RNA or Protein are silently ignored.
             }
-;
+
             if (!$aVariant['VariantOnTranscript/RNA']) {
                 // Script dies here, because I want to know if I missed something. This happens with NR transcripts, but those were ignored anyway, right?
                 //var_dump($aVariant);
@@ -1952,14 +1954,18 @@ print('Mutalyzer returned EREF error, hg19/hg38 error?' . "\n");
                 $bDropTranscriptData = true;
             }
 
+        }
+
+
             // DNA fields and protein field can be super long with long inserts.
             foreach (array('VariantOnGenome/DNA', 'VariantOnTranscript/DNA') as $sField) {
-                if (strlen($aVariant[$sField]) > 100 && preg_match('/ins([ACTG]+)$/', $aVariant[$sField], $aRegs)) {
+                if (isset($aVariant[$sField]) && strlen($aVariant[$sField]) > 100 && preg_match('/ins([ACTG]+)$/', $aVariant[$sField], $aRegs)) {
                     $aVariant[$sField] = str_replace('ins' . $aRegs[1], 'ins' . strlen($aRegs[1]), $aVariant[$sField]);
                 }
             }
+
             $sField = 'VariantOnTranscript/Protein';
-            if (strlen($aVariant[$sField]) > 100 && preg_match('/ins(([A-Z][a-z]{2})+)\)$/', $aVariant[$sField], $aRegs)) {
+            if (isset($aVariant[$sField]) && strlen($aVariant[$sField]) > 100 && preg_match('/ins(([A-Z][a-z]{2})+)\)$/', $aVariant[$sField], $aRegs)) {
                 $aVariant[$sField] = str_replace('ins' . $aRegs[1], 'ins' . strlen($aRegs[1]), $aVariant[$sField]);
             }
 
@@ -1968,7 +1974,7 @@ print('Mutalyzer returned EREF error, hg19/hg38 error?' . "\n");
             // to using the column mappings (much more robust) we no longer had the ncbi ID available as it was overwritten.
             // By moving this code down here we retain the ncbi ID for use and then overwrite at the last step.
             $aVariant['transcriptid'] = $aTranscripts[$aVariant['transcriptid']]['id'];
-        }
+
 
         // Now store the variants, first the genomic stuff, then the VOT stuff.
         // If the VOG data has already been stored, we will *not* overwrite it.
