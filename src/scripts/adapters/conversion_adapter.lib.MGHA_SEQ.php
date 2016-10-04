@@ -225,7 +225,6 @@ class LOVD_MghaSeqDataConverter extends LOVD_DefaultDataConverter {
         global $_LINE_AGGREGATED;
         $_LINE_AGGREGATED = array();
 
-        $aLine['CHROM'] = 'chr' . $aLine['CHROM'];
         $aLine = $this->prepareFrequencyColumns($aLine);
         $aLine = $this->prepareAlleleDepthColumns($aLine);
 
