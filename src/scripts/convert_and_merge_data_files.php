@@ -1285,7 +1285,7 @@ foreach ($aFiles as $sID) {
 
             } else {
                 // We've got a line of data here. Isolate the values.
-                $aLine = explode("\t", $sLine);
+                $aLine = explode("\t", rtrim($sLine, "\r\n"));
                 // For any category, the number of columns should be the same as the number of fields.
                 // However, less fields may be encountered because the spreadsheet program just put tabs and no quotes in empty fields.
                 if (count($aLine) < $nColumns) {
@@ -1323,6 +1323,7 @@ foreach ($aFiles as $sID) {
     // First line should be headers, we already read it out somewhere above here.
     $aHeaders = explode("\t", rtrim($sHeaders, "\r\n"));
     // $aHeaders = array_map('trim', $aHeaders, array_fill(0, count($aHeaders), '"')); // In case we ever need to trim off quotes.
+    $nHeaders = count($aHeaders);
 
     // Verify the identity of this file. Some columns are appended by the Miracle ID.
     // Check the child's Miracle ID with that we have in the meta data file, and remove all the IDs so the headers are recognized normally.
@@ -1351,7 +1352,14 @@ foreach ($aFiles as $sID) {
             continue;
         }
 
-        $aLine = array_combine($aHeaders, explode("\t", rtrim($sLine, "\r\n")));
+        // We've got a line of data here. Isolate the values.
+        $aLine = explode("\t", rtrim($sLine, "\r\n"));
+        // The number of columns should be the same as the number of fields.
+        // However, less fields may be encountered, if the last fields were empty.
+        if (count($aLine) < $nHeaders) {
+            $aLine = array_pad($aLine, $nHeaders, '');
+        }
+        $aLine = array_combine($aHeaders, $aLine);
         $aVariant = array(); // Will contain the mapped, possibly modified, data.
         // $aLine = array_map('trim', $aLine, array_fill(0, count($aLine), '"')); // In case we ever need to trim off quotes.
 
@@ -1383,12 +1391,16 @@ foreach ($aFiles as $sID) {
         // Allele.
         if ($aVariant['allele'] == '1/1') {
             $aVariant['allele'] = 3; // Homozygous.
-        } elseif ($aVariant['VariantOnGenome/Sequencing/Father/VarPresent'] >= 5 && $aVariant['VariantOnGenome/Sequencing/Mother/VarPresent'] <= 3) {
-            // From father, inferred.
-            $aVariant['allele'] = 10;
-        } elseif ($aVariant['VariantOnGenome/Sequencing/Mother/VarPresent'] >= 5 && $aVariant['VariantOnGenome/Sequencing/Father/VarPresent'] <= 3) {
-            // From mother, inferred.
-            $aVariant['allele'] = 20;
+        } elseif (isset($aVariant['VariantOnGenome/Sequencing/Father/VarPresent']) && isset($aVariant['VariantOnGenome/Sequencing/Mother/VarPresent'])) {
+            if ($aVariant['VariantOnGenome/Sequencing/Father/VarPresent'] >= 5 && $aVariant['VariantOnGenome/Sequencing/Mother/VarPresent'] <= 3) {
+                // From father, inferred.
+                $aVariant['allele'] = 10;
+            } elseif ($aVariant['VariantOnGenome/Sequencing/Mother/VarPresent'] >= 5 && $aVariant['VariantOnGenome/Sequencing/Father/VarPresent'] <= 3) {
+                // From mother, inferred.
+                $aVariant['allele'] = 20;
+            } else {
+                $aVariant['allele'] = 0;
+            }
         } else {
             $aVariant['allele'] = 0;
         }
@@ -1412,7 +1424,7 @@ foreach ($aFiles as $sID) {
         }
         // Fixing some other VOG fields.
         foreach (array('VariantOnGenome/Sequencing/Father/GenoType', 'VariantOnGenome/Sequencing/Father/GenoType/Quality', 'VariantOnGenome/Sequencing/Mother/GenoType', 'VariantOnGenome/Sequencing/Mother/GenoType/Quality') as $sCol) {
-            if ($aVariant[$sCol] && $aVariant[$sCol] == 'None') {
+            if (!empty($aVariant[$sCol]) && $aVariant[$sCol] == 'None') {
                 $aVariant[$sCol] = '';
             }
         }
@@ -1503,7 +1515,7 @@ print('Can\'t load UD for gene ' . $aGeneInfo['symbol'] . '.' . "\n");
             // We really couldn't do anything with this gene (now, or last time).
             $aGenes[$aLine['SYMBOL']] = false;
 
-        } elseif (!isset($aTranscripts[$aLine['Feature']])) {
+        } elseif (!empty($aLine['Feature']) && !isset($aTranscripts[$aLine['Feature']])) {
             // Gene found, get transcript information.
             // First try to get this transcript from the database.
             if ($aTranscript = $_DB->query('SELECT id, geneid, id_mutalyzer, id_ncbi, position_c_cds_end, position_g_mrna_start, position_g_mrna_end FROM ' . TABLE_TRANSCRIPTS . ' WHERE id_ncbi LIKE ? ORDER BY (id_ncbi = ?) DESC, id DESC LIMIT 1', array(substr($aVariant['transcriptid'], 0, strpos($aVariant['transcriptid'] . '.', '.')+1) . '%', $aVariant['transcriptid']))->fetchAssoc()) {
@@ -1571,7 +1583,7 @@ $aTranscriptInfo = array(array('id' => 'NO_TRANSCRIPTS')); // Basically, any tex
         }
 
         // Now check, if we managed to get the transcript ID. If not, then we'll have to continue without it.
-        if (!isset($aTranscripts[$aLine['Feature']]) || !$aTranscripts[$aLine['Feature']]) {
+        if (empty($aLine['Feature']) || !isset($aTranscripts[$aLine['Feature']]) || !$aTranscripts[$aLine['Feature']]) {
             // When the transcript still doesn't exist, or it evaluates to false (we don't have it, we can't get it), then skip it.
             $aVariant['transcriptid'] = '';
         } else {
@@ -1582,7 +1594,8 @@ $aTranscriptInfo = array(array('id' => 'NO_TRANSCRIPTS')); // Basically, any tex
             // First, take off the transcript name, so we can easily check for a del/ins checking for an underscore.
             $aVariant['VariantOnTranscript/DNA'] = substr($aVariant['VariantOnTranscript/DNA'], strpos($aVariant['VariantOnTranscript/DNA'], ':')+1); // NM_000000.1:c.1del -> c.1del
             if (!$aVariant['VariantOnTranscript/DNA'] || strpos($aVariant['VariantOnTranscript/DNA'], '_') !== false) {
-                // We don't trust HGVS descriptions with an _ in it. Because at VEP they don't understand that when the gene is on reverse, they have to switch the positions.
+                // We don't have a DNA field from VEP, or we get them with an underscore which we don't trust, because
+                //  at VEP they don't understand that when the gene is on reverse, they have to switch the positions.
                 // Also, sometimes a delins is simply a substitution, when the VCF file is all messed up (ACGT to ACCT for example).
                 // No other option, call Mutalyzer.
                 // But first check if I did that before.
