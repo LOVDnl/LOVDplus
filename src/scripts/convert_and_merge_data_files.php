@@ -1363,6 +1363,13 @@ foreach ($aFiles as $sID) {
         $aVariant = array(); // Will contain the mapped, possibly modified, data.
         // $aLine = array_map('trim', $aLine, array_fill(0, count($aLine), '"')); // In case we ever need to trim off quotes.
 
+        // VCF 4.2 can contain lines with an ALT allele of "*", indicating the allele is
+        //  not WT at this position, but affected by an earlier mentioned variant instead.
+        // Because these are not actually variants, we ignore them.
+        if ($aLine['ALT'] == '*') {
+            continue;
+        }
+
         // When seeing a new chromosome, reset these variables. We don't want them too big; it's useless and takes up a lot of memory.
         if ($sLastChromosome != $aLine['chromosome']) {
             $sLastChromosome = $aLine['chromosome'];
@@ -1511,14 +1518,16 @@ print('Can\'t load UD for gene ' . $aGeneInfo['symbol'] . '.' . "\n");
 
 
 
+        // Store transcript ID without version, we'll use it plenty of times.
+        $aLine['transcript_noversion'] = substr($aVariant['transcriptid'], 0, strpos($aVariant['transcriptid'] . '.', '.')+1);
         if (!isset($aGenes[$aLine['SYMBOL']]) || !$aGenes[$aLine['SYMBOL']]) {
             // We really couldn't do anything with this gene (now, or last time).
             $aGenes[$aLine['SYMBOL']] = false;
 
         } elseif (!empty($aLine['Feature']) && !isset($aTranscripts[$aLine['Feature']])) {
-            // Gene found, get transcript information.
-            // First try to get this transcript from the database.
-            if ($aTranscript = $_DB->query('SELECT id, geneid, id_mutalyzer, id_ncbi, position_c_cds_end, position_g_mrna_start, position_g_mrna_end FROM ' . TABLE_TRANSCRIPTS . ' WHERE id_ncbi LIKE ? ORDER BY (id_ncbi = ?) DESC, id DESC LIMIT 1', array(substr($aVariant['transcriptid'], 0, strpos($aVariant['transcriptid'] . '.', '.')+1) . '%', $aVariant['transcriptid']))->fetchAssoc()) {
+            // Gene found, transcript given but not yet seen before. Get transcript information.
+            // First try to get this transcript from the database, ignoring (but preferring) version.
+            if ($aTranscript = $_DB->query('SELECT id, geneid, id_mutalyzer, id_ncbi, position_c_cds_end, position_g_mrna_start, position_g_mrna_end FROM ' . TABLE_TRANSCRIPTS . ' WHERE id_ncbi LIKE ? ORDER BY (id_ncbi = ?) DESC, id DESC LIMIT 1', array($aLine['transcript_noversion'] . '%', $aVariant['transcriptid']))->fetchAssoc()) {
                 // We've got it in the database.
                 $aTranscripts[$aLine['Feature']] = $aTranscript;
 
@@ -1551,7 +1560,7 @@ $aTranscriptInfo = array(array('id' => 'NO_TRANSCRIPTS')); // Basically, any tex
                 // Loop transcript options, add the one we need.
                 foreach($aTranscriptInfo as $aTranscript) {
                     // Comparison is made without looking at version numbers!
-                    if (substr($aTranscript['id'], 0, strpos($aTranscript['id'] . '.', '.')) == substr($aVariant['transcriptid'], 0, strpos($aVariant['transcriptid'] . '.', '.'))) {
+                    if (substr($aTranscript['id'], 0, strpos($aTranscript['id'] . '.', '.')+1) == $aLine['transcript_noversion']) {
                         // Store in database, prepare values.
                         $sTranscriptName = str_replace($aGenes[$aLine['SYMBOL']]['name'] . ', ', '', $aTranscript['product']);
                         $aTranscript['id_mutalyzer'] = str_replace($aGenes[$aLine['SYMBOL']]['id'] . '_v', '', $aTranscript['name']);
@@ -1620,20 +1629,32 @@ $aTranscriptInfo = array(array('id' => 'NO_TRANSCRIPTS')); // Basically, any tex
                 if (!isset($aMappings[$aVariant['chromosome'] . ':' . $aVariant['VariantOnGenome/DNA']][$aTranscripts[$aLine['Feature']]['id_ncbi']])) {
                     // Somehow, we can't find the transcript in the mapping info.
                     // This sometimes happens when the slice has a newer transcript than the one we have in the position converter database.
+                    // This can also happen, when VEP says the variant maps, but Mutalyzer disagrees (boundaries may be different, variant may be outside of gene).
                     // Try the version we actually requested.
                     if ($aLine['Feature'] != $aTranscripts[$aLine['Feature']]['id_ncbi']) {
-                        // Just copy...
+                        // The database has selected a different version; just copy that...
                         $aMappings[$aVariant['chromosome'] . ':' . $aVariant['VariantOnGenome/DNA']][$aTranscripts[$aLine['Feature']]['id_ncbi']] = $aMappings[$aVariant['chromosome'] . ':' . $aVariant['VariantOnGenome/DNA']][$aLine['Feature']];
                     } else {
                         // Do one more attempt, finding the transcript for other versions. Just take first one you find.
-                        $aAlternativeVersions = array_keys($aMappings[$aVariant['chromosome'] . ':' . $aVariant['VariantOnGenome/DNA']], substr($aLine['Feature'], 0, strpos($aLine['Feature'] . '.', '.')+1));
-                        // This hasn't happened before in the test test, but just in case.
-                        var_dump('Found alternative by searching: ', $aLine['Feature'], $aAlternativeVersions);
-                        $aMappings[$aVariant['chromosome'] . ':' . $aVariant['VariantOnGenome/DNA']][$aTranscripts[$aLine['Feature']]['id_ncbi']] = $aMappings[$aVariant['chromosome'] . ':' . $aVariant['VariantOnGenome/DNA']][$aAlternativeVersions[0]];
+                        $aAlternativeVersions = array();
+                        foreach ($aMappings[$aVariant['chromosome'] . ':' . $aVariant['VariantOnGenome/DNA']] as $sRef => $sDNA) {
+                            if (strpos($sRef, $aLine['transcript_noversion']) === 0) {
+                                $aAlternativeVersions[] = $sRef;
+                            }
+                        }
+                        if ($aAlternativeVersions) {
+                            var_dump('Found alternative by searching: ', $aLine['Feature'], $aAlternativeVersions);
+                            $aMappings[$aVariant['chromosome'] . ':' . $aVariant['VariantOnGenome/DNA']][$aTranscripts[$aLine['Feature']]['id_ncbi']] = $aMappings[$aVariant['chromosome'] . ':' . $aVariant['VariantOnGenome/DNA']][$aAlternativeVersions[0]];
+                        } else {
+                            // This happens when VEP says we can map on a known transcript, but doesn't provide us a valid mapping,
+                            // *and* Mutalyzer at the same time doesn't seem to be able to map to this transcript at all.
+                            // This happens sometimes with variants outside of genes, that VEP apparently considers close enough.
+                            // Getting here will trigger an error in the next block, because no valid mapping has been provided.
+                        }
                     }
 
                     if (!isset($aMappings[$aVariant['chromosome'] . ':' . $aVariant['VariantOnGenome/DNA']][$aTranscripts[$aLine['Feature']]['id_ncbi']])) {
-                        die('Can\'t map variant ' . $aVariant['VariantOnGenome/DNA'] . ' onto transcript ' . $aTranscripts[$aLine['Feature']]['id_ncbi'] . '.' . "\n");
+                        die('Can\'t map variant ' . $aVariant['VariantOnGenome/DNA'] . ' (' . $aLine['chromosome'] . ':' . $aLine['position'] . $aLine['REF'] . '>' . $aLine['ALT'] . ') onto transcript ' . $aTranscripts[$aLine['Feature']]['id_ncbi'] . '.' . "\n");
                     }
                 }
                 $aVariant['VariantOnTranscript/DNA'] = $aMappings[$aVariant['chromosome'] . ':' . $aVariant['VariantOnGenome/DNA']][$aTranscripts[$aLine['Feature']]['id_ncbi']];
