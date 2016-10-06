@@ -4,7 +4,7 @@
  * LEIDEN OPEN VARIATION DATABASE (LOVD)
  *
  * Created     : 2014-11-28
- * Modified    : 2016-09-19
+ * Modified    : 2016-10-06
  * For LOVD+   : 3.0-16
  *
  * Copyright   : 2004-2016 Leiden University Medical Center; http://www.LUMC.nl/
@@ -37,8 +37,8 @@ require ROOT_PATH . 'inc-init.php';
 require ROOT_PATH . 'inc-lib-genes.php';
 // 128MB was not enough for a 100MB file. We're already no longer using file(), now we're using fgets().
 // But still, loading all the gene and transcript data, uses too much memory. After some 18000 lines, the thing dies.
-// Setting to 1.5GB, but still maybe we'll run into problems. Do we need to reset the genes and transcripts arrays after each chromosome?
-ini_set('memory_limit', '1536M');
+// Setting to 2GB, but still maybe we'll run into problems.
+ini_set('memory_limit', '2048M');
 
 // But we don't care about your session (in fact, it locks the whole LOVD if we keep this page running).
 session_write_close();
@@ -881,6 +881,7 @@ $aColumnMappings = array(
     'rsID' => 'VariantOnGenome/dbSNP',
     'AFESP5400' => 'VariantOnGenome/Frequency/EVS', // Will be divided by 100 later.
     'AFGONL' => 'VariantOnGenome/Frequency/GoNL',
+    'EXAC_AF' => 'VariantOnGenome/Frequency/ExAC',
     'MutationTaster_pred' => 'VariantOnTranscript/Prediction/MutationTaster',
     'MutationTaster_score' => 'VariantOnTranscript/Prediction/MutationTaster/Score',
     'Polyphen2_HDIV_score' => 'VariantOnTranscript/PolyPhen/HDIV',
@@ -1765,17 +1766,17 @@ if (!$aVariant['VariantOnTranscript/RNA']) {
     var_dump($aVariant);
     exit;
 }
-        }
 
-        // DNA fields and protein field can be super long with long inserts.
-        foreach (array('VariantOnGenome/DNA', 'VariantOnTranscript/DNA') as $sField) {
-            if (isset($aVariant[$sField]) && strlen($aVariant[$sField]) > 100 && preg_match('/ins([ACTG]+)$/', $aVariant[$sField], $aRegs)) {
+            // DNA fields and protein field can be super long with long inserts.
+            foreach (array('VariantOnGenome/DNA', 'VariantOnTranscript/DNA') as $sField) {
+                if (strlen($aVariant[$sField]) > 100 && preg_match('/ins([ACTG]+)$/', $aVariant[$sField], $aRegs)) {
+                    $aVariant[$sField] = str_replace('ins' . $aRegs[1], 'ins' . strlen($aRegs[1]), $aVariant[$sField]);
+                }
+            }
+            $sField = 'VariantOnTranscript/Protein';
+            if (strlen($aVariant[$sField]) > 100 && preg_match('/ins(([A-Z][a-z]{2})+)\)$/', $aVariant[$sField], $aRegs)) {
                 $aVariant[$sField] = str_replace('ins' . $aRegs[1], 'ins' . strlen($aRegs[1]), $aVariant[$sField]);
             }
-        }
-        $sField = 'VariantOnTranscript/Protein';
-        if (isset($aVariant[$sField]) && strlen($aVariant[$sField]) > 100 && preg_match('/ins(([A-Z][a-z]{2})+)\)$/', $aVariant[$sField], $aRegs)) {
-            $aVariant[$sField] = str_replace('ins' . $aRegs[1], 'ins' . strlen($aRegs[1]), $aVariant[$sField]);
         }
 
 

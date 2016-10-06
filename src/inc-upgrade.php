@@ -592,6 +592,10 @@ if ($sCalcVersionFiles != $sCalcVersionDB) {
                          'ALTER TABLE ' . TABLE_VARIANTS . ' ADD COLUMN confirmation_statusid TINYINT(1) UNSIGNED NULL AFTER curation_statusid, ADD INDEX (confirmation_statusid), ADD CONSTRAINT ' . TABLE_VARIANTS . '_fk_confirmation_statusid FOREIGN KEY (confirmation_statusid) REFERENCES ' . TABLE_CONFIRMATION_STATUS . ' (id) ON DELETE SET NULL ON UPDATE CASCADE',
                          'UPDATE ' . TABLE_EFFECT . ' SET name = REPLACE(name, "ar", ".")',
                      ),
+                 '3.0-12v' =>
+                     array(
+                         'INSERT INTO ' . TABLE_COLS . ' VALUES ("VariantOnGenome/Frequency/ExAC", 255, 100, 0, 1, 0, "ExAC AF", "", "Allele frequency from the ExAC project.", "Allele frequency from the ExAC project.", "FLOAT UNSIGNED", "ExAC allele frequency||text|6", "", "", 0, 0, 1, 0, NOW(), NULL, NULL)',
+                     ),
              );
 
     if ($sCalcVersionDB < lovd_calculateVersion('3.0-alpha-01')) {
