@@ -45,6 +45,15 @@ enforce_hgnc_gene = 1
 
 
 
+[import]
+# Convert_and_merge script can continue running or exit as soon as we run into one line of data with annotation error.
+exit_on_annotation_error = yes
+
+# If we choose 'no' for exit_on_annotation_error, we still have to set a maximum limit of how many errors we allow.
+max_annotation_error_allowed = 20
+
+
+
 [paths]
 
 # The following path contains data files to load into LOVD+.
