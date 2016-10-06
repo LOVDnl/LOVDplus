@@ -1340,6 +1340,13 @@ foreach ($aFiles as $sID) {
     }
 
     // Now start parsing the file, reading it out line by line, building up the variant data in $aData.
+    $dStart = time();
+    $aMutalyzerCalls = array(
+        'getTranscriptsAndInfo' => 0,
+        'numberConversion' => 0,
+        'runMutalyzer' => 0,
+    );
+    $tMutalyzerCalls = 0; // Time spent doing Mutalyzer calls.
     $aData = array(); // 'chr1:1234567C>G' => array(array(genomic_data), array(transcript1), array(transcript2), ...)
     print('Parsing file. Current time: ' . date('Y-m-d H:i:s') . ".\n");
     flush();
@@ -1540,7 +1547,10 @@ print('Can\'t load UD for gene ' . $aGeneInfo['symbol'] . '.' . "\n");
 print('Loading transcript information for ' . $aGenes[$aLine['SYMBOL']]['id'] . '...' . "\n");
 
                     $aTranscriptInfo = array();
+                    $aMutalyzerCalls['getTranscriptsAndInfo'] ++;
+                    $tMutalyzerStart = microtime(true);
                     $sJSONResponse = file_get_contents('https://mutalyzer.nl/json/getTranscriptsAndInfo?genomicReference=' . $aGenes[$aLine['SYMBOL']]['refseq_UD'] . '&geneName=' . $aGenes[$aLine['SYMBOL']]['id']);
+                    $tMutalyzerCalls += (microtime(true) - $tMutalyzerStart);
                     if ($sJSONResponse && $aResponse = json_decode($sJSONResponse, true)) {
                         // Before we had to go two layers deep; through the result, then read out the info.
                         // But now apparently this service just returns the string with quotes (the latter are removed by json_decode()).
@@ -1611,12 +1621,16 @@ $aTranscriptInfo = array(array('id' => 'NO_TRANSCRIPTS')); // Basically, any tex
                 if (!isset($aMappings[$aVariant['chromosome'] . ':' . $aVariant['VariantOnGenome/DNA']])) {
                     $aMappings[$aVariant['chromosome'] . ':' . $aVariant['VariantOnGenome/DNA']] = array();
 //print('Running position converter, DNA was: "' . $aVariant['VariantOnTranscript/DNA'] . '"' . "\n");
+                    $aMutalyzerCalls['numberConversion'] ++;
+                    $tMutalyzerStart = microtime(true);
                     $sJSONResponse = file_get_contents('https://mutalyzer.nl/json/numberConversion?build=' . $_CONF['refseq_build'] . '&variant=' . $_SETT['human_builds'][$_CONF['refseq_build']]['ncbi_sequences'][$aVariant['chromosome']] . ':' . $aVariant['VariantOnGenome/DNA']);
                     // FIXME: We need a better solution for this...
                     // Try one extra time, if Mutalyzer fails.
                     if ($sJSONResponse === false) {
+                        $aMutalyzerCalls['numberConversion'] ++;
                         $sJSONResponse = file_get_contents('https://mutalyzer.nl/json/numberConversion?build=' . $_CONF['refseq_build'] . '&variant=' . $_SETT['human_builds'][$_CONF['refseq_build']]['ncbi_sequences'][$aVariant['chromosome']] . ':' . $aVariant['VariantOnGenome/DNA']);
                     }
+                    $tMutalyzerCalls += (microtime(true) - $tMutalyzerStart);
                     if ($sJSONResponse && $aResponse = json_decode($sJSONResponse, true)) {
                         // Before we had to go two layers deep; through the result, then read out the string.
                         // But now apparently this service just returns the string with quotes (the latter are removed by json_decode()).
@@ -1700,7 +1714,10 @@ $aTranscriptInfo = array(array('id' => 'NO_TRANSCRIPTS')); // Basically, any tex
                     // Normally, we would implement a cache here, but we rarely run Mutalyzer, and if we do, we will not likely run it on a variant on the same transcript.
                     // So, first just check if we still don't have a Mutalyzer ID.
 print('Reloading Mutalyzer ID for ' . $aTranscripts[$aLine['Feature']]['id_ncbi'] . ' in ' . $aGenes[$aLine['SYMBOL']]['refseq_UD'] . ' (' . $aGenes[$aLine['SYMBOL']]['id'] . ')' . "\n");
+                    $aMutalyzerCalls['getTranscriptsAndInfo'] ++;
+                    $tMutalyzerStart = microtime(true);
                     $sJSONResponse = file_get_contents('https://mutalyzer.nl/json/getTranscriptsAndInfo?genomicReference=' . rawurlencode($aGenes[$aLine['SYMBOL']]['refseq_UD']) . '&geneName=' . rawurlencode($aGenes[$aLine['SYMBOL']]['id']));
+                    $tMutalyzerCalls += (microtime(true) - $tMutalyzerStart);
                     if ($sJSONResponse && $aResponse = json_decode($sJSONResponse, true)) {
                         // Loop transcripts, find the one in question, then isolate Mutalyzer ID.
                         foreach ($aResponse as $aTranscript) {
@@ -1717,7 +1734,10 @@ print('Reloading Mutalyzer ID for ' . $aTranscripts[$aLine['Feature']]['id_ncbi'
                 }
 
 print('Running mutalyzer to predict protein change for ' . $aGenes[$aLine['SYMBOL']]['refseq_UD'] . '(' . $aGenes[$aLine['SYMBOL']]['id'] . '_v' . $aTranscripts[$aLine['Feature']]['id_mutalyzer'] . '):' . $aVariant['VariantOnTranscript/DNA'] . "\n");
+                $aMutalyzerCalls['runMutalyzer'] ++;
+                $tMutalyzerStart = microtime(true);
                 $sJSONResponse = file_get_contents('https://mutalyzer.nl/json/runMutalyzer?variant=' . rawurlencode($aGenes[$aLine['SYMBOL']]['refseq_UD'] . '(' . $aGenes[$aLine['SYMBOL']]['id'] . '_v' . $aTranscripts[$aLine['Feature']]['id_mutalyzer'] . '):' . $aVariant['VariantOnTranscript/DNA']));
+                $tMutalyzerCalls += (microtime(true) - $tMutalyzerStart);
 //var_dump('https://mutalyzer.nl/json/runMutalyzer?variant=' . rawurlencode($aGenes[$aLine['SYMBOL']]['refseq_UD'] . '(' . $aGenes[$aLine['SYMBOL']]['id'] . '_v' . $aTranscripts[$aLine['Feature']]['id_mutalyzer'] . '):' . $aVariant['VariantOnTranscript/DNA']));
                 if ($sJSONResponse && $aResponse = json_decode($sJSONResponse, true)) {
                     if (!isset($aResponse['proteinDescriptions'])) {
@@ -1967,7 +1987,12 @@ if (!$aVariant['VariantOnTranscript/RNA']) {
         print('Error scheduling file for import!' . "\n");
     }
 
-    print('All done, ' . $sFileDone . ' ready for import.' . "\n" . 'Current time: ' . date('Y-m-d H:i:s') . ".\n\n");
+    print('All done, ' . $sFileDone . ' ready for import.' . "\n" . 'Current time: ' . date('Y-m-d H:i:s') . "\n" .
+          '  Took ' . round((time() - $dStart)/60) . ' minutes, Mutalyzer calls taking ' . round($tMutalyzerCalls/60) . ' minutes.' . "\n");
+    foreach ($aMutalyzerCalls as $sFunction => $nCalls) {
+        print('    ' . $sFunction . ': ' . $nCalls . "\n");
+    }
+    print("\n");
     break;// Keep this break in the loop, so we will only continue the loop to the next file when there is a continue;
 }
 ?>
