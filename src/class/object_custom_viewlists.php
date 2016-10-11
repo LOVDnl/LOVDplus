@@ -595,7 +595,7 @@ class LOVD_CustomViewList extends LOVD_Object {
         $zData = parent::prepareData($zData, $sView);
 
         // Mark all statuses from Marked and lower; Marked will be red, all others gray.
-        // Diagnostics: We disable this feature in LOVD+.
+        // We disable this feature in LOVD+.
         $bVarStatus = (!LOVD_plus && !empty($zData['var_statusid']) && $zData['var_statusid'] <= STATUS_MARKED);
         $bIndStatus = (!LOVD_plus && !empty($zData['ind_statusid']) && $zData['ind_statusid'] <= STATUS_MARKED);
 

@@ -4,10 +4,10 @@
  * LEIDEN OPEN VARIATION DATABASE (LOVD)
  *
  * Created     : 2011-05-12
- * Modified    : 2015-06-26
- * For LOVD    : 3.0-14
+ * Modified    : 2016-10-11
+ * For LOVD    : 3.0-18
  *
- * Copyright   : 2004-2015 Leiden University Medical Center; http://www.LUMC.nl/
+ * Copyright   : 2004-2016 Leiden University Medical Center; http://www.LUMC.nl/
  * Programmers : Ing. Ivar C. Lugtenburg <I.C.Lugtenburg@LUMC.nl>
  *               Ing. Ivo F.A.C. Fokkema <I.F.A.C.Fokkema@LUMC.nl>
  *
@@ -93,10 +93,14 @@ class LOVD_TranscriptVariant extends LOVD_Custom {
                  array(
                         'geneid_' => 'Gene',
                         'id_ncbi_' => 'Transcript ID',
-//                        'effect_reported' => 'Affects function (reported)',
-//                        'effect_concluded' => 'Affects function (concluded)',
+                        'effect_reported' => 'Affects function (reported)',
+                        'effect_concluded' => 'Affects function (concluded)',
                       ),
                  $this->buildViewEntry());
+        if (LOVD_plus) {
+            unset($this->aColumnsViewEntry['effect_reported']);
+            unset($this->aColumnsViewEntry['effect_concluded']);
+        }
 
         // List of columns and (default?) order for viewing a list of entries.
         $this->aColumnsViewList = array_merge(
@@ -113,11 +117,11 @@ class LOVD_TranscriptVariant extends LOVD_Custom {
                         'id_' => array(
                                     'view' => array('Variant ID', 90),
                                     'db'   => array('vot.id', 'ASC', true)),
-//                        'effect' => array(
-//                                    'view' => array('Affects function', 70),
-//                                    'db'   => array('e.name', 'ASC', true),
-//                                    'legend' => array('The variant\'s effect on the protein\'s function, in the format Reported/Curator concluded; ranging from \'+\' (variant affects function) to \'-\' (does not affect function).',
-//                                                      'The variant\'s affect on the protein\'s function, in the format Reported/Curator concluded; \'+\' indicating the variant affects function, \'+?\' probably affects function, \'-\' does not affect function, \'-?\' probably does not affect function, \'?\' effect unknown.')),
+                        'effect' => array(
+                                    'view' => array('Affects function', 70),
+                                    'db'   => array('e.name', 'ASC', true),
+                                    'legend' => array('The variant\'s effect on the protein\'s function, in the format Reported/Curator concluded; ranging from \'+\' (variant affects function) to \'-\' (does not affect function).',
+                                                      'The variant\'s affect on the protein\'s function, in the format Reported/Curator concluded; \'+\' indicating the variant affects function, \'+?\' probably affects function, \'-\' does not affect function, \'-?\' probably does not affect function, \'?\' effect unknown, \'.\' effect not classified.')),
                       ),
                  $this->buildViewList(),
                  array(
@@ -126,6 +130,9 @@ class LOVD_TranscriptVariant extends LOVD_Custom {
                                     'db'   => array('ds.name', false, true),
                                     'auth' => LEVEL_COLLABORATOR),
                       ));
+        if (LOVD_plus) {
+            unset($this->aColumnsViewList['effect']);
+        }
 
         $this->sSortDefault = 'id_ncbi';
 

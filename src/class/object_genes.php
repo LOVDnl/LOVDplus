@@ -4,10 +4,10 @@
  * LEIDEN OPEN VARIATION DATABASE (LOVD)
  *
  * Created     : 2010-12-15
- * Modified    : 2015-03-11
- * For LOVD    : 3.0-13
+ * Modified    : 2016-10-11
+ * For LOVD    : 3.0-18
  *
- * Copyright   : 2004-2015 Leiden University Medical Center; http://www.LUMC.nl/
+ * Copyright   : 2004-2016 Leiden University Medical Center; http://www.LUMC.nl/
  * Programmers : Ing. Ivar C. Lugtenburg <I.C.Lugtenburg@LUMC.nl>
  *               Ing. Ivo F.A.C. Fokkema <I.F.A.C.Fokkema@LUMC.nl>
  *
@@ -138,9 +138,8 @@ class LOVD_Gene extends LOVD_Object {
                         'created_date_' => 'Date created',
                         'edited_by_' => array('Last edited by', LEVEL_COLLABORATOR),
                         'edited_date_' => array('Date last edited', LEVEL_COLLABORATOR),
-// DIAGNOSTICS: Removed the two below.
-//                        'updated_by_' => array('Last updated by', LEVEL_COLLABORATOR),
-//                        'updated_date_' => 'Date last updated',
+                        'updated_by_' => array('Last updated by', LEVEL_COLLABORATOR),
+                        'updated_date_' => 'Date last updated',
                         'version_' => 'Version',
                         'TableEnd_General' => '',
                         'HR_1' => '',
@@ -165,6 +164,10 @@ class LOVD_Gene extends LOVD_Object {
                         'show_genecards_' => 'GeneCards',
                         'show_genetests_' => 'GeneTests',
                       );
+        if (LOVD_plus) {
+            unset($this->aColumnsViewEntry['updated_by_']);
+            unset($this->aColumnsViewEntry['updated_date_']);
+        }
 
         // List of columns and (default?) order for viewing a list of entries.
         $this->aColumnsViewList =
@@ -200,19 +203,19 @@ class LOVD_Gene extends LOVD_Object {
                     'view' => array('Associated with diseases', 200),
                     'db'   => array('diseases_', false, 'TEXT')),
             );
-        $this->sSortDefault = 'id_';
-
         if (LOVD_plus) {
             // Diagnostics: Remove some columns, and add one.
             unset($this->aColumnsViewList['variants']);
             unset($this->aColumnsViewList['uniq_variants']);
             unset($this->aColumnsViewList['updated_date_']);
-            // Add transcript information for the gene panel viewlist.
+            // Add transcript information for the gene panel's "Manage genes" gene viewlist.
             // Unfortunately, we can't limit this for the genes VL on the gene panel page,
             //  because we also want it to work on the AJAX viewlist, so we can't use lovd_getProjectFile(),
             //  but neither can we use the sViewListID, because we're in the constructor.
             $this->aSQLViewList['SELECT'] .= ', IFNULL(CONCAT("<OPTION value=&quot;&quot;>-- select --</OPTION>", GROUP_CONCAT(CONCAT("<OPTION value=&quot;", t.id, "&quot;>", t.id_ncbi, "</OPTION>") ORDER BY t.id_ncbi SEPARATOR "")), "<OPTION value=&quot;&quot;>-- no transcripts available --</OPTION>") AS transcripts_HTML';
         }
+
+        $this->sSortDefault = 'id_';
 
         // Because the gene information is publicly available, remove some columns for the public.
         $this->unsetColsByAuthLevel();

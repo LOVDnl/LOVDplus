@@ -4,10 +4,10 @@
  * LEIDEN OPEN VARIATION DATABASE (LOVD)
  *
  * Created     : 2011-11-09
- * Modified    : 2012-07-12
- * For LOVD    : 3.0-beta-07
+ * Modified    : 2016-10-11
+ * For LOVD    : 3.0-18
  *
- * Copyright   : 2004-2012 Leiden University Medical Center; http://www.LUMC.nl/
+ * Copyright   : 2004-2016 Leiden University Medical Center; http://www.LUMC.nl/
  * Programmers : Ing. Ivar C. Lugtenburg <I.C.Lugtenburg@LUMC.nl>
  *               Ing. Ivo F.A.C. Fokkema <I.F.A.C.Fokkema@LUMC.nl>
  *
@@ -40,8 +40,7 @@ if (empty($_GET['id']) || empty($_GET['object']) || !preg_match('/^[A-Z_]+$/i', 
 // To prevent security problems if we forget to set a requirement here, we default to LEVEL_ADMIN.
 $aNeededLevel =
          array(
-// DIAGNOSTICS:
-                'ScreeningMOD' => 0,
+                'ScreeningMOD' => 0, // LOVD+
                 'Transcript_Variant' => 0,
               );
 
@@ -71,8 +70,7 @@ if (FORMAT == 'text/plain' && !defined('FORMAT_ALLOW_TEXTPLAIN')) {
 }
 
 $sFile = ROOT_PATH . 'class/object_' . strtolower($_GET['object']) . 's.php';
-// FOR DIAGNOSIS
-if (substr($_GET['object'], -3) == 'MOD') {
+if (LOVD_plus && substr($_GET['object'], -3) == 'MOD') {
     $sFile = str_replace('mods.', 's.mod.', $sFile);
 }
 

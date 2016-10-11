@@ -42,20 +42,20 @@ $aNeededLevel =
          array(
                 'Column' => LEVEL_CURATOR,
                 'Custom_ViewList' => 0,
-                'Custom_ViewListMOD' => 0,
+                'Custom_ViewListMOD' => 0, // LOVD+
                 'Disease' => 0,
                 'Gene' => 0,
-                'Gene_Panel' => LEVEL_SUBMITTER,
-                'Gene_Panel_Gene_REV' => LEVEL_SUBMITTER,
-                'Gene_Statistic' => LEVEL_SUBMITTER,
+                'Gene_Panel' => LEVEL_SUBMITTER, // LOVD+
+                'Gene_Panel_Gene_REV' => LEVEL_SUBMITTER, // LOVD+
+                'Gene_Statistic' => LEVEL_SUBMITTER, // LOVD+
                 'Genome_Variant' => 0,
                 'Individual' => 0,
-                'IndividualMOD' => 0,
+                'IndividualMOD' => 0, // LOVD+
                 'Link' => LEVEL_MANAGER,
                 'Log' => (LOVD_plus? LEVEL_SUBMITTER : LEVEL_MANAGER),
                 'Phenotype' => 0,
                 'Screening' => 0,
-                'ScreeningMOD' => 0,
+                'ScreeningMOD' => 0, // LOVD+
                 'Shared_Column' => LEVEL_CURATOR,
                 'Transcript' => 0,
                 'Transcript_Variant' => 0,
@@ -123,7 +123,7 @@ if (FORMAT == 'text/plain' && !defined('FORMAT_ALLOW_TEXTPLAIN')) {
 
 $sFile = ROOT_PATH . 'class/object_' . strtolower($_GET['object']) . 's.php';
 $sFile = str_replace('_revs.php', 's.rev.php', $sFile);
-// FOR DIAGNOSIS
+// Some exceptions for LOVD+.
 if ($_GET['object'] == 'Custom_ViewListMOD' && $_GET['object_id'] == 'AnalysisRunResults,VariantOnGenome,VariantOnTranscript') {
     $sFile = '../class/object_custom_viewlists.mod.php';
     if (empty($_GET['search_runid'])) {

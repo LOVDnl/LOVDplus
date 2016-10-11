@@ -4,10 +4,10 @@
  * LEIDEN OPEN VARIATION DATABASE (LOVD)
  *
  * Created     : 2011-02-16
- * Modified    : 2015-03-11
- * For LOVD    : 3.0-13
+ * Modified    : 2016-10-11
+ * For LOVD    : 3.0-18
  *
- * Copyright   : 2004-2015 Leiden University Medical Center; http://www.LUMC.nl/
+ * Copyright   : 2004-2016 Leiden University Medical Center; http://www.LUMC.nl/
  * Programmers : Ing. Ivar C. Lugtenburg <I.C.Lugtenburg@LUMC.nl>
  *               Ing. Ivo F.A.C. Fokkema <I.F.A.C.Fokkema@LUMC.nl>
  *               Msc. Daan Asscheman <D.Asscheman@LUMC.nl>
@@ -245,9 +245,9 @@ class LOVD_Individual extends LOVD_Custom {
             }
         }
 
-        // DIAGNOSTICS: Don't allow individuals with an identical Lab-ID.
+        // Diagnostics: Don't allow individuals with an identical Lab-ID.
         // Can't enforce this in the table, because it's a custom column that's not active during installation, so I'll just do it like this.
-        if (!empty($aData['Individual/Lab_ID'])) {
+        if (LOVD_plus && !empty($aData['Individual/Lab_ID'])) {
             if ($zData && isset($zData['id']) && isset($zData['Individual/Lab_ID'])) {
                 if ($_DB->query('SELECT id FROM ' . TABLE_INDIVIDUALS . ' WHERE `Individual/Lab_ID` = ? AND id != ?', array($aData['Individual/Lab_ID'], $zData['id']))->fetchColumn()) {
                     lovd_errorAdd('Individual/Lab_ID', 'Another individual with this Lab ID already exists in the database.');

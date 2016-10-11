@@ -4,8 +4,8 @@
  * LEIDEN OPEN VARIATION DATABASE (LOVD)
  *
  * Created     : 2009-10-21
- * Modified    : 2016-03-31
- * For LOVD    : 3.0-15
+ * Modified    : 2016-10-11
+ * For LOVD    : 3.0-18
  *
  * Copyright   : 2004-2016 Leiden University Medical Center; http://www.LUMC.nl/
  * Programmers : Ing. Ivo F.A.C. Fokkema <I.F.A.C.Fokkema@LUMC.nl>
@@ -457,7 +457,6 @@ class LOVD_Object {
         $aSQL = array();
         foreach ($aFields as $key => $sField) {
             $sSQL .= (!$key? '' : ', ') . '`' . $sField . '`';
-
             if (!isset($aData[$sField])) {
                 // Field may be not set, make sure it is (happens in very rare cases).
                 $aData[$sField] = '';
@@ -621,14 +620,13 @@ class LOVD_Object {
                 // Call the tooltip function with a request to move the tooltip left, because "Owner" is often the last column in the table, and we don't want it to run off the page. I have found no way of moving the tooltip left whenever it's enlarging the document size.
                 $zData['owned_by_'] = '<SPAN class="custom_link" onmouseover="lovd_showToolTip(\'<TABLE border=0 cellpadding=0 cellspacing=0 width=350 class=S11><TR><TH valign=top>User&nbsp;ID</TH><TD>' . ($_AUTH['level'] < LEVEL_MANAGER? $nID : '<A href=users/' . $nID . '>' . $nID . '</A>') . '</TD></TR><TR><TH valign=top>Name</TH><TD>' . $sName . '</TD></TR><TR><TH valign=top>Email&nbsp;address</TH><TD>' . str_replace("\r\n", '<BR>', lovd_hideEmail($sEmail)) . '</TD></TR><TR><TH valign=top>Institute</TH><TD>' . $sInstitute . '</TD></TR><TR><TH valign=top>Department</TH><TD>' . $sDepartment . '</TD></TR><TR><TH valign=top>Country</TH><TD>' . $sCountryID . '</TD></TR></TABLE>\', this, [-200, 0]);">' . $zData['owned_by_'] . '</SPAN>';
             }
-            // DIAGNOSTICS.
-            if (isset($zData['analysis_by']) && (int) $zData['analysis_by'] && !empty($zData['analyzer'])) {
-                list($nID, $sName, $sEmail, $sInstitute, $sDepartment, $sCountryID) = $zData['analyzer'];
-                // Call the tooltip function with a request to move the tooltip left, because "Owner" is often the last column in the table, and we don't want it to run off the page. I have found no way of moving the tooltip left whenever it's enlarging the document size.
-                $zData['analysis_by_'] = '<SPAN class="custom_link" onmouseover="lovd_showToolTip(\'<TABLE border=0 cellpadding=0 cellspacing=0 width=350 class=S11><TR><TH valign=top>User&nbsp;ID</TH><TD>' . ($_AUTH['level'] < LEVEL_MANAGER? $nID : '<A href=users/' . $nID . '>' . $nID . '</A>') . '</TD></TR><TR><TH valign=top>Name</TH><TD>' . $sName . '</TD></TR><TR><TH valign=top>Email&nbsp;address</TH><TD>' . str_replace("\r\n", '<BR>', lovd_hideEmail($sEmail)) . '</TD></TR><TR><TH valign=top>Institute</TH><TD>' . $sInstitute . '</TD></TR><TR><TH valign=top>Department</TH><TD>' . $sDepartment . '</TD></TR><TR><TH valign=top>Country</TH><TD>' . $sCountryID . '</TD></TR></TABLE>\', this, [-200, 0]);">' . $zData['analysis_by_'] . '</SPAN>';
-            }
             if (LOVD_plus) {
-                // Diagnostics: In LOVD+, we disable the feature of coloring hidden and marked data, since all data is hidden.
+                // Analyzer's details like the owner's details.
+                if (isset($zData['analysis_by']) && (int) $zData['analysis_by'] && !empty($zData['analyzer'])) {
+                    list($nID, $sName, $sEmail, $sInstitute, $sDepartment, $sCountryID) = $zData['analyzer'];
+                    $zData['analysis_by_'] = '<SPAN class="custom_link" onmouseover="lovd_showToolTip(\'<TABLE border=0 cellpadding=0 cellspacing=0 width=350 class=S11><TR><TH valign=top>User&nbsp;ID</TH><TD>' . ($_AUTH['level'] < LEVEL_MANAGER? $nID : '<A href=users/' . $nID . '>' . $nID . '</A>') . '</TD></TR><TR><TH valign=top>Name</TH><TD>' . $sName . '</TD></TR><TR><TH valign=top>Email&nbsp;address</TH><TD>' . str_replace("\r\n", '<BR>', lovd_hideEmail($sEmail)) . '</TD></TR><TR><TH valign=top>Institute</TH><TD>' . $sInstitute . '</TD></TR><TR><TH valign=top>Department</TH><TD>' . $sDepartment . '</TD></TR><TR><TH valign=top>Country</TH><TD>' . $sCountryID . '</TD></TR></TABLE>\', this);">' . $zData['analysis_by_'] . '</SPAN>';
+                }
+                // In LOVD+, we disable the feature of coloring hidden and marked data, since all data is hidden.
                 $zData['class_name'] = '';
             }
 
@@ -636,8 +634,6 @@ class LOVD_Object {
             // Add links to users from *_by fields.
             $aUserColumns = array('owned_by', 'created_by', 'edited_by', 'updated_by', 'deleted_by', 'analysis_by', 'analysis_approved_by');
             foreach($aUserColumns as $sUserColumn) {
-                // A hack because our modified Screenings VE complains about analysis_by existing, but analysis_by_ not.
-                // Apply this change to LOVD3 upstream, and remove this comment.
                 if (empty($zData[$sUserColumn]) || !isset($this->aColumnsViewEntry[$sUserColumn . '_'])) {
                     $zData[$sUserColumn . '_'] = 'N/A';
                 } elseif ($_AUTH && $zData[$sUserColumn] != '00000') {

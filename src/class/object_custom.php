@@ -4,10 +4,10 @@
  * LEIDEN OPEN VARIATION DATABASE (LOVD)
  *
  * Created     : 2011-02-17
- * Modified    : 2015-03-11
- * For LOVD    : 3.0-13
+ * Modified    : 2016-10-11
+ * For LOVD    : 3.0-18
  *
- * Copyright   : 2004-2015 Leiden University Medical Center; http://www.LUMC.nl/
+ * Copyright   : 2004-2016 Leiden University Medical Center; http://www.LUMC.nl/
  * Programmers : Ing. Ivar C. Lugtenburg <I.C.Lugtenburg@LUMC.nl>
  *               Ing. Ivo F.A.C. Fokkema <I.F.A.C.Fokkema@LUMC.nl>
  *
@@ -362,24 +362,29 @@ class LOVD_Custom extends LOVD_Object {
             if ($aCol['mandatory']) {
                 $this->aCheckMandatory[] = $sCol;
             }
-            // DIAGNOSTICS: Disabled, as it takes a lot of time, and we don't use it.
-//            // Make it easier for users to fill in the age fields. Change 5d into 00y00m05d, for instance.
-//            if (preg_match('/\/Age(\/.+|_.+)?$/', $sCol) && $aData[$sCol] && preg_match('/^([<>])?(\d{1,2}y)?(\d{1,2}m)?(\d{1,2}d)?(\?)?$/', $aData[$sCol], $aRegs)) {
-//                $aRegs = array_pad($aRegs, 6, '');
-//                if ($aRegs[2] || $aRegs[3] || $aRegs[4]) {
-//                    // At least some data needs to be filled in!
-//                    // First, pad the numbers.
-//                    foreach ($aRegs as $key => $val) {
-//                        if (preg_match('/^\d{1}[ymd]$/', $val)) {
-//                            $aRegs[$key] = '0' . $val;
-//                        }
-//                    }
-//                    // Then, glue everything together.
-//                    $aData[$sCol] = $_POST[$sCol] = $aRegs[1] . (!$aRegs[2]? '00y' : $aRegs[2]) . (!$aRegs[3] && $aRegs[4]? '00m' : $aRegs[3]) . (!$aRegs[4]? '' : $aRegs[4]) . (!$aRegs[5]? '' : $aRegs[5]);
-//                }
-//            }
+            if (!LOVD_plus) {
+                // Disabled for LOVD+, as it takes a lot of time, and we don't use it.
+                // Make it easier for users to fill in the age fields. Change 5d into 00y00m05d, for instance.
+                if (preg_match('/\/Age(\/.+|_.+)?$/', $sCol) && $aData[$sCol] && preg_match('/^([<>])?(\d{1,2}y)?(\d{1,2}m)?(\d{1,2}d)?(\?)?$/', $aData[$sCol], $aRegs)) {
+                    $aRegs = array_pad($aRegs, 6, '');
+                    if ($aRegs[2] || $aRegs[3] || $aRegs[4]) {
+                        // At least some data needs to be filled in!
+                        // First, pad the numbers.
+                        foreach ($aRegs as $key => $val) {
+                            if (preg_match('/^\d{1}[ymd]$/', $val)) {
+                                $aRegs[$key] = '0' . $val;
+                            }
+                        }
+                        // Then, glue everything together.
+                        $aData[$sCol] = $_POST[$sCol] = $aRegs[1] . (!$aRegs[2]? '00y' : $aRegs[2]) . (!$aRegs[3] && $aRegs[4]? '00m' : $aRegs[3]) . (!$aRegs[4]? '' : $aRegs[4]) . (!$aRegs[5]? '' : $aRegs[5]);
+                    }
+                }
+            }
             if (!empty($aData[$sCol])) {
-                //$this->checkInputRegExp($sCol, $aData[$sCol]); // Disabled for DIAGNOSTICS, to speed up the import.
+                if (!LOVD_plus) {
+                    // Disabled for LOVD+, to speed up the import.
+                    $this->checkInputRegExp($sCol, $aData[$sCol]);
+                }
                 $this->checkSelectedInput($sCol, $aData[$sCol]);
             }
         }
