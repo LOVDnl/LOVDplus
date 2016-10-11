@@ -10,6 +10,7 @@
  * Copyright   : 2004-2016 Leiden University Medical Center; http://www.LUMC.nl/
  * Programmers : Ing. Ivo F.A.C. Fokkema <I.F.A.C.Fokkema@LUMC.nl>
  *               Ing. Ivar C. Lugtenburg <I.C.Lugtenburg@LUMC.nl>
+ *               Msc. Daan Asscheman <D.Asscheman@LUMC.nl>
  *
  *
  * This file is part of LOVD.
@@ -716,9 +717,12 @@ if ($_SERVER['HTTP_HOST'] == 'leiden-test.diagnostics.lovd.nl') {
 
 
             // Determine if we're the current tab.
-            $bSel = (substr(lovd_getProjectFile(), 1, strrpos(lovd_getProjectFile(), '.') - 1) == $sPrefix);
-            // Auch! Hard coded exception!
-            if (!$bSel && defined('TAB_SELECTED') && TAB_SELECTED == $sPrefix) { $bSel = true; }
+            if (defined('TAB_SELECTED')) {
+                // Hard coded exceptions...
+                $bSel = (TAB_SELECTED == $sPrefix);
+            } else {
+                $bSel = (substr(lovd_getProjectFile(), 1, strrpos(lovd_getProjectFile(), '.') - 1) == $sPrefix);
+            }
             $sFile = 'tab_' . $sPrefix;
 
             // Print transition.
@@ -736,6 +740,9 @@ if ($_SERVER['HTTP_HOST'] == 'leiden-test.diagnostics.lovd.nl') {
             if ($_SESSION['currdb']) {
                 if (in_array($sPrefix, array('configuration', 'genes', 'transcripts', 'variants', 'screenings', 'individuals'))) {
                     $sURL = $sPrefix . '/' . $_SESSION['currdb'];
+                    if ($sPrefix == 'variants') {
+                        $sURL .= '/unique';
+                    }
                 } elseif ($sPrefix == 'diseases') {
                     $sURL = $sPrefix . '?search_genes_=' . $_SESSION['currdb'];
                 }

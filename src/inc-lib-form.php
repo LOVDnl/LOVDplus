@@ -429,11 +429,9 @@ function lovd_fetchDBID ($aData)
                 // Check this option, if it doesn't pass we'll skip it now.
                 $aDataCopy = $aData;
                 $aDataCopy['VariantOnGenome/DBID'] = $sDBIDoption;
-                /* Diagnostics: Assuming all suggestions are correct.
-                if (!lovd_checkDBID($aDataCopy)) {
+                if (!LOVD_plus && !lovd_checkDBID($aDataCopy)) {
                     continue;
                 }
-                */
                 if ($sDBIDoptionSymbol == $sDBIDnewSymbol && $sDBIDoptionNumber < $sDBIDnewNumber && $sDBIDoptionNumber != '000000') {
                     // If the symbol of the option is the same, but the number is lower(not including 000000), take it.
                     $sDBID = $sDBIDoption;
@@ -580,7 +578,7 @@ function lovd_matchURL ($s, $bAllowCustomHosts = false)
     // Matches a string to the standard URL pattern (including those using IP addresses).
     // If $bAllowCustomHosts is true, hosts like "localhost" (hosts without dots) are allowed.
 
-    return (preg_match('/^(ht|f)tps?:\/\/([0-9]{1,3}(\.[0-9]{1,3}){3}|(([0-9a-z][-0-9a-z]*[0-9a-z]|[0-9a-z])\.' . ($bAllowCustomHosts? '?' : '') . ')+[a-z]{2,6})(\/[%&=#0-9a-z\/._+-]*\??.*)?$/i', $s));
+    return (preg_match('/^(ht|f)tps?:\/\/([0-9]{1,3}(\.[0-9]{1,3}){3}|(([0-9a-z][-0-9a-z]*[0-9a-z]|[0-9a-z])\.' . ($bAllowCustomHosts? '?' : '') . ')+[a-z]{2,})(\/[%&=#0-9a-z\/._+-]*\??.*)?$/i', $s));
 }
 
 
@@ -722,9 +720,12 @@ function lovd_sendMailFormatAddresses ($aRecipients, & $aEmailsUsed)
 function lovd_setUpdatedDate ($aGenes)
 {
     // Updates the updated_date field of the indicated gene.
-    return count($aGenes);
-
     global $_AUTH, $_DB;
+
+    if (LOVD_plus) {
+        // LOVD+ does not use these timestamps.
+        return count($aGenes);
+    }
 
     if (!$aGenes) {
         return false;

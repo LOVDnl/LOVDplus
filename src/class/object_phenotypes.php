@@ -4,12 +4,13 @@
  * LEIDEN OPEN VARIATION DATABASE (LOVD)
  *
  * Created     : 2011-02-16
- * Modified    : 2013-04-26
- * For LOVD    : 3.0-05
+ * Modified    : 2015-09-02
+ * For LOVD    : 3.0-14
  *
- * Copyright   : 2004-2013 Leiden University Medical Center; http://www.LUMC.nl/
+ * Copyright   : 2004-2015 Leiden University Medical Center; http://www.LUMC.nl/
  * Programmers : Ing. Ivar C. Lugtenburg <I.C.Lugtenburg@LUMC.nl>
  *               Ing. Ivo F.A.C. Fokkema <I.F.A.C.Fokkema@LUMC.nl>
+ *               Msc. Daan Asscheman <D.Asscheman@LUMC.nl>
  *
  *
  * This file is part of LOVD.
@@ -123,6 +124,9 @@ class LOVD_Phenotype extends LOVD_Custom {
                         'owned_by_' => array(
                                     'view' => array('Owner', 160),
                                     'db'   => array('uo.name', 'ASC', true)),
+                        'owner_countryid' => array(
+                                    'view' => false,
+                                    'db'   => array('uo.countryid', 'ASC', true)),
                         'status' => array(
                                     'view' => array('Status', 70),
                                     'db'   => array('ds.name', false, true),
@@ -190,7 +194,12 @@ class LOVD_Phenotype extends LOVD_Custom {
                 ' ORDER BY name')->fetchAllCombine();
             $aFormOwner = array('Owner of this data', '', 'select', 'owned_by', 1, $aSelectOwner, false, false, false);
             $aSelectStatus = $_SETT['data_status'];
-            unset($aSelectStatus[STATUS_PENDING], $aSelectStatus[STATUS_IN_PROGRESS]);
+            if (lovd_getProjectFile() == '/import.php') {
+                // During an import the status pending is allowed, therefore only status in progress is unset.
+                unset($aSelectStatus[STATUS_IN_PROGRESS]);
+            } else {
+                unset($aSelectStatus[STATUS_PENDING], $aSelectStatus[STATUS_IN_PROGRESS]);
+            }
             $aFormStatus = array('Status of this data', '', 'select', 'statusid', 1, $aSelectStatus, false, false, false);
         } else {
             $aFormOwner = array();

@@ -4,12 +4,13 @@
  * LEIDEN OPEN VARIATION DATABASE (LOVD)
  *
  * Created     : 2010-12-21
- * Modified    : 2014-07-25
- * For LOVD    : 3.0-11
+ * Modified    : 2015-07-17
+ * For LOVD    : 3.0-14
  *
- * Copyright   : 2004-2014 Leiden University Medical Center; http://www.LUMC.nl/
+ * Copyright   : 2004-2015 Leiden University Medical Center; http://www.LUMC.nl/
  * Programmers : Ing. Ivar C. Lugtenburg <I.C.Lugtenburg@LUMC.nl>
  *               Ing. Ivo F.A.C. Fokkema <I.F.A.C.Fokkema@LUMC.nl>
+ *               Msc. Daan Asscheman <D.Asscheman@LUMC.nl>
  *
  *
  * This file is part of LOVD.
@@ -386,6 +387,9 @@ if (ACTION == 'create') {
                 if (count($aSuccessTranscripts)) {
                     lovd_writeLog('Event', LOG_EVENT, 'Transcript information entries successfully added to gene ' . $zData['gene']['id'] . ' - ' . $zData['gene']['name']);
                 }
+
+                // Change updated date for gene.
+                lovd_setUpdatedDate($sGene);
             }
 
             unset($_SESSION['work'][$sPathBase][$_POST['workID']]);
@@ -478,7 +482,7 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && ACTION == 'edit') {
         if (!lovd_error()) {
             // Fields to be used.
             $aFields = array(
-                            'id_ensembl', 'id_protein_ensembl', 'id_protein_uniprot',
+                            'id_ensembl', 'id_protein_ensembl', 'id_protein_uniprot', 'edited_by', 'edited_date',
                             );
 
             // Prepare values.
@@ -486,6 +490,9 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && ACTION == 'edit') {
             $_POST['edited_date'] = date('Y-m-d H:i:s');
 
             $_DATA->updateEntry($nID, $_POST, $aFields);
+
+            // Change updated date for gene.
+            lovd_setUpdatedDate($zData['geneid']);
 
             // Write to log...
             lovd_writeLog('Event', LOG_EVENT, 'Edited transcript information entry #' . $nID . ' (' . $zData['geneid'] . ')');
@@ -573,6 +580,9 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && ACTION == 'delete') {
             // Query text.
             // This also deletes the entries in variants.
             $_DATA->deleteEntry($nID);
+
+            // Change updated date for gene.
+            lovd_setUpdatedDate($zData['geneid']);
 
             // Write to log...
             lovd_writeLog('Event', LOG_EVENT, 'Deleted transcript information entry ' . $nID . ' - ' . $zData['geneid'] . ' (' . $zData['name'] . ')');

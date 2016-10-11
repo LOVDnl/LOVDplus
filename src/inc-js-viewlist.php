@@ -4,10 +4,10 @@
  * LEIDEN OPEN VARIATION DATABASE (LOVD)
  *
  * Created     : 2010-01-29
- * Modified    : 2013-05-15
- * For LOVD    : 3.0-05
+ * Modified    : 2015-09-21
+ * For LOVD    : 3.0-14
  *
- * Copyright   : 2004-2013 Leiden University Medical Center; http://www.LUMC.nl/
+ * Copyright   : 2004-2015 Leiden University Medical Center; http://www.LUMC.nl/
  * Programmers : Ing. Ivo F.A.C. Fokkema <I.F.A.C.Fokkema@LUMC.nl>
  *               Ing. Ivar C. Lugtenburg <I.C.Lugtenburg@LUMC.nl>
  *
@@ -35,7 +35,7 @@ require ROOT_PATH . 'inc-lib-init.php';
 require ROOT_PATH . 'inc-js-ajax.php';
 
 // Find out whether or not we're using SSL.
-if (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] == 'on' && !empty($_SERVER['SSL_PROTOCOL'])) {
+if ((!empty($_SERVER['HTTP_X_FORWARDED_PROTO']) && $_SERVER['HTTP_X_FORWARDED_PROTO'] == 'https') || (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] != 'off') || !empty($_SERVER['SSL_PROTOCOL'])) {
     // We're using SSL!
     define('PROTOCOL', 'https://');
 } else {
@@ -328,7 +328,7 @@ if (!isset($_GET['nohistory'])) {
             }
         });
         // Gather changed checkbox IDs and send, too.
-        if (check_list[sViewListID].length) {
+        if (check_list[sViewListID] && check_list[sViewListID].length) {
             if ($.isArray(check_list[sViewListID])) {
                 var sIDlist = check_list[sViewListID].join(';');
             } else {
@@ -383,7 +383,10 @@ function lovd_stretchInputs (id)
     var aColumns = $("#viewlistTable_"+id+" th");
     var nColumns = aColumns.size();
     for (var i = 0; i < nColumns; i ++) {
-        aColumns.eq(i).find("input").css("width", aColumns.eq(i).width() - 6);
+        if (aColumns.eq(i).width()) {
+            // But only if the column actually has a width (= 0 if table is hidden for now)
+            aColumns.eq(i).find("input").css("width", aColumns.eq(i).width() - 6);
+        }
     }
 }
 

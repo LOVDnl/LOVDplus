@@ -198,7 +198,7 @@ if (PATH_COUNT == 2 && ACTION == 'order') {
             // We're in a new window, refresh opener en close window.
             print('      <SCRIPT type="text/javascript">setTimeout(\'opener.location.reload();self.close();\', 1000);</SCRIPT>' . "\n\n");
         } else {
-            print('      <SCRIPT type="text/javascript">setTimeout(\'window.location.href=\\\'' . lovd_getInstallURL() . $_PE[0] . '/' . $sID . '\\\';\', 1000);</SCRIPT>' . "\n\n");
+            print('      <SCRIPT type="text/javascript">setTimeout(\'window.location.href=\\\'' . lovd_getInstallURL() . $_PE[0] . '/' . $_PE[1] . '\\\';\', 1000);</SCRIPT>' . "\n\n");
         }
 
         $_T->printFooter();

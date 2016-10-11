@@ -259,7 +259,7 @@ class LOVD_SystemSetting extends LOVD_Object {
         // Sets default values of fields in $_POST.
         $_POST['system_title'] = 'LOVD - Leiden Open Variation Database';
         $_POST['location_url'] = ($_SERVER['HTTP_HOST'] == 'localhost' || lovd_matchIPRange($_SERVER['HTTP_HOST'])? '' : lovd_getInstallURL());
-        $_POST['refseq_build'] = 'hg19';
+        $_POST['refseq_build'] = 'hg38';
         $_POST['api_feed_history'] = 3;
         $_POST['logo_uri'] = 'gfx/' . (LOVD_plus? 'LOVD_plus_logo200x50' : 'LOVD3_logo145x50') . '.jpg';
         $_POST['mutalyzer_soap_url'] = 'https://mutalyzer.nl/services';

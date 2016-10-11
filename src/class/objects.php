@@ -10,6 +10,7 @@
  * Copyright   : 2004-2016 Leiden University Medical Center; http://www.LUMC.nl/
  * Programmers : Ing. Ivo F.A.C. Fokkema <I.F.A.C.Fokkema@LUMC.nl>
  *               Ing. Ivar C. Lugtenburg <I.C.Lugtenburg@LUMC.nl>
+ *               Msc. Daan Asscheman <D.Asscheman@LUMC.nl>
  *               Anthony Marty <anthony.marty@unimelb.edu.au>
  *
  *
@@ -248,7 +249,11 @@ class LOVD_Object {
                     foreach ($Val as $sValue) {
                         $sValue = trim($sValue); // Trim whitespace from $sValue to ensure match independent of whitespace.
                         if (!in_array($sValue, $aOptions)) {
-                            lovd_errorAdd($sName, 'Please select a valid entry from the \'' . $sHeader . '\' selection box, \'' . strip_tags($sValue) . '\' is not a valid value.');
+                            if (lovd_getProjectFile() == '/import.php') {
+                                lovd_errorAdd($sName, 'Please select a valid entry from the \'' . $sHeader . '\' selection box, \'' . strip_tags($sValue) . '\' is not a valid value. Please choose from these options: \'' . implode('\', \'', $aOptions) . '\'.');
+                            } else {
+                                lovd_errorAdd($sName, 'Please select a valid entry from the \'' . $sHeader . '\' selection box, \'' . strip_tags($sValue) . '\' is not a valid value.');
+                            }
                         }
                     }
                 }
@@ -373,6 +378,7 @@ class LOVD_Object {
     function getCount ($ID = false)
     {
         // Returns the number of entries in the database table.
+        // ViewEntry() and ViewList() call this function to see if data exists at all, and actually don't require a precise number.
         // $ID = Can be an integer/numeric string, or an array. If an integer/numeric string: ID to check for existance.
         //   If an associative array (for linking tables), use array('geneid' => 'IVD', 'userid' => 1).
         global $_DB;
@@ -616,9 +622,18 @@ class LOVD_Object {
             }
             // If we find an owned_by_ field, and an owner array, we set up the popups as well (but not for the "LOVD" user).
             if (isset($zData['owned_by']) && (int) $zData['owned_by'] && !empty($zData['owner'])) {
-                list($nID, $sName, $sEmail, $sInstitute, $sDepartment, $sCountryID) = $zData['owner'];
-                // Call the tooltip function with a request to move the tooltip left, because "Owner" is often the last column in the table, and we don't want it to run off the page. I have found no way of moving the tooltip left whenever it's enlarging the document size.
-                $zData['owned_by_'] = '<SPAN class="custom_link" onmouseover="lovd_showToolTip(\'<TABLE border=0 cellpadding=0 cellspacing=0 width=350 class=S11><TR><TH valign=top>User&nbsp;ID</TH><TD>' . ($_AUTH['level'] < LEVEL_MANAGER? $nID : '<A href=users/' . $nID . '>' . $nID . '</A>') . '</TD></TR><TR><TH valign=top>Name</TH><TD>' . $sName . '</TD></TR><TR><TH valign=top>Email&nbsp;address</TH><TD>' . str_replace("\r\n", '<BR>', lovd_hideEmail($sEmail)) . '</TD></TR><TR><TH valign=top>Institute</TH><TD>' . $sInstitute . '</TD></TR><TR><TH valign=top>Department</TH><TD>' . $sDepartment . '</TD></TR><TR><TH valign=top>Country</TH><TD>' . $sCountryID . '</TD></TR></TABLE>\', this, [-200, 0]);">' . $zData['owned_by_'] . '</SPAN>';
+                if(!is_array($zData['owner'][0])) {
+                    $zData['owner'] = array($zData['owner']);
+                }
+                // We are going to overwrite the 'owned_by_' field.
+                $zData['owned_by_'] = '';
+                foreach($zData['owner'] as $aLinkData) {
+                    if (count($aLinkData) >= 6) {
+                        list($nID, $sName, $sEmail, $sInstitute, $sDepartment, $sCountryID) = $aLinkData;
+                        // Call the tooltip function with a request to move the tooltip left, because "Owner" is often the last column in the table, and we don't want it to run off the page. I have found no way of moving the tooltip left whenever it's enlarging the document size.
+                        $zData['owned_by_'] .= (!$zData['owned_by_']? '' : ', ') . '<SPAN class="custom_link" onmouseover="lovd_showToolTip(\'<TABLE border=0 cellpadding=0 cellspacing=0 width=350 class=S11><TR><TH valign=top>User&nbsp;ID</TH><TD>' . ($_AUTH['level'] < LEVEL_MANAGER? $nID : '<A href=users/' . $nID . '>' . $nID . '</A>') . '</TD></TR><TR><TH valign=top>Name</TH><TD>' . $sName . '</TD></TR><TR><TH valign=top>Email&nbsp;address</TH><TD>' . str_replace("\r\n", '<BR>', lovd_hideEmail($sEmail)) . '</TD></TR><TR><TH valign=top>Institute</TH><TD>' . $sInstitute . '</TD></TR><TR><TH valign=top>Department</TH><TD>' . $sDepartment . '</TD></TR><TR><TH valign=top>Country</TH><TD>' . $sCountryID . '</TD></TR></TABLE>\', this, [-200, 0]);">' . $sName . '</SPAN>';
+                    }
+                }
             }
             if (LOVD_plus) {
                 // Analyzer's details like the owner's details.
@@ -1274,7 +1289,7 @@ class LOVD_Object {
             //   Unfortunately, we can't automatically get us an SQL_CALC_FOUND_ROWS which leaves out unnecessary joins. Is there a way to do this?
             // ORDER BY is absolutely killing on large result sets, but when used you might as well use SQL_CALC_FOUND_ROWS, since it needs to read the entire table anyways.
             // So, long time to retrieve count (>1s) => no SQL_CALC_FOUND_ROWS and no sort.
-            // Count OK (<=1s), but big result set (25K) => no sort.
+            // Count OK (<=1s), but big result set (250K) => no sort. ($_SETT['lists']['max_sortable_rows'])
 
             // 1) If we don't have a count in memory, request count separately, using SQL_CALC_FOUND_ROWS, since it handles all complex queries.
             // Also if last count was >30min ago, request again.
@@ -1345,7 +1360,8 @@ class LOVD_Object {
                         while ($zData = $q->fetchAssoc()) {
                             $zData = $this->generateRowID($zData);
                             // We only need the row_id here for knowing which ones we need to check.
-                            $aSessionViewList['checked'][] = $zData['row_id'];
+                            // 2015-09-18; 3.0-14; We need to run rawurldecode() or else Columns are not selectable this way.
+                            $aSessionViewList['checked'][] = rawurldecode($zData['row_id']);
                         }
                     } elseif ($_GET['ids_changed'] == 'none') {
                         // If the unselect all button was clicked, reset the 'checked' array.
@@ -1596,7 +1612,7 @@ class LOVD_Object {
                     die('0'); // Silent error.
                 }
 
-                print('      </FORM>' . "\n\n");
+                print('      <DIV id="viewlistDiv_' . $sViewListID . '">' . "\n"); // These contents will be replaced by Ajax.
 
                 if (substr($this->sObject, -7) == 'Variant') {
                     $sUnit = 'variants' . (substr($this->sObject, 0, 10) == 'Transcript'? ' on transcripts' : '');
@@ -1621,6 +1637,8 @@ class LOVD_Object {
                     $sMessage .= $sWhere;
                 }
                 lovd_showInfoTable($sMessage . '!', 'stop');
+
+                print('      </DIV></FORM>' . "\n\n");
 
                 return 0;
             }
@@ -1650,7 +1668,9 @@ class LOVD_Object {
 
             $zData = $this->autoExplode($zData);
 
-            $zData = $this->prepareData($zData);
+            // Only the CustomViewList object has this 3rd argument, but other objects' prepareDate()
+            // don't complain when called with this 3 argument they didn't define.
+            $zData = $this->prepareData($zData, 'list', $sViewListID);
 
             if (FORMAT == 'text/html') {
                 // FIXME; rawurldecode() in the line below should have a better solution.

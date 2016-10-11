@@ -4,13 +4,14 @@
  * LEIDEN OPEN VARIATION DATABASE (LOVD)
  *
  * Created     : 2010-12-15
- * Modified    : 2014-12-11
- * For LOVD    : 3.0-13
+ * Modified    : 2015-09-24
+ * For LOVD    : 3.0-14
  *
- * Copyright   : 2004-2014 Leiden University Medical Center; http://www.LUMC.nl/
+ * Copyright   : 2004-2015 Leiden University Medical Center; http://www.LUMC.nl/
  * Programmers : Ing. Ivo F.A.C. Fokkema <I.F.A.C.Fokkema@LUMC.nl>
  *               Ing. Ivar C. Lugtenburg <I.C.Lugtenburg@LUMC.nl>
  *               Msc. Daan Asscheman <D.Asscheman@LUMC.nl>
+ *               David Baux <david.baux@inserm.fr>
  *
  *
  * This file is part of LOVD.
@@ -32,7 +33,9 @@
 
 define('ROOT_PATH', './');
 require ROOT_PATH . 'inc-init.php';
-define('TAB_SELECTED', 'gene_panels');
+if (LOVD_plus) {
+    define('TAB_SELECTED', 'gene_panels');
+}
 
 if ($_AUTH) {
     // If authorized, check for updates.
@@ -84,22 +87,25 @@ if (PATH_COUNT == 2 && preg_match('/^[a-z][a-z0-9#@-]+$/i', rawurldecode($_PE[1]
     require ROOT_PATH . 'class/object_genes.php';
     $_DATA = new LOVD_Gene();
     $zData = $_DATA->viewEntry($sID);
+    // 2015-07-22; 3.0-14; Drop usage of CURRENT_PATH in favor of fixed $sID which may have a gene symbol with incorrect case.
+    // Now fix possible issues with capitalization. inc-init.php does this for $_SESSION['currdb'], but we're using $sID.
+    $sID = $zData['id'];
 
     $aNavigation = array();
     if ($_AUTH && $_AUTH['level'] >= LEVEL_CURATOR) {
         // Authorized user is logged in. Provide tools.
-        $aNavigation[CURRENT_PATH . '?edit']             = array('menu_edit.png', 'Edit gene information', 1);
+        $aNavigation[$_PE[0] . '/' . $sID . '?edit']             = array('menu_edit.png', 'Edit gene information', 1);
         $aNavigation['transcripts/' . $sID . '?create']  = array('menu_plus.png', 'Add transcript(s) to gene', 1);
         if ($_AUTH['level'] >= LEVEL_MANAGER) {
-            $aNavigation[CURRENT_PATH . '?delete']       = array('cross.png', 'Delete gene entry', 1);
-            $aNavigation[CURRENT_PATH . '?authorize']    = array('', 'Add/remove curators/collaborators', 1);
+            $aNavigation[$_PE[0] . '/' . $sID . '?delete']       = array('cross.png', 'Delete gene entry', 1);
+            $aNavigation[$_PE[0] . '/' . $sID . '?authorize']    = array('', 'Add/remove curators/collaborators', 1);
         } else {
-            $aNavigation[CURRENT_PATH . '?sortCurators'] = array('', 'Sort/hide curator names', 1);
+            $aNavigation[$_PE[0] . '/' . $sID . '?sortCurators'] = array('', 'Sort/hide curator names', 1);
         }
-        $aNavigation[CURRENT_PATH . '?empty']            = array('menu_empty.png', 'Empty this gene database', (bool) ($zData['variants']));
-        $aNavigation[CURRENT_PATH . '/graphs']           = array('menu_graphs.png', 'View graphs about this gene database', 1);
-        $aNavigation[CURRENT_PATH . '/columns']          = array('menu_columns.png', 'View enabled variant columns', 1);
-        $aNavigation[CURRENT_PATH . '/columns?order']    = array('menu_columns.png', 'Re-order enabled variant columns', 1);
+        $aNavigation[$_PE[0] . '/' . $sID . '?empty']            = array('menu_empty.png', 'Empty this gene database', (bool) ($zData['variants']));
+        $aNavigation[$_PE[0] . '/' . $sID . '/graphs']           = array('menu_graphs.png', 'View graphs about this gene database', 1);
+        $aNavigation[$_PE[0] . '/' . $sID . '/columns']          = array('menu_columns.png', 'View enabled variant columns', 1);
+        $aNavigation[$_PE[0] . '/' . $sID . '/columns?order']    = array('menu_columns.png', 'Re-order enabled variant columns', 1);
         $aNavigation['columns/VariantOnTranscript']      = array('menu_columns.png', 'View all available variant columns', 1);
 //        $aNavigation['download/all/gene/' . $sID]        = array('menu_save.png', 'Download all this gene\'s data', 1);
         $aNavigation['javascript:lovd_openWindow(\'' . lovd_getInstallURL() . 'scripts/refseq_parser.php?step=1&amp;symbol=' . $sID . '\', \'refseq_parser\', 900, 500);'] = array('menu_scripts.png', 'Create human-readable refseq file', ($zData['refseq_UD'] && count($zData['transcripts'])));
@@ -255,7 +261,7 @@ if (PATH_COUNT == 1 && ACTION == 'create') {
                 } else {
                     // Get UD from mutalyzer.
                     try {
-                        $sRefseqUD = $_Mutalyzer->sliceChromosomeByGene(array('geneSymbol' => $sSymbol, 'organism' => 'Man', 'upStream' => '5000', 'downStream' => '2000'))->sliceChromosomeByGeneResult;
+                        $sRefseqUD = lovd_getUDForGene($_CONF['refseq_build'], $sSymbol);
                     } catch (SoapFault $e) {
                         lovd_soapError($e);
                     }
@@ -576,6 +582,9 @@ if (PATH_COUNT == 2 && preg_match('/^[a-z][a-z0-9#@-]+$/i', rawurldecode($_PE[1]
     require ROOT_PATH . 'inc-lib-form.php';
     $_DATA = new LOVD_Gene();
     $zData = $_DATA->loadEntry($sID);
+    // 2015-07-22; 3.0-14; Drop usage of CURRENT_PATH in favor of fixed $sID which may have a gene symbol with incorrect case.
+    // Now fix possible issues with capitalization. inc-init.php does this for $_SESSION['currdb'], but we're using $sID.
+    $sID = $zData['id'];
 
     $sPath = $_PE[0] . '?' . ACTION;
     if (GET) {
@@ -606,6 +615,7 @@ if (PATH_COUNT == 2 && preg_match('/^[a-z][a-z0-9#@-]+$/i', rawurldecode($_PE[1]
         $_SESSION['work'][$sPath][$_POST['workID']]['values']['genomic_references'] = $aRefseqGenomic;
     }
 
+    // This passes on the new list of genomic reference sequences to getForm(), which globals this variable.
     $zData['genomic_references'] = $_SESSION['work'][$sPath][$_POST['workID']]['values']['genomic_references'];
     if (count($_POST) > 1) {
         lovd_errorClean();
@@ -690,7 +700,7 @@ if (PATH_COUNT == 2 && preg_match('/^[a-z][a-z0-9#@-]+$/i', rawurldecode($_PE[1]
             unset($_SESSION['work'][$sPath][$_POST['workID']]);
 
             // Thank the user...
-            header('Refresh: 3; url=' . lovd_getInstallURL() . CURRENT_PATH);
+            header('Refresh: 3; url=' . lovd_getInstallURL() . $_PE[0] . '/' . $sID);
 
             $_T->printHeader();
             $_T->printTitle();
@@ -724,7 +734,7 @@ if (PATH_COUNT == 2 && preg_match('/^[a-z][a-z0-9#@-]+$/i', rawurldecode($_PE[1]
     lovd_includeJS('inc-js-custom_links.php');
 
     // Table.
-    print('      <FORM action="' . CURRENT_PATH . '?' . ACTION . '" method="post">' . "\n");
+    print('      <FORM action="' . $_PE[0] . '/' . $sID . '?' . ACTION . '" method="post">' . "\n");
 
     // Array which will make up the form table.
     $aForm = array_merge(
@@ -923,6 +933,9 @@ if (PATH_COUNT == 2 && preg_match('/^[a-z][a-z0-9#@-]+$/i', rawurldecode($_PE[1]
     require ROOT_PATH . 'class/object_genes.php';
     $_DATA = new LOVD_Gene();
     $zData = $_DATA->loadEntry($sID);
+    // 2015-07-22; 3.0-14; Drop usage of CURRENT_PATH in favor of fixed $sID which may have a gene symbol with incorrect case.
+    // Now fix possible issues with capitalization. inc-init.php does this for $_SESSION['currdb'], but we're using $sID.
+    $sID = $zData['id'];
     require ROOT_PATH . 'inc-lib-form.php';
 
     if (!empty($_POST)) {
@@ -967,12 +980,12 @@ if (PATH_COUNT == 2 && preg_match('/^[a-z][a-z0-9#@-]+$/i', rawurldecode($_PE[1]
     $_T->printTitle();
 
     lovd_showInfoTable('This will delete the ' . $zData['id'] . ' gene, all transcripts of this gene, and all annotations on variants specific for ' . $zData['id'] . '. The genomic variants and all individual-related information, including screenings, phenotypes and diseases, will not be deleted, so these might be left without a curator able to manage the data.<BR>
-                        <B>If you also wish to remove all information on individuals with variants in ' . $zData['id'] . ', first <A href="' . CURRENT_PATH . '?empty">empty</A> the gene database.</B>', 'warning');
+                        <B>If you also wish to remove all information on individuals with variants in ' . $zData['id'] . ', first <A href="' . $_PE[0] . '/' . $sID . '?empty">empty</A> the gene database.</B>', 'warning');
 
     lovd_errorPrint();
 
     // Table.
-    print('      <FORM action="' . CURRENT_PATH . '?' . ACTION . '" method="post">' . "\n");
+    print('      <FORM action="' . $_PE[0] . '/' . $sID . '?' . ACTION . '" method="post">' . "\n");
 
     // Array which will make up the form table.
     $aForm = array_merge(
@@ -1292,27 +1305,80 @@ if (PATH_COUNT == 3 && preg_match('/^[a-z][a-z0-9#@-]+$/i', rawurldecode($_PE[1]
     print('      <!--[if lte IE 8]><SCRIPT type="text/javascript" src="lib/flot/excanvas.min.js"></SCRIPT><![endif]-->' . "\n\n");
 
     // FIXME; Implement:
-    // - Variant types (RNA, Protein level).
+    // Check what's left here.
+    // - Variant types (RNA).
     // - Locations of variants (exon and intron numbers)?
     // - Variants in this gene reported in individuals with which diseases?
-    //   * Too bad we don't know if these variants cause this disease. Search for pathogenicity only?
+    //   * Too bad we don't know if these variants cause this disease. Search for pathogenicity only? YES
 
     // We need to create the DIV containers, the Graph object will fill it in.
-    // Variant types (DNA level).
-    print('      <H5>Variant type (DNA level)</H5>' . "\n" .
-          '      <TABLE border="0" cellpadding="2" cellspacing="0" width="900" style="height : 320px;">' . "\n" .
-          '        <TR valign="top">' . "\n" .
-          '          <TD width="50%">' . "\n" .
-          '            <B>All ' . ($_AUTH['level'] >= LEVEL_COLLABORATOR? '' : 'public ') . ' variants</B><BR>'. "\n" .
-          '            <DIV id="variantsTypeDNA_all" style="width : 325px; height : 250px;"><IMG src="gfx/lovd_loading.gif" alt="Loading..."></DIV><BR><DIV id="variantsTypeDNA_all_hover">&nbsp;</DIV></TD>' . "\n" .
-          '          <TD width="50%">' . "\n" .
-          '            <B>Unique ' . ($_AUTH['level'] >= LEVEL_COLLABORATOR? '' : 'public ') . 'variants</B><BR>'. "\n" .
-          '            <DIV id="variantsTypeDNA_unique" style="width : 325px; height : 250px;"><IMG src="gfx/lovd_loading.gif" alt="Loading..."></DIV><BR><DIV id="variantsTypeDNA_unique_hover">&nbsp;</DIV></TD></TR></TABLE>' . "\n\n");
+    // To save ourselves a lot of code, we'll build the DIV containers as templates.
+    $aGraphs = array(
+        // Variant types (DNA level).
+        'Variant type (DNA level, all ' . ($_AUTH['level'] >= LEVEL_COLLABORATOR? '' : 'public ') . 'variants)' =>
+        array(
+            'variantsTypeDNA_all' => 'All ' . ($_AUTH['level'] >= LEVEL_COLLABORATOR? '' : 'public ') . 'variants',
+            'variantsTypeDNA_unique' => 'Unique ' . ($_AUTH['level'] >= LEVEL_COLLABORATOR? '' : 'public ') . 'variants',
+        ),
+        // Variant types (DNA level) ((likely) pathogenic only).
+        'Variant type (DNA level, all ' . ($_AUTH['level'] >= LEVEL_COLLABORATOR? '' : 'public ') . 'pathogenic variants)' =>
+        array(
+            'variantsTypeDNA_all_pathogenic' => 'All ' . ($_AUTH['level'] >= LEVEL_COLLABORATOR? '' : 'public ') . 'pathogenic variants',
+            'variantsTypeDNA_unique_pathogenic' => 'Unique ' . ($_AUTH['level'] >= LEVEL_COLLABORATOR? '' : 'public ') . 'pathogenic variants',
+        ),
+        // Variant types (protein level).
+        'Variant type (Protein level, all ' . ($_AUTH['level'] >= LEVEL_COLLABORATOR? '' : 'public ') . 'variants) (note: numbers are sums for all transcripts of this gene)' =>
+        array(
+            'variantsTypeProtein_all' => 'All ' . ($_AUTH['level'] >= LEVEL_COLLABORATOR? '' : 'public ') . 'variants',
+            'variantsTypeProtein_unique' => 'Unique ' . ($_AUTH['level'] >= LEVEL_COLLABORATOR? '' : 'public ') . 'variants',
+        ),
+        // Variant types (protein level) ((likely) pathogenic only).
+        'Variant type (Protein level, all ' . ($_AUTH['level'] >= LEVEL_COLLABORATOR? '' : 'public ') . 'pathogenic variants) (note: numbers are sums for all transcripts of this gene)' =>
+        array(
+            'variantsTypeProtein_all_pathogenic' => 'All ' . ($_AUTH['level'] >= LEVEL_COLLABORATOR? '' : 'public ') . 'pathogenic variants',
+            'variantsTypeProtein_unique_pathogenic' => 'Unique ' . ($_AUTH['level'] >= LEVEL_COLLABORATOR? '' : 'public ') . 'pathogenic variants',
+        ),
+        // Variant locations (DNA level).
+        'Variant location (DNA level, all ' . ($_AUTH['level'] >= LEVEL_COLLABORATOR? '' : 'public ') . 'variants) (note: numbers are sums for all transcripts of this gene)' =>
+        array(
+            'variantsLocations_all' => 'All ' . ($_AUTH['level'] >= LEVEL_COLLABORATOR? '' : 'public ') . 'variants',
+            'variantsLocations_unique' => 'Unique ' . ($_AUTH['level'] >= LEVEL_COLLABORATOR? '' : 'public ') . 'variants',
+        ),
+        // Variant locations (DNA level) ((likely) pathogenic only).
+        'Variant type (DNA level, all ' . ($_AUTH['level'] >= LEVEL_COLLABORATOR? '' : 'public ') . 'pathogenic variants) (note: numbers are sums for all transcripts of this gene)' =>
+        array(
+            'variantsLocations_all_pathogenic' => 'All ' . ($_AUTH['level'] >= LEVEL_COLLABORATOR? '' : 'public ') . 'pathogenic variants',
+            'variantsLocations_unique_pathogenic' => 'Unique ' . ($_AUTH['level'] >= LEVEL_COLLABORATOR? '' : 'public ') . 'pathogenic variants',
+        ),
+    );
 
+    foreach ($aGraphs as $sCategory => $aCategory) {
+        print('      <H5>' . $sCategory . '</H5>' . "\n" .
+              '      <TABLE border="0" cellpadding="2" cellspacing="0" width="900" style="height : 320px;">' . "\n" .
+              '        <TR valign="top">');
+        foreach ($aCategory as $sGraphID => $sTitle) {
+            print("\n" .
+                  '          <TD width="50%">' . "\n" .
+                  '            <B>' . $sTitle . '</B><BR>' . "\n" .
+                  '            <DIV id="' . $sGraphID . '" style="width : 325px; height : 250px;"><IMG src="gfx/lovd_loading.gif" alt="Loading..."></DIV><BR><DIV id="' . $sGraphID . '_hover">&nbsp;</DIV></TD>');
+        }
+        print('</TR></TABLE>' . "\n\n");
+    }
+
+    flush();
     $_T->printFooter(false);
-
     $_G->variantsTypeDNA('variantsTypeDNA_all', $sID, ($_AUTH['level'] >= LEVEL_COLLABORATOR), false);
     $_G->variantsTypeDNA('variantsTypeDNA_unique', $sID, ($_AUTH['level'] >= LEVEL_COLLABORATOR), true);
+    $_G->variantsTypeDNA('variantsTypeDNA_all_pathogenic', $sID, ($_AUTH['level'] >= LEVEL_COLLABORATOR), false, true);
+    $_G->variantsTypeDNA('variantsTypeDNA_unique_pathogenic', $sID, ($_AUTH['level'] >= LEVEL_COLLABORATOR), true, true);
+    $_G->variantsTypeProtein('variantsTypeProtein_all', $sID, ($_AUTH['level'] >= LEVEL_COLLABORATOR), false, false);
+    $_G->variantsTypeProtein('variantsTypeProtein_unique', $sID, ($_AUTH['level'] >= LEVEL_COLLABORATOR), true, false);
+    $_G->variantsTypeProtein('variantsTypeProtein_all_pathogenic', $sID, ($_AUTH['level'] >= LEVEL_COLLABORATOR), false, true);
+    $_G->variantsTypeProtein('variantsTypeProtein_unique_pathogenic', $sID, ($_AUTH['level'] >= LEVEL_COLLABORATOR), true, true);
+    $_G->variantsLocations('variantsLocations_all', $sID, ($_AUTH['level'] >= LEVEL_COLLABORATOR), false);
+    $_G->variantsLocations('variantsLocations_unique', $sID, ($_AUTH['level'] >= LEVEL_COLLABORATOR), true);
+    $_G->variantsLocations('variantsLocations_all_pathogenic', $sID, ($_AUTH['level'] >= LEVEL_COLLABORATOR), false, true);
+    $_G->variantsLocations('variantsLocations_unique_pathogenic', $sID, ($_AUTH['level'] >= LEVEL_COLLABORATOR), true, true);
 
     print('</BODY>' . "\n" .
           '</HTML>' . "\n");
@@ -1330,7 +1396,10 @@ if (PATH_COUNT == 2 && preg_match('/^[a-z][a-z0-9#@-]+$/i', rawurldecode($_PE[1]
 
     $sID = rawurldecode($_PE[1]);
 
-    if (!$_DB->query('SELECT COUNT(*) FROM ' . TABLE_GENES . ' WHERE id = ?', array($sID))->fetchColumn()) {
+    // 2015-07-22; 3.0-14; Drop usage of CURRENT_PATH in favor of fixed $sID which may have a gene symbol with incorrect case.
+    // Now fix possible issues with capitalization. inc-init.php does this for $_SESSION['currdb'], but we're using $sID.
+    $sVerifiedID = $_DB->query('SELECT id FROM ' . TABLE_GENES . ' WHERE id = ?', array($sID))->fetchColumn();
+    if (!$sVerifiedID) {
         define('PAGE_TITLE', 'Manage curators for the ' . $sID . ' gene');
         $_T->printHeader();
         $_T->printTitle();
@@ -1338,12 +1407,13 @@ if (PATH_COUNT == 2 && preg_match('/^[a-z][a-z0-9#@-]+$/i', rawurldecode($_PE[1]
         $_T->printFooter();
         exit;
     }
+    $sID = $sVerifiedID;
 
     // Load appropiate user level for this gene.
     lovd_isAuthorized('gene', $sID);
 
     if (ACTION == 'authorize' && $_AUTH['level'] < LEVEL_MANAGER) {
-        header('Location: ' . lovd_getInstallURL() . CURRENT_PATH . '?sortCurators');
+        header('Location: ' . lovd_getInstallURL() . $_PE[0] . '/' . $sID . '?sortCurators');
         exit;
     }
 
@@ -1453,7 +1523,7 @@ if (PATH_COUNT == 2 && preg_match('/^[a-z][a-z0-9#@-]+$/i', rawurldecode($_PE[1]
             lovd_writeLog('Event', LOG_EVENT, $sMessage);
 
             // Thank the user...
-            header('Refresh: 3; url=' . lovd_getInstallURL() . CURRENT_PATH);
+            header('Refresh: 3; url=' . lovd_getInstallURL() . $_PE[0] . '/' . $sID);
 
             $_T->printHeader();
             $_T->printTitle();
@@ -1543,7 +1613,7 @@ if (PATH_COUNT == 2 && preg_match('/^[a-z][a-z0-9#@-]+$/i', rawurldecode($_PE[1]
         print('<TH width="75" style="text-align:right;">Shown</TH>');
     }
     print('</TR></TABLE>' . "\n" .
-          '      <FORM action="' . CURRENT_PATH . '?' . ACTION . '" method="post">' . "\n" .
+          '      <FORM action="' . $_PE[0] . '/' . $sID . '?' . ACTION . '" method="post">' . "\n" .
           '        <UL id="curator_list" class="sortable" style="margin-top : 0px; width : 550px;">' . "\n");
     // Now loop the items in the order given.
     foreach ($aCurators as $nID => $aVal) {
@@ -1563,11 +1633,11 @@ if (PATH_COUNT == 2 && preg_match('/^[a-z][a-z0-9#@-]+$/i', rawurldecode($_PE[1]
                         array('POST', '', '', '', '0%', '0', '100%'),
                         array('', '', 'print', 'Enter your password for authorization'),
                         array('', '', 'password', 'password', 20),
-                        array('', '', 'print', '<INPUT type="submit" value="Save curator list">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<INPUT type="submit" value="Cancel" onclick="window.location.href=\'' . lovd_getInstallURL() . CURRENT_PATH . '\'; return false;" style="border : 1px solid #FF4422;">'),
+                        array('', '', 'print', '<INPUT type="submit" value="Save curator list">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<INPUT type="submit" value="Cancel" onclick="window.location.href=\'' . lovd_getInstallURL() . $_PE[0] . '/' . $sID . '\'; return false;" style="border : 1px solid #FF4422;">'),
                       );
         lovd_viewForm($aForm);
     } else {
-        print('        <INPUT type="submit" value="Save">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<INPUT type="submit" value="Cancel" onclick="window.location.href=\'' . lovd_getInstallURL() . CURRENT_PATH . '\'; return false;" style="border : 1px solid #FF4422;">' . "\n");
+        print('        <INPUT type="submit" value="Save">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<INPUT type="submit" value="Cancel" onclick="window.location.href=\'' . lovd_getInstallURL() . $_PE[0] . '/' . $sID . '\'; return false;" style="border : 1px solid #FF4422;">' . "\n");
     }
     print("\n" .
           '      </FORM>' . "\n\n");

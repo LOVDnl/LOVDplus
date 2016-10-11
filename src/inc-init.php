@@ -10,6 +10,7 @@
  * Copyright   : 2004-2016 Leiden University Medical Center; http://www.LUMC.nl/
  * Programmers : Ing. Ivo F.A.C. Fokkema <I.F.A.C.Fokkema@LUMC.nl>
  *               Ing. Ivar C. Lugtenburg <I.C.Lugtenburg@LUMC.nl>
+ *               Msc. Daan Asscheman <D.Asscheman@LUMC.nl>
  *
  *
  * This file is part of LOVD.
@@ -58,7 +59,7 @@ if ($_SERVER['HTTP_HOST'] == 'localhost') {
 
 // Define constants needed throughout LOVD.
 // Find out whether or not we're using SSL.
-if (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] == 'on' && !empty($_SERVER['SSL_PROTOCOL'])) {
+if ((!empty($_SERVER['HTTP_X_FORWARDED_PROTO']) && $_SERVER['HTTP_X_FORWARDED_PROTO'] == 'https') || (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] != 'off') || !empty($_SERVER['SSL_PROTOCOL'])) {
     // We're using SSL!
     define('SSL', true);
     define('SSL_PROTOCOL', $_SERVER['SSL_PROTOCOL']);
@@ -153,7 +154,7 @@ $aRequired =
 $_SETT = array(
                 'system' =>
                      array(
-                            'version' => '3.0-13',
+                            'version' => '3.0-14',
                           ),
                 'user_levels' =>
                      array(
@@ -241,7 +242,7 @@ $_SETT = array(
                           ),
                 'lists' =>
                     array(
-                        'max_sortable_rows' => 50000,
+                        'max_sortable_rows' => 250000,
                     ),
                 'notes_align' =>
                      array(
@@ -249,6 +250,7 @@ $_SETT = array(
                             0  => 'center',
                             1  => 'right',
                           ),
+                'unique_view_max_string_length' => 100,
                 'human_builds' =>
                      array(
                             '----' => array('ncbi_name' => 'non-Human'),
@@ -315,6 +317,39 @@ $_SETT = array(
                                                             '22' => 'NC_000022.10',
                                                             'X'  => 'NC_000023.10',
                                                             'Y'  => 'NC_000024.9',
+                                                            'M'  => 'NC_012920.1',
+                                                          ),
+                                          ),
+                            // http://www.ncbi.nlm.nih.gov/projects/genome/assembly/grc/human/data/
+                            'hg38' =>
+                                     array(
+                                            'ncbi_name'      => 'GRCh38',
+                                            'ncbi_sequences' =>
+                                                     array(
+                                                            '1'  => 'NC_000001.11',
+                                                            '2'  => 'NC_000002.12',
+                                                            '3'  => 'NC_000003.12',
+                                                            '4'  => 'NC_000004.12',
+                                                            '5'  => 'NC_000005.10',
+                                                            '6'  => 'NC_000006.12',
+                                                            '7'  => 'NC_000007.14',
+                                                            '8'  => 'NC_000008.11',
+                                                            '9'  => 'NC_000009.12',
+                                                            '10' => 'NC_000010.11',
+                                                            '11' => 'NC_000011.10',
+                                                            '12' => 'NC_000012.12',
+                                                            '13' => 'NC_000013.11',
+                                                            '14' => 'NC_000014.9',
+                                                            '15' => 'NC_000015.10',
+                                                            '16' => 'NC_000016.10',
+                                                            '17' => 'NC_000017.11',
+                                                            '18' => 'NC_000018.10',
+                                                            '19' => 'NC_000019.10',
+                                                            '20' => 'NC_000020.11',
+                                                            '21' => 'NC_000021.9',
+                                                            '22' => 'NC_000022.11',
+                                                            'X'  => 'NC_000023.11',
+                                                            'Y'  => 'NC_000024.10',
                                                             'M'  => 'NC_012920.1',
                                                           ),
                                           ),

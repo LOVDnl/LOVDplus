@@ -4,8 +4,8 @@
  * LEIDEN OPEN VARIATION DATABASE (LOVD)
  *
  * Created     : 2009-10-21
- * Modified    : 2013-12-30
- * For LOVD    : 3.0-09
+ * Modified    : 2016-03-31
+ * For LOVD    : 3.0-15
  *
  * Copyright   : 2004-2013 Leiden University Medical Center; http://www.LUMC.nl/
  * Programmers : Ing. Ivo F.A.C. Fokkema <I.F.A.C.Fokkema@LUMC.nl>
@@ -480,7 +480,7 @@ class LOVD_User extends LOVD_Object {
                 $nOwnes = 0;
                 $sOwnes = '';
 
-                // FIXME: Phenotypes is not included, because we don't have a phenotypes overview (must be disease-specific).
+                // FIXME: Phenotypes is not included, because we don't have a phenotypes overview to link to (must be disease-specific).
                 foreach (array('individuals', 'screenings', 'variants') as $sDataType) {
                     $n = $_DB->query('SELECT COUNT(*) FROM ' . constant('TABLE_' . strtoupper($sDataType)) . ' WHERE owned_by = ?', array($zData['id']))->fetchColumn();
                     if ($n) {

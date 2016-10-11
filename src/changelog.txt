@@ -15,6 +15,73 @@
  * 3.0 Build 14 (r657)
  * 2015-10-09
  *********/
+ * Added URLs to show data by reference (DOI or PubMed currently supported),
+   e.g. /references/PMID:10677295.
+ * Fixed possible future problems with the longer new generic top level domains,
+   which could be rejected as invalid URLs for LOVDs to reside.
+ * Fixed bug; During import the panel IDs in the individual section where only
+   checked in the database and not in the import file. Same for father ID and
+   mother ID.
+ * Curators can simulate the import of an LOVD tab-delimited file.
+ * Fixed problem when LOVD is behind a proxy communicating over HTTPS with the
+   internet, but over normal HTTP with LOVD itself. LOVD then does not detect it
+   is running under HTTPS and includes other items using normal HTTP, causing
+   errors.
+   (thanks to Raymond Dalgleish, University of Leicester, UK, for reporting)
+ * Increased maximum of entries for sortable views to 250K.
+ * Fixed bug; When creating a download file, filters applied would sometimes
+   overwrite previously set filters, for instance causing the gene-specific
+   download to sometimes not contain all related diseases.
+ * Fixed bug; When an import file missed the preceding zeros in any numeric ID,
+   LOVD did not recognize the ID, even though it existed in the database. This
+   bug was introduced in 3.0-13.
+ * Improved the speed of the genes and diseases ViewEntries, where many linked
+   variants, individuals or phenotype entries slowed down the views.
+ * Major update to gene-specific graph page.
+   (thanks to David Baux, IURC, France, for initial code and ideas)
+ * Due to continuous changes in the reCAPTCHA appearance, changed the text that
+   describes the image.
+   (thanks to Raymond Dalgleish, University of Leicester, UK)
+ * The unique variant view is available. When the variant tab is selected, only
+   unique variants are displayed. The reported column is new in the unique
+   variant view and contains the number of times the variant is reported.
+ * Fixed typo in variants.php.
+ * Max errors during import can be changed in the import file.
+ * Fixed bug; After resorting columns from a certain category, LOVD forwarded
+   the user to the last column's view, instead of to the category's view.
+ * Fixed bug; During import, checking the Variants_On_Transcripts section got
+   slower as more variants within the same gene were checked.
+ * Update via an import is available. Managers and higher are allowed to update
+   fields via the import. Per line, one field can be changed. Curators can run a
+   simulate update import.
+ * Fixed bug; When downloading variant data, the given Variant_On_Transcripts
+   effectid had been overwritten in the file by the Variants_On_Genome effectid.
+ * Added gene symbol as a new column to the variant views on the Individual and
+   Screening detailed views.
+ * Fixed bug; Editing a transcript entry didn't update the "Last edited by" and
+   "Date last edited" fields.
+ * Fixed bug; When gene symbols with wrong capitalization are used in URLs, some
+   features and pages caused errors.
+ * Added hidden column on data ViewLists for searching on the data owner's
+   country.
+ * Importing data with status pending is now possible.
+ * Fixed typo in reset_password.php.
+ * Fixed bug; The "Select all" link didn't work for the custom column data
+   listing.
+ * Fixed bug; When removing a transcript from a variant, if the transcript was
+   the only one in the database, an interface error occured.
+ * Fixed bug; The position converter on the variant data entry form always used
+   hg19.
+ * Added support for hg38 for new LOVD3 installations. It is also the new
+   default for new LOVD3 installations.
+ * Updated links to Ensembl as they changed the default URL to point to hg38.
+ * Fixed bug; For each new gene, the UD (Mutalyzer reference sequence) retrieved
+   was hg38 instead of the active human build.
+ * Fixed bug; When a checkbox field was left empty in the import file, an SQL
+   error occured during the import.
+ * Added the genome build to the genomic DNA field headers in variant listings
+   and detailed views.
+ * Increased maximum length of disease's abbreviation to 25.
 
 
 /**************************

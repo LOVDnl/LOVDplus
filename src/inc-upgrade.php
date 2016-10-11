@@ -6,7 +6,7 @@
  *
  * Created     : 2010-01-14
  * Modified    : 2016-09-16
- * For LOVD    : 3.0-13
+ * For LOVD    : 3.0-14
  *
  * Copyright   : 2004-2015 Leiden University Medical Center; http://www.LUMC.nl/
  * Programmers : Ing. Ivo F.A.C. Fokkema <I.F.A.C.Fokkema@LUMC.nl>
@@ -595,6 +595,10 @@ if ($sCalcVersionFiles != $sCalcVersionDB) {
                  '3.0-12v' =>
                      array(
                          'INSERT INTO ' . TABLE_COLS . ' VALUES ("VariantOnGenome/Frequency/ExAC", 255, 100, 0, 1, 0, "ExAC AF", "", "Allele frequency from the ExAC project.", "Allele frequency from the ExAC project.", "FLOAT UNSIGNED", "ExAC allele frequency||text|6", "", "", 0, 0, 1, 0, NOW(), NULL, NULL)',
+                     ),
+                 '3.0-14' =>
+                     array(
+                         'ALTER TABLE ' . TABLE_DISEASES . ' MODIFY COLUMN symbol VARCHAR(25) NOT NULL',
                      ),
              );
 
