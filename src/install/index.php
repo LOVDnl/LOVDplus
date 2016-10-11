@@ -457,28 +457,30 @@ if ($_SERVER['SERVER_ADMIN'] == 'i.f.a.c.fokkema@lumc.nl' && $_SERVER['HTTP_HOST
     $nInstallSQL += $nStatuses;
 
 
-    // (5b) Registering LOVD analysis statuses.
-    $nStatuses = count($_SETT['analysis_status']);
-    foreach ($_SETT['analysis_status'] as $nStatus => $sStatus) {
-        $aInstallSQL['Registering LOVD analysis statuses...'][] = 'INSERT INTO ' . TABLE_ANALYSIS_STATUS . ' VALUES (' . $nStatus . ', "' . $sStatus . '")';
+    if (LOVD_plus) {
+        // (5b) Registering LOVD analysis statuses.
+        $nStatuses = count($_SETT['analysis_status']);
+        foreach ($_SETT['analysis_status'] as $nStatus => $sStatus) {
+            $aInstallSQL['Registering LOVD analysis statuses...'][] = 'INSERT INTO ' . TABLE_ANALYSIS_STATUS . ' VALUES (' . $nStatus . ', "' . $sStatus . '")';
+        }
+        $nInstallSQL += $nStatuses;
+
+
+        // (5c) Registering LOVD curation statuses.
+        $nStatuses = count($_SETT['curation_status']);
+        foreach ($_SETT['curation_status'] as $nStatus => $sStatus) {
+            $aInstallSQL['Registering LOVD curation statuses...'][] = 'INSERT INTO ' . TABLE_CURATION_STATUS . ' VALUES (' . $nStatus . ', "' . $sStatus . '")';
+        }
+        $nInstallSQL += $nStatuses;
+
+
+        // (5d) Registering LOVD confirmation statuses.
+        $nStatuses = count($_SETT['confirmation_status']);
+        foreach ($_SETT['confirmation_status'] as $nStatus => $sStatus) {
+            $aInstallSQL['Registering LOVD confirmation statuses...'][] = 'INSERT INTO ' . TABLE_CONFIRMATION_STATUS . ' VALUES (' . $nStatus . ', "' . $sStatus . '")';
+        }
+        $nInstallSQL += $nStatuses;
     }
-    $nInstallSQL += $nStatuses;
-
-
-    // (5c) Registering LOVD curation statuses.
-    $nStatuses = count($_SETT['curation_status']);
-    foreach ($_SETT['curation_status'] as $nStatus => $sStatus) {
-        $aInstallSQL['Registering LOVD curation statuses...'][] = 'INSERT INTO ' . TABLE_CURATION_STATUS . ' VALUES (' . $nStatus . ', "' . $sStatus . '")';
-    }
-    $nInstallSQL += $nStatuses;
-
-
-    // (5d) Registering LOVD confirmation statuses.
-    $nStatuses = count($_SETT['confirmation_status']);
-    foreach ($_SETT['confirmation_status'] as $nStatus => $sStatus) {
-        $aInstallSQL['Registering LOVD confirmation statuses...'][] = 'INSERT INTO ' . TABLE_CONFIRMATION_STATUS . ' VALUES (' . $nStatus . ', "' . $sStatus . '")';
-    }
-    $nInstallSQL += $nStatuses;
 
 
     // (6) Registering LOVD allele values.

@@ -429,8 +429,9 @@ if (PATH_COUNT == 1 && ACTION == 'create') {
                 lovd_writeLog('Event', LOG_EVENT, 'Created gene information entry ' . $_POST['id'] . ' (' . $_POST['name'] . ')');
 
                 // Make current user curator of this gene.
-                // DIAGNOSTICS:
-                // $_DB->query('INSERT INTO ' . TABLE_CURATES . ' VALUES (?, ?, ?, ?)', array($_AUTH['id'], $_POST['id'], 1, 1));
+                if (!LOVD_plus) {
+                    $_DB->query('INSERT INTO ' . TABLE_CURATES . ' VALUES (?, ?, ?, ?)', array($_AUTH['id'], $_POST['id'], 1, 1));
+                }
 
                 // Add diseases.
                 $aSuccessDiseases = array();
@@ -504,7 +505,7 @@ if (PATH_COUNT == 1 && ACTION == 'create') {
 
                 // Thank the user...
                 // If there is only one user, don't forward to the Add curators page.
-                if (false && $_DB->query('SELECT COUNT(*) FROM ' . TABLE_USERS . ' WHERE id > 0')->fetchColumn() > 1) {
+                if (!LOVD_plus && $_DB->query('SELECT COUNT(*) FROM ' . TABLE_USERS . ' WHERE id > 0')->fetchColumn() > 1) {
                     header('Refresh: 3; url=' . lovd_getInstallURL() . CURRENT_PATH . '/' . $_POST['id'] . '?authorize');
                 } else {
                     header('Refresh: 3; url=' . lovd_getInstallURL() . CURRENT_PATH . '/' . $_POST['id']);

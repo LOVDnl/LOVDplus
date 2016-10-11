@@ -51,6 +51,8 @@
    the database, the IDs from the database are used and a soft error is set.
    Custom columns and diseases that exist are not imported and import will
    continue using the IDs from the database.
+ * Added chapter "Adding data to LOVD" to the manual and extended chapter
+   "Downloading & importing data".
  * The Phenotype/Length column is now no longer enabled by default for healthy
    controls.
  * On the system-wide view of gene-specific columns, two menu links were enabled

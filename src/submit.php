@@ -4,8 +4,8 @@
  * LEIDEN OPEN VARIATION DATABASE (LOVD)
  *
  * Created     : 2011-02-21
- * Modified    : 2015-01-16
- * For LOVD    : 3.0-13
+ * Modified    : 2016-10-11
+ * For LOVD    : 3.0-18
  *
  * Copyright   : 2004-2015 Leiden University Medical Center; http://www.LUMC.nl/
  * Programmers : Ing. Ivar C. Lugtenburg <I.C.Lugtenburg@LUMC.nl>
@@ -1065,9 +1065,12 @@ if (PATH_COUNT == 4 && $_PE[1] == 'finish' && in_array($_PE[2], array('individua
     }
 
     // Send mail.
-    // Diagnostics: Better not send email at this time, users get confused.
-    //$bMail = lovd_sendMail($aTo, $sSubject, $sBody, $_SETT['email_headers'], $_CONF['send_admin_submissions'], $aCC);
-    $bMail = true;
+    if (LOVD_plus) {
+        // Diagnostics: We don't send out emails...
+        $bMail = true;
+    } else {
+        $bMail = lovd_sendMail($aTo, $sSubject, $sBody, $_SETT['email_headers'], $_CONF['send_admin_submissions'], $aCC);
+    }
 
     // FIXME; When messaging system is built in, maybe queue message for curators?
     if ($bMail) {
