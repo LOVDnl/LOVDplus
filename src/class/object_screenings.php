@@ -11,6 +11,7 @@
  * Programmers : Ing. Ivar C. Lugtenburg <I.C.Lugtenburg@LUMC.nl>
  *               Ing. Ivo F.A.C. Fokkema <I.F.A.C.Fokkema@LUMC.nl>
  *               Msc. Daan Asscheman <D.Asscheman@LUMC.nl>
+ *               M. Kroon <m.kroon@lumc.nl>
  *
  *
  * This file is part of LOVD.
@@ -128,10 +129,10 @@ class LOVD_Screening extends LOVD_Custom {
                                     'view' => false,
                                     'db'   => array('s.id', 'ASC', true)),
                         'id' => array(
-                                    'view' => array('Screening ID', 110),
+                                    'view' => array('Screening ID', 110, 'style="text-align : right;"'),
                                     'db'   => array('s.id', 'ASC', true)),
                         'individualid' => array(
-                                    'view' => array('Individual ID', 110),
+                                    'view' => array('Individual ID', 110, 'style="text-align : right;"'),
                                     'db'   => array('s.individualid', 'ASC', true)),
                       ),
                  $this->buildViewList(),
@@ -140,7 +141,7 @@ class LOVD_Screening extends LOVD_Custom {
                                     'view' => array('Genes screened', 20),
                                     'db'   => array('genes', 'ASC', 'TEXT')),
                         'variants_found_' => array(
-                                    'view' => array('Variants found', 100),
+                                    'view' => array('Variants found', 100, 'style="text-align : right;"'),
                                     'db'   => array('variants_found_', 'ASC', 'INT_UNSIGNED')),
                         'owned_by_' => array(
                                     'view' => array('Owner', 160),
@@ -195,7 +196,7 @@ class LOVD_Screening extends LOVD_Custom {
         global $_AUTH, $_DB, $nID;
 
         if ($_AUTH['level'] >= LEVEL_CURATOR) {
-            $aSelectOwner = $_DB->query('SELECT id, name FROM ' . TABLE_USERS .
+            $aSelectOwner = $_DB->query('SELECT id, CONCAT(name, " (#", id, ")") as name_id FROM ' . TABLE_USERS .
                 (ACTION == 'edit' && ((int) $_POST['owned_by'] === 0 || LOVD_plus)? '' : ' WHERE id > 0') .
                 ' ORDER BY name')->fetchAllCombine();
             $aFormOwner = array('Owner of this data', '', 'select', 'owned_by', 1, $aSelectOwner, false, false, false);

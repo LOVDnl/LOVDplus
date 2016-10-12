@@ -233,7 +233,7 @@ if (!ACTION && (empty($_PE[1]) || preg_match('/^chr[0-9A-Z]{1,2}$/', $_PE[1]))) 
         $sChr = '';
     }
 
-    define('PAGE_TITLE', 'View genomic variants' . (!$sChr? '' : ' on chromosome ' . substr($sChr, 3)));
+    define('PAGE_TITLE', 'View all genomic variants' . (!$sChr? '' : ' on chromosome ' . substr($sChr, 3)));
     $_T->printHeader();
     $_T->printTitle();
 
@@ -263,7 +263,7 @@ if (PATH_COUNT == 2 && $_PE[1] == 'in_gene' && !ACTION) {
         define('FORMAT_ALLOW_TEXTPLAIN', true);
     }
 
-    define('PAGE_TITLE', 'View transcript variants');
+    define('PAGE_TITLE', 'View all variants affecting transcripts');
     $_T->printHeader();
     $_T->printTitle();
 
@@ -349,15 +349,16 @@ if (!ACTION && !empty($_PE[1]) && !ctype_digit($_PE[1])) {
     }
 
     if ($bUnique) {
-        define('PAGE_TITLE', 'View unique variants in ' . $sGene);
+        define('PAGE_TITLE', 'View unique variants in gene ' . $sGene);
+        $sViewListID = 'CustomVL_VOTunique_VOG_' . $sGene;
     } else {
-        define('PAGE_TITLE', 'View all transcript variants in ' . $sGene);
+        define('PAGE_TITLE', 'View all transcript variants in gene ' . $sGene);
+        $sViewListID = 'CustomVL_VOT_VOG_' . $sGene;
     }
     $_T->printHeader();
     $_T->printTitle();
     lovd_printGeneHeader();
 
-    $sViewListID = 'CustomVL_VOT_VOG_' . $sGene;
 
     // If this gene has only one NM, show that one. Otherwise have people pick one.
     list($nTranscriptID, $sTranscript) = each($aTranscripts);
@@ -386,9 +387,8 @@ if (!ACTION && !empty($_PE[1]) && !ctype_digit($_PE[1])) {
         require ROOT_PATH . 'class/object_custom_viewlists.php';
         if ($bUnique) {
             // When this ViewListID is changed, also change the prepareData in object_custom_viewluists.php
-            $sViewListID = 'CustomVL_VOTunique_VOG_' . $sGene;
             $_DATA = new LOVD_CustomViewList(array('VariantOnTranscriptUnique', 'VariantOnGenome'), $sGene); // Restrict view to gene (correct custom column set, correct order).
-            $_DATA->setRowLink($sViewListID, 'variants/' . $sGene . '?search_position_c_start={{position_c_start}}&search_position_c_start_intron={{position_c_start_intron}}&search_position_c_end={{position_c_end}}&search_position_c_end_intron={{position_c_end_intron}}&search_vot_clean_dna_change=%3D%22{{vot_clean_dna_change}}%22');
+            $_DATA->setRowLink($sViewListID, 'variants/' . $sGene . '?search_position_c_start={{position_c_start}}&search_position_c_start_intron={{position_c_start_intron}}&search_position_c_end={{position_c_end}}&search_position_c_end_intron={{position_c_end_intron}}&search_vot_clean_dna_change=%3D%22{{vot_clean_dna_change}}%22&search_transcriptid={{transcriptid}}');
         } else {
             $_DATA = new LOVD_CustomViewList(array('VariantOnTranscript', 'VariantOnGenome'), $sGene); // Restrict view to gene (correct custom column set, correct order).
         }
@@ -975,7 +975,7 @@ if (PATH_COUNT == 1 && ACTION == 'create') {
     foreach ($_POST as $key => $val) {
         if (substr($key, 0, 7) == 'ignore_') {
             // First check the checkbox. Then the event first triggers the click and THEN changes the checked state. Recheck the checkbox.
-            echo '$( \'input[name="ignore_' . substr($key, 7, 5) . '"]\' ).attr(\'checked\', true).trigger(\'click\').attr(\'checked\', true);' . "\n";
+            echo '$( \'input[name="ignore_' . substr($key, 7, $_SETT['objectid_length']['transcripts']) . '"]\' ).attr(\'checked\', true).trigger(\'click\').attr(\'checked\', true);' . "\n";
         }
     }
 

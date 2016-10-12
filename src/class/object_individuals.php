@@ -11,6 +11,7 @@
  * Programmers : Ing. Ivar C. Lugtenburg <I.C.Lugtenburg@LUMC.nl>
  *               Ing. Ivo F.A.C. Fokkema <I.F.A.C.Fokkema@LUMC.nl>
  *               Msc. Daan Asscheman <D.Asscheman@LUMC.nl>
+ *               M. Kroon <m.kroon@lumc.nl>
  *
  *
  * This file is part of LOVD.
@@ -93,6 +94,7 @@ class LOVD_Individual extends LOVD_Custom {
                                         // FIXME; Can we get this order correct, such that diseases without abbreviation nicely mix with those with? Right now, the diseases without symbols are in the back.
                                           'GROUP_CONCAT(DISTINCT IF(CASE d.symbol WHEN "-" THEN "" ELSE d.symbol END = "", d.name, d.symbol) ORDER BY (d.symbol != "" AND d.symbol != "-") DESC, d.symbol, d.name SEPARATOR ", ") AS diseases_, ' .
                                           'GROUP_CONCAT(DISTINCT s2g.geneid ORDER BY s2g.geneid SEPARATOR ", ") AS genes_screened_, ' .
+                                          'GROUP_CONCAT(DISTINCT t.geneid ORDER BY t.geneid SEPARATOR ", ") AS variants_in_genes_, ' .
                                           'COUNT(DISTINCT ' . ($_AUTH['level'] >= LEVEL_COLLABORATOR? 's2v.variantid' : 'vog.id') . ') AS variants_, ' . // Counting s2v.variantid will not include the limit opposed to vog in the join's ON() clause.
                                           'uo.name AS owned_by_, ' .
                                           'CONCAT_WS(";", uo.id, uo.name, uo.email, uo.institute, uo.department, IFNULL(uo.countryid, "")) AS _owner, ' .
@@ -107,6 +109,8 @@ class LOVD_Individual extends LOVD_Custom {
                                           ($_AUTH['level'] >= LEVEL_COLLABORATOR? '' :
                                               'LEFT OUTER JOIN ' . TABLE_VARIANTS . ' AS vog ON (s2v.variantid = vog.id AND (vog.statusid >= ' . STATUS_MARKED . (!$_AUTH? '' : ' OR vog.created_by = "' . $_AUTH['id'] . '" OR vog.owned_by = "' . $_AUTH['id'] . '"') . ')) ') .
                                           'LEFT OUTER JOIN ' . TABLE_SCR2GENE . ' AS s2g ON (s.id = s2g.screeningid) ' .
+                                          'LEFT OUTER JOIN ' . TABLE_VARIANTS_ON_TRANSCRIPTS . ' AS vot ON (' . ($_AUTH['level'] >= LEVEL_COLLABORATOR? 's2v.variantid' : 'vog.id') . ' = vot.id) ' .
+                                          'LEFT OUTER JOIN ' . TABLE_TRANSCRIPTS . ' AS t ON (t.id = vot.transcriptid) ' .
                                           'LEFT OUTER JOIN ' . TABLE_USERS . ' AS uo ON (i.owned_by = uo.id) ' .
                                           'LEFT OUTER JOIN ' . TABLE_DATA_STATUS . ' AS ds ON (i.statusid = ds.id)';
         $this->aSQLViewList['GROUP_BY'] = 'i.id';
@@ -137,10 +141,10 @@ class LOVD_Individual extends LOVD_Custom {
                                     'view' => false,
                                     'db'   => array('i.id', 'ASC', true)),
                         'id' => array(
-                                    'view' => array('Individual ID', 110),
+                                    'view' => array('Individual ID', 110, 'style="text-align : right;"'),
                                     'db'   => array('i.id', 'ASC', true)),
                         'panelid' => array(
-                                    'view' => array('Panel ID', 70),
+                                    'view' => array('Panel ID', 70, 'style="text-align : right;"'),
                                     'db'   => array('i.panelid', 'ASC', true)),
                       ),
                  $this->buildViewList(),
@@ -153,15 +157,19 @@ class LOVD_Individual extends LOVD_Custom {
                                     'db'   => array('diseases_', 'ASC', true)),
                         'genes_searched' => array(
                                     'view' => false,
-                                    'db'   => array('s2g.geneid', false, true)),
+                                    'db'   => array('t.geneid', false, true)),
                         'genes_screened_' => array(
                                     'view' => array('Genes screened', 175),
                                     'db'   => array('genes_screened_', false, true)),
+                        'variants_in_genes_' => array(
+                                    'view' => array('Variants in genes', 175),
+                                    'db'   => array('variants_in_genes_', false, true),
+                                    'legend' => array('The individual has variants for this gene.')),
                         'variants_' => array(
-                                    'view' => array('Variants', 75),
+                                    'view' => array('Variants', 75, 'style="text-align : right;"'),
                                     'db'   => array('variants_', 'DESC', 'INT_UNSIGNED')),
                         'panel_size' => array(
-                                    'view' => array('Panel size', 70),
+                                    'view' => array('Panel size', 70, 'style="text-align : right;"'),
                                     'db'   => array('i.panel_size', 'DESC', true),
                                     'legend' => array('How many individuals does this entry represent?')),
                         'owned_by_' => array(
@@ -296,7 +304,7 @@ class LOVD_Individual extends LOVD_Custom {
         }
 
         if ($_AUTH['level'] >= LEVEL_CURATOR) {
-            $aSelectOwner = $_DB->query('SELECT id, name FROM ' . TABLE_USERS .
+            $aSelectOwner = $_DB->query('SELECT id, CONCAT(name, " (#", id, ")") as name_id FROM ' . TABLE_USERS .
                 (ACTION == 'edit' && ((int) $_POST['owned_by'] === 0 || LOVD_plus)? '' : ' WHERE id > 0') .
                 ' ORDER BY name')->fetchAllCombine();
             $aFormOwner = array('Owner of this data', '', 'select', 'owned_by', 1, $aSelectOwner, false, false, false);
@@ -326,7 +334,7 @@ class LOVD_Individual extends LOVD_Custom {
                  array(
                         array('Panel size', '', 'text', 'panel_size', 10),
                         array('', '', 'note', 'Fill in how many individuals this entry represents (default: 1).'),
-//                        array('ID of panel this entry belongs to (optional)', 'Fill in LOVD\'s individual ID of the group to which this individual or group of individuals belong to (Optional).', 'text', 'panelid', 10),
+           'panelid' => array('ID of panel this entry belongs to (optional)', 'Fill in LOVD\'s individual ID of the group to which this individual or group of individuals belong to (Optional).', 'text', 'panelid', 10),
                         'hr',
                         'skip',
                         array('', '', 'print', '<B>Relation to diseases</B>'),
@@ -355,6 +363,9 @@ class LOVD_Individual extends LOVD_Custom {
             unset($this->aFormData['diseases_create']);
         } else {
             unset($this->aFormData['diseases_info']);
+        }
+        if (LOVD_plus) {
+            unset($this->aFormData['panelid']);
         }
 
         return parent::getForm();

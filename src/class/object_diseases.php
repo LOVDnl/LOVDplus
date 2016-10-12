@@ -4,12 +4,14 @@
  * LEIDEN OPEN VARIATION DATABASE (LOVD)
  *
  * Created     : 2010-07-28
- * Modified    : 2015-05-06
- * For LOVD    : 3.0-14
+ * Modified    : 2016-02-08
+ * For LOVD    : 3.0-15
  *
  * Copyright   : 2004-2015 Leiden University Medical Center; http://www.LUMC.nl/
  * Programmers : Ing. Ivo F.A.C. Fokkema <I.F.A.C.Fokkema@LUMC.nl>
  *               Ing. Ivar C. Lugtenburg <I.C.Lugtenburg@LUMC.nl>
+ *               Msc. Daan Asscheman <D.Asscheman@LUMC.nl>
+ *               Mark Kroon MSc. <M.Kroon@LUMC.nl>
  *
  *
  * This file is part of LOVD.
@@ -53,6 +55,10 @@ class LOVD_Disease extends LOVD_Object {
         // Default constructor.
         global $_AUTH;
 
+        // SQL code for preparing load entry query.
+        // Increase DB limits to allow concatenation of large number of gene IDs.
+        $this->sSQLPreLoadEntry = 'SET group_concat_max_len = 200000';
+
         // SQL code for loading an entry for an edit form.
         $this->sSQLLoadEntry = 'SELECT d.*, ' .
                                'GROUP_CONCAT(g2d.geneid ORDER BY g2d.geneid SEPARATOR ";") AS _genes ' .
@@ -61,10 +67,14 @@ class LOVD_Disease extends LOVD_Object {
                                'WHERE d.id = ? ' .
                                'GROUP BY d.id';
 
+        // SQL code for preparing view entry query.
+        // Increase DB limits to allow concatenation of large number of gene IDs.
+        $this->sSQLPreViewEntry = 'SET group_concat_max_len = 200000';
+
         // SQL code for viewing an entry.
         $this->aSQLViewEntry['SELECT']   = 'd.*, ' .
-                                           '(SELECT COUNT(*) FROM lovd_v3_individuals AS i INNER JOIN lovd_v3_individuals2diseases AS i2d ON (i.id = i2d.individualid) WHERE i2d.diseaseid = d.id' . ($_AUTH['level'] >= LEVEL_COLLABORATOR? '' : ' AND i.statusid >= ' . STATUS_MARKED) . ') AS individuals, ' .
-                                           '(SELECT COUNT(*) FROM lovd_v3_phenotypes AS p WHERE p.diseaseid = d.id' . ($_AUTH['level'] >= LEVEL_COLLABORATOR? '' : ' AND p.statusid >= ' . STATUS_MARKED) . ') AS phenotypes, ' .
+                                           '(SELECT COUNT(*) FROM ' . TABLE_INDIVIDUALS . ' AS i INNER JOIN ' . TABLE_IND2DIS . ' AS i2d ON (i.id = i2d.individualid) WHERE i2d.diseaseid = d.id' . ($_AUTH['level'] >= LEVEL_COLLABORATOR? '' : ' AND i.statusid >= ' . STATUS_MARKED) . ') AS individuals, ' .
+                                           '(SELECT COUNT(*) FROM ' . TABLE_PHENOTYPES . ' AS p WHERE p.diseaseid = d.id' . ($_AUTH['level'] >= LEVEL_COLLABORATOR? '' : ' AND p.statusid >= ' . STATUS_MARKED) . ') AS phenotypes, ' .
                                            'GROUP_CONCAT(DISTINCT g2d.geneid ORDER BY g2d.geneid SEPARATOR ";") AS _genes, ' .
                                            'uc.name AS created_by_, ' .
                                            'ue.name AS edited_by_';
@@ -104,7 +114,7 @@ class LOVD_Disease extends LOVD_Object {
         $this->aColumnsViewList =
                  array(
                         'diseaseid' => array(
-                                    'view' => array('ID', 45),
+                                    'view' => array('ID', 45, 'style="text-align : right;"'),
                                     'db'   => array('d.id', 'ASC', true)),
                         'symbol' => array(
                                     'view' => array('Abbreviation', 110),
@@ -113,7 +123,7 @@ class LOVD_Disease extends LOVD_Object {
                                     'view' => array('Name', 300),
                                     'db'   => array('d.name', 'ASC', true)),
                         'id_omim' => array(
-                                    'view' => array('OMIM ID', 75),
+                                    'view' => array('OMIM ID', 75, 'style="text-align : right;"'),
                                     'db'   => array('d.id_omim', 'ASC', true)),
                         'individuals' => array(
                                     'view' => array('Individuals', 80, 'style="text-align : right;"'),
@@ -167,7 +177,7 @@ class LOVD_Disease extends LOVD_Object {
         // We don't like two diseases with the exact same name, either.
         if (!empty($aData['name']) && ($bCreate || $aData['name'] != $zData['name'])) {
             $bExists = $_DB->query('SELECT id FROM ' . TABLE_DISEASES . ' WHERE name = ?', array($aData['name']))->fetchColumn();
-            if ($bExists) {
+            if ($bExists && ($bCreate || $zData['id'] != $bExists)) {
                 // IMPORTANT: when you change this message, also change the array_search argument in import.php in the Disease section.
                 lovd_errorAdd('name', 'Another disease already exists with the same name!');
             }

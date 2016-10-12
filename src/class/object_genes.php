@@ -11,6 +11,7 @@
  * Programmers : Ing. Ivar C. Lugtenburg <I.C.Lugtenburg@LUMC.nl>
  *               Ing. Ivo F.A.C. Fokkema <I.F.A.C.Fokkema@LUMC.nl>
  *               Msc. Daan Asscheman <D.Asscheman@LUMC.nl>
+ *               Mark Kroon MSc. <M.Kroon@LUMC.nl>
  *
  *
  * This file is part of LOVD.
@@ -73,10 +74,10 @@ class LOVD_Gene extends LOVD_Object {
                                            'uc.name AS created_by_, ' .
                                            'ue.name AS edited_by_, ' .
                                            'uu.name AS updated_by_, ' .
-                                           '(SELECT COUNT(*) FROM ' . TABLE_VARIANTS . ' AS vog INNER JOIN ' . TABLE_VARIANTS_ON_TRANSCRIPTS . ' AS vot USING (id) WHERE vot.transcriptid = t.id AND vog.statusid >= ' . STATUS_MARKED . ') AS variants, ' .
-                                           '(SELECT COUNT(DISTINCT vog.`VariantOnGenome/DBID`) FROM ' . TABLE_VARIANTS . ' AS vog INNER JOIN ' . TABLE_VARIANTS_ON_TRANSCRIPTS . ' AS vot USING (id) WHERE vot.transcriptid = t.id AND vog.statusid >= ' . STATUS_MARKED . ') AS uniq_variants, ' .
+                                           '(SELECT COUNT(DISTINCT vog.id) FROM ' . TABLE_VARIANTS . ' AS vog INNER JOIN ' . TABLE_VARIANTS_ON_TRANSCRIPTS . ' AS vot USING (id) INNER JOIN ' . TABLE_TRANSCRIPTS . ' AS t ON (vot.transcriptid = t.id) WHERE t.geneid = g.id AND vog.statusid >= ' . STATUS_MARKED . ') AS variants, ' .
+                                           '(SELECT COUNT(DISTINCT vog.`VariantOnGenome/DBID`) FROM ' . TABLE_VARIANTS . ' AS vog INNER JOIN ' . TABLE_VARIANTS_ON_TRANSCRIPTS . ' AS vot USING (id) INNER JOIN ' . TABLE_TRANSCRIPTS . ' AS t ON (vot.transcriptid = t.id) WHERE t.geneid = g.id AND vog.statusid >= ' . STATUS_MARKED . ') AS uniq_variants, ' .
                                            '"" AS count_individuals, ' . // Temporarely value, prepareData actually runs this query.
-                                           '(SELECT COUNT(*) FROM ' . TABLE_VARIANTS . ' AS hidden_vog INNER JOIN ' . TABLE_VARIANTS_ON_TRANSCRIPTS . ' AS hidden_vot ON (hidden_vog.id = hidden_vot.id) WHERE hidden_vot.transcriptid = t.id AND hidden_vog.statusid < ' . STATUS_MARKED . ') AS hidden_variants';
+                                           '(SELECT COUNT(*) FROM ' . TABLE_VARIANTS . ' AS hidden_vog INNER JOIN ' . TABLE_VARIANTS_ON_TRANSCRIPTS . ' AS hidden_vot ON (hidden_vog.id = hidden_vot.id) INNER JOIN ' . TABLE_TRANSCRIPTS . ' AS t ON (hidden_vot.transcriptid = t.id) WHERE t.geneid = g.id AND hidden_vog.statusid < ' . STATUS_MARKED . ') AS hidden_variants';
         $this->aSQLViewEntry['FROM']     = TABLE_GENES . ' AS g ' .
                                            'LEFT OUTER JOIN ' . TABLE_GEN2DIS . ' AS g2d ON (g.id = g2d.geneid) ' .
                                            'LEFT OUTER JOIN ' . TABLE_DISEASES . ' AS d ON (g2d.diseaseid = d.id) ' .
@@ -94,15 +95,19 @@ class LOVD_Gene extends LOVD_Object {
                                           // FIXME; Can we get this order correct, such that diseases without abbreviation nicely mix with those with? Right now, the diseases without symbols are in the back.
                                           'GROUP_CONCAT(DISTINCT IF(CASE d.symbol WHEN "-" THEN "" ELSE d.symbol END = "", d.name, d.symbol) ORDER BY (d.symbol != "" AND d.symbol != "-") DESC, d.symbol, d.name SEPARATOR ", ") AS diseases_, ' .
                                           'COUNT(DISTINCT t.id) AS transcripts';
-// Diagnostics: Removed two below, and modified one up.
-//                                          'COUNT(DISTINCT vog.id) AS variants, ' .
-//                                          'COUNT(DISTINCT vog.`VariantOnGenome/DBID`) AS uniq_variants';
+        if (!LOVD_plus) {
+            // Speed optimization by skipping variant counts.
+            $this->aSQLViewList['SELECT'] .= ', ' .
+                                          'COUNT(DISTINCT vog.id) AS variants, ' .
+                                          'COUNT(DISTINCT vog.`VariantOnGenome/DBID`) AS uniq_variants';
+        }
         $this->aSQLViewList['FROM']     = TABLE_GENES . ' AS g ' .
                                           'LEFT OUTER JOIN ' . TABLE_GEN2DIS . ' AS g2d ON (g.id = g2d.geneid) ' .
                                           'LEFT OUTER JOIN ' . TABLE_TRANSCRIPTS . ' AS t ON (g.id = t.geneid) ' .
-// Diagnostics: Removed two below.
-//                                          'LEFT OUTER JOIN ' . TABLE_VARIANTS_ON_TRANSCRIPTS . ' AS vot ON (t.id = vot.transcriptid) ' .
-//                                          'LEFT OUTER JOIN ' . TABLE_VARIANTS . ' AS vog ON (vot.id = vog.id' . ($_AUTH['level'] >= LEVEL_COLLABORATOR? '' : ' AND vog.statusid >= ' . STATUS_MARKED) . ') ' .
+                                          (LOVD_plus? '' :
+                                             // Speed optimization by skipping variant counts.
+                                            'LEFT OUTER JOIN ' . TABLE_VARIANTS_ON_TRANSCRIPTS . ' AS vot ON (t.id = vot.transcriptid) ' .
+                                            'LEFT OUTER JOIN ' . TABLE_VARIANTS . ' AS vog ON (vot.id = vog.id' . ($_AUTH['level'] >= LEVEL_COLLABORATOR? '' : ' AND vog.statusid >= ' . STATUS_MARKED) . ') ') .
                                           'LEFT OUTER JOIN ' . TABLE_DISEASES . ' AS d ON (g2d.diseaseid = d.id)';
         $this->aSQLViewList['GROUP_BY'] = 'g.id';
 
@@ -186,13 +191,13 @@ class LOVD_Gene extends LOVD_Object {
                     'view' => array('Band', 70),
                     'db'   => array('g.chrom_band', false, true)),
                 'transcripts' => array(
-                    'view' => array('Transcripts', 90),
+                    'view' => array('Transcripts', 90, 'style="text-align : right;"'),
                     'db'   => array('transcripts', 'DESC', 'INT_UNSIGNED')),
                 'variants' => array(
-                    'view' => array('Variants', 70),
+                    'view' => array('Variants', 70, 'style="text-align : right;"'),
                     'db'   => array('variants', 'DESC', 'INT_UNSIGNED')),
                 'uniq_variants' => array(
-                    'view' => array('Unique variants', 70),
+                    'view' => array('Unique variants', 70, 'style="text-align : right;"'),
                     'db'   => array('uniq_variants', 'DESC', 'INT_UNSIGNED')),
                 'updated_date_' => array(
                     'view' => array('Last updated', 110),
@@ -305,6 +310,16 @@ class LOVD_Gene extends LOVD_Object {
 
         // If we've built the form before, simply return it. Especially imports will repeatedly call checkFields(), which calls getForm().
         if (!empty($this->aFormData)) {
+            if (lovd_getProjectFile() == '/import.php') {
+                // During import the refseq_genomic is required, else the import 
+                // starts complaining that the selected refseq_genomic is not valid
+                // Therefore we set the refseq_genomic in the aFormData property 
+                // before the getForm() is returned.
+                global $zData;
+                $aSelectRefseqGenomic = array_combine(array($zData['refseq_genomic']), array($zData['refseq_genomic']));
+         
+                $this->aFormData['refseq_genomic'] = array('Genomic reference sequence', '', 'select', 'refseq_genomic', 1, $aSelectRefseqGenomic, false, false, false);
+            }
             return parent::getForm();
         }
 
@@ -331,8 +346,10 @@ class LOVD_Gene extends LOVD_Object {
         $aTranscriptsForm = array();
         if (!empty($zData['transcripts'])) {
             foreach ($zData['transcripts'] as $sTranscript) {
-                if (!isset($aTranscriptNames[preg_replace('/\.\d+$/', '', $sTranscript)])) {
-                    $aTranscriptsForm[$sTranscript] = lovd_shortenString($zData['transcriptNames'][preg_replace('/\.\d+$/', '', $sTranscript)], 50);
+                // Until revision 679 the transcript version was not used in the index and removed with preg_replace.
+                // Can not figure out why version is not included. Therefore, for now we will do without preg_replace.
+                if (!isset($aTranscriptNames[$sTranscript])) {
+                    $aTranscriptsForm[$sTranscript] = lovd_shortenString($zData['transcriptNames'][$sTranscript], 50);
                     $aTranscriptsForm[$sTranscript] .= str_repeat(')', substr_count($aTranscriptsForm[$sTranscript], '(')) . ' (' . $sTranscript . ')';
                 }
             }
@@ -382,7 +399,7 @@ class LOVD_Gene extends LOVD_Object {
                         array('', '', 'print', '<B>Reference sequences (mandatory)</B>'),
                         array('', '', 'note', 'Collecting variants requires a proper reference sequence. Without a genomic and a transcript reference sequence the variants in this LOVD database cannot be interpreted properly or mapped to the genome.'),
                         'hr',
-                        array('Genomic reference sequence', '', 'select', 'refseq_genomic', 1, $aSelectRefseqGenomic, false, false, false),
+    'refseq_genomic' => array('Genomic reference sequence', '', 'select', 'refseq_genomic', 1, $aSelectRefseqGenomic, false, false, false),
                         array('', '', 'note', 'Select the genomic reference sequence (NG, NC, LRG accession number). Only the references that are available to LOVD are shown.'),
     'transcripts' =>    array('Transcript reference sequence(s)', 'Select transcript references (NM accession numbers).', 'select', 'active_transcripts', $nTranscriptsFormSize, $aTranscriptsForm, false, true, false),
                         'hr',

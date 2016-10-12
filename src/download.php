@@ -4,10 +4,10 @@
  * LEIDEN OPEN VARIATION DATABASE (LOVD)
  *
  * Created     : 2012-06-10
- * Modified    : 2016-04-06
+ * Modified    : 2016-04-08
  * For LOVD    : 3.0-15
  *
- * Copyright   : 2004-2015 Leiden University Medical Center; http://www.LUMC.nl/
+ * Copyright   : 2004-2016 Leiden University Medical Center; http://www.LUMC.nl/
  * Programmer  : Ing. Ivo F.A.C. Fokkema <I.F.A.C.Fokkema@LUMC.nl>
  *
  *
@@ -50,6 +50,7 @@ if (ACTION || PATH_COUNT < 2) {
 
 if (($_PE[1] == 'all' && (empty($_PE[2]) || in_array($_PE[2], array('gene', 'mine', 'user')))) ||
     ($_PE[1] == 'columns' && PATH_COUNT <= 3) ||
+    ($_PE[1] == 'genes' && PATH_COUNT == 2) ||
     ($_PE[1] == 'gene_panels' && PATH_COUNT == 3 && ctype_digit($_PE[2]))) {
     // URL: /download/all
     // URL: /download/all/gene/IVD
@@ -57,6 +58,7 @@ if (($_PE[1] == 'all' && (empty($_PE[2]) || in_array($_PE[2], array('gene', 'min
     // URL: /download/all/user/00001
     // URL: /download/columns
     // URL: /download/columns/(VariantOnGenome|VariantOnTranscript|Individual|...)
+    // URL: /download/genes
     // URL: /download/gene_panels/00001
     // Download data from the database, so that we can import it elsewhere.
 
@@ -69,16 +71,16 @@ if (($_PE[1] == 'all' && (empty($_PE[2]) || in_array($_PE[2], array('gene', 'min
         exit;
     }
 
-    $sFileName = '';
-    $sHeader = '';
-    $sFilter = '';
+    $sFileName = ''; // What name to give the file that is provided?
+    $sHeader = '';   // What header to put in the file? "<header> download".
+    $sFilter = '';   // Do you want to filter the data? If so, put some string here, that marks this type of filter.
     $ID = '';
     if ($_PE[1] == 'all' && empty($_PE[2])) {
         // Download all data.
         $sFileName = 'full_download';
         $sHeader = 'Full data';
         lovd_requireAuth(LEVEL_MANAGER);
-    } elseif ($_PE[1] == 'all' && $_PE[2] == 'gene'  && PATH_COUNT == 4 && preg_match('/^[a-z][a-z0-9#@-]+$/i', rawurldecode($_PE[3]))) {
+    } elseif ($_PE[1] == 'all' && $_PE[2] == 'gene'  && PATH_COUNT == 4 && preg_match('/^[a-z][a-z0-9#@-]*$/i', rawurldecode($_PE[3]))) {
         // Gene database contents.
         $sFileName = 'full_download_' . $_PE[3];
         $sHeader = 'Full data';
@@ -114,6 +116,13 @@ if (($_PE[1] == 'all' && (empty($_PE[2]) || in_array($_PE[2], array('gene', 'min
         $sFilter = 'category';
         $ID = $_PE[2];
         lovd_requireAuth(LEVEL_MANAGER);
+
+    } elseif ($_PE[1] == 'genes' && empty($_PE[2])) {
+        // Download all genes.
+        $sFileName = 'genes';
+        $sHeader = 'Gene data';
+        lovd_requireAuth(LEVEL_MANAGER);
+
     } elseif (LOVD_plus && $_PE[1] == 'gene_panels' && PATH_COUNT == 3 && ctype_digit($_PE[2])) {
         // Download a single gene panel.
         $sFileName = 'gene_panel_' . $_PE[2];
@@ -292,6 +301,13 @@ if (($_PE[1] == 'all' && (empty($_PE[2]) || in_array($_PE[2], array('gene', 'min
         if ($sFilter == 'category') {
             $aObjects['Columns']['filters']['category'] = $ID;
         }
+
+    } elseif ($_PE[1] == 'genes') {
+        $aObjects =
+            array(
+                'Genes' => $aDataTypeSettings,
+                'Transcripts' => $aDataTypeSettings,
+            );
 
     } elseif (LOVD_plus && $_PE[1] == 'gene_panels') {
         $aObjects =

@@ -4,12 +4,14 @@
  * LEIDEN OPEN VARIATION DATABASE (LOVD)
  *
  * Created     : 2011-11-08
- * Modified    : 2013-08-08
- * For LOVD    : 3.0-07
+ * Modified    : 2016-03-15
+ * For LOVD    : 3.0-15
  *
- * Copyright   : 2004-2013 Leiden University Medical Center; http://www.LUMC.nl/
+ * Copyright   : 2004-2016 Leiden University Medical Center; http://www.LUMC.nl/
  * Programmers : Ing. Ivar C. Lugtenburg <I.C.Lugtenburg@LUMC.nl>
  *               Ing. Ivo F.A.C. Fokkema <I.F.A.C.Fokkema@LUMC.nl>
+ *               Msc. Daan Asscheman <D.Asscheman@LUMC.nl>
+ *               M. Kroon <m.kroon@lumc.nl>
  *
  *
  * This file is part of LOVD.
@@ -38,6 +40,8 @@ define('AJAX_UNKNOWN_RESPONSE', '6');
 define('AJAX_CONNECTION_ERROR', '7');
 define('AJAX_NO_AUTH', '8');
 define('AJAX_DATA_ERROR', '9');
+
+$_SETT = array('objectid_length' => array('transcripts' => 8));
 ?>
 
 function lovd_checkHGVS (e)
@@ -68,7 +72,7 @@ function lovd_checkHGVS (e)
     }
 
     // Grab the corresponding protein description field if it exists.
-    var oProtein = $(oVariantDNA).parent().parent().siblings().find('input[name="' + $(oVariantDNA).attr('name').substring(0,5) + '_VariantOnTranscript/Protein"]');
+    var oProtein = $(oVariantDNA).parent().parent().siblings().find('input[name="' + $(oVariantDNA).attr('name').substring(0, <?php echo $_SETT['objectid_length']['transcripts']; ?>) + '_VariantOnTranscript/Protein"]');
 
     // Add a transparent placeholder for the indicator at the protein field, so that the form will not shift when it is added.
     oProtein.siblings('img:first').removeClass().attr('src', 'gfx/trans.png');
@@ -193,7 +197,7 @@ function lovd_convertPosition (oElement)
         }
     } else {
         // This function was called from a transcript variant, so prepare the variant accordingly for mutalyzer.
-        var nTranscriptID = oThisDNA.attr('name').substring(0,5);
+        var nTranscriptID = oThisDNA.attr('name').substring(0, <?php echo $_SETT['objectid_length']['transcripts']; ?>);
         var sVariantNotation = aTranscripts[nTranscriptID][0] + ':' + oThisDNA.val();
         // This value will not be used by mutalyzer for mapping to the genome, but we
         // need to fill something in for the call.
@@ -211,7 +215,7 @@ function lovd_convertPosition (oElement)
                         aVariants = sData.split(';');
                         var nVariants = aVariants.length;
                         for (i = 0; i < nVariants; i++) {
-                            var aVariant = /^([A-Z]{2}_\d{6,9}\.\d{1,2}):([cn]\..+)$/.exec(aVariants[i]);
+                            var aVariant = /^([A-Z]{2}_\d{6,9}\.\d{1,2}(?:\([A-Z0-9]+_v\d{3}\))?):([cn]\..+)$/.exec(aVariants[i]);
                             if (aVariant != null) {
                                 var oInput = $('#variantForm input[id_ncbi="' + aVariant[1] + '"]');
                                 if (oInput[0] != undefined) {
@@ -226,7 +230,7 @@ function lovd_convertPosition (oElement)
                                     // is no use to run this function again when the DNA field hasn't changed.
                                     oInput.siblings('button:eq(0)').hide();
                                     // Grab the corresponding protein description field if it exists.
-                                    var oProtein = $(oInput).parent().parent().siblings().find('input[name="' + $(oInput).attr('name').substring(0,5) + '_VariantOnTranscript/Protein"]');
+                                    var oProtein = $(oInput).parent().parent().siblings().find('input[name="' + $(oInput).attr('name').substring(0, <?php echo $_SETT['objectid_length']['transcripts']; ?>) + '_VariantOnTranscript/Protein"]');
                                     if (!oInput[0].disabled) {
                                         // Transcript is not disabled, so let mutalyzer predict the protein description.
                                         lovd_getProteinChange(oProtein);
@@ -306,7 +310,7 @@ function lovd_getProteinChange (oElement)
         title: 'Loading...'
     }).show();
     // Collect the corresponding transcript variant information, because Mutalyzer needs it to make a prediction.
-    var nTranscriptID = $(oThisProtein).attr('name').substring(0,5);
+    var nTranscriptID = $(oThisProtein).attr('name').substring(0, <?php echo $_SETT['objectid_length']['transcripts']; ?>);
     var oThisDNA = $(oElement).parent().parent().siblings().find('input[name="' + nTranscriptID + '_VariantOnTranscript/DNA"]');
     var sVariantNotation = aUDrefseqs[aTranscripts[nTranscriptID][1]] + '(' + aTranscripts[nTranscriptID][1] + '_v' + aTranscripts[nTranscriptID][2] + '):' + $(oThisDNA).val();
     var oThisRNA = $(oElement).parent().parent().siblings().find('input[name="' + nTranscriptID + '_VariantOnTranscript/RNA"]');
@@ -314,23 +318,25 @@ function lovd_getProteinChange (oElement)
     $(oThisRNA).removeClass();
 
     $.get('ajax/check_variant.php', { variant: sVariantNotation, gene: aTranscripts[nTranscriptID][1] },
-        function(sData) {
-            if (sData.length == 1) {
+        function(aData, sStatus) {
+            if (aData.length == 1 || aData['mutalyzer_error']) {
                 // Either Mutalyzer says No, our regexp didn't match with the full variant notation or user lost $_AUTH.
-                if (sData == '<?php echo AJAX_NO_AUTH; ?>') {
+                if (aData === '<?php echo AJAX_NO_AUTH; ?>') {
                     alert('Lost your session!');
+                } else if (aData === '<?php echo AJAX_DATA_ERROR; ?>') {
+                    alert('Invalid input, or input missing.');
                 }
                 if (!oThisProtein.attr('disabled')) {
                     $(oThisProtein).siblings('img:first').attr({
                         src: 'gfx/cross.png',
                         onclick: '',
                         style: '',
-                        alt: 'Error on mutalyzer request!\nError code: ' + sData,
-                        title: 'Error on mutalyzer request!\nError code: ' + sData
+                        alt: 'Error on mutalyzer request!\nError code: ' + (!$.isArray(aData)? aData : aData['mutalyzer_error']),
+                        title: 'Error on mutalyzer request!\nError code: ' + (!$.isArray(aData)? aData : aData['mutalyzer_error'])
                     }).show();
                 }
 
-            } else if (sData == '||' && oThisDNA.val().lastIndexOf('n.', 0) === 0) {
+            } else if (aData === '' && oThisDNA.val().lastIndexOf('n.', 0) === 0) {
                 // No data, but no errors either! No wonder... it's an n. variant!
                 // No prediction on protein level possible!
                 oThisProtein.siblings('img:first').attr({
@@ -343,72 +349,17 @@ function lovd_getProteinChange (oElement)
                 oThisProtein.siblings('button:eq(0)').hide();
 
             } else {
-                var aData = sData.split('||'); // aData[0] = errors, aData[1] = actual reply.
-                if (aData[0]) {
-                    var aErrors = aData[0].split('|'); // aErrors could contain multiple errors.
-                } else {
-                    var aErrors = [];
-                }
-                var aErrorList = [];
-                var aWarningList = [];
-                for (index in aErrors) {
-                    // Analyze the messages that Mutalyzer returns.
-                    var aError = aErrors[index].split(':');
-                    // aError[0] == Error code, aError[1] = Message.
-                    var sErrorCode = aError[0];
-                    aError.splice(0,1);
-                    var sErrorMessage = aError.join(':');
-                    if (sErrorCode.match(/_OTHER$/)) {
-                        // Whatever error it is, it's not about this gene!
-                        continue;
-                    } else if (sErrorCode == 'ERANGE') {
-                        // Ignore 'ERANGE' as an actual error, because we can always interpret this as p.(=), p.? or p.0.
-                        sErrorMessage = '';
-                        var aVariantRange = $(oThisDNA).val().split('_');
-                        // Check what the variant looks like and act accordingly.
-                        if (aVariantRange.length == 2 && /-\d+/.exec(aVariantRange[0]) != null && /-\d+/.exec(aVariantRange[1]) != null) {
-                            // Variant has 2 positions. Variant has both the start and end positions upstream of the transcript, we can assume that the product will not be affected.
-                            sPredictR = 'r.(=)';
-                            sPredictP = 'p.(=)';
-                        } else if (aVariantRange.length == 2 && /-\d+/.exec(aVariantRange[0]) != null && /\*\d+/.exec(aVariantRange[1]) != null) {
-                            // Variant has 2 positions. Variant has an upstream start position and a downstream end position, we can assume that the product will not be expressed.
-                            sPredictR = 'r.0?';
-                            sPredictP = 'p.0?';
-                        } else if (aVariantRange.length == 2 && /\*\d+/.exec(aVariantRange[0]) != null && /\*\d+/.exec(aVariantRange[1]) != null) {
-                            // Variant has 2 positions. Variant has both the start and end positions downstream of the transcript, we can assume that the product will not be affected.
-                            sPredictR = 'r.(=)';
-                            sPredictP = 'p.(=)';
-                        } else if (aVariantRange.length == 1 && (/-\d+/.exec(aVariantRange[0]) != null || /\*\d+/.exec(aVariantRange[0]) != null)) {
-                            // Variant has 1 position and is either upstream or downstream from the transcript, we can assume that the product will not be affected.
-                            sPredictR = 'r.(=)';
-                            sPredictP = 'p.(=)';
-                        } else {
-                            // One of the positions of the variant falls within the transcript, so we can not make any assumptions based on that.
-                            sPredictR = 'r.?';
-                            sPredictP = 'p.?';
-                        }
-                        // Fill in our assumption in aData to forge that this information came from Mutalyzer.
-                        aData[1] = sPredictP;
-                        aData[2] = sPredictR;
-                        continue;
-                    }
-                    if (sErrorCode.substring(0, 1) == 'E') {
-                        aErrorList.push(sErrorCode + ':' + sErrorMessage);
-                    } else {
-                        aWarningList.push(sErrorCode + ':' + sErrorMessage);
-                    }
-                }
-
                 // Decide what to do with the analyzed Mutalyzer output.
                 var sErrorMessages = '';
-                if (aErrorList.length || !aData[1]) {
-                    // Mutalyzer returned one or more errors, so we add the err class to make the field red. We Also add an image with a tooltip that shows the error.
-                    for (index in aErrorList) {
-                        if (index != '0') {
+                if (aData['error'] || !aData['predict']) {
+                    // Mutalyzer returned one or more errors, so we add the err class to make the field red. We also add an image with a tooltip that shows the error.
+                    var firstError = true;
+                    for (index in aData['error']) {
+                        if (firstError !== true) {
                             sErrorMessages += '<BR>';
                         }
-                        var aError = aErrorList[index].split(':');
-                        sErrorMessages +=  '<B>' + aError[0] + ':</B> ' + aError[1];
+                        sErrorMessages +=  '<B>' + index + ':</B> ' + aData['error'][index];
+                        firstError = false;
                     }
                     if (!oThisProtein.attr('disabled')) {
                         $(oThisDNA).attr('class', 'err');
@@ -432,20 +383,15 @@ function lovd_getProteinChange (oElement)
 
                 } else {
                     // No errors returned by Mutalyzer.
-                    if (aWarningList.length) {
-                        // Mutalyzer returned a warning so we add the warn class to make the field yellow. We Also add an image with a tooltip that shows the warning.
-                        for (index in aWarningList) {
-                            if (index != '0') {
+                    if (aData['warning']) {
+                        // Mutalyzer returned a warning so we add the warn class to make the field yellow. We also add an image with a tooltip that shows the warning.
+                        var firstWarning = true;
+                        for (index in aData['warning']) {
+                            if (firstWarning !== true) {
                                 sErrorMessages += '<BR>';
                             }
-                            var aWarning = aWarningList[index].split(':');
-                            if (aWarning[0] == 'WSPLICE') {
-                                // Mutalyzer now (2012-12-07) returns a WSPLICE for <= 5 nucleotides from the site, eventhough there internally is a difference.
-                                // Most likely, they will include two different types of errors in the future.
-                                aData[1] = 'p.?';
-                                aData[2] = 'r.spl?';
-                            }
-                            sErrorMessages +=  '<B>' + aWarning[0] + ':</B> ' + aWarning[1];
+                            sErrorMessages +=  '<B>' + index + ':</B> ' + aData['warning'][index];
+                            firstWarning = false;
                         }
                         if (!oThisProtein.attr('disabled')) {
                             $(oThisDNA).attr('class', 'warn');
@@ -466,22 +412,8 @@ function lovd_getProteinChange (oElement)
                             title : 'HGVS compliant!'
                         }).show();
                     }
-                    // Fill in the predicted value in the corresponding RNA and protein fields.
-                    // Predict RNA change, if not given yet.
-                    if (aData.length == 2) {
-                        // RNA not filled in yet.
-                        if (aData[1] == 'p.?') {
-                            aData[2] = 'r.?';
-                        } else if (aData[1] == 'p.(=)') {
-                            // FIXME: Not correct in case of substitutions e.g. in the third position of the codon, not leading to a protein change.
-                            aData[2] = 'r.(=)';
-                        } else {
-                            // RNA will default to r.(?).
-                            aData[2] = 'r.(?)';
-                        }
-                    }
-                    $(oThisRNA).attr('value', aData[2]);
-                    $(oThisProtein).attr('value', aData[1]);
+                    $(oThisRNA).attr('value', aData['predict']['RNA']);
+                    $(oThisProtein).attr('value', aData['predict']['protein']);
                     lovd_highlightInput(oThisRNA);
                     lovd_highlightInput(oThisProtein);
 
@@ -496,7 +428,8 @@ function lovd_getProteinChange (oElement)
                     $(oThisProtein).siblings('button:eq(0)').hide();
                 }
             }
-    });
+        },"json"
+    );
     return false;
 }
 
@@ -538,15 +471,20 @@ $(function ()
     oGenomicVariant.change(lovd_checkHGVS);
     // Add same function to the onKeyUp event, but then it will check itself if the variant is likely to be complete.
     oGenomicVariant.keyup(lovd_checkHGVS);
-    // Then, trigger it already because if we're on an edit form we want the buttons to be ready.
-    oGenomicVariant.change();
+
+    if (oGenomicVariant.val() !== '') {
+        // Variant field already has content, check HGVS now because if we're on an edit form we
+        // want the buttons to be ready.
+        oGenomicVariant.change();
+    }
+
     if (oTranscriptVariants[0] != undefined) {
         // Add the buttons and images at the end of the transcripts DNA fields.
         oTranscriptVariants.parent().append('&nbsp;&nbsp;<IMG style="display:none;" align="top" width="16" height="16">&nbsp;<BUTTON class="mapVariant" type="button" onclick="lovd_convertPosition(this); return false;" style="display:none;">Map to genome</BUTTON>');
         var nTranscriptVariants = oTranscriptVariants.size();
         for (i=0; i < nTranscriptVariants; i++) {
             // Add an artificial attribute "id_ncbi" to the transcripts DNA input field. This is needed to link the response from Mutalyzer to this field, if needed.
-            $(oTranscriptVariants[i]).attr('id_ncbi', aTranscripts[$(oTranscriptVariants[i]).attr('name').substring(0,5)][0]);
+            $(oTranscriptVariants[i]).attr('id_ncbi', aTranscripts[$(oTranscriptVariants[i]).attr('name').substring(0, <?php echo $_SETT['objectid_length']['transcripts']; ?>)][0]);
         }
         // Add an onChange event that runs lovd_checkHGVS.
         oTranscriptVariants.change(lovd_checkHGVS);
@@ -559,7 +497,10 @@ $(function ()
             oProteinVariants.parent().append('&nbsp;&nbsp;<IMG src="gfx/trans.png" style="display:inline;" align="top" width="16" height="16">&nbsp;<BUTTON class="proteinChange" type="button" onclick="lovd_getProteinChange(this); return false;" style="display:none;">Predict</BUTTON>');
         }
 
-        // Then, trigger it already because if we're on an edit form we want the buttons to be ready.
-        oTranscriptVariants.change();
+        if (oTranscriptVariants.val() !== '') {
+            // Variant field already has content, check HGVS now because if we're on an edit form we
+            // want the buttons to be ready.
+            oTranscriptVariants.change();
+        }
     }
 });

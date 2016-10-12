@@ -154,7 +154,7 @@ $aRequired =
 $_SETT = array(
                 'system' =>
                      array(
-                            'version' => '3.0-14',
+                            'version' => '3.0-15',
                           ),
                 'user_levels' =>
                      array(
@@ -227,8 +227,8 @@ $_SETT = array(
                             9 => '<SPAN style="color:red;"><B>Critical</B></SPAN>',
                           ),
                 'upstream_URL' => 'http://www.LOVD.nl/',
-                'upstream_BTS_URL' => 'https://humgenprojects.lumc.nl/trac/LOVD3/report/1',
-                'upstream_BTS_URL_new_ticket' => 'https://humgenprojects.lumc.nl/trac/LOVD3/newticket',
+                'upstream_BTS_URL' => 'https://github.com/LOVDnl/LOVD3/issues/',
+                'upstream_BTS_URL_new_ticket' => 'https://github.com/LOVDnl/LOVD3/issues/new',
                 'wikiprofessional_iprange' => '131.174.88.0-255',
                 'list_sizes' =>
                      array(
@@ -251,6 +251,18 @@ $_SETT = array(
                             1  => 'right',
                           ),
                 'unique_view_max_string_length' => 100,
+                'objectid_length' =>
+                    array(
+                        'diseases' => 5,
+                        'individuals' => 8,
+                        'links' => 3,
+                        'phenotypes' => 10,
+                        'screenings' => 10,
+                        // Warning! Length of transcript IDs also configured in inc-js-variants.php.
+                        'transcripts' => 8,
+                        'users' => 5,
+                        'variants' => 10,
+                    ),
                 'human_builds' =>
                      array(
                             '----' => array('ncbi_name' => 'non-Human'),
@@ -353,8 +365,40 @@ $_SETT = array(
                                                             'M'  => 'NC_012920.1',
                                                           ),
                                           ),
-                          ),
-              );
+                    ),
+                // Mitochondrial aliases. The key is the gene symbol used by HGNC, the value is the gene symbol used by NCBI.
+                'mito_genes_aliases' =>
+                    array(
+                            'MT-TF' => 'TRNF',
+                            'MT-RNR1' => 'RNR1',
+                            'MT-TV' => 'TRNV',
+                            'MT-RNR2' => 'RNR2',
+                            'MT-TL1' => 'TRNL1',
+                            'MT-ND1' => 'ND1',
+                            'MT-TI' => 'TRNI',
+                            'MT-TM' => 'TRNM',
+                            'MT-ND2' => 'ND2',
+                            'MT-TW' => 'TRNW',
+                            'MT-CO1' => 'COX1',
+                            'MT-TD' => 'TRND',
+                            'MT-CO2' => 'COX2',
+                            'MT-TK' => 'TRNK',
+                            'MT-ATP8' => 'ATP8',
+                            'MT-ATP6' => 'ATP6',
+                            'MT-CO3' => 'COX3',
+                            'MT-TG' => 'TRNG',
+                            'MT-ND3' => 'ND3',
+                            'MT-TR' => 'TRNR',
+                            'MT-ND4L' => 'ND4L',
+                            'MT-ND4' => 'ND4',
+                            'MT-TH' => 'TRNH',
+                            'MT-TS2' => 'TRNS2',
+                            'MT-TL2' => 'TRNL2',
+                            'MT-ND5' => 'ND5',
+                            'MT-CYB' => 'CYTB',
+                            'MT-TT' => 'TRNT',
+                    ),
+            );
 
 // Complete version info.
 list($_SETT['system']['tree'], $_SETT['system']['build']) = explode('-', $_SETT['system']['version'], 2);
@@ -827,18 +871,8 @@ if (!defined('NOT_INSTALLED')) {
             $_PE[$key] = '';
         }
     }
-    $aObjectPadding = array(
-                        'variants' => 10,
-                        'transcripts' => 5,
-                        'diseases' => 5,
-                        'individuals' => 8,
-                        'screenings' => 10,
-                        'links' => 3,
-                        'phenotypes' => 10,
-                        'users' => 5,
-                     );
-    if (isset($aObjectPadding[$_PE[0]]) && isset($_PE[1]) && ctype_digit($_PE[1])) {
-        $_PE[1] = sprintf('%0' . $aObjectPadding[$_PE[0]] . 'd', $_PE[1]);
+    if (isset($_SETT['objectid_length'][$_PE[0]]) && isset($_PE[1]) && ctype_digit($_PE[1])) {
+        $_PE[1] = sprintf('%0' . $_SETT['objectid_length'][$_PE[0]] . 'd', $_PE[1]);
     }
     define('CURRENT_PATH', implode('/', $_PE));
     define('PATH_COUNT', count($_PE)); // So you don't need !empty($_PE[1]) && ...
@@ -880,7 +914,7 @@ if (!defined('NOT_INSTALLED')) {
 
         // Switch gene.
         // Gene switch will occur automatically at certain pages. They can be accessed by following links in LOVD itself, or possibly from outer sources.
-        if (preg_match('/^(configuration|genes|transcripts|variants|view)\/([^\/]+)/', CURRENT_PATH, $aRegs)) {
+        if (preg_match('/^(configuration|genes|transcripts|variants|individuals|view)\/([^\/]+)/', CURRENT_PATH, $aRegs)) {
             // We'll check this value further down in this code.
             if (!in_array($aRegs[2], array('in_gene', 'upload')) && !ctype_digit($aRegs[2])) {
                 $_SESSION['currdb'] = $aRegs[2]; // Not checking capitalization here yet.
@@ -900,7 +934,6 @@ if (!defined('NOT_INSTALLED')) {
         $_SETT['email_headers'] = 'MIME-Version: 1.0' . PHP_EOL .
                                   'Content-Type: text/plain; charset=UTF-8' . PHP_EOL .
                                   'X-Priority: 3' . PHP_EOL .
-                                  'X-MSMail-Priority: Normal' . PHP_EOL .
                                   'X-Mailer: PHP/' . phpversion() . PHP_EOL .
                                   'From: ' . (ON_WINDOWS? '' : '"LOVD (' . lovd_shortenString($_CONF['system_title'], 50) . ')" ') . '<' . $_CONF['email_address'] . '>';
         $_SETT['email_mime_headers'] =

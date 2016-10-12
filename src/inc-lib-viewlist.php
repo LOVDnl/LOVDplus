@@ -48,14 +48,18 @@ function lovd_formatSearchExpression ($sExpression, $sColumnType)
 {
     // Formats the search expressions for the "title" text of the input field so that the users can understand what their search does.
     if ($sColumnType == 'DATETIME') {
-        $sExpression = preg_replace('/ (\d)/', "{{SPACE}}$1", $sExpression);
+        $sExpression = preg_replace('/ (\d)/', "{{SPACE}}$1", trim($sExpression));
     } else {
-        $sExpression = preg_replace_callback('/("[^"]+")/', create_function('$aRegs', 'return str_replace(\' \', \'{{SPACE}}\', $aRegs[1]);'), $sExpression);
+        $sExpression = preg_replace_callback('/("[^"]+")/', create_function('$aRegs', 'return str_replace(\' \', \'{{SPACE}}\', $aRegs[1]);'), trim($sExpression));
     }
     $aANDExpressions = explode(' ', $sExpression);
     $nANDLength = count($aANDExpressions);
     $sFormattedExpressions = '';
     foreach ($aANDExpressions as $nANDIndex => $sANDExpression) {
+        if (!trim($sANDExpression)) {
+            // Double spaces in the search terms.
+            continue;
+        }
         $aORExpressions = explode('|', $sANDExpression);
         $nORLength = count($aORExpressions);
         $sFormattedExpression = ($sColumnType == 'TEXT'? ' - ' : ' ');

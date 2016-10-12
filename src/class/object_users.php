@@ -7,9 +7,10 @@
  * Modified    : 2016-03-31
  * For LOVD    : 3.0-15
  *
- * Copyright   : 2004-2013 Leiden University Medical Center; http://www.LUMC.nl/
+ * Copyright   : 2004-2016 Leiden University Medical Center; http://www.LUMC.nl/
  * Programmers : Ing. Ivo F.A.C. Fokkema <I.F.A.C.Fokkema@LUMC.nl>
  *               Ing. Ivar C. Lugtenburg <I.C.Lugtenburg@LUMC.nl>
+ *               M. Kroon <m.kroon@lumc.nl>
  *
  *
  * This file is part of LOVD.
@@ -65,6 +66,10 @@ class LOVD_User extends LOVD_Object {
         foreach ($_SETT['user_levels'] as $nLevel => $sLevel) {
             $sLevelQuery .= ' WHEN "' . $nLevel . '" THEN "' . $nLevel . $sLevel . '"';
         }
+
+        // SQL code for preparing view entry query.
+        // Increase DB limits to allow concatenation of large number of gene IDs.
+        $this->sSQLPreViewEntry = 'SET group_concat_max_len = 200000';
 
         // SQL code for viewing an entry.
         $this->aSQLViewEntry['SELECT']   = 'u.*, ' .
@@ -343,8 +348,8 @@ class LOVD_User extends LOVD_Object {
                         array('Email address(es), one per line', '', 'textarea', 'email', 30, 3),
                         array('Telephone (optional)', '', 'text', 'telephone', 20),
           'username' => array('Username', '', 'text', 'username', 20),
-            'passwd' => array('Password', 'A proper password is at least 4 characters long and contains at least one number or special character.', 'password', 'password_1', 20),
-    'passwd_confirm' => array('Password (confirm)', '', 'password', 'password_2', 20),
+            'passwd' => array('Password', 'A proper password is at least 4 characters long and contains at least one number or special character.', 'password', 'password_1', 20, true),
+    'passwd_confirm' => array('Password (confirm)', '', 'password', 'password_2', 20, true),
      'passwd_change' => array('Must change password at next logon', '', 'checkbox', 'password_force_change'),
                         'hr',
                         'skip',
@@ -388,8 +393,8 @@ class LOVD_User extends LOVD_Object {
                  array(
                         array('POST', '', '', '', '50%', '14', '50%'),
        'change_self' => array('Current password', '', 'password', 'password', 20),
-                        array('New password', '', 'password', 'password_1', 20),
-                        array('New password (confirm)', '', 'password', 'password_2', 20),
+                        array('New password', '', 'password', 'password_1', 20, true),
+                        array('New password (confirm)', '', 'password', 'password_2', 20, true),
                         'skip',
       'change_other' => array('Enter your password for authorization', '', 'password', 'password', 20));
             if ($_PE[1] == $_AUTH['id']) {
@@ -452,20 +457,10 @@ class LOVD_User extends LOVD_Object {
                 // This is only visible for Curators, so we don't want to mess around with aColumnsViewEntry when this field is no longer there.
                 $this->aColumnsViewEntry['collaborates_'][0] .= ' ' . count($zData['collaborates']) . ' gene' . (count($zData['collaborates']) == 1? '' : 's');
             }
-            $zData['curates_'] = '';
-            $zData['curates_short_'] = '';
-            $i = 0;
-            foreach ($zData['curates'] as $key => $sGene) {
-                $zData['curates_'] .= (!$key? '' : ', ') . '<A href="genes/' . $sGene . '">' . $sGene . '</A>';
-                if ($i < 20) {
-                    $zData['curates_short_'] .= (!$key? '' : ', ') . '<A href="genes/' . $sGene . '">' . $sGene . '</A>';
-                    $i++;
-                }
-            }
-            if (count($zData['curates']) > 22) {
-                // Replace long gene list by shorter one, allowing expand.
-                $zData['curates_'] = '<SPAN>' . $zData['curates_short_'] . ', <A href="#" onclick="$(this).parent().hide(); $(this).parent().next().show(); return false;">' . (count($zData['curates']) - $i) . ' more...</A></SPAN><SPAN style="display : none;">' . $zData['curates_'] . '</SPAN>';
-            }
+
+            // Get HTML links for genes curated by current user.
+            $zData['curates_'] = $this->lovd_getObjectLinksHTML($zData['curates'], 'genes/%s');
+
             $zData['collaborates_'] = '';
             foreach ($zData['collaborates'] as $key => $sGene) {
                 $zData['collaborates_'] .= (!$key? '' : ', ') . '<A href="genes/' . $sGene . '">' . $sGene . '</A>';
@@ -485,7 +480,7 @@ class LOVD_User extends LOVD_Object {
                     $n = $_DB->query('SELECT COUNT(*) FROM ' . constant('TABLE_' . strtoupper($sDataType)) . ' WHERE owned_by = ?', array($zData['id']))->fetchColumn();
                     if ($n) {
                         $nOwnes += $n;
-                        $sOwnes .= (!$sOwnes? '' : ', ') . '<A href="' . $sDataType . '?search_owned_by_=%3D%22' . rawurlencode($zData['name']) . '%22">' . $n . ' ' . ($n == 1? substr($sDataType, 0, -1) : $sDataType) . '</A>';
+                        $sOwnes .= (!$sOwnes? '' : ', ') . '<A href="' . $sDataType . '?search_owned_by_=%3D%22' . rawurlencode(html_entity_decode($zData['name'])) . '%22">' . $n . ' ' . ($n == 1? substr($sDataType, 0, -1) : $sDataType) . '</A>';
                     }
                 }
 
@@ -497,9 +492,6 @@ class LOVD_User extends LOVD_Object {
             $zData['status_'] = ($zData['active']? '<IMG src="gfx/status_online.png" alt="Online" title="Online" width="14" height="14" align="top"> Online' : 'Offline');
             $zData['locked_'] = ($zData['locked']? '<IMG src="gfx/status_locked.png" alt="Locked" title="Locked" width="14" height="14" align="top"> Locked' : 'No');
             $zData['level_'] = $_SETT['user_levels'][$zData['level']];
-/*
-    $zData['submits_'] = $zData['submits'] . ($zData['submits']? ' (<A href="' . ROOT_PATH . 'submitters_variants.php?submitterid=' . $zData['submitterid'] . '&all_genes">view</A>)' : '');
-*/
         }
         return $zData;
     }

@@ -10,6 +10,7 @@
  * Copyright   : 2004-2016 Leiden University Medical Center; http://www.LUMC.nl/
  * Programmers : Ing. Ivo F.A.C. Fokkema <I.F.A.C.Fokkema@LUMC.nl>
  *               Msc. Daan Asscheman <D.Asscheman@LUMC.nl>
+ *               M. Kroon <m.kroon@lumc.nl>
  *
  *
  * This file is part of LOVD.
@@ -336,16 +337,39 @@ function lovd_calculateFieldDifferences ($zData, &$aLine)
         // When the database columns do not exist in the import file, the columns are not taken into account in this function.
         // Below we take care of fields that exist in the database but not in the import file.
         if (isset($aLine[$sCol])) {
-            if ($sValue != $aLine[$sCol]) {
-                if (isset($aSection['update_columns_not_allowed'][$sCol]) &&
-                    $aSection['update_columns_not_allowed'][$sCol]['error_type']) {
-                    // Changes in these fields are ignored during an update import, because they are not allowed to be modified.
-                    // But because we might want to set a warning to inform the user, the fields must be included in the $aDiffs array.
-                    // Whether changes in these columns are soft or hard errors or ignored silently, is defined in $aSection['update_columns_not_allowed'].
-                    $aDiffs[$sCol] = array('DB' => $sValue, 'file' => $aLine[$sCol], 'ignore' => true);
-                } else {
-                    $aDiffs[$sCol] = array('DB' => $sValue, 'file' => $aLine[$sCol], 'ignore' => false);
-                }
+            if (strval($sValue) === $aLine[$sCol]) {
+                // Database and import file have the same value, continue to the next field.
+                continue;
+            }
+
+            // We have to perform an extra check for IDs because the import
+            // file and database can have a difference in leading zeros.
+            if ($aSection['object']->sObject === 'Gene' &&
+                $sCol === 'id') {
+                // The ID in section genes is the only ID which is not an integer.
+                // Therefore, we don't have to do an extra check on gene ID and we
+                // can continue.
+                continue;
+            }
+            if (!empty($sValue) &&
+                ctype_digit($sValue) &&
+                (int) $sValue === (int) $aLine[$sCol]) {
+                // Database and import file have the same value, continue to the next field.
+                continue;
+            }
+
+            // The field is different in the import file and in the database.
+            // Now we check what we will do with this difference:
+            // ignore = true; Value in import file is NOT saved in database
+            // ignore = false; Value in import file is saved in database
+            if (isset($aSection['update_columns_not_allowed'][$sCol]) &&
+                $aSection['update_columns_not_allowed'][$sCol]['error_type']) {
+                // Changes in these fields are ignored during an update import, because they are not allowed to be modified.
+                // But because we might want to set a warning to inform the user, the fields must be included in the $aDiffs array.
+                // Whether changes in these columns are soft or hard errors or ignored silently, is defined in $aSection['update_columns_not_allowed'].
+                $aDiffs[$sCol] = array('DB' => $sValue, 'file' => $aLine[$sCol], 'ignore' => true);
+            } else {
+                $aDiffs[$sCol] = array('DB' => $sValue, 'file' => $aLine[$sCol], 'ignore' => false);
             }
         } else {
             // During an update import we do not want to update fields, not present in the import file, with the default values.
@@ -459,13 +483,13 @@ if (POST || $_FILES) { // || $_FILES is in use for the automatic loading of file
 
     // If the file does not arrive (too big), it doesn't exist in $_FILES.
     if (empty($_FILES['import']) || ($_FILES['import']['error'] > 0 && $_FILES['import']['error'] < 4)) {
-        lovd_errorAdd('import', 'There was a problem with the file transfer. Please try again. The file cannot be larger than ' . round($nMaxSize/pow(1024, 2), 1) . ' MB' . ($nMaxSize == $nMaxSizeLOVD? '' : ', due to restrictions on this server.') . '.');
+        lovd_errorAdd('import', 'There was a problem with the file transfer. Please try again. The file cannot be larger than ' . round($nMaxSize/pow(1024, 2), 1) . ' MB' . ($nMaxSize == $nMaxSizeLOVD? '' : ', due to restrictions on this server') . '.');
 
     } elseif ($_FILES['import']['error'] == 4 || !$_FILES['import']['size']) {
         lovd_errorAdd('import', 'Please select a file to upload.');
 
     } elseif ($_FILES['import']['size'] > $nMaxSize) {
-        lovd_errorAdd('import', 'The file cannot be larger than ' . round($nMaxSize/pow(1024, 2), 1) . ' MB' . ($nMaxSize == $nMaxSizeLOVD? '' : ', due to restrictions on this server.') . '.');
+        lovd_errorAdd('import', 'The file cannot be larger than ' . round($nMaxSize/pow(1024, 2), 1) . ' MB' . ($nMaxSize == $nMaxSizeLOVD? '' : ', due to restrictions on this server') . '.');
 
     } elseif ($_FILES['import']['error']) {
         // Various errors available from 4.3.0 or later.
@@ -547,7 +571,9 @@ if (POST || $_FILES) { // || $_FILES is in use for the automatic loading of file
         foreach ($aData as $i => $sLine) {
             $sLine = trim($sLine);
             if (!$sLine) {
-                lovd_endLine();
+                if (!lovd_endLine()) {
+                    break;
+                }
                 continue;
             }
 
@@ -574,7 +600,9 @@ if (POST || $_FILES) { // || $_FILES is in use for the automatic loading of file
                             }
                         }
                     }
-                    lovd_endLine();
+                    if (!lovd_endLine()) {
+                        break;
+                    }
                 }
                 break;
             }
@@ -601,9 +629,10 @@ if (POST || $_FILES) { // || $_FILES is in use for the automatic loading of file
         require ROOT_PATH . 'class/progress_bar.php';
         $_BAR = array(new ProgressBar('parser', 'Parsing file...'));
         $_BAR[0]->setMessageVisibility('done', true);
-        // DIAGNOSTICS: Find default gene we'll use for all VOTs, since the gene is always the same anyway.
-        $sDefaultGene = $_DB->query('SELECT geneid FROM ' . TABLE_TRANSCRIPTS . ' LIMIT 1')->fetchColumn();
-        // END: DIAGNOSTICS.
+        if (LOVD_plus) {
+            // Diagnostics: Find default gene we'll use for all VOTs, since the gene is always the same anyway.
+            $sDefaultGene = $_DB->query('SELECT geneid FROM ' . TABLE_TRANSCRIPTS . ' LIMIT 1')->fetchColumn();
+        }
 
 
 
@@ -611,7 +640,9 @@ if (POST || $_FILES) { // || $_FILES is in use for the automatic loading of file
         foreach ($aData as $i => $sLine) {
             $sLine = trim($sLine);
             if (!$sLine) {
-                lovd_endLine();
+                if (!lovd_endLine()) {
+                    break;
+                }
                 continue;
             }
 
@@ -737,7 +768,9 @@ if (POST || $_FILES) { // || $_FILES is in use for the automatic loading of file
                             $aSection['object'] = new LOVD_Disease();
                             break;
                         case 'Genes_To_Diseases':
+                            require_once ROOT_PATH . 'class/object_basic.php';
                             $sTableName = $aParsed[$sCurrentSection]['table_name'] = 'TABLE_GEN2DIS';
+                            $aSection['object'] = new LOVD_Basic($sTableName);
                             break;
                         case 'Individuals':
                             // The following columns are allowed for update: fatherid, motherid, panelid, panel_size, owned_by, statusid.
@@ -745,7 +778,9 @@ if (POST || $_FILES) { // || $_FILES is in use for the automatic loading of file
                             $aSection['object'] = new LOVD_Individual();
                             break;
                         case 'Individuals_To_Diseases':
+                            require_once ROOT_PATH . 'class/object_basic.php';
                             $sTableName = $aParsed[$sCurrentSection]['table_name'] = 'TABLE_IND2DIS';
+                            $aSection['object'] = new LOVD_Basic($sTableName);
                             break;
                         case 'Phenotypes':
                             // The following columns are allowed for update: owned_by, statusid.
@@ -760,7 +795,10 @@ if (POST || $_FILES) { // || $_FILES is in use for the automatic loading of file
                                         'individualid' => array('message' => 'Not allowed to change the individual.', 'error_type' => 'hard'),
                                     )
                                 );
-                            // We don't create an object here, because we need to do that per disease. This means we don't have a general check for mandatory columns, which is not so much a problem I think.
+                            // We don't create an object here, because we need to do that per disease (since different diseases
+                            // may have different custom columns). This means the field headers are not checked for
+                            // mandatory fields. Mandatory fields are still checked below with a disease-specific
+                            // instantiation of LOVD_Phenotype.
                             $aSection['objects'] = array();
                             break;
                         case 'Screenings':
@@ -777,7 +815,9 @@ if (POST || $_FILES) { // || $_FILES is in use for the automatic loading of file
                             $aSection['object'] = new LOVD_Screening();
                             break;
                         case 'Screenings_To_Genes':
+                            require_once ROOT_PATH . 'class/object_basic.php';
                             $sTableName = $aParsed[$sCurrentSection]['table_name'] = 'TABLE_SCR2GENE';
+                            $aSection['object'] = new LOVD_Basic($sTableName);
                             break;
                         case 'Variants_On_Genome':
                             // The following columns are allowed for update: effectid, type, mapping_flags, average_frequency.
@@ -812,11 +852,16 @@ if (POST || $_FILES) { // || $_FILES is in use for the automatic loading of file
                                         'position_c_end_intron' => array('message' => 'Not allowed to change the intronic end position.', 'error_type' => 'hard'),
                                     )
                                 );
-                            // We don't create an object here, because we need to do that per gene. This means we don't have a general check for mandatory columns, which is not so much a problem I think.
+                            // We don't create an object here, because we need to do that per gene (since different genes
+                            // may have different custom columns). This means the field headers are not checked for
+                            // mandatory fields. Mandatory fields are still checked below with a gene-specific
+                            // instantiation of LOVD_TranscriptVariant.
                             $aSection['objects'] = array();
                             break;
                         case 'Screenings_To_Variants':
+                            require_once ROOT_PATH . 'class/object_basic.php';
                             $sTableName = $aParsed[$sCurrentSection]['table_name'] = 'TABLE_SCR2VAR';
+                            $aSection['object'] = new LOVD_Basic($sTableName);
                             break;
                         default:
                             // Category not recognized!
@@ -851,7 +896,9 @@ if (POST || $_FILES) { // || $_FILES is in use for the automatic loading of file
                         }
                     }
                 } // Else, it's just comments we will ignore.
-                lovd_endLine();
+                if (!lovd_endLine()) {
+                    break;
+                }
                 continue;
             }
 
@@ -984,13 +1031,13 @@ if (POST || $_FILES) { // || $_FILES is in use for the automatic loading of file
 
             // General checks: required fields defined by import.
             foreach ($aSection['required_columns'] as $sCol) {
-                if (empty($aLine[$sCol])) {
+                if (!isset($aLine[$sCol]) || $aLine[$sCol] === '') {
                     lovd_errorAdd('import', 'Error (' . $sCurrentSection . ', line ' . $nLine . '): Missing value for required column "' . htmlspecialchars($sCol) . '".');
                 }
             }
 
             // For shared objects, load the correct object.
-            if ($sCurrentSection == 'Phenotypes' && $aLine['diseaseid']) {
+            if ($sCurrentSection == 'Phenotypes' && $aLine['diseaseid'] !== '') {
                 if (!isset($aSection['objects'][(int) $aLine['diseaseid']])) {
                     $aSection['objects'][(int) $aLine['diseaseid']] = new LOVD_Phenotype($aLine['diseaseid']);
                 }
@@ -1015,15 +1062,19 @@ if (POST || $_FILES) { // || $_FILES is in use for the automatic loading of file
                     // Store for the next VOT.
                     $aParsed['Transcripts']['data'][(int) $aLine['transcriptid']] = array('id' => $aLine['transcriptid'], 'geneid' => $sGene, 'todo' => '');
                 }
-                // DIAGNOSTICS: Simple method to save a lot of memory and parsing time; since all genes should be equal, I'm creating the VOT object just once.
-                // This will save a lot of memory (each VOT object takes 0.05 MB == 500 MB per 10.000 VOTs, and we often have 40.000 or so) and parsing time.
-                // Selecting a gene that exists, so transcripts and columns will be filled (needed to actually make the checkFields() work.)
-                $sGene = $sDefaultGene;
-                // END: DIAGNOSTICS.
-                if (!isset($aSection['objects'][$sGene])) {
-                    $aSection['objects'][$sGene] = new LOVD_TranscriptVariant($sGene);
+                if (LOVD_plus) {
+                    // Diagnostics: Simple method to save a lot of memory and parsing time; since all genes should be equal, I'm creating the VOT object just once.
+                    // This will save a lot of memory (each VOT object takes 0.05 MB == 500 MB per 10.000 VOTs, and we often have 40.000 or so) and parsing time.
+                    // Selecting a gene that exists, so transcripts and columns will be filled (needed to actually make the checkFields() work.)
+                    $sGene = $sDefaultGene;
                 }
-                $aSection['object'] =& $aSection['objects'][$sGene];
+                // Only instantiate an object when a gene is found for a transcript.
+                if ($sGene) {
+                    if (!isset($aSection['objects'][$sGene])) {
+                        $aSection['objects'][$sGene] = new LOVD_TranscriptVariant($sGene);
+                    }
+                    $aSection['object'] =& $aSection['objects'][$sGene];
+                }
             }
 
             // Special actions for section Columns.
@@ -1039,14 +1090,21 @@ if (POST || $_FILES) { // || $_FILES is in use for the automatic loading of file
             }
 
             // Build the form, necessary for field-specific actions (currently for checkboxes only).
-            // Exclude section Genes, because it is not allowed to import this section it is not necessary to run the getForm().
+            // Exclude section Genes, because it is not allowed to import this section, it is not necessary to run the getForm().
             if (isset($aSection['object']) && is_object($aSection['object']) && $sCurrentSection != 'Genes') {
-                if ($sCurrentSection == 'Phenotypes') {
-                    $aForm = $aSection['objects'][(int) $aLine['diseaseid']]->getForm();
-                } elseif ($sCurrentSection == 'Variants_On_Transcripts'){
-                    $aForm = $aSection['objects'][$sGene]->getForm();
-                } else {
-                    $aForm = $aSection['object']->getForm();
+                $aForm = array();
+                switch ($sCurrentSection) {
+                    case 'Phenotypes':
+                        $aForm = $aSection['objects'][(int) $aLine['diseaseid']]->getForm();
+                        break;
+                    case 'Variants_On_Transcripts':
+                        // Only get $aForm when we're sure we've got an object. We might not, which happens if we don't have a valid transcriptid.
+                        if (isset($aSection['objects'][$sGene])) {
+                            $aForm = $aSection['objects'][$sGene]->getForm();
+                        }
+                        break;
+                    default:
+                        $aForm = $aSection['object']->getForm();
                 }
                 lovd_setEmptyCheckboxFields($aForm);
             }
@@ -1145,7 +1203,9 @@ if (POST || $_FILES) { // || $_FILES is in use for the automatic loading of file
                     }
                 } else {
                     lovd_errorAdd('import', 'Error (' . $sCurrentSection . ', line ' . $nLine . '): This line refers to a non-existing entry. When the import mode is set to update, no new inserts can be done.');
-                    lovd_endLine();
+                    if (!lovd_endLine()) {
+                        break;
+                    }
                     continue;
                 }
             }
@@ -1182,15 +1242,14 @@ if (POST || $_FILES) { // || $_FILES is in use for the automatic loading of file
                 if ($sCurrentSection == 'Columns' || $sCurrentSection == 'Genes') {
                     $ID = $aLine['id'];
                 } else {
-                    if (!ctype_digit($aLine['id'])) {
-                        lovd_errorAdd('import', 'Error (' . $sCurrentSection . ', line ' . $nLine . '): ID "' . htmlspecialchars($aLine['id']) . '" is not a numerical value.');
-                    }
                     $ID = (int) $aLine['id'];
                 }
                 if (isset($aSection['data'][$ID])) {
                     // We saw this ID before in this file!
                     lovd_errorAdd('import', 'Error (' . $sCurrentSection . ', line ' . $nLine . '): ID "' . htmlspecialchars($aLine['id']) . '" already defined at line ' . $aSection['data'][$ID]['nLine'] . '.');
-                    lovd_endLine();
+                    if (!lovd_endLine()) {
+                        break;
+                    }
                     continue; // Skip to next line.
                 }
             }
@@ -1345,42 +1404,44 @@ if (POST || $_FILES) { // || $_FILES is in use for the automatic loading of file
                         }
                     }
 
-                    $nDiseaseIdOmim = $_DB->query('SELECT id, id_omim FROM ' . TABLE_DISEASES . ' WHERE name = ?', array($aLine['name']))->fetchRow();
-                    if ($nDiseaseIdOmim && !$nDiseaseIdOmim[1] && $aLine['id_omim']) {
-                        lovd_errorAdd('import', 'Error (' . $sCurrentSection . ', line ' . $nLine . '): Import file contains OMIM ID for disease ' . $aLine['name'] . ', while OMIM ID is missing in database.');
-                    }
-                    if (($nDiseaseIdOmim && $nDiseaseIdOmim[1] == $aLine['id_omim']) || ($nDiseaseIdOmim[1] && !$aLine['id_omim']) || ($nDiseaseIdOmim && !$nDiseaseIdOmim[1] && !$aLine['id_omim'])) {
-                        // Some error added in checkfields should be removes and because soft messages are used.
-                        $nKey = array_search('Error (' . $sCurrentSection . ', line ' . $nLine . '): Another disease already exists with the same name!', $_ERROR['messages']);
-                        // when key is false, no errors are set in checkfields.
-                        if ($nKey !== false) {
-                            unset($_ERROR['messages'][$nKey]);
-                            $_ERROR['messages'] = array_values($_ERROR['messages']);
-                        }
-
-                        $nKey = array_search('Error (' . $sCurrentSection . ', line ' . $nLine . '): Another disease already exists with this OMIM ID!', $_ERROR['messages']);
-                        // when key is false, no errors are set in checkfields.
-                        if ($nKey !== false) {
-                            unset($_ERROR['messages'][$nKey]);
-                            $_ERROR['messages'] = array_values($_ERROR['messages']);
-                        }
-
-                        if (!$zData) {
-                            // Do not set soft warnings when we do an update.
-                            $_BAR[0]->appendMessage('Warning (' . $sCurrentSection . ', line ' . $nLine . '): There is already a disease with disease name ' . $aLine['name'] . (empty($aLine['id_omim'])? '' : ' and/or OMIM ID ' . $aLine['id_omim']) . '. This disease is not imported! <BR>', 'done');
-                            $nWarnings ++;
-                        }
-
-                        $aLine['newID'] = $nDiseaseIdOmim[0];
-                        $aLine['todo'] = 'map';
-                        break;
-                    }
-
                     if ($zData) {
-                        if ($nDifferences) {
+                        // Diseases is the only table with a record for ID 0.
+                        // This ID is reserved for healthy individual / control and is not allowed to change.
+                        // Changes on this record are ignored.
+                        if ($nDifferences && (int) $zData['id'] !== 0) {
                             $aLine['todo'] = 'update'; // OK, update only when there are differences.
                         }
                     } else {
+                        // Create: Attempt to map the disease in the file to a disease in the database.
+                        $rDiseaseIdOmim = $_DB->query('SELECT id, id_omim FROM ' . TABLE_DISEASES . ' WHERE name = ?', array($aLine['name']))->fetchRow();
+                        if ($rDiseaseIdOmim && !$rDiseaseIdOmim[1] && $aLine['id_omim']) {
+                            lovd_errorAdd('import', 'Error (' . $sCurrentSection . ', line ' . $nLine . '): Import file contains OMIM ID for disease ' . $aLine['name'] . ', while OMIM ID is missing in database.');
+                        }
+                        if ($rDiseaseIdOmim && (($rDiseaseIdOmim[1] == $aLine['id_omim']) || ($rDiseaseIdOmim[1] && !$aLine['id_omim']) || (!$rDiseaseIdOmim[1] && !$aLine['id_omim']))) {
+                            // Some error added in checkfields should be removed because soft messages are used.
+                            $nKey = array_search('Error (' . $sCurrentSection . ', line ' . $nLine . '): Another disease already exists with the same name!', $_ERROR['messages']);
+                            // when key is false, no errors are set in checkfields.
+                            if ($nKey !== false) {
+                                unset($_ERROR['messages'][$nKey]);
+                                $_ERROR['messages'] = array_values($_ERROR['messages']);
+                            }
+
+                            $nKey = array_search('Error (' . $sCurrentSection . ', line ' . $nLine . '): Another disease already exists with this OMIM ID!', $_ERROR['messages']);
+                            // when key is false, no errors are set in checkfields.
+                            if ($nKey !== false) {
+                                unset($_ERROR['messages'][$nKey]);
+                                $_ERROR['messages'] = array_values($_ERROR['messages']);
+                            }
+
+                            // Do not set soft warnings when we do an update.
+                            $_BAR[0]->appendMessage('Warning (' . $sCurrentSection . ', line ' . $nLine . '): There is already a disease with disease name ' . $aLine['name'] . (empty($aLine['id_omim'])? '' : ' and/or OMIM ID ' . $aLine['id_omim']) . '. This disease is not imported! <BR>', 'done');
+                            $nWarnings ++;
+
+                            $aLine['newID'] = $rDiseaseIdOmim[0];
+                            $aLine['todo'] = 'map';
+                            break;
+                        }
+
                         // We're inserting. Curators at this moment are not allowed to insert diseases.
                         if ($_AUTH['level'] < LEVEL_MANAGER) {
                             lovd_errorAdd('import', 'Error (' . $sCurrentSection . ', line ' . $nLine . '): Access denied, currently manager level is required to import new disease entries.');
@@ -1700,12 +1761,6 @@ if (POST || $_FILES) { // || $_FILES is in use for the automatic loading of file
                     break;
 
                 case 'Variants_On_Genome':
-                    foreach (array('position_g_start', 'position_g_end', 'mapping_flags') as $sCol) {
-                        if ($aLine[$sCol] && !ctype_digit($aLine[$sCol])) {
-                            lovd_errorAdd('import', 'Error (' . $sCurrentSection . ', line ' . $nLine . '): Invalid value in the \'' . $sCol . '\' field: "' . htmlspecialchars($aLine[$sCol]) . '" is not a numerical value.');
-                        }
-                    }
-
                     if ($zData) {
                         if ($nDifferences) {
                             $aLine['todo'] = 'update'; // OK, update only when there are differences.
@@ -1745,13 +1800,6 @@ if (POST || $_FILES) { // || $_FILES is in use for the automatic loading of file
                     if ($aLine['id'] && !$bVariantInFile && !$bVariantInDB) {
                         // Variant does not exist and is not defined in the import file.
                         lovd_errorAdd('import', 'Error (' . $sCurrentSection . ', line ' . $nLine . '): Genomic Variant "' . htmlspecialchars($aLine['variantid']) . '" does not exist in the database and is not defined in this import file.');
-                    }
-
-                    foreach (array('position_c_start', 'position_c_start_intron', 'position_c_end', 'position_c_end_intron') as $sCol) {
-                        if ($aLine[$sCol] && !is_numeric($aLine[$sCol])) {
-                            // No ctype_digit() here, because that doesn't match negative numbers.
-                            lovd_errorAdd('import', 'Error (' . $sCurrentSection . ', line ' . $nLine . '): Invalid value in the \'' . $sCol . '\' field: "' . htmlspecialchars($aLine[$sCol]) . '" is not a numerical value.');
-                        }
                     }
 
                     if ($zData) {

@@ -10,6 +10,7 @@
  * Copyright   : 2004-2016 Leiden University Medical Center; http://www.LUMC.nl/
  * Programmers : Ing. Ivo F.A.C. Fokkema <I.F.A.C.Fokkema@LUMC.nl>
  *               Ing. Ivar C. Lugtenburg <I.C.Lugtenburg@LUMC.nl>
+ *               M. Kroon <m.kroon@lumc.nl>
  *
  *
  * This file is part of LOVD.
@@ -123,7 +124,7 @@ class LOVD_Log extends LOVD_Object {
             case 'ColAdd':
             case 'ColEdit':
             case 'ColRemove':
-                $zData['entry'] = preg_replace('/olumn ([A-Z][A-Za-z\/_]+) /', 'olumn <A href="columns/$1">$1</A> ', $zData['entry']);
+                $zData['entry'] = preg_replace('/olumn ([A-Z][A-Za-z0-9\/_]+) /', 'olumn <A href="columns/$1">$1</A> ', $zData['entry']);
                 break;
             case 'DiseaseCreate':
             case 'DiseaseEdit':
@@ -131,6 +132,9 @@ class LOVD_Log extends LOVD_Object {
                 break;
             case 'CuratorAuthorize':
             case 'CuratorSort':
+                $zData['entry'] = preg_replace('/the ([A-Z][A-Za-z0-9-]+) gene/', 'the <A href="genes/$1">$1</A> gene', $zData['entry']);
+                $zData['entry'] = preg_replace('/#([0-9]+)\s/', '#<A href="users/$1">$1</A> ', $zData['entry']);
+                break;
             case 'GeneCreate':
             case 'GeneEdit':
             case 'GeneEmpty':

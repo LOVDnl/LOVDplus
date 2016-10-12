@@ -4,13 +4,14 @@
  * LEIDEN OPEN VARIATION DATABASE (LOVD)
  *
  * Created     : 2010-12-20
- * Modified    : 2015-10-09
- * For LOVD    : 3.0-14
+ * Modified    : 2016-04-16
+ * For LOVD    : 3.0-15
  *
- * Copyright   : 2004-2015 Leiden University Medical Center; http://www.LUMC.nl/
+ * Copyright   : 2004-2016 Leiden University Medical Center; http://www.LUMC.nl/
  * Programmers : Ing. Ivar C. Lugtenburg <I.C.Lugtenburg@LUMC.nl>
  *               Ing. Ivo F.A.C. Fokkema <I.F.A.C.Fokkema@LUMC.nl>
  *               Msc. Daan Asscheman <D.Asscheman@LUMC.nl>
+ *               M. Kroon <m.kroon@lumc.nl>
  *
  *
  * This file is part of LOVD.
@@ -72,9 +73,13 @@ class LOVD_GenomeVariant extends LOVD_Custom {
                                            'GROUP_CONCAT(s2v.screeningid SEPARATOR "|") AS screeningids, ' .
                                            'uo.name AS owned_by_, ' .
                                            'uc.name AS created_by_, ' .
-                                           'ue.name AS edited_by_, ' .
+                                           'ue.name AS edited_by_';
+        if (LOVD_plus) {
+            // Add curation status and confirmation status.
+            $this->aSQLViewEntry['SELECT'] .= ', ' .
                                            'curs.name AS curation_status_, ' .
                                            'cons.name AS confirmation_status_';
+        }
         $this->aSQLViewEntry['FROM']     = TABLE_VARIANTS . ' AS vog ' .
                                            'LEFT OUTER JOIN ' . TABLE_SCR2VAR . ' AS s2v ON (vog.id = s2v.variantid) ' .
                                            'LEFT OUTER JOIN ' . TABLE_SCREENINGS . ' AS s ON (s.id = s2v.screeningid) ' .
@@ -82,9 +87,13 @@ class LOVD_GenomeVariant extends LOVD_Custom {
                                            'LEFT OUTER JOIN ' . TABLE_ALLELES . ' AS a ON (vog.allele = a.id) ' .
                                            'LEFT OUTER JOIN ' . TABLE_USERS . ' AS uo ON (vog.owned_by = uo.id) ' .
                                            'LEFT OUTER JOIN ' . TABLE_USERS . ' AS uc ON (vog.created_by = uc.id) ' .
-                                           'LEFT OUTER JOIN ' . TABLE_USERS . ' AS ue ON (vog.edited_by = ue.id) ' .
+                                           'LEFT OUTER JOIN ' . TABLE_USERS . ' AS ue ON (vog.edited_by = ue.id)';
+        if (LOVD_plus) {
+            // Add curation status and confirmation status.
+            $this->aSQLViewEntry['FROM'] .= ' ' .
                                            'LEFT OUTER JOIN ' . TABLE_CURATION_STATUS . ' AS curs ON (vog.curation_statusid = curs.id)' .
                                            'LEFT OUTER JOIN ' . TABLE_CONFIRMATION_STATUS . ' AS cons ON (vog.confirmation_statusid = cons.id)';
+        }
         $this->aSQLViewEntry['GROUP_BY'] = 'vog.id';
 
         // SQL code for viewing the list of variants
@@ -137,6 +146,10 @@ class LOVD_GenomeVariant extends LOVD_Custom {
                         'edited_by_' => array('Last edited by', LEVEL_COLLABORATOR),
                         'edited_date_' => array('Date last edited', LEVEL_COLLABORATOR),
                       ));
+        if (!LOVD_plus) {
+            unset($this->aColumnsViewEntry['curation_status_']);
+            unset($this->aColumnsViewEntry['confirmation_status_']);
+        }
 
         // List of columns and (default?) order for viewing a list of entries.
         $this->aColumnsViewList = array_merge(
@@ -145,7 +158,7 @@ class LOVD_GenomeVariant extends LOVD_Custom {
                                     'view' => false,
                                     'db'   => array('screeningids', 'ASC', 'TEXT')),
                         'id_' => array(
-                                    'view' => array('Variant ID', 90),
+                                    'view' => array('Variant ID', 90, 'style="text-align : right;"'),
                                     'db'   => array('vog.id', 'ASC', true)),
                         'effect' => array(
                                     'view' => array('Effect', 70),
@@ -293,7 +306,7 @@ class LOVD_GenomeVariant extends LOVD_Custom {
         }
 
         if ($_AUTH['level'] >= LEVEL_CURATOR) {
-            $aSelectOwner = $_DB->query('SELECT id, name FROM ' . TABLE_USERS .
+            $aSelectOwner = $_DB->query('SELECT id, CONCAT(name, " (#", id, ")") as name_id FROM ' . TABLE_USERS .
                 (ACTION == 'edit' && ((int) $_POST['owned_by'] === 0 || LOVD_plus)? '' : ' WHERE id > 0') .
                 ' ORDER BY name')->fetchAllCombine();
             $aFormOwner = array('Owner of this data', '', 'select', 'owned_by', 1, $aSelectOwner, false, false, false);

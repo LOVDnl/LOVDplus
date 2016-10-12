@@ -4,14 +4,15 @@
  * LEIDEN OPEN VARIATION DATABASE (LOVD)
  *
  * Created     : 2010-12-15
- * Modified    : 2015-09-24
- * For LOVD    : 3.0-14
+ * Modified    : 2016-02-26
+ * For LOVD    : 3.0-15
  *
- * Copyright   : 2004-2015 Leiden University Medical Center; http://www.LUMC.nl/
+ * Copyright   : 2004-2016 Leiden University Medical Center; http://www.LUMC.nl/
  * Programmers : Ing. Ivo F.A.C. Fokkema <I.F.A.C.Fokkema@LUMC.nl>
  *               Ing. Ivar C. Lugtenburg <I.C.Lugtenburg@LUMC.nl>
  *               Msc. Daan Asscheman <D.Asscheman@LUMC.nl>
  *               David Baux <david.baux@inserm.fr>
+ *               M. Kroon <m.kroon@lumc.nl>
  *
  *
  * This file is part of LOVD.
@@ -44,6 +45,93 @@ if ($_AUTH) {
 
 
 
+function lovd_prepareCuratorLogMessage($sGeneID, $aCurators, $aAllowEdit, $aShown)
+{
+    // Creates a log message showing main differences between current database
+    // status and curator privileges given as parameters ($aCurators,
+    // $aAllowEdit, $aShown).
+    // Parameters:
+    //     $sGeneID: Gene ID.
+    //     $aCurators: array of curator IDs.
+    //     $aAllowEdit: array of curator IDs with edit privileges.
+    //     $aShown: array of curator IDs in order as shown on gene page.
+    global $_DB;
+
+    $sLogMessage = 'Updated curator list for the ' . $sGeneID . ' gene:' . "\n";
+
+    // Generate SQL condition for curator ID. This condition is needed to select
+    // users that are currently not associated with the gene.
+    $sSQLUserWhereCondition = '';
+    if (count($aCurators) > 0) {
+        $sSQLUserWhereCondition = 'u.id IN (?' . str_repeat(', ?', count($aCurators) - 1) . ') OR';
+    }
+
+    // Get all curators (past and new) from database.
+    $qUser = $_DB->query('SELECT u.id, u.name, u2g.allow_edit, u2g.show_order FROM ' .
+        TABLE_USERS . ' AS u LEFT OUTER JOIN ' . TABLE_CURATES . ' AS u2g ON (u.id = u2g.userid ' .
+        'AND u2g.geneid = ?) WHERE ' . $sSQLUserWhereCondition . ' u2g.geneid IS NOT NULL',
+        array_merge(array($sGeneID), $aCurators));
+    $aUserResult = $qUser->fetchAllAssoc();
+    $zUsers = array();
+    foreach ($aUserResult as $zResult) {
+        $zUsers[$zResult['id']] = $zResult;
+    }
+
+    foreach ($zUsers as $nUserID => $zUser) {
+        // Compare status of current privileges with those about to be submitted.
+
+        if (!in_array($nUserID, $aCurators)) {
+            $sLogMessage .= 'Removed user #' . $nUserID . ' (' . $zUser['name'] . ').' . "\n";
+            continue;
+        }
+
+        if (is_null($zUser['allow_edit']) && is_null($zUser['show_order'])) {
+            $sLogMessage .= 'Added user #' . $nUserID . ' (' . $zUser['name'] . ').' . "\n";
+            continue;
+        }
+
+        if ($zUser['show_order'] == '0' && in_array($nUserID, $aShown)) {
+            $sLogMessage .= 'Displayed user #' . $nUserID . ' (' . $zUser['name'] . ').' . "\n";
+
+        } elseif ($zUser['show_order'] != '0' && !in_array($nUserID, $aShown)) {
+            $sLogMessage .= 'Hid user #' . $nUserID . ' (' . $zUser['name'] . ').' . "\n";
+        }
+
+        if ($zUser['allow_edit'] == '0' && in_array($nUserID, $aAllowEdit)) {
+            $sLogMessage .= 'Given edit privileges to user #' . $nUserID . ' (' .
+                            $zUser['name'] . ').' . "\n";
+
+        } elseif ($zUser['allow_edit'] == '1' && !in_array($nUserID, $aAllowEdit)) {
+            $sLogMessage .= 'Retracted edit privileges from user #' . $nUserID . ' (' .
+                            $zUser['name'] . ').' . "\n";
+        }
+    }
+
+    // Format new order of curators with IDs and names.
+    $sLogMessage .= 'Order is now: ';
+    $aCuratorDisplaysShown = array();
+    $aCuratorDisplaysHidden = array();
+
+    foreach ($aCurators as $sCuratorID) {
+        if (isset($zUsers[$sCuratorID])) {
+            $sCuratorDisplay = 'user #' . $sCuratorID . ' (' . $zUsers[$sCuratorID]['name'] . ')';
+
+            if (in_array($sCuratorID, $aShown)) {
+                $aCuratorDisplaysShown[] = $sCuratorDisplay;
+            } else {
+                $aCuratorDisplaysHidden[] = $sCuratorDisplay;
+            }
+        }
+    }
+
+    $sLogMessage .= join(', ', $aCuratorDisplaysShown);
+    if (count($aCuratorDisplaysHidden) > 0) {
+        // Hidden curators are separate, their order may be off as it is implicit.
+        $sLogMessage .= ', ' . join(', ', $aCuratorDisplaysHidden);
+    }
+    return $sLogMessage;
+}
+
 
 
 if (PATH_COUNT == 1 && !ACTION) {
@@ -71,17 +159,17 @@ if (PATH_COUNT == 1 && !ACTION) {
 
 
 
-if (PATH_COUNT == 2 && preg_match('/^[a-z][a-z0-9#@-]+$/i', rawurldecode($_PE[1])) && !ACTION) {
+if (PATH_COUNT == 2 && preg_match('/^[a-z][a-z0-9#@-]*$/i', rawurldecode($_PE[1])) && !ACTION) {
     // URL: /genes/DMD
     // View specific entry.
 
     $sID = rawurldecode($_PE[1]);
-    define('PAGE_TITLE', 'View gene ' . $sID);
+    define('PAGE_TITLE', 'View ' . $sID . ' gene homepage');
     $_T->printHeader();
     $_T->printTitle();
     lovd_printGeneHeader();
 
-    // Load appropiate user level for this gene.
+    // Load appropriate user level for this gene.
     lovd_isAuthorized('gene', $sID);
 
     require ROOT_PATH . 'class/object_genes.php';
@@ -107,7 +195,9 @@ if (PATH_COUNT == 2 && preg_match('/^[a-z][a-z0-9#@-]+$/i', rawurldecode($_PE[1]
         $aNavigation[$_PE[0] . '/' . $sID . '/columns']          = array('menu_columns.png', 'View enabled variant columns', 1);
         $aNavigation[$_PE[0] . '/' . $sID . '/columns?order']    = array('menu_columns.png', 'Re-order enabled variant columns', 1);
         $aNavigation['columns/VariantOnTranscript']      = array('menu_columns.png', 'View all available variant columns', 1);
-//        $aNavigation['download/all/gene/' . $sID]        = array('menu_save.png', 'Download all this gene\'s data', 1);
+        if (!LOVD_plus) {
+            $aNavigation['download/all/gene/' . $sID]        = array('menu_save.png', 'Download all this gene\'s data', 1);
+        }
         $aNavigation['javascript:lovd_openWindow(\'' . lovd_getInstallURL() . 'scripts/refseq_parser.php?step=1&amp;symbol=' . $sID . '\', \'refseq_parser\', 900, 500);'] = array('menu_scripts.png', 'Create human-readable refseq file', ($zData['refseq_UD'] && count($zData['transcripts'])));
     }
     lovd_showJGNavigation($aNavigation, 'Genes');
@@ -150,8 +240,12 @@ if (PATH_COUNT == 1 && ACTION == 'create') {
     lovd_requireAUTH(LEVEL_MANAGER);
 
     require ROOT_PATH . 'class/object_genes.php';
+    // FIXME: This is just to use two functions of the object that don't actually use the object. Better put them elsewhere.
+    require ROOT_PATH . 'class/object_transcripts.php';
     require ROOT_PATH . 'inc-lib-form.php';
-    $_DATA = new LOVD_Gene();
+    $_DATA['Genes'] = new LOVD_Gene();
+    // FIXME: This is just to use two functions of the object that don't actually use the object. Better put them elsewhere.
+    $_DATA['Transcript'] = new LOVD_transcript();
 
     $sPath = CURRENT_PATH . '?' . ACTION;
     if (GET) {
@@ -180,11 +274,12 @@ if (PATH_COUNT == 1 && ACTION == 'create') {
                 // Gene Symbol must be unique.
                 // Enforced in the table, but we want to handle this gracefully.
                 // When numeric, we search the id_hgnc field. When not, we search the id (gene symbol) field.
-                $sSQL = 'SELECT COUNT(*) FROM ' . TABLE_GENES . ' WHERE id' . (!ctype_digit($_POST['hgnc_id'])? '' : '_hgnc') . ' = ?';
+                $sSQL = 'SELECT id, id_hgnc FROM ' . TABLE_GENES . ' WHERE id' . (!ctype_digit($_POST['hgnc_id'])? '' : '_hgnc') . ' = ?';
                 $aSQL = array($_POST['hgnc_id']);
+                $result = $_DB->query($sSQL, $aSQL)->fetchObject();
 
-                if ($_DB->query($sSQL, $aSQL)->fetchColumn()) {
-                    lovd_errorAdd('hgnc_id', 'This gene entry is already present in this LOVD installation.');
+                if ($result !== false) {
+                    lovd_errorAdd('hgnc_id', sprintf('This gene entry (%s, HGNC-ID=%d) is already present in this LOVD installation.', $result->id, $result->id_hgnc));
                 } else {
                     // This call already makes the needed lovd_errorAdd() calls.
                     $aGeneInfo = lovd_getGeneInfoFromHGNC($_POST['hgnc_id']);
@@ -196,10 +291,6 @@ if (PATH_COUNT == 1 && ACTION == 'create') {
                         $sEntrez = $aGeneInfo['entrez_id'];
                         // OMIM ID is not always defined.
                         $nOmim = (!isset($aGeneInfo['omim_id'])? '' : $aGeneInfo['omim_id']);
-                        // For now, until NCBI has fixed their API, we can't create MT- genes (Mutalyzer cannot get a proper reference sequence).
-                        if (substr($sSymbol, 0, 3) == 'MT-') {
-                            lovd_errorAdd('', 'Unfortunately, due to some problems on the side of the NCBI, we are unable to handle variants on the mitochondrial genome at this time. When the NCBI has fixed the problem, we will implement support for MT genes.');
-                        }
                     }
                 }
             }
@@ -215,6 +306,7 @@ if (PATH_COUNT == 1 && ACTION == 'create') {
                                  '        </FORM>';
 
                 $_BAR = new ProgressBar('', 'Collecting gene information...', $sFormNextPage);
+                $nProgress = 0.0;
 
                 $_T->printFooter(false);
 
@@ -233,14 +325,14 @@ if (PATH_COUNT == 1 && ACTION == 'create') {
 
                 // Get NG if it exists
                 $_BAR->setMessage('Checking for NG...');
-                $_BAR->setProgress(16);
+                $_BAR->setProgress($nProgress += 16);
                 if ($sNG = lovd_getNGbyGeneSymbol($sSymbol)) {
                     $aRefseqGenomic[] = $sNG;
                 }
 
                 // Get NC from LOVD
                 $_BAR->setMessage('Checking for NC...');
-                $_BAR->setProgress(33);
+                $_BAR->setProgress($nProgress += 17);
 
                 if ($sChromLocation == 'mitochondria') {
                     $sChromosome = 'M';
@@ -253,7 +345,7 @@ if (PATH_COUNT == 1 && ACTION == 'create') {
                 $aRefseqGenomic[] = $_SETT['human_builds'][$_CONF['refseq_build']]['ncbi_sequences'][$sChromosome];
 
                 $_BAR->setMessage('Making a gene slice of the NC...');
-                $_BAR->setProgress(49);
+                $_BAR->setProgress($nProgress += 16);
                 // 2014-05-23; 3.0-11; Don't bother trying to get an UD for a mitochondrial gene, the NCBI uses different names and you will never get it...
                 if ($sChromosome == 'M') {
                     // Instead of the UD, we just use the NC, it's small enough.
@@ -262,6 +354,14 @@ if (PATH_COUNT == 1 && ACTION == 'create') {
                     // Get UD from mutalyzer.
                     try {
                         $sRefseqUD = lovd_getUDForGene($_CONF['refseq_build'], $sSymbol);
+                        if ($sRefseqUD === '') {
+                            // Function may return an empty string. This is not a SOAP error, but still an error. For instance a type of gene we don't support.
+                            // To prevent further problems (getting transcripts, let's handle this nicely, shall we?
+                            $_BAR->setMessage('Failed to retreive gene reference sequence. This could be a temporary error, but it is likely that this gene is not supported by LOVD.', 'done');
+                            $_BAR->setMessageVisibility('done', true);
+                            die('</BODY>' . "\n" .
+                                '</HTML>' . "\n");
+                        }
                     } catch (SoapFault $e) {
                         lovd_soapError($e);
                     }
@@ -270,63 +370,10 @@ if (PATH_COUNT == 1 && ACTION == 'create') {
                 // Get all transcripts and info.
                 // FIXME: When changing code here, check in transcripts?create if you need to make changes there, too.
                 $_BAR->setMessage('Collecting all available transcripts...');
-                $_BAR->setProgress(66);
-                // 2014-05-23; 3.0-11; For Mitochondrial genes, we won't be able to get any proper transcript information. Fake one.
-                // FIXME: Actually, using the incorrect gene symbol, we can get some info:
-                // (some info is missing apparently! - chromTransStart, chromTransEnd, ...)
-                if ($sChromosome == 'M') {
-                    $sRefseqNM = $sRefseqUD . '(' . $sSymbol . '_v001)';
-                    $aTranscripts = array($sRefseqNM);
-                    $aTranscriptsMutalyzer = array($sRefseqNM => '001');
-                    $aTranscriptsProtein = array($sRefseqNM => '');
-                    $aTranscriptsName = array($sRefseqNM => 'transcript variant 1'); // FIXME: Perhaps indicate this transcript is a fake one, reconstructed from the CDS?
-                    $aTranscriptsPositions = array($sRefseqNM =>
-                        array(
-                            'chromTransStart' => 0,
-                            'chromTransEnd' => 0,
-                            'cTransStart' => 0, // Should be 1, but because we don't know any of the other values, I will just leave all set to 0.
-                            'cTransEnd' => 0,
-                            'cCDSStop' => 0,
-                        ));
-                } else {
-                    try {
-                        // Can throw notice when TranscriptInfo is not present (when a gene recently has been renamed, for instance).
-                        $aTranscriptInfo = @$_Mutalyzer->getTranscriptsAndInfo(array('genomicReference' => $sRefseqUD, 'geneName' => $sSymbol))->getTranscriptsAndInfoResult->TranscriptInfo;
-                    } catch (SoapFault $e) {
-                        lovd_soapError($e);
-                    }
-                    if (empty($aTranscriptInfo)) {
-                        // No transcripts found.
-                        $aTranscriptInfo = array();
-                    }
+                $_BAR->setProgress($nProgress += 17);
 
-                    $aTranscripts = array();
-                    $aTranscriptsName = array();
-                    $aTranscriptsMutalyzer = array();
-                    $aTranscriptsPositions = array();
-                    $aTranscriptsProtein = array();
-                    $nTranscripts = count($aTranscriptInfo);
-                    $nProgress = 0.0;
-                    foreach($aTranscriptInfo as $oTranscript) {
-                        $nProgress += (34/$nTranscripts);
-                        $_BAR->setMessage('Collecting ' . $oTranscript->id . ' info...');
-                        if ($oTranscript->id) {
-                            $aTranscripts[] = $oTranscript->id;
-                            $aTranscriptsName[preg_replace('/\.\d+/', '', $oTranscript->id)] = str_replace($sGeneName . ', ', '', $oTranscript->product);
-                            $aTranscriptsMutalyzer[preg_replace('/\.\d+/', '', $oTranscript->id)] = str_replace($sSymbol . '_v', '', $oTranscript->name);
-                            $aTranscriptsPositions[$oTranscript->id] =
-                                array(
-                                    'chromTransStart' => (isset($oTranscript->chromTransStart)? $oTranscript->chromTransStart : 0),
-                                    'chromTransEnd' => (isset($oTranscript->chromTransEnd)? $oTranscript->chromTransEnd : 0),
-                                    'cTransStart' => $oTranscript->cTransStart,
-                                    'cTransEnd' => $oTranscript->sortableTransEnd,
-                                    'cCDSStop' => $oTranscript->cCDSStop,
-                                );
-                            $aTranscriptsProtein[$oTranscript->id] = (!isset($oTranscript->proteinTranscript)? '' : $oTranscript->proteinTranscript->id);
-                        }
-                        $_BAR->setProgress(66 + $nProgress);
-                    }
-                }
+                $aTranscripts = $_DATA['Transcript']->getTranscriptPositions($sRefseqUD, $sSymbol, $sGeneName, $nProgress);
+
                 $_BAR->setProgress(100);
                 $_BAR->setMessage('Information collected, now building form...');
                 $_BAR->setMessageVisibility('done', true);
@@ -344,11 +391,11 @@ if (PATH_COUNT == 1 && ACTION == 'create') {
                                                                 );
                 if (!empty($aTranscripts)) {
                     $_SESSION['work'][$sPath][$_POST['workID']]['values'] = array_merge($_SESSION['work'][$sPath][$_POST['workID']]['values'], array(
-                                                                  'transcripts' => $aTranscripts,
-                                                                  'transcriptMutalyzer' => $aTranscriptsMutalyzer,
-                                                                  'transcriptsProtein' => $aTranscriptsProtein,
-                                                                  'transcriptNames' => $aTranscriptsName,
-                                                                  'transcriptPositions' => $aTranscriptsPositions,
+                                                                  'transcripts' => $aTranscripts['id'],
+                                                                  'transcriptMutalyzer' => $aTranscripts['mutalyzer'],
+                                                                  'transcriptsProtein' => $aTranscripts['protein'],
+                                                                  'transcriptNames' => $aTranscripts['name'],
+                                                                  'transcriptPositions' => $aTranscripts['positions'],
                                                                 ));
                 }
 
@@ -402,7 +449,7 @@ if (PATH_COUNT == 1 && ACTION == 'create') {
         if (count($_POST) > 1) {
             lovd_errorClean();
 
-            $_DATA->checkFields($_POST, $zData);
+            $_DATA['Genes']->checkFields($_POST, $zData);
 
             if (!lovd_error()) {
                 // Fields to be used.
@@ -426,7 +473,7 @@ if (PATH_COUNT == 1 && ACTION == 'create') {
                 $_POST['id_entrez'] = ($zData['id_entrez']? $zData['id_entrez'] : '');
                 $_POST['id_omim'] = ($zData['id_omim']? $zData['id_omim'] : '');
 
-                $_DATA->insertEntry($_POST, $aFields);
+                $_DATA['Genes']->insertEntry($_POST, $aFields);
 
                 // Add the default custom columns to this gene.
                 lovd_addAllDefaultCustomColumns('gene', $_POST['id']);
@@ -464,31 +511,64 @@ if (PATH_COUNT == 1 && ACTION == 'create') {
                         if (!$sTranscript) {
                             continue;
                         }
-                        // Gather transcript information from session.
-                        $nMutalyzerID = $zData['transcriptMutalyzer'][preg_replace('/\.\d+$/', '', $sTranscript)];
-                        $sTranscriptProtein = $zData['transcriptsProtein'][$sTranscript];
-                        $sTranscriptName = $zData['transcriptNames'][preg_replace('/\.\d+$/', '', $sTranscript)];
-                        $aTranscriptPositions = $zData['transcriptPositions'][$sTranscript];
+                        // FIXME; If else statement is temporary. Now we only use the transcript object to save the transcripts for mitochondrial genes.
+                        // Later all transcripts will be saved like this. For the sake of clarity this will be done in a separate commit.
+                        if ($zData['chromosome'] == 'M') {
+                            $zDataTranscript = array(
+                                'geneid' => $_POST['id'],
+                                'name' => $zData['transcriptNames'][$sTranscript],
+                                'id_mutalyzer' => $zData['transcriptMutalyzer'][$sTranscript],
+                                'id_ncbi' => $sTranscript,
+                                'id_ensembl' => '',
+                                'id_protein_ncbi' => $zData['transcriptsProtein'][$sTranscript],
+                                'id_protein_ensembl' => '',
+                                'id_protein_uniprot' => '',
+                                'position_c_mrna_start' => $zData['transcriptPositions'][$sTranscript]['cTransStart'],
+                                'position_c_mrna_end' => $zData['transcriptPositions'][$sTranscript]['cTransEnd'],
+                                'position_c_cds_end' => $zData['transcriptPositions'][$sTranscript]['cCDSStop'],
+                                'position_g_mrna_start' => $zData['transcriptPositions'][$sTranscript]['chromTransStart'],
+                                'position_g_mrna_end' => $zData['transcriptPositions'][$sTranscript]['chromTransEnd'],
+                                'created_date' => date('Y-m-d H:i:s'),
+                                'created_by' => $_POST['created_by'],
+                            );
 
-                        // Add transcript to gene.
-                        $q = $_DB->query('INSERT INTO ' . TABLE_TRANSCRIPTS . '(id, geneid, name, id_mutalyzer, id_ncbi, id_ensembl, id_protein_ncbi, id_protein_ensembl, id_protein_uniprot, position_c_mrna_start, position_c_mrna_end, position_c_cds_end, position_g_mrna_start, position_g_mrna_end, created_date, created_by) ' .
-                                         'VALUES(NULL, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), ?)',
-                                         array($_POST['id'], $sTranscriptName, $nMutalyzerID, $sTranscript, '', $sTranscriptProtein, '', '', $aTranscriptPositions['cTransStart'], $aTranscriptPositions['cTransEnd'], $aTranscriptPositions['cCDSStop'], $aTranscriptPositions['chromTransStart'], $aTranscriptPositions['chromTransEnd'], $_POST['created_by']));
-                        if (!$q) {
-                            // Silent error.
-                            lovd_writeLog('Error', LOG_EVENT, 'Transcript information entry ' . $sTranscript . ' - ' . ' - could not be added to gene ' . $_POST['id']);
-                        } else {
+                            if (!$_DATA['Transcript']->insertEntry($zDataTranscript, array_keys($zDataTranscript))) {
+                                // Silent error.
+                                lovd_writeLog('Error', LOG_EVENT, 'Transcript information entry ' . $sTranscript . ' - ' . ' - could not be added to gene ' . $_POST['id']);
+                                continue;
+                            }
+
                             $aSuccessTranscripts[] = $sTranscript;
+                            $_DATA['Transcript']->turnOffMappingDone($_POST['chromosome'], $zData['transcriptPositions'][$sTranscript]);
 
-                            // Turn off the MAPPING_DONE flags for variants within range of this transcript, so that automatic mapping will pick them up again.
-                            $q = $_DB->query('UPDATE ' . TABLE_VARIANTS . ' SET mapping_flags = mapping_flags & ~' . MAPPING_DONE . ' WHERE chromosome = ? AND ' .
-                                             '(position_g_start BETWEEN ? AND ?) OR ' .
-                                             '(position_g_end   BETWEEN ? AND ?) OR ' .
-                                             '(position_g_start < ? AND position_g_end > ?)',
-                                             array($_POST['chromosome'], $aTranscriptPositions['chromTransStart'], $aTranscriptPositions['chromTransEnd'], $aTranscriptPositions['chromTransStart'], $aTranscriptPositions['chromTransEnd'], $aTranscriptPositions['chromTransStart'], $aTranscriptPositions['chromTransEnd']));
-                            if ($q->rowCount()) {
-                                // If we have changed variants, turn on mapping immediately.
-                                $_SESSION['mapping']['time_complete'] = 0;
+                        } else {
+                            // Gather transcript information from session.
+                            // Until revision 679 the transcript version was not used in the index.
+                            // Can not figure out why version is not included. Therefore, for now we will do without.
+                            $nMutalyzerID = $zData['transcriptMutalyzer'][$sTranscript];
+                            $sTranscriptProtein = $zData['transcriptsProtein'][$sTranscript];
+                            $sTranscriptName = $zData['transcriptNames'][$sTranscript];
+                            $aTranscriptPositions = $zData['transcriptPositions'][$sTranscript];
+                            // Add transcript to gene.
+                            $q = $_DB->query('INSERT INTO ' . TABLE_TRANSCRIPTS . '(id, geneid, name, id_mutalyzer, id_ncbi, id_ensembl, id_protein_ncbi, id_protein_ensembl, id_protein_uniprot, position_c_mrna_start, position_c_mrna_end, position_c_cds_end, position_g_mrna_start, position_g_mrna_end, created_date, created_by) ' .
+                                             'VALUES(NULL, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), ?)',
+                                             array($_POST['id'], $sTranscriptName, $nMutalyzerID, $sTranscript, '', $sTranscriptProtein, '', '', $aTranscriptPositions['cTransStart'], $aTranscriptPositions['cTransEnd'], $aTranscriptPositions['cCDSStop'], $aTranscriptPositions['chromTransStart'], $aTranscriptPositions['chromTransEnd'], $_POST['created_by']));
+                            if (!$q) {
+                                // Silent error.
+                                lovd_writeLog('Error', LOG_EVENT, 'Transcript information entry ' . $sTranscript . ' - ' . ' - could not be added to gene ' . $_POST['id']);
+                            } else {
+                                $aSuccessTranscripts[] = $sTranscript;
+
+                                // Turn off the MAPPING_DONE flags for variants within range of this transcript, so that automatic mapping will pick them up again.
+                                $q = $_DB->query('UPDATE ' . TABLE_VARIANTS . ' SET mapping_flags = mapping_flags & ~' . MAPPING_DONE . ' WHERE chromosome = ? AND (' .
+                                                 '(position_g_start BETWEEN ? AND ?) OR ' .
+                                                 '(position_g_end   BETWEEN ? AND ?) OR ' .
+                                                 '(position_g_start < ? AND position_g_end > ?))',
+                                                 array($_POST['chromosome'], $aTranscriptPositions['chromTransStart'], $aTranscriptPositions['chromTransEnd'], $aTranscriptPositions['chromTransStart'], $aTranscriptPositions['chromTransEnd'], $aTranscriptPositions['chromTransStart'], $aTranscriptPositions['chromTransEnd']));
+                                if ($q->rowCount()) {
+                                    // If we have changed variants, turn on mapping immediately.
+                                    $_SESSION['mapping']['time_complete'] = 0;
+                                }
                             }
                         }
                     }
@@ -526,7 +606,7 @@ if (PATH_COUNT == 1 && ACTION == 'create') {
             }
         } else {
             // Default values.
-            $_DATA->setDefaultValues();
+            $_DATA['Genes']->setDefaultValues();
         }
 
         $_T->printHeader();
@@ -548,7 +628,7 @@ if (PATH_COUNT == 1 && ACTION == 'create') {
 
         // Array which will make up the form table.
         $aForm = array_merge(
-                     $_DATA->getForm(),
+                     $_DATA['Genes']->getForm(),
                      array(
                             array('', '', 'submit', 'Create gene information entry'),
                           ));
@@ -566,7 +646,7 @@ if (PATH_COUNT == 1 && ACTION == 'create') {
 
 
 
-if (PATH_COUNT == 2 && preg_match('/^[a-z][a-z0-9#@-]+$/i', rawurldecode($_PE[1])) && ACTION == 'edit') {
+if (PATH_COUNT == 2 && preg_match('/^[a-z][a-z0-9#@-]*$/i', rawurldecode($_PE[1])) && ACTION == 'edit') {
     // URL: /genes/DMD?edit
     // Edit an entry.
 
@@ -574,7 +654,7 @@ if (PATH_COUNT == 2 && preg_match('/^[a-z][a-z0-9#@-]+$/i', rawurldecode($_PE[1]
     define('PAGE_TITLE', 'Edit gene information entry');
     define('LOG_EVENT', 'GeneEdit');
 
-    // Load appropiate user level for this gene.
+    // Load appropriate user level for this gene.
     lovd_isAuthorized('gene', $sID);
     lovd_requireAUTH(LEVEL_CURATOR);
 
@@ -755,7 +835,7 @@ if (PATH_COUNT == 2 && preg_match('/^[a-z][a-z0-9#@-]+$/i', rawurldecode($_PE[1]
 
 
 
-if (PATH_COUNT == 2 && preg_match('/^[a-z][a-z0-9#@-]+$/i', rawurldecode($_PE[1])) && ACTION == 'empty') {
+if (PATH_COUNT == 2 && preg_match('/^[a-z][a-z0-9#@-]*$/i', rawurldecode($_PE[1])) && ACTION == 'empty') {
     // URL: /genes/DMD?empty
     // Empty the gene database (delete all variants and associated data).
 
@@ -765,7 +845,7 @@ if (PATH_COUNT == 2 && preg_match('/^[a-z][a-z0-9#@-]+$/i', rawurldecode($_PE[1]
     $_T->printHeader();
     $_T->printTitle();
 
-    // Load appropiate user level for this gene.
+    // Load appropriate user level for this gene.
     lovd_isAuthorized('gene', $sID);
     lovd_requireAUTH(LEVEL_CURATOR);
 
@@ -919,7 +999,7 @@ if (PATH_COUNT == 2 && preg_match('/^[a-z][a-z0-9#@-]+$/i', rawurldecode($_PE[1]
 
 
 
-if (PATH_COUNT == 2 && preg_match('/^[a-z][a-z0-9#@-]+$/i', rawurldecode($_PE[1])) && ACTION == 'delete') {
+if (PATH_COUNT == 2 && preg_match('/^[a-z][a-z0-9#@-]*$/i', rawurldecode($_PE[1])) && ACTION == 'delete') {
     // URL: /genes/DMD?delete
     // Drop specific entry.
 
@@ -938,40 +1018,43 @@ if (PATH_COUNT == 2 && preg_match('/^[a-z][a-z0-9#@-]+$/i', rawurldecode($_PE[1]
     $sID = $zData['id'];
     require ROOT_PATH . 'inc-lib-form.php';
 
-    if (!empty($_POST)) {
+    // Check whether user has submitted and confirmed the form/action.
+    $bValidPassword = false;
+    $bConfirmation = !empty($_GET['confirm']);
+    if (POST) {
         lovd_errorClean();
 
         // Mandatory fields.
         if (empty($_POST['password'])) {
             lovd_errorAdd('password', 'Please fill in the \'Enter your password for authorization\' field.');
-        }
 
-        // User had to enter his/her password for authorization.
-        if ($_POST['password'] && !lovd_verifyPassword($_POST['password'], $_AUTH['password'])) {
+        } elseif (!lovd_verifyPassword($_POST['password'], $_AUTH['password'])) {
             lovd_errorAdd('password', 'Please enter your correct password for authorization.');
-        }
-
-        if (!lovd_error()) {
-            // This also deletes the entries in gen2dis and transcripts.
-            $_DATA->deleteEntry($sID);
-
-            // Write to log...
-            lovd_writeLog('Event', LOG_EVENT, 'Deleted gene information entry ' . $sID . ' - ' . $zData['id'] . ' (' . $zData['name'] . ')');
-
-            // Thank the user...
-            header('Refresh: 3; url=' . lovd_getInstallURL() . $_PE[0]);
-
-            $_T->printHeader();
-            $_T->printTitle();
-            lovd_showInfoTable('Successfully deleted the gene information entry!', 'success');
-
-            $_T->printFooter();
-            exit;
 
         } else {
-            // Because we're sending the data back to the form, I need to unset the password fields!
-            unset($_POST['password']);
+            $bValidPassword = true;
         }
+
+        // Remove password from default values shown in confirmation form.
+        unset($_POST['password']);
+    }
+
+    if ($bValidPassword && $bConfirmation) {
+        // This also deletes the entries in gen2dis and transcripts.
+        $_DATA->deleteEntry($sID);
+
+        // Write to log...
+        lovd_writeLog('Event', LOG_EVENT, 'Deleted gene information entry ' . $sID . ' - ' . $zData['id'] . ' (' . $zData['name'] . ')');
+
+        // Thank the user...
+        header('Refresh: 3; url=' . lovd_getInstallURL() . $_PE[0]);
+
+        $_T->printHeader();
+        $_T->printTitle();
+        lovd_showInfoTable('Successfully deleted the gene information entry!', 'success');
+
+        $_T->printFooter();
+        exit;
     }
 
 
@@ -982,10 +1065,26 @@ if (PATH_COUNT == 2 && preg_match('/^[a-z][a-z0-9#@-]+$/i', rawurldecode($_PE[1]
     lovd_showInfoTable('This will delete the ' . $zData['id'] . ' gene, all transcripts of this gene, and all annotations on variants specific for ' . $zData['id'] . '. The genomic variants and all individual-related information, including screenings, phenotypes and diseases, will not be deleted, so these might be left without a curator able to manage the data.<BR>
                         <B>If you also wish to remove all information on individuals with variants in ' . $zData['id'] . ', first <A href="' . $_PE[0] . '/' . $sID . '?empty">empty</A> the gene database.</B>', 'warning');
 
+    if ($bValidPassword) {
+        $zCounts = $_DB->query('SELECT count(DISTINCT t.id) AS tcount, count(DISTINCT vot.id) AS votcount
+                                FROM ' . TABLE_TRANSCRIPTS . ' AS t
+                                 LEFT OUTER JOIN ' . TABLE_VARIANTS_ON_TRANSCRIPTS . ' AS vot ON (t.id = vot.transcriptid)
+                                WHERE t.geneid = ?', array($sID))->fetchAssoc();
+        if ($zCounts['tcount'] || $zCounts['votcount']) {
+            lovd_showInfoTable('<B>You are about to delete ' . $zCounts['tcount'] .
+                ' transcript(s) and related information on ' . $zCounts['votcount'] .
+                ' variant(s) on those transcripts. Please fill in your password one more time ' .
+                'to confirm the removal of gene ' . $sID . '</B>', 'warning');
+        } else {
+            lovd_showInfoTable('<B>Please note the message above and fill in your password one ' .
+                'more time to confirm the removal of gene ' . $sID . '</B>', 'warning');
+        }
+    }
+
     lovd_errorPrint();
 
     // Table.
-    print('      <FORM action="' . $_PE[0] . '/' . $sID . '?' . ACTION . '" method="post">' . "\n");
+    print('      <FORM action="' . $_PE[0] . '/' . $sID . '?' . ACTION . (!$bValidPassword? '' : '&confirm=true') . '" method="post">' . "\n");
 
     // Array which will make up the form table.
     $aForm = array_merge(
@@ -1008,7 +1107,7 @@ if (PATH_COUNT == 2 && preg_match('/^[a-z][a-z0-9#@-]+$/i', rawurldecode($_PE[1]
 
 
 
-if (PATH_COUNT == 3 && preg_match('/^[a-z][a-z0-9#@-]+$/i', rawurldecode($_PE[1])) && $_PE[2] == 'columns' && !ACTION) {
+if (PATH_COUNT == 3 && preg_match('/^[a-z][a-z0-9#@-]*$/i', rawurldecode($_PE[1])) && $_PE[2] == 'columns' && !ACTION) {
     // URL: /genes/DMD/columns
     // View enabled columns for this gene.
 
@@ -1017,7 +1116,7 @@ if (PATH_COUNT == 3 && preg_match('/^[a-z][a-z0-9#@-]+$/i', rawurldecode($_PE[1]
     $_T->printHeader();
     $_T->printTitle();
 
-    // Load appropiate user level for this gene.
+    // Load appropriate user level for this gene.
     lovd_isAuthorized('gene', $sID);
     lovd_requireAUTH(LEVEL_CURATOR);
 
@@ -1038,7 +1137,7 @@ if (PATH_COUNT == 3 && preg_match('/^[a-z][a-z0-9#@-]+$/i', rawurldecode($_PE[1]
 
 
 
-if (PATH_COUNT > 3 && preg_match('/^[a-z][a-z0-9#@-]+$/i', rawurldecode($_PE[1])) && $_PE[2] == 'columns' && !ACTION) {
+if (PATH_COUNT > 3 && preg_match('/^[a-z][a-z0-9#@-]*$/i', rawurldecode($_PE[1])) && $_PE[2] == 'columns' && !ACTION) {
     // URL: /genes/DMD/columns/DNA
     // URL: /genes/DMD/columns/GVS/Function
     // View specific enabled column for this gene.
@@ -1054,7 +1153,7 @@ if (PATH_COUNT > 3 && preg_match('/^[a-z][a-z0-9#@-]+$/i', rawurldecode($_PE[1])
     $_T->printHeader();
     $_T->printTitle();
 
-    // Load appropiate user level for this gene.
+    // Load appropriate user level for this gene.
     lovd_isAuthorized($sUnit, $sParentID);
     lovd_requireAUTH(LEVEL_CURATOR); // Will also stop user if gene given is fake.
 
@@ -1078,7 +1177,7 @@ if (PATH_COUNT > 3 && preg_match('/^[a-z][a-z0-9#@-]+$/i', rawurldecode($_PE[1])
 
 
 
-if (PATH_COUNT > 3 && preg_match('/^[a-z][a-z0-9#@-]+$/i', rawurldecode($_PE[1])) && $_PE[2] == 'columns' && ACTION == 'edit') {
+if (PATH_COUNT > 3 && preg_match('/^[a-z][a-z0-9#@-]*$/i', rawurldecode($_PE[1])) && $_PE[2] == 'columns' && ACTION == 'edit') {
     // URL: /genes/DMD/columns/DNA?edit
     // URL: /genes/DMD/columns/GVS/Function?edit
     // Edit specific enabled column for this gene.
@@ -1093,7 +1192,7 @@ if (PATH_COUNT > 3 && preg_match('/^[a-z][a-z0-9#@-]+$/i', rawurldecode($_PE[1])
     define('PAGE_TITLE', 'Edit settings for custom data column ' . $sColumnID . ' for ' . $sUnit . ' ' . $sParentID);
     define('LOG_EVENT', 'SharedColEdit');
 
-    // Load appropiate user level for this gene.
+    // Load appropriate user level for this gene.
     lovd_isAuthorized($sUnit, $sParentID);
     lovd_requireAUTH(LEVEL_CURATOR); // Will also stop user if gene given is fake.
 
@@ -1183,7 +1282,7 @@ if (PATH_COUNT > 3 && preg_match('/^[a-z][a-z0-9#@-]+$/i', rawurldecode($_PE[1])
 
 
 
-if (PATH_COUNT == 3 && preg_match('/^[a-z][a-z0-9#@-]+$/i', rawurldecode($_PE[1])) && $_PE[2] == 'columns' && ACTION == 'order') {
+if (PATH_COUNT == 3 && preg_match('/^[a-z][a-z0-9#@-]*$/i', rawurldecode($_PE[1])) && $_PE[2] == 'columns' && ACTION == 'order') {
     // URL: /genes/DMD/columns?order
     // Change order of enabled columns for this gene.
 
@@ -1193,7 +1292,7 @@ if (PATH_COUNT == 3 && preg_match('/^[a-z][a-z0-9#@-]+$/i', rawurldecode($_PE[1]
     $_T->printHeader();
     $_T->printTitle();
 
-    // Load appropiate user level for this gene.
+    // Load appropriate user level for this gene.
     lovd_isAuthorized('gene', $sID);
     lovd_requireAUTH(LEVEL_CURATOR);
 
@@ -1276,7 +1375,7 @@ if (PATH_COUNT == 3 && preg_match('/^[a-z][a-z0-9#@-]+$/i', rawurldecode($_PE[1]
 
 
 
-if (PATH_COUNT == 3 && preg_match('/^[a-z][a-z0-9#@-]+$/i', rawurldecode($_PE[1])) && $_PE[2] == 'graphs' && !ACTION) {
+if (PATH_COUNT == 3 && preg_match('/^[a-z][a-z0-9#@-]*$/i', rawurldecode($_PE[1])) && $_PE[2] == 'graphs' && !ACTION) {
     // URL: /genes/DMD/graphs
     // Show different graphs about this gene; variant type (DNA, RNA & Protein level), ...
 
@@ -1389,7 +1488,7 @@ if (PATH_COUNT == 3 && preg_match('/^[a-z][a-z0-9#@-]+$/i', rawurldecode($_PE[1]
 
 
 
-if (PATH_COUNT == 2 && preg_match('/^[a-z][a-z0-9#@-]+$/i', rawurldecode($_PE[1])) && in_array(ACTION, array('authorize', 'sortCurators'))) {
+if (PATH_COUNT == 2 && preg_match('/^[a-z][a-z0-9#@-]*$/i', rawurldecode($_PE[1])) && in_array(ACTION, array('authorize', 'sortCurators'))) {
     // URL: /genes/DMD?authorize
     // URL: /genes/DMD?sortCurators
     // Authorize users to be curators or collaborators for this gene, and/or define the order in which they're shown.
@@ -1409,7 +1508,7 @@ if (PATH_COUNT == 2 && preg_match('/^[a-z][a-z0-9#@-]+$/i', rawurldecode($_PE[1]
     }
     $sID = $sVerifiedID;
 
-    // Load appropiate user level for this gene.
+    // Load appropriate user level for this gene.
     lovd_isAuthorized('gene', $sID);
 
     if (ACTION == 'authorize' && $_AUTH['level'] < LEVEL_MANAGER) {
@@ -1487,6 +1586,13 @@ if (PATH_COUNT == 2 && preg_match('/^[a-z][a-z0-9#@-]+$/i', rawurldecode($_PE[1]
 
         if (!lovd_error()) {
             // What's by far the most efficient code-wise is just insert/update all we've got and delete everything else.
+
+            // Prepare log for changes.
+            // (depends on current database status, so we create the log message before
+            // the changes are committed, but log the actual message afterwards).
+            $sLogMessage = lovd_prepareCuratorLogMessage($sID, $_POST['curators'],
+                                                         $_POST['allow_edit'], $_POST['shown']);
+
             $_DB->beginTransaction();
 
             foreach ($_POST['curators'] as $nOrder => $nUserID) {
@@ -1515,12 +1621,7 @@ if (PATH_COUNT == 2 && preg_match('/^[a-z][a-z0-9#@-]+$/i', rawurldecode($_PE[1]
             $_DB->commit();
 
             // Write to log...
-            if (ACTION == 'authorize') {
-                $sMessage = 'Updated curator list for the ' . $sID . ' gene';
-            } else {
-                $sMessage = 'Resorted curator list for the ' . $sID . ' gene';
-            }
-            lovd_writeLog('Event', LOG_EVENT, $sMessage);
+            lovd_writeLog('Event', LOG_EVENT, $sLogMessage);
 
             // Thank the user...
             header('Refresh: 3; url=' . lovd_getInstallURL() . $_PE[0] . '/' . $sID);
@@ -1617,7 +1718,7 @@ if (PATH_COUNT == 2 && preg_match('/^[a-z][a-z0-9#@-]+$/i', rawurldecode($_PE[1]
           '        <UL id="curator_list" class="sortable" style="margin-top : 0px; width : 550px;">' . "\n");
     // Now loop the items in the order given.
     foreach ($aCurators as $nID => $aVal) {
-        print('          <LI id="li_' . $nID . '"><INPUT type="hidden" name="curators[]" value="' . $nID . '"><TABLE width="100%"><TR><TD class="handle" width="13" align="center"><IMG src="gfx/drag_vertical.png" alt="" title="Click and drag to sort" width="5" height="13"></TD><TD>' . $aVal['name'] . '</TD>');
+        print('          <LI id="li_' . $nID . '"><INPUT type="hidden" name="curators[]" value="' . $nID . '"><TABLE width="100%"><TR><TD class="handle" width="13" align="center"><IMG src="gfx/drag_vertical.png" alt="" title="Click and drag to sort" width="5" height="13"></TD><TD>' . $aVal['name'] . ' (#' . $nID . ')</TD>');
         if (ACTION == 'authorize') {
             print('<TD width="100" align="right"><INPUT type="checkbox" name="allow_edit[]" value="' . $nID . '" onchange="if (this.checked == true) { this.parentNode.nextSibling.children[0].disabled = false; } else if (' . $aVal['level'] . ' >= ' . LEVEL_MANAGER . ') { this.checked = true; } else { this.parentNode.nextSibling.children[0].checked = false; this.parentNode.nextSibling.children[0].disabled = true; }"' . ($aVal['allow_edit'] || $aVal['level'] >= LEVEL_MANAGER? ' checked' : '') . '></TD><TD width="75" align="right"><INPUT type="checkbox" name="shown[]" value="' . $nID . '"' . ($aVal['allow_edit']? ($aVal['shown']? ' checked' : '') : ' disabled') . '></TD><TD width="30" align="right">' . ($aVal['level'] >= $_AUTH['level'] && $nID != $_AUTH['id']? '&nbsp;' : '<A href="#" onclick="lovd_unauthorizeUser(\'Genes_AuthorizeUser\', \'' . $nID . '\'); return false;"><IMG src="gfx/mark_0.png" alt="Remove" width="11" height="11" border="0"></A>') . '</TD>');
         } else {

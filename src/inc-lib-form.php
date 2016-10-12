@@ -10,6 +10,7 @@
  * Copyright   : 2004-2016 Leiden University Medical Center; http://www.LUMC.nl/
  * Programmers : Ing. Ivo F.A.C. Fokkema <I.F.A.C.Fokkema@LUMC.nl>
  *               Ing. Ivar C. Lugtenburg <I.C.Lugtenburg@LUMC.nl>
+ *               M. Kroon <m.kroon@lumc.nl>
  *
  *
  * This file is part of LOVD.
@@ -273,7 +274,7 @@ function lovd_errorPrint ()
 {
     // Based on a function provided by Ileos.nl in the interest of Open Source.
     // Prints error variable.
-    global $_AUTH, $_ERROR;
+    global $_ERROR;
 
     if (count($_ERROR['messages']) > 1) {
         unset($_ERROR['messages'][0]);
@@ -896,14 +897,42 @@ function lovd_viewForm ($a,
 
 
 
-            } elseif (in_array($aField[2], array('text', 'password', 'file'))) {
+            } elseif (in_array($aField[2], array('text', 'file'))) {
                 list($sHeader, $sHelp, $sType, $sName, $nSize) = $aField;
-                if (!isset($GLOBALS['_' . $sMethod][$sName])) { $GLOBALS['_' . $sMethod][$sName] = ''; }
+                if (!isset($GLOBALS['_' . $sMethod][$sName])) {
+                    $GLOBALS['_' . $sMethod][$sName] = '';
+                }
 
                 print('<INPUT type="' . $sType . '" name="' . $sName . '" size="' . $nSize . '" value="' . htmlspecialchars($GLOBALS['_' . $sMethod][$sName]) . '"' . (!lovd_errorFindField($sName)? '' : ' class="err"') . '>' . $sDataSuffix);
                 continue;
 
 
+            } elseif ($aField[2] == 'password') {
+                // Add default values to any missing entries at the end of the field array.
+                $aFieldComplete = array_pad($aField, 6, false);
+                list( , , $sType, $sName, $nSize, $bBlockAutofillPass) = $aFieldComplete;
+
+                if (!isset($GLOBALS['_' . $sMethod][$sName])) {
+                    $GLOBALS['_' . $sMethod][$sName] = '';
+                }
+
+                // Setup password field attributes.
+                $sFieldAtts = ' type="' . $sType . '" name="' . $sName . '" size="' . $nSize . '"';
+                if ($bBlockAutofillPass) {
+                    // Block editing of the actual password field until JS onFocus event.
+                    $sFieldAtts .= ' readonly onfocus="this.removeAttribute(\'readonly\');"';
+                }
+
+                // Output a hidden text field before password field, to catch a possible
+                // mistaken automatic fill of a username.
+                print('<INPUT type="text" style="display:none" />' . PHP_EOL);
+                // Print indentation for new line.
+                print($sNewLine);
+
+                print('<INPUT' . $sFieldAtts . ' value="' . htmlspecialchars(
+                        $GLOBALS['_' . $sMethod][$sName]) . '"' . (!lovd_errorFindField($sName)?
+                        '' : ' class="err"') . '>' . $sDataSuffix);
+                continue;
 
             } elseif ($aField[2] == 'textarea') {
                 list($sHeader, $sHelp, $sType, $sName, $nCols, $nRows) = $aField;
@@ -941,8 +970,8 @@ function lovd_viewForm ($a,
                             $bInOptGroup = true;
                         } else {
                             // We have to cast the $key to string because PHP made integers of them, if they were integer strings.
-                            $bSelected = ((!$bMultiple && (string)$GLOBALS['_' . $sMethod][$sName] === (string)$key) || ($bMultiple && is_array($GLOBALS['_' . $sMethod][$sName]) && in_array((string)$key, $GLOBALS['_' . $sMethod][$sName], true)));
-                            print("\n" . $sNewLine . '  <OPTION value="' . htmlspecialchars($key) . '"' . ($bSelected ? ' selected' : '') . '>' . htmlspecialchars($val) . '</OPTION>');
+                            $bSelected = ((!$bMultiple && (string) $GLOBALS['_' . $sMethod][$sName] === (string) $key) || ($bMultiple && is_array($GLOBALS['_' . $sMethod][$sName]) && in_array((string) $key, $GLOBALS['_' . $sMethod][$sName], true)));
+                            print("\n" . $sNewLine . '  <OPTION value="' . htmlspecialchars($key) . '"' . ($bSelected? ' selected' : '') . '>' . htmlspecialchars($val) . '</OPTION>');
                         }
                     }
                     // If we are still in an option group then lets close it.

@@ -11,6 +11,7 @@
  * Programmers : Ing. Ivo F.A.C. Fokkema <I.F.A.C.Fokkema@LUMC.nl>
  *               Ing. Ivar C. Lugtenburg <I.C.Lugtenburg@LUMC.nl>
  *               Msc. Daan Asscheman <D.Asscheman@LUMC.nl>
+ *               M. Kroon <m.kroon@lumc.nl>
  *
  *
  * This file is part of LOVD.
@@ -81,6 +82,7 @@ class LOVD_Template {
 
         $this->aMenu =
             array(
+                        'genes' => (!empty($_SESSION['currdb'])? $_SESSION['currdb'] . ' homepage' : 'View all genes'),
                         'gene_panels' => 'View all gene panels',
                         'genes_' =>
                          array(
@@ -89,7 +91,7 @@ class LOVD_Template {
                              'hr',
                              '/genes' => array('menu_magnifying_glass.png', 'View all genes', 0),
                              '/gene_statistics' => array('menu_magnifying_glass.png', 'View all gene statistics', 0),
-                             '/genes/' . $_SESSION['currdb'] => array('menu_magnifying_glass.png', 'View the ' . $_SESSION['currdb'] . ' gene homepage', 0),
+                             '/genes/' . $_SESSION['currdb'] => array('menu_magnifying_glass.png', 'View ' . $_SESSION['currdb'] . ' gene homepage', 0),
                              '/genes/' . $_SESSION['currdb'] . '/graphs' => array('menu_graphs.png', 'View graphs about the ' . $_SESSION['currdb'] . ' gene database', 0),
                              '/genes?create' => array('plus.png', 'Create a new gene entry', LEVEL_MANAGER),
                               ),
@@ -97,7 +99,7 @@ class LOVD_Template {
                         'transcripts_' =>
                          array(
                                 '' => array('menu_transcripts.png', 'View all transcripts', 0),
-                                '/transcripts/' . $_SESSION['currdb'] => array('menu_transcripts.png', 'View all transcripts of the ' . $_SESSION['currdb'] . ' gene', 0),
+                                '/transcripts/' . $_SESSION['currdb'] => array('menu_transcripts.png', 'View all transcripts of gene ' . $_SESSION['currdb'], 0),
                                 'create' => array('plus.png', 'Create a new transcript information entry', LEVEL_CURATOR),
                               ),
                         'variants' => 'View variants',
@@ -105,8 +107,10 @@ class LOVD_Template {
                          array(
                                 '' => array('menu_magnifying_glass.png', 'View all genomic variants', 0),
                                 '/variants/in_gene' => array('menu_magnifying_glass.png', 'View all variants affecting transcripts', 0),
-                                '/variants/' . $_SESSION['currdb'] => array('menu_magnifying_glass.png', 'View all variants in the ' . $_SESSION['currdb'] . ' gene', 0),
-                                '/view/' . $_SESSION['currdb'] => array('menu_magnifying_glass.png', 'Full data view for the ' . $_SESSION['currdb'] . ' gene', 0),
+                             'hr',
+                                '/variants/' . $_SESSION['currdb'] . '/unique' => array('menu_magnifying_glass.png', 'View unique variants in gene ' . $_SESSION['currdb'], 0),
+                                '/variants/' . $_SESSION['currdb'] => array('menu_magnifying_glass.png', 'View all variants in gene ' . $_SESSION['currdb'], 0),
+                                '/view/' . $_SESSION['currdb'] => array('menu_magnifying_glass.png', 'Full data view for gene ' . $_SESSION['currdb'], 0),
                                 '/submit' => array('plus.png', 'Create a new data submission', LEVEL_SUBMITTER),
                              'hr',
                              '/columns/VariantOnGenome?search_active_=1' => array('menu_columns.png', 'View active genomic custom columns', LEVEL_MANAGER),
@@ -116,15 +120,17 @@ class LOVD_Template {
                         'individuals_' =>
                          array(
                                 '' => array('menu_magnifying_glass.png', 'View all individuals', 0),
-                                '/individuals/' . $_SESSION['currdb'] => array('menu_magnifying_glass.png', 'View all individuals screened for ' . $_SESSION['currdb'], 0),
+                                '/individuals/' . $_SESSION['currdb'] => array('menu_magnifying_glass.png', 'View all individuals with variants in gene ' . $_SESSION['currdb'], 0),
                                 'create' => array('plus.png', 'Create a new data submission', LEVEL_SUBMITTER),
                                 'hr',
                                 '/columns/Individual?search_active_=1' => array('menu_columns.png', 'View active custom columns', LEVEL_MANAGER),
                                 '/columns/Individual?search_active_=0' => array('menu_columns.png', 'Enable more custom columns', LEVEL_MANAGER),
                               ),
                         'diseases' => 'View diseases',
+                        'diseases_' =>
                          array(
                                 '' => array('menu_magnifying_glass.png', 'View all diseases', 0),
+                                'search_genes_=' . $_SESSION['currdb'] => array('menu_magnifying_glass.png', 'View all diseases associated with gene ' . $_SESSION['currdb'], 0),
                                 'create' => array('plus.png', 'Create a new disease information entry', LEVEL_CURATOR),
                                 'hr',
                                 '/columns/Phenotype' => array('menu_columns_add.png', 'View available phenotype columns', LEVEL_CURATOR),
@@ -133,7 +139,7 @@ class LOVD_Template {
                         'screenings_' =>
                          array(
                                 '' => array('menu_magnifying_glass.png', 'View all screenings', 0),
-                                '/screenings/' . $_SESSION['currdb'] => array('menu_magnifying_glass.png', 'View all screenings for the ' . $_SESSION['currdb'] . ' gene', 0),
+                                '/screenings/' . $_SESSION['currdb'] => array('menu_magnifying_glass.png', 'View all screenings for gene ' . $_SESSION['currdb'], 0),
                                 '/submit' => array('plus.png', 'Create a new data submission', LEVEL_SUBMITTER),
                                 'hr',
                                 '/columns/Screening?search_active_=1' => array('menu_columns.png', 'View active custom columns', LEVEL_MANAGER),
@@ -156,8 +162,8 @@ class LOVD_Template {
                         'configuration_' =>
                          array(
                              // The links are only active, when this person has rights on the currently selected gene.
-                             '/view/' . $_SESSION['currdb'] . '?search_var_status=Submitted%7CNon%7CMarked' => array('menu_variants_curate.png', 'View uncurated ' . $_SESSION['currdb'] . ' variants', ($_AUTH && in_array($_SESSION['currdb'], $_AUTH['curates'])? LEVEL_CURATOR : LEVEL_MANAGER)),
                              '/view/' . $_SESSION['currdb'] => array('menu_variants.png', 'View ' . $_SESSION['currdb'] . ' variants', ($_AUTH && in_array($_SESSION['currdb'], $_AUTH['curates'])? LEVEL_CURATOR : LEVEL_MANAGER)),
+                             '/view/' . $_SESSION['currdb'] . '?search_var_status=' . urlencode('="Pending"|"Non public"|"Marked"') => array('menu_variants_curate.png', 'View ' . $_SESSION['currdb'] . ' variants that require attention', ($_AUTH && in_array($_SESSION['currdb'], $_AUTH['curates'])? LEVEL_CURATOR : LEVEL_MANAGER)),
                              'hr',
 /*
                                         array('config_free_edit.php', 'fnr', 'Find &amp; Replace', 'Find &amp; Replace', 'lovd_free_edit_fnr'),
@@ -184,12 +190,12 @@ class LOVD_Template {
                                 'hr',
                                 '/columns?create' => array('menu_columns_create.png', 'Create new custom data column', LEVEL_MANAGER),
                                 '/columns' => array('menu_columns.png', 'Browse all custom data columns', LEVEL_MANAGER),
-//                                '/download/columns' => array('menu_save.png', 'Download all LOVD custom columns', LEVEL_MANAGER),
+                                '/download/columns' => array('menu_save.png', 'Download all LOVD custom columns', LEVEL_MANAGER),
                                 'hr',
                                 '/links?create' => array('menu_links.png', 'Create a new custom link', LEVEL_MANAGER),
                                 '/links' => array('menu_links.png', 'Browse all available custom links', LEVEL_MANAGER),
                                 'hr',
-//                                '/download/all' => array('menu_save.png', 'Download all data', LEVEL_MANAGER),
+                                '/download/all' => array('menu_save.png', 'Download all data', LEVEL_MANAGER),
                                 '/import' => array('menu_import.png', 'Import data', LEVEL_MANAGER),
                                 '/import?schedule' => array('menu_clock.png', 'Schedule data for import', LEVEL_MANAGER),
                                 'hr',
@@ -216,23 +222,36 @@ class LOVD_Template {
             unset($this->aMenu['genes_']['/genes/']);
             unset($this->aMenu['genes_']['/genes//graphs']);
             unset($this->aMenu['transcripts_']['/transcripts/']);
+            unset($this->aMenu['variants_']['/variants//unique']);
             unset($this->aMenu['variants_']['/variants/']);
             unset($this->aMenu['variants_']['/view/']);
             unset($this->aMenu['individuals_']['/individuals/']);
+            unset($this->aMenu['diseases_']['search_genes_=']);
             unset($this->aMenu['screenings_']['/screenings/']);
             unset($this->aMenu['configuration_']);
         }
 
-        // Unset unneeded tabs for Diagnostics.
         if (LOVD_plus) {
+            // Unset unneeded tabs for Diagnostics.
+            unset($this->aMenu['genes']);
             unset($this->aMenu['transcripts'], $this->aMenu['transcripts_']);
             unset($this->aMenu['variants'], $this->aMenu['variants_']);
             unset($this->aMenu['screenings'], $this->aMenu['screenings_']);
             unset($this->aMenu['submit'], $this->aMenu['submit_']);
             unset($this->aMenu['configuration'], $this->aMenu['configuration_']);
+            unset($this->aMenu['setup_']['/download/columns']);
+            unset($this->aMenu['setup_']['/download/all']);
             if ($_AUTH && $_AUTH['level'] <= LEVEL_ANALYZER) {
                 unset($this->aMenu['diseases'], $this->aMenu['diseases_']);
             }
+        } else {
+            // Remove menu items for non-LOVD+.
+            unset($this->aMenu['gene_panels']);
+            unset($this->aMenu['genes_']['/gene_panels']);
+            unset($this->aMenu['genes_']['/gene_panels?create']);
+            unset($this->aMenu['genes_'][0]);
+            unset($this->aMenu['genes_']['/gene_statistics']);
+            unset($this->aMenu['setup_']['/import?schedule']);
         }
 
         if (!defined('PAGE_TITLE')) {
@@ -521,37 +540,68 @@ function lovd_mapVariants ()
 <?php
             return true;
         }
+
+        $sCurrSymbol = $sCurrGene = '';
+        if (!empty($_SESSION['currdb'])) {
+            // FIXME; Currently we don't support "=GENE" matching (for instance, on the disease tab) because changing that value will not trigger a change in CURRDB... Yet.
+            $sGeneSwitchURL = preg_replace('/(\/)' . preg_quote($_SESSION['currdb'], '/') . '\b/', "$1{{GENE}}", $_SERVER['REQUEST_URI']);
+            // Just use currently selected database.
+            $sCurrSymbol = $_SESSION['currdb'];
+            $sCurrGene = $_SETT['currdb']['name'];
+        }
+
+        // FIXME; how will we handle this? (if we'll handle this)
+        // During submission, show the gene we're submitting to instead of the currently selected gene.
+        //if (lovd_getProjectFile() == '/submit.php' && !empty($_POST['gene']) && $_POST['gene'] != $_SESSION['currdb']) {
+        //    // Fetch gene's info from db... we don't have it anywhere yet.
+        //    list($sCurrSymbol, $sCurrGene) = $_DB->query('SELECT id, gene FROM ' . TABLE_DBS . ' WHERE id = ?', array($_POST['gene']))->fetchRow();
+        //}
 ?>
 
   <SCRIPT type="text/javascript">
-    <!--
+    var geneSwitcher = '';
 
-<?php
-        if (!empty($_SESSION['currdb'])) {
-            // A quick way to switch genes, regardless of on which page you are.
-            // FIXME; Currently we don't support "=GENE" matching (for instance, on the disease tab) because changing that value will not trigger a change in CURRDB... Yet.
-            //$sGeneSwitchURL = preg_replace('/(\/|=)' . preg_quote($_SESSION['currdb'], '/') . '\b/', "$1{{GENE}}", $_SERVER['REQUEST_URI']);
-            $sGeneSwitchURL = preg_replace('/(\/)' . preg_quote($_SESSION['currdb'], '/') . '\b/', "$1{{GENE}}", $_SERVER['REQUEST_URI']);
-            print('    var sURL = "' . $sGeneSwitchURL . '";' . "\n" .
-                  '    function lovd_switchGeneInline () {' . "\n" .
-            // FIXME; It is very very difficult to keep the hash, it should be selective since otherwise you might be loading the EXACT SAME VL, BUT ON A DIFFERENT PAGE (viewing variants belonging to gene X, on a page that says you're looking at gene Y).
-//              '      var sForm = \'<FORM action="" id="SelectGeneDBInline" method="get" style="margin : 0px;" onsubmit="document.location.href=(sURL.replace(\\\'{{GENE}}\\\', $(this).children(\\\'select\\\').val()) + (!window.location.hash? \\\'\\\' : window.location.hash)); return false;">' .
-                  '      var sForm = \'<FORM action="" id="SelectGeneDBInline" method="get" style="margin : 0px;" onsubmit="document.location.href=(sURL.replace(\\\'{{GENE}}\\\', $(this).children(\\\'select\\\').val())); return false;">' .
-                                      '<SELECT name="select_db" onchange="$(this).parent().submit();">');
-            $qGenes = $_DB->query('SELECT id, CONCAT(id, " (", name, ")") AS name FROM ' . TABLE_GENES . ' ORDER BY id');
-            while ($zGene = $qGenes->fetchAssoc()) {
-                // This will shorten the gene names nicely, to prevent long gene names from messing up the form.
-                $zGene['name'] = lovd_shortenString($zGene['name'], 75);
-                print('<OPTION value="' . $zGene['id'] . '"' . ($_SESSION['currdb'] == $zGene['id']? ' selected' : '') . '>' . addslashes($zGene['name']) . '</OPTION>');
+    function lovd_switchGene()
+    {
+        // Fetches the gene switcher data from LOVD. Might be a form with a
+        // dropdown, or a form with a text field for autocomplete.
+        $.get('ajax/get_gene_switcher.php', function (sData, sStatus)
+        {
+            geneSwitcher = sData;
+            if (geneSwitcher === '<?php echo AJAX_DATA_ERROR; ?>') {
+                alert('Error when retrieving a list of genes');
+                return;
             }
-            print('</SELECT>' .
-                  '<INPUT type="submit" value="Switch"></FORM>\';' . "\n" .
-                  '      document.getElementById(\'gene_name\').innerHTML=sForm;' . "\n" .
-                  '    }' . "\n");
-        }
-        ?>
+            $('#gene_name').hide();
 
-    //-->
+            $('#gene_switcher').html(geneSwitcher['html']);
+            if (geneSwitcher['switchType'] === 'autocomplete') {
+                $('#select_gene_autocomplete').autocomplete({
+                    source: geneSwitcher['data'],
+                    minLength: 3
+                }).on('autocompleteselect', function (e, ui) { $(this).val(ui['item']['value']); $(this).parent().parent().submit(); }); // Auto submit on selecting the gene from the list.
+                // And set focus to the field, too.
+                $('#select_gene_autocomplete').focus();
+            }
+        },'json'
+        ).fail(function (sData, sStatus)
+        {
+            alert('Error when retrieving a list of genes: ' + sStatus);
+        });
+    }
+
+    function lovd_changeURL ()
+    {
+        // Replaces the gene in the current URL with the one selected.
+        var sURL = '<?php if (!empty($_SESSION['currdb'])) { echo $sGeneSwitchURL; } ?>';
+        // FIXME; It is very very difficult to keep the hash, it should be selective since otherwise you might be loading the EXACT SAME VL, BUT ON A DIFFERENT PAGE (viewing variants belonging to gene X, on a page that says you're looking at gene Y).
+        if (geneSwitcher['switchType'] === 'autocomplete') {
+            document.location.href = sURL.replace('{{GENE}}', $('#select_gene_autocomplete').val());
+        } else {
+            document.location.href = sURL.replace('{{GENE}}', $('#select_gene_dropdown').val());
+        }
+    }
+
   </SCRIPT>
   <LINK rel="stylesheet" type="text/css" href="lib/jQuery/css/cupertino/jquery-ui.custom.css">
 </HEAD>
@@ -587,24 +637,22 @@ if ($_SERVER['HTTP_HOST'] == 'leiden-test.diagnostics.lovd.nl') {
               '      <IMG src="' . $_CONF['logo_uri'] . '" alt="LOVD - Leiden Open Variation Database" ' . $sSize . '>' . "\n" .
               '    </TD>' . "\n");
 
-        $sCurrSymbol = $sCurrGene = '';
-/*
-        // FIXME; how will we handle this?
-        // During submission, show the gene we're submitting to instead of the currently selected gene.
-        if (lovd_getProjectFile() == '/submit.php' && !empty($_POST['gene']) && $_POST['gene'] != $_SESSION['currdb']) {
-            // Fetch gene's info from db... we don't have it anywhere yet.
-            list($sCurrSymbol, $sCurrGene) = $_DB->query('SELECT id, gene FROM ' . TABLE_DBS . ' WHERE id = ?', array($_POST['gene']))->fetchRow();
-        } else*/if (!empty($_SESSION['currdb'])) {
-            // Just use currently selected database.
-            $sCurrSymbol = $_SESSION['currdb'];
-            $sCurrGene = $_SETT['currdb']['name'];
+        print('    <TD valign="top" style="padding-top : 2px;">' . "\n" .
+              '      <H2 style="margin-bottom : 2px;">' . $_CONF['system_title'] . '</H2>');
+
+        if ($sCurrSymbol && $sCurrGene) {
+            print('      <H5 id="gene_name" style="display:inline">' . $sCurrGene . ' (' . $sCurrSymbol . ')' . "\n");
+            if (strpos($sGeneSwitchURL, '{{GENE}}') !== false) {
+                print('        <A href="#" onclick="lovd_switchGene(); return false;">' . "\n" .
+                      '          <IMG src="gfx/lovd_genes_switch_inline.png" width="23" height="23" alt="Switch gene" title="Switch gene database" align="top">' . "\n" .
+                      '        </A>' . "\n");
+            }
+            print('      </H5>' . "\n");
         }
 
-        print('    <TD valign="top" style="padding-top : 2px;">' . "\n" .
-              '      <H2 style="margin-bottom : 2px;">' . $_CONF['system_title'] . '</H2>' . "\n" .
-              (!($sCurrSymbol && $sCurrGene)? '' : '      <H5 id="gene_name">' . $sCurrGene . ' (' . $sCurrSymbol . ')' .
-              (strpos($sGeneSwitchURL, '{{GENE}}') === false? '' : '&nbsp;<A href="#" onclick="lovd_switchGeneInline(); return false;"><IMG src="gfx/lovd_genes_switch_inline.png" width="23" height="23" alt="Switch gene" title="Switch gene database" align="top"></A>') .
-              '</H5>' . "\n") .
+        // With an ajax call, the H5 with ID 'gene_switcher' is filled with a dropdown or an autocomplete field.
+        // This is done with function lovd_switchGene().
+        print('      <H5 id="gene_switcher"></H5>' . "\n" .
               '    </TD>' . "\n" .
               '    <TD valign="top" align="right" style="padding-right : 5px; padding-top : 2px;">' . "\n" .
               '      LOVD v.' . $_STAT['tree'] . ' Build ' . $_STAT['build'] .

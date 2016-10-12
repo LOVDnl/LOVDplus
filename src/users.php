@@ -4,12 +4,14 @@
  * LEIDEN OPEN VARIATION DATABASE (LOVD)
  *
  * Created     : 2010-01-14
- * Modified    : 2015-05-06
- * For LOVD    : 3.0-14
+ * Modified    : 2016-03-21
+ * For LOVD    : 3.0-15
  *
- * Copyright   : 2004-2015 Leiden University Medical Center; http://www.LUMC.nl/
+ * Copyright   : 2004-2016 Leiden University Medical Center; http://www.LUMC.nl/
  * Programmers : Ing. Ivo F.A.C. Fokkema <I.F.A.C.Fokkema@LUMC.nl>
  *               Ing. Ivar C. Lugtenburg <I.C.Lugtenburg@LUMC.nl>
+ *               Msc. Daan Asscheman <D.Asscheman@LUMC.nl>
+ *               M. Kroon <m.kroon@lumc.nl>
  *
  *
  * This file is part of LOVD.
@@ -100,8 +102,6 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && !ACTION) {
 
     require ROOT_PATH . 'class/object_users.php';
     $_DATA = new LOVD_User();
-    // Increase the max group_concat() length, so that curators of many many genes still have all genes mentioned here.
-    $_DB->query('SET group_concat_max_len = 150000');
     $zData = $_DATA->viewEntry($nID);
 
     $aNavigation = array();
@@ -495,11 +495,12 @@ if (PATH_COUNT == 1 && in_array(ACTION, array('create', 'register'))) {
                 $bMail = 0; // Does not evaluate to True (mention we've sent the email), but doesn't equal False either (mention we failed to send the email).
             }
 
-            if ($bMail) {
-                // Thank the user...
+            if ($bMail !== false) {
+                // Forward the user if we didn't fail to send the email (or we may not have tried to send it).
                 header('Refresh: 3; url=' . lovd_getInstallURL() . $_PE[0] . '/' . $nID . '?&new_submitter');
             }
 
+            // Thank the user...
             $_T->printHeader();
             $_T->printTitle();
             lovd_showInfoTable('Successfully created '  . (ACTION == 'create'? 'the user' : 'your') . ' account!' .
@@ -1094,7 +1095,11 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && ACTION == 'submissions') {
         $_DATA = new LOVD_Individual();
         $_GET['search_individualid'] = implode('|', $aUnfinished);
         $_GET['page_size'] = '10';
-        $_DATA->setRowLink('Individuals_submissions', ($_AUTH['id'] == $nID? 'submit/individual/' . $_DATA->sRowID : ''));
+        if ($_AUTH['id'] == $nID) {
+            $_DATA->setRowLink('Individuals_submissions', 'submit/individual/' . $_DATA->sRowID);
+        } else {
+            $_DATA->setRowLink('Individuals_submissions', 'individuals/' . $_DATA->sRowID);
+        }
         $_DATA->viewList('Individuals_submissions', array('individualid', 'diseaseids', 'owned_by_', 'status'), false, false, true);
         unset($_GET['search_individualid']);
     } else {
@@ -1108,7 +1113,11 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && ACTION == 'submissions') {
         $_DATA = new LOVD_Screening();
         $_GET['search_screeningid'] = implode('|', $aUnfinished);
         $_GET['page_size'] = '10';
-        $_DATA->setRowLink('Screenings_submissions', ($_AUTH['id'] == $nID? 'submit/screening/' . $_DATA->sRowID : ''));
+        if ($_AUTH['id'] == $nID) {
+            $_DATA->setRowLink('Screenings_submissions', 'submit/screening/' . $_DATA->sRowID);
+        } else {
+            $_DATA->setRowLink('Individuals_submissions', 'screenings/' . $_DATA->sRowID);
+        }
         $_DATA->viewList('Screenings_submissions', array('owned_by_', 'created_date', 'edited_date'), false, false, true);
     } else {
         lovd_showInfoTable('No submissions of variant screenings found!', 'stop');
