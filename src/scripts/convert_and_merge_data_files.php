@@ -15,7 +15,7 @@
 //define('ROOT_PATH', '../');
 define('ROOT_PATH', dirname(__FILE__) . '/../');
 define('FORMAT_ALLOW_TEXTPLAIN', true);
-define('MAX_SKIPPED', 10);
+
 
 $_GET['format'] = 'text/plain';
 // To prevent notices when running inc-init.php.
@@ -47,13 +47,19 @@ session_write_close();
 set_time_limit(0);
 ignore_user_abort(true);
 
-$_CONFIG = array(
-    'user' => array(
-        'exit_on_annotation_error' => 'y'
-    )
-);
 
-lovd_verifySettings('exit_on_annotation_error', 'Do you want the script to EXIT when there is an annotation error in the variant data?', 'array', array('yes', 'no', 'y', 'n'));
+
+if (empty($_INI['import']['exit_on_annotation_error'])) {
+    $_INI['import']['exit_on_annotation_error'] = 'yes';
+}
+
+if (empty($_INI['import']['max_annotation_error_allowed'])) {
+    $_INI['import']['max_annotation_error_allowed'] = 50;
+}
+
+
+
+
 
 
 // This script will be called from localhost by a cron job.
@@ -68,6 +74,7 @@ $aSuffixes = array(
     'vep' => 'directvep.data.lovd',
     'total.tmp' => 'total.data.tmp',
     'total' => 'total.data.lovd',
+    'error' => 'error'
 );
 
 // Define list of genes to ignore, because they can't be found by the HGNC.
@@ -141,122 +148,6 @@ $aFiles = array(); // array(ID => array(files), ...);
 
 
 
-function lovd_verifySettings ($sKeyName, $sMessage, $sVerifyType, $options)
-{
-    // Copied from Geneloader
-    // https://github.com/LOVDnl/geneloader/blob/master/geneloader.php
-
-    // Based on a function provided by Ileos.nl in the interest of Open Source.
-    // Check if settings match certain input.
-    global $_CONFIG;
-
-    switch($sVerifyType) {
-        case 'array':
-            $aOptions = $options;
-            if (!is_array($aOptions)) {
-                return false;
-            }
-            break;
-
-        case 'int':
-            // Integer, options define a range in the format '1,3' (1 to 3) or '1,' (1 or higher).
-            $aRange = explode(',', $options);
-            if (!is_array($aRange) ||
-                ($aRange[0] === '' && $aRange[1] === '') ||
-                ($aRange[0] !== '' && !ctype_digit($aRange[0])) ||
-                ($aRange[1] !== '' && !ctype_digit($aRange[1]))) {
-                return false;
-            }
-            break;
-    }
-
-    while (true) {
-        print('  ' . $sMessage .
-            ($sVerifyType != 'int' || ($aRange === array('', ''))? '' : ' (' . (int) $aRange[0] . '-' . $aRange[1] . ')') .
-            (empty($_CONFIG['user'][$sKeyName])? '' : ' [' . $_CONFIG['user'][$sKeyName] . ']') . ' : ');
-        $sInput = trim(fgets(STDIN));
-        if (!strlen($sInput) && !empty($_CONFIG['user'][$sKeyName])) {
-            $sInput = $_CONFIG['user'][$sKeyName];
-        }
-
-        switch ($sVerifyType) {
-            case 'array':
-                $sInput = strtolower($sInput);
-                if (in_array($sInput, $aOptions)) {
-                    $_CONFIG['user'][$sKeyName] = $sInput;
-                    return true;
-                }
-                break;
-
-            case 'int':
-                $sInput = (int) $sInput;
-                // Check if input is lower than minimum required value (if configured).
-                if ($aRange[0] !== '' && $sInput < $aRange[0]) {
-                    break;
-                }
-                // Check if input is higher than maximum required value (if configured).
-                if ($aRange[1] !== '' && $sInput > $aRange[1]) {
-                    break;
-                }
-                $_CONFIG['user'][$sKeyName] = $sInput;
-                return true;
-
-            case 'string':
-                $sInput = $sInput;
-                $_CONFIG['user'][$sKeyName] = $sInput;
-                return true;
-
-            case 'file':
-            case 'lovd_path':
-            case 'path':
-                // Always accept the default (if non-empty) or the given options.
-                if (($sInput && ($sInput == $_CONFIG['user'][$sKeyName] ||
-                            $sInput === $options)) ||
-                    (is_array($options) && in_array($sInput, $options))) {
-                    $_CONFIG['user'][$sKeyName] = $sInput; // In case an option was chosen that was not the default.
-                    return true;
-                }
-                if (in_array($sVerifyType, array('lovd_path', 'path')) && !is_dir($sInput)) {
-                    print('    Given path is not a directory.' . "\n");
-                    break;
-                } elseif (!is_readable($sInput)) {
-                    print('    Cannot read given path.' . "\n");
-                    break;
-                }
-
-                if ($sVerifyType == 'lovd_path') {
-                    if (!file_exists($sInput . '/config.ini.php')) {
-                        if (file_exists($sInput . '/src/config.ini.php')) {
-                            $sInput .= '/src';
-                        } else {
-                            print('    Cannot locate config.ini.php in given path.' . "\n" .
-                                '    Please check that the given path is a correct path to an LOVD installation.' . "\n");
-                            break;
-                        }
-                    }
-                    if (!is_readable($sInput . '/config.ini.php')) {
-                        print('    Cannot read configuration file in given LOVD directory.' . "\n");
-                        break;
-                    }
-                    // We'll set everything up later, because we don't want to
-                    // keep the $_DB open for as long as the user is answering questions.
-                }
-                $_CONFIG['user'][$sKeyName] = $sInput;
-                return true;
-
-            default:
-                return false;
-        }
-    }
-
-    return false; // We'd actually never get here.
-}
-
-
-
-
-
-
 function lovd_initAdapter()
 {
 
@@ -288,27 +179,29 @@ function lovd_initAdapter()
 
 
 
-function lovd_handleAnnotationError($nAnnotationErrors, &$aVariant, $nLine, $sErrorMsg)
-{
-    // When we encounter a line of data with annotation error,
-    // this function decides whether to exit or continue script depending on the option user chooses.
 
-    global $_CONFIG;
-
+function lovd_handleAnnotationError(&$aVariant, $sErrorMsg) {
+    global $_INI, $fError, $nAnnotationErrors, $nLine, $sFileError;
     $nAnnotationErrors++;
 
-    print("LINE " . $nLine . " - VariantOnTranscript data dropped: " . $sErrorMsg . "\n");
+    $sLineErrorMsg = "LINE " . $nLine . " - VariantOnTranscript data dropped: " . $sErrorMsg . "\n";
+    if ($fError) {
+        fwrite($fError, $sLineErrorMsg);
+    }
+    print($sLineErrorMsg);
 
-    $bExitOnError = (substr(strtolower($_CONFIG['user']['exit_on_annotation_error']), 0, 1) === 'y'? true : false);
+    $bExitOnError = (substr(strtolower($_INI['import']['exit_on_annotation_error']), 0, 1) === 'y'? true : false);
     if ($bExitOnError) {
         die("ERROR: Please update your data and re-run this script.\n");
     }
 
     // We want to stop the script if there are too many lines of data with annotations issues.
     // We want users to check their data before they continue.
-    if ($nAnnotationErrors > MAX_SKIPPED) {
+    if ($nAnnotationErrors > $_INI['import']['max_annotation_error_allowed']) {
+        $sFileMessage = (filesize($sFileError) === 0?'' : "Please check details of dropped annotation data in " . $sFileError . "\n");
         die("ERROR: Script cannot continue because this file has too many lines of annotation data that this script cannot handle.\n"
-            . $nAnnotationErrors . " lines of transcripts data was dropped.\nPlease update your data and re-run this script.\n");
+            . $nAnnotationErrors . " lines of transcripts data was dropped.\nPlease update your data and re-run this script.\n"
+            . $sFileMessage);
     }
 
     // Otherwise, keep the VariantOnGenome data only, and add some data in Remarks.
@@ -554,6 +447,7 @@ foreach ($aFiles as $sID) {
     $sFileMeta = $_INI['paths']['data_files'] . '/' . $sID . '.' . $aSuffixes['meta'];
     $sFileTmp = $_INI['paths']['data_files'] . '/' . $sID . '.' . $aSuffixes['total.tmp'];
     $sFileDone = $_INI['paths']['data_files'] . '/' . $sID . '.' . $aSuffixes['total'];
+    $sFileError = $_INI['paths']['data_files'] . '/' . $sID . '.' . $aSuffixes['error'];
 
     $fInput = fopen($sFileToConvert, 'r');
     if ($fInput === false) {
@@ -585,6 +479,8 @@ foreach ($aFiles as $sID) {
         continue; // Continue to try the next file.
     }
     fclose($fOutput);
+
+    $fError = @fopen($sFileError, 'w');
 
     // Isolate the used Screening ID, so we'll connect the variants to the right ID.
     // It could just be 1 always, but they use the Miracle ID.
@@ -1027,7 +923,7 @@ print('No available transcripts for gene ' . $aGenes[$aVariant['symbol']]['id'] 
 
                     if (!isset($aMappings[$aVariant['chromosome'] . ':' . $aVariant['VariantOnGenome/DNA']][$aTranscripts[$aVariant['transcriptid']]['id_ncbi']])) {
                         $sErrorMsg = 'Can\'t map variant ' . $aVariant['VariantOnGenome/DNA'] . ' onto transcript ' . $aTranscripts[$aVariant['transcriptid']]['id_ncbi'] . '.';
-                        $nAnnotationErrors = lovd_handleAnnotationError($nAnnotationErrors, $aVariant, $nLine, $sErrorMsg);
+                        $nAnnotationErrors = lovd_handleAnnotationError($aVariant, $sErrorMsg);
                         $bDropTranscriptData = true;
                     }
                 }
@@ -1204,7 +1100,7 @@ print('Mutalyzer returned EREF error, hg19/hg38 error?' . "\n");
                 //exit;
 
                 $sErrorMsg = "Missing VariantOnTranscript/RNA. Chromosome: ". $aVariant['chromosome'] . ". VariantOnGenome/DNA: " . $aVariant['VariantOnGenome/DNA'] . ".";
-                $nAnnotationErrors = lovd_handleAnnotationError($nAnnotationErrors, $aVariant, $nLine, $sErrorMsg);
+                $nAnnotationErrors = lovd_handleAnnotationError($aVariant, $sErrorMsg);
                 $bDropTranscriptData = true;
             }
 
@@ -1273,6 +1169,14 @@ print('Mutalyzer returned EREF error, hg19/hg38 error?' . "\n");
     print('Number of times HGNC called: ' . $nHGNC . ".\n");
     print('Number of times Mutalyzer called: ' . $nMutalyzer . ".\n");
     print('Number of lines with annotation error: ' . $nAnnotationErrors . ".\n");
+    if (filesize($sFileError) > 0) {
+        print("ERROR FILE: Please check details of dropped annotation data in " . $sFileError . "\n");
+    } else {
+        $sFileMessage = '';
+        fclose($fError);
+        unlink($sFileError);
+    }
+
     if (!$aData) {
         // No variants!
         print('No variants found to import.' . "\n");
@@ -1310,6 +1214,7 @@ print('Mutalyzer returned EREF error, hg19/hg38 error?' . "\n");
 
 
     // VOG data.
+    $nVOG = 0;
     fputs($fOutput, "\r\n" .
         '## Genes ## Do not remove or alter this header ##' . "\r\n" . // Needed to load the existing genes, otherwise we'll only have errors.
         '## Transcripts ## Do not remove or alter this header ##' . "\r\n" . // Needed to load the existing transcripts, otherwise we'll only have errors.
@@ -1332,11 +1237,16 @@ print('Mutalyzer returned EREF error, hg19/hg38 error?' . "\n");
             fputs($fOutput, (!$nKey? '' : "\t") . '"' . (!isset($aVariant[0][$sCol])? '' : str_replace(array("\r\n", "\r", "\n"), array('\r\n', '\r', '\n'), addslashes($aVariant[0][$sCol]))) . '"');
         }
         fputs($fOutput, "\r\n");
+        $nVOG++;
     }
+
+    // Show number of Variants on Genome data created.
+    print("Number of Variants On Genome rows created: " . $nVOG . "\n");
 
 
 
     // VOT data.
+    $nVOT = 0;
     fputs($fOutput, "\r\n\r\n" .
         '## Variants_On_Transcripts ## Do not remove or alter this header ##' . "\r\n" .
         '## Count = ' . $nVOTs . "\r\n" .
@@ -1356,9 +1266,12 @@ print('Mutalyzer returned EREF error, hg19/hg38 error?' . "\n");
                 fputs($fOutput, (!$nKey? '' : "\t") . '"' . (!isset($aVOT[$sCol])? '' : str_replace(array("\r\n", "\r", "\n"), array('\r\n', '\r', '\n'), addslashes($aVOT[$sCol]))) . '"');
             }
             fputs($fOutput, "\r\n");
+            $nVOT++;
         }
     }
 
+    // Show number of Variants on Transcripts data created.
+    print("Number of Variants On Transcripts rows created: " . $nVOT . "\n");
 
 
     // Link all variants to the screening.
