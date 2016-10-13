@@ -4,13 +4,14 @@
  * LEIDEN OPEN VARIATION DATABASE (LOVD)
  *
  * Created     : 2009-10-19
- * Modified    : 2016-05-13
+ * Modified    : 2016-06-24
  * For LOVD    : 3.0-16
  *
  * Copyright   : 2004-2016 Leiden University Medical Center; http://www.LUMC.nl/
  * Programmers : Ing. Ivo F.A.C. Fokkema <I.F.A.C.Fokkema@LUMC.nl>
  *               Ing. Ivar C. Lugtenburg <I.C.Lugtenburg@LUMC.nl>
  *               Msc. Daan Asscheman <D.Asscheman@LUMC.nl>
+ *               M. Kroon <m.kroon@lumc.nl>
  *
  *
  * This file is part of LOVD.
@@ -81,6 +82,10 @@ if (!empty($_GET['format']) && in_array($_GET['format'], $aFormats)) {
     define('FORMAT', $aFormats[0]);
 }
 header('Content-type: ' . FORMAT . '; charset=UTF-8');
+
+define('COLLEAGUE_CAN_EDIT', 1);    // Colleagues that have edit permissions.
+define('COLLEAGUE_CANNOT_EDIT', 2); // Colleagues that have no edit permissions.
+define('COLLEAGUE_ALL', 3);         // All colleagues.
 
 define('LEVEL_SUBMITTER', 1);    // Also includes collaborators and curators. Authorization is depending on assignments, not user levels anymore.
 define('LEVEL_ANALYZER', 2);     // Diagnostics: LOVD+ introduced this user level.
@@ -154,7 +159,7 @@ $aRequired =
 $_SETT = array(
                 'system' =>
                      array(
-                            'version' => '3.0-15',
+                            'version' => '3.0-16',
                           ),
                 'user_levels' =>
                      array(
@@ -641,6 +646,7 @@ $_TABLES =
          array(
                 'TABLE_COUNTRIES' => TABLEPREFIX . '_countries',
                 'TABLE_USERS' => TABLEPREFIX . '_users',
+                'TABLE_COLLEAGUES' => TABLEPREFIX . '_colleagues',
                 'TABLE_CHROMOSOMES' => TABLEPREFIX . '_chromosomes',
                 'TABLE_GENES' => TABLEPREFIX . '_genes',
                 'TABLE_CURATES' => TABLEPREFIX . '_users2genes',
@@ -914,7 +920,7 @@ if (!defined('NOT_INSTALLED')) {
 
         // Switch gene.
         // Gene switch will occur automatically at certain pages. They can be accessed by following links in LOVD itself, or possibly from outer sources.
-        if (preg_match('/^(configuration|genes|transcripts|variants|individuals|view)\/([^\/]+)/', CURRENT_PATH, $aRegs)) {
+        if (preg_match('/^(configuration|genes|transcripts|variants|individuals|screenings|view)\/([^\/]+)/', CURRENT_PATH, $aRegs)) {
             // We'll check this value further down in this code.
             if (!in_array($aRegs[2], array('in_gene', 'upload')) && !ctype_digit($aRegs[2])) {
                 $_SESSION['currdb'] = $aRegs[2]; // Not checking capitalization here yet.

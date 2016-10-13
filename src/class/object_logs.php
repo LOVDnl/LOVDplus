@@ -4,7 +4,7 @@
  * LEIDEN OPEN VARIATION DATABASE (LOVD)
  *
  * Created     : 2010-01-28
- * Modified    : 2016-05-09
+ * Modified    : 2016-06-17
  * For LOVD    : 3.0-16
  *
  * Copyright   : 2004-2016 Leiden University Medical Center; http://www.LUMC.nl/
@@ -165,6 +165,9 @@ class LOVD_Log extends LOVD_Object {
                 break;
             case 'TranscriptEdit':
                 $zData['entry'] = preg_replace('/(entry) (#)?([0-9]+) /', '$1 $2<A href="transcripts/$3">$3</A> ', $zData['entry']);
+                break;
+            case 'ShareAccess':
+                $zData['entry'] = preg_replace('/(user) (#)?([0-9]+)/', '$1 $2<A href="users/$3">$3</A>', $zData['entry']);
                 break;
             case 'UserBoot':
             case 'UserCreate':

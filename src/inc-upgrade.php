@@ -5,11 +5,12 @@
  *
  * Created     : 2010-01-14
  * Modified    : 2016-09-16
- * For LOVD    : 3.0-15
+ * For LOVD    : 3.0-16
  *
  * Copyright   : 2004-2016 Leiden University Medical Center; http://www.LUMC.nl/
  * Programmers : Ing. Ivo F.A.C. Fokkema <I.F.A.C.Fokkema@LUMC.nl>
  *               Ing. Ivar C. Lugtenburg <I.C.Lugtenburg@LUMC.NL>
+ *               M. Kroon <m.kroon@lumc.nl>
  *
  *
  * This file is part of LOVD.
@@ -603,6 +604,17 @@ if ($sCalcVersionFiles != $sCalcVersionDB) {
                      array(
                          'UPDATE ' . TABLE_DISEASES . ' SET symbol = "Healthy/Control" WHERE id_omim IS NULL AND created_by = 0 AND symbol = "Healty/Control"',
                      ),
+                 '3.0-15a' =>
+                     array('CREATE TABLE IF NOT EXISTS ' . TABLE_COLLEAGUES . '(
+                            userid_from SMALLINT(5) UNSIGNED ZEROFILL NOT NULL,
+                            userid_to   SMALLINT(5) UNSIGNED ZEROFILL NOT NULL,
+                            allow_edit  BOOLEAN NOT NULL DEFAULT 0,
+                            PRIMARY KEY (userid_from, userid_to),
+                            INDEX (userid_to),
+                            CONSTRAINT ' . TABLE_COLLEAGUES .  '_fk_userid_from FOREIGN KEY (userid_from) REFERENCES ' . TABLE_USERS . ' (id) ON DELETE CASCADE ON UPDATE CASCADE,
+                            CONSTRAINT ' . TABLE_COLLEAGUES . '_fk_userid_to FOREIGN KEY (userid_to) REFERENCES ' . TABLE_USERS . ' (id) ON DELETE CASCADE ON UPDATE CASCADE)
+                            ENGINE=InnoDB, DEFAULT CHARACTER SET utf8',
+                     ),
              );
 
     if ($sCalcVersionDB < lovd_calculateVersion('3.0-alpha-01')) {
@@ -753,10 +765,6 @@ if ($sCalcVersionFiles != $sCalcVersionDB) {
     // Try to update the upgrade lock.
     $sQ = 'UPDATE ' . TABLE_STATUS . ' SET lock_update = 1 WHERE lock_update = 0';
     $nMax = 30;
-    // DMD_SPECIFIC
-    if ($_SERVER['SERVER_ADMIN'] == 'i.f.a.c.fokkema@lumc.nl' && $_SERVER['HTTP_HOST'] == 'localhost') {
-        $nMax = 3;
-    }
 
     for ($i = 0; $i < $nMax; $i ++) {
         $bLocked = !$_DB->exec($sQ);

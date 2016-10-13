@@ -4,12 +4,13 @@
  * LEIDEN OPEN VARIATION DATABASE (LOVD)
  *
  * Created     : 2009-10-22
- * Modified    : 2016-04-06
- * For LOVD    : 3.0-15
+ * Modified    : 2016-06-14
+ * For LOVD    : 3.0-16
  *
  * Copyright   : 2004-2016 Leiden University Medical Center; http://www.LUMC.nl/
  * Programmers : Ing. Ivo F.A.C. Fokkema <I.F.A.C.Fokkema@LUMC.nl>
  *               Ing. Ivar C. Lugtenburg <I.C.Lugtenburg@LUMC.nl>
+ *               M. Kroon <m.kroon@lumc.nl>
  *
  *
  * This file is part of LOVD.
@@ -29,10 +30,6 @@
  *
  *************/
 
-// STILL TODO:
-// variant <-> pathogenicity <-> disease? Link pathogenicity specifically to one of the phenotypes or diseases?
-// Functional assays / computer predictions, hoe toevoegen??? Aan variant én aan individual???
-
 // IDs:
 // WARNING: If editing any of these, also edit $_SETT['objectid_length']!
 // userid SMALLINT(5) UNSIGNED (65K)
@@ -46,10 +43,10 @@
 // colid VARCHAR(100) (100 characters)
 // linkid TINYINT(3) UNSIGNED (255)
 
-// DMD_SPECIFIC
 if (!defined('ROOT_PATH')) {
     define('ROOT_PATH', '../');
     require ROOT_PATH . 'inc-init.php';
+    lovd_requireAUTH(LEVEL_MANAGER);
 }
 
 $sSettings = 'ENGINE=InnoDB,
@@ -101,6 +98,17 @@ $aTableSQL =
     CONSTRAINT ' . TABLE_USERS . '_fk_countryid FOREIGN KEY (countryid) REFERENCES ' . TABLE_COUNTRIES . ' (id) ON DELETE SET NULL ON UPDATE CASCADE,
     CONSTRAINT ' . TABLE_USERS . '_fk_created_by FOREIGN KEY (created_by) REFERENCES ' . TABLE_USERS . ' (id) ON DELETE SET NULL ON UPDATE CASCADE,
     CONSTRAINT ' . TABLE_USERS . '_fk_edited_by FOREIGN KEY (edited_by) REFERENCES ' . TABLE_USERS . ' (id) ON DELETE SET NULL ON UPDATE CASCADE)
+    ' . $sSettings
+
+         , 'TABLE_COLLEAGUES' =>
+             'CREATE TABLE ' . TABLE_COLLEAGUES . '(
+    userid_from SMALLINT(5) UNSIGNED ZEROFILL NOT NULL,
+    userid_to   SMALLINT(5) UNSIGNED ZEROFILL NOT NULL,
+    allow_edit  BOOLEAN NOT NULL DEFAULT 0,
+    PRIMARY KEY (userid_from, userid_to),
+    INDEX (userid_to),
+    CONSTRAINT ' . TABLE_COLLEAGUES .  '_fk_userid_from FOREIGN KEY (userid_from) REFERENCES ' . TABLE_USERS . ' (id) ON DELETE CASCADE ON UPDATE CASCADE,
+    CONSTRAINT ' . TABLE_COLLEAGUES . '_fk_userid_to FOREIGN KEY (userid_to) REFERENCES ' . TABLE_USERS . ' (id) ON DELETE CASCADE ON UPDATE CASCADE)
     ' . $sSettings
 
         , 'TABLE_CHROMOSOMES' =>
@@ -1000,7 +1008,6 @@ $aTableSQL =
 ' . $sSettings
           );
 
-// DMD_SPECIFIC;
 if (lovd_getProjectFile() == '/install/inc-sql-tables.php') {
     header('Content-type: text/plain; charset=UTF-8');
     var_dump($aTableSQL);

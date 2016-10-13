@@ -29,10 +29,10 @@
  *
  *************/
 
-// DMD_SPECIFIC
 if (!defined('ROOT_PATH')) {
     define('ROOT_PATH', '../');
     require ROOT_PATH . 'inc-init.php';
+    lovd_requireAUTH(LEVEL_MANAGER);
 }
 
 $aColSQL =

@@ -12,6 +12,7 @@
  *               Jerry Hoogenboom <J.Hoogenboom@LUMC.nl>
  *               Ing. Ivo F.A.C. Fokkema <I.F.A.C.Fokkema@LUMC.nl>
  *               Msc. Daan Asscheman <D.Asscheman@LUMC.nl>
+ *               M. Kroon <m.kroon@lumc.nl>
  *
  *
  * This file is part of LOVD.
@@ -1069,7 +1070,7 @@ if (PATH_COUNT == 4 && $_PE[1] == 'finish' && in_array($_PE[2], array('individua
         // Diagnostics: We don't send out emails...
         $bMail = true;
     } else {
-        $bMail = lovd_sendMail($aTo, $sSubject, $sBody, $_SETT['email_headers'], $_CONF['send_admin_submissions'], $aCC);
+        $bMail = lovd_sendMail($aTo, $sSubject, $sBody, $_SETT['email_headers'], true, $_CONF['send_admin_submissions'], $aCC);
     }
 
     // FIXME; When messaging system is built in, maybe queue message for curators?
