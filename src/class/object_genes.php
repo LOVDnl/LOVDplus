@@ -11,7 +11,7 @@
  * Programmers : Ing. Ivar C. Lugtenburg <I.C.Lugtenburg@LUMC.nl>
  *               Ing. Ivo F.A.C. Fokkema <I.F.A.C.Fokkema@LUMC.nl>
  *               Msc. Daan Asscheman <D.Asscheman@LUMC.nl>
- *               Mark Kroon MSc. <M.Kroon@LUMC.nl>
+ *               M. Kroon <m.kroon@lumc.nl>
  *
  *
  * This file is part of LOVD.
@@ -379,7 +379,7 @@ class LOVD_Gene extends LOVD_Object {
         // Array which will make up the form table.
         $this->aFormData =
                  array(
-                        array('POST', '', '', '', '50%', '14', '50%'),
+                        array('POST', '', '', '', '35%', '14', '65%'),
                         array('', '', 'print', '<B>General information</B>'),
                         'hr',
                         array('Full gene name', '', 'print', $zData['name'], 50),

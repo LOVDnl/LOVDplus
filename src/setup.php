@@ -217,6 +217,11 @@ $aItems =
                         array('variants?create', 'lovd_variants_create.png', 'Create new variant', 'Create a new variant.'),
                         array('variants', 'lovd_variants.png', 'View all variants', 'Manage variants.'),
                       ),
+            'Announcements' =>
+                 array(
+                        array('announcements?create', 'lovd_announcements_create.png', 'Create new announcement', 'Create a new announcement, optionally making LOVD read-only.'),
+                        array('announcements', 'lovd_information.png', 'View all announcements', 'Manage system announcements.'),
+                      ),
 /*
 // Export central repository format.
 print('            <TABLE border="0" cellpadding="2" cellspacing="0" class="setup" width="100%">' . "\n" .

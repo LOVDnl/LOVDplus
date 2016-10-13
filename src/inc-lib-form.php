@@ -4,8 +4,8 @@
  * LEIDEN OPEN VARIATION DATABASE (LOVD)
  *
  * Created     : 2009-10-21
- * Modified    : 2016-06-17
- * For LOVD    : 3.0-16
+ * Modified    : 2016-10-13
+ * For LOVD    : 3.0-18
  *
  * Copyright   : 2004-2016 Leiden University Medical Center; http://www.LUMC.nl/
  * Programmers : Ing. Ivo F.A.C. Fokkema <I.F.A.C.Fokkema@LUMC.nl>
@@ -396,7 +396,7 @@ function lovd_fetchDBID ($aData)
                 $aArgs[] = $aData['position_g_start'];
             }
         }
-        if (false && !empty($aTranscriptVariants)) {
+        if (!LOVD_plus && !empty($aTranscriptVariants)) {
             if (!empty($sGenomeVariant)) {
                 $sSQL .= ' UNION ';
             }
@@ -434,7 +434,7 @@ function lovd_fetchDBID ($aData)
                     continue;
                 }
                 if ($sDBIDoptionSymbol == $sDBIDnewSymbol && $sDBIDoptionNumber < $sDBIDnewNumber && $sDBIDoptionNumber != '000000') {
-                    // If the symbol of the option is the same, but the number is lower(not including 000000), take it.
+                    // If the symbol of the option is the same, but the number is lower (not including 000000), take it.
                     $sDBID = $sDBIDoption;
                 } elseif ($sDBIDoptionSymbol != $sDBIDnewSymbol && isset($aGenes) && in_array($sDBIDoptionSymbol, $aGenes)) {
                     // If the symbol of the option is different and is one of the genes of the variant you are editing/creating, take it.
@@ -755,11 +755,11 @@ function lovd_setUpdatedDate ($aGenes)
 
 
 function lovd_viewForm ($a,
-                        $sHeaderPrefix = "\n          <TR valign=\"top\">\n            <TD class=\"{{ CLASS }}\" width=\"{{ WIDTH }}\">",
+                        $sHeaderPrefix = "\n          <TR valign=\"top\">\n            <TD class=\"{{ CLASS }}\">",
                         $sHeaderSuffix = '</TD>',
-                        $sHelpPrefix   = "\n            <TD class=\"{{ CLASS }}\" width=\"{{ WIDTH }}\">",
+                        $sHelpPrefix   = "\n            <TD class=\"{{ CLASS }}\">",
                         $sHelpSuffix   = '</TD>',
-                        $sDataPrefix   = "\n            <TD class=\"{{ CLASS }}\" width=\"{{ WIDTH }}\">",
+                        $sDataPrefix   = "\n            <TD class=\"{{ CLASS }}\">",
                         $sDataSuffix   = '</TD></TR>',
                         $sNewLine      = '              ')
 {
@@ -794,24 +794,25 @@ function lovd_viewForm ($a,
         $sMethod = 'POST';
     }
 
-    // Class names and widths.
+    // Class names, widths are taken care of in the COLGROUP element (that doesn't support class name).
     $aCats = array('Header', 'Help', 'Data');
     foreach ($aCats as $sCat) {
         $sClass  = 's' . $sCat . 'Class';
         $sPrefix = 's' . $sCat . 'Prefix';
-        $sWidth  = 's' . $sCat . 'Width';
         if ($$sClass) {
             $$sPrefix = str_replace('{{ CLASS }}', $$sClass, $$sPrefix);
         } else {
             $$sPrefix = str_replace(' class="{{ CLASS }}"', '', $$sPrefix);
         }
-
-        if ($$sWidth) {
-            $$sPrefix = str_replace('{{ WIDTH }}', $$sWidth, $$sPrefix);
-        } else {
-            $$sPrefix = str_replace(' width="{{ WIDTH }}"', '', $$sPrefix);
-        }
     }
+    // Table structure, use COLGROUP for the width to ensure table-layout:fixed gets the width correctly.
+    $nFormWidth = 760;
+    $sTable = '        <TABLE border="0" cellpadding="0" cellspacing="1" width="' . $nFormWidth . '" class="dataform">
+          <COLGROUP>
+            <COL width="' . $sHeaderWidth . '"></COL>
+            <COL width="' . $sHelpWidth . '"></COL>
+            <COL width="' . $sDataWidth . '"></COL>
+          </COLGROUP>';
 
 
 
@@ -819,10 +820,9 @@ function lovd_viewForm ($a,
 
     // First: print the table.
     $bInFieldset = false;
-    $nFormWidth = 760;
     if (!(!empty($a[1][0]) && $a[1][0] == 'fieldset')) {
         // Table should only be printed when the first field is not a fieldset definition, that definition will close and open a new table.
-        print('        <TABLE border="0" cellpadding="0" cellspacing="1" width="' . $nFormWidth . '">');
+        print($sTable);
     }
 
     // Now loop the array with fields, to print them on the screen.
@@ -841,14 +841,14 @@ function lovd_viewForm ($a,
             } elseif ($aField == 'hr') {
                 // Horizontal line (ruler).
                 // This construction may not entirely be correct when this function is called with different prefixes & suffixes than the default ones.
-                echo str_replace(' width="' . $sHeaderWidth . '"', '', str_replace('<TD', '<TD colspan="3"', $sHeaderPrefix)) . '<IMG src="gfx/trans.png" alt="" width="100%" height="1" class="form_hr">' . $sDataSuffix;
+                echo str_replace('<TD', '<TD colspan="3"', $sHeaderPrefix) . '<IMG src="gfx/trans.png" alt="" width="100%" height="1" class="form_hr">' . $sDataSuffix;
                 continue;
             } elseif ($aField == 'end_fieldset' && $bInFieldset) {
                 // End of fieldset. Only given when fieldset is open and no new fieldset should be opened.
                 print('</TABLE>' . "\n" .
                       '        </FIELDSET>' . "\n" .
-                      '        <TABLE border="0" cellpadding="0" cellspacing="1" width="' . $nFormWidth . '">');
-                $nInFieldset = false;
+                      $sTable);
+                $bInFieldset = false;
                 continue;
             }
 
@@ -868,7 +868,7 @@ function lovd_viewForm ($a,
                     print('        </FIELDSET>' . "\n");
                 }
                 print('        <FIELDSET style="width : ' . ($nFormWidth + 4) . 'px;"><LEGEND style="margin-left : ' . $sHeaderWidth . ';"><B>' . $aField[2] . '</B> <SPAN class="S11">[<A href="#" id="' . $aField[1] . '_link" onClick="lovd_toggleVisibility(\'' . $aField[1] . '\'); return false;">' . ($bShow? 'Hide' : 'Show') . '</A>]</SPAN></LEGEND>' . "\n" .
-                      '        <TABLE border="0" cellpadding="0" cellspacing="1" width="' . $nFormWidth . '" id="' . $aField[1] . '"' . ($bShow? '' : ' style="display : none"') . '>');
+                      preg_replace('/>/', ' id="' . $aField[1] . '"' . ($bShow? '' : ' style="display : none"') . '>', $sTable, 1));
                 $bInFieldset = true;
                 continue;
             }
@@ -933,6 +933,8 @@ function lovd_viewForm ($a,
                         $GLOBALS['_' . $sMethod][$sName]) . '"' . (!lovd_errorFindField($sName)?
                         '' : ' class="err"') . '>' . $sDataSuffix);
                 continue;
+
+
 
             } elseif ($aField[2] == 'textarea') {
                 list($sHeader, $sHelp, $sType, $sName, $nCols, $nRows) = $aField;

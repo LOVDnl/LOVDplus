@@ -4,8 +4,8 @@
  * LEIDEN OPEN VARIATION DATABASE (LOVD)
  *
  * Created     : 2009-10-19
- * Modified    : 2016-06-23
- * For LOVD    : 3.0-16
+ * Modified    : 2016-10-13
+ * For LOVD    : 3.0-18
  *
  * Copyright   : 2004-2016 Leiden University Medical Center; http://www.LUMC.nl/
  * Programmers : Ing. Ivo F.A.C. Fokkema <I.F.A.C.Fokkema@LUMC.nl>
@@ -29,6 +29,27 @@
  * along with LOVD.  If not, see <http://www.gnu.org/licenses/>.
  *
  *************/
+
+function lovd_arrayInsertAfter ($key, array &$array, $new_key, $new_value)
+{
+    // Insert $new_key, $new_value pair after entry $key in array $array.
+    // Courtesy of http://eosrei.net/
+    if (array_key_exists($key, $array)) {
+        $new = array();
+        foreach ($array as $k => $value) {
+            $new[$k] = $value;
+            if ($k === $key) {
+                $new[$new_key] = $new_value;
+            }
+        }
+        return $new;
+    }
+    return FALSE;
+}
+
+
+
+
 
 function lovd_calculateVersion ($sVersion)
 {
@@ -156,8 +177,8 @@ function lovd_displayError ($sError, $sMessage, $sLogFile = 'Error')
     // Write to log file... if we're not here because we don't have MySQL.
     if (!empty($_DB) && class_exists('PDO') && in_array('mysql', PDO::getAvailableDrivers())) {
         // lovd_displayError() always halts LOVD. If we're in a transaction, any log we'll write
-        // to the DB will be gone since PHP will rollback() any transaction that is still open.
-        // So we'd better rollback() ourselves first!
+        // to the DB will be gone since PHP will rollBack() any transaction that is still open.
+        // So we'd better rollBack() ourselves first!
         try {
             @$_DB->rollBack(); // In case we were in a transaction. // FIXME; we can know from PHP >= 5.3.3.
         } catch (PDOException $eNoTransaction) {}
@@ -814,24 +835,256 @@ function lovd_magicUnquoteAll ()
 
 
 
+function lovd_parseConfigFile($sConfigFile)
+{
+    // Parses the given config file, checks all values, and returns array with parsed settings.
+
+    // Config file exists?
+    if (!file_exists($sConfigFile)) {
+        lovd_displayError('Init', 'Can\'t find config.ini.php');
+    }
+
+    // Config file readable?
+    if (!is_readable($sConfigFile)) {
+        lovd_displayError('Init', 'Can\'t read config.ini.php');
+    }
+
+    // Open config file.
+    if (!$aConfig = file($sConfigFile)) {
+        lovd_displayError('Init', 'Can\'t open config.ini.php');
+    }
+
+
+
+    // Parse config file.
+    $_INI = array();
+    unset($aConfig[0]); // The first line is the PHP code with the exit() call.
+
+    $sKey = '';
+    foreach ($aConfig as $nLine => $sLine) {
+        // Go through the file line by line.
+        $sLine = trim($sLine);
+
+        // Empty line or comment.
+        if (!$sLine || substr($sLine, 0, 1) == '#') {
+            continue;
+        }
+
+        // New section.
+        if (preg_match('/^\[([A-Z][A-Z_ ]+[A-Z])\]$/i', $sLine, $aRegs)) {
+            $sKey = $aRegs[1];
+            $_INI[$sKey] = array();
+            continue;
+        }
+
+        // Setting.
+        if (preg_match('/^([A-Z_]+) *=(.*)$/i', $sLine, $aRegs)) {
+            list(, $sVar, $sVal) = $aRegs;
+            $sVal = trim($sVal, ' "\'“”');
+
+            if (!$sVal) {
+                $sVal = false;
+            }
+
+            // Set value in array.
+            if ($sKey) {
+                $_INI[$sKey][$sVar] = $sVal;
+            } else {
+                $_INI[$sVar] = $sVal;
+            }
+
+        } else {
+            // Couldn't parse value.
+            lovd_displayError('Init', 'Error parsing config file at line ' . ($nLine + 1));
+        }
+    }
+
+    // We now have the $_INI variable filled according to the file's contents.
+    // Check the settings' values to see if they are valid.
+    $aConfigValues =
+        array(
+            'database' =>
+                array(
+                    'driver' =>
+                        array(
+                            'required' => true,
+                            'default'  => 'mysql',
+                            'pattern'  => '/^[a-z]+$/',
+                            'values' => array('mysql' => 'MySQL', 'sqlite' => 'SQLite'),
+                        ),
+                    'hostname' =>
+                        array(
+                            'required' => true,
+                            'default'  => 'localhost',
+                            // Also include hostname:port and :/path/to/socket values.
+                            'pattern'  => '/^([0-9a-z][-0-9a-z.]*[0-9a-z](:[0-9]+)?|:[-0-9a-z.\/]+)$/i',
+                        ),
+                    'username' =>
+                        array(
+                            'required' => true,
+                        ),
+                    'password' =>
+                        array(
+                            'required' => false, // XAMPP and other systems have 'root' without password as default!
+                        ),
+                    'database' =>
+                        array(
+                            'required' => true,
+                        ),
+                    'table_prefix' =>
+                        array(
+                            'required' => true,
+                            'default'  => 'lovd',
+                            'pattern'  => '/^[A-Z0-9_]+$/i',
+                        ),
+                ),
+        );
+
+    if (LOVD_plus) {
+        // Configure data file paths.
+        $aConfigValues['paths'] = array(
+            'data_files' =>
+                array(
+                    'required' => true,
+                    'path_is_readable' => true,
+                    'path_is_writable' => true,
+                ),
+            'data_files_archive' =>
+                array(
+                    'required' => false,
+                    'path_is_readable' => true,
+                    'path_is_writable' => true,
+                ),
+            'alternative_ids' =>
+                array(
+                    'required' => false,
+                    'path_is_readable' => true,
+                    'path_is_writable' => false,
+                ),
+            'confirm_variants' =>
+                array(
+                    'required' => false,
+                    'path_is_readable' => true,
+                    'path_is_writable' => true,
+                ),
+        );
+
+        // Configure instance details.
+        $aConfigValues['instance'] = array(
+            'name' =>
+                array(
+                    'required' => false,
+                    'default'  => '',
+                ),
+        );
+    }
+
+    // SQLite doesn't need an username and password...
+    if (isset($_INI['database']['driver']) && $_INI['database']['driver'] == 'sqlite') {
+        unset($aConfigValues['database']['username']);
+        unset($aConfigValues['database']['password']);
+    }
+
+    foreach ($aConfigValues as $sSection => $aVars) {
+        foreach ($aVars as $sVar => $aVar) {
+            if (!isset($_INI[$sSection][$sVar]) || !$_INI[$sSection][$sVar]) {
+                // Nothing filled in...
+
+                if (isset($aVar['default']) && $aVar['default']) {
+                    // Set default value.
+                    $_INI[$sSection][$sVar] = $aVar['default'];
+                } elseif (isset($aVar['required']) && $aVar['required']) {
+                    // No default value, required setting not filled in.
+                    lovd_displayError('Init', 'Error parsing config file: missing required value for setting \'' . $sVar . '\' in section [' . $sSection . ']');
+                } elseif (!isset($_INI[$sSection][$sVar])){
+                    // Add the setting to the $_INI array to avoid notices.
+                    $_INI[$sSection][$sVar] = false;
+                }
+
+            } else {
+                // Value is present in $_INI.
+                if (isset($aVar['pattern']) && !preg_match($aVar['pattern'], $_INI[$sSection][$sVar])) {
+                    // Error: a pattern is available, but it doesn't match the input!
+                    lovd_displayError('Init', 'Error parsing config file: incorrect value for setting \'' . $sVar . '\' in section [' . $sSection . ']');
+
+                } elseif (isset($aVar['values']) && is_array($aVar['values'])) {
+                    // Value must be present in list of possible values.
+                    $_INI[$sSection][$sVar] = strtolower($_INI[$sSection][$sVar]);
+                    if (!array_key_exists($_INI[$sSection][$sVar], $aVar['values'])) {
+                        // Error: a value list is available, but it doesn't match the input!
+                        lovd_displayError('Init', 'Error parsing config file: incorrect value for setting \'' . $sVar . '\' in section [' . $sSection . ']');
+                    }
+                }
+
+                // For paths, check readability or writability.
+                if (!empty($aVar['path_is_readable']) && !is_readable($_INI[$sSection][$sVar])) {
+                    // Error: The path should be readable, but it's not!
+                    lovd_displayError('Init', 'Error parsing config file: path for \'' . $sVar . '\' in section [' . $sSection . '] is not readable.');
+                }
+                if (!empty($aVar['path_is_writable']) && !is_writable($_INI[$sSection][$sVar])) {
+                    // Error: The path should be writable, but it's not!
+                    lovd_displayError('Init', 'Error parsing config file: path for \'' . $sVar . '\' in section [' . $sSection . '] is not writable.');
+                }
+            }
+        }
+    }
+
+    return $_INI;
+}
+
+
+
+
+
+
 function lovd_php_file ($sURL, $bHeaders = false, $sPOST = false, $aAdditionalHeaders = array()) {
-    // LOVD's alternative to file(), not dependent on the fopenwrappers, and can do POST requests.
+    // LOVD's alternative to file(), not dependent on the fopen wrappers, and can do POST requests.
     global $_CONF, $_SETT;
 
-    if (substr($sURL, 0, 4) != 'http' || (ini_get('allow_url_fopen') && !$sPOST && !$aAdditionalHeaders)) {
-        // Normal file() is fine.
-        return @file($sURL, FILE_IGNORE_NEW_LINES);
-    }
+    // Check additional headers.
     if (!is_array($aAdditionalHeaders)) {
         $aAdditionalHeaders = array($aAdditionalHeaders);
     }
+
+    // Prepare proxy authorization header.
+    if (!empty($_CONF['proxy_username']) && !empty($_CONF['proxy_password'])) {
+        $aAdditionalHeaders[] = 'Proxy-Authorization: Basic ' . base64_encode($_CONF['proxy_username'] . ':' . $_CONF['proxy_password']);
+    }
+
     $aAdditionalHeaders[] = ''; // To make sure we end with a \r\n.
+
+    // Use the simple file() method, only if:
+    // - We're working with local files, OR:
+    // - We're using HTTPS (because our fsockopen() currently doesn't support that, let's hope allow_url_fopen is on), OR:
+    // - Fopen wrappers are on AND we're NOT using POST (because POST doesn't work for now).
+    if (substr($sURL, 0, 4) != 'http' || substr($sURL, 0, 5) == 'https' || (ini_get('allow_url_fopen') && !$sPOST)) {
+        // Normal file() is fine.
+        $aOptions = array(
+            'http' => array(
+                'method' => ($sPOST? 'POST' : 'GET'),
+                'header' => $aAdditionalHeaders,
+                'user_agent' => 'LOVDv.' . $_SETT['system']['version'],
+            ),
+        );
+        // If we're connecting through a proxy, we need to set some additional information.
+        if ($_CONF['proxy_host']) {
+            $aOptions['http']['proxy'] = 'tcp://' . $_CONF['proxy_host'] . ':' . $_CONF['proxy_port'];
+            $aOptions['http']['request_fulluri'] = true;
+        }
+        if (substr($sURL, 0, 5) == 'https') {
+            $aOptions['ssl'] = array('allow_self_signed' => 1, 'SNI_enabled' => 1, (PHP_VERSION_ID >= 50600? 'peer_name' : 'SNI_server_name') => parse_url($sURL, PHP_URL_HOST));
+            $aOptions['http']['request_fulluri'] = false; // Somehow this breaks when testing through squid3 and using HTTPS.
+        }
+
+        return @file($sURL, FILE_IGNORE_NEW_LINES, stream_context_create($aOptions));
+    }
 
     $aHeaders = array();
     $aOutput = array();
     $aURL = parse_url($sURL);
     if ($aURL['host']) {
-        $f = @fsockopen((!empty($_CONF['proxy_host'])? $_CONF['proxy_host'] : $aURL['host']), (!empty($_CONF['proxy_port'])? $_CONF['proxy_port'] : 80)); // Doesn't support SSL without OpenSSL.
+        // fsockopen() can only connect to an HTTPS (proxy or host), when using "ssl" as the scheme, and having OpenSSL installed.
+        $f = @fsockopen((!empty($_CONF['proxy_host'])? $_CONF['proxy_host'] : $aURL['host']), (!empty($_CONF['proxy_port'])? $_CONF['proxy_port'] : 80));
         if ($f === false) {
             // No use continuing - it will only cause errors.
             return false;
@@ -842,8 +1095,6 @@ function lovd_php_file ($sURL, $bHeaders = false, $sPOST = false, $aAdditionalHe
                     (!$sPOST? '' :
                     'Content-length: ' . strlen($sPOST) . "\r\n" .
                     'Content-Type: application/x-www-form-urlencoded' . "\r\n") .
-            (empty($_CONF['proxy_username']) || empty($_CONF['proxy_password'])? '' :
-                'Proxy-Authorization: Basic ' . base64_encode($_CONF['proxy_username'] . ':' . $_CONF['proxy_password']) . "\r\n") .
             implode("\r\n", $aAdditionalHeaders) .
                     'Connection: Close' . "\r\n\r\n" .
                     (!$sPOST? '' :
@@ -975,7 +1226,7 @@ function lovd_requireAUTH ($nLevel = 0)
 
         $sMessage = 'To access this area, you need ' . (!$nLevel? 'to <A href="login">log in</A>.' : ($nLevel == max($aKeys)? '' : 'at least ') . $_SETT['user_levels'][$nLevel] . ' clearance.');
         // FIXME; extend this list?
-        if (lovd_getProjectFile() == '/submit.php' && !$_AUTH) {
+        if (lovd_getProjectFile() == '/submit.php') {
             $sMessage .= '<BR>If you are not registered as a submitter, please <A href="users?register">do so here</A>.';
         }
         lovd_showInfoTable($sMessage, 'stop');
@@ -1084,7 +1335,7 @@ function lovd_showDialog ($sID, $sTitle, $sMessage, $sType = 'information', $aSe
 
 
 
-function lovd_showInfoTable ($sMessage, $sType = 'information', $sWidth = '100%', $sHref = '')
+function lovd_showInfoTable ($sMessage, $sType = 'information', $sWidth = '100%', $sHref = '', $bBR = true)
 {
     $aTypes =
              array(
@@ -1115,13 +1366,13 @@ function lovd_showInfoTable ($sMessage, $sType = 'information', $sWidth = '100%'
                   '| ' . str_pad($aTypes[$sType], $nWidth - 4, ' ') . ' |' . "\n" .
                   $sSeparatorLine . "\n" .
                   '| ' . implode(" |\n| ", $aMessage) . ' |' . "\n" .
-                  $sSeparatorLine . "\n\n");
+                  $sSeparatorLine . (!$bBR? '' : "\n") . "\n");
             break;
         default:
             print('      <TABLE border="0" cellpadding="2" cellspacing="0" width="' . $sWidth . '" class="info"' . (!empty($sHref)? ' style="cursor : pointer;" onclick="' . (preg_match('/[ ;"\'=()]/', $sHref)? $sHref : 'window.location.href=\'' . $sHref . '\';') . '"': '') . '>' . "\n" .
                   '        <TR>' . "\n" .
                   '          <TD valign="top" align="center" width="40"><IMG src="gfx/lovd_' . $sType . '.png" alt="' . $aTypes[$sType] . '" title="' . $aTypes[$sType] . '" width="32" height="32" style="margin : 4px;"></TD>' . "\n" .
-                  '          <TD valign="middle">' . $sMessage . '</TD></TR></TABLE><BR>' . "\n\n");
+                  '          <TD valign="middle">' . $sMessage . '</TD></TR></TABLE>' . (!$bBR? '' : '<BR>') . "\n\n");
     }
 }
 

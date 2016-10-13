@@ -4,11 +4,12 @@
  * LEIDEN OPEN VARIATION DATABASE (LOVD)
  *
  * Created     : 2012-05-02
- * Modified    : 2016-02-18
- * For LOVD    : 3.0-15
+ * Modified    : 2016-09-15
+ * For LOVD    : 3.0-17
  *
  * Copyright   : 2004-2016 Leiden University Medical Center; http://www.LUMC.nl/
  * Programmer  : Ing. Ivo F.A.C. Fokkema <I.F.A.C.Fokkema@LUMC.nl>
+ *               M. Kroon <m.kroon@lumc.nl>
  *
  *
  * This file is part of LOVD.
@@ -34,7 +35,6 @@ if (!defined('ROOT_PATH')) {
 }
 // Require parent class definition.
 require_once ROOT_PATH . 'class/objects.php';
-require_once ROOT_PATH . 'inc-lib-columns.php';
 
 
 
@@ -228,7 +228,7 @@ class LOVD_SharedColumn extends LOVD_Object {
         // Array which will make up the form table.
         $this->aFormData =
                  array(
-                        array('POST', '', '', '', '40%', '14', '60%'),
+                        array('POST', '', '', '', '35%', '14', '65%'),
                         array('', '', 'print', '<B>Column descriptions</B>'),
                         'hr',
                         array('Description on short legend<BR>(HTML enabled)', '', 'textarea', 'description_legend_short', 50, 2),

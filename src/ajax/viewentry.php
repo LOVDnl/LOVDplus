@@ -10,6 +10,7 @@
  * Copyright   : 2004-2016 Leiden University Medical Center; http://www.LUMC.nl/
  * Programmers : Ing. Ivar C. Lugtenburg <I.C.Lugtenburg@LUMC.nl>
  *               Ing. Ivo F.A.C. Fokkema <I.F.A.C.Fokkema@LUMC.nl>
+ *               M. Kroon <m.kroon@lumc.nl>
  *
  *
  * This file is part of LOVD.
@@ -50,14 +51,13 @@ if (isset($aNeededLevel[$_GET['object']])) {
     $nNeededLevel = LEVEL_ADMIN;
 }
 
-// We can't authorize Curators without loading their level!
-if ($_AUTH['level'] < LEVEL_MANAGER && !empty($_AUTH['curates'])) {
-    if ($_GET['object'] == 'Transcript_Variant') {
-        list($nVariantID, $nTranscriptID) = explode(',', $_GET['id']);
-        lovd_isAuthorized('variant', $nVariantID);
-    }
-    // FIXME; other lovd_isAuthorized() calls?
+// Call isAuthorized() on the object. NB: isAuthorized() modifies the global
+// $_AUTH for curators, owners and colleagues.
+if ($_GET['object'] == 'Transcript_Variant') {
+    list($nVariantID, $nTranscriptID) = explode(',', $_GET['id']);
+    lovd_isAuthorized('variant', $nVariantID);
 }
+// FIXME; other lovd_isAuthorized() calls?
 
 // Require special clearance?
 if ($nNeededLevel && (!$_AUTH || $_AUTH['level'] < $nNeededLevel)) {

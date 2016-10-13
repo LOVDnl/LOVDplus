@@ -4,8 +4,8 @@
  * LEIDEN OPEN VARIATION DATABASE (LOVD)
  *
  * Created     : 2010-12-15
- * Modified    : 2016-06-21
- * For LOVD    : 3.0-16
+ * Modified    : 2016-09-14
+ * For LOVD    : 3.0-17
  *
  * Copyright   : 2004-2016 Leiden University Medical Center; http://www.LUMC.nl/
  * Programmers : Ing. Ivo F.A.C. Fokkema <I.F.A.C.Fokkema@LUMC.nl>
@@ -289,8 +289,7 @@ if (PATH_COUNT == 1 && ACTION == 'create') {
                         $sGeneName = $aGeneInfo['name'];
                         $sChromLocation = $aGeneInfo['location'];
                         $sEntrez = $aGeneInfo['entrez_id'];
-                        // OMIM ID is not always defined.
-                        $nOmim = (!isset($aGeneInfo['omim_id'])? '' : $aGeneInfo['omim_id']);
+                        $nOmim = $aGeneInfo['omim_id'];
                     }
                 }
             }
@@ -715,7 +714,7 @@ if (PATH_COUNT == 2 && preg_match('/^[a-z][a-z0-9#@-]*$/i', rawurldecode($_PE[1]
                 require ROOT_PATH . 'class/soap_client.php';
                 $_Mutalyzer = new LOVD_SoapClient();
                 try {
-                    $sRefseqUD = $_Mutalyzer->sliceChromosomeByGene(array('geneSymbol' => $sID, 'organism' => 'Man', 'upStream' => '5000', 'downStream' => '2000'))->sliceChromosomeByGeneResult;
+                    $sRefseqUD = lovd_getUDForGene($_CONF['refseq_build'], $sID);
                     $_POST['refseq_UD'] = $sRefseqUD;
                     $aFields[] = 'refseq_UD';
                 } catch (SoapFault $e) {} // Silent error.
@@ -1605,7 +1604,7 @@ if (PATH_COUNT == 2 && preg_match('/^[a-z][a-z0-9#@-]*$/i', rawurldecode($_PE[1]
                     // FIXME; Is using REPLACE not a lot easier?
                     $_DB->query('INSERT INTO ' . TABLE_CURATES . ' VALUES (?, ?, ?, ?) ON DUPLICATE KEY UPDATE allow_edit = VALUES(allow_edit), show_order = VALUES(show_order)', array($nUserID, $sID, (int) in_array($nUserID, $_POST['allow_edit']), (in_array($nUserID, $_POST['shown'])? $nOrder : 0)));
                     // FIXME; Without detailed user info we can't include elaborate logging. Would we want that anyway?
-                    //   We could rapport things here more specifically because mysql_affected_rows() tells us if there has been an update (2) or an insert (1) or nothing changed (0).
+                    //   We could rapport things here more specifically because MySQL can tell us if there has been an update (2) or an insert (1) or nothing changed (0).
                 } else {
                     // Just sort and update visibility!
                     $_DB->query('UPDATE ' . TABLE_CURATES . ' SET show_order = ? WHERE geneid = ? AND userid = ?', array((in_array($nUserID, $_POST['shown'])? $nOrder : 0), $sID, $nUserID));

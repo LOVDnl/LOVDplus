@@ -4,6 +4,65 @@
  *
  *************/
 
+/************************************
+ * 3.0 Build 17 patch 02 (tag:3.0-17)
+ * 2016-09-27
+ *********/
+ * Fixed bug; Some data listings had some rows that were no longer clickable.
+ * Fixed bug; Custom columns could no longer be edited because of a double
+   inclusion of a library file.
+
+
+/**************************
+ * 3.0 Build 17 patch 01
+ * 2016-09-22
+ *********/
+ * Fixed bug; Custom links no longer functioned in most columns in custom data
+   listings.
+
+
+/**************************
+ * 3.0 Build 17
+ * 2016-09-21
+ *********/
+ * Fixed bug; Impossible for users of level submitter to browse the user list
+   on the access sharing page.
+ * Fixed bug; Repeated gene names on user account pages.
+ * Added a "remarks" field for transcript. This may for example be used to
+   denote why a certain transcript was chosen.
+   Closes #77: "Comment on transcript".
+ * Fixed bug; Query errors could occur when performing incorrect searches in
+   hidden columns.
+ * Fixed bug; Error when updating individuals panel from import file.
+   Closes #67: "Import: Panel_size of individual in panelid field not checked
+   properly"
+ * Fixed bug; The previous bug fix #53, about LOVD complaining about fields not
+   in the file when running an update import, was not implemented properly.
+   Closes #53: "Importing records fails on existing fields in database".
+ * Fixed bug; Colleagues can now see non-public fields of shared data.
+   Closes #105: "Assigned colleagues can't see non-public fields in
+   ViewEntries"
+ * Added the option to block submitter registrations.
+ * Added the option to create announcements within LOVD.
+ * Described these two new features in the manual, and added a new chapter
+   "Updating LOVD".
+ * Added new fields "tissues", "features" and "remarks" to diseases.
+   Closes #101: "New columns for diseases viewlist: tissue, alias, remarks".
+ * Fixed bug; The proxy server settings were often ignored by LOVD, and proxy
+   servers could not be used when using HTTPS, such as with Mutalyzer resources.
+   Closes #112: "SOAP using HTTPS over proxy using PHP 5.6.0 doesn't work".
+   (thanks to Jorge Oliveira, Centro Hospitalar do Porto, for reporting)
+ * Fixed bug; For curators, editing a disease could result in a fatal error in
+   some conditions.
+ * Fixed issue with the HGNC returning multiple OMIM IDs sometimes. Some LOVD
+   installations refuse to create such genes.
+   (thanks to Jorge Oliveira, Centro Hospitalar do Porto, for reporting)
+ * You can now perform a 'find and replace' on custom columns in some tables if
+   authorized. Note that this feature is still in BETA, changes made using find
+   and replace are not checked for errors as done in the edit forms, therefore
+   using this feature may have destructive consequences.
+
+
 /**************************
  * 3.0 Build 16 (tag:3.0-16)
  * 2016-06-24
@@ -30,7 +89,7 @@
  * Added possibility for sharing access to one's data with others. One can
    make another user a 'colleague' and let them view (and optionally edit)
    their submissions.
-   Closes #76: "Unstable identifiers for transcript variants bug major"
+   Closes #51: "Sharing permissions".
  * Fixed bug; LOVD used to store Mutalyzer identifiers for transcript variants,
    but they were found to be unstable. Now, Mutalyzer has a new feature that
    works around this and now protein prediction in LOVD is done with an NCBI

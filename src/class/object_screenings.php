@@ -225,7 +225,7 @@ class LOVD_Screening extends LOVD_Custom {
         // Array which will make up the form table.
         $this->aFormData = array_merge(
                  array(
-                        array('POST', '', '', '', '40%', '14', '60%'),
+                        array('POST', '', '', '', '35%', '14', '65%'),
                         array('', '', 'print', '<B>Screening information</B>'),
                         'hr',
                       ),

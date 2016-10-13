@@ -331,7 +331,7 @@ class LOVD_Individual extends LOVD_Custom {
         // Array which will make up the form table.
         $this->aFormData = array_merge(
                  array(
-                        array('POST', '', '', '', '50%', '14', '50%'),
+                        array('POST', '', '', '', '35%', '14', '65%'),
                         array('', '', 'print', '<B>Individual information</B>'),
                         'hr',
                       ),

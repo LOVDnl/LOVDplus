@@ -320,10 +320,11 @@ class LOVD_Custom extends LOVD_Object {
     function buildViewEntry ()
     {
         // Gathers the columns which are active for the current data type and returns them in a viewEntry format
+        // Note: object_custom_viewlists.php implements their own version of this code.
         global $_AUTH;
         $aViewEntry = array();
         foreach ($this->aColumns as $sID => $aCol) {
-            if (!$aCol['public_view'] && $_AUTH['level'] < LEVEL_OWNER) {
+            if (!$aCol['public_view'] && $_AUTH['level'] < LEVEL_COLLABORATOR) {
                 continue;
             }
             $aViewEntry[$sID] = $aCol['head_column'];
@@ -338,10 +339,11 @@ class LOVD_Custom extends LOVD_Object {
     function buildViewList ()
     {
         // Gathers the columns which are active for the current data type and returns them in a viewList format
+        // Note: object_custom_viewlists.php implements their own version of this code.
         global $_AUTH;
         $aViewList = array();
         foreach ($this->aColumns as $sID => $aCol) {
-            if (!$aCol['public_view'] && $_AUTH['level'] < LEVEL_OWNER) {
+            if (!$aCol['public_view'] && $_AUTH['level'] < LEVEL_COLLABORATOR) {
                 continue;
             }
             $bAlignRight = preg_match('/^(DEC|FLOAT|(TINY|SMALL|MEDIUM|BIG)?INT)/', $aCol['mysql_type']);
@@ -351,6 +353,7 @@ class LOVD_Custom extends LOVD_Object {
                                     'view'   => array($aCol['head_column'], $aCol['width'], ($bAlignRight? ' align="right"' : '')),
                                     'db'     => array('`' . $aCol['colid'] . '`', 'ASC', lovd_getColumnType('', $aCol['mysql_type'])),
                                     'legend' => array($aCol['description_legend_short'], $aCol['description_legend_full']),
+                                    'allowfnr' => true, // All custom columns allow Find & Replace.
                                  );
         }
         return $aViewList;

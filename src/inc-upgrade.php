@@ -4,8 +4,8 @@
  * LEIDEN OPEN VARIATION DATABASE (LOVD)
  *
  * Created     : 2010-01-14
- * Modified    : 2016-09-16
- * For LOVD    : 3.0-16
+ * Modified    : 2016-10-13
+ * For LOVD    : 3.0-18
  *
  * Copyright   : 2004-2016 Leiden University Medical Center; http://www.LUMC.nl/
  * Programmers : Ing. Ivo F.A.C. Fokkema <I.F.A.C.Fokkema@LUMC.nl>
@@ -614,6 +614,40 @@ if ($sCalcVersionFiles != $sCalcVersionDB) {
                             CONSTRAINT ' . TABLE_COLLEAGUES .  '_fk_userid_from FOREIGN KEY (userid_from) REFERENCES ' . TABLE_USERS . ' (id) ON DELETE CASCADE ON UPDATE CASCADE,
                             CONSTRAINT ' . TABLE_COLLEAGUES . '_fk_userid_to FOREIGN KEY (userid_to) REFERENCES ' . TABLE_USERS . ' (id) ON DELETE CASCADE ON UPDATE CASCADE)
                             ENGINE=InnoDB, DEFAULT CHARACTER SET utf8',
+                     ),
+                 '3.0-16a' =>
+                    array('ALTER TABLE ' . TABLE_TRANSCRIPTS . ' ADD COLUMN remarks TEXT NOT NULL AFTER id_protein_uniprot'),
+                 '3.0-16b' =>
+                    array('ALTER TABLE ' . TABLE_DISEASES .
+                               ' ADD COLUMN tissues  TEXT NOT NULL AFTER id_omim, 
+                                 ADD COLUMN features TEXT NOT NULL AFTER tissues,
+                                 ADD COLUMN remarks TEXT NOT NULL AFTER features',
+                        ),
+                 '3.0-16c' =>
+                    array(
+                        'ALTER TABLE ' . TABLE_CONFIG . ' ADD COLUMN allow_submitter_registration BOOLEAN NOT NULL DEFAULT ' . (int) (!LOVD_plus) . ' AFTER include_in_listing',
+                        'CREATE TABLE ' . TABLE_ANNOUNCEMENTS . ' (
+                            id SMALLINT(5) UNSIGNED ZEROFILL NOT NULL AUTO_INCREMENT,
+                            type VARCHAR(15) NOT NULL DEFAULT "information",
+                            announcement TEXT NOT NULL,
+                            start_date DATETIME NOT NULL DEFAULT "0000-00-00 00:00:00",
+                            end_date DATETIME NOT NULL DEFAULT "9999-12-31 23:59:59",
+                            lovd_read_only BOOLEAN NOT NULL DEFAULT 0,
+                            created_by SMALLINT(5) UNSIGNED ZEROFILL,
+                            created_date DATETIME NOT NULL,
+                            edited_by SMALLINT(5) UNSIGNED ZEROFILL,
+                            edited_date DATETIME,
+                            PRIMARY KEY (id),
+                            INDEX (created_by),
+                            INDEX (edited_by),
+                            CONSTRAINT ' . TABLE_ANNOUNCEMENTS . '_fk_created_by FOREIGN KEY (created_by) REFERENCES ' . TABLE_USERS . ' (id) ON DELETE SET NULL ON UPDATE CASCADE,
+                            CONSTRAINT ' . TABLE_ANNOUNCEMENTS . '_fk_edited_by FOREIGN KEY (edited_by) REFERENCES ' . TABLE_USERS . ' (id) ON DELETE SET NULL ON UPDATE CASCADE)
+                            ENGINE=InnoDB,
+                            DEFAULT CHARACTER SET utf8',
+                    ),
+                 '3.0-18' =>
+                     array(
+                         'INSERT IGNORE INTO ' . TABLE_SOURCES . ' VALUES ("pubmed_article", "http://www.ncbi.nlm.nih.gov/pubmed/{{ ID }}")',
                      ),
              );
 

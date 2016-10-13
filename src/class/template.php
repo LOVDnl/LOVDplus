@@ -4,11 +4,11 @@
  * LEIDEN OPEN VARIATION DATABASE (LOVD)
  *
  * Created     : 2012-03-27
- * Modified    : 2016-06-23
- * For LOVD    : 3.0-15
+ * Modified    : 2016-10-13
+ * For LOVD    : 3.0-18
  *
  * Copyright   : 2004-2016 Leiden University Medical Center; http://www.LUMC.nl/
- * Programmers : Ing. Ivo F.A.C. Fokkema <I.F.A.C.Fokkema@LUMC.nl>
+ * Programmers : Ivo F.A.C. Fokkema <I.F.A.C.Fokkema@LUMC.nl>
  *               Ing. Ivar C. Lugtenburg <I.C.Lugtenburg@LUMC.nl>
  *               Msc. Daan Asscheman <D.Asscheman@LUMC.nl>
  *               M. Kroon <m.kroon@lumc.nl>
@@ -166,7 +166,6 @@ class LOVD_Template {
                              '/view/' . $_SESSION['currdb'] . '?search_var_status=' . urlencode('="Pending"|"Non public"|"Marked"') => array('menu_variants_curate.png', 'View ' . $_SESSION['currdb'] . ' variants that require attention', ($_AUTH && in_array($_SESSION['currdb'], $_AUTH['curates'])? LEVEL_CURATOR : LEVEL_MANAGER)),
                              'hr',
 /*
-                                        array('config_free_edit.php', 'fnr', 'Find &amp; Replace', 'Find &amp; Replace', 'lovd_free_edit_fnr'),
                                         array('config_free_edit.php', 'copy', 'Copy Column', 'Copy Column', 'lovd_free_edit_copy'),
                                         'vr',
 */
@@ -200,6 +199,9 @@ class LOVD_Template {
                                 '/import?schedule' => array('menu_clock.png', 'Schedule data for import', LEVEL_MANAGER),
                                 'hr',
                                 '/logs' => array('menu_logs.png', 'View system logs', LEVEL_MANAGER),
+                                'hr',
+                                '/announcements?create' => array('lovd_form_information.png', 'Create a new system announcement', LEVEL_MANAGER),
+                                '/announcements' => array('lovd_form_information.png', 'View system announcements', LEVEL_MANAGER),
                               ),
                         'docs' => 'LOVD documentation',
 //                         array(
@@ -609,6 +611,16 @@ function lovd_mapVariants ()
 <BODY style="margin : 0px;">
 
 <?php
+// Check for announcements. Ignore errors, in case the table doesn't exist yet.
+$qAnnouncements = @$_DB->query('SELECT id, type, announcement FROM ' . TABLE_ANNOUNCEMENTS . ' WHERE start_date <= NOW() AND end_date >= NOW()', array(), false);
+if ($qAnnouncements) {
+    $zAnnouncements = $qAnnouncements->fetchAllAssoc();
+} else {
+    $zAnnouncements = array();
+}
+foreach ($zAnnouncements as $zAnnouncement) {
+    lovd_showInfoTable($zAnnouncement['announcement'], $zAnnouncement['type'], '100%', (!$_AUTH || $_AUTH['level'] < LEVEL_MANAGER? '' : 'announcements/' . $zAnnouncement['id']), false);
+}
 
 if ($_SERVER['HTTP_HOST'] == 'leiden-test.diagnostics.lovd.nl') {
     print('
@@ -662,11 +674,10 @@ if ($_SERVER['HTTP_HOST'] == 'leiden-test.diagnostics.lovd.nl') {
             if ($_AUTH) {
                 print('      <B>Welcome, ' . $_AUTH['name'] . '</B><BR>' . "\n" .
                       '      <A href="users/' . $_AUTH['id'] . '"><B>Your account</B></A> | ' . (false && $_AUTH['level'] == LEVEL_SUBMITTER && $_CONF['allow_submitter_mods']? '<A href="variants?search_created_by=' . $_AUTH['id'] . '"><B>Your submissions</B></A> | ' : '') . (!empty($_AUTH['saved_work']['submissions']['individual']) || !empty($_AUTH['saved_work']['submissions']['screening'])? '<A href="users/' . $_AUTH['id'] . '?submissions"><B>Unfinished submissions</B></A> | ' : '') . '<A href="logout"><B>Log out</B></A>' . "\n");
-            } elseif (!LOVD_plus) {
-                print('      <A href="users?register"><B>Register as submitter</B></A> | <A href="login"><B>Log in</B></A>' . "\n");
             } else {
                 // LOVD+ doesn't allow for submitter registrations, because submitters already achieve rights.
-                print('      <A href="login"><B>Log in</B></A>' . "\n");
+                print('      ' . (!$_CONF['allow_submitter_registration'] || $_CONF['lovd_read_only'] || LOVD_plus? '' : '<A href="users?register"><B>Register as submitter</B></A> | ') .
+                      '<A href="login"><B>Log in</B></A>' . "\n");
             }
         }
 

@@ -4,11 +4,11 @@
  * LEIDEN OPEN VARIATION DATABASE (LOVD)
  *
  * Created     : 2009-10-19
- * Modified    : 2016-06-24
- * For LOVD    : 3.0-16
+ * Modified    : 2016-09-21
+ * For LOVD    : 3.0-17
  *
  * Copyright   : 2004-2016 Leiden University Medical Center; http://www.LUMC.nl/
- * Programmers : Ing. Ivo F.A.C. Fokkema <I.F.A.C.Fokkema@LUMC.nl>
+ * Programmers : Ivo F.A.C. Fokkema <I.F.A.C.Fokkema@LUMC.nl>
  *               Ing. Ivar C. Lugtenburg <I.C.Lugtenburg@LUMC.nl>
  *               Msc. Daan Asscheman <D.Asscheman@LUMC.nl>
  *               M. Kroon <m.kroon@lumc.nl>
@@ -37,7 +37,7 @@ if (!defined('ROOT_PATH')) {
 }
 
 // Require library standard functions.
-require ROOT_PATH . 'inc-lib-init.php';
+require_once ROOT_PATH . 'inc-lib-init.php';
 
 // Define module path.
 // FIXME; do we still need this?
@@ -81,7 +81,8 @@ if (!empty($_GET['format']) && in_array($_GET['format'], $aFormats)) {
 } else {
     define('FORMAT', $aFormats[0]);
 }
-header('Content-type: ' . FORMAT . '; charset=UTF-8');
+// @ is to suppress errors in Travis test.
+@header('Content-type: ' . FORMAT . '; charset=UTF-8');
 
 define('COLLEAGUE_CAN_EDIT', 1);    // Colleagues that have edit permissions.
 define('COLLEAGUE_CANNOT_EDIT', 2); // Colleagues that have no edit permissions.
@@ -159,7 +160,7 @@ $aRequired =
 $_SETT = array(
                 'system' =>
                      array(
-                            'version' => '3.0-16',
+                            'version' => '3.0-17',
                           ),
                 'user_levels' =>
                      array(
@@ -443,195 +444,7 @@ $_T = new LOVD_Template();
 
 // We define CONFIG_URI as the location of the config file.
 define('CONFIG_URI', ROOT_PATH . 'config.ini.php');
-
-// Config file exists?
-if (!file_exists(CONFIG_URI)) {
-    lovd_displayError('Init', 'Can\'t find config.ini.php');
-}
-
-// Config file readable?
-if (!is_readable(CONFIG_URI)) {
-    lovd_displayError('Init', 'Can\'t read config.ini.php');
-}
-
-// Open config file.
-if (!$aConfig = file(CONFIG_URI)) {
-    lovd_displayError('Init', 'Can\'t open config.ini.php');
-}
-
-
-
-// Parse config file.
-$_INI = array();
-unset($aConfig[0]); // The first line is the PHP code with the exit() call.
-
-$sKey = '';
-foreach ($aConfig as $nLine => $sLine) {
-    // Go through the file line by line.
-    $sLine = trim($sLine);
-
-    // Empty line or comment.
-    if (!$sLine || substr($sLine, 0, 1) == '#') {
-        continue;
-    }
-
-    // New section.
-    if (preg_match('/^\[([A-Z][A-Z_ ]+[A-Z])\]$/i', $sLine, $aRegs)) {
-        $sKey = $aRegs[1];
-        $_INI[$sKey] = array();
-        continue;
-    }
-
-    // Setting.
-    if (preg_match('/^([A-Z_]+) *=(.*)$/i', $sLine, $aRegs)) {
-        list(,$sVar, $sVal) = $aRegs;
-        $sVal = trim($sVal, ' "\'“”');
-
-        if (!$sVal) {
-            $sVal = false;
-        }
-
-        // Set value in array.
-        if ($sKey) {
-            $_INI[$sKey][$sVar] = $sVal;
-        } else {
-            $_INI[$sVar] = $sVal;
-        }
-
-    } else {
-        // Couldn't parse value.
-        lovd_displayError('Init', 'Error parsing config file at line ' . ($nLine + 1));
-    }
-}
-
-// We now have the $_INI variable filled according to the file's contents.
-// Check the settings' values to see if they are valid.
-$aConfigValues =
-         array(
-                'database' =>
-                         array(
-                                'driver' =>
-                                         array(
-                                                'required' => true,
-                                                'default'  => 'mysql',
-                                                'pattern'  => '/^[a-z]+$/',
-                                                'values' => array('mysql' => 'MySQL', 'sqlite' => 'SQLite'),
-                                              ),
-                                'hostname' =>
-                                         array(
-                                                'required' => true,
-                                                'default'  => 'localhost',
-                                                // Also include hostname:port and :/path/to/socket values.
-                                                'pattern'  => '/^([0-9a-z][-0-9a-z.]*[0-9a-z](:[0-9]+)?|:[-0-9a-z.\/]+)$/i',
-                                              ),
-                                'username' =>
-                                         array(
-                                                'required' => true,
-                                              ),
-                                'password' =>
-                                         array(
-                                                'required' => false, // XAMPP and other systems have 'root' without password as default!
-                                              ),
-                                'database' =>
-                                         array(
-                                                'required' => true,
-                                              ),
-                                'table_prefix' =>
-                                         array(
-                                                'required' => true,
-                                                'default'  => 'lovd',
-                                                'pattern'  => '/^[A-Z0-9_]+$/i',
-                                              ),
-                              ),
-              );
-if (LOVD_plus) {
-    // Configure data file paths.
-    $aConfigValues['paths'] = array(
-        'data_files' =>
-            array(
-                'required' => true,
-                'path_is_readable' => true,
-                'path_is_writable' => true,
-            ),
-        'data_files_archive' =>
-            array(
-                'required' => false,
-                'path_is_readable' => true,
-                'path_is_writable' => true,
-            ),
-        'alternative_ids' =>
-            array(
-                'required' => false,
-                'path_is_readable' => true,
-                'path_is_writable' => false,
-            ),
-        'confirm_variants' =>
-            array(
-                'required' => false,
-                'path_is_readable' => true,
-                'path_is_writable' => true,
-            ),
-    );
-    // Configure instance details.
-    $aConfigValues['instance'] = array(
-        'name' =>
-            array(
-                'required' => false,
-                'default'  => '',
-            ),
-    );
-}
-// SQLite doesn't need an username and password...
-if (isset($_INI['database']['driver']) && $_INI['database']['driver'] == 'sqlite') {
-    unset($aConfigValues['database']['username']);
-    unset($aConfigValues['database']['password']);
-}
-
-foreach ($aConfigValues as $sSection => $aVars) {
-    foreach ($aVars as $sVar => $aVar) {
-        if (!isset($_INI[$sSection][$sVar]) || !$_INI[$sSection][$sVar]) {
-            // Nothing filled in...
-
-            if (isset($aVar['default']) && $aVar['default']) {
-                // Set default value.
-                $_INI[$sSection][$sVar] = $aVar['default'];
-            } elseif (isset($aVar['required']) && $aVar['required']) {
-                // No default value, required setting not filled in.
-                lovd_displayError('Init', 'Error parsing config file: missing required value for setting \'' . $sVar . '\' in section [' . $sSection . ']');
-            } elseif (!isset($_INI[$sSection][$sVar])){
-                // Add the setting to the $_INI array to avoid notices.
-                $_INI[$sSection][$sVar] = false;
-            }
-
-        } else {
-            // Value is present in $_INI.
-            if (isset($aVar['pattern']) && !preg_match($aVar['pattern'], $_INI[$sSection][$sVar])) {
-                // Error: a pattern is available, but it doesn't match the input!
-                lovd_displayError('Init', 'Error parsing config file: incorrect value for setting \'' . $sVar . '\' in section [' . $sSection . ']');
-
-            } elseif (isset($aVar['values']) && is_array($aVar['values'])) {
-                // Value must be present in list of possible values.
-                $_INI[$sSection][$sVar] = strtolower($_INI[$sSection][$sVar]);
-                if (!array_key_exists($_INI[$sSection][$sVar], $aVar['values'])) {
-                    // Error: a value list is available, but it doesn't match the input!
-                    lovd_displayError('Init', 'Error parsing config file: incorrect value for setting \'' . $sVar . '\' in section [' . $sSection . ']');
-                }
-            }
-
-            // For paths, check readability or writability.
-            if (!empty($aVar['path_is_readable']) && !is_readable($_INI[$sSection][$sVar])) {
-                // Error: The path should be readable, but it's not!
-                lovd_displayError('Init', 'Error parsing config file: path for \'' . $sVar . '\' in section [' . $sSection . '] is not readable.');
-            }
-            if (!empty($aVar['path_is_writable']) && !is_writable($_INI[$sSection][$sVar])) {
-                // Error: The path should be writable, but it's not!
-                lovd_displayError('Init', 'Error parsing config file: path for \'' . $sVar . '\' in section [' . $sSection . '] is not writable.');
-            }
-        }
-    }
-}
-
-
+$_INI = lovd_parseConfigFile(CONFIG_URI);
 
 
 
@@ -679,6 +492,7 @@ $_TABLES =
                 'TABLE_COLS2LINKS' => TABLEPREFIX . '_columns2links',
                 'TABLE_CONFIG' => TABLEPREFIX . '_config',
                 'TABLE_STATUS' => TABLEPREFIX . '_status',
+                'TABLE_ANNOUNCEMENTS' => TABLEPREFIX . '_announcements',
                 'TABLE_SOURCES' => TABLEPREFIX . '_external_sources',
                 'TABLE_LOGS' => TABLEPREFIX . '_logs',
                 'TABLE_MODULES' => TABLEPREFIX . '_modules',
@@ -746,6 +560,12 @@ mb_internal_encoding('UTF-8');
 if ($_CONF = $_DB->query('SELECT * FROM ' . TABLE_CONFIG, false, false)) {
     // Must be two-step, since $_CONF can be false and therefore does not have ->fetchAssoc().
     $_CONF = $_CONF->fetchAssoc();
+    if ($_CONF) {
+        // See if the database is read-only at the moment, due to an announcement with the configuration.
+        // Ignore errors, in case the table doesn't exist yet.
+        $qAnnouncements = @$_DB->query('SELECT COUNT(*) FROM ' . TABLE_ANNOUNCEMENTS . ' WHERE start_date <= NOW() AND end_date >= NOW() AND lovd_read_only = 1', array(), false);
+        $_CONF['lovd_read_only'] = ($qAnnouncements && $qAnnouncements->fetchColumn());
+    }
 }
 if (!$_CONF) {
     // Basic configuration, in case we're not installed properly.
@@ -754,6 +574,7 @@ if (!$_CONF) {
          array(
                 'system_title' => 'LOVD 3.0 - Leiden Open Variation Database',
                 'logo_uri' => 'gfx/' . (LOVD_plus? 'LOVD_plus_logo200x50' : 'LOVD3_logo145x50') . '.jpg',
+                'lovd_read_only' => false,
               );
 }
 
@@ -858,7 +679,8 @@ session_name('PHPSESSID_' . $_SETT['cookie_id']);
 
 // Start sessions - use cookies.
 @session_start(); // On some Ubuntu distributions this can cause a distribution-specific error message when session cleanup is triggered.
-header('X-LOVD-version: ' . $_SETT['system']['version'] . (empty($_STAT['version']) || $_STAT['version'] == $_SETT['system']['version']? '' : ' (DB @ ' . $_STAT['version'] . ')'));
+// @ is to suppress errors in Travis test.
+@header('X-LOVD-version: ' . $_SETT['system']['version'] . (empty($_STAT['version']) || $_STAT['version'] == $_SETT['system']['version']? '' : ' (DB @ ' . $_STAT['version'] . ')'));
 
 
 
@@ -866,6 +688,17 @@ header('X-LOVD-version: ' . $_SETT['system']['version'] . (empty($_STAT['version
 if (!defined('NOT_INSTALLED')) {
     // Load session data.
     require ROOT_PATH . 'inc-auth.php';
+
+    // If we're read only, log user out when lower than Manager.
+    if ($_AUTH && $_CONF['lovd_read_only'] && $_AUTH['level'] < LEVEL_MANAGER) {
+        // We won't let the user know, because this usually only happens when a
+        //  new message has appeared that sets the installation to read-only.
+        // So let's hope the new message on the screen attracks attention and
+        //  that it speaks for itself.
+        // (In principle, it can also happen when an existing message is edited
+        //   to lock the installation.)
+        $_AUTH = false;
+    }
 
     // Define $_PE ($_PATH_ELEMENTS) and CURRENT_PATH.
     $sPath = preg_replace('/^' . preg_quote(lovd_getInstallURL(false), '/') . '/', '', lovd_cleanDirName(rawurldecode($_SERVER['REQUEST_URI']))); // 'login' or 'genes?create' or 'users/00001?edit'
