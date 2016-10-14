@@ -4,8 +4,8 @@
  * LEIDEN OPEN VARIATION DATABASE (LOVD)
  *
  * Created     : 2010-02-18
- * Modified    : 2016-09-05
- * For LOVD    : 3.0-17
+ * Modified    : 2016-10-14
+ * For LOVD    : 3.0-18
  *
  * Copyright   : 2004-2016 Leiden University Medical Center; http://www.LUMC.nl/
  * Programmers : Ing. Ivo F.A.C. Fokkema <I.F.A.C.Fokkema@LUMC.nl>
@@ -140,15 +140,10 @@ if (FORMAT == 'text/plain' && !defined('FORMAT_ALLOW_TEXTPLAIN')) {
 }
 
 $sFile = ROOT_PATH . 'class/object_' . strtolower($sObject) . 's.php';
+// For revision tables.
 $sFile = str_replace('_revs.php', 's.rev.php', $sFile);
-// Some exceptions for LOVD+.
-if ($sObject == 'Custom_ViewListMOD' && $sObject == 'AnalysisRunResults,VariantOnGenome,VariantOnTranscript') {
-    $sFile = '../class/object_custom_viewlists.mod.php';
-    if (empty($_GET['search_runid'])) {
-        // Prevent from all variants to show, just show nothing then.
-        $_GET['search_runid'] = '0';
-    }
-} elseif (substr($sObject, -3) == 'MOD') {
+// Exception for LOVD+.
+if (LOVD_plus && substr($_GET['object'], -3) == 'MOD') {
     $sFile = str_replace('mods.', 's.mod.', $sFile);
 }
 

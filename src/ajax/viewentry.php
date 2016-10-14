@@ -70,6 +70,7 @@ if (FORMAT == 'text/plain' && !defined('FORMAT_ALLOW_TEXTPLAIN')) {
 }
 
 $sFile = ROOT_PATH . 'class/object_' . strtolower($_GET['object']) . 's.php';
+// Exception for LOVD+.
 if (LOVD_plus && substr($_GET['object'], -3) == 'MOD') {
     $sFile = str_replace('mods.', 's.mod.', $sFile);
 }
