@@ -4,8 +4,8 @@
  * LEIDEN OPEN VARIATION DATABASE (LOVD)
  *
  * Created     : 2012-06-10
- * Modified    : 2016-04-08
- * For LOVD    : 3.0-15
+ * Modified    : 2016-10-14
+ * For LOVD    : 3.0-18
  *
  * Copyright   : 2004-2016 Leiden University Medical Center; http://www.LUMC.nl/
  * Programmer  : Ing. Ivo F.A.C. Fokkema <I.F.A.C.Fokkema@LUMC.nl>
@@ -140,7 +140,7 @@ if (($_PE[1] == 'all' && (empty($_PE[2]) || in_array($_PE[2], array('gene', 'min
     print('### LOVD-version ' . lovd_calculateVersion($_SETT['system']['version']) . ' ### ' . $sHeader . ' download ### To import, do not remove or alter this header ###' . "\r\n");
     if ($sFilter == 'owner') {
         print('## Filter: (created_by = ' . $ID . ' || owned_by = ' . $ID . ')' . "\r\n");
-    } elseif (in_array($sFilter, array('gene', 'category', 'genepanel'))) {
+    } elseif (in_array($sFilter, array('category', 'gene', 'genepanel'))) {
         print('## Filter: (' . $sFilter . ' = ' . $ID . ')' . "\r\n");
     }
     print('# charset = UTF-8' . "\r\n\r\n");

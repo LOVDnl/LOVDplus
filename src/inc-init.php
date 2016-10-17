@@ -4,8 +4,8 @@
  * LEIDEN OPEN VARIATION DATABASE (LOVD)
  *
  * Created     : 2009-10-19
- * Modified    : 2016-09-21
- * For LOVD    : 3.0-17
+ * Modified    : 2016-10-17
+ * For LOVD    : 3.0-18
  *
  * Copyright   : 2004-2016 Leiden University Medical Center; http://www.LUMC.nl/
  * Programmers : Ivo F.A.C. Fokkema <I.F.A.C.Fokkema@LUMC.nl>
@@ -135,8 +135,8 @@ define('MAPPING_DONE', 32);             // FIXME; Create a button in Setup which
 // Define constant to quickly check if we're on Windows, since sending emails on Windows requires different settings.
 define('ON_WINDOWS', (strtoupper(substr(PHP_OS, 0, 3) == 'WIN')));
 
-// Diagnostics: To later make it easier to share certain code
-// between LOVD and LOVD+, simply define if we're active or not.
+// Diagnostics: To make it easier to share certain code between
+// LOVD and LOVD+, simply define if we're active or not.
 define('LOVD_plus', true);
 
 // For the installation process (and possibly later somewhere else, too).
