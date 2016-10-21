@@ -441,10 +441,6 @@ if (POST || $_FILES) { // || $_FILES is in use for the automatic loading of file
         }
     }
 
-
-
-
-
     if (!lovd_error()) {
         // Prepare, find LOVD version and format type.
         $aParsed = array_fill_keys(
@@ -533,8 +529,6 @@ if (POST || $_FILES) { // || $_FILES is in use for the automatic loading of file
                 lovd_endLine();
                 continue;
             }
-
-
 
             if (substr(ltrim($sLine, '"'), 0, 1) == '#') {
                 if (preg_match('/^#\s*([a-z_]+)\s*=\s*(.+)$/', ltrim($sLine, '"'), $aRegs)) {
@@ -650,11 +644,9 @@ if (POST || $_FILES) { // || $_FILES is in use for the automatic loading of file
                             $aSection['required_columns'] = $aSection['allowed_columns'];
                         } else {
                             // Normal data table, no data links.
-                            if ($sCurrentSection == 'Variants_On_Transcripts' && $aParsed['Variants_On_Genome']['ids']) {
-                                // IDs are not unique, and anyways are already parsed in the VOG section.
-                                // Note: Making this a reference (=& instead of =) slows down the parsing of a VOT line 3x. Don't understand why.
-                                $aSection['ids'] = $aParsed['Variants_On_Genome']['ids'];
-                            } else {
+
+                            // Some ids that do not need to be loaded can be skipped here.
+                            if (!in_array($sCurrentSection, array('Variants_On_Genome', 'Variants_On_Transcripts', 'Screenings', 'Screenings_To_Variants', 'Screenings_To_Genes', 'Genes_To_Diseases', 'Individuals_To_Diseases'))) {
                                 $aSection['ids'] = array_flip($_DB->query('SELECT id FROM ' . $sTableName)->fetchAllColumn());
                             }
                         }
@@ -1445,6 +1437,7 @@ if (POST || $_FILES) { // || $_FILES is in use for the automatic loading of file
                 // Too many errors.
                 break;
             }
+
         }
 
         // Clean up old section, if available.
@@ -1472,6 +1465,7 @@ if (POST || $_FILES) { // || $_FILES is in use for the automatic loading of file
         foreach ($aParsed as $sSection => $aSection) {
             unset($aParsed[$sSection]['ids']);
         }
+
         $_BAR[0]->setProgress(100); // To make sure we're at 100% (some errors skip the lovd_endLine()).
 
 
