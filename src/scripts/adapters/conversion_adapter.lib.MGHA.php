@@ -39,7 +39,6 @@ $_INSTANCE_CONFIG['screenings'] = array(
 
 
 
-
 class LOVD_MghaDataConverter extends LOVD_DefaultDataConverter {
 
     static $sAdapterName = 'MGHA';
@@ -297,23 +296,25 @@ class LOVD_MghaDataConverter extends LOVD_DefaultDataConverter {
 
         // For MGHA the allele column is in the format A/A, C/T etc. Leiden have converted this to 1/1, 0/1, etc.
         // MGHA also need to calculate the VarPresent for Father and Mother as this is required later on when assigning a value to allele
-        $aChildGenotypes = explode('/', $aLine['Child_GT']);
+        if (isset($aLine['Child_GT'])) {
+            $aChildGenotypes = explode('/', $aLine['Child_GT']);
 
-        if ($aLine['Child_GT'] == './.') {
-            // We set it to '' as this is what Leiden do.
-            $aLine['Child_GT'] = '';
+            if ($aLine['Child_GT'] == './.') {
+                // We set it to '' as this is what Leiden do.
+                $aLine['Child_GT'] = '';
 
-        } elseif ($aChildGenotypes[0] !== $aChildGenotypes[1]) {
-            // Het.
-            $aLine['Child_GT'] = '0/1';
+            } elseif ($aChildGenotypes[0] !== $aChildGenotypes[1]) {
+                // Het.
+                $aLine['Child_GT'] = '0/1';
 
-        } elseif ($aChildGenotypes[0] == $aChildGenotypes[1] && $aChildGenotypes[0] == $aLine['ALT']) {
-            // Homo alt.
-            $aLine['Child_GT'] = '1/1';
+            } elseif ($aChildGenotypes[0] == $aChildGenotypes[1] && $aChildGenotypes[0] == $aLine['ALT']) {
+                // Homo alt.
+                $aLine['Child_GT'] = '1/1';
 
-        } elseif ($aChildGenotypes[0] == $aChildGenotypes[1] && $aChildGenotypes[0] == $aLine['REF']) {
-            // Homo ref.
-            $aLine['Child_GT'] = '0/0';
+            } elseif ($aChildGenotypes[0] == $aChildGenotypes[1] && $aChildGenotypes[0] == $aLine['REF']) {
+                // Homo ref.
+                $aLine['Child_GT'] = '0/0';
+            }
         }
 
 

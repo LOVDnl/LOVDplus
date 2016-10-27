@@ -141,6 +141,7 @@ $aRequired =
                             'mb_detect_encoding',
                             'xml_parser_create', // We could also look for libxml constants?
                             'openssl_seal',      // We could also look for openssl constants?
+                            'curl_init',
                           ),
                 'PHP_classes' =>
                      array(

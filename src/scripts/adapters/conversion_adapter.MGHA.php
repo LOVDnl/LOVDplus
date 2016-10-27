@@ -297,17 +297,14 @@ if ($argc != 1 && in_array($argv[1], array('--help', '-help', '-h', '-?'))) {
             $aDataArr[$sDataSample]['parent'] = strtolower($aSamples['Pedigree_File']);
 
         } elseif (trim(empty($aSamples['Pedigree_File']))) {
-            // We have an empty value which is not valid.
-            print('Pedigree_File column is empty in the sample meta file for sample ' . $sDataSample . ".\n" . $sExpectedValuesStr);
-            die(53);
+            // We have an empty value, assume that this sample is to be imported.
+            $aDataArr[$sDataSample]['parent'] = 'import';
 
-        }else{
+        } else {
             // Value does not match expected input, alert user and display list of expected values.
             print('Invalid entry in the Pedigree_File column of sample meta file for sample ' . $sDataSample . "\n" . $sExpectedValuesStr);
             die(53);
         }
-
-
 
         if (trim(strtoupper($aSamples['Consanguinity'])) == 'UNKNOWN' || $aSamples['Consanguinity'] == '') {
             // Convert unknown to ? for Consanguinity otherwise will not import into LOVD.

@@ -49,6 +49,47 @@ ignore_user_abort(true);
 
 
 
+
+
+// Initialize curl connection.
+$ch = curl_init();
+
+function mutalyzer_getTranscriptsAndInfo($ref, $gene) {
+    global $ch;
+
+    $sUrl = 'https://mutalyzer.nl/json/getTranscriptsAndInfo?genomicReference=' . $ref . '&geneName=' . $gene;
+    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+    curl_setopt($ch, CURLOPT_URL, $sUrl);
+
+    return curl_exec($ch);
+}
+
+function mutalyzer_numberConversion($build, $variant) {
+    global $ch;
+
+    $sUrl = 'https://mutalyzer.nl/json/numberConversion?build=' . $build . '&variant=' . $variant;
+    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+    curl_setopt($ch, CURLOPT_URL, $sUrl);
+
+    return curl_exec($ch);
+}
+
+function mutalyzer_runMutalyzer($variant) {
+    global $ch;
+
+    $sUrl = 'https://mutalyzer.nl/json/runMutalyzer?variant=' . $variant;
+    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+    curl_setopt($ch, CURLOPT_URL, $sUrl);
+
+    return curl_exec($ch);
+}
+
+
+
+
+
+
+
 if (empty($_INI['import']['exit_on_annotation_error'])) {
     $_INI['import']['exit_on_annotation_error'] = 'yes';
 }
@@ -799,7 +840,7 @@ print('Can\'t load UD for gene ' . $aGeneInfo['symbol'] . '.' . "\n");
 print('Loading transcript information for ' . $aGenes[$aVariant['symbol']]['id'] . '...' . "\n");
                         $nSleepTime = 2;
                         for ($i = 0; $i <= $nMutalyzerRetries; $i++) { // Retry Mutalyzer call several times until successful.
-                            $sJSONResponse = file_get_contents('https://mutalyzer.nl/json/getTranscriptsAndInfo?genomicReference=' . $aGenes[$aVariant['symbol']]['refseq_UD'] . '&geneName=' . $aGenes[$aVariant['symbol']]['id']);
+                            $sJSONResponse = mutalyzer_getTranscriptsAndInfo($aGenes[$aVariant['symbol']]['refseq_UD'], $aGenes[$aVariant['symbol']]['id']);
                             $nMutalyzer++;
                             if ($sJSONResponse === false) { // The Mutalyzer call has failed.
                                 sleep($nSleepTime); // Sleep for some time.
@@ -882,7 +923,7 @@ print('No available transcripts for gene ' . $aGenes[$aVariant['symbol']]['id'] 
                     $sJSONResponse = false;
                     $nSleepTime = 2;
                     for($i=0; $i <= $nMutalyzerRetries; $i++){ // Retry Mutalyzer call several times until successful.
-                        $sJSONResponse = file_get_contents('https://mutalyzer.nl/json/numberConversion?build=' . $_CONF['refseq_build'] . '&variant=' . $_SETT['human_builds'][$_CONF['refseq_build']]['ncbi_sequences'][$aVariant['chromosome']] . ':' . $aVariant['VariantOnGenome/DNA']);
+                        $sJSONResponse = mutalyzer_numberConversion($_CONF['refseq_build'], $_SETT['human_builds'][$_CONF['refseq_build']]['ncbi_sequences'][$aVariant['chromosome']] . ':' . $aVariant['VariantOnGenome/DNA']);
                         $nMutalyzer++;
                         if ($sJSONResponse === false) { // The Mutalyzer call has failed.
                             sleep($nSleepTime); // Sleep for some time.
@@ -975,7 +1016,7 @@ print('No available transcripts for gene ' . $aGenes[$aVariant['symbol']]['id'] 
                         print('Reloading Mutalyzer ID for ' . $aTranscripts[$aVariant['transcriptid']]['id_ncbi'] . ' in ' . $aVariant[$aVariant['symbol']]['refseq_UD'] . ' (' . $aGenes[$aVariant['symbol']]['id'] . ')' . "\n");
                         $nSleepTime = 2;
                         for ($i = 0; $i <= $nMutalyzerRetries; $i++) { // Retry Mutalyzer call several times until successful.
-                            $sJSONResponse = file_get_contents('https://mutalyzer.nl/json/getTranscriptsAndInfo?genomicReference=' . rawurlencode($aGenes[$aVariant['symbol']]['refseq_UD']) . '&geneName=' . rawurlencode($aGenes[$aVariant['symbol']]['id']));
+                            $sJSONResponse = mutalyzer_getTranscriptsAndInfo(rawurlencode($aGenes[$aVariant['symbol']]['refseq_UD']), rawurlencode($aGenes[$aVariant['symbol']]['id']));
                             $nMutalyzer++;
                             if ($sJSONResponse === false) { // The Mutalyzer call has failed.
                                 sleep($nSleepTime); // Sleep for some time.
@@ -1007,7 +1048,7 @@ print('Running mutalyzer to predict protein change for ' . $aGenes[$aVariant['sy
                 $sJSONResponse = false;
                 $nSleepTime = 2;
                 for($i=0; $i <= $nMutalyzerRetries; $i++){ // Retry Mutalyzer call several times until successful.
-                    $sJSONResponse = file_get_contents('https://mutalyzer.nl/json/runMutalyzer?variant=' . rawurlencode($aGenes[$aVariant['symbol']]['refseq_UD'] . '(' . $aGenes[$aVariant['symbol']]['id'] . '_v' . $aTranscripts[$aVariant['transcriptid']]['id_mutalyzer'] . '):' . $aVariant['VariantOnTranscript/DNA']));
+                    $sJSONResponse = mutalyzer_runMutalyzer(rawurlencode($aGenes[$aVariant['symbol']]['refseq_UD'] . '(' . $aGenes[$aVariant['symbol']]['id'] . '_v' . $aTranscripts[$aVariant['transcriptid']]['id_mutalyzer'] . '):' . $aVariant['VariantOnTranscript/DNA']));
                     $nMutalyzer++;
                     if ($sJSONResponse === false) { // The Mutalyzer call has failed.
                         sleep($nSleepTime); // Sleep for some time.
@@ -1124,7 +1165,7 @@ print('Mutalyzer returned EREF error, hg19/hg38 error?' . "\n");
             // This used to be done at the start of this else statement but since we have switched from using the headers in the file
             // to using the column mappings (much more robust) we no longer had the ncbi ID available as it was overwritten.
             // By moving this code down here we retain the ncbi ID for use and then overwrite at the last step.
-            $aVariant['transcriptid'] = (empty($aTranscripts[$aVariant['transcriptid']]['id'])? '' : $aTranscripts[$aVariant['transcriptid']]['id']);
+            $aVariant['transcriptid'] = (!isset($aTranscripts[$aVariant['transcriptid']]['id'])? '' : $aTranscripts[$aVariant['transcriptid']]['id']);
 
 
         // Now store the variants, first the genomic stuff, then the VOT stuff.
