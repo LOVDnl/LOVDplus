@@ -488,6 +488,9 @@ if (PATH_COUNT >= 2 && ctype_digit($_PE[1]) && !ACTION && (PATH_COUNT == 2 || PA
             }
             print('          </UL>' . "\n" . '        </LI>' . "\n");
         }
+        if ($_INI['instance']['name'] == 'mgha') { // Allow the results of the analysis to be downloaded for MGHA. TODO Confirm the permission level required to do this, currently submitter and above can do this.
+            print('        <LI class="icon"><A click="lovd_AJAX_viewListSubmit(\'CustomVL_AnalysisRunResults_for_I_VE\', function(){lovd_AJAX_viewListDownload(\'CustomVL_AnalysisRunResults_for_I_VE\', true);});"><SPAN class="icon" style="background-image: url(gfx/menu_save.png);"></SPAN>Download variants</A></LI>' . "\n");
+        }
         print('      </UL>' . "\n\n");
         $_DATA->viewList('CustomVL_AnalysisRunResults_for_I_VE', array(), false, false, $bMenu);
         print('
