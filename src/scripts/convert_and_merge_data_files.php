@@ -1124,7 +1124,7 @@ print('Mutalyzer returned EREF error, hg19/hg38 error?' . "\n");
             // This used to be done at the start of this else statement but since we have switched from using the headers in the file
             // to using the column mappings (much more robust) we no longer had the ncbi ID available as it was overwritten.
             // By moving this code down here we retain the ncbi ID for use and then overwrite at the last step.
-            $aVariant['transcriptid'] = $aTranscripts[$aVariant['transcriptid']]['id'];
+            $aVariant['transcriptid'] = (empty($aTranscripts[$aVariant['transcriptid']]['id'])? '' : $aTranscripts[$aVariant['transcriptid']]['id']);
 
 
         // Now store the variants, first the genomic stuff, then the VOT stuff.
@@ -1197,14 +1197,21 @@ print('Mutalyzer returned EREF error, hg19/hg38 error?' . "\n");
             $aColumnsForVOG[] = $sCol;
         }
     }
+
     // Assuming here that *all* variants actually have at least one VOT... Take VOT columns.
-    foreach (array_keys($aVOT) as $sCol) {
-        if (substr($sCol, 0, 20) == 'VariantOnTranscript/') {
-            $aColumnsForVOT[] = $sCol;
+    if (!empty($aVOT)) {
+        foreach (array_keys($aVOT) as $sCol) {
+            if (substr($sCol, 0, 20) == 'VariantOnTranscript/') {
+                $aColumnsForVOT[] = $sCol;
+            }
+        }
+    } else {
+        foreach ($aColumnMappings as $sVEPColumn => $sLOVDColumn) {
+            if (substr($sLOVDColumn, 0, 20) == 'VariantOnTranscript/') {
+                $aColumnsForVOT[] = $sLOVDColumn;
+            }
         }
     }
-
-
 
     // Start storing the data into the total data file.
     $fOutput = fopen($sFileTmp, 'a');
