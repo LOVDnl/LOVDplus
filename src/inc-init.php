@@ -102,22 +102,6 @@ define('STATUS_HIDDEN', 4);
 define('STATUS_MARKED', 7);
 define('STATUS_OK', 9);
 
-define('CUR_STATUS_VARIANT_OF_INTEREST', 10); // A curator has determined that this variant requires curation. We still need a second person to confirm this before any curation takes place.
-define('CUR_STATUS_FOR_CURATION', 20); // A second curator has confirmed that this variant should be curated so the curation can begin.
-define('CUR_STATUS_REQUIRES_CONFIRMATION', 30); // Needs additional labwork to confirm the variant is correct, e.g. sanger.
-define('CUR_STATUS_CONFIRMED', 40); // Additional labwork has been completed and the variant is confirmed to be correct. (We don't have a status if the variant turns out to be incorrect, maybe we need one?)
-define('CUR_STATUS_PROPOSED', 50); // A curator has completed the curation process and proposed a classification. It will be discussed at a meeting before a final classification is decided.
-define('CUR_STATUS_CURATED_REPORTABLE', 70); // A final classification has been determined and this variant is to appear on a report. The curation process is now finished.
-define('CUR_STATUS_CURATED_NOT_REPORTABLE', 80); // A final classification has been determined but this variant is not to appear on a report. The curation process is now finished.
-define('CUR_STATUS_NOT_FOR_CURATION', 90); // A curator has determined that this variant does not require curation and no further action will be taken on this variant.
-define('CUR_STATUS_ARTEFACT', 91); // A curator has determined that this variant does not exist as a result of a sequencing error.
-
-define('CON_STATUS_NOT_PERFORMED', 0); // The variant has not yet been assessed.
-define('CON_STATUS_NOT_REQUIRED', 1); // A curator has determined that this variant does not require confirmation so curation can begin immediately.
-define('CON_STATUS_REQUIRED', 3); // A curator has determined that this variant requires confirmation.
-define('CON_STATUS_PASSED', 5); // This variant has been confirmed to be real and passes the confirmation process.
-define('CON_STATUS_FAILED', 7); // This variant has been confirmed to not be real and fails the confirmation process.
-
 define('AJAX_FALSE', '0');
 define('AJAX_TRUE', '1');
 define('AJAX_UNKNOWN_RESPONSE', '6');
@@ -202,26 +186,6 @@ $_SETT = array(
                             STATUS_HIDDEN => 'Non public',
                             STATUS_MARKED => 'Marked',
                             STATUS_OK => 'Public',
-                          ),
-                'curation_status' =>
-                     array(
-                            CUR_STATUS_VARIANT_OF_INTEREST => 'Variant of Interest',
-                            CUR_STATUS_NOT_FOR_CURATION => 'Not for Curation',
-                            CUR_STATUS_ARTEFACT => 'Artefact',
-                            CUR_STATUS_FOR_CURATION => 'For Curation',
-                            CUR_STATUS_REQUIRES_CONFIRMATION => 'Requires Confirmation',
-                            CUR_STATUS_CONFIRMED => 'Confirmed',
-                            CUR_STATUS_PROPOSED => 'Proposed Classification',
-                            CUR_STATUS_CURATED_REPORTABLE => 'Curated & Reportable',
-                            CUR_STATUS_CURATED_NOT_REPORTABLE => 'Curated & Not Reportable',
-                          ),
-                'confirmation_status' =>
-                     array(
-                            CON_STATUS_NOT_PERFORMED => 'Not performed',
-                            CON_STATUS_NOT_REQUIRED => 'Not required',
-                            CON_STATUS_REQUIRED => 'Required',
-                            CON_STATUS_PASSED => 'Passed',
-                            CON_STATUS_FAILED => 'Failed',
                           ),
                 'update_levels' =>
                      array(
@@ -420,6 +384,23 @@ if (LOVD_plus) {
     define('ANALYSIS_STATUS_WAIT_CONFIRMATION', 6); // Staff has checked, now waiting for confirmation of variants in the lab.
     define('ANALYSIS_STATUS_CONFIRMED', 7);         // Variants were confirmed, analysis is completely done now.
     define('ANALYSIS_STATUS_ARCHIVED', 9);          // Variants have been taken offline.
+
+    define('CON_STATUS_NOT_PERFORMED', 0); // The variant has not yet been assessed.
+    define('CON_STATUS_NOT_REQUIRED', 1);  // A curator has determined that this variant does not require confirmation so curation can begin immediately.
+    define('CON_STATUS_REQUIRED', 3);      // A curator has determined that this variant requires confirmation.
+    define('CON_STATUS_PASSED', 5);        // This variant has been confirmed to be real and passes the confirmation process.
+    define('CON_STATUS_FAILED', 7);        // This variant has been confirmed to not be real and fails the confirmation process.
+
+    define('CUR_STATUS_VARIANT_OF_INTEREST', 10);    // A curator has determined that this variant requires curation. We still need a second person to confirm this before any curation takes place.
+    define('CUR_STATUS_FOR_CURATION', 20);           // A second curator has confirmed that this variant should be curated so the curation can begin.
+    define('CUR_STATUS_REQUIRES_CONFIRMATION', 30);  // Needs additional labwork to confirm the variant is correct, e.g. sanger.
+    define('CUR_STATUS_CONFIRMED', 40);              // Additional labwork has been completed and the variant is confirmed to be correct. (We don't have a status if the variant turns out to be incorrect, maybe we need one?)
+    define('CUR_STATUS_PROPOSED', 50);               // A curator has completed the curation process and proposed a classification. It will be discussed at a meeting before a final classification is decided.
+    define('CUR_STATUS_CURATED_REPORTABLE', 70);     // A final classification has been determined and this variant is to appear on a report. The curation process is now finished.
+    define('CUR_STATUS_CURATED_NOT_REPORTABLE', 80); // A final classification has been determined but this variant is not to appear on a report. The curation process is now finished.
+    define('CUR_STATUS_NOT_FOR_CURATION', 90);       // A curator has determined that this variant does not require curation and no further action will be taken on this variant.
+    define('CUR_STATUS_ARTEFACT', 91);               // A curator has determined that this variant does not exist as a result of a sequencing error.
+
     $_SETT['analysis_status'] =
         array(
             ANALYSIS_STATUS_WAIT => 'Waiting for data upload',
@@ -429,6 +410,26 @@ if (LOVD_plus) {
             ANALYSIS_STATUS_WAIT_CONFIRMATION => 'Awaiting confirmation',
             ANALYSIS_STATUS_CONFIRMED => 'Confirmed',
             ANALYSIS_STATUS_ARCHIVED => 'Archived',
+        );
+    $_SETT['confirmation_status'] =
+        array(
+            CON_STATUS_NOT_PERFORMED => 'Not performed',
+            CON_STATUS_NOT_REQUIRED => 'Not required',
+            CON_STATUS_REQUIRED => 'Required',
+            CON_STATUS_PASSED => 'Passed',
+            CON_STATUS_FAILED => 'Failed',
+        );
+    $_SETT['curation_status'] =
+        array(
+            CUR_STATUS_VARIANT_OF_INTEREST => 'Variant of Interest',
+            CUR_STATUS_NOT_FOR_CURATION => 'Not for Curation',
+            CUR_STATUS_ARTEFACT => 'Artefact',
+            CUR_STATUS_FOR_CURATION => 'For Curation',
+            CUR_STATUS_REQUIRES_CONFIRMATION => 'Requires Confirmation',
+            CUR_STATUS_CONFIRMED => 'Confirmed',
+            CUR_STATUS_PROPOSED => 'Proposed Classification',
+            CUR_STATUS_CURATED_REPORTABLE => 'Curated & Reportable',
+            CUR_STATUS_CURATED_NOT_REPORTABLE => 'Curated & Not Reportable',
         );
     // Diagnostics: Added one level, and changed the submitter level's name.
     unset($_SETT['user_levels'][LEVEL_SUBMITTER]); // To make space, we need to rename it anyway.
