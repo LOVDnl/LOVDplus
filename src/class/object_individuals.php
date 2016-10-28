@@ -232,10 +232,6 @@ class LOVD_Individual extends LOVD_Custom {
                 } elseif ($aData[$sParentalField] == $this->nID) {
                     lovd_errorAdd($sParentalField, 'The \'' . $sParentalField . '\' can not link to itself; this field is used to indicate which individual in the database is the parent of the given individual.');
                 }
-            } elseif (!empty($aData[$sParentalField]) && !ctype_digit($aData[$sParentalField])) {
-                // FIXME: Normally we don't have to check this, because objects.php is taking care of this.
-                // But as long as the field is not defined on the form, there is no check.
-                lovd_errorAdd($sParentalField, 'The \'' . $sParentalField . '\' must contain a positive integer.');
             }
         }
 

@@ -4,7 +4,7 @@
  * LEIDEN OPEN VARIATION DATABASE (LOVD)
  *
  * Created     : 2009-10-21
- * Modified    : 2016-10-11
+ * Modified    : 2016-10-28
  * For LOVD    : 3.0-18
  *
  * Copyright   : 2004-2016 Leiden University Medical Center; http://www.LUMC.nl/
@@ -1275,7 +1275,7 @@ class LOVD_Object {
                 // Analyzer's details like the owner's details.
                 if (isset($zData['analysis_by']) && (int) $zData['analysis_by'] && !empty($zData['analyzer'])) {
                     list($nID, $sName, $sEmail, $sInstitute, $sDepartment, $sCountryID) = $zData['analyzer'];
-                    $zData['analysis_by_'] = '<SPAN class="custom_link" onmouseover="lovd_showToolTip(\'<TABLE border=0 cellpadding=0 cellspacing=0 width=350 class=S11><TR><TH valign=top>User&nbsp;ID</TH><TD>' . ($_AUTH['level'] < LEVEL_MANAGER? $nID : '<A href=users/' . $nID . '>' . $nID . '</A>') . '</TD></TR><TR><TH valign=top>Name</TH><TD>' . $sName . '</TD></TR><TR><TH valign=top>Email&nbsp;address</TH><TD>' . str_replace("\r\n", '<BR>', lovd_hideEmail($sEmail)) . '</TD></TR><TR><TH valign=top>Institute</TH><TD>' . $sInstitute . '</TD></TR><TR><TH valign=top>Department</TH><TD>' . $sDepartment . '</TD></TR><TR><TH valign=top>Country</TH><TD>' . $sCountryID . '</TD></TR></TABLE>\', this);">' . $zData['analysis_by_'] . '</SPAN>';
+                    $zData['analysis_by_'] = '<SPAN class="custom_link" onmouseover="lovd_showToolTip(\'' . addslashes('<TABLE border=0 cellpadding=0 cellspacing=0 width=350 class=S11><TR><TH valign=top>User&nbsp;ID</TH><TD>' . ($_AUTH['level'] < LEVEL_MANAGER? $nID : '<A href=users/' . $nID . '>' . $nID . '</A>') . '</TD></TR><TR><TH valign=top>Name</TH><TD>' . $sName . '</TD></TR><TR><TH valign=top>Email&nbsp;address</TH><TD>' . str_replace("\r\n", '<BR>', lovd_hideEmail($sEmail)) . '</TD></TR><TR><TH valign=top>Institute</TH><TD>' . $sInstitute . '</TD></TR><TR><TH valign=top>Department</TH><TD>' . $sDepartment . '</TD></TR><TR><TH valign=top>Country</TH><TD>' . $sCountryID . '</TD></TR></TABLE>') . '\', this);">' . $sName . '</SPAN>';
                 }
                 // In LOVD+, we disable the feature of coloring hidden and marked data, since all data is hidden.
                 $zData['class_name'] = '';
@@ -2063,6 +2063,7 @@ class LOVD_Object {
             // 1) If we don't have a count in memory, request count separately.
             // Also if last count was >15min ago, request again.
             $bTrueCount = false; // Indicates whether or not we are sure about the number of results.
+            // FIXME: this has to be done better, we can't see what we're filtering for, because it's in the arguments!
             $sFilterMD5 = md5($this->aSQLViewList['WHERE'] . '||' . $this->aSQLViewList['HAVING'] . '||' . implode('|', $aArgs)); // A signature for the filters, NOTE that this depends on the column order!
             // FIXME: If this count takes longer than 1s, we don't estimate anymore like we used to (see line 1543).
             if (true || !isset($aSessionViewList['counts'][$sFilterMD5]['n'])) {
@@ -2215,7 +2216,7 @@ class LOVD_Object {
         // FIXME; this is a temporary hack just to get the genes?authorize working when all users have been selected.
         //   There is no longer a viewList when all users have been selected, but we need one for the JS execution.
         //   Possibly, this code can be standardized a bit and, if necessary for other viewLists as well, can be kept here.
-        if (!$nTotal && !$bSearched && (($this->sObject == 'User' && !empty($_GET['search_id'])) || ($this->sObject == 'Custom_ViewList' && isset($_GET['search_runid'])))) {
+        if (!$nTotal && !$bSearched && (($this->sObject == 'User' && !empty($_GET['search_id'])))) {
             // FIXME; Maybe check for JS contents of the rowlink?
             // There has been searched, but apparently the ID column is forced hidden. This must be the authorize page.
             $bSearched = true; // This will trigger the creation of the viewList table.

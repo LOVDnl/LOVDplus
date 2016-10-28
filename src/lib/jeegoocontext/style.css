@@ -1,4 +1,4 @@
-﻿body ul.jeegoocontext, body ul.jeegoocontext ul
+body ul.jeegoocontext, body ul.jeegoocontext ul
 {
 	/* Required settings */
 	top:-1000px; left:-1000px; position:absolute; z-index:999;
