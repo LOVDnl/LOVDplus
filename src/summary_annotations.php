@@ -51,7 +51,7 @@ if (PATH_COUNT == 2 && ACTION == 'edit') {
 
 
     define('PAGE_TITLE', 'Edit summary annotations for variant ' . $DBID);
-    define('LOG_EVENT', 'SummaryAnnotationEdit');
+    define('LOG_EVENT', 'SAREdit');
 
     lovd_requireAUTH(LEVEL_ANALYZER);
 
@@ -141,7 +141,7 @@ if (PATH_COUNT == 2 && ACTION == 'create') {
     $nVariantID = $_GET['variant_id'];
 
     define('PAGE_TITLE', 'Create a new summary annotation entry');
-    define('LOG_EVENT', 'SummaryAnnotationCreate');
+    define('LOG_EVENT', 'SARCreate');
 
     lovd_requireAUTH(LEVEL_ANALYZER);
 
