@@ -1783,7 +1783,13 @@ print('No available transcripts for gene ' . $aGenes[$aVariant['symbol']]['id'] 
             // Handle the rest of the VOT columns.
             // First, take off the transcript name, so we can easily check for a del/ins checking for an underscore.
             $aVariant['VariantOnTranscript/DNA'] = substr($aVariant['VariantOnTranscript/DNA'], strpos($aVariant['VariantOnTranscript/DNA'], ':')+1); // NM_000000.1:c.1del -> c.1del
-            if (!$aVariant['VariantOnTranscript/DNA'] || strpos($aVariant['VariantOnTranscript/DNA'], '_') !== false) {
+
+            $bCallMutalyzer = !$aVariant['VariantOnTranscript/DNA'];
+            if (!empty($_INI['import']['check_indel_description'])) {
+                $bCallMutalyzer = $bCallMutalyzer || (strpos($aVariant['VariantOnTranscript/DNA'], '_') !== false);
+            }
+
+            if ($bCallMutalyzer) {
                 // We don't trust HGVS descriptions with an _ in it. Because at VEP they don't understand that when the gene is on reverse, they have to switch the positions.
                 // Also, sometimes a delins is simply a substitution, when the VCF file is all messed up (ACGT to ACCT for example).
                 // No other option, call Mutalyzer.
