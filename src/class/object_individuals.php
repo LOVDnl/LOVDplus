@@ -332,7 +332,7 @@ class LOVD_Individual extends LOVD_Custom {
       'authorization' => array('Enter your password for authorization', '', 'password', 'password', 20),
                       ));
 
-        if (ACTION == 'create' || (ACTION == 'publish' && GET)) {
+        if (ACTION == 'create' || (ACTION == 'publish' && GET) || isset($_FILES['import'])) {
             unset($this->aFormData['authorization']);
         }
         if ($_AUTH['level'] < LEVEL_CURATOR) {

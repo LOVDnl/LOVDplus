@@ -4,7 +4,7 @@
  * LEIDEN OPEN VARIATION DATABASE (LOVD)
  *
  * Created     : 2014-11-28
- * Modified    : 2016-08-17
+ * Modified    : 2016-09-19
  * For LOVD+   : 3.0-16
  *
  * Copyright   : 2004-2016 Leiden University Medical Center; http://www.LUMC.nl/
@@ -16,7 +16,6 @@
 define('ROOT_PATH', dirname(__FILE__) . '/../');
 define('FORMAT_ALLOW_TEXTPLAIN', true);
 define('NO_TRANSCRIPT', '-----');
-define('MAX_SKIPPED', 10);
 
 $_GET['format'] = 'text/plain';
 // To prevent notices when running inc-init.php.
@@ -51,13 +50,63 @@ ignore_user_abort(true);
 
 
 
+// Initialize curl connection.
+$ch = curl_init();
+
+function mutalyzer_getTranscriptsAndInfo($ref, $gene) {
+    global $ch;
+
+    $sUrl = 'https://mutalyzer.nl/json/getTranscriptsAndInfo?genomicReference=' . $ref . '&geneName=' . $gene;
+    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+    curl_setopt($ch, CURLOPT_URL, $sUrl);
+
+    return curl_exec($ch);
+}
+
+function mutalyzer_numberConversion($build, $variant) {
+    global $ch;
+
+    $sUrl = 'https://mutalyzer.nl/json/numberConversion?build=' . $build . '&variant=' . $variant;
+    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+    curl_setopt($ch, CURLOPT_URL, $sUrl);
+
+    return curl_exec($ch);
+}
+
+function mutalyzer_runMutalyzer($variant) {
+    global $ch;
+
+    $sUrl = 'https://mutalyzer.nl/json/runMutalyzer?variant=' . $variant;
+    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+    curl_setopt($ch, CURLOPT_URL, $sUrl);
+
+    return curl_exec($ch);
+}
+
+
+
+
+
+
+if (empty($_INI['import']['exit_on_annotation_error'])) {
+    $_INI['import']['exit_on_annotation_error'] = 'yes';
+}
+
+if (empty($_INI['import']['max_annotation_error_allowed'])) {
+    $_INI['import']['max_annotation_error_allowed'] = 50;
+}
+
+
+
+
+
 
 // This script will be called from localhost by a cron job.
 
 // call adapter script first for MGHA
 if ($_INI['instance']['name'] == 'mgha') {
     require_once ROOT_PATH . 'scripts/adapter.lib.php';
-    $cmd = 'php adapter.php';
+    $cmd = 'php '. ROOT_PATH . 'scripts/adapter.php';
     passthru($cmd, $adapterResult);
     if ($adapterResult !== 0){
         die('Adapter Failed');
@@ -72,6 +121,7 @@ $aSuffixes = array(
     'vep' => 'directvep.data.lovd',
     'total.tmp' => 'total.data.tmp',
     'total' => 'total.data.lovd',
+    'error' => 'error'
 );
 
 // The number of times we retry the Mutalyzer API call if the connection fails.
@@ -1007,23 +1057,35 @@ $aFiles = array(); // array(ID => array(files), ...);
 
 
 
-function lovd_handleAnnotationError($nAnnotationErrors, &$aVariant, $nLine, $sErrorMsg) {
+function lovd_handleAnnotationError(&$aVariant, $sErrorMsg) {
+    global $_INI, $fError, $nAnnotationErrors, $nLine, $sFileError;
     $nAnnotationErrors++;
 
-    print("LINE " . $nLine . " - VariantOnTranscript data dropped: " . $sErrorMsg . "\n");
+    $sLineErrorMsg = "LINE " . $nLine . " - VariantOnTranscript data dropped: " . $sErrorMsg . "\n";
+    if ($fError) {
+        fwrite($fError, $sLineErrorMsg);
+    }
+    print($sLineErrorMsg);
+
+    $bExitOnError = (substr(strtolower($_INI['import']['exit_on_annotation_error']), 0, 1) === 'y'? true : false);
+    if ($bExitOnError) {
+        die("ERROR: Please update your data and re-run this script.\n");
+    }
 
     // We want to stop the script if there are too many lines of data with annotations issues.
     // We want users to check their data before they continue.
-    if ($nAnnotationErrors > MAX_SKIPPED) {
+    if ($nAnnotationErrors > $_INI['import']['max_annotation_error_allowed']) {
+        $sFileMessage = (filesize($sFileError) === 0?'' : "Please check details of dropped annotation data in " . $sFileError . "\n");
         die("ERROR: Script cannot continue because this file has too many lines of annotation data that this script cannot handle.\n"
-            . $nAnnotationErrors . " lines of transcripts data was dropped.\nPlease update your data and re-run this script.\n");
+            . $nAnnotationErrors . " lines of transcripts data was dropped.\nPlease update your data and re-run this script.\n"
+            . $sFileMessage);
     }
 
     // Otherwise, keep the VariantOnGenome data only, and add some data in Remarks.
     if (isset($aVariant['VariantOnGenome/Remarks'])) {
         $aVariant['VariantOnGenome/Remarks'] .= $sErrorMsg;
     }
-print($nAnnotationErrors. "\n");
+
     return $nAnnotationErrors;
 }
 
@@ -1274,6 +1336,7 @@ foreach ($aFiles as $sID) {
     $sFileMeta = $_INI['paths']['data_files'] . '/' . $sID . '.' . $aSuffixes['meta'];
     $sFileTmp = $_INI['paths']['data_files'] . '/' . $sID . '.' . $aSuffixes['total.tmp'];
     $sFileDone = $_INI['paths']['data_files'] . '/' . $sID . '.' . $aSuffixes['total'];
+    $sFileError = $_INI['paths']['data_files'] . '/' . $sID . '.' . $aSuffixes['error'];
 
     $fInput = fopen($sFileToConvert, 'r');
     if ($fInput === false) {
@@ -1310,6 +1373,8 @@ foreach ($aFiles as $sID) {
         continue; // Continue to try the next file.
     }
     fclose($fOutput);
+
+    $fError = @fopen($sFileError, 'w');
 
     // Isolate the used Screening ID, so we'll connect the variants to the right ID.
     // It could just be 1 always, but they use the Miracle ID.
@@ -1647,7 +1712,7 @@ print('Can\'t load UD for gene ' . $aGeneInfo['symbol'] . '.' . "\n");
 print('Loading transcript information for ' . $aGenes[$aVariant['symbol']]['id'] . '...' . "\n");
                         $nSleepTime = 2;
                         for ($i = 0; $i <= $nMutalyzerRetries; $i++) { // Retry Mutalyzer call several times until successful.
-                            $sJSONResponse = file_get_contents('https://mutalyzer.nl/json/getTranscriptsAndInfo?genomicReference=' . $aGenes[$aVariant['symbol']]['refseq_UD'] . '&geneName=' . $aGenes[$aVariant['symbol']]['id']);
+                            $sJSONResponse = mutalyzer_getTranscriptsAndInfo($aGenes[$aVariant['symbol']]['refseq_UD'], $aGenes[$aVariant['symbol']]['id']);
                             $nMutalyzer++;
                             if ($sJSONResponse === false) { // The Mutalyzer call has failed.
                                 sleep($nSleepTime); // Sleep for some time.
@@ -1726,10 +1791,11 @@ print('No available transcripts for gene ' . $aGenes[$aVariant['symbol']]['id'] 
                 if (!isset($aMappings[$aVariant['chromosome'] . ':' . $aVariant['VariantOnGenome/DNA']])) {
                     $aMappings[$aVariant['chromosome'] . ':' . $aVariant['VariantOnGenome/DNA']] = array();
 //print('Running position converter, DNA was: "' . $aVariant['VariantOnTranscript/DNA'] . '"' . "\n");
+
                     $sJSONResponse = false;
                     $nSleepTime = 2;
                     for($i=0; $i <= $nMutalyzerRetries; $i++){ // Retry Mutalyzer call several times until successful.
-                        $sJSONResponse = file_get_contents('https://mutalyzer.nl/json/numberConversion?build=' . $_CONF['refseq_build'] . '&variant=' . $_SETT['human_builds'][$_CONF['refseq_build']]['ncbi_sequences'][$aVariant['chromosome']] . ':' . $aVariant['VariantOnGenome/DNA']);
+                        $sJSONResponse = mutalyzer_numberConversion($_CONF['refseq_build'], $_SETT['human_builds'][$_CONF['refseq_build']]['ncbi_sequences'][$aVariant['chromosome']] . ':' . $aVariant['VariantOnGenome/DNA']);
                         $nMutalyzer++;
                         if ($sJSONResponse === false) { // The Mutalyzer call has failed.
                             sleep($nSleepTime); // Sleep for some time.
@@ -1743,6 +1809,7 @@ print('No available transcripts for gene ' . $aGenes[$aVariant['symbol']]['id'] 
                     if ($sJSONResponse === false) {
                         print('>>>>> Attempted to call Mutalyzer ' . $iMutalyzerRetries . ' times for numberConversion and failed on line ' . $nLine . '.' . "\n");
                     }                        
+
                     if ($sJSONResponse && $aResponse = json_decode($sJSONResponse, true)) {
                         // Before we had to go two layers deep; through the result, then read out the string.
                         // But now apparently this service just returns the string with quotes (the latter are removed by json_decode()).
@@ -1770,7 +1837,7 @@ print('No available transcripts for gene ' . $aGenes[$aVariant['symbol']]['id'] 
 
                     if (!isset($aMappings[$aVariant['chromosome'] . ':' . $aVariant['VariantOnGenome/DNA']][$aTranscripts[$aVariant['transcriptid']]['id_ncbi']])) {
                         $sErrorMsg = 'Can\'t map variant ' . $aVariant['VariantOnGenome/DNA'] . ' onto transcript ' . $aTranscripts[$aVariant['transcriptid']]['id_ncbi'] . '.';
-                        $nAnnotationErrors = lovd_handleAnnotationError($nAnnotationErrors, $aVariant, $nLine, $sErrorMsg);
+                        $nAnnotationErrors = lovd_handleAnnotationError($aVariant, $sErrorMsg);
                         $bDropTranscriptData = true;
                     }
                 }
@@ -1821,7 +1888,7 @@ print('No available transcripts for gene ' . $aGenes[$aVariant['symbol']]['id'] 
                         print('Reloading Mutalyzer ID for ' . $aTranscripts[$aVariant['transcriptid']]['id_ncbi'] . ' in ' . $aVariant[$aVariant['symbol']]['refseq_UD'] . ' (' . $aGenes[$aVariant['symbol']]['id'] . ')' . "\n");
                         $nSleepTime = 2;
                         for ($i = 0; $i <= $nMutalyzerRetries; $i++) { // Retry Mutalyzer call several times until successful.
-                            $sJSONResponse = file_get_contents('https://mutalyzer.nl/json/getTranscriptsAndInfo?genomicReference=' . rawurlencode($aGenes[$aVariant['symbol']]['refseq_UD']) . '&geneName=' . rawurlencode($aGenes[$aVariant['symbol']]['id']));
+                            $sJSONResponse = mutalyzer_getTranscriptsAndInfo(rawurlencode($aGenes[$aVariant['symbol']]['refseq_UD']), rawurlencode($aGenes[$aVariant['symbol']]['id']));
                             $nMutalyzer++;
                             if ($sJSONResponse === false) { // The Mutalyzer call has failed.
                                 sleep($nSleepTime); // Sleep for some time.
@@ -1853,7 +1920,7 @@ print('Running mutalyzer to predict protein change for ' . $aGenes[$aVariant['sy
                 $sJSONResponse = false;
                 $nSleepTime = 2;
                 for($i=0; $i <= $nMutalyzerRetries; $i++){ // Retry Mutalyzer call several times until successful.
-                    $sJSONResponse = file_get_contents('https://mutalyzer.nl/json/runMutalyzer?variant=' . rawurlencode($aGenes[$aVariant['symbol']]['refseq_UD'] . '(' . $aGenes[$aVariant['symbol']]['id'] . '_v' . $aTranscripts[$aVariant['transcriptid']]['id_mutalyzer'] . '):' . $aVariant['VariantOnTranscript/DNA']));
+                    $sJSONResponse = mutalyzer_runMutalyzer(rawurlencode($aGenes[$aVariant['symbol']]['refseq_UD'] . '(' . $aGenes[$aVariant['symbol']]['id'] . '_v' . $aTranscripts[$aVariant['transcriptid']]['id_mutalyzer'] . '):' . $aVariant['VariantOnTranscript/DNA']));
                     $nMutalyzer++;
                     if ($sJSONResponse === false) { // The Mutalyzer call has failed.
                         sleep($nSleepTime); // Sleep for some time.
@@ -1941,25 +2008,29 @@ print('Mutalyzer returned EREF error, hg19/hg38 error?' . "\n");
                 }
                 // Any errors related to the prediction of Exon, RNA or Protein are silently ignored.
             }
-;
+
             if (!$aVariant['VariantOnTranscript/RNA']) {
                 // Script dies here, because I want to know if I missed something. This happens with NR transcripts, but those were ignored anyway, right?
                 //var_dump($aVariant);
                 //exit;
 
                 $sErrorMsg = "Missing VariantOnTranscript/RNA. Chromosome: ". $aVariant['chromosome'] . ". VariantOnGenome/DNA: " . $aVariant['VariantOnGenome/DNA'] . ".";
-                $nAnnotationErrors = lovd_handleAnnotationError($nAnnotationErrors, $aVariant, $nLine, $sErrorMsg);
+                $nAnnotationErrors = lovd_handleAnnotationError($aVariant, $sErrorMsg);
                 $bDropTranscriptData = true;
             }
 
+        }
+
+
             // DNA fields and protein field can be super long with long inserts.
             foreach (array('VariantOnGenome/DNA', 'VariantOnTranscript/DNA') as $sField) {
-                if (strlen($aVariant[$sField]) > 100 && preg_match('/ins([ACTG]+)$/', $aVariant[$sField], $aRegs)) {
+                if (isset($aVariant[$sField]) && strlen($aVariant[$sField]) > 100 && preg_match('/ins([ACTG]+)$/', $aVariant[$sField], $aRegs)) {
                     $aVariant[$sField] = str_replace('ins' . $aRegs[1], 'ins' . strlen($aRegs[1]), $aVariant[$sField]);
                 }
             }
+
             $sField = 'VariantOnTranscript/Protein';
-            if (strlen($aVariant[$sField]) > 100 && preg_match('/ins(([A-Z][a-z]{2})+)\)$/', $aVariant[$sField], $aRegs)) {
+            if (isset($aVariant[$sField]) && strlen($aVariant[$sField]) > 100 && preg_match('/ins(([A-Z][a-z]{2})+)\)$/', $aVariant[$sField], $aRegs)) {
                 $aVariant[$sField] = str_replace('ins' . $aRegs[1], 'ins' . strlen($aRegs[1]), $aVariant[$sField]);
             }
 
@@ -1967,8 +2038,8 @@ print('Mutalyzer returned EREF error, hg19/hg38 error?' . "\n");
             // This used to be done at the start of this else statement but since we have switched from using the headers in the file
             // to using the column mappings (much more robust) we no longer had the ncbi ID available as it was overwritten.
             // By moving this code down here we retain the ncbi ID for use and then overwrite at the last step.
-            $aVariant['transcriptid'] = $aTranscripts[$aVariant['transcriptid']]['id'];
-        }
+            $aVariant['transcriptid'] = (isset($aTranscripts[$aVariant['transcriptid']]['id'])? $aTranscripts[$aVariant['transcriptid']]['id'] : '');
+
 
         // Now store the variants, first the genomic stuff, then the VOT stuff.
         // If the VOG data has already been stored, we will *not* overwrite it.
@@ -2020,6 +2091,14 @@ print('Mutalyzer returned EREF error, hg19/hg38 error?' . "\n");
     print('Number of times HGNC called: ' . $nHGNC . ".\n");
     print('Number of times Mutalyzer called: ' . $nMutalyzer . ".\n");
     print('Number of lines with annotation error: ' . $nAnnotationErrors . ".\n");
+    if (filesize($sFileError) > 0) {
+        print("ERROR FILE: Please check details of dropped annotation data in " . $sFileError . "\n");
+    } else {
+        $sFileMessage = '';
+        fclose($fError);
+        unlink($sFileError);
+    }
+
     if (!$aData) {
         // No variants!
         print('No variants found to import.' . "\n");
@@ -2057,6 +2136,7 @@ print('Mutalyzer returned EREF error, hg19/hg38 error?' . "\n");
 
 
     // VOG data.
+    $nVOG = 0;
     fputs($fOutput, "\r\n" .
         '## Genes ## Do not remove or alter this header ##' . "\r\n" . // Needed to load the existing genes, otherwise we'll only have errors.
         '## Transcripts ## Do not remove or alter this header ##' . "\r\n" . // Needed to load the existing transcripts, otherwise we'll only have errors.
@@ -2079,11 +2159,16 @@ print('Mutalyzer returned EREF error, hg19/hg38 error?' . "\n");
             fputs($fOutput, (!$nKey? '' : "\t") . '"' . (!isset($aVariant[0][$sCol])? '' : str_replace(array("\r\n", "\r", "\n"), array('\r\n', '\r', '\n'), addslashes($aVariant[0][$sCol]))) . '"');
         }
         fputs($fOutput, "\r\n");
+        $nVOG++;
     }
+
+    // Show number of Variants on Genome data created.
+    print("Number of Variants On Genome rows created: " . $nVOG . "\n");
 
 
 
     // VOT data.
+    $nVOT = 0;
     fputs($fOutput, "\r\n\r\n" .
         '## Variants_On_Transcripts ## Do not remove or alter this header ##' . "\r\n" .
         '## Count = ' . $nVOTs . "\r\n" .
@@ -2103,9 +2188,12 @@ print('Mutalyzer returned EREF error, hg19/hg38 error?' . "\n");
                 fputs($fOutput, (!$nKey? '' : "\t") . '"' . (!isset($aVOT[$sCol])? '' : str_replace(array("\r\n", "\r", "\n"), array('\r\n', '\r', '\n'), addslashes($aVOT[$sCol]))) . '"');
             }
             fputs($fOutput, "\r\n");
+            $nVOT++;
         }
     }
 
+    // Show number of Variants on Transcripts data created.
+    print("Number of Variants On Transcripts rows created: " . $nVOT . "\n");
 
 
     // Link all variants to the screening.

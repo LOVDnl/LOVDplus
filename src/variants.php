@@ -3380,7 +3380,7 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && ACTION == 'curate') {
             if ($zData['effectid']{1} != ($_AUTH['level'] >= LEVEL_CURATOR? $_POST['effect_concluded'] : substr($_SETT['var_effect_default'], -1))) {
             $sCurationLog .= 'Effect concluded: "' . $_SETT['var_effect'][$zData['effectid']{1}] . '" => "' . $_SETT['var_effect'][($_AUTH['level'] >= LEVEL_CURATOR? $_POST['effect_concluded'] : substr($_SETT['var_effect_default'], -1))] . '"' . "\n";
             }
-            if (trim($zData['VariantOnGenome/Remarks']) != trim($zData['VariantOnGenome/Remarks'])) {
+            if (trim($zData['VariantOnGenome/Remarks']) != trim($_POST['VariantOnGenome/Remarks'])) {
             $sCurationLog .= 'VariantOnGenome/Remarks: "' . (!trim($zData['VariantOnGenome/Remarks'])? '<empty>' : str_replace(array("\r", "\n", "\t"), array('\r', '\n', '\t'), $zData['VariantOnGenome/Remarks'])) . '" => "' . (!trim($_POST['VariantOnGenome/Remarks'])? '<empty>' : str_replace(array("\r", "\n", "\t"), array('\r', '\n', '\t'), $_POST['VariantOnGenome/Remarks'])) . '"' . "\n";
             }
 
@@ -3933,9 +3933,9 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && ACTION == 'map') {
 
 
 
-if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && ACTION == 'curation_status_log') {
-    // URL: /variants/0000000001?curation_status_log
-    // Show the logs for the changes of curation status for this variant.
+if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && ACTION == 'curation_log') {
+    // URL: /variants/0000000001?curation_log
+    // Show the logs for the changes of curation data for this variant.
 
     $nID = sprintf('%010d', $_PE[1]);
     define('PAGE_TITLE', 'Curation status history for variant #' . $nID);
@@ -3946,7 +3946,7 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && ACTION == 'curation_status_log') 
     $_GET['search_entry_'] = '"variant #' . $nID . '"';
     require_once ROOT_PATH . 'class/object_logs.php';
     $_DATA = new LOVD_Log();
-    $_DATA->viewList('Logs_for_curation_status', array('name', 'event', 'del'), true);
+    $_DATA->viewList('Logs_for_curation_data', array('name', 'event', 'del'), true);
     unset($_GET['page_size'], $_GET['search_event'], $_GET['search_entry_']);
     $_T->printFooter();
     exit;
@@ -3956,9 +3956,9 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && ACTION == 'curation_status_log') 
 
 
 
-if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && ACTION == 'curation_log') {
-    // URL: /variants/0000000001?curation_log
-    // Show the logs for the changes of curation data for this variant.
+if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && ACTION == 'curation_status_log') {
+    // URL: /variants/0000000001?curation_status_log
+    // Show the logs for the changes of curation status for this variant.
 
     $nID = sprintf('%010d', $_PE[1]);
     define('PAGE_TITLE', 'Curation history for variant #' . $nID);
