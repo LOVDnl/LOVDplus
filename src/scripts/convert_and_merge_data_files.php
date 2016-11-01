@@ -1785,7 +1785,7 @@ print('No available transcripts for gene ' . $aGenes[$aVariant['symbol']]['id'] 
             $aVariant['VariantOnTranscript/DNA'] = substr($aVariant['VariantOnTranscript/DNA'], strpos($aVariant['VariantOnTranscript/DNA'], ':')+1); // NM_000000.1:c.1del -> c.1del
 
             $bCallMutalyzer = !$aVariant['VariantOnTranscript/DNA'];
-            if (!empty($_INI['import']['check_indel_description'])) {
+            if (empty($_INI['import']['skip_check_indel_description'])) {
                 $bCallMutalyzer = $bCallMutalyzer || (strpos($aVariant['VariantOnTranscript/DNA'], '_') !== false);
             }
 
