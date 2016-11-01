@@ -34,6 +34,31 @@ $_INSTANCE_CONFIG['screenings'] = array(
     )
 );
 
+$_INSTANCE_CONFIG['custom_object'] = array(
+    'viewList' => array(
+        'colsToShow' => array(
+            // We can have view list id as key here if needed.
+            // 0 here means the viewList columns seen by the constructor (at the point where we don't know VL id yet.
+            '0' => array(
+                // VOG
+                'VariantOnGenome/DNA',
+                'VariantOnGenome/Sequencing/Quality',
+                'VariantOnGenome/Variant_priority',
+                'VariantOnGenome/Frequency/1000G/VEP',
+                'VariantOnGenome/Frequency/EVS/VEP/European_American',
+                'VariantOnGenome/Frequency/ExAC',
+
+                // VOT
+                'VariantOnTranscript/DNA',
+                'VariantOnTranscript/Protein',
+                'VariantOnTranscript/Consequence_Type',
+                'VariantOnTranscript/Consequence_Impact',
+
+            )
+        )
+    )
+);
+
 
 
 
