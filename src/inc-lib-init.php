@@ -1288,4 +1288,23 @@ function lovd_convertSecondsToTime ($sValue, $nDecimals = 0)
 
     return round($nValue, $nDecimals) . $sLast;
 }
+
+function lovd_verifyInstance ($sName, $bExact=true) {
+
+    global $_INI;
+
+    // Check if this instance belongs to $sName instance group.
+    // If $bExact is set to true, it will match the exact instance name instead of prefix.
+    if ($_INI['instance']['name'] == $sName) {
+        return true;
+    }
+
+    if (!$bExact) {
+        if (strpos($_INI['instance']['name'], $sName) === 0) {
+            return true;
+        }
+    }
+
+    return false;
+}
 ?>
