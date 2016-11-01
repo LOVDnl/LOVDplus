@@ -65,7 +65,7 @@ class LOVD_TranscriptVariant extends LOVD_Custom {
 
         // SQL code for viewing an entry.
         $this->aSQLViewEntry['SELECT']   = 'vot.*, ' .
-                                           't.geneid, t.id_ncbi' . ($_INI['instance']['name'] == 'mgha' ? ', vog.chromosome' : ''); // MGHA will have to add a few custom columns here to get the Genomizer link to work properly.
+                                           't.geneid, t.id_ncbi' . (lovd_verifyInstance('mgha', false) ? ', vog.chromosome' : ''); // MGHA will have to add a few custom columns here to get the Genomizer link to work properly.
         $this->aSQLViewEntry['FROM']     = TABLE_VARIANTS_ON_TRANSCRIPTS . ' AS vot ' .
                                           'INNER JOIN ' . TABLE_VARIANTS . ' AS vog ON (vot.id = vog.id) ' . // Only done so that the vog.statusid can be checked.
                                            'LEFT OUTER JOIN ' . TABLE_TRANSCRIPTS . ' AS t ON (vot.transcriptid = t.id)';
@@ -95,7 +95,7 @@ class LOVD_TranscriptVariant extends LOVD_Custom {
 //                        'effect_reported' => 'Affects function (reported)',
 //                        'effect_concluded' => 'Affects function (concluded)',
                       ),
-                 ($_INI['instance']['name'] == 'mgha' ? array('genomizer_url_' => 'Genomizer') : array()), // MGHA entry for the Genomizer link in the VOT ViewEntry.
+                 (lovd_verifyInstance('mgha', false) ? array('genomizer_url_' => 'Genomizer') : array()), // MGHA entry for the Genomizer link in the VOT ViewEntry.
                  $this->buildViewEntry());
 
         // List of columns and (default?) order for viewing a list of entries.
@@ -360,7 +360,7 @@ class LOVD_TranscriptVariant extends LOVD_Custom {
             $zData['id_ncbi_'] = '<A href="transcripts/' . $zData['transcriptid'] . '">' . $zData['id_ncbi'] . '</A>';
             $zData['effect_reported'] = $_SETT['var_effect'][$zData['effectid']{0}];
             $zData['effect_concluded'] = $_SETT['var_effect'][$zData['effectid']{1}];
-            if ($_INI['instance']['name'] == 'mgha') { // Display the Genomizer URL in the VOT ViewEntry. TODO Once the ref and alt are separated we need to add it into this URL. Should we add this to the links table so as it can be used elsewhere?
+            if (lovd_verifyInstance('mgha', false)) { // Display the Genomizer URL in the VOT ViewEntry. TODO Once the ref and alt are separated we need to add it into this URL. Should we add this to the links table so as it can be used elsewhere?
                 $zData['genomizer_url_'] = '<A href="http://genomizer.com/?chr=' . $zData['chromosome'] . '&gene=' . $zData['geneid'] . '&ref_seq=' . $zData['id_ncbi'] . '&variant=' . $zData['VariantOnTranscript/DNA'] . '" target="_blank">Genomizer Link</A>';
             }
         }
