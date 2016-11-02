@@ -84,8 +84,8 @@ $_INSTANCE_CONFIG['custom_object'] = array(
                 'curation_status_',
                 'VariantOnGenome/Sequencing/Somatic/Status',
                 'chromosome',
-                //'geneid'
-                //'id_ncbi',
+                'symbol',
+                'transcript',
                 'VariantOnGenome/DNA',
                 'VariantOnTranscript/DNA',
                 'VariantOnTranscript/Protein',
