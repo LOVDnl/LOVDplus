@@ -131,6 +131,11 @@ if ($aVariantIDs) {
         case 'remove_with_any_gmaf_gt_1':
             $aVariantIDsFiltered = $_DB->query('SELECT DISTINCT CAST(id AS UNSIGNED) FROM ' . TABLE_VARIANTS . ' WHERE (`VariantOnGenome/Frequency/1000G/VEP` IS NULL OR `VariantOnGenome/Frequency/1000G/VEP` <= 0.01) AND (`VariantOnGenome/Frequency/ExAC` IS NULL OR `VariantOnGenome/Frequency/ExAC` <= 0.01) AND (`VariantOnGenome/Frequency/EVS/VEP/European_American` IS NULL OR `VariantOnGenome/Frequency/EVS/VEP/European_American` <= 0.01) AND id IN (?' . str_repeat(', ?', count($aVariantIDs) - 1) . ')', $aVariantIDs, false)->fetchAllColumn();
             break;
+        // Remove variants with max gMAF (EVS, 1000g) > 0.01, no value is assumed 0.
+        // NOTE: seqliner data does not have ExAC
+        case 'remove_with_any_gmaf_evs_1000g_gt_1':
+            $aVariantIDsFiltered = $_DB->query('SELECT DISTINCT CAST(id AS UNSIGNED) FROM ' . TABLE_VARIANTS . ' WHERE (`VariantOnGenome/Frequency/1000G/VEP` IS NULL OR `VariantOnGenome/Frequency/1000G/VEP` <= 0.01) AND (`VariantOnGenome/Frequency/EVS/VEP/European_American` IS NULL OR `VariantOnGenome/Frequency/EVS/VEP/European_American` <= 0.01) AND id IN (?' . str_repeat(', ?', count($aVariantIDs) - 1) . ')', $aVariantIDs, false)->fetchAllColumn();
+            break;
         // Variant with ind ratio < 0.5.
         case 'remove_obs_count_ratio_gte_50':
             $aVariantIDsFiltered = $_DB->query('SELECT DISTINCT CAST(vog.id AS UNSIGNED) FROM ' . TABLE_VARIANTS . ' AS vog LEFT JOIN ' . TABLE_VARIANTS . ' AS ovog ON (vog.`VariantOnGenome/DBID` = ovog.`VariantOnGenome/DBID`) LEFT JOIN ' . TABLE_SCR2VAR . ' AS s2v ON (ovog.id = s2v.variantid) LEFT JOIN ' . TABLE_SCREENINGS . ' AS s ON (s2v.screeningid = s.id) WHERE vog.id IN (?' . str_repeat(', ?', count($aVariantIDs) - 1) . ') GROUP BY vog.`VariantOnGenome/DBID` HAVING ((COUNT(DISTINCT s.individualid) - 1) / (SELECT COUNT(*) FROM ' . TABLE_INDIVIDUALS . ')) < 0.5', $aVariantIDs, false)->fetchAllColumn();
