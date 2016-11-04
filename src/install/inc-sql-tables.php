@@ -977,24 +977,41 @@ $aTableSQL =
         , 'TABLE_GENE_STATISTICS' =>
     'CREATE TABLE ' . TABLE_GENE_STATISTICS . ' (
     id VARCHAR(25) NOT NULL,
-    vep_annotation TINYINT(1) DEFAULT NULL,
-    nextera_cds_bases INT(10) unsigned DEFAULT NULL,
-    nextera_exon_bases INT(10) unsigned DEFAULT NULL,
-    refseq_cds_bases INT(10) unsigned DEFAULT NULL,
-    refseq_exon_bases INT(10) unsigned DEFAULT NULL,
-    cds_coverage DECIMAL(5,2) DEFAULT NULL,
-    exon_coverage DECIMAL(5,2) DEFAULT NULL,
-    alternative_names VARCHAR(1000) DEFAULT NULL,
-    exon_mean_of_mean_coverage DECIMAL(6,2) DEFAULT NULL,
-    exon_mean_coverage_sd DECIMAL(6,2) DEFAULT NULL,
-    exon_mean_of_median_coverage DECIMAL(6,2) DEFAULT NULL,
-    exon_mean_of_percent_20x DECIMAL(6,2) DEFAULT NULL,
-    exon_mean_percent_sd DECIMAL(6,2) DEFAULT NULL,
-    cds_mean_of_mean_coverage DECIMAL(6,2) DEFAULT NULL,
-    cds_mean_coverage_sd DECIMAL(6,2) DEFAULT NULL,
-    cds_mean_of_median_coverage DECIMAL(6,2) DEFAULT NULL,
-    cds_mean_of_percent_20x DECIMAL(5,2) DEFAULT NULL,
-    cds_mean_percent_sd DECIMAL(5,2) DEFAULT NULL,
+    chromosome VARCHAR(10),
+    start_pos INT(10),
+    end_pos INT(10),
+    vep_annotation TINYINT(1),
+    alternative_names VARCHAR(1000),
+    refseq_cds_bases INT(10),
+    refseq_exon_bases INT(10),
+    nextera_cds_bases INT(10) unsigned,
+    nextera_exon_bases INT(10) unsigned,
+    nextera_cds_coverage DECIMAL(5,2),
+    nextera_exon_coverage DECIMAL(5,2),
+    nextera_exon_mean_of_mean_coverage DECIMAL(6,2),
+    nextera_exon_mean_coverage_sd DECIMAL(6,2),
+    nextera_exon_mean_of_median_coverage DECIMAL(6,2),
+    nextera_exon_mean_of_percent_20x DECIMAL(6,2),
+    nextera_exon_mean_percent_sd DECIMAL(6,2),
+    nextera_cds_mean_of_mean_coverage DECIMAL(6,2),
+    nextera_cds_mean_coverage_sd DECIMAL(6,2),
+    nextera_cds_mean_of_median_coverage DECIMAL(6,2),
+    nextera_cds_mean_of_percent_20x DECIMAL(5,2),
+    nextera_cds_mean_percent_sd DECIMAL(5,2),
+    cre_cds_bases INT(10),
+    cre_exon_bases INT(10),
+    cre_cds_coverage DECIMAL(5,2),
+    cre_exon_coverage DECIMAL(5,2),
+    cre_exon_mean_of_mean_coverage DECIMAL(6,2),
+    cre_exon_mean_coverage_sd DECIMAL(6,2),
+    cre_exon_mean_of_median_coverage DECIMAL(6,2),
+    cre_exon_mean_of_percent_20x DECIMAL(6,2),
+    cre_exon_mean_percent_sd DECIMAL(6,2),
+    cre_cds_mean_of_mean_coverage DECIMAL(6,2),
+    cre_cds_mean_coverage_sd DECIMAL(6,2),
+    cre_cds_mean_of_median_coverage DECIMAL(6,2),
+    cre_cds_mean_of_percent_20x DECIMAL(5,2),
+    cre_cds_mean_percent_sd DECIMAL(5,2),
     created_date DATETIME NOT NULL,
     PRIMARY KEY (id))
 ' . $sSettings
@@ -1046,6 +1063,6 @@ $aTableSQL =
 // DMD_SPECIFIC;
 if (lovd_getProjectFile() == '/install/inc-sql-tables.php') {
     header('Content-type: text/plain; charset=UTF-8');
-    var_dump($aTableSQL);
+    print_r($aTableSQL);
 }
 ?>
