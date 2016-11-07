@@ -52,7 +52,8 @@ exit_on_annotation_error = yes
 # If we choose 'no' for exit_on_annotation_error, we still have to set a maximum limit of how many errors we allow.
 max_annotation_error_allowed = 20
 
-
+# If we choose 1, convert_and_merge script will NOT call Mutalyzer to check if an indel variant description is correct.
+skip_check_indel_description = 0
 
 [paths]
 

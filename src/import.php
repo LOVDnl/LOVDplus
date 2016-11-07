@@ -643,10 +643,17 @@ if (POST || $_FILES) { // || $_FILES is in use for the automatic loading of file
                             // Linking tables (such as GEN2DIS) require all available columns to be present.
                             $aSection['required_columns'] = $aSection['allowed_columns'];
                         } else {
-                            // Normal data table, no data links.
-
-                            // Some ids that do not need to be loaded can be skipped here.
-                            if (!in_array($sCurrentSection, array('Variants_On_Genome', 'Variants_On_Transcripts', 'Screenings', 'Screenings_To_Variants', 'Screenings_To_Genes', 'Genes_To_Diseases', 'Individuals_To_Diseases'))) {
+                            if (!LOVD_plus) {
+                                if ($sCurrentSection == 'Variants_On_Transcripts' && $aParsed['Variants_On_Genome']['ids']) {
+                                    // IDs are not unique, and anyways are already parsed in the VOG section.
+                                    // Note: Making this a reference (=& instead of =) slows down the parsing of a VOT line 3x. Don't understand why.
+                                    $aSection['ids'] = $aParsed['Variants_On_Genome']['ids'];
+                                } else {
+                                    // Normal data table, no data links.
+                                    $aSection['ids'] = array_flip($_DB->query('SELECT id FROM ' . $sTableName)->fetchAllColumn());
+                                }
+                            } elseif (!in_array($sCurrentSection, array('Variants_On_Genome', 'Variants_On_Transcripts', 'Screenings', 'Screenings_To_Variants', 'Screenings_To_Genes', 'Genes_To_Diseases', 'Individuals_To_Diseases'))) {
+                                // Some ids that do not need to be loaded can be skipped here.
                                 $aSection['ids'] = array_flip($_DB->query('SELECT id FROM ' . $sTableName)->fetchAllColumn());
                             }
                         }
