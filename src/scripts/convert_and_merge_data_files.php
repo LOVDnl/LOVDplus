@@ -1542,13 +1542,10 @@ foreach ($aFiles as $sID) {
                 continue;
             }
             if (empty($aLine[$sVEPColumn]) || $aLine[$sVEPColumn] == 'unknown' || $aLine[$sVEPColumn] == '.') {
-                if ($_INI['instance']['name'] == 'mgha') {
-                    if ($sLOVDColumn == 'VariantOnGenome/Variant_priority') {
-                        $aVariant['VariantOnGenome/Variant_priority'] = 0;
-                    } else {
-                        $aVariant[$sLOVDColumn] = '';
-                    }
-                }else{
+                if ($_INI['instance']['name'] == 'mgha' && $aLine[$sVEPColumn] == 0) {
+                    // We want to keep 0's for some columns, eg priority and allele depths etc...
+                    $aVariant[$sLOVDColumn] = 0;
+                } else {
                     $aVariant[$sLOVDColumn] = '';
                 }
             } else {

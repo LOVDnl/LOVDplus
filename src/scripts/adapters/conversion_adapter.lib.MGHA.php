@@ -217,6 +217,9 @@ function lovd_prepareMappings()
         'Mother_PP' => 'VariantOnGenome/Sequencing/Mother/Phredscaled_Probabilities',
 
         // Columns that are created when processing data in lovd_prepareVariantData function.
+        'Child_Depth_Ref' => 'VariantOnGenome/Sequencing/Depth/Ref', // Derived from Child_AD.
+        'Child_Depth_Alt' => 'VariantOnGenome/Sequencing/Depth/Alt', // Derived from Child_AD.
+        'Child_Alt_Percentage' => 'VariantOnGenome/Sequencing/Depth/Alt/Fraction', // Derived from Child_AD.
         'Father_Depth_Ref' => 'VariantOnGenome/Sequencing/Father/Depth/Ref', // Derived from Father_AD.
         'Father_Depth_Alt' => 'VariantOnGenome/Sequencing/Father/Depth/Alt', // Derived from Father_AD.
         'Father_Alt_Percentage' => 'VariantOnGenome/Sequencing/Father/Depth/Alt/Fraction', // Derived from Father_AD.
@@ -308,19 +311,29 @@ function lovd_prepareVariantData($aLine, $options = array())
     }
 
 
+    // Calculate the Childs allele depths and fraction.
+    if (isset($aLine['Child_AD'])) {
+        // Child_AD(x,y)
+        // Calculate the alt depth as fraction (/100).
+        $aChildAllelicDepths = explode(',', $aLine['Child_AD']);
+
+        // Set the ref and alt values in $aLine.
+        $aLine['Child_Depth_Ref'] = $aChildAllelicDepths[0];
+        $aLine['Child_Depth_Alt'] = $aChildAllelicDepths[1];
+
+        if ($aChildAllelicDepths[1] == 0) {
+            $aLine['Child_Alt_Percentage'] = 0;
+        } else {
+            $aLine['Child_Alt_Percentage'] = $aChildAllelicDepths[1] / ($aChildAllelicDepths[0] + $aChildAllelicDepths[1]);
+        }
+    }
+
+
     if (!empty($aLine['Mother_GT']) || !empty($aLine['Father_GT'])){
         // Check whether the mother or father's genotype is present.
         // If so we are dealing with a trio and we need to calculate the following.
 
-        for ($nParentCount = 1; $nParentCount <= 2; $nParentCount++) {
-
-            if ($nParentCount == 1) {
-                $sParent = 'Father';
-
-            } else {
-                $sParent = 'Mother';
-            }
-
+        foreach (array('Father','Mother') as $sParent) {
 
             // Get the genotypes for the parents and compare them to each other.
             // Data is separated by a / or a |.
@@ -334,7 +347,34 @@ function lovd_prepareVariantData($aLine, $options = array())
                 die('Unexpected delimiter in ' . $sParent . '_GT column. We cannot process the file as values from this column are required to calculate the allele.' . ".\n");
             }
 
+            // Calculate the VarPresent for the mother and the father using the allelic depths (Parent_AD) and Phred-scaled Likelihoods (Parent_PL)
+            // Parent_AD(x,y)   Parent_PL(a,b,c)
+            // Calculate the alt depth as fraction (/100).
+            $aParentAllelicDepths = explode(',', $aLine[$sParent . '_AD']);
 
+            // Set the ref and alt values in $aLine.
+            $aLine[$sParent . '_Depth_Ref'] = $aParentAllelicDepths[0];
+            $aLine[$sParent . '_Depth_Alt'] = $aParentAllelicDepths[1];
+
+
+            if ($aParentAllelicDepths[1] == 0) {
+                $sParentAltPercentage = 0;
+
+            } else {
+                // alt percentage = Parent_AD(y) / (Parent.AD(x) + Parent.AD(y))
+                $sParentAltPercentage = $aParentAllelicDepths[1] / ($aParentAllelicDepths[0] + $aParentAllelicDepths[1]);
+            }
+
+            // Set the alt percentage in $aLine.
+            $aLine[$sParent . '_Alt_Percentage'] = $sParentAltPercentage;
+
+            if ($aLine[$sParent . '_PL'] == '' || $aLine[$sParent . '_PL'] == 'unknown') {
+                $sParentPLAlt = 'unknown';
+
+            } else {
+                $aParentPL = explode(',', $aLine[$sParent . '_PL']);
+                $sParentPLAlt = $aParentPL[1]; // Parent PLAlt = Parent_PL(b)
+            }
 
             if ($aParentGenotypes[0] == $aParentGenotypes[1] && $aParentGenotypes[0] == $aLine['ALT']) {
                 // Homo alt.
@@ -358,39 +398,6 @@ function lovd_prepareVariantData($aLine, $options = array())
                     // We set it to '' as this is what Leiden do.
                     $aLine[$sParent . '_GT'] = '';
                 }
-
-                // Calculate the VarPresent for the mother and the father using the allelic depths (Parent_AD) and Phred-scaled Likelihoods (Parent_PL)
-                // Parent_AD(x,y)   Parent_PL(a,b,c)
-                // Calculate the alt depth as fraction (/100).
-                $aParentAllelicDepths = explode(',', $aLine[$sParent . '_AD']);
-
-                // Set the ref and alt values in $aLine.
-                $aLine[$sParent . '_Depth_Ref'] = $aParentAllelicDepths[0];
-                $aLine[$sParent . '_Depth_Alt'] = $aParentAllelicDepths[1];
-
-
-                if ($aParentAllelicDepths[1] == 0) {
-                    $sParentAltPercentage = 0;
-                    $aLine[$sParent . '_Depth_Alt_Frac'] = 0;
-
-                } else {
-                    // alt percentage = Parent_AD(y) / (Parent.AD(x) + Parent.AD(y))
-                    $aLine[$sParent . '_Depth_Alt_Frac'] = $aParentAllelicDepths[1]/100;
-                    $sParentAltPercentage = $aParentAllelicDepths[1] / ($aParentAllelicDepths[0] + $aParentAllelicDepths[1]);
-                }
-
-                // Set the alt percentage in $aLine.
-                $aLine[$sParent . '_Alt_Percentage'] = $sParentAltPercentage;
-
-                if ($aLine[$sParent . '_PL'] == '' || $aLine[$sParent . '_PL'] == 'unknown') {
-                    $sParentPLAlt = 'unknown';
-
-                } else {
-                    $aParentPL = explode(',', $aLine[$sParent . '_PL']);
-                    $sParentPLAlt = $aParentPL[1]; // Parent PLAlt = Parent_PL(b)
-                }
-
-
 
                 if ($sParentAltPercentage > 10) {
                     $aLine[$sParent . '_VarPresent'] = 5;
