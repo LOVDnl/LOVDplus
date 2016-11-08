@@ -1028,7 +1028,7 @@ class LOVD_DefaultDataConverter {
     function formatEmptyColumn($aLine, $sVEPColumn, $sLOVDColumn, $aVariant)
     {
         // Returns how we want to represent empty data in $aVariant array given a LOVD column name.
-        if (isset($aLine[$sVEPColumn]) && $aLine[$sVEPColumn] == 0) {
+        if (isset($aLine[$sVEPColumn]) && ($aLine[$sVEPColumn] === 0 || $aLine[$sVEPColumn] === '0')) {
             $aVariant[$sLOVDColumn] = 0;
         } else {
             $aVariant[$sLOVDColumn] = '';

@@ -596,18 +596,10 @@ class LOVD_MghaDataConverter extends LOVD_DefaultDataConverter {
     function formatEmptyColumn($aLine, $sVEPColumn, $sLOVDColumn, $aVariant)
     {
         // Returns how we want to represent empty data in $aVariant array given a LOVD column name.
-
-        switch ($sLOVDColumn) {
-            case 'VariantOnGenome/Variant_priority':
-                $aVariant[$sLOVDColumn] = 0;
-                break;
-            default:
-                // Returns how we want to represent empty data in $aVariant array given a LOVD column name.
-                if (isset($aLine[$sVEPColumn]) && $aLine[$sVEPColumn] == 0) {
-                    $aVariant[$sLOVDColumn] = 0;
-                } else {
-                    $aVariant[$sLOVDColumn] = '';
-                }
+        if (isset($aLine[$sVEPColumn]) && ($aLine[$sVEPColumn] === 0 || $aLine[$sVEPColumn] === '0')) {
+            $aVariant[$sLOVDColumn] = 0;
+        } else {
+            $aVariant[$sLOVDColumn] = '';
         }
 
         return $aVariant;
