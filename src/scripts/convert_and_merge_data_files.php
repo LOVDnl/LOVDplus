@@ -13,7 +13,7 @@
  *************/
 
 //define('ROOT_PATH', '../');
-define('ROOT_PATH', dirname(__FILE__) . '/../');
+define('ROOT_PATH', str_replace('\\', '/', dirname(__FILE__) . '/../'));
 define('FORMAT_ALLOW_TEXTPLAIN', true);
 
 
@@ -663,7 +663,7 @@ foreach ($aFiles as $sID) {
         // $aLine = array_map('trim', $aLine, array_fill(0, count($aLine), '"')); // In case we ever need to trim off quotes.
 
         // Reformat variant data if extra modification required by different instance of LOVD.
-        $aLine = $zAdapter->prepareVariantData($aLine);
+        $aLine = $zAdapter->prepareVariantData($aLine, array('aGenes' => $aGenes, 'aTranscripts' => $aTranscripts));
 
         // Map VEP columns to LOVD columns.
         foreach ($aColumnMappings as $sVEPColumn => $sLOVDColumn) {
@@ -675,7 +675,7 @@ foreach ($aFiles as $sID) {
             }
             
             if (empty($aLine[$sVEPColumn]) || $aLine[$sVEPColumn] == 'unknown' || $aLine[$sVEPColumn] == '.') {
-                $aVariant = $zAdapter->formatEmptyColumn($aLine, $sLOVDColumn, $aVariant);
+                $aVariant = $zAdapter->formatEmptyColumn($aLine, $sVEPColumn, $sLOVDColumn, $aVariant);
             } else {
                 $aVariant[$sLOVDColumn] = $aLine[$sVEPColumn];
             }
@@ -850,7 +850,7 @@ print('Loading transcript information for ' . $aGenes[$aVariant['symbol']]['id']
                             }
                         }
                         if ($sJSONResponse === false) {
-                            print('>>>>> Attempted to call Mutalyzer ' . $iMutalyzerRetries . ' times to getTranscriptsAndInfo and failed on line ' . $nLine . '.' . "\n");
+                            print('>>>>> Attempted to call Mutalyzer ' . $nMutalyzerRetries . ' times to getTranscriptsAndInfo and failed on line ' . $nLine . '.' . "\n");
                         }
                     }
                     if ($sJSONResponse && $aResponse = json_decode($sJSONResponse, true)) {
@@ -941,7 +941,7 @@ print('No available transcripts for gene ' . $aGenes[$aVariant['symbol']]['id'] 
 
 
                     if ($sJSONResponse === false) {
-                        print('>>>>> Attempted to call Mutalyzer ' . $iMutalyzerRetries . ' times for numberConversion and failed on line ' . $nLine . '.' . "\n");
+                        print('>>>>> Attempted to call Mutalyzer ' . $nMutalyzerRetries . ' times for numberConversion and failed on line ' . $nLine . '.' . "\n");
                     }                        
 
                     if ($sJSONResponse && $aResponse = json_decode($sJSONResponse, true)) {
@@ -1032,7 +1032,7 @@ print('No available transcripts for gene ' . $aGenes[$aVariant['symbol']]['id'] 
                             }
                         }
                         if ($sJSONResponse === false) {
-                            print('>>>>> Attempted to call Mutalyzer ' . $iMutalyzerRetries . ' times to getTranscriptsAndInfo and failed on line ' . $nLine . '.' . "\n");
+                            print('>>>>> Attempted to call Mutalyzer ' . $nMutalyzerRetries . ' times to getTranscriptsAndInfo and failed on line ' . $nLine . '.' . "\n");
                         }
                     }
                     if ($sJSONResponse && $aResponse = json_decode($sJSONResponse, true)) {
@@ -1064,7 +1064,7 @@ print('Running mutalyzer to predict protein change for ' . $aGenes[$aVariant['sy
                     }
                 }
                 if ($sJSONResponse === false) {
-                    print('>>>>> Attempted to call Mutalyzer ' . $iMutalyzerRetries . ' times to runMutalyzer and failed on line ' . $nLine . '.' . "\n");
+                    print('>>>>> Attempted to call Mutalyzer ' . $nMutalyzerRetries . ' times to runMutalyzer and failed on line ' . $nLine . '.' . "\n");
                 }
 //var_dump('https://mutalyzer.nl/json/runMutalyzer?variant=' . rawurlencode($aGenes[$aLine['SYMBOL']]['refseq_UD'] . '(' . $aGenes[$aLine['SYMBOL']]['id'] . '_v' . $aTranscripts[$aLine['Feature']]['id_mutalyzer'] . '):' . $aVariant['VariantOnTranscript/DNA']));
                 if ($sJSONResponse && $aResponse = json_decode($sJSONResponse, true)) {
