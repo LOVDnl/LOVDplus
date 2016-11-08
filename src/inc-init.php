@@ -37,11 +37,6 @@ if (!defined('ROOT_PATH')) {
 // Require library standard functions.
 require ROOT_PATH . 'inc-lib-init.php';
 
-// Load any instance specific functions and variables.
-if (file_exists(ROOT_PATH . 'scripts/adapter.lib.php')) {
-    require ROOT_PATH . 'scripts/adapter.lib.php';
-}
-
 // Define module path.
 // FIXME; do we still need this?
 define('MODULE_PATH', ROOT_PATH . 'modules/');
@@ -425,6 +420,17 @@ foreach ($aConfig as $nLine => $sLine) {
         lovd_displayError('Init', 'Error parsing config file at line ' . ($nLine + 1));
     }
 }
+
+
+// Load any instance specific functions and variables.
+$sInstanceName = 'DEFAULT';
+if (!empty($_INI['instance']['name'])) {
+    $sInstanceName = strtoupper($_INI['instance']['name']);
+}
+if (file_exists(ROOT_PATH . 'scripts/adapters/conversion_adapter.lib.' . $sInstanceName . '.php')) {
+    require_once ROOT_PATH . 'scripts/adapters/conversion_adapter.lib.' . $sInstanceName . '.php';
+}
+
 
 // We now have the $_INI variable filled according to the file's contents.
 // Check the settings' values to see if they are valid.
