@@ -13,7 +13,7 @@
  *************/
 
 //define('ROOT_PATH', '../');
-define('ROOT_PATH', dirname(__FILE__) . '/../');
+define('ROOT_PATH', str_replace('\\', '/', dirname(__FILE__) . '/../'));
 define('FORMAT_ALLOW_TEXTPLAIN', true);
 define('NO_TRANSCRIPT', '-----');
 
@@ -1719,7 +1719,7 @@ print('Loading transcript information for ' . $aGenes[$aVariant['symbol']]['id']
                             }
                         }
                         if ($sJSONResponse === false) {
-                            print('>>>>> Attempted to call Mutalyzer ' . $iMutalyzerRetries . ' times to getTranscriptsAndInfo and failed on line ' . $nLine . '.' . "\n");
+                            print('>>>>> Attempted to call Mutalyzer ' . $nMutalyzerRetries . ' times to getTranscriptsAndInfo and failed on line ' . $nLine . '.' . "\n");
                         }
                     }
                     if ($sJSONResponse && $aResponse = json_decode($sJSONResponse, true)) {
@@ -1810,7 +1810,7 @@ print('No available transcripts for gene ' . $aGenes[$aVariant['symbol']]['id'] 
 
 
                     if ($sJSONResponse === false) {
-                        print('>>>>> Attempted to call Mutalyzer ' . $iMutalyzerRetries . ' times for numberConversion and failed on line ' . $nLine . '.' . "\n");
+                        print('>>>>> Attempted to call Mutalyzer ' . $nMutalyzerRetries . ' times for numberConversion and failed on line ' . $nLine . '.' . "\n");
                     }                        
 
                     if ($sJSONResponse && $aResponse = json_decode($sJSONResponse, true)) {
@@ -1901,7 +1901,7 @@ print('No available transcripts for gene ' . $aGenes[$aVariant['symbol']]['id'] 
                             }
                         }
                         if ($sJSONResponse === false) {
-                            print('>>>>> Attempted to call Mutalyzer ' . $iMutalyzerRetries . ' times to getTranscriptsAndInfo and failed on line ' . $nLine . '.' . "\n");
+                            print('>>>>> Attempted to call Mutalyzer ' . $nMutalyzerRetries . ' times to getTranscriptsAndInfo and failed on line ' . $nLine . '.' . "\n");
                         }
                     }
                     if ($sJSONResponse && $aResponse = json_decode($sJSONResponse, true)) {
@@ -1933,7 +1933,7 @@ print('Running mutalyzer to predict protein change for ' . $aGenes[$aVariant['sy
                     }
                 }
                 if ($sJSONResponse === false) {
-                    print('>>>>> Attempted to call Mutalyzer ' . $iMutalyzerRetries . ' times to runMutalyzer and failed on line ' . $nLine . '.' . "\n");
+                    print('>>>>> Attempted to call Mutalyzer ' . $nMutalyzerRetries . ' times to runMutalyzer and failed on line ' . $nLine . '.' . "\n");
                 }
 //var_dump('https://mutalyzer.nl/json/runMutalyzer?variant=' . rawurlencode($aGenes[$aLine['SYMBOL']]['refseq_UD'] . '(' . $aGenes[$aLine['SYMBOL']]['id'] . '_v' . $aTranscripts[$aLine['Feature']]['id_mutalyzer'] . '):' . $aVariant['VariantOnTranscript/DNA']));
                 if ($sJSONResponse && $aResponse = json_decode($sJSONResponse, true)) {
