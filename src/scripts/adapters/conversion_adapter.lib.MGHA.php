@@ -282,13 +282,11 @@ class LOVD_MghaDataConverter extends LOVD_DefaultDataConverter {
 
 
 
-    function prepareVariantData($aLine, $options = array())
+    function prepareVariantData(&$aLine)
     {
         // Processes the variant data file for MGHA.
         // Cleans up data in existing columns and splits some columns out to two columns.
-        // Expect to see $aGenes, $aTranscripts.
-        $aGenes = (!isset($options['aGenes'])? array() : $options['aGenes']);
-        $aTranscripts = (!isset($options['aTranscripts'])? array() : $options['aTranscripts']);
+
         // Move transcripts that are to be dropped into VariantOnGenome/Remarks
         $aLine['Variant_Remarks'] = '';
         // Handle genes that start with 'LOC'.
@@ -297,10 +295,10 @@ class LOVD_MghaDataConverter extends LOVD_DefaultDataConverter {
         $bDropTranscript = false;
         if (!empty($aLine['SYMBOL']) && strpos(strtolower($aLine['SYMBOL']), 'loc') === 0) {
             $bDropTranscript = true;
-        } elseif (!empty($aLine['SYMBOL']) && empty($aGenes[$aLine['SYMBOL']])) {
+        } elseif (!empty($aLine['SYMBOL']) && empty($this->aScriptVars['aGenes'][$aLine['SYMBOL']])) {
             $aLine['Variant_Remarks'] = "UNKNOWN GENE\n";
             $bDropTranscript = true;
-        } elseif (!empty($aLine['Feature']) && empty($aTranscripts[$aLine['Feature']])) {
+        } elseif (!empty($aLine['Feature']) && empty($this->aScriptVars['aTranscripts'][$aLine['Feature']])) {
             $aLine['Variant_Remarks'] = "UNKNOWN TRANSCRIPT\n";
             $bDropTranscript = true;
         } elseif (!empty($aLine['HGVSc']) && strpos($aLine['HGVSc'], '*-') !== false) {

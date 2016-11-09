@@ -129,7 +129,7 @@ class LOVD_DefaultDataConverter {
 
 
 
-    function prepareVariantData($aLine)
+    function prepareVariantData(&$aLine)
     {
         // Reformat a line of raw variant data into the format that works for this instance.
 
