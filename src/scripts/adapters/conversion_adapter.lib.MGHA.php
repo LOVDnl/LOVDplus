@@ -414,7 +414,7 @@ class LOVD_MghaDataConverter extends LOVD_DefaultDataConverter {
                         // Homo ref.
                         $aLine[$sParent . '_GT'] = '0/0';
                     }
-                    if ($aLine[$sParent . '_GT'] = './.') {
+                    if ($aLine[$sParent . '_GT'] == './.') {
                         // We set it to '' as this is what Leiden do.
                         $aLine[$sParent . '_GT'] = '';
                     }
