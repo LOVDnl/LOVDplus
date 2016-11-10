@@ -47,12 +47,47 @@ $_INSTANCE_CONFIG['custom_object'] = array(
                 'VariantOnGenome/Frequency/1000G/VEP',
                 'VariantOnGenome/Frequency/EVS/VEP/European_American',
                 'VariantOnGenome/Frequency/ExAC',
+                'VariantOnGenome/Sequencing/Depth/Alt',
 
                 // VOT
                 'VariantOnTranscript/DNA',
                 'VariantOnTranscript/Protein',
                 'VariantOnTranscript/Consequence_Type',
                 'VariantOnTranscript/Consequence_Impact',
+                'VariantOnTranscript/Prediction/CADD_Raw'
+            ),
+
+            'CustomVL_AnalysisRunResults_for_I_VE' => array(
+                // Invisible.
+                'runid',
+                'curation_statusid',
+                'variantid',
+
+
+                // Visible.
+                'curation_status_',
+                'chromosome',
+                'VariantOnGenome/DNA',
+                'VariantOnTranscript/DNA',
+                'VariantOnTranscript/Protein',
+                'allele_',
+                'vog_effect',
+                'gene_OMIM_',
+                'gene_disease_name',
+                'VariantOnGenome/Sequencing/Quality',
+                'VariantOnGenome/Sequencing/Depth/Alt',
+                'VariantOnGenome/Variant_priority',
+                'VariantOnTranscript/Prediction/CADD_Raw',
+                'VariantOnTranscript/Consequence_Impact',
+                'VariantOnTranscript/Consequence_Type',
+                'VariantOnGenome/Frequency/ExAC',
+                'VariantOnGenome/Frequency/1000G/VEP',
+                'VariantOnGenome/Frequency/EVS/VEP/European_American',
+                'obs_disease',
+                'obs_var_dis_ind_ratio',
+                'obs_variant',
+                'obs_var_ind_ratio',
+                'gene_panels'
             )
         )
     )
