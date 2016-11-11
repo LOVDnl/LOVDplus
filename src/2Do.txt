@@ -4,6 +4,15 @@ NGS diagnostics
 Task list in SharePoint:
 https://teamwerk.lumc.nl/sites/LOVD_plus/Lists/Tasks/Current%20tasks.aspx
 
+2016-11-08
+\item[$\circ$] KG: Wants the new GoNL frequency *next to* the old one. So will need to import the new one, too. Sander
+      will tell me what the column will be called. Then adapt conversion, and have new column created. Better on top of
+      old build, so testing will be swift. All filters need to use the NEW column, and drop the old column. This
+      means old runs repeated will have more results, yes.
+\item[$\circ$] KG: Is it logged in LOVD+, who makes the export for Miracle?
+
+
+
 2016-10-25
 \item[$\circ$] KG: Can conversion and import runs be emailed to me?
 \item[$\circ$] Sander: Discussion about new APIs implemented around Miracle and Prinia. He will create wrappers around
