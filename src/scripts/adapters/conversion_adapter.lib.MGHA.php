@@ -47,7 +47,8 @@ $_INSTANCE_CONFIG['custom_object'] = array(
                 'VariantOnGenome/Frequency/1000G/VEP',
                 'VariantOnGenome/Frequency/EVS/VEP/European_American',
                 'VariantOnGenome/Frequency/ExAC',
-                'VariantOnGenome/Sequencing/Depth/Alt',
+                'VariantOnGenome/Sequencing/Depth/Total',
+                'VariantOnGenome/Sequencing/Depth/Alt/Fraction',
 
                 // VOT
                 'VariantOnTranscript/DNA',
@@ -75,7 +76,8 @@ $_INSTANCE_CONFIG['custom_object'] = array(
                 'gene_OMIM_',
                 'gene_disease_name',
                 'VariantOnGenome/Sequencing/Quality',
-                'VariantOnGenome/Sequencing/Depth/Alt',
+                'VariantOnGenome/Sequencing/Depth/Total',
+                'VariantOnGenome/Sequencing/Depth/Alt/Fraction',
                 'VariantOnGenome/Variant_priority',
                 'VariantOnTranscript/Prediction/CADD_Raw',
                 'VariantOnTranscript/Consequence_Impact',
