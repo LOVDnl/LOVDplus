@@ -4,7 +4,7 @@
  * LEIDEN OPEN VARIATION DATABASE (LOVD)
  *
  * Created     : 2013-11-07
- * Modified    : 2016-05-17
+ * Modified    : 2016-09-29
  * For LOVD    : 3.0-13
  *
  * Copyright   : 2004-2016 Leiden University Medical Center; http://www.LUMC.nl/
@@ -401,6 +401,28 @@ class LOVD_CustomViewListMOD extends LOVD_CustomViewList {
                                     'The ratio of the number of individuals with this variant and this disease divided by the total number of individuals with this disease within this database.')),
                         ));
                     break;
+            }
+        }
+
+
+
+        // Modifications specifically for the Analysis Results VL.
+        // The table is regarded too wide, and columns need to be narrowed.
+        // We could shorten headers etc in the database, but this will shorten
+        // them too for the VE, which reduces the clarity of the data.
+        $aVLModifications = array(
+            'VariantOnGenome/DNA' => array('view' => array('DNA change (genomic)', 100)),
+            'VariantOnGenome/Alamut' => array('view' => array('Alamut', 60)),
+            'VariantOnGenome/Conservation_score/PhyloP' => array('view' => array('PhyloP', 60)),
+            'VariantOnGenome/HGMD/Association' => array('view' => array('HGMD', 50)),
+            'VariantOnGenome/Sequencing/Depth/Alt/Fraction' => array('view' => array('RD Alt (%)', 90)),
+            'VariantOnGenome/Sequencing/Quality' => array('view' => array('Seq. Q.', 60)),
+            'VariantOnTranscript/DNA' => array('view' => array('DNA change (cDNA)', 100)),
+            'VariantOnTranscript/Protein' => array('view' => array('Protein', 100)),
+        );
+        foreach ($aVLModifications as $sCol => $aModifications) {
+            if (isset($this->aColumnsViewList[$sCol])) {
+                $this->aColumnsViewList[$sCol] = array_merge($this->aColumnsViewList[$sCol], $aModifications);
             }
         }
 
