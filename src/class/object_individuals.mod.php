@@ -4,7 +4,7 @@
  * LEIDEN OPEN VARIATION DATABASE (LOVD)
  *
  * Created     : 2013-10-28
- * Modified    : 2016-05-24
+ * Modified    : 2016-11-11
  * For LOVD    : 3.0-13
  *
  * Copyright   : 2004-2016 Leiden University Medical Center; http://www.LUMC.nl/
@@ -92,6 +92,7 @@ class LOVD_IndividualMOD extends LOVD_Individual {
         $this->aSQLViewList['SELECT']   = 'i.*, ' .
                                           'i.id AS individualid, ' .
                                           's.id AS screeningid, ' .
+                                          's.analysis_by, ' .
                                           's.analysis_date, ' .
                                           's.analysis_approved_date, ' .
                                         // FIXME; Can we get this order correct, such that diseases without abbreviation nicely mix with those with? Right now, the diseases without symbols are in the back.
