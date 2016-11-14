@@ -4,11 +4,11 @@
  * LEIDEN OPEN VARIATION DATABASE (LOVD)
  *
  * Created     : 2013-11-27
- * Modified    : 2016-08-05
+ * Modified    : 2016-09-28
  * For LOVD    : 3.0-13
  *
  * Copyright   : 2004-2016 Leiden University Medical Center; http://www.LUMC.nl/
- * Programmer  : Ing. Ivo F.A.C. Fokkema <I.F.A.C.Fokkema@LUMC.nl>
+ * Programmer  : Ivo F.A.C. Fokkema <I.F.A.C.Fokkema@LUMC.nl>
  *
  *
  * This file is part of LOVD.
@@ -72,6 +72,6 @@ if (!empty($_GET['id']) && $_AUTH && ACTION !== false && isset($_SETT['var_effec
             $_SESSION['viewlists']['CustomVL_AnalysisRunResults_for_I_VE']['checked'] = array(); // To clean up.
         }
     }
-    die((string) ($nSwitched > 0) . ' ' . $nSwitched);
+    die((int) ($nSwitched > 0) . ' ' . $nSwitched);
 }
 ?>
