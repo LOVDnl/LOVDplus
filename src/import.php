@@ -1518,7 +1518,7 @@ if (POST || $_FILES) { // || $_FILES is in use for the automatic loading of file
             $aGenes = array();
             $_DB->beginTransaction();
 
-            foreach ($aParsed as $sSection => $aSection) {
+            foreach ($aParsed as $sSection => &$aSection) {
                 $aFields = $aSection['allowed_columns'];
                 // We will unset the IDs, and generate new ones. All, but the Column and VOT sections, which don't have an PK AUTO_INCREMENT.
                 if (in_array('id', $aFields) && !in_array($sSection, array('Columns', 'Variants_On_Transcripts'))) {
@@ -1526,7 +1526,7 @@ if (POST || $_FILES) { // || $_FILES is in use for the automatic loading of file
                 }
                 $aDone[$sSection] = 0;
 
-                foreach ($aSection['data'] as $nID => $aData) {
+                foreach ($aSection['data'] as $nID => &$aData) {
                     $nEntry++;
                     if (!$aData['todo'] || !in_array($aData['todo'], array('insert', 'update'))) {
                         continue;

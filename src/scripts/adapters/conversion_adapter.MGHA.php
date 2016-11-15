@@ -404,6 +404,8 @@ if ($argc != 1 && in_array($argv[1], array('--help', '-help', '-h', '-?'))) {
 
     // Loop through all the samples in the SMDF and include individual and screening columns.
     foreach ($aDataArr as $sKey => $sVal) {
+        $aColumnsForScreening = array();
+        $aColumnsForIndividual = array();
 
         if (trim($sVal['trio']) == 'T') {
             // Sample is part of a trio.
@@ -500,7 +502,6 @@ if ($argc != 1 && in_array($argv[1], array('--help', '-help', '-h', '-?'))) {
 
                 }
 
-
                 if ($sType == 'trio') {
                     // Add trio specific columns.
 
@@ -530,6 +531,7 @@ if ($argc != 1 && in_array($argv[1], array('--help', '-help', '-h', '-?'))) {
                     print('Error opening the temporary output file: ' . $sFileNameSMDFTemp . ".\n");
                     die(51);
                 }
+
                 // Write the output data to a variable.
                 $sOutputData =
                     '### LOVD-version 3000-080 ### Full data download ### To import, do not remove or alter this header ###' . "\r\n" .
