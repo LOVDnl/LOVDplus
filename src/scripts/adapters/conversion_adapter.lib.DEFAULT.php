@@ -78,6 +78,7 @@ class LOVD_DefaultDataConverter {
             'rsID' => 'VariantOnGenome/dbSNP',
             'AFESP5400' => 'VariantOnGenome/Frequency/EVS', // Will be divided by 100 later.
             'AFGONL' => 'VariantOnGenome/Frequency/GoNL',
+            'EXAC_AF' => 'VariantOnGenome/Frequency/ExAC',
             'MutationTaster_pred' => 'VariantOnTranscript/Prediction/MutationTaster',
             'MutationTaster_score' => 'VariantOnTranscript/Prediction/MutationTaster/Score',
             'Polyphen2_HDIV_score' => 'VariantOnTranscript/PolyPhen/HDIV',

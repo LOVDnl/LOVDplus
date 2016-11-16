@@ -4,7 +4,7 @@
  * LEIDEN OPEN VARIATION DATABASE (LOVD)
  *
  * Created     : 2013-10-28
- * Modified    : 2016-05-24
+ * Modified    : 2016-11-11
  * For LOVD    : 3.0-13
  *
  * Copyright   : 2004-2016 Leiden University Medical Center; http://www.LUMC.nl/
@@ -92,6 +92,7 @@ class LOVD_IndividualMOD extends LOVD_Individual {
         $this->aSQLViewList['SELECT']   = 'i.*, ' .
                                           'i.id AS individualid, ' .
                                           's.id AS screeningid, ' .
+                                          's.analysis_by, ' .
                                           's.analysis_date, ' .
                                           's.analysis_approved_date, ' .
                                           ($_INI['instance']['name'] != 'mgha' ? '' : 's.`Screening/Pipeline/Run_ID`, CASE WHEN s.`Screening/Mother/Sample_ID` IS NOT NULL AND CHAR_LENGTH(s.`Screening/Mother/Sample_ID`) > 0 AND s.`Screening/Father/Sample_ID` IS NOT NULL AND CHAR_LENGTH(s.`Screening/Father/Sample_ID`) > 0 THEN "Trio" ELSE "Individual" END AS family_type, ') . // MGHA specific individual identifiers.
