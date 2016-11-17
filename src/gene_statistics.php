@@ -317,6 +317,7 @@ if (PATH_COUNT == 1 && ACTION == 'import') {
             // Get all the current gene symbols in LOVD.
             $aGenesInLOVD = $_DB->query('SELECT UPPER(id), id FROM ' . TABLE_GENES)->fetchAllCombine();
             $sDateNow = date('Y-m-d H:i:s');
+            $nAltSymbolKey = array_search('alternative_names',$aFileColumnNames); // Record the array location for the alternative gene names, used for matching statistics if there is not an exact gene name match.
             // Loop through each of the gene symbols and check to see if they exist within LOVD, create an error log. Remove genes that are not within LOVD?
             foreach ($aData as $i => $sLine) {
                 // Skip the first line with the headers in it.
@@ -325,18 +326,44 @@ if (PATH_COUNT == 1 && ACTION == 'import') {
                 }
                 $sLine = trim($sLine);
                 $aColumns = explode("\t", $sLine);
-
+                $bFoundGene = false;
                 $sFileGeneSymbol = $aColumns[0];
+
                 // Check if the gene symbol exists within LOVD.
-                if (!isset($aGenesInLOVD[strtoupper($sFileGeneSymbol)])) {
-                    $aMissingGenes[] = $sFileGeneSymbol;
-                } else {
-                    foreach ($aMissingColumnIDs as $iMissingColumnID) {
+                if (!isset($aGenesInLOVD[strtoupper($sFileGeneSymbol)])) { // We did not find the gene symbol within LOVD+ using our first check.
+                    if ($nAltSymbolKey !== false) { // We have alternative gene names to search through.
+                        // Clean up spaces and trim alternative gene names.
+                        $sAltGeneSymbols = str_replace(' ', '', trim($aColumns[$nAltSymbolKey]));
+                        // Explode the alternative gene names out.
+                        $aAltGeneSymbols = explode(",", $sAltGeneSymbols);
+                        // Loop through the alternative gene names and see if we can find a match within LOVD+.
+                        foreach ($aAltGeneSymbols as $sAltGeneSymbol) {
+                            if (isset($aGenesInLOVD[strtoupper($sAltGeneSymbol)])) { // We found a match so lets use this symbol in LOVD+.
+                                // TODO - Record the latest gene symbol in the statistics record.
+                                // If we are replacing the given gene symbol with an old gene symbol the result will be that the given gene symbol will no longer appear anywhere within the statistics record.
+                                // The old gene symbol will appear as the primary key as well as in the alternative names column.
+                                // We may also want to remove the old symbol from the alternative names if it is used so as it doesn't appear in two places.
+
+                                $aColumns[0] = $sAltGeneSymbol; // Replace the given gene symbol with the one found within LOVD+.
+                                $bFoundGene = true;
+                                break;
+                            }
+                        }
+                    }
+                } else { // We have found the gene symbol in our first check.
+                    $bFoundGene = true;
+                }
+
+                if ($bFoundGene) { // We have found this gene within LOVD+ so insert the gene statistics data.
+                    foreach ($aMissingColumnIDs as $iMissingColumnID) { // Remove any columns that are not present within LOVD+.
                         unset($aColumns[$iMissingColumnID]);
                     }
                     $aColumns = array_values($aColumns);
                     $aColumns[] = $sDateNow;
-                    $pdoInsert->execute($aColumns);
+                    $pdoInsert->execute($aColumns); // Insert the gene statistics record.
+                } else {
+                    // We didn't find a match so this is a missing gene symbol, add it to the list of missing genes.
+                    $aMissingGenes[] = $sFileGeneSymbol;
                 }
                 // Update the progress bar every 1000 records.
                 $_BAR->setProgress(($i / $iGeneFileCount) * 100);
@@ -345,6 +372,7 @@ if (PATH_COUNT == 1 && ACTION == 'import') {
                 }
             }
 
+            // We are all done so lets clean up.
             $_BAR->setProgress(100);
             $_BAR->setMessage('Done!');
             $_BAR->setMessageVisibility('done', true);
