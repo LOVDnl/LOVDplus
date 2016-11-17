@@ -4,12 +4,12 @@
  * LEIDEN OPEN VARIATION DATABASE (LOVD)
  *
  * Created     : 2016-08-12
- * Modified    : 2016-08-12
+ * Modified    : 2016-09-28
  * For LOVD    : 3.0-13
  *
  * Copyright   : 2004-2016 Leiden University Medical Center; http://www.LUMC.nl/
  * Programmers : Anthony Marty <anthony.marty@unimelb.edu.au>
- *               Ing. Ivo F.A.C. Fokkema <I.F.A.C.Fokkema@LUMC.nl>
+ *               Ivo F.A.C. Fokkema <I.F.A.C.Fokkema@LUMC.nl>
  *
  *
  * This file is part of LOVD.
@@ -71,11 +71,11 @@ if (!empty($_GET['id']) && $_AUTH && ACTION !== false && isset($_SETT['confirmat
         if ($_GET['id'] == 'selected') {
             $_SESSION['viewlists']['CustomVL_AnalysisRunResults_for_I_VE']['checked'] = array(); // To clean up.
         }
+        foreach ($aIDs as $nID) {
+            // Write to log...
+            lovd_writeLog('Event', 'ConfirmationStatus', 'Updated confirmation status for variant #' . $nID . ' to "' . $_SETT['confirmation_status'][ACTION] . '".');
+        }
     }
-    foreach ($aIDs as $nID) {
-        // Write to log...
-        lovd_writeLog('Event', 'ConfirmationStatus', 'Updated confirmation status for variant #' . $nID . ' to "' . $_SETT['confirmation_status'][ACTION] . '".');
-    }
-    die((string) ($nSwitched > 0) . ' ' . $nSwitched);
+    die((int) ($nSwitched > 0) . ' ' . $nSwitched);
 }
 ?>

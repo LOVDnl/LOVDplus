@@ -1729,6 +1729,8 @@ if (!lovd_isCurator($_SESSION['currdb'])) {
                     $_BAR[1]->setProgress(($nEntry/$nDataTotal)*100);
                 }
 
+                unset($aData); // break the reference with the last element.
+
                 // Done with all this section!
                 unset($aParsed[$sSection]['allowed_columns']);
                 unset($aParsed[$sSection]['object']);
@@ -1741,6 +1743,8 @@ if (!lovd_isCurator($_SESSION['currdb'])) {
                     unset($aDone[$sSection]);
                 }
             }
+            unset($aSection); // break the reference with the last element.
+
             if (!$bError) {
                 $_DB->commit();
                 $_BAR[1]->setMessage('Done importing!', 'done');
