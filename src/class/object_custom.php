@@ -378,9 +378,12 @@ class LOVD_Custom extends LOVD_Object {
 //                    $aData[$sCol] = $_POST[$sCol] = $aRegs[1] . (!$aRegs[2]? '00y' : $aRegs[2]) . (!$aRegs[3] && $aRegs[4]? '00m' : $aRegs[3]) . (!$aRegs[4]? '' : $aRegs[4]) . (!$aRegs[5]? '' : $aRegs[5]);
 //                }
 //            }
-            if (!empty($aData[$sCol])) {
-                //$this->checkInputRegExp($sCol, $aData[$sCol]); // Disabled for DIAGNOSTICS, to speed up the import.
-                $this->checkSelectedInput($sCol, $aData[$sCol]);
+
+            if (lovd_getProjectFile() != '/import.php') {
+                if (!empty($aData[$sCol])) {
+                    //$this->checkInputRegExp($sCol, $aData[$sCol]); // Disabled for DIAGNOSTICS, to speed up the import.
+                    $this->checkSelectedInput($sCol, $aData[$sCol]);
+                }
             }
         }
 
