@@ -977,6 +977,7 @@ $aTableSQL =
         , 'TABLE_GENE_STATISTICS' =>
     'CREATE TABLE ' . TABLE_GENE_STATISTICS . ' (
     id VARCHAR(25) NOT NULL,
+    hgnc VARCHAR(25),
     chromosome VARCHAR(10),
     start_pos INT(10),
     end_pos INT(10),

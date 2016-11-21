@@ -73,6 +73,10 @@ class LOVD_GeneStatistic extends LOVD_Object {
                 'id_' => array(
                     'view' => array('Symbol<BR><BR><BR>', 80),
                     'db'   => array('g.id', 'ASC', true)),
+                'hgnc' => array(
+                    'view' => array('Latest<BR>HGNC<BR>Symbol<BR>', 65),
+                    'db'   => array('gs.hgnc', 'DESC', true),
+                    'legend' => array('The latest symbol according to the HGNC.')),
                 'blacklist_flag_' => array(
                     'view' => false,
                     'db'   => array('blacklist_flag_', 'ASC', 'INT')),
