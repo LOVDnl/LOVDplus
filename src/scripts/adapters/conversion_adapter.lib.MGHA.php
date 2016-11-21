@@ -539,7 +539,7 @@ class LOVD_MghaDataConverter extends LOVD_DefaultDataConverter {
             $aLine['Variant_Priority'] = 6;
         } else {
             if ($aLine['IMPACT'] == 'HIGH') {
-                if (($aLine['ID'] == '.' || $aLine['ID'] == '') && $sMaxFreq == '') {
+                if ($sMaxFreq === '') {
                     // If novel - SNP138 ($aLine['ID']) is = '.' or '' and there is no frequency.
                     $aLine['Variant_Priority'] = 5;
                 } elseif ($sMaxFreq <= 0.0005) {
@@ -552,7 +552,7 @@ class LOVD_MghaDataConverter extends LOVD_DefaultDataConverter {
             } elseif ($aLine['IMPACT'] == 'MODERATE') {
                 if ($sMaxFreq <= 0.01) {
                     // Check if it is rare.
-                    if ((($aLine['ID'] == '.' || $aLine['ID'] == '') && $sMaxFreq == '') || $sMaxFreq <= 0.0005) {
+                    if ($sMaxFreq === '' || $sMaxFreq <= 0.0005) {
                         // check if novel - SNP138 ($aLine['ID']) is = '.' or '' and there is no frequency OR if very rare (<0.0005).
                         if ($aLine['Condel'] >= 0.07) {
                             // Check if it is conserved - condel >= 0.07.
