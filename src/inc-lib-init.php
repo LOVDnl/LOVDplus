@@ -215,12 +215,12 @@ function lovd_getColumnData ($sTable)
     global $_DB, $_TABLES;
     static $aTableCols = array();
 
-    // Only for tables that actually exist.
-    if (!in_array($sTable, $_TABLES)) {
-        return false;
-    }
-
     if (empty($aTableCols[$sTable])) {
+        // Only for tables that actually exist.
+        if (!in_array($sTable, $_TABLES)) {
+            return false;
+        }
+
         $q = $_DB->query('SHOW COLUMNS FROM ' . $sTable, false, false); // Safe, since $sTable is already checked with $_TABLES.
         if (!$q) {
             // Can happen when table does not exist yet (i.e. during install).
