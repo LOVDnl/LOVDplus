@@ -1320,7 +1320,7 @@ class LOVD_Object {
 
             // Manipulate SELECT to include SQL_CALC_FOUND_ROWS.
             $bSQLCALCFOUNDROWS = false;
-            if (!$bTrueCount && $_INI['database']['driver'] == 'mysql' && ($aSessionViewList['counts'][$sFilterMD5]['t'] < 1 || $aSessionViewList['counts'][$sFilterMD5]['d'] < (time() - (60*15)))) {
+            if (!$bTrueCount && $_INI['database']['driver'] == 'mysql' && ($aSessionViewList['counts'][$sFilterMD5]['t'] < 2 || $aSessionViewList['counts'][$sFilterMD5]['d'] < (time() - (60*15)))) {
                 // But only if we're using MySQL and it takes less than a second to get the correct number of results, or it's been more than 15 minutes since the last check!
                 $this->aSQLViewList['SELECT'] = 'SQL_CALC_FOUND_ROWS ' . $this->aSQLViewList['SELECT'];
                 $bSQLCALCFOUNDROWS = true;
@@ -1378,7 +1378,7 @@ class LOVD_Object {
             }
 
             // ORDER BY will only occur when we estimate we have time for it.
-            if ($aSessionViewList['counts'][$sFilterMD5]['t'] < 1 && $aSessionViewList['counts'][$sFilterMD5]['n'] <= $_SETT['lists']['max_sortable_rows']) {
+            if ($aSessionViewList['counts'][$sFilterMD5]['t'] < 2 && $aSessionViewList['counts'][$sFilterMD5]['n'] <= $_SETT['lists']['max_sortable_rows']) {
                 $sSQL .= ' ORDER BY ' . $this->aSQLViewList['ORDER_BY'];
                 $bSortableVL = true;
             } else {
