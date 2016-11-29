@@ -4,11 +4,11 @@
  * LEIDEN OPEN VARIATION DATABASE (LOVD)
  *
  * Created     : 2010-02-18
- * Modified    : 2016-05-09
- * For LOVD    : 3.0-16
+ * Modified    : 2016-11-29
+ * For LOVD    : 3.0-18
  *
  * Copyright   : 2004-2016 Leiden University Medical Center; http://www.LUMC.nl/
- * Programmers : Ing. Ivo F.A.C. Fokkema <I.F.A.C.Fokkema@LUMC.nl>
+ * Programmers : Ivo F.A.C. Fokkema <I.F.A.C.Fokkema@LUMC.nl>
  *               Ing. Ivar C. Lugtenburg <I.C.Lugtenburg@LUMC.nl>
  *
  *
@@ -46,6 +46,7 @@ $aNeededLevel =
                 'Disease' => 0,
                 'Gene' => 0,
                 'Gene_Panel' => LEVEL_SUBMITTER,
+                'Gene_Panel_Gene' => LEVEL_SUBMITTER,
                 'Gene_Panel_Gene_REV' => LEVEL_SUBMITTER,
                 'Gene_Statistic' => LEVEL_SUBMITTER,
                 'Genome_Variant' => 0,

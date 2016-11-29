@@ -4,12 +4,13 @@
  * LEIDEN OPEN VARIATION DATABASE (LOVD)
  *
  * Created     : 2016-03-01
- * Modified    : 2016-08-17
- * For LOVD    : 3.0-13
+ * Modified    : 2016-11-29
+ * For LOVD    : 3.0-18
  *
  * Copyright   : 2004-2016 Leiden University Medical Center; http://www.LUMC.nl/
  * Programmers : Anthony Marty <anthony.marty@unimelb.edu.au>
  *               Ivo F.A.C. Fokkema <I.F.A.C.Fokkema@LUMC.nl>
+ *               John-Paul Plazzer <johnpaul.plazzer@gmail.com>
  *
  *
  * This file is part of LOVD.
@@ -36,6 +37,125 @@ require ROOT_PATH . 'inc-init.php';
 if ($_AUTH) {
     // If authorized, check for updates.
     require ROOT_PATH . 'inc-upgrade.php';
+}
+
+
+
+
+
+// Function is used in only one place, doesn't really use the advantages that
+//  functions bring (namespace, nesting, ...), perhaps just merge into the code?
+function displayGenePanelHistory ($nID, $sFromDate, $sToDate)
+{
+    // Shows the gene panel history for a certain gene panel ID, for the given date range.
+    global $_DB;
+
+    // Fill in the time if we don't have it already.
+    // Format has already been checked, now we can just check for the length.
+    // Todo: if this function is called from somewhere else in future, should it not also check the format itself?
+    if (strlen($sFromDate) == 10) {
+        $sFromDate .= ' 00:00:00'; // Set the 'from' date as the first second of the selected day.
+    }
+    if (strlen($sToDate) == 10) {
+        $sToDate .= ' 23:59:59'; // Set the 'to' date as the last second of the selected day.
+    }
+
+    // Query to get the gene panel revisions.
+    $aGenePanelRevs = $_DB->query('SELECT * FROM ' . TABLE_GENE_PANELS_REV . ' WHERE id = ? AND valid_from >= ? ORDER BY valid_from ASC', array($nID, $sFromDate))->fetchAll();
+    $nCount = 0; // The number of Gene Panel revisions (modifications) in date range, not counting the "Created record" revision.
+
+    // FIXME: Could we replace this with a Gene Panel Rev VL? There is quite some more info needed, though, so might not work...
+    foreach ($aGenePanelRevs as $aGenePanelRev) {
+        if ($aGenePanelRev['valid_from'] <= $sToDate) {
+            // The revision's valid_from date is used to determine if an event (record created, record modified) happens in the selected date range.
+            // The revision's valid_to date doesn't matter for these events, for the purpose of showing the history.
+            $aChanges[$nCount][0] = $aGenePanelRev['reason'];
+            $aChanges[$nCount][1] = $aGenePanelRev['valid_from'];
+            $nCount ++;
+        }
+    }
+
+    if ($aGenePanelRevs[0]['created_date'] >= $sFromDate && $aGenePanelRevs[0]['created_date'] <= $sToDate) {
+        // This gene panel was created within the given date range. Don't include that entry as a "difference".
+        $nCount --;
+    }
+
+    // If the To Date is earlier than when the gene panel was created, then notify user.
+    if ($sToDate < $aGenePanelRevs[0]['created_date']) {
+        lovd_showInfoTable('This gene panel did not exist yet in the given date range. It was created ' . $aGenePanelRevs[0]['created_date'] . '.', 'information');
+    } elseif ($nCount == 0) {
+        // The "modification" count is zero, so nothing changed.
+        lovd_showInfoTable('Information about this gene panel has not changed between the given dates.', 'information');
+    } else {
+        // Display the gene panel revisions.
+        print('
+        <TABLE border="0" cellpadding="0" cellspacing="1" width="750" class="data" style="font-size : 13px;">   
+          <TR>
+            <TH>Changes to Gene Panel information</TH>
+            <TH width="150">Date</TH>');
+
+        // FIXME: Could we replace this with a Gene Panel Rev VL? There is quite some more info needed, though, so might not work...
+        foreach ($aChanges as $aChange) {
+            // The revision's valid_from date is used to determine if an event (record created, record modified) happens in the selected date range.
+            // The revision's valid_to date doesn't matter for these events, for the purpose of showing the history.
+            print('
+          <TR>
+            <TD>' . nl2br($aChange[0]) . '</TD>
+            <TD>' . $aChange[1] . '</TD>
+          </TR>' . "\n");
+        }
+
+        print('        </TABLE><BR>' . "\n\n");
+    }
+
+    // This more complex query can handle the case of a gene that is added, removed, then added again.
+    // Also, exclude genes where valid_from and valid_to do not overlap with the selected data range because they are not relevant and would produce wrong results.
+    $aGenePanelGeneRevs = $_DB->query('SELECT geneid, MIN(valid_from) AS valid_from, MAX(valid_to) AS valid_to FROM ' . TABLE_GP2GENE_REV . ' WHERE genepanelid = ? AND (valid_to >= ? and valid_from <= ?) GROUP BY geneid', array($nID, $sFromDate, $sToDate))->fetchAll();
+    $nAddedCount = 0; // Number of genes that have been added between selected date range.
+    $nRemovedCount = 0; // Number of genes that have been removed between selected date range.
+
+    $aAddedGenes = array();
+    $aRemovedGenes = array();
+    // Display the gene panel gene revisions for the genepanel between two dates.
+    foreach ($aGenePanelGeneRevs as $aGenePanelGeneRev) {
+        if ($aGenePanelGeneRev['valid_from'] >= $sFromDate && $aGenePanelGeneRev['valid_to'] >= $sToDate) {
+            // Added Genes: These are genes which were created between the from date and to date and are still valid after to date.
+            $aAddedGenes[$nAddedCount] = $aGenePanelGeneRev['geneid'];
+            $nAddedCount ++;
+        } elseif ($aGenePanelGeneRev['valid_from'] <= $sFromDate && $aGenePanelGeneRev['valid_to'] <= $sToDate) {  // Removed Genes: these are genes which existed at the fromDate but not after the toDate.
+            $aRemovedGenes[$nRemovedCount] = $aGenePanelGeneRev['geneid'];
+            $nRemovedCount ++;
+        }
+    }
+
+    if ($nAddedCount == 0 && $nRemovedCount == 0) {
+        lovd_showInfoTable('Genes in this gene panel have not changed between the given dates.', 'information');
+    } else {
+        // Display the gene panel gene revisions for the genepanel between two dates.
+        print('    <TABLE border="0" cellpadding="0" cellspacing="0" width="750">
+      <TR valign="top">' . "\n");
+        foreach (array(1, 0) as $i) {
+            print('        <TD>
+          <TABLE border="0" cellpadding="0" cellspacing="1" width="365" class="data" style="font-size : 13px;' . ($i? '' : ' margin-left : 20px;') . '">
+            <TR>
+              <TH>' . ($i? 'Added Genes' : 'Removed Genes') . '</TH>
+            </TR>' . "\n");
+            foreach ($aAddedGenes as $sAddedGene) {
+                print((!$i? '' : '            <TR>
+              <TD>' . $sAddedGene . '</TD>
+            </TR>' . "\n"));
+            }
+            foreach ($aRemovedGenes as $aRemovedGene) {
+                print(($i? '' : '            <TR>
+              <TD>' . $aRemovedGene . ' </TD>
+            </TR>' . "\n"));
+            }
+            print('          </TABLE>
+        </TD>' . "\n");
+        }
+        print('      </TR>
+    </TABLE>' . "\n");
+    }
 }
 
 
@@ -89,7 +209,8 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && !ACTION) {
         // Authorized user is logged in. Provide tools.
         $aNavigation[CURRENT_PATH . '?edit']            = array('menu_edit.png', 'Edit gene panel information', 1);
         $aNavigation[CURRENT_PATH . '?manage_genes']    = array('menu_plus.png', 'Manage gene panel\'s genes', 1);
-        $aNavigation[CURRENT_PATH . '?history']         = array('menu_clock.png', 'View history of genes in this gene panel', 1);
+        $aNavigation[CURRENT_PATH . '?history']         = array('menu_clock.png', 'View differences between two dates', 1);
+        $aNavigation[CURRENT_PATH . '?history_full']    = array('menu_clock.png', 'View full history of genes in this gene panel', 1);
         $aNavigation['download/' . CURRENT_PATH]        = array('menu_save.png', 'Download this gene panel and its genes', 1);
         if ($_AUTH['level'] >= LEVEL_ADMIN) {
             $aNavigation[CURRENT_PATH . '?delete']      = array('cross.png', 'Delete gene panel entry', 1);
@@ -97,15 +218,15 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && !ACTION) {
     }
     lovd_showJGNavigation($aNavigation, 'GenePanel');
 
-    // Display the genes in this gene panel
+    // Display the genes in this gene panel.
     print('<BR><BR>' . "\n\n");
     $_T->printTitle('Genes in gene panel', 'H4');
     require ROOT_PATH . 'class/object_gene_panel_genes.php';
     $_DATA = new LOVD_GenePanelGene();
-    // Only show the genes in this gene panel by setting the genepanelid to the current gene panel id
+    // Only show the genes in this gene panel by setting the genepanelid to the current gene panel id.
     $_GET['search_genepanelid'] = $nID;
     $sGPGViewListID = 'GenePanelGene';
-    // Add a menu item to allow the user to download the whole gene panel
+    // Add a menu item to allow the user to download the whole gene panel.
     print('      <UL id="viewlistMenu_' . $sGPGViewListID . '" class="jeegoocontext jeegooviewlist">' . "\n" .
           '        <LI class="icon"><A click="lovd_AJAX_viewListSubmit(\'' . $sGPGViewListID . '\', function(){lovd_AJAX_viewListDownload(\'' . $sGPGViewListID . '\', true);});"><SPAN class="icon" style="background-image: url(gfx/menu_save.png);"></SPAN>Download gene panel\'s genes</A></LI>' . "\n" .
           '      </UL>' . "\n\n");
@@ -1037,12 +1158,12 @@ if (PATH_COUNT == 3 && preg_match('/^[a-z][a-z0-9#@-]+$/i', rawurldecode($_PE[2]
 
 
 
-if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && ACTION == 'history') {
-    // URL: /gene_panels/00001?history
+if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && ACTION == 'history_full') {
+    // URL: /gene_panels/00001?history_full
     // Show the history for this gene panel.
 
     $nID = sprintf('%05d', $_PE[1]);
-    define('PAGE_TITLE', 'View history for gene panel #' . $nID);
+    define('PAGE_TITLE', 'View full history for gene panel #' . $nID);
 
     lovd_requireAUTH();
 
@@ -1054,6 +1175,103 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && ACTION == 'history') {
     $_GET['search_genepanelid'] = $nID;
     $_DATA->viewList('GenePanelGeneREV');
 
+    $_T->printFooter();
+    exit;
+}
+
+
+
+
+
+if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && ACTION == 'history') {
+    // URL: /gene_panels/00001?history
+    // URL: /gene_panels/00001?history&from=2013-09-06&to=2016-06-02
+    // URL: /gene_panels/00001?history&from=2013-09-06%2014:15:09&to=2016-06-02%2016:27:29
+    // Show the history of this gene panel between two dates.
+
+    // When no dates are given, take defaults and refresh.
+    $bReload = false;
+    require ROOT_PATH . 'inc-lib-form.php';
+    if (empty($_GET['from']) || (!lovd_matchDate($_GET['from']) && !lovd_matchDate($_GET['from'], true))) {
+        // From date empty or rejected. Set to t=0.
+        $_GET['from'] = date('Y-m-d', 0);
+        $bReload = true;
+    }
+    if (empty($_GET['to']) || (!lovd_matchDate($_GET['to']) && !lovd_matchDate($_GET['to'], true))) {
+        // To date empty or rejected. Set to t=time().
+        $_GET['to'] = date('Y-m-d');
+        $bReload = true;
+    }
+    if ($bReload) {
+        // One of the times had to be filled in by us, let's reload.
+        header('Location: ' . lovd_getInstallURL() . CURRENT_PATH . '?' . ACTION . '&from=' . $_GET['from'] . '&to=' . $_GET['to']);
+        exit;
+    }
+
+    $nID = sprintf('%05d', $_PE[1]);
+    define('PAGE_TITLE', 'View changes to gene panel #' . $nID . ' between dates');
+
+    lovd_requireAUTH();
+
+    $_T->printHeader();
+    $_T->printTitle();
+
+    print('    <FORM action="' . CURRENT_PATH . '?history" method="get" id="dateRangeForm" onsubmit="lovd_changeDateRange(\'gene_panels/' . $nID . '?history\'); return false;">
+      <TABLE border="0" cellpadding="10" cellspacing="1" width="750" class="data" style="font-size : 13px;">
+        <TR>
+          <TD>
+            <SPAN>From date: <INPUT type="text" id="fromDate" readonly="true" value="' . $_GET['from'] . '" style="font-size : 13px;"></SPAN>
+            <SPAN>To date: <INPUT type="text" id="toDate" readonly="true" value="' . $_GET['to'] . '" style="font-size : 13px;"></SPAN>
+            <INPUT type="submit" value="View changes" style="font-size : 13px;">
+          </TD>
+        </TR>
+      </TABLE>
+    </FORM><BR>' . "\n");
+
+    displayGenePanelHistory($nID, $_GET['from'], $_GET['to']);
+
+    // Add JS for support of the date picker.
+?>
+    <SCRIPT type="text/javascript">
+        <!--
+        $(function() {
+            $("#fromDate").datepicker({
+                changeYear: true,
+                yearRange: '1970:<?php echo date('Y'); ?>',
+                numberOfMonths: 3,
+                stepMonths: 3,
+                dateFormat: 'yy-mm-dd',
+                maxDate: $("#toDate").val(),
+                onClose: function (selectedDate) {
+                    $("#toDate").datepicker("option", "minDate", selectedDate);
+                }
+            });
+            $("#toDate").datepicker({
+                changeYear: true,
+                yearRange: '1970:<?php echo date('Y'); ?>',
+                numberOfMonths: 3,
+                stepMonths: 3,
+                dateFormat: 'yy-mm-dd',
+                minDate: $("#fromDate").val(),
+                onClose: function (selectedDate) {
+                    $("#fromDate").datepicker("option", "maxDate", selectedDate);
+                }
+            });
+        });
+        function lovd_changeDateRange (sUrl) {
+            var aDateFields = document.getElementById("dateRangeForm");
+
+            if (aDateFields.elements[0].value == '' || aDateFields.elements[1].value == '') {
+                alert("Both dates must be entered!");
+            } else {
+                // Change the URL, allowing the user to go back to the gene panel screen.
+                window.location = sUrl + '&from=' + aDateFields.elements[0].value  + '&to=' + aDateFields.elements[1].value;
+            }
+        }
+        //-->
+    </SCRIPT>
+
+<?php
     $_T->printFooter();
     exit;
 }
