@@ -4,12 +4,12 @@
  * LEIDEN OPEN VARIATION DATABASE (LOVD)
  *
  * Created     : 2012-03-27
- * Modified    : 2016-04-06
- * For LOVD    : 3.0-15
+ * Modified    : 2016-11-29
+ * For LOVD    : 3.0-18
  *
  * Copyright   : 2004-2016 Leiden University Medical Center; http://www.LUMC.nl/
- * Programmers : Ing. Ivo F.A.C. Fokkema <I.F.A.C.Fokkema@LUMC.nl>
- *               Ing. Ivar C. Lugtenburg <I.C.Lugtenburg@LUMC.nl>
+ * Programmers : Ivo F.A.C. Fokkema <I.F.A.C.Fokkema@LUMC.nl>
+ *               Ivar C. Lugtenburg <I.C.Lugtenburg@LUMC.nl>
  *
  *
  * This file is part of LOVD.
@@ -495,7 +495,7 @@ function lovd_mapVariants ()
         lovd_includeJS('inc-js-openwindow.php', 1);
         lovd_includeJS('inc-js-toggle-visibility.js', 1); // Used on forms and variant overviews for small info tables.
         lovd_includeJS('lib/jQuery/jquery.min.js', 1);
-        lovd_includeJS('lib/jQuery/jquery-ui.custom.min.js', 1);
+        lovd_includeJS('lib/jQuery/jquery-ui.min.js', 1);
         lovd_includeJS('lib/jeegoocontext/jquery.jeegoocontext.min.js', 1);
 
         if (!$bFull) {
@@ -552,7 +552,7 @@ function lovd_mapVariants ()
 
     //-->
   </SCRIPT>
-  <LINK rel="stylesheet" type="text/css" href="lib/jQuery/css/cupertino/jquery-ui.custom.css">
+  <LINK rel="stylesheet" type="text/css" href="lib/jQuery/css/cupertino/jquery-ui.css">
 </HEAD>
 
 <BODY style="margin : 0px;">
