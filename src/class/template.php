@@ -4,12 +4,12 @@
  * LEIDEN OPEN VARIATION DATABASE (LOVD)
  *
  * Created     : 2012-03-27
- * Modified    : 2016-04-06
- * For LOVD    : 3.0-15
+ * Modified    : 2016-11-29
+ * For LOVD    : 3.0-18
  *
  * Copyright   : 2004-2016 Leiden University Medical Center; http://www.LUMC.nl/
- * Programmers : Ing. Ivo F.A.C. Fokkema <I.F.A.C.Fokkema@LUMC.nl>
- *               Ing. Ivar C. Lugtenburg <I.C.Lugtenburg@LUMC.nl>
+ * Programmers : Ivo F.A.C. Fokkema <I.F.A.C.Fokkema@LUMC.nl>
+ *               Ivar C. Lugtenburg <I.C.Lugtenburg@LUMC.nl>
  *
  *
  * This file is part of LOVD.
@@ -523,43 +523,6 @@ function lovd_mapVariants ()
 ?>
 
   <SCRIPT type="text/javascript">
-
-      $(function() {
-          $("#fromDate").datepicker({
-              changeYear: true,
-              yearRange: '1970:<?php echo date('Y'); ?>',
-              numberOfMonths: 3,
-              stepMonths: 3,
-              dateFormat: 'yy-mm-dd',
-              maxDate: $("#toDate").val(),
-              onClose: function(selectedDate) {
-                  $("#toDate").datepicker("option", "minDate", selectedDate);
-              }
-          });
-          $("#toDate").datepicker({
-              changeYear: true,
-              yearRange: '1970:<?php echo date('Y'); ?>',
-              numberOfMonths: 3,
-              stepMonths: 3,
-              dateFormat: 'yy-mm-dd',
-              minDate: $("#fromDate").val(),
-              onClose: function(selectedDate) {
-                  $("#fromDate").datepicker("option", "maxDate", selectedDate);
-              }
-          });
-      });
-      function lovd_changeDateRange(url) {
-          var aDateFields = document.getElementById("dateRangeForm");
-
-          if (aDateFields.elements[0].value == '' || aDateFields.elements[1].value == '') {
-              alert("Both dates must be entered!");
-          //} else if (aDateFields.elements[0].value > aDateFields.elements[1].value) {  // This condition is not possible to reach because datepicker prevents it with minDate and maxDate parameters.
-          //    alert("From date can not be greater than the To date");
-          } else {
-              // Change the URL, allowing the user to go back to the gene panel screen.
-              window.location = url + '&from=' + aDateFields.elements[0].value  + '&to=' + aDateFields.elements[1].value;
-          }
-      }
     <!--
 
 <?php
