@@ -83,23 +83,23 @@ function displayGenePanelHistory ($nID, $sFromDate, $sToDate)
     // If the To Date is earlier than when the gene panel was created, then notify user.
     if ($sToDate < $aGenePanelRevs[0]['created_date']) {
         lovd_showInfoTable('This gene panel did not exist yet in the given date range. It was created ' . $aGenePanelRevs[0]['created_date'] . '.', 'information');
-    } elseif ($nCount == 0) { // "modification" count is zero.
+    } elseif ($nCount == 0) {
+        // The "modification" count is zero, so nothing changed.
         lovd_showInfoTable('Information about this gene panel has not changed between the given dates.', 'information');
-    }
-    else {
+    } else {
         // Display the gene panel revisions.
         print('
         <TABLE border="0" cellpadding="0" cellspacing="1" width="750" class="data" style="font-size : 13px;">   
           <TR>
             <TH>Changes to Gene Panel information</TH>
-            <TH width="150">Date</TH>
-          </TR>' . "\n");
+            <TH width="150">Date</TH>');
 
         // FIXME: Could we replace this with a Gene Panel Rev VL? There is quite some more info needed, though, so might not work...
         foreach ($aChanges as $aChange) {
             // The revision's valid_from date is used to determine if an event (record created, record modified) happens in the selected date range.
             // The revision's valid_to date doesn't matter for these events, for the purpose of showing the history.
-            print('          <TR>
+            print('
+          <TR>
             <TD>' . nl2br($aChange[0]) . '</TD>
             <TD>' . $aChange[1] . '</TD>
           </TR>' . "\n");
@@ -130,27 +130,25 @@ function displayGenePanelHistory ($nID, $sFromDate, $sToDate)
 
     if ($nAddedCount == 0 && $nRemovedCount == 0) {
         lovd_showInfoTable('Genes in this gene panel have not changed between the given dates.', 'information');
-    }
-    else {
+    } else {
         // Display the gene panel gene revisions for the genepanel between two dates.
         print('    <TABLE border="0" cellpadding="0" cellspacing="0" width="750">
       <TR valign="top">' . "\n");
         foreach (array(1, 0) as $i) {
             print('        <TD>
-          <TABLE border="0" cellpadding="0" cellspacing="1" width="365" class="data" style="font-size : 13px;' . ($i ? '' : ' margin-left : 20px;') . '">
+          <TABLE border="0" cellpadding="0" cellspacing="1" width="365" class="data" style="font-size : 13px;' . ($i? '' : ' margin-left : 20px;') . '">
             <TR>
-              <TH>' . ($i ? 'Added Genes' : 'Removed Genes') . '</TH>
+              <TH>' . ($i? 'Added Genes' : 'Removed Genes') . '</TH>
             </TR>' . "\n");
             foreach ($aAddedGenes as $sAddedGene) {
-                print((!$i ? '' : '            <TR>
+                print((!$i? '' : '            <TR>
               <TD>' . $sAddedGene . '</TD>
             </TR>' . "\n"));
             }
             foreach ($aRemovedGenes as $aRemovedGene) {
-                print(($i ? '' : '            <TR>
+                print(($i? '' : '            <TR>
               <TD>' . $aRemovedGene . ' </TD>
             </TR>' . "\n"));
-                //  }
             }
             print('          </TABLE>
         </TD>' . "\n");
@@ -212,7 +210,7 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && !ACTION) {
         $aNavigation[CURRENT_PATH . '?edit']            = array('menu_edit.png', 'Edit gene panel information', 1);
         $aNavigation[CURRENT_PATH . '?manage_genes']    = array('menu_plus.png', 'Manage gene panel\'s genes', 1);
         $aNavigation[CURRENT_PATH . '?history']         = array('menu_clock.png', 'View differences between two dates', 1);
-        $aNavigation[CURRENT_PATH . '?history_full']    = array('menu_clock.png', 'View full history of this gene panel', 1);
+        $aNavigation[CURRENT_PATH . '?history_full']    = array('menu_clock.png', 'View full history of genes in this gene panel', 1);
         $aNavigation['download/' . CURRENT_PATH]        = array('menu_save.png', 'Download this gene panel and its genes', 1);
         if ($_AUTH['level'] >= LEVEL_ADMIN) {
             $aNavigation[CURRENT_PATH . '?delete']      = array('cross.png', 'Delete gene panel entry', 1);
@@ -1161,7 +1159,7 @@ if (PATH_COUNT == 3 && preg_match('/^[a-z][a-z0-9#@-]+$/i', rawurldecode($_PE[2]
 
 
 if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && ACTION == 'history_full') {
-    // URL: /gene_panels/00001?history_detailed
+    // URL: /gene_panels/00001?history_full
     // Show the history for this gene panel.
 
     $nID = sprintf('%05d', $_PE[1]);
@@ -1187,6 +1185,7 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && ACTION == 'history_full') {
 
 if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && ACTION == 'history') {
     // URL: /gene_panels/00001?history
+    // URL: /gene_panels/00001?history&from=2013-09-06&to=2016-06-02
     // URL: /gene_panels/00001?history&from=2013-09-06%2014:15:09&to=2016-06-02%2016:27:29
     // Show the history of this gene panel between two dates.
 
@@ -1243,7 +1242,7 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && ACTION == 'history') {
                 stepMonths: 3,
                 dateFormat: 'yy-mm-dd',
                 maxDate: $("#toDate").val(),
-                onClose: function(selectedDate) {
+                onClose: function (selectedDate) {
                     $("#toDate").datepicker("option", "minDate", selectedDate);
                 }
             });
@@ -1254,21 +1253,19 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && ACTION == 'history') {
                 stepMonths: 3,
                 dateFormat: 'yy-mm-dd',
                 minDate: $("#fromDate").val(),
-                onClose: function(selectedDate) {
+                onClose: function (selectedDate) {
                     $("#fromDate").datepicker("option", "maxDate", selectedDate);
                 }
             });
         });
-        function lovd_changeDateRange(url) {
+        function lovd_changeDateRange (sUrl) {
             var aDateFields = document.getElementById("dateRangeForm");
 
             if (aDateFields.elements[0].value == '' || aDateFields.elements[1].value == '') {
                 alert("Both dates must be entered!");
-                //} else if (aDateFields.elements[0].value > aDateFields.elements[1].value) {  // This condition is not possible to reach because datepicker prevents it with minDate and maxDate parameters.
-                //    alert("From date can not be greater than the To date");
             } else {
                 // Change the URL, allowing the user to go back to the gene panel screen.
-                window.location = url + '&from=' + aDateFields.elements[0].value  + '&to=' + aDateFields.elements[1].value;
+                window.location = sUrl + '&from=' + aDateFields.elements[0].value  + '&to=' + aDateFields.elements[1].value;
             }
         }
         //-->
