@@ -4,12 +4,12 @@
  * LEIDEN OPEN VARIATION DATABASE (LOVD)
  *
  * Created     : 2016-03-07
- * Modified    : 2016-04-06
- * For LOVD    : 3.0-13
+ * Modified    : 2016-11-29
+ * For LOVD    : 3.0-18
  *
  * Copyright   : 2004-2016 Leiden University Medical Center; http://www.LUMC.nl/
  * Programmers : Anthony Marty <anthony.marty@unimelb.edu.au>
- *               Ing. Ivo F.A.C. Fokkema <I.F.A.C.Fokkema@LUMC.nl>
+ *               Ivo F.A.C. Fokkema <I.F.A.C.Fokkema@LUMC.nl>
  *
  *
  * This file is part of LOVD.
@@ -234,7 +234,10 @@ class LOVD_GenePanelGene extends LOVD_Object {
         }
         // Only format this viewlist if we are not downloading it
         $zData['pmid_'] = $zData['pmid'];
-        $zData['id_omim_'] = $zData['id_omim'];
+        if (isset($zData['id_omim'])) {
+            // The REV view doesn't have this data, since it's taken from a different table.
+            $zData['id_omim_'] = $zData['id_omim'];
+        }
         $zData['transcript_ncbi_'] = $zData['transcript_ncbi'];
         if (FORMAT == 'text/html') {
             // Format the pubmed URL.
