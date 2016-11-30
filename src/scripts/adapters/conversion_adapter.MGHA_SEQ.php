@@ -47,29 +47,23 @@ if ($argc != 1 && in_array($argv[1], array('--help', '-help', '-h', '-?'))) {
 // Fix any trailing slashes in the path to the data files.
 $_INI['paths']['data_files'] = rtrim($_INI['paths']['data_files'], "\\/") . "/";
 
-$aBatchFolders = glob($_INI['paths']['data_files'] . BATCH_FOLDER_PREFIX . BATCH_FOLDER_DELIMITER . '*');
-if (empty($aBatchFolders)) {
-    print("No batch folder found\nBatch folder name must start with " . BATCH_FOLDER_PREFIX . BATCH_FOLDER_DELIMITER . "\n");
-    exit();
-}
+$sMetaFile = validateMetaDataFile($_INI['paths']['data_files']);
+print("> Required metadata file exists\n");
+
+// Now validate the metadata VALUES.
+$aAllMetadata = getMetaData($sMetaFile);
+print("> Metadata values validated\n");
 
 // Loop through each batch folder to be processed
-foreach($aBatchFolders as $sBatchFolderPath) {
-    $sBatchFolderName = basename($sBatchFolderPath);
+foreach($aAllMetadata as $sBatchFolderName => $aMetadata) {
     print("> Processing " . $sBatchFolderName . "\n");
 
     // Check if all the required files exist.
     list($sPrefix, $sBatchNumber, $sIndividualID) = validateBatchFolderName($sBatchFolderName);
-
-    $sMetaFile = validateMetaDataFile($sBatchFolderPath, $sBatchNumber, $sIndividualID);
-    print("> Required metadata file exists\n");
+    $sBatchFolderPath = $_INI['paths']['data_files'] . $sBatchFolderName;
 
     $aVariantFiles = validateVariantFiles($sBatchFolderPath, $sBatchNumber, $sIndividualID);
     print("> Required variant files exist\n");
-
-    // Now validate the metadata VALUES.
-    $aMetadata = getMetaData($sMetaFile, $sBatchNumber, $sIndividualID);
-    print("> Metadata values validated\n");
 
     // Get database ID of the individual to be processed in this batch.
     $sIndDBID = getIndividualDBID($aMetadata);
@@ -86,6 +80,9 @@ foreach($aBatchFolders as $sBatchFolderPath) {
     archiveBatchFolder($sBatchFolderPath);
     print("> batch folder archived\n");
 }
+
+archiveMetadataFile($sMetaFile);
+print("> sample metadata file archived\n");
 
 
 
@@ -256,6 +253,19 @@ function archiveBatchFolder($sBatchPath) {
 
 
 
+function archiveMetadataFile($sMetadataFile) {
+    if (!rename($sMetadataFile, $sMetadataFile . '.' . time() . '.ARK')) {
+        print("ERROR: failed to archive sample metadata file " . $sMetadataFile);
+        exit(ERROR_OPEN_FILES);
+    }
+
+    return true;
+}
+
+
+
+
+
 function getIndividualDBID($aMetadata) {
     // Get database ID of the given individual ID provided in the metadata file.
     // If the individual has been inserted in the database in the past, then, simply retrieve the database ID.
@@ -294,7 +304,7 @@ function getIndividualDBID($aMetadata) {
 
 
 
-function getMetaData($sMetaDataFilename, $sBatch, $sIndividual) {
+function getMetaData($sMetaDataFilename) {
     // Validate if the metadata provided is in the correct format and returns the metadata if everything is valid.
     // It will print error and stop the script if it is invalid.
     // It does the following validations:
@@ -324,18 +334,11 @@ function getMetaData($sMetaDataFilename, $sBatch, $sIndividual) {
     );
 
     $bHeaderRead = false;
-    $bDataRead = false;
-    $aMetadata = array();
+    $aAllMetadata = array();
     while (($sLine = fgets($fMetaData)) !== false) {
         $sLine = trim($sLine, " \n");
         if (empty($sLine)) {
             continue;
-        }
-
-        // If data has been read. But, there are still more lines to be processed. The metadata file contains more rows than it should.
-        if ($bDataRead) {
-            print("ERROR: metadata file should not contain more than one row of data\n");
-            exit(ERROR_INCORRECT_FORMAT);
         }
 
         // Process header.
@@ -360,28 +363,23 @@ function getMetaData($sMetaDataFilename, $sBatch, $sIndividual) {
             continue;
         }
 
+
         // Process data.
         $aLine = explode($sDelimiter, $sLine);
-
-        if ($aLine[$aExpectedColumns['Batch']] !== $sBatch) {
-            print("ERROR: unmatched Batch ID. Batch ID in metadata file is " . $aLine[$aExpectedColumns['Batch']] . "Folder batch ID is " . $sBatch);
-            exit(ERROR_INVALID_METADATA);
-        }
-
-        if ($aLine[$aExpectedColumns['Individual_ID']] !== $sIndividual) {
-            print("ERROR: unmatched Individual ID. Individual ID in metadata file is " . $aLine[$aExpectedColumns['Individual_ID']] . "Folder Individual ID is " . $sIndividual);
-            exit(ERROR_INVALID_METADATA);
-        }
 
         $aMetadata = array();
         foreach ($aExpectedColumns as $sColName => $nIndex) {
             $aMetadata[$sColName] = formatMetadataValue($sColName, $aLine[$nIndex]);
         }
-        $bDataRead = true;
+
+        $sBatch = $aMetadata['Batch'];
+        $sIndividual = $aMetadata['Individual_ID'];
+        $sKey = implode(BATCH_FOLDER_DELIMITER, array(BATCH_FOLDER_PREFIX, $sBatch, $sIndividual));
+        $aAllMetadata[$sKey] = $aMetadata;
     }
 
     fclose($fMetaData);
-    return $aMetadata;
+    return $aAllMetadata;
 }
 
 
@@ -412,6 +410,8 @@ function formatMetadataValue($sColName, $sRawValue) {
 
 
 function validateBatchFolderName($sBatchFolderName) {
+    global $_INI;
+
     // Validate if batch folder name is in the correct format.
     $aExpectedParts = array(
         BATCH_FOLDER_PREFIX => '',
@@ -431,6 +431,12 @@ function validateBatchFolderName($sBatchFolderName) {
         exit(ERROR_MISSING_FILES);
     }
 
+    if (!file_exists($_INI['paths']['data_files'] . $sBatchFolderName)) {
+        print("ERROR: batch folder " . $_INI['paths']['data_files'] . $sBatchFolderName . " does not exist\n");
+        exit(ERROR_MISSING_FILES);
+
+    }
+
     return $parts;
 }
 
@@ -438,10 +444,10 @@ function validateBatchFolderName($sBatchFolderName) {
 
 
 
-function validateMetaDataFile($sPath, $sBatch, $sIndividual) {
+function validateMetaDataFile($sPath) {
     // Validate if metadata file EXISTS in this batch folder.
 
-    $aMetadataFiles = glob($sPath . '/*.meta');
+    $aMetadataFiles = glob($sPath . '*.meta');
     if (count($aMetadataFiles) > 1) {
         print("ERROR: More than one metadata file found\nPlease keep only one correct metadata file in the batch folder\n");
         exit(ERROR_MISSING_FILES);
