@@ -3938,7 +3938,7 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && ACTION == 'curation_log') {
     // Show the logs for the changes of curation data for this variant.
 
     $nID = sprintf('%010d', $_PE[1]);
-    define('PAGE_TITLE', 'Curation status history for variant #' . $nID);
+    define('PAGE_TITLE', 'Curation history for variant #' . $nID);
     $_T->printHeader();
     $_T->printTitle();
     $_GET['page_size'] = 10;
@@ -3961,7 +3961,7 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && ACTION == 'curation_status_log') 
     // Show the logs for the changes of curation status for this variant.
 
     $nID = sprintf('%010d', $_PE[1]);
-    define('PAGE_TITLE', 'Curation history for variant #' . $nID);
+    define('PAGE_TITLE', 'Curation status history for variant #' . $nID);
     $_T->printHeader();
     $_T->printTitle();
     $_GET['page_size'] = 10;
