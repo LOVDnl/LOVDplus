@@ -3942,7 +3942,7 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && ACTION == 'curation_log') {
     $_T->printHeader();
     $_T->printTitle();
     $_GET['page_size'] = 10;
-    $_GET['search_event'] = 'CurationStatus';
+    $_GET['search_event'] = 'VariantCuration';
     $_GET['search_entry_'] = '"variant #' . $nID . '"';
     require_once ROOT_PATH . 'class/object_logs.php';
     $_DATA = new LOVD_Log();
@@ -3965,7 +3965,7 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && ACTION == 'curation_status_log') 
     $_T->printHeader();
     $_T->printTitle();
     $_GET['page_size'] = 10;
-    $_GET['search_event'] = 'VariantCuration';
+    $_GET['search_event'] = 'CurationStatus';
     $_GET['search_entry_'] = '"variant #' . $nID . '"';
     require_once ROOT_PATH . 'class/object_logs.php';
     $_DATA = new LOVD_Log();
