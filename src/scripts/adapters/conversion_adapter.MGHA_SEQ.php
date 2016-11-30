@@ -93,8 +93,8 @@ function getVariantFileTypes() {
     $aFileTypes = array(
         'tnc' => 'tumour--normal_combined',
         'tnm' => 'tumour_normal_merged',
-        't' => 'tumour_UG',
-        'n' => 'normal_UG'
+        't' => 'tumour_HAP',
+        'n' => 'normal_HAP'
     );
 
     return $aFileTypes;
@@ -108,13 +108,47 @@ function getColumnMappings() {
     // Mapping vep columns to lovd columns
 
     $aColumnMappings = array(
-        'Individual_ID' => 'Individual/Sample_ID',
+        'Sample_ID' => 'Individual/Sample_ID',
         'Sex' => 'Individual/Gender',
-        'Normal_Sample_ID' => 'Screening/Normal/Sample_ID',
-        'Tumor_Sample_ID' => 'Screening/Tumour/Sample_ID',
-        'Fastq_Files' => 'Screening/FastQ_files',
+        'Tumour_Fastq_Files' => 'Screening/Tumour/FastQ_files',
+        'Normal_Fastq_Files' => 'Screening/Normal/FastQ_files',
         'Notes' => 'Screening/Notes',
-        'pipeline_path' => 'Screening/Pipeline/Path'
+        'pipeline_path' => 'Screening/Pipeline/Path',
+
+        'DNA_Tube_ID' => 'Screening/DNA/Tube_ID',
+        'DNA_Concentration' => 'Screening/DNA/Concentration',
+        'DNA_Volume' => 'Screening/DNA/Volume',
+        'DNA_Quantity' => 'Screening/DNA/Quantity',
+        'DNA_Quality' => 'Screening/DNA/Quality',
+        'DNA_Date' => 'Screening/DNA/Date',
+        'Cohort' => 'Individual/Cohort',
+        'Sample_Type' => 'Screening/Sample/Type',
+        'Prioritised_Genes' => 'Screening/Prioritised_genes',
+        'Consanguinity' => 'Individual/Consanguinity',
+        'Variants_File' => 'Screening/Variants_file',
+        'Pedigree_File' => 'Screening/Pedigree_file',
+        'Ethnicity' => 'Individual/Origin/Ethnic',
+        'VariantCall_Group' => 'Screening/Variant_call_group',
+        'Capture_Date' => 'Screening/Capture_date',
+        'Sequencing_Date' => 'Screening/Sequencing_date',
+        'Mean_Coverage' => 'Screening/Mean_coverage',
+        'Duplicate_Percentage' => 'Screening/Duplicate_percentage',
+        'Machine_ID' => 'Screening/Machine_ID',
+        'DNA_Extraction_Lab' => 'Screening/DNA_extraction_lab',
+        'Sequencing_Lab' => 'Screening/Sequencing_lab',
+        'Exome_Capture' => 'Screening/Exome_capture',
+        'Library_Preparation' => 'Screening/Library_preparation',
+        'Barcode_Pool_Size' => 'Screening/Barcode_pool_size',
+        'Read_Type' => 'Screening/Read_type',
+        'Machine_Type' => 'Screening/Machine_type',
+        'Sequencing_Chemistry' => 'Screening/Sequencing_chemistry',
+        'Sequencing_Software' => 'Screening/Sequencing_software',
+        'Demultiplex_Software' => 'Screening/Demultiplex_software',
+        'Hospital_Centre' => 'Individual/Hospital_centre',
+        'Sequencing_Contact' => 'Screening/Sequencing_contact',
+        'Pipeline_Contact' => 'Screening/Pipeline_contact',
+        'Pipeline_Notes' => 'Screening/Pipeline/Notes',
+        'Analysis_Type' => 'Screening/Analysis_type'
     );
 
     return $aColumnMappings;
@@ -127,7 +161,7 @@ function getColumnMappings() {
 function reformatVariantFile($sVariantFile, $sType, $sBatch, $sIndividual) {
     // Create a new copy of the variant file with the following changes:
     // - Remove all comment lines that start with '##'.
-    // - Remove '#' fromt he start of header line.
+    // - Remove '#' from the start of header line.
     // - Rename the file to batchNumber_IndividualID.tsvType.directvep.data.lovd.
 
     global $_INI;
@@ -274,7 +308,7 @@ function getIndividualDBID($aMetadata) {
     global $_DB;
 
     $aMetadata['individual_exists'] = false;
-    $sIndividualID = $aMetadata['Individual_ID'];
+    $sIndividualID = $aMetadata['Sample_ID'];
     $sIndDBID = $_DB->query('SELECT `id` FROM ' . TABLE_INDIVIDUALS . ' WHERE `Individual/Sample_ID` = ?', array($sIndividualID))->fetchColumn();
 
     // If the individual does not already exist in the database, then create it.
@@ -291,10 +325,8 @@ function getIndividualDBID($aMetadata) {
 
         // Add in any custom columns for the individual.
         $aIndFields = $aIndFields + getCustomColumnsData('Individual/', $aMetadata);
-
         $_DB->query('INSERT INTO ' . TABLE_INDIVIDUALS . ' (`' . implode('`, `', array_keys($aIndFields)) . '`) VALUES (?' . str_repeat(', ?', count($aIndFields) - 1) . ')', array_values($aIndFields));
         $sIndDBID = sprintf('%08d', $_DB->lastInsertId());
-
     }
 
     return $sIndDBID;
@@ -325,12 +357,46 @@ function getMetaData($sMetaDataFilename) {
     $sDelimiter = "\t";
     $aExpectedColumns = array(
         'Batch' => MISSING_COL_INDEX,
-        'Individual_ID' => MISSING_COL_INDEX,
+        'Sample_ID' => MISSING_COL_INDEX,
         'Sex' => MISSING_COL_INDEX,
-        'Normal_Sample_ID' => MISSING_COL_INDEX,
-        'Tumor_Sample_ID' => MISSING_COL_INDEX,
-        'Fastq_Files' => MISSING_COL_INDEX,
-        'Notes' => MISSING_COL_INDEX
+        'Tumour_Fastq_Files' => MISSING_COL_INDEX,
+        'Normal_Fastq_Files' => MISSING_COL_INDEX,
+        'Notes' => MISSING_COL_INDEX,
+
+        'DNA_Tube_ID' => MISSING_COL_INDEX,
+        'DNA_Concentration' => MISSING_COL_INDEX,
+        'DNA_Volume' => MISSING_COL_INDEX,
+        'DNA_Quantity' => MISSING_COL_INDEX,
+        'DNA_Quality' => MISSING_COL_INDEX,
+        'DNA_Date' => MISSING_COL_INDEX,
+        'Cohort' => MISSING_COL_INDEX,
+        'Sample_Type' => MISSING_COL_INDEX,
+        'Prioritised_Genes' => MISSING_COL_INDEX,
+        'Consanguinity' => MISSING_COL_INDEX,
+        'Variants_File' => MISSING_COL_INDEX,
+        'Pedigree_File' => MISSING_COL_INDEX,
+        'Ethnicity' => MISSING_COL_INDEX,
+        'VariantCall_Group' => MISSING_COL_INDEX,
+        'Capture_Date' => MISSING_COL_INDEX,
+        'Sequencing_Date' => MISSING_COL_INDEX,
+        'Mean_Coverage' => MISSING_COL_INDEX,
+        'Duplicate_Percentage' => MISSING_COL_INDEX,
+        'Machine_ID' => MISSING_COL_INDEX,
+        'DNA_Extraction_Lab' => MISSING_COL_INDEX,
+        'Sequencing_Lab' => MISSING_COL_INDEX,
+        'Exome_Capture' => MISSING_COL_INDEX,
+        'Library_Preparation' => MISSING_COL_INDEX,
+        'Barcode_Pool_Size' => MISSING_COL_INDEX,
+        'Read_Type' => MISSING_COL_INDEX,
+        'Machine_Type' => MISSING_COL_INDEX,
+        'Sequencing_Chemistry' => MISSING_COL_INDEX,
+        'Sequencing_Software' => MISSING_COL_INDEX,
+        'Demultiplex_Software' => MISSING_COL_INDEX,
+        'Hospital_Centre' => MISSING_COL_INDEX,
+        'Sequencing_Contact' => MISSING_COL_INDEX,
+        'Pipeline_Contact' => MISSING_COL_INDEX,
+        'Pipeline_Notes' => MISSING_COL_INDEX,
+        'Analysis_Type' => MISSING_COL_INDEX
     );
 
     $bHeaderRead = false;
@@ -372,8 +438,11 @@ function getMetaData($sMetaDataFilename) {
             $aMetadata[$sColName] = formatMetadataValue($sColName, $aLine[$nIndex]);
         }
 
+        // Additional metadata columns that does not already exist in the samples metadata file provided.
+        $aMetadata = appendMetadata($aMetadata);
+
         $sBatch = $aMetadata['Batch'];
-        $sIndividual = $aMetadata['Individual_ID'];
+        $sIndividual = $aMetadata['Sample_ID'];
         $sKey = implode(BATCH_FOLDER_DELIMITER, array(BATCH_FOLDER_PREFIX, $sBatch, $sIndividual));
         $aAllMetadata[$sKey] = $aMetadata;
     }
@@ -403,6 +472,34 @@ function formatMetadataValue($sColName, $sRawValue) {
             return $sRawValue;
     }
 
+}
+
+
+
+
+
+function appendMetadata($aMetadata) {
+    // Add metadata columns that are not originally in the samples metadata file.
+    $aSamples = array('Normal', 'Tumour');
+    foreach ($aSamples as $sSample) {
+        if (!isset($aMetadata[$sSample . '_Sample_ID'])) {
+            $aMetadata[$sSample . '_Sample_ID'] = '';
+
+            if (!empty($aMetadata[$sSample . '_Fastq_Files'])) {
+                $sFastqFiles = trim($aMetadata[$sSample . '_Fastq_Files']);
+
+                // There might be multiple fastq files separated by comma.
+                // But, it does not matter here. We only need the first prefix of the first fastq file.
+                $aParts = explode('_', $sFastqFiles);
+                if (count($aParts) >= 1) {
+                    $aMetadata[$sSample . '_Sample_ID'] = $aParts[0];
+                }
+            }
+        }
+    }
+
+
+    return $aMetadata;
 }
 
 
@@ -458,7 +555,7 @@ function validateMetaDataFile($sPath) {
     }
 
     print("ERROR: Missing metadata file\n");
-    exit(ERROR_MISSING_FILES);
+    exit();
 }
 
 
