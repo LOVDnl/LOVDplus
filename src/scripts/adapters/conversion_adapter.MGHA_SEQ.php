@@ -109,6 +109,9 @@ function getColumnMappings() {
 
     $aColumnMappings = array(
         'Sample_ID' => 'Individual/Sample_ID',
+        'Tumour_Sample_ID' => 'Screening/Tumour/Sample_ID',
+        'Normal_Sample_ID' => 'Screening/Normal/Sample_ID',
+
         'Sex' => 'Individual/Gender',
         'Tumour_Fastq_Files' => 'Screening/Tumour/FastQ_files',
         'Normal_Fastq_Files' => 'Screening/Normal/FastQ_files',
@@ -484,7 +487,6 @@ function appendMetadata($aMetadata) {
     foreach ($aSamples as $sSample) {
         if (!isset($aMetadata[$sSample . '_Sample_ID'])) {
             $aMetadata[$sSample . '_Sample_ID'] = '';
-
             if (!empty($aMetadata[$sSample . '_Fastq_Files'])) {
                 $sFastqFiles = trim($aMetadata[$sSample . '_Fastq_Files']);
 
@@ -497,7 +499,6 @@ function appendMetadata($aMetadata) {
             }
         }
     }
-
 
     return $aMetadata;
 }
