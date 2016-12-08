@@ -167,43 +167,45 @@ class LOVD_MghaDataConverter extends LOVD_DefaultDataConverter {
             'CANONICAL' => 'VariantOnTranscript/Canonical_Transcript',
             'ENSP' => 'VariantOnTranscript/Embsembl_Protein_Identifier',
             'HGVS_OFFSET' => 'VariantOnTranscript/HGVS_Offset',
-            'GMAF' => 'VariantOnGenome/Frequency/1000G/VEP',
-            'AFR_MAF' => 'VariantOnGenome/Frequency/1000G/VEP/African',
-            'AMR_MAF' => 'VariantOnGenome/Frequency/1000G/VEP/American',
-            'EAS_MAF' => 'VariantOnGenome/Frequency/1000G/VEP/East_Asian',
-            'EUR_MAF' => 'VariantOnGenome/Frequency/1000G/VEP/European',
-            'SAS_MAF' => 'VariantOnGenome/Frequency/1000G/VEP/South_Asian',
-            'EA_MAF' => 'VariantOnGenome/Frequency/EVS/VEP/European_American',
-            'AA_MAF' => 'VariantOnGenome/Frequency/EVS/VEP/African_American',
-            'ExAC_MAF' => 'VariantOnGenome/Frequency/ExAC',
-            'ExAC_Adj_MAF' => 'VariantOnGenome/Frequency/ExAC/Adjusted',
-            'ExAC_AFR_MAF' => 'VariantOnGenome/Frequency/ExAC/African_American',
-            'ExAC_AMR_MAF' => 'VariantOnGenome/Frequency/ExAC/American',
-            'ExAC_EAS_MAF' => 'VariantOnGenome/Frequency/ExAC/East_Asian',
-            'ExAC_FIN_MAF' => 'VariantOnGenome/Frequency/ExAC/Finnish',
-            'ExAC_NFE_MAF' => 'VariantOnGenome/Frequency/ExAC/Non_Finnish',
-            'ExAC_OTH_MAF' => 'VariantOnGenome/Frequency/ExAC/Other',
-            'ExAC_SAS_MAF' => 'VariantOnGenome/Frequency/ExAC/South_Asian',
+
             'CLIN_SIG' => 'VariantOnTranscript/Clinical_Significance',
             'SOMATIC' => 'VariantOnTranscript/Somatic_Status',
             'PHENO' => 'VariantOnTranscript/Phenotype',
             'PUBMED' => 'VariantOnTranscript/Pubmed',
             'Condel' => 'VariantOnTranscript/Prediction/Condel_Score',
-            '1000Gp1_AC' => 'VariantOnGenome/Frequency/1000G/dbNSFP/Allele_Count',
-            '1000Gp1_AF' => 'VariantOnGenome/Frequency/1000G/dbNSFP',
-            '1000Gp1_AFR_AC' => 'VariantOnGenome/Frequency/1000G/dbNSFP/African/Allele_Count',
-            '1000Gp1_AFR_AF' => 'VariantOnGenome/Frequency/1000G/dbNSFP/African',
-            '1000Gp1_AMR_AC' => 'VariantOnGenome/Frequency/1000G/dbNSFP/American/Allele_Count',
-            '1000Gp1_AMR_AF' => 'VariantOnGenome/Frequency/1000G/dbNSFP/American',
-            '1000Gp1_ASN_AC' => 'VariantOnGenome/Frequency/1000G/dbNSFP/Asian/Allele_Count',
-            '1000Gp1_ASN_AF' => 'VariantOnGenome/Frequency/1000G/dbNSFP/Asian',
-            '1000Gp1_EUR_AC' => 'VariantOnGenome/Frequency/1000G/dbNSFP/European/Allele_Count',
-            '1000Gp1_EUR_AF' => 'VariantOnGenome/Frequency/1000G/dbNSFP/European',
+
             'CADD_phred' => 'VariantOnTranscript/Prediction/CADD_Phredlike',
             'CADD_raw' => 'VariantOnTranscript/Prediction/CADD_Raw',
             'CADD_raw_rankscore' => 'VariantOnTranscript/Prediction/CADD_Raw_Ranked',
-            'ESP6500_AA_AF' => 'VariantOnGenome/Frequency/ESP6500/American',
-            'ESP6500_EA_AF' => 'VariantOnGenome/Frequency/ESP6500/European_American',
+
+            'cpipe_1000Gp3_AF' => 'VariantOnGenome/1000Gp3/Frequency',
+            'cpipe_1000Gp3_AN' => 'VariantOnGenome/1000Gp3/Allele/Total',
+            'cpipe_1000Gp3_AC' => 'VariantOnGenome/1000Gp3/Allele/Count',
+            'cpipe_1000Gp3_AF_AFR' => 'VariantOnGenome/1000Gp3/Frequency/African',
+            'cpipe_1000Gp3_AF_AMR' => 'VariantOnGenome/1000Gp3/Frequency/American',
+            'cpipe_1000Gp3_AF_EAS' => 'VariantOnGenome/1000Gp3/Frequency/East_Asian',
+            'cpipe_1000Gp3_AF_EUR' => 'VariantOnGenome/1000Gp3/Frequency/European',
+            'cpipe_1000Gp3_AF_SAS' => 'VariantOnGenome/1000Gp3/Frequency/South_Asian',
+
+
+            'cpipe_ExAC_AN_Adj' => 'VariantOnGenome/ExAC/Frequency/Allele/Total/Adjusted',
+            'cpipe_ExAC_AC_Adj' => 'VariantOnGenome/ExAC/Frequency/Allele/Count/Adjusted',
+
+            // To be calculated
+            'cpipe_ExAC_AF_Adj' => 'VariantOnGenome/ExAC/Frequency/Adjusted',
+            'cpipe_ExAC_AF_AFR' => 'VariantOnGenome/ExAC/Frequency/African',
+            'cpipe_ExAC_AF_AMR' => 'VariantOnGenome/ExAC/Frequency/American',
+            'cpipe_ExAC_AF_CONSANGUINEOUS' => 'VariantOnGenome/ExAC/Frequency/Consanguineous',
+            'cpipe_ExAC_AF_EAS' => 'VariantOnGenome/ExAC/Frequency/East_Asian',
+            'cpipe_ExAC_AF_FEMALE' => 'VariantOnGenome/ExAC/Frequency/Female',
+            'cpipe_ExAC_AF_FIN' => 'VariantOnGenome/ExAC/Frequency/Finnish',
+            'cpipe_ExAC_AF_MALE' => 'VariantOnGenome/ExAC/Frequency/Male',
+            'cpipe_ExAC_AF_NFE' => 'VariantOnGenome/ExAC/Frequency/Non_Finnish',
+            'cpipe_ExAC_AF_OTH' => 'VariantOnGenome/ExAC/Frequency/Other',
+            'cpipe_ExAC_AF_POPMAX' => 'VariantOnGenome/ExAC/Frequency/Popmax',
+            'cpipe_ExAC_AF_SAS' => 'VariantOnGenome/ExAC/Frequency/South_Asian',
+
+
             'FATHMM_pred' => 'VariantOnTranscript/Prediction/FATHMM',
             'FATHMM_rankscore' => 'VariantOnTranscript/Prediction/FATHMM_Ranked_Score',
             'FATHMM_score' => 'VariantOnTranscript/Prediction/FATHMM_Score',
@@ -471,69 +473,84 @@ class LOVD_MghaDataConverter extends LOVD_DefaultDataConverter {
             $sRef = substr($sRef, 0, -1);
             $sAlt = substr($sAlt, 0, -1);
         }
-        // Insertions/duplications, deletions, inversions, indels.
-        // We do not want to display the frequencies for these, set frequency columns to empty.
-        if (strlen($sRef) != 1 || strlen($sAlt) != 1) {
-            $sAlt = '';
-        }
-        // Set frequency columns array, this is using the column names from the file before they are mapped to LOVD columns names.
-        $aFreqColumns = array(
-            'GMAF',
-            'AFR_MAF',
-            'AMR_MAF',
-            'EAS_MAF',
-            'EUR_MAF',
-            'SAS_MAF',
-            'EA_MAF',
-            'AA_MAF',
-            'ExAC_MAF',
-            'ExAC_Adj_MAF',
-            'ExAC_AFR_MAF',
-            'ExAC_AMR_MAF',
-            'ExAC_EAS_MAF',
-            'ExAC_FIN_MAF',
-            'ExAC_NFE_MAF',
-            'ExAC_OTH_MAF',
-            'ExAC_SAS_MAF',
-            'ESP6500_AA_AF',
-            'ESP6500_EA_AF'
+
+        // We need to calculate AF_Adj using AC_Adj and AN_Adj
+        // All population specific columns are already adjusted (only include those with DP >= 10 & GQ >= 20)
+        $aFreqColsToCalculate = array(
+            'cpipe_ExAC_' => array(
+                'Adj', // general population adjusted
+                'AFR',
+                'AMR',
+                'CONSANGUINEOUS',
+                'EAS',
+                'FEMALE',
+                'FIN',
+                'MALE',
+                'NFE',
+                'OTH',
+                'POPMAX',
+                'SAS'
+            ),
+
+            // Other examples if we have other frequency data in the future.
+            //'cpipe_1000Gp3_' => array(
+            //
+            //)
         );
-        // Array of frequency columns used for variant priority calculation. The maximum frequency of all these columns is used.
-        $aFreqCalcColumns = array(
-            'GMAF',
-            'EA_MAF',
-            'ExAC_MAF'
-        );
-        $aFreqCalcValues = array();
-        foreach($aFreqColumns as $sFreqColumn) {
-            if ($aLine[$sFreqColumn] == 'unknown' || $aLine[$sFreqColumn] == '' || $sAlt == '' || empty($sAlt) || strlen($sAlt) == 0) {
-                $aLine[$sFreqColumn] = '';
-            } else {
-                $aFreqArr = explode("&", $aLine[$sFreqColumn]);
-                $aFreqValArray = array();
-                foreach ($aFreqArr as $freqData) {
-                    if (preg_match('/^(\D+)\:(.+)$/', $freqData, $freqCalls)) {
-                        $sFreqPrefix = $freqCalls[1];
-                        if ($sFreqPrefix == $sAlt && is_numeric($freqCalls[2])){
-                            array_push($aFreqValArray, $freqCalls[2]);
+
+
+        foreach ($aFreqColsToCalculate as $sPrefix => $aColsPopulation) {
+            foreach ($aColsPopulation as $sPopulation) {
+                $aLine[$sPrefix . 'AF_' . $sPopulation] = '';
+
+
+                // If coloumns exist, we can process them.
+                if (isset($aLine[$sPrefix . 'AN_' . $sPopulation]) && isset($aLine[$sPrefix . 'AC_' . $sPopulation])) {
+
+                    $sAC = $aLine[$sPrefix . 'AC_' . $sPopulation];
+                    $sAN = $aLine[$sPrefix . 'AN_' . $sPopulation];
+
+                    // If NOT numeric, we keep it as empty string (defined above)
+                    // If numeric, initialise with 0.0
+                    if (is_numeric($sAC) && is_numeric($sAN)) {
+
+                        $aLine[$sPrefix . 'AF_' . $sPopulation] = 0;
+
+                        // If they are not zero, then
+                        if (!empty($sAC) && !empty($sAN)) {
+
+                            $aLine[$sPrefix . 'AF_' . $sPopulation] = (float) $sAC/ (float) $sAN;
                         }
                     }
                 }
-                // Check there are values in the array before taking max.
-                $sFreqCheck = array_filter($aFreqValArray);
-                if (!empty($sFreqCheck)){
-                    $aLine[$sFreqColumn] = max($aFreqValArray);
-                } else {
-                    $aLine[$sFreqColumn] = '';
-                }
-            }
-            // If column is required for calculating variant priority then add to array.
-            if(in_array($sFreqColumn,$aFreqCalcColumns)){
-                array_push($aFreqCalcValues,$aLine[$sFreqColumn]);
+
             }
         }
-        // Get maximum frequency.
-        $sMaxFreq = max($aFreqCalcValues);
+
+
+        // Calculate the max frequency so that we can use it for variant priority calculation.
+        $aFreqCalcColumns = array(
+            'cpipe_ExAC_AF_Adj',
+            'cpipe_1000Gp3_AF'
+        );
+
+        $sMaxFreq = '';
+        foreach ($aFreqCalcColumns as $sFreqCol) {
+            if (isset($aLine[$sFreqCol])) {
+
+                // If no value has been assigned previously, just assign the first frequency (could be '' or numeric).
+                if ($sMaxFreq === '') {
+                    $sMaxFreq = $aLine[$sFreqCol];
+                } else {
+                    if ($aLine[$sFreqCol] > $sMaxFreq) {
+                        $sMaxFreq = $aLine[$sFreqCol];
+                    }
+                }
+
+            }
+        }
+
+
         // Variant Priority.
         if (!empty($aLine['CPIPE_BED'])) {
             $aLine['Variant_Priority'] = 6;
