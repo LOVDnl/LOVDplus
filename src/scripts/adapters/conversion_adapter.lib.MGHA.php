@@ -44,9 +44,8 @@ $_INSTANCE_CONFIG['custom_object'] = array(
                 'VariantOnGenome/DNA',
                 'VariantOnGenome/Sequencing/Quality',
                 'VariantOnGenome/Variant_priority',
-                'VariantOnGenome/Frequency/1000G/VEP',
-                'VariantOnGenome/Frequency/EVS/VEP/European_American',
-                'VariantOnGenome/Frequency/ExAC',
+                'VariantOnGenome/1000Gp3/Frequency',
+                'VariantOnGenome/ExAC/Frequency/Adjusted',
                 'VariantOnGenome/Sequencing/Depth/Total',
                 'VariantOnGenome/Sequencing/Depth/Alt/Fraction',
 
@@ -82,9 +81,8 @@ $_INSTANCE_CONFIG['custom_object'] = array(
                 'VariantOnTranscript/Prediction/CADD_Raw',
                 'VariantOnTranscript/Consequence_Impact',
                 'VariantOnTranscript/Consequence_Type',
-                'VariantOnGenome/Frequency/ExAC',
-                'VariantOnGenome/Frequency/1000G/VEP',
-                'VariantOnGenome/Frequency/EVS/VEP/European_American',
+                'VariantOnGenome/1000Gp3/Frequency',
+                'VariantOnGenome/ExAC/Frequency/Adjusted',
                 'obs_disease',
                 'obs_var_dis_ind_ratio',
                 'obs_variant',
@@ -114,12 +112,15 @@ class LOVD_MghaDataConverter extends LOVD_DefaultDataConverter {
             // Mappings for fields used to process other fields but not imported into the database.
             'SYMBOL' => 'symbol',
             'REF' => 'ref',
+            'vog_ref' => 'VariantOnGenome/Ref',
             'ALT' => 'alt',
+            'vog_alt' => 'VariantOnGenome/Alt',
             'Existing_variation' => 'existingvariation',
             'Feature' => 'transcriptid',
             // VariantOnGenome/DNA - constructed by the lovd_getVariantDescription function later on.
             'CHROM' => 'chromosome',
             'POS' => 'position', // lovd_getVariantDescription() needs this.
+            'vog_pos' => 'VariantOnGenome/Position',
             'ID' => 'VariantOnGenome/dbSNP',
             'QUAL' => 'VariantOnGenome/Sequencing/Quality',
             'FILTER' => 'VariantOnGenome/Sequencing/Filter',
@@ -178,6 +179,9 @@ class LOVD_MghaDataConverter extends LOVD_DefaultDataConverter {
             'CADD_raw' => 'VariantOnTranscript/Prediction/CADD_Raw',
             'CADD_raw_rankscore' => 'VariantOnTranscript/Prediction/CADD_Raw_Ranked',
 
+            'ESP6500_AA_AF' => 'VariantOnGenome/Frequency/ESP6500/American',
+            'ESP6500_EA_AF' => 'VariantOnGenome/Frequency/ESP6500/European_American',
+
             'cpipe_1000Gp3_AF' => 'VariantOnGenome/1000Gp3/Frequency',
             'cpipe_1000Gp3_AN' => 'VariantOnGenome/1000Gp3/Allele/Total',
             'cpipe_1000Gp3_AC' => 'VariantOnGenome/1000Gp3/Allele/Count',
@@ -202,7 +206,6 @@ class LOVD_MghaDataConverter extends LOVD_DefaultDataConverter {
             'cpipe_ExAC_AF_MALE' => 'VariantOnGenome/ExAC/Frequency/Male',
             'cpipe_ExAC_AF_NFE' => 'VariantOnGenome/ExAC/Frequency/Non_Finnish',
             'cpipe_ExAC_AF_OTH' => 'VariantOnGenome/ExAC/Frequency/Other',
-            'cpipe_ExAC_AF_POPMAX' => 'VariantOnGenome/ExAC/Frequency/Popmax',
             'cpipe_ExAC_AF_SAS' => 'VariantOnGenome/ExAC/Frequency/South_Asian',
 
 
@@ -325,6 +328,13 @@ class LOVD_MghaDataConverter extends LOVD_DefaultDataConverter {
     {
         // Processes the variant data file for MGHA.
         // Cleans up data in existing columns and splits some columns out to two columns.
+
+        // Make a copy of some columns so that they can be mapped to more than one columns
+        // Here, we only import one copy of these columns.
+        // We just don't want to modify existing mappings because they are used by the convert_and_merge script.
+        $aLine['vog_alt'] = $aLine['ALT'];
+        $aLine['vog_ref'] = $aLine['REF'];
+        $aLine['vog_pos'] = $aLine['POS'];
 
         // Move transcripts that are to be dropped into VariantOnGenome/Remarks
         $aLine['Variant_Remarks'] = '';
