@@ -363,6 +363,12 @@ class LOVD_MghaDataConverter extends LOVD_DefaultDataConverter {
             $aLine['Variant_Remarks'] .= "IMPACT: " . (!empty($aLine['IMPACT'])? $aLine['IMPACT'] : '')  . "\n";
             $aLine['Feature'] = static::$NO_TRANSCRIPT;
         }
+
+        // Split clinical significance data into a string separated by comma.
+        if (!empty($aLine['CLIN_SIG'])) {
+            $aLine['CLIN_SIG'] = str_replace('&', ', ', $aLine['CLIN_SIG']);
+        }
+
         // For MGHA the allele column is in the format A/A, C/T etc. Leiden have converted this to 1/1, 0/1, etc.
         // MGHA also need to calculate the VarPresent for Father and Mother as this is required later on when assigning a value to allele
         if (isset($aLine['Child_GT'])) {
