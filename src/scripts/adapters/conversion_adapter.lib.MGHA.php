@@ -492,6 +492,42 @@ class LOVD_MghaDataConverter extends LOVD_DefaultDataConverter {
             $sRef = substr($sRef, 0, -1);
             $sAlt = substr($sAlt, 0, -1);
         }
+        // Insertions/duplications, deletions, inversions, indels.
+        // We do not want to display the frequencies for these, set frequency columns to empty.
+        if (strlen($sRef) != 1 || strlen($sAlt) != 1) {
+            $sAlt = '';
+        }
+
+        // Some frequency columns comes in the format of alt1:freq1&alt2:freq2.
+        // We need to match the value with the corresponding value in ALT column.
+        $aAltFreqColumns = array(
+            'EA_MAF',
+            'AA_MAF'
+        );
+
+        foreach($aAltFreqColumns as $sFreqColumn) {
+            if ($aLine[$sFreqColumn] == 'unknown' || $aLine[$sFreqColumn] == '' || $sAlt == '' || empty($sAlt) || strlen($sAlt) == 0) {
+                $aLine[$sFreqColumn] = '';
+            } else {
+                $aFreqArr = explode("&", $aLine[$sFreqColumn]);
+                $aFreqValArray = array();
+                foreach ($aFreqArr as $freqData) {
+                    if (preg_match('/^(\D+)\:(.+)$/', $freqData, $freqCalls)) {
+                        $sFreqPrefix = $freqCalls[1];
+                        if ($sFreqPrefix == $sAlt && is_numeric($freqCalls[2])){
+                            array_push($aFreqValArray, $freqCalls[2]);
+                        }
+                    }
+                }
+                // Check there are values in the array before taking max.
+                $sFreqCheck = array_filter($aFreqValArray);
+                if (!empty($sFreqCheck)){
+                    $aLine[$sFreqColumn] = max($aFreqValArray);
+                } else {
+                    $aLine[$sFreqColumn] = '';
+                }
+            }
+        }
 
         // We need to calculate AF_Adj using AC_Adj and AN_Adj
         // All population specific columns are already adjusted (only include those with DP >= 10 & GQ >= 20)
@@ -522,22 +558,18 @@ class LOVD_MghaDataConverter extends LOVD_DefaultDataConverter {
             foreach ($aColsPopulation as $sPopulation) {
                 $aLine[$sPrefix . 'AF_' . $sPopulation] = '';
 
-
                 // If coloumns exist, we can process them.
                 if (isset($aLine[$sPrefix . 'AN_' . $sPopulation]) && isset($aLine[$sPrefix . 'AC_' . $sPopulation])) {
-
                     $sAC = $aLine[$sPrefix . 'AC_' . $sPopulation];
                     $sAN = $aLine[$sPrefix . 'AN_' . $sPopulation];
 
-                    // If NOT numeric, we keep it as empty string (defined above)
-                    // If numeric, initialise with 0.0
+                    // If NOT numeric, we leave it as an empty string (defined above).
+                    // If numeric, initialise with 0.
                     if (is_numeric($sAC) && is_numeric($sAN)) {
-
                         $aLine[$sPrefix . 'AF_' . $sPopulation] = 0;
 
-                        // If they are not zero, then
+                        // If they are not zero, then calculate frequency.
                         if (!empty($sAC) && !empty($sAN)) {
-
                             $aLine[$sPrefix . 'AF_' . $sPopulation] = (float) $sAC/ (float) $sAN;
                         }
                     }
