@@ -182,6 +182,9 @@ class LOVD_MghaDataConverter extends LOVD_DefaultDataConverter {
             'ESP6500_AA_AF' => 'VariantOnGenome/Frequency/ESP6500/American',
             'ESP6500_EA_AF' => 'VariantOnGenome/Frequency/ESP6500/European_American',
 
+            'EA_MAF' => 'VariantOnGenome/Frequency/EVS/VEP/European_American',
+            'AA_MAF' => 'VariantOnGenome/Frequency/EVS/VEP/African_American',
+
             'cpipe_1000Gp3_AF' => 'VariantOnGenome/1000Gp3/Frequency',
             'cpipe_1000Gp3_AN' => 'VariantOnGenome/1000Gp3/Allele/Total',
             'cpipe_1000Gp3_AC' => 'VariantOnGenome/1000Gp3/Allele/Count',
