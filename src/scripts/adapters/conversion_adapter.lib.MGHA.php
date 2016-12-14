@@ -187,6 +187,13 @@ class LOVD_MghaDataConverter extends LOVD_DefaultDataConverter {
             'EA_MAF' => 'VariantOnGenome/Frequency/EVS/VEP/European_American',
             'AA_MAF' => 'VariantOnGenome/Frequency/EVS/VEP/African_American',
 
+
+            'clinvar_clnsig' => 'VariantOnTranscript/dbNSFP/ClinVar/Clinical_Significance',
+            'clinvar_rs' => 'VariantOnTranscript/dbNSFP/ClinVar/rs',
+            'clinvar_trait' => 'VariantOnTranscript/dbNSFP/ClinVar/Trait',
+            'COSMIC_CNT' => 'VariantOnTranscript/dbNSFP/COSMIC/Number_Of_Samples',
+            'COSMIC_ID' => 'VariantOnTranscript/dbNSFP/COSMIC/ID',
+
             'cpipe_1000Gp3_AF' => 'VariantOnGenome/1000Gp3/Frequency',
             'cpipe_1000Gp3_AN' => 'VariantOnGenome/1000Gp3/Allele/Total',
             'cpipe_1000Gp3_AC' => 'VariantOnGenome/1000Gp3/Allele/Count',
