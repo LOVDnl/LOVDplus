@@ -34,7 +34,7 @@ if (!defined('ROOT_PATH')) {
 }
 // Require parent class definition.
 require_once ROOT_PATH . 'class/object_custom_viewlists.php';
-require_once ROOT_PATH . 'class/object_transcripts_variants.php';
+require_once ROOT_PATH . 'class/object_transcript_variants.php';
 
 
 
