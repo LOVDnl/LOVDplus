@@ -96,7 +96,7 @@ class LOVD_TranscriptVariant extends LOVD_Custom {
 //                        'effect_reported' => 'Affects function (reported)',
 //                        'effect_concluded' => 'Affects function (concluded)',
                       ),
-                 (lovd_verifyInstance('mgha', false) ? array('genomizer_url_' => 'Genomizer') : array()), // MGHA entry for the Genomizer link in the VOT ViewEntry.
+                 (lovd_verifyInstance('mgha', false) ? array('genomizer_url_' => 'Genomizer', 'clinvar_' => "ClinVar Description") : array()), // MGHA entry for the Genomizer link in the VOT ViewEntry.
                  $this->buildViewEntry());
 
         // List of columns and (default?) order for viewing a list of entries.
@@ -363,6 +363,10 @@ class LOVD_TranscriptVariant extends LOVD_Custom {
             $zData['effect_concluded'] = $_SETT['var_effect'][$zData['effectid']{1}];
             if (lovd_verifyInstance('mgha', false)) { // Display the Genomizer URL in the VOT ViewEntry. TODO Once the ref and alt are separated we need to add it into this URL. Should we add this to the links table so as it can be used elsewhere?
                 $zData['genomizer_url_'] = '<A href="http://genomizer.com/?chr=' . $zData['chromosome'] . '&gene=' . $zData['geneid'] . '&ref_seq=' . $zData['id_ncbi'] . '&variant=' . $zData['VariantOnTranscript/DNA'] . '" target="_blank">Genomizer Link</A>';
+                if (isset($zData['VariantOnTranscript/dbNSFP/ClinVar/Clinical_Significance'])) {
+                    $zData['clinvar_'] = static::getClinvarDesc($zData['VariantOnTranscript/dbNSFP/ClinVar/Clinical_Significance']);
+                    unset($zData['VariantOnTranscript/dbNSFP/ClinVar/Clinical_Significance']);
+                }
             }
         }
 
@@ -383,6 +387,28 @@ class LOVD_TranscriptVariant extends LOVD_Custom {
                 $_POST[$sCol] = $this->getDefaultValue($sColClean);
             }
         }
+    }
+
+
+
+
+
+    static function getClinvarDesc($sCode) {
+        $aClinvarDesc = array(
+            '2' => 'Benign',
+            '3' => 'Likely benign',
+            '4' => 'Likely pathogenic',
+            '5' => 'Pathogenic',
+            '6' => 'Drug response',
+            '7' => 'histocompatibility'
+        );
+
+        $sDescription = '';
+        if (!empty($aClinvarDesc[$sCode])) {
+            $sDescription = $aClinvarDesc[$sCode];
+        }
+
+        return $sDescription;
     }
 
 
