@@ -365,7 +365,6 @@ class LOVD_TranscriptVariant extends LOVD_Custom {
                 $zData['genomizer_url_'] = '<A href="http://genomizer.com/?chr=' . $zData['chromosome'] . '&gene=' . $zData['geneid'] . '&ref_seq=' . $zData['id_ncbi'] . '&variant=' . $zData['VariantOnTranscript/DNA'] . '" target="_blank">Genomizer Link</A>';
                 if (isset($zData['VariantOnTranscript/dbNSFP/ClinVar/Clinical_Significance'])) {
                     $zData['clinvar_'] = static::getClinvarDesc($zData['VariantOnTranscript/dbNSFP/ClinVar/Clinical_Significance']);
-                    unset($zData['VariantOnTranscript/dbNSFP/ClinVar/Clinical_Significance']);
                 }
             }
         }
