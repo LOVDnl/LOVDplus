@@ -34,6 +34,7 @@ if (!defined('ROOT_PATH')) {
 }
 // Require parent class definition.
 require_once ROOT_PATH . 'class/object_custom_viewlists.php';
+require_once ROOT_PATH . 'class/object_transcripts_variants.php';
 
 
 
@@ -532,6 +533,10 @@ class LOVD_CustomViewListMOD extends LOVD_CustomViewList {
         }
         if (!empty($zData['curation_status_'])) {
             $zData['curation_status_'] = substr($zData['curation_status_'], 2);
+        }
+
+        if (isset($zData['VariantOnTranscript/dbNSFP/ClinVar/Clinical_Significance'])) {
+            $zData['clinvar_'] = LOVD_TranscriptVariant::getClinvarDesc($zData['VariantOnTranscript/dbNSFP/ClinVar/Clinical_Significance']);
         }
 
         return $zData;
