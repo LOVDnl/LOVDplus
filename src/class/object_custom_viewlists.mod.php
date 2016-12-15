@@ -402,7 +402,7 @@ class LOVD_CustomViewListMOD extends LOVD_CustomViewList {
                                 'view' => array('OMIM links', 100),
                                 'db'   => array('__gene_OMIM', 'ASC', 'TEXT')),
                             'clinvar_' => array(
-                                'view' => array('ClinVar Description')
+                                'view' => array('ClinVar Description', 100)
                             ),
                         ));
                     break;
