@@ -55,7 +55,6 @@ $_INSTANCE_CONFIG['custom_object'] = array(
                 'VariantOnTranscript/Consequence_Type',
                 'VariantOnTranscript/Consequence_Impact',
                 'VariantOnTranscript/Prediction/CADD_Raw',
-                'VariantOnTranscript/Clinical_Significance'
             ),
 
             'CustomVL_AnalysisRunResults_for_I_VE' => array(
@@ -84,7 +83,7 @@ $_INSTANCE_CONFIG['custom_object'] = array(
                 'VariantOnTranscript/Consequence_Type',
                 'VariantOnGenome/1000Gp3/Frequency',
                 'VariantOnGenome/ExAC/Frequency/Adjusted',
-                'VariantOnTranscript/Clinical_Significance',
+                'clinvar_',
                 'obs_disease',
                 'obs_var_dis_ind_ratio',
                 'obs_variant',
