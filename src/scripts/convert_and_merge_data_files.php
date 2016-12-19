@@ -163,8 +163,11 @@ $aColumnsForVOT = array(
     'position_c_start',
     'position_c_start_intron',
     'position_c_end',
-    'position_c_end_intron',
+    'position_c_end_intron'
 );
+
+$aVOTKeys = array();
+
 // Default values.
 $aDefaultValues = array(
     'effectid' => $_SETT['var_effect_default'],
@@ -1258,8 +1261,10 @@ print('Mutalyzer returned EREF error, hg19/hg38 error?' . "\n");
             foreach ($aVariant as $sCol => $sVal) {
                 if (in_array($sCol, $aColumnsForVOT) || substr($sCol, 0, 20) == 'VariantOnTranscript/') {
                     $aVOT[$sCol] = $sVal;
+                    $aVOTKeys[$sCol] = $sCol;
                 }
             }
+
             $aData[$sKey][$aVariant['transcriptid']] = $aVOT;
         }
 
@@ -1305,18 +1310,8 @@ print('Mutalyzer returned EREF error, hg19/hg38 error?' . "\n");
     }
 
     // Assuming here that *all* variants actually have at least one VOT... Take VOT columns.
-    if (!empty($aVOT)) {
-        foreach (array_keys($aVOT) as $sCol) {
-            if (substr($sCol, 0, 20) == 'VariantOnTranscript/') {
-                $aColumnsForVOT[] = $sCol;
-            }
-        }
-    } else {
-        foreach ($aColumnMappings as $sVEPColumn => $sLOVDColumn) {
-            if (substr($sLOVDColumn, 0, 20) == 'VariantOnTranscript/') {
-                $aColumnsForVOT[] = $sLOVDColumn;
-            }
-        }
+    foreach ($aVOTKeys as $sCol) {
+        $aColumnsForVOT[] = $sCol;
     }
 
     // Start storing the data into the total data file.
