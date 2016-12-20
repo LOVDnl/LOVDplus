@@ -47,6 +47,7 @@ $_INSTANCE_CONFIG['custom_object'] = array(
                 'VariantOnGenome/1000Gp3/Frequency',
                 'VariantOnGenome/ExAC/Frequency/Adjusted',
                 'VariantOnGenome/Sequencing/Depth/Total',
+                'VariantOnGenome/Sequencing/Allele/Frequency',
                 'VariantOnGenome/Sequencing/Depth/Alt/Fraction',
 
                 // VOT
@@ -54,8 +55,8 @@ $_INSTANCE_CONFIG['custom_object'] = array(
                 'VariantOnTranscript/Protein',
                 'VariantOnTranscript/Consequence_Type',
                 'VariantOnTranscript/Consequence_Impact',
-                'VariantOnTranscript/Prediction/CADD_Raw',
                 'VariantOnTranscript/Clinical_Significance',
+                'VariantOnGenome/Frequency/EVS/VEP/European_American'
             ),
 
             'CustomVL_AnalysisRunResults_for_I_VE' => array(
@@ -67,29 +68,31 @@ $_INSTANCE_CONFIG['custom_object'] = array(
 
                 // Visible.
                 'curation_status_',
+                'vog_effect',
+                'VariantOnGenome/Variant_priority',
                 'chromosome',
                 'VariantOnGenome/DNA',
                 'VariantOnTranscript/DNA',
                 'VariantOnTranscript/Protein',
-                'allele_',
-                'vog_effect',
+                'VariantOnGenome/Sequencing/Depth/Total',
+                'VariantOnGenome/Sequencing/Quality',
+//                'VariantOnGenome/Sequencing/Allele/Frequency',
+                'zygosity_',
+                'VariantOnGenome/Sequencing/Depth/Alt/Fraction',
                 'gene_OMIM_',
                 'gene_disease_name',
-                'VariantOnGenome/Sequencing/Quality',
-                'VariantOnGenome/Sequencing/Depth/Total',
-                'VariantOnGenome/Sequencing/Depth/Alt/Fraction',
-                'VariantOnGenome/Variant_priority',
-                'VariantOnTranscript/Prediction/CADD_Raw',
+                'VariantOnTranscript/Clinical_Significance',
+                'allele_',
                 'VariantOnTranscript/Consequence_Impact',
                 'VariantOnTranscript/Consequence_Type',
-                'VariantOnGenome/1000Gp3/Frequency',
                 'VariantOnGenome/ExAC/Frequency/Adjusted',
-                'VariantOnTranscript/Clinical_Significance',
+                'VariantOnGenome/1000Gp3/Frequency',
                 'obs_disease',
                 'obs_var_dis_ind_ratio',
                 'obs_variant',
                 'obs_var_ind_ratio',
-                'gene_panels'
+                'gene_panels',
+                'VariantOnGenome/Frequency/EVS/VEP/European_American'
             )
         )
     )

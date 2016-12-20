@@ -430,6 +430,9 @@ class LOVD_CustomViewListMOD extends LOVD_CustomViewList {
                                 'db'   => array('obs_var_dis_ind_ratio', 'ASC', 'DECIMAL'),
                                 'legend' => array('The ratio of the number of individuals with this variant and this disease divided by the total number of individuals with this disease within this database.',
                                     'The ratio of the number of individuals with this variant and this disease divided by the total number of individuals with this disease within this database.')),
+                            'zygosity_' => array(
+                                'view' => array('Zygosity', 70),
+                            )
                         ));
                     break;
             }
@@ -441,12 +444,17 @@ class LOVD_CustomViewListMOD extends LOVD_CustomViewList {
         // The table is regarded too wide, and columns need to be narrowed.
         // We could shorten headers etc in the database, but this will shorten
         // them too for the VE, which reduces the clarity of the data.
+        $sAltFrac = 'RD Alt (%)';
+        if ($_INI['instance']['name'] == 'mgha') {
+            $sAltFrac = 'Var Frac';
+        }
+
         $aVLModifications = array(
             'VariantOnGenome/DNA' => array('view' => array('DNA change (genomic)', 100)),
             'VariantOnGenome/Alamut' => array('view' => array('Alamut', 60)),
             'VariantOnGenome/Conservation_score/PhyloP' => array('view' => array('PhyloP', 60)),
             'VariantOnGenome/HGMD/Association' => array('view' => array('HGMD', 50)),
-            'VariantOnGenome/Sequencing/Depth/Alt/Fraction' => array('view' => array('RD Alt (%)', 90)),
+            'VariantOnGenome/Sequencing/Depth/Alt/Fraction' => array('view' => array($sAltFrac, 90)),
             'VariantOnGenome/Sequencing/Quality' => array('view' => array('Seq. Q.', 60)),
             'VariantOnTranscript/DNA' => array('view' => array('DNA change (cDNA)', 100)),
             'VariantOnTranscript/Protein' => array('view' => array('Protein', 100)),
