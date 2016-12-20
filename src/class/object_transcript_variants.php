@@ -96,7 +96,7 @@ class LOVD_TranscriptVariant extends LOVD_Custom {
 //                        'effect_reported' => 'Affects function (reported)',
 //                        'effect_concluded' => 'Affects function (concluded)',
                       ),
-                 (lovd_verifyInstance('mgha', false) ? array('genomizer_url_' => 'Genomizer', 'clinvar_' => "ClinVar Description") : array()), // MGHA entry for the Genomizer link in the VOT ViewEntry.
+                 (lovd_verifyInstance('mgha', false) ? array('genomizer_url_' => 'Genomizer', 'clinvar_' => "ClinVar Description (dbNSFP)") : array()), // MGHA entry for the Genomizer link in the VOT ViewEntry.
                  $this->buildViewEntry());
 
         // List of columns and (default?) order for viewing a list of entries.
