@@ -347,13 +347,6 @@ class LOVD_MghaDataConverter extends LOVD_DefaultDataConverter {
         $aLine['vog_ref'] = $aLine['REF'];
         $aLine['vog_pos'] = $aLine['POS'];
 
-
-        if (isset($aLine['CPIPE_BED'])) {
-            if (!empty($aLine['CPIPE_BED'])) {
-                $aLine['CPIPE_BED'] = 1;
-            }
-        }
-
         // Move transcripts that are to be dropped into VariantOnGenome/Remarks
         $aLine['Variant_Remarks'] = '';
         // Handle genes that start with 'LOC'.
@@ -382,9 +375,35 @@ class LOVD_MghaDataConverter extends LOVD_DefaultDataConverter {
             $aLine['Feature'] = static::$NO_TRANSCRIPT;
         }
 
-        // Split clinical significance data into a string separated by comma.
-        if (!empty($aLine['CLIN_SIG'])) {
-            $aLine['CLIN_SIG'] = str_replace('&', ', ', $aLine['CLIN_SIG']);
+        if (isset($aLine['CPIPE_BED'])) {
+            if (!empty($aLine['CPIPE_BED'])) {
+                $aLine['CPIPE_BED'] = 1;
+            }
+        }
+
+        $aColsWithAmpersands = array(
+            'CLIN_SIG',
+            'clinvar_clnsig',
+            'clinvar_rs'
+        );
+
+        foreach ($aColsWithAmpersands as $sCol) {
+            // Split clinical significance data into a string separated by comma.
+            if (!empty($aLine[$sCol])) {
+                $aLine[$sCol] = str_replace('&', ', ', $aLine[$sCol]);
+            }
+        }
+
+        // clinvar_trait require further processing:
+        // replace \x2c (HEX for comma) with comma
+        // replace _ with space
+        if (!empty($aLine['clinvar_trait'])) {
+            // enclose each item separated by & with quote.
+            $aLine['clinvar_trait'] = str_replace('&', '", "', $aLine['clinvar_trait']);
+            $aLine['clinvar_trait'] = '"' . $aLine['clinvar_trait'] . '"';
+
+            $aLine['clinvar_trait'] = str_replace('\x2c', ',', $aLine['clinvar_trait']);
+            $aLine['clinvar_trait'] = str_replace('_', ' ', $aLine['clinvar_trait']);
         }
 
         // For MGHA the allele column is in the format A/A, C/T etc. Leiden have converted this to 1/1, 0/1, etc.
