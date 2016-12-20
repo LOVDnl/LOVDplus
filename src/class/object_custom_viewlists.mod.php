@@ -539,6 +539,16 @@ class LOVD_CustomViewListMOD extends LOVD_CustomViewList {
             $zData['clinvar_'] = LOVD_TranscriptVariant::getClinvarDesc($zData['VariantOnTranscript/dbNSFP/ClinVar/Clinical_Significance']);
         }
 
+        if (isset($zData['VariantOnGenome/Sequencing/Allele/Frequency'])) {
+            if ($zData['VariantOnGenome/Sequencing/Allele/Frequency'] == 1) {
+                $zData['zygosity_'] = 'Hom';
+            } else if ($zData['VariantOnGenome/Sequencing/Allele/Frequency'] < 1) {
+                $zData['zygosity_'] = 'Het';
+            } else {
+                $zData['zygosity_'] = '';
+            }
+        }
+
         return $zData;
     }
 }
