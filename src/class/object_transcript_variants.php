@@ -392,7 +392,7 @@ class LOVD_TranscriptVariant extends LOVD_Custom {
 
 
 
-    static function getClinvarDesc($sCode) {
+    static function getClinvarDesc($sCodes) {
         $aClinvarDesc = array(
             '2' => 'Benign',
             '3' => 'Likely benign',
@@ -403,8 +403,18 @@ class LOVD_TranscriptVariant extends LOVD_Custom {
         );
 
         $sDescription = '';
-        if (!empty($aClinvarDesc[$sCode])) {
-            $sDescription = $aClinvarDesc[$sCode];
+        $aDescriptions = array();
+
+        if (!empty($sCodes)) {
+            $aCodes = explode(',', $sCodes);
+            foreach ($aCodes as $sCode) {
+                $sCode = trim($sCode);
+                if (!empty($aClinvarDesc[$sCode])) {
+                    $aDescriptions[] = $aClinvarDesc[$sCode];
+                }
+            }
+
+            $sDescription = implode(", ", $aDescriptions);
         }
 
         return $sDescription;
