@@ -493,6 +493,15 @@ if ($argc != 1 && in_array($argv[1], array('--help', '-help', '-h', '-?'))) {
                         $sVal[$pipelineColumn] = '';
                     }
 
+                    if (isset($sVal['Fastq_Files'])) {
+                        $aFastqFiles = explode(",", $sVal['Fastq_Files']);
+                        $aBasenames = array();
+                        foreach ($aFastqFiles as $fastqFile) {
+                            $aBasenames[] = basename($fastqFile);
+                        }
+                        $sVal['Fastq_Files'] = implode(", ", $aBasenames);
+                    }
+
                     if (substr($sLOVDColumn, 0, 11) == 'Individual/') {
                         $aColumnsForIndividual[$sLOVDColumn] = $sVal[$pipelineColumn];
 
