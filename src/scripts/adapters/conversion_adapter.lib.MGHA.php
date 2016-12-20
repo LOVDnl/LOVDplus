@@ -36,6 +36,9 @@ $_INSTANCE_CONFIG['screenings'] = array(
 
 $_INSTANCE_CONFIG['custom_object'] = array(
     'viewList' => array(
+        'defaultSort' => array(
+            'CustomVL_AnalysisRunResults_for_I_VE' => 'VariantOnGenome/Variant_priority'
+        ),
         'colsToShow' => array(
             // We can have view list id as key here if needed.
             // 0 here means the viewList columns seen by the constructor (at the point where we don't know VL id yet.

@@ -464,6 +464,9 @@ if (PATH_COUNT >= 2 && ctype_digit($_PE[1]) && !ACTION && (PATH_COUNT == 2 || PA
             print('          </UL>' . "\n" . '        </LI>' . "\n");
         }
         print('      </UL>' . "\n\n");
+        if (isset($_INSTANCE_CONFIG['custom_object']['viewList']['defaultSort']['CustomVL_AnalysisRunResults_for_I_VE'])) {
+            $_DATA->setSortDefault($_INSTANCE_CONFIG['custom_object']['viewList']['defaultSort']['CustomVL_AnalysisRunResults_for_I_VE']);
+        }
         $_DATA->viewList('CustomVL_AnalysisRunResults_for_I_VE', array(), false, false, $bMenu);
         print('
           </DIV>');

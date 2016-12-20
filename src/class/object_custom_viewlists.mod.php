@@ -390,7 +390,10 @@ class LOVD_CustomViewListMOD extends LOVD_CustomViewList {
                 $this->aColumnsViewList['VariantOnTranscript/DNA']['db'][0] = 'VariantOnTranscript_DNA';
             }
 
-
+            // Variant Priority is to be sorted in DESC order.
+            if (isset($this->aColumnsViewList['VariantOnGenome/Variant_priority']['db'])) {
+                $this->aColumnsViewList['VariantOnGenome/Variant_priority']['db'][1] = 'DESC';
+            }
 
             // Some fixed columns are supposed to be shown AFTER this objects's custom columns, so we'll need to go through the objects again.
             switch ($sObject) {
