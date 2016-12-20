@@ -347,6 +347,13 @@ class LOVD_MghaDataConverter extends LOVD_DefaultDataConverter {
         $aLine['vog_ref'] = $aLine['REF'];
         $aLine['vog_pos'] = $aLine['POS'];
 
+
+        if (isset($aLine['CPIPE_BED'])) {
+            if (!empty($aLine['CPIPE_BED'])) {
+                $aLine['CPIPE_BED'] = 1;
+            }
+        }
+
         // Move transcripts that are to be dropped into VariantOnGenome/Remarks
         $aLine['Variant_Remarks'] = '';
         // Handle genes that start with 'LOC'.
