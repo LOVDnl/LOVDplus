@@ -1311,7 +1311,9 @@ print('Mutalyzer returned EREF error, hg19/hg38 error?' . "\n");
 
     // Assuming here that *all* variants actually have at least one VOT... Take VOT columns.
     foreach ($aVOTKeys as $sCol) {
-        $aColumnsForVOT[] = $sCol;
+        if (substr($sCol, 0, 20) == 'VariantOnTranscript/') {
+            $aColumnsForVOT[] = $sCol;
+        }
     }
 
     // Start storing the data into the total data file.
