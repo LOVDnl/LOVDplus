@@ -435,7 +435,7 @@ class LOVD_CustomViewListMOD extends LOVD_CustomViewList {
                                     'The ratio of the number of individuals with this variant and this disease divided by the total number of individuals with this disease within this database.')),
                             'zygosity_' => array(
                                 'view' => array('Zygosity', 70),
-                                'db' => array('`VariantOnGenome/Sequencing/Allele/Frequency`', 'ASC', 'DECIMAL'),
+                                'db' => array('vog.`VariantOnGenome/Sequencing/Allele/Frequency`', 'ASC'),
                             )
                         ));
                     break;
