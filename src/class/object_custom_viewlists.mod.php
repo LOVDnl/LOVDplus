@@ -157,7 +157,8 @@ class LOVD_CustomViewListMOD extends LOVD_CustomViewList {
                         $aColumnsToShow['VariantOnGenome'] = $aVOGCols;
                     }
 
-                    $aSQL['SELECT'] .= (!$aSQL['SELECT']? '' : ', ') . 'vog.*, a.name AS allele_, eg.name AS vog_effect, CONCAT(cs.id, cs.name) AS curation_status_';
+                    $aSQL['SELECT'] .= (!$aSQL['SELECT']? '' : ', ') . 'vog.*, a.name AS allele_, eg.name AS vog_effect, CONCAT(cs.id, cs.name) AS curation_status_' .
+                        ($_INI['instance']['name'] == 'mgha'?', IF(vog.`VariantOnGenome/Sequencing/Allele/Frequency` < 1, "Het", "Hom") as zygosity_' : '');
                     // Observation count columns.
                     // Find the diseases that this individual has assigned using the analysis run ID in $_GET.
                     if (!empty($_GET['search_runid'])) {
@@ -435,7 +436,7 @@ class LOVD_CustomViewListMOD extends LOVD_CustomViewList {
                                     'The ratio of the number of individuals with this variant and this disease divided by the total number of individuals with this disease within this database.')),
                             'zygosity_' => array(
                                 'view' => array('Zygosity', 70),
-                                'db' => array('vog.`VariantOnGenome/Sequencing/Allele/Frequency`', 'ASC'),
+                                'db' => array('zygosity_', 'ASC', 'TEXT'),
                             )
                         ));
                     break;
