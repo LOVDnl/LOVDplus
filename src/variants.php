@@ -516,6 +516,7 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && !ACTION) {
         }
         $aNavigation[CURRENT_PATH . '?map']        = array('menu_transcripts.png', 'Manage transcripts for this variant', 1);
         if ($_AUTH['level'] >= LEVEL_CURATOR) {
+            $aNavigation[CURRENT_PATH . '?deleteTranscripts']        = array('menu_transcripts.png', 'Delete non-preferred transcripts', 1);
             $aNavigation[CURRENT_PATH . '?delete'] = array('cross.png', 'Delete variant entry', 1);
         }
         if (!empty($zData['position_g_start']) && $_CONF['refseq_build'] != '----') {
@@ -590,6 +591,12 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && !ACTION) {
     $sViewListID = 'VOT_for_VOG_VE';
     $_DATA->setRowID($sViewListID, 'VOT_{{transcriptid}}');
     $_DATA->setRowLink($sViewListID, 'javascript:window.location.hash = \'{{transcriptid}}\'; return false');
+    $_DATA->appendRowClass(function($zData) {
+        if (!empty($zData['genepanelid'])) {
+            return 'preferred-transcript';
+        }
+        return '';
+    });
     $_DATA->viewList($sViewListID, array('id_', 'transcriptid', 'status'), true, true);
     unset($_GET['search_id_']);
 ?>
@@ -612,8 +619,8 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && !ACTION) {
                 if (hash != prevHash) {
                     // Hash changed, (re)load viewEntry.
                     // Set the correct status for the TRs in the viewList (highlight the active TR).
-                    $( '#VOT_' + prevHash ).attr('class', 'data');
-                    $( '#VOT_' + hash ).attr('class', 'data bold');
+                    $( '#VOT_' + prevHash ).removeClass('bold');
+                    $( '#VOT_' + hash ).addClass('bold');
 
                     if (!($.browser.msie && $.browser.version < 9.0)) {
                         $( '#viewentryDiv' ).stop().css('opacity','0'); // Stop execution of actions, set opacity = 0 (hidden, but not taken out of the flow).
@@ -630,14 +637,16 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && !ACTION) {
                     prevHash = hash;
                 } else {
                     // The viewList could have been resubmitted now, so reset this value (not very efficient).
-                    $( '#VOT_' + hash ).attr('class', 'data bold');
+                    $( '#VOT_' + hash ).addClass('bold');
                 }
             }
         }
 
         function displayOneTranscript() {
             // If there is only one row of VOT, then trigger click on the first row so that it is the details of that transcript is displayed.
-            if ($('#viewlistTable_<?php echo $sViewListID?> tr').length === 2) { // Table heading + first row.
+            if ($('#viewlistTable_<?php echo $sViewListID?> tr.preferred-transcript').length >= 1) {
+                $('#viewlistTable_<?php echo $sViewListID?> tr.preferred-transcript')[0].click();
+            } else if ($('#viewlistTable_<?php echo $sViewListID?> tr').length === 2) { // Table heading + first row.
                 $('#viewlistTable_<?php echo $sViewListID?> tr')[1].click();
             }
         }
@@ -3549,6 +3558,111 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && ACTION == 'map') {
     $_T->printFooter();
     exit;
 }
+
+
+
+
+
+if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && ACTION == 'deleteTranscripts') {
+    $nVariantID = $_PE[1];
+    define('LOG_EVENT', 'deleteTranscripts');
+
+    // Require manager clearance.
+    lovd_isAuthorized('variant', $nVariantID);
+    lovd_requireAUTH(LEVEL_OWNER);
+
+    require ROOT_PATH . 'inc-lib-form.php';
+
+    $sSQL = "SELECT t.id_ncbi, gp2g.transcriptid, vot.transcriptid
+    FROM " . TABLE_VARIANTS_ON_TRANSCRIPTS . " vot
+    JOIN " . TABLE_TRANSCRIPTS . " t ON vot.transcriptid = t.id
+    LEFT JOIN " . TABLE_GP2GENE . " gp2g ON t.id = gp2g.transcriptid
+    WHERE vot.id = ? AND gp2g.transcriptid IS NULL";
+
+    $aTranscripts = $_DB->query($sSQL, array($_PE[1]))->fetchAllAssoc();
+
+    // Form submission: Now actually delete these transcripts
+    if (POST) {
+        lovd_errorClean();
+
+        // Mandatory fields.
+        if (empty($_POST['password'])) {
+            lovd_errorAdd('password', 'Please fill in the \'Enter your password for authorization\' field.');
+        } elseif (!lovd_verifyPassword($_POST['password'], $_AUTH['password'])) {
+            // User had to enter his/her password for authorization.
+            lovd_errorAdd('password', 'Please enter your correct password for authorization.');
+        }
+
+        if (!lovd_error()) {
+            if (!empty($_POST['delete'])) {
+                $aNcbiIds = array();
+                $aTranscriptIds = array();
+                foreach ($aTranscripts as $sTranscript) {
+                    $aNcbiIds[] = $sTranscript['id_ncbi'];
+                    $aTranscriptIds[] = $sTranscript['transcriptid'];
+                }
+
+                // Delete from database
+                if (!empty($aTranscriptIds)) {
+                    // Remove transcript mapping from variant...
+                    $_DB->query('DELETE FROM ' . TABLE_VARIANTS_ON_TRANSCRIPTS . ' WHERE id = ? AND transcriptid IN (?' . str_repeat(', ?', count($aTranscriptIds) - 1) . ')', array_merge(array($nVariantID), $aTranscriptIds));
+                }
+
+                // Write to log...
+                lovd_writeLog('Event', LOG_EVENT, 'Deleted non-preferred transcripts for variant #' . $nVariantID . ' : ' . implode(', ', $aNcbiIds));
+
+                // Thank the user...
+                header('Refresh: 3; url=' . lovd_getInstallURL() . CURRENT_PATH);
+                $_T->printHeader();
+                $_T->printTitle();
+                lovd_showInfoTable('Successfully updated the transcript list!', 'success');
+
+                $_T->printFooter();
+                exit;
+            }
+        }
+    }
+
+    $_T->printHeader();
+    $_T->printTitle();
+
+    lovd_errorPrint();
+
+    if (empty($aTranscripts)) {
+        lovd_showInfoTable('This variant does not have non-preferred transcripts.');
+    } else {
+        print('<P>Are you sure you want to delete these transcripts?</P>');
+        print('<BR><TABLE width="300px" class="data">');
+        print('    <TR>
+                       <TH>Transcripts</TH>
+                     </TR>'
+             );
+          // We want to always print the classification rows in the same order as stored in $_SETT.
+          foreach ($aTranscripts as $aRow) {
+              print('<TR>
+                       <TD>'. $aRow["id_ncbi"] . '</TD>
+                     </TR>'
+              );
+          }
+        print('</TABLE>');
+        print('<BR/>');
+
+        // Array which will make up the form table.
+        $aForm = array(
+                        array('POST', '', '', '', '0%', '0', '100%'),
+                        array('', '', 'print', 'Enter your password for authorization'),
+                        array('', '', 'password', 'password', 20),
+                        array('', '', 'print', '<INPUT type="submit" name="delete" value="Delete Transcripts" />'),
+                      );
+
+        print('<FORM action="" method="POST">' . "\n");
+        lovd_viewForm($aForm);
+        print('</FORM>');
+    }
+
+    $_T->printFooter();
+}
+
 
 
 
