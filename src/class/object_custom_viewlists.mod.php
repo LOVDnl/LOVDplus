@@ -434,11 +434,16 @@ class LOVD_CustomViewListMOD extends LOVD_CustomViewList {
                                 'db'   => array('obs_var_dis_ind_ratio', 'ASC', 'DECIMAL'),
                                 'legend' => array('The ratio of the number of individuals with this variant and this disease divided by the total number of individuals with this disease within this database.',
                                     'The ratio of the number of individuals with this variant and this disease divided by the total number of individuals with this disease within this database.')),
-                            'zygosity_' => array(
-                                'view' => array('Zygosity', 70),
-                                'db' => array('zygosity_', 'ASC', 'TEXT'),
-                            )
                         ));
+
+                        if ($_INI['instance']['name'] == 'mgha') {
+                            $this->aColumnsViewList = array_merge($this->aColumnsViewList, array(
+                                'zygosity_' => array(
+                                    'view' => array('Zygosity', 70),
+                                    'db' => array('zygosity_', 'ASC', 'TEXT'),
+                                )
+                            ));
+                        }
                     break;
             }
         }
