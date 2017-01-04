@@ -54,7 +54,7 @@ class LOVD_GenomeVariant extends LOVD_Custom {
     function __construct ()
     {
         // Default constructor.
-        global $_AUTH, $_SETT;
+        global $_AUTH, $_SETT, $_INI;
 
         // SQL code for loading an entry for an edit form.
         // FIXME; change owner to owned_by_ in the load entry query below.
@@ -74,6 +74,13 @@ class LOVD_GenomeVariant extends LOVD_Custom {
                                            'ue.name AS edited_by_, ' .
                                            'curs.name AS curation_status_, ' .
                                            'cons.name AS confirmation_status_';
+
+        if ($_INI['instance']['name'] == 'mgha') {
+            $this->aSQLViewEntry['SELECT'] .= ', ROUND(vog.`VariantOnGenome/Sequencing/Depth/Alt/Fraction`, 2) as var_frac_ ' .
+                ', ROUND(vog.`VariantOnGenome/Sequencing/Father/Depth/Alt/Fraction`, 2) as var_frac_father_ ' .
+                ', ROUND(vog.`VariantOnGenome/Sequencing/Mother/Depth/Alt/Fraction`, 2) as var_frac_mother_ ';
+        }
+
         $this->aSQLViewEntry['FROM']     = TABLE_VARIANTS . ' AS vog ' .
                                            'LEFT OUTER JOIN ' . TABLE_SCR2VAR . ' AS s2v ON (vog.id = s2v.variantid) ' .
                                            'LEFT OUTER JOIN ' . TABLE_SCREENINGS . ' AS s ON (s.id = s2v.screeningid) ' .
@@ -359,7 +366,7 @@ class LOVD_GenomeVariant extends LOVD_Custom {
     {
         // Prepares the data by "enriching" the variable received with links, pictures, etc.
 
-        global $_AUTH, $_DB, $_SETT;
+        global $_AUTH, $_DB, $_SETT, $_INI;
 
         if (!in_array($sView, array('list', 'entry'))) {
             $sView = 'list';
@@ -458,6 +465,20 @@ class LOVD_GenomeVariant extends LOVD_Custom {
         // Replace rs numbers with dbSNP links.
         if (!empty($zData['VariantOnGenome/dbSNP'])) {
             $zData['VariantOnGenome/dbSNP'] = preg_replace('/(rs\d+)/', '<SPAN' . ($sView != 'list'? '' : ' onclick="cancelParentEvent(event);"') . '><A href="http://www.ncbi.nlm.nih.gov/SNP/snp_ref.cgi?rs=' . "$1" . '" target="_blank">' . "$1" . '</A></SPAN>', $zData['VariantOnGenome/dbSNP']);
+        }
+
+        if ($_INI['instance']['name'] == 'mgha') {
+            if (!empty($zData['var_frac_'])) {
+                $zData['VariantOnGenome/Sequencing/Depth/Alt/Fraction'] = $zData['var_frac_'];
+            }
+
+            if (!empty($zData['var_frac_father_'])) {
+                $zData['VariantOnGenome/Sequencing/Father/Depth/Alt/Fraction'] = $zData['var_frac_father_'];
+            }
+
+            if (!empty($zData['var_frac_mother_'])) {
+                $zData['VariantOnGenome/Sequencing/Mother/Depth/Alt/Fraction'] = $zData['var_frac_mother_'];
+            }
         }
 
         return $zData;

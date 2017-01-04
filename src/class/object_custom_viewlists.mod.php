@@ -158,7 +158,7 @@ class LOVD_CustomViewListMOD extends LOVD_CustomViewList {
                     }
 
                     $aSQL['SELECT'] .= (!$aSQL['SELECT']? '' : ', ') . 'vog.*, a.name AS allele_, eg.name AS vog_effect, CONCAT(cs.id, cs.name) AS curation_status_' .
-                        ($_INI['instance']['name'] == 'mgha'?', IF(vog.`VariantOnGenome/Sequencing/Allele/Frequency` < 1, "Het", "Hom") as zygosity_' : '');
+                        ($_INI['instance']['name'] == 'mgha'?', IF(vog.`VariantOnGenome/Sequencing/Allele/Frequency` < 1, "Het", "Hom") as zygosity_, ROUND(vog.`VariantOnGenome/Sequencing/Depth/Alt/Fraction`, 2) as var_frac_ ' : '');
                     // Observation count columns.
                     // Find the diseases that this individual has assigned using the analysis run ID in $_GET.
                     if (!empty($_GET['search_runid'])) {
@@ -441,7 +441,11 @@ class LOVD_CustomViewListMOD extends LOVD_CustomViewList {
                                 'zygosity_' => array(
                                     'view' => array('Zygosity', 70),
                                     'db' => array('zygosity_', 'ASC', 'TEXT'),
-                                )
+                                ),
+                                'var_frac_' => array(
+                                    'view' => array('Var Frac', 70),
+                                    'db' => array('var_frac_', 'ASC', 'DECIMAL'),
+                                ),
                             ));
                         }
                     break;
@@ -454,17 +458,14 @@ class LOVD_CustomViewListMOD extends LOVD_CustomViewList {
         // The table is regarded too wide, and columns need to be narrowed.
         // We could shorten headers etc in the database, but this will shorten
         // them too for the VE, which reduces the clarity of the data.
-        $sAltFrac = 'RD Alt (%)';
-        if ($_INI['instance']['name'] == 'mgha') {
-            $sAltFrac = 'Var Frac';
-        }
+
 
         $aVLModifications = array(
             'VariantOnGenome/DNA' => array('view' => array('DNA change (genomic)', 100)),
             'VariantOnGenome/Alamut' => array('view' => array('Alamut', 60)),
             'VariantOnGenome/Conservation_score/PhyloP' => array('view' => array('PhyloP', 60)),
             'VariantOnGenome/HGMD/Association' => array('view' => array('HGMD', 50)),
-            'VariantOnGenome/Sequencing/Depth/Alt/Fraction' => array('view' => array($sAltFrac, 90)),
+            'VariantOnGenome/Sequencing/Depth/Alt/Fraction' => array('view' => array('RD Alt (%)', 90)),
             'VariantOnGenome/Sequencing/Quality' => array('view' => array('Seq. Q.', 60)),
             'VariantOnTranscript/DNA' => array('view' => array('DNA change (cDNA)', 100)),
             'VariantOnTranscript/Protein' => array('view' => array('Protein', 100)),

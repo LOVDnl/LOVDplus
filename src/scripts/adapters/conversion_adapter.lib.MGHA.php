@@ -79,9 +79,8 @@ $_INSTANCE_CONFIG['custom_object'] = array(
                 'VariantOnTranscript/Protein',
                 'VariantOnGenome/Sequencing/Depth/Total',
                 'VariantOnGenome/Sequencing/Quality',
-//                'VariantOnGenome/Sequencing/Allele/Frequency',
-                'zygosity_',
-                'VariantOnGenome/Sequencing/Depth/Alt/Fraction',
+                'zygosity_', // 'VariantOnGenome/Sequencing/Allele/Frequency'
+                'var_frac_', // 'VariantOnGenome/Sequencing/Depth/Alt/Fraction'
                 'gene_OMIM_',
                 'gene_disease_name',
                 'VariantOnTranscript/Clinical_Significance',
