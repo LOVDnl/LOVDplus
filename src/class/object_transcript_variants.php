@@ -86,6 +86,8 @@ class LOVD_TranscriptVariant extends LOVD_Custom {
                                           'LEFT OUTER JOIN ' . TABLE_TRANSCRIPTS . ' AS t ON (t.id = vot.transcriptid)' .
                                           'LEFT OUTER JOIN ' . TABLE_GP2GENE . ' as gp2g ON (vot.transcriptid = gp2g.transcriptid)';
 
+        $this->aSQLViewList['GROUP_BY'] = 't.id_ncbi';
+
         $this->sObjectID = $sObjectID;
         $this->nID = $nID;
         parent::__construct();

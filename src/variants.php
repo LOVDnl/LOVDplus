@@ -643,9 +643,12 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && !ACTION) {
         }
 
         function displayOneTranscript() {
-            // If there is only one row of VOT, then trigger click on the first row so that it is the details of that transcript is displayed.
+            // There is at least one preferred-transcript row, then trigger click on the first preferred transcript row
+            // so that the details of that transcript is displayed.
             if ($('#viewlistTable_<?php echo $sViewListID?> tr.preferred-transcript').length >= 1) {
                 $('#viewlistTable_<?php echo $sViewListID?> tr.preferred-transcript')[0].click();
+
+            // If there is only one row of VOT, then trigger click on the first row so that the details of that transcript is displayed.
             } else if ($('#viewlistTable_<?php echo $sViewListID?> tr').length === 2) { // Table heading + first row.
                 $('#viewlistTable_<?php echo $sViewListID?> tr')[1].click();
             }
@@ -3573,7 +3576,26 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && ACTION == 'deleteTranscripts') {
 
     require ROOT_PATH . 'inc-lib-form.php';
 
-    $sSQL = "SELECT t.id_ncbi, gp2g.transcriptid, vot.transcriptid
+    define('PAGE_TITLE', 'Delete Non-preferred Transcripts of variant #' . $nVariantID);
+
+    // Make sure we only delete these transcripts if the gene has at least one preferred transcript in the gene panels.
+    $sSQL = "SELECT COUNT(t.id) as num_preferred_transcripts
+    FROM " . TABLE_VARIANTS_ON_TRANSCRIPTS . " vot
+    JOIN " . TABLE_TRANSCRIPTS . " t ON vot.transcriptid = t.id
+    LEFT JOIN " . TABLE_GP2GENE . " gp2g ON t.id = gp2g.transcriptid
+    WHERE vot.id = ? AND gp2g.transcriptid IS NOT NULL";
+    $nPreferredTranscripts = $_DB->query($sSQL, array($_PE[1]))->fetchAllAssoc();
+
+    if (empty($nPreferredTranscripts[0]['num_preferred_transcripts'])) {
+        header('Refresh: 3; url=' . lovd_getInstallURL() . CURRENT_PATH);
+        $_T->printHeader();
+        $_T->printTitle();
+        lovd_showInfoTable('No preferred transcripts selected for this variant.');
+        $_T->printFooter();
+        exit;
+    }
+
+    $sSQL = "SELECT t.id_ncbi, gp2g.transcriptid, vot.transcriptid, t.geneid
     FROM " . TABLE_VARIANTS_ON_TRANSCRIPTS . " vot
     JOIN " . TABLE_TRANSCRIPTS . " t ON vot.transcriptid = t.id
     LEFT JOIN " . TABLE_GP2GENE . " gp2g ON t.id = gp2g.transcriptid
@@ -3596,16 +3618,31 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && ACTION == 'deleteTranscripts') {
         if (!lovd_error()) {
             if (!empty($_POST['delete'])) {
                 $aNcbiIds = array();
-                $aTranscriptIds = array();
+                $aTranscriptIdsFromDB = array();
                 foreach ($aTranscripts as $sTranscript) {
-                    $aNcbiIds[] = $sTranscript['id_ncbi'];
-                    $aTranscriptIds[] = $sTranscript['transcriptid'];
+                    $aNcbiIds[$sTranscript['id_ncbi']] = $sTranscript['id_ncbi'];
+                    $aTranscriptIdsFromDB[$sTranscript['transcriptid']] = $sTranscript['transcriptid'];
+                }
+
+                // Safeguard for 2 things here:
+                // - If gene panel preferred transcript is updated between confirmation and POST submission: we make sure we only delete those transcripts displayed on the confirmation screen.
+                // - If someone updated the html input data from the frontend: we make sure we only delete those transcripts that are non-preferred transcripts of this variant according to the database.
+                //
+                // Basically we only delete transcripts that are found in BOTH non-preferred transcripts in the database AND transcript ids submitted via POST.
+
+                $aTranscriptIdsToBeDeleted = array();
+                if (!empty($_POST['ids'])) {
+                    foreach ($_POST['ids'] as $sTranscriptId) {
+                        if (isset($aTranscriptIdsFromDB[$sTranscriptId])) {
+                            $aTranscriptIdsToBeDeleted[] = $sTranscriptId;
+                        }
+                    }
                 }
 
                 // Delete from database
-                if (!empty($aTranscriptIds)) {
+                if (!empty($aTranscriptIdsToBeDeleted)) {
                     // Remove transcript mapping from variant...
-                    $_DB->query('DELETE FROM ' . TABLE_VARIANTS_ON_TRANSCRIPTS . ' WHERE id = ? AND transcriptid IN (?' . str_repeat(', ?', count($aTranscriptIds) - 1) . ')', array_merge(array($nVariantID), $aTranscriptIds));
+                    $_DB->query('DELETE FROM ' . TABLE_VARIANTS_ON_TRANSCRIPTS . ' WHERE id = ? AND transcriptid IN (?' . str_repeat(', ?', count($aTranscriptIdsToBeDeleted) - 1) . ')', array_merge(array($nVariantID), $aTranscriptIdsToBeDeleted));
                 }
 
                 // Write to log...
@@ -3623,15 +3660,21 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && ACTION == 'deleteTranscripts') {
         }
     }
 
-    $_T->printHeader();
-    $_T->printTitle();
-
-    lovd_errorPrint();
 
     if (empty($aTranscripts)) {
-        lovd_showInfoTable('This variant does not have non-preferred transcripts.');
+        header('Refresh: 5; url=' . lovd_getInstallURL() . CURRENT_PATH);
+        $_T->printHeader();
+        $_T->printTitle();
+        lovd_showInfoTable('This variant does not have any non-preferred transcript.<br/>All transcripts of this variant has been set as preferred transcripts in at least one gene panel.');
+        $_T->printFooter();
+        exit;
     } else {
-        print('<P>Are you sure you want to delete these transcripts?</P>');
+        $_T->printHeader();
+        $_T->printTitle();
+        lovd_errorPrint();
+
+        print('<FORM action="" method="POST">' . "\n");
+        print('<P>These transcripts will be deleted and <strong>cannot be restored</strong>. Click "Delete Transcripts" to confirm.</P>');
         print('<BR><TABLE width="300px" class="data">');
         print('    <TR>
                        <TH>Transcripts</TH>
@@ -3640,7 +3683,7 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && ACTION == 'deleteTranscripts') {
           // We want to always print the classification rows in the same order as stored in $_SETT.
           foreach ($aTranscripts as $aRow) {
               print('<TR>
-                       <TD>'. $aRow["id_ncbi"] . '</TD>
+                       <TD>'. $aRow["id_ncbi"] . '<INPUT type="hidden" name="ids[]" value="' . $aRow['transcriptid'] . '"></TD>
                      </TR>'
               );
           }
@@ -3655,7 +3698,7 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && ACTION == 'deleteTranscripts') {
                         array('', '', 'print', '<INPUT type="submit" name="delete" value="Delete Transcripts" />'),
                       );
 
-        print('<FORM action="" method="POST">' . "\n");
+
         lovd_viewForm($aForm);
         print('</FORM>');
     }
