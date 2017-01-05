@@ -267,13 +267,21 @@ class LOVD_CustomViewListMOD extends LOVD_CustomViewList {
                             }
                         }
                         // Security checks in this file's prepareData() need geneid to see if the column in question is set to non-public for one of the genes.
-                        $aSQL['SELECT'] .= (!$aSQL['SELECT']? '' : ', ') . 'GROUP_CONCAT(DISTINCT t.geneid SEPARATOR ";") AS symbol, GROUP_CONCAT(DISTINCT t.geneid SEPARATOR ";") AS _geneid, GROUP_CONCAT(DISTINCT t.id_ncbi SEPARATOR ";") AS transcript, GROUP_CONCAT(DISTINCT IF(IFNULL(g.id_omim, 0) = 0, "", CONCAT(g.id, ";", g.id_omim)) SEPARATOR ";;") AS __gene_OMIM';
+                        $aSQL['SELECT'] .= (!$aSQL['SELECT']? '' : ', ') . 'GROUP_CONCAT(DISTINCT t.geneid SEPARATOR ";") AS symbol, GROUP_CONCAT(DISTINCT t.geneid SEPARATOR ";") AS _geneid, GROUP_CONCAT(DISTINCT IF(IFNULL(g.id_omim, 0) = 0, "", CONCAT(g.id, ";", g.id_omim)) SEPARATOR ";;") AS __gene_OMIM';
                         $aSQL['FROM'] .= ' LEFT JOIN ' . TABLE_VARIANTS_ON_TRANSCRIPTS . ' AS vot ON (';
                         // Earlier, VOG was used, join to that.
                         $aSQL['FROM'] .= 'vog.id = vot.id)';
                         // Join to transcripts for the NM number, but also to genes to show the gene's OMIM ID.
                         $aSQL['FROM'] .= ' LEFT JOIN ' . TABLE_TRANSCRIPTS . ' AS t ON (vot.transcriptid = t.id) LEFT JOIN ' . TABLE_GENES . ' AS g ON (t.geneid = g.id)';
                         // We have no fallback, so we'll easily detect an error if we messed up somewhere.
+
+                        // Display the gene panels that this variant is found in.
+                        $aSQL['FROM'] .= ' LEFT JOIN ' . TABLE_GP2GENE . ' AS gp2g ON (t.geneid = gp2g.geneid) 
+                                           LEFT JOIN ' . TABLE_GENE_PANELS . ' AS gp ON (gp2g.genepanelid = gp.id)
+                                           LEFT JOIN ' . TABLE_TRANSCRIPTS . ' AS t_preferred ON (gp2g.transcriptid = t_preferred.id)' ;
+                        $aSQL['SELECT'] .= (!$aSQL['SELECT']? '' : ', ') .
+                            'GROUP_CONCAT(DISTINCT gp.name SEPARATOR ", ") AS gene_panels,
+                             IFNULL(GROUP_CONCAT(DISTINCT t_preferred.id_ncbi SEPARATOR ", "),  GROUP_CONCAT(DISTINCT t.id_ncbi SEPARATOR ";") ) AS preferred_transcripts'; // if no preferred transcript found, display all transcripts
                     }
                     break;
             }
@@ -331,7 +339,7 @@ class LOVD_CustomViewListMOD extends LOVD_CustomViewList {
                                         'legend' => array('The variant\'s effect on a protein\'s function, in the format Reported/Curator concluded; ranging from \'+\' (variant affects function) to \'-\' (does not affect function).',
                                                           'The variant\'s affect on a protein\'s function, in the format Reported/Curator concluded; \'+\' indicating the variant affects function, \'+?\' probably affects function, \'-\' does not affect function, \'-?\' probably does not affect function, \'?\' effect unknown.')),
                                 'chromosome' => array(
-                                        'view' => array('Chr', 50),
+                                        'view' => array('Chr', 40),
                                         'db'   => array('vog.chromosome', 'ASC', true)),
                               ));
 
@@ -356,6 +364,9 @@ class LOVD_CustomViewListMOD extends LOVD_CustomViewList {
                                 'transcript' => array(
                                      'view' => array('Transcript', 20),
                                      'db'   => array('transcript', 'ASC', true)),
+                                'preferred_transcripts' => array(
+                                     'view' => array('Transcript', 20),
+                                     'db'   => array('preferred_transcripts', 'ASC', true)),
                                   ));
                     if (!$this->sSortDefault) {
                         // First data table in view.

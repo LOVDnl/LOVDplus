@@ -85,12 +85,11 @@ $_INSTANCE_CONFIG['custom_object'] = array(
                 'VariantOnGenome/Sequencing/Somatic/Status',
                 'chromosome',
                 'symbol',
-                'transcript',
+                'preferred_transcripts',
                 'VariantOnGenome/DNA',
                 'VariantOnTranscript/DNA',
                 'VariantOnTranscript/Protein',
                 'VariantOnGenome/Consequence',
-                'vog_effect',
                 'VariantOnGenome/DbSNP_IDs',
                 'obs_variant',
                 'obs_var_ind_ratio',
@@ -98,7 +97,6 @@ $_INSTANCE_CONFIG['custom_object'] = array(
                 'VariantOnGenome/Frequency/1000G/VEP',
                 'VariantOnGenome/Frequency/EVS/VEP/European_American',
                 'VariantOnGenome/COSMIC_IDs',
-                'VariantOnGenome/Sequencing/Normal/Genotype/Quality',
                 'VariantOnGenome/Sequencing/Tumour/Genotype/Quality',
                 'VariantOnGenome/Sequencing/Normal/BI/Depth/Total',
                 'VariantOnGenome/Sequencing/Tumour/BI/Depth/Total',
@@ -122,7 +120,8 @@ $_INSTANCE_CONFIG['custom_object'] = array(
                 'VariantOnGenome/Sequencing/Tumour/Indel/Mapping_Quality',
                 'VariantOnTranscript/SIFT',
                 'VariantOnTranscript/PolyPhen',
-
+                'VariantOnGenome/Sequencing/Normal/Genotype/Quality',
+                'vog_effect',
             )
         )
     )
