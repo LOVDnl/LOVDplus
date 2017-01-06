@@ -516,7 +516,7 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && !ACTION) {
         }
         $aNavigation[CURRENT_PATH . '?map']        = array('menu_transcripts.png', 'Manage transcripts for this variant', 1);
         if ($_AUTH['level'] >= LEVEL_CURATOR) {
-            $aNavigation[CURRENT_PATH . '?deleteTranscripts']        = array('menu_transcripts.png', 'Delete non-preferred transcripts', 1);
+            $aNavigation[CURRENT_PATH . '?deleteTranscripts']        = array('menu_transcripts.png', 'Delete non preferred transcripts', 1);
             $aNavigation[CURRENT_PATH . '?delete'] = array('cross.png', 'Delete variant entry', 1);
         }
         if (!empty($zData['position_g_start']) && $_CONF['refseq_build'] != '----') {
@@ -3576,7 +3576,7 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && ACTION == 'deleteTranscripts') {
 
     require ROOT_PATH . 'inc-lib-form.php';
 
-    define('PAGE_TITLE', 'Delete Non Preferred Transcript Annotations of Variant #' . $nVariantID);
+    define('PAGE_TITLE', 'Delete Non Preferred Transcript Annotations from Variant #' . $nVariantID);
 
     // Make sure we only delete these transcripts if the gene has at least one preferred transcript in the gene panels.
     $sSQL = "SELECT COUNT(t.id) as num_preferred_transcripts
@@ -3626,9 +3626,9 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && ACTION == 'deleteTranscripts') {
 
                 // Safeguard for 2 things here:
                 // - If gene panel preferred transcript is updated between confirmation and POST submission: we make sure we only delete those transcripts displayed on the confirmation screen.
-                // - If someone updated the html input data from the frontend: we make sure we only delete those transcripts that are non-preferred transcripts of this variant according to the database.
+                // - If someone updated the html input data from the frontend: we make sure we only delete those transcripts that are non preferred transcripts of this variant according to the database.
                 //
-                // Basically we only delete transcripts that are found in BOTH non-preferred transcripts in the database AND transcript ids submitted via POST.
+                // Basically we only delete transcripts that are found in BOTH non preferred transcripts in the database AND transcript ids submitted via POST.
 
                 $aTranscriptIdsToBeDeleted = array();
                 if (!empty($_POST['ids'])) {
@@ -3665,7 +3665,7 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && ACTION == 'deleteTranscripts') {
         header('Refresh: 5; url=' . lovd_getInstallURL() . CURRENT_PATH);
         $_T->printHeader();
         $_T->printTitle();
-        lovd_showInfoTable('This variant does not have any non-preferred transcript.<br/>All transcripts of this variant has been set as preferred transcripts in at least one gene panel.');
+        lovd_showInfoTable('This variant does not have any non preferred transcript.<br/>All transcripts of this variant has been set as preferred transcripts in at least one gene panel.');
         $_T->printFooter();
         exit;
     } else {
