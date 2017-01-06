@@ -127,6 +127,26 @@ $_INSTANCE_CONFIG['custom_object'] = array(
     )
 );
 
+$_INSTANCE_CONFIG['variants'] = array(
+    'curation_files' => array(
+        'igv' => array(
+            'type' => 'image' ,
+            'id' => 'nid',
+            'label' => 'IGV screenshot'),
+        'ucsc' => array(
+            'type' => 'image' ,
+            'id' => 'said',  // This file is stored using the Summary Annotation Record DBID.
+            'label' => 'UCSC screenshot (Summary Annotation)'),
+        'confirmation' => array(
+            'type' => 'image' ,
+            'id' => 'nid',
+            'label' => 'Confirmation screenshot'),
+        'workfile' => array(
+            'type' => 'excel' ,
+            'id' => 'nid',
+            'label' => 'Excel file')
+    )
+);
 
 
 class LOVD_MghaSeqDataConverter extends LOVD_DefaultDataConverter {
