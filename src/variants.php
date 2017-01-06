@@ -3576,7 +3576,7 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && ACTION == 'deleteTranscripts') {
 
     require ROOT_PATH . 'inc-lib-form.php';
 
-    define('PAGE_TITLE', 'Delete Non-preferred Transcripts of variant #' . $nVariantID);
+    define('PAGE_TITLE', 'Delete Non Preferred Transcript Annotations of Variant #' . $nVariantID);
 
     // Make sure we only delete these transcripts if the gene has at least one preferred transcript in the gene panels.
     $sSQL = "SELECT COUNT(t.id) as num_preferred_transcripts
@@ -3646,7 +3646,7 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && ACTION == 'deleteTranscripts') {
                 }
 
                 // Write to log...
-                lovd_writeLog('Event', LOG_EVENT, 'Deleted non-preferred transcripts for variant #' . $nVariantID . ' : ' . implode(', ', $aNcbiIds));
+                lovd_writeLog('Event', LOG_EVENT, 'Deleted non preferred transcript annotations for variant #' . $nVariantID . ' : ' . implode(', ', $aNcbiIds));
 
                 // Thank the user...
                 header('Refresh: 3; url=' . lovd_getInstallURL() . CURRENT_PATH);
@@ -3674,7 +3674,7 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && ACTION == 'deleteTranscripts') {
         lovd_errorPrint();
 
         print('<FORM action="" method="POST">' . "\n");
-        print('<P>These transcripts will be deleted and <strong>cannot be restored</strong>. Click "Delete Transcripts" to confirm.</P>');
+        print('<P>These transcript annotations will be deleted and <strong>cannot be restored</strong>. Click "Delete" to confirm.</P>');
         print('<BR><TABLE width="300px" class="data">');
         print('    <TR>
                        <TH>Transcripts</TH>
@@ -3695,7 +3695,7 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && ACTION == 'deleteTranscripts') {
                         array('POST', '', '', '', '0%', '0', '100%'),
                         array('', '', 'print', 'Enter your password for authorization'),
                         array('', '', 'password', 'password', 20),
-                        array('', '', 'print', '<INPUT type="submit" name="delete" value="Delete Transcripts" />'),
+                        array('', '', 'print', '<INPUT type="submit" name="delete" value="Delete" />'),
                       );
 
 
