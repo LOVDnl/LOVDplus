@@ -514,75 +514,84 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && !ACTION) {
     lovd_showJGNavigation($aNavigation, 'Variants');
 
     // RIGHT COLUMN on the curation page
-    $sSQL = 'SELECT i.*, s.*, vog.*
-            FROM ' . TABLE_VARIANTS . ' AS vog ' .
-           'JOIN ' . TABLE_SCR2VAR . ' AS s2v ON (vog.id = s2v.variantid AND vog.id = "' . $nID . '") ' .
-           'JOIN ' . TABLE_SCREENINGS . ' AS s ON (s.id = s2v.screeningid) ' .
-           'JOIN ' . TABLE_INDIVIDUALS . ' AS i ON (s.individualid = i.id) ' ;
+    $sSQL = 'SELECT obscount_json FROM ' . TABLE_VARIANTS . ' WHERE id = "' . $nID . '"';
+    $zResult = $_DB->query($sSQL)->fetchAssoc();
+    $sObscountJson = $zResult['obscount_json'];
 
-    $aIndividual = $_DB->query($sSQL)->fetchAssoc();
-    $aConfig = array(
-        'Individual/Gender' => array(
-            'label' => 'Gender',
-            'table' => TABLE_INDIVIDUALS,
-            'fields' => array('Individual/Gender'),
-            'condition' => '`Individual/Gender` = "' . $aIndividual['Individual/Gender'] . '"'
-        ),
-        'Individual/Origin/Ethnic' => array(
-            'label' => 'Ethnic',
-            'table' => TABLE_INDIVIDUALS,
-            'fields' => array('Individual/Origin/Ethnic'),
-            'condition' => '`Individual/Origin/Ethnic` = "' . $aIndividual['Individual/Origin/Ethnic'] . '"'
-        ),
-        'Screening/Sample/Type' => array(
-            'label' => 'Sample Type',
-            'table' => TABLE_SCREENINGS,
-            'fields' => array('Screening/Sample/Type'),
-            'condition' => '`Screening/Sample/Type` = "' . $aIndividual['Screening/Sample/Type'] . '"'
-        ),
-        'Screening/Library_preparation' => array(
-            'label' => 'Capture Method',
-            'table' => TABLE_SCREENINGS,
-            'fields' => array('Screening/Library_preparation'),
-            'condition' => '`Screening/Library_preparation` = "' . $aIndividual['Screening/Library_preparation'] . '"'
-        ),
-        'Screening/Sequencing_software' => array(
-            'label' => 'Sequencing Technology',
-            'table' => TABLE_SCREENINGS,
-            'fields' => array('Screening/Sequencing_software'),
-            'condition' => '`Screening/Sequencing_Software` = "' . $aIndividual['Screening/Sequencing_software'] . '"'
-        ),
-        'Screening/Analysis_type' => array(
-            'label' => 'Analysis Pipeline',
-            'table' => TABLE_SCREENINGS,
-            'fields' => array('Screening/Analysis_type'),
-            'condition' => '`Screening/Analysis_type` = "' . $aIndividual['Screening/Analysis_type'] . '"'
-        ),
-        'Screening/Library_preparation&Screening/Sequencing_software' => array(
-            'label' => 'Same Capture Method and Sequencing Technology',
-            'table' => TABLE_SCREENINGS,
-            'fields' => array('Screening/Library_preparation', 'Screening/Sequencing_software'),
-            'condition' => '`Screening/Library_preparation` = "' . $aIndividual['Screening/Library_preparation'] . '"'
-                         . ' AND '
-                         . '`Screening/Sequencing_Software` = "' . $aIndividual['Screening/Sequencing_software'] . '"'
-        ),
-        'Screening/Library_preparation&Screening/Sequencing_software&Screening/Analysis_type' => array(
-            'label' => 'Same Capture Method, Sequencing Technology, and Analysis Pipeline',
-            'table' => TABLE_SCREENINGS,
-            'fields' => array('Screening/Library_preparation', 'Screening/Sequencing_software', 'Screening/Analysis_type'),
-            'condition' => '`Screening/Library_preparation` = "' . $aIndividual['Screening/Library_preparation'] . '"'
-                         . ' AND '
-                         . '`Screening/Sequencing_Software` = "' . $aIndividual['Screening/Sequencing_software'] . '"'
-                         . ' AND '
-                         . '`Screening/Analysis_type` = "' . $aIndividual['Screening/Analysis_type'] . '"'
-        )
-    );
+print_r($sObscountJson);
 
     print('
-    </TD>
-      <TD valign="top" id="obscount_viewlist" style="padding-left: 10px;">' . "\n");
-      $aData = array();
-      foreach ($aConfig as $sCategory => $aRules) {
+        </TD>
+          <TD valign="top" id="obscount_viewlist" style="padding-left: 10px;">' . "\n");
+
+    if (empty($sObscountJson)) {
+
+        $sSQL = 'SELECT i.*, s.*, vog.*
+                FROM ' . TABLE_VARIANTS . ' AS vog ' .
+               'JOIN ' . TABLE_SCR2VAR . ' AS s2v ON (vog.id = s2v.variantid AND vog.id = "' . $nID . '") ' .
+               'JOIN ' . TABLE_SCREENINGS . ' AS s ON (s.id = s2v.screeningid) ' .
+               'JOIN ' . TABLE_INDIVIDUALS . ' AS i ON (s.individualid = i.id) ' ;
+
+        $aIndividual = $_DB->query($sSQL)->fetchAssoc();
+        $aConfig = array(
+            'Individual/Gender' => array(
+                'label' => 'Gender',
+                'table' => TABLE_INDIVIDUALS,
+                'fields' => array('Individual/Gender'),
+                'condition' => '`Individual/Gender` = "' . $aIndividual['Individual/Gender'] . '"'
+            ),
+            'Individual/Origin/Ethnic' => array(
+                'label' => 'Ethnic',
+                'table' => TABLE_INDIVIDUALS,
+                'fields' => array('Individual/Origin/Ethnic'),
+                'condition' => '`Individual/Origin/Ethnic` = "' . $aIndividual['Individual/Origin/Ethnic'] . '"'
+            ),
+            'Screening/Sample/Type' => array(
+                'label' => 'Sample Type',
+                'table' => TABLE_SCREENINGS,
+                'fields' => array('Screening/Sample/Type'),
+                'condition' => '`Screening/Sample/Type` = "' . $aIndividual['Screening/Sample/Type'] . '"'
+            ),
+            'Screening/Library_preparation' => array(
+                'label' => 'Capture Method',
+                'table' => TABLE_SCREENINGS,
+                'fields' => array('Screening/Library_preparation'),
+                'condition' => '`Screening/Library_preparation` = "' . $aIndividual['Screening/Library_preparation'] . '"'
+            ),
+            'Screening/Sequencing_software' => array(
+                'label' => 'Sequencing Technology',
+                'table' => TABLE_SCREENINGS,
+                'fields' => array('Screening/Sequencing_software'),
+                'condition' => '`Screening/Sequencing_Software` = "' . $aIndividual['Screening/Sequencing_software'] . '"'
+            ),
+            'Screening/Analysis_type' => array(
+                'label' => 'Analysis Pipeline',
+                'table' => TABLE_SCREENINGS,
+                'fields' => array('Screening/Analysis_type'),
+                'condition' => '`Screening/Analysis_type` = "' . $aIndividual['Screening/Analysis_type'] . '"'
+            ),
+            'Screening/Library_preparation&Screening/Sequencing_software' => array(
+                'label' => 'Same Capture Method and Sequencing Technology',
+                'table' => TABLE_SCREENINGS,
+                'fields' => array('Screening/Library_preparation', 'Screening/Sequencing_software'),
+                'condition' => '`Screening/Library_preparation` = "' . $aIndividual['Screening/Library_preparation'] . '"'
+                             . ' AND '
+                             . '`Screening/Sequencing_Software` = "' . $aIndividual['Screening/Sequencing_software'] . '"'
+            ),
+            'Screening/Library_preparation&Screening/Sequencing_software&Screening/Analysis_type' => array(
+                'label' => 'Same Capture Method, Sequencing Technology, and Analysis Pipeline',
+                'table' => TABLE_SCREENINGS,
+                'fields' => array('Screening/Library_preparation', 'Screening/Sequencing_software', 'Screening/Analysis_type'),
+                'condition' => '`Screening/Library_preparation` = "' . $aIndividual['Screening/Library_preparation'] . '"'
+                             . ' AND '
+                             . '`Screening/Sequencing_Software` = "' . $aIndividual['Screening/Sequencing_software'] . '"'
+                             . ' AND '
+                             . '`Screening/Analysis_type` = "' . $aIndividual['Screening/Analysis_type'] . '"'
+            )
+        );
+
+        $aData = array();
+        foreach ($aConfig as $sCategory => $aRules) {
           $aData[$sCategory] = array();
           $aData[$sCategory]['label'] = $aRules['label'];
           $aData[$sCategory]['values'] = array();
@@ -611,6 +620,15 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && !ACTION) {
 
           $aCountDBID = $_DB->query($sSQL)->rowCount();
           $aData[$sCategory]['count_dbid'] = $aCountDBID;
+        }
+
+          $sObscountJson = json_encode($aData);
+          $sSQL = "UPDATE " . TABLE_VARIANTS . " SET obscount_json = '$sObscountJson' WHERE id = ?";
+          $zResult = $_DB->query($sSQL, array($nID));
+
+      } else {
+
+          $aData = json_decode($sObscountJson, true);
       }
 
       print('<BR><TABLE width="600px" class="data">');
