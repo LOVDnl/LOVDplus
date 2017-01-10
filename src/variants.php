@@ -444,8 +444,12 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && !ACTION) {
 
     require ROOT_PATH . 'class/object_genome_variants.php';
     lovd_isAuthorized('variant', $nID);
+    print('  <TABLE cellpadding="0" cellspacing="0" border="0">
+    <TR>
+      <TD valign="top">' . "\n");
     $_DATA = new LOVD_GenomeVariant();
     $zData = $_DATA->viewEntry($nID);
+
 
     $bAuthorized = ($_AUTH && $_AUTH['level'] >= LEVEL_OWNER);
     // However, for LOVD_plus, depending on the status of the screening, we might not have the rights to edit the variant.
@@ -508,6 +512,130 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && !ACTION) {
         }
     }
     lovd_showJGNavigation($aNavigation, 'Variants');
+
+    // RIGHT COLUMN on the curation page
+    $sSQL = 'SELECT i.*, s.*, vog.*
+            FROM ' . TABLE_VARIANTS . ' AS vog ' .
+           'JOIN ' . TABLE_SCR2VAR . ' AS s2v ON (vog.id = s2v.variantid AND vog.id = "' . $nID . '") ' .
+           'JOIN ' . TABLE_SCREENINGS . ' AS s ON (s.id = s2v.screeningid) ' .
+           'JOIN ' . TABLE_INDIVIDUALS . ' AS i ON (s.individualid = i.id) ' ;
+
+    $aIndividual = $_DB->query($sSQL)->fetchAssoc();
+    $aConfig = array(
+        'Individual/Gender' => array(
+            'label' => 'Gender',
+            'table' => TABLE_INDIVIDUALS,
+            'fields' => array('Individual/Gender'),
+            'condition' => '`Individual/Gender` = "' . $aIndividual['Individual/Gender'] . '"'
+        ),
+        'Individual/Origin/Ethnic' => array(
+            'label' => 'Ethnic',
+            'table' => TABLE_INDIVIDUALS,
+            'fields' => array('Individual/Origin/Ethnic'),
+            'condition' => '`Individual/Origin/Ethnic` = "' . $aIndividual['Individual/Origin/Ethnic'] . '"'
+        ),
+        'Screening/Sample/Type' => array(
+            'label' => 'Sample Type',
+            'table' => TABLE_SCREENINGS,
+            'fields' => array('Screening/Sample/Type'),
+            'condition' => '`Screening/Sample/Type` = "' . $aIndividual['Screening/Sample/Type'] . '"'
+        ),
+        'Screening/Library_preparation' => array(
+            'label' => 'Capture Method',
+            'table' => TABLE_SCREENINGS,
+            'fields' => array('Screening/Library_preparation'),
+            'condition' => '`Screening/Library_preparation` = "' . $aIndividual['Screening/Library_preparation'] . '"'
+        ),
+        'Screening/Sequencing_software' => array(
+            'label' => 'Sequencing Technology',
+            'table' => TABLE_SCREENINGS,
+            'fields' => array('Screening/Sequencing_software'),
+            'condition' => '`Screening/Sequencing_Software` = "' . $aIndividual['Screening/Sequencing_software'] . '"'
+        ),
+        'Screening/Analysis_type' => array(
+            'label' => 'Analysis Pipeline',
+            'table' => TABLE_SCREENINGS,
+            'fields' => array('Screening/Analysis_type'),
+            'condition' => '`Screening/Analysis_type` = "' . $aIndividual['Screening/Analysis_type'] . '"'
+        ),
+        'Screening/Library_preparation&Screening/Sequencing_software' => array(
+            'label' => 'Same Capture Method and Sequencing Technology',
+            'table' => TABLE_SCREENINGS,
+            'fields' => array('Screening/Library_preparation', 'Screening/Sequencing_software'),
+            'condition' => '`Screening/Library_preparation` = "' . $aIndividual['Screening/Library_preparation'] . '"'
+                         . ' AND '
+                         . '`Screening/Sequencing_Software` = "' . $aIndividual['Screening/Sequencing_software'] . '"'
+        ),
+        'Screening/Library_preparation&Screening/Sequencing_software&Screening/Analysis_type' => array(
+            'label' => 'Same Capture Method, Sequencing Technology, and Analysis Pipeline',
+            'table' => TABLE_SCREENINGS,
+            'fields' => array('Screening/Library_preparation', 'Screening/Sequencing_software', 'Screening/Analysis_type'),
+            'condition' => '`Screening/Library_preparation` = "' . $aIndividual['Screening/Library_preparation'] . '"'
+                         . ' AND '
+                         . '`Screening/Sequencing_Software` = "' . $aIndividual['Screening/Sequencing_software'] . '"'
+                         . ' AND '
+                         . '`Screening/Analysis_type` = "' . $aIndividual['Screening/Analysis_type'] . '"'
+        )
+    );
+
+    print('
+    </TD>
+      <TD valign="top" id="obscount_viewlist" style="padding-left: 10px;">' . "\n");
+      $aData = array();
+      foreach ($aConfig as $sCategory => $aRules) {
+          $aData[$sCategory] = array();
+          $aData[$sCategory]['label'] = $aRules['label'];
+          $aData[$sCategory]['values'] = array();
+          foreach ($aRules['fields'] as $sField) {
+              $aData[$sCategory]['values'][] = $aIndividual[$sField];
+          }
+
+          // TOTAL population in this database
+          $sSQL = 'SELECT COUNT(s.individualid) AS total
+            FROM ' . TABLE_INDIVIDUALS . ' i 
+            JOIN ' . TABLE_SCREENINGS . ' s ON (s.individualid = i.id)
+            WHERE ' . $aRules['condition'] . ' 
+            GROUP BY s.individualid';
+
+          $aCount = $_DB->query($sSQL, array())->rowCount();
+          $aData[$sCategory]['total'] = $aCount;
+
+          // Number of individuals with this variant
+          $sSQL = 'SELECT COUNT(s.individualid) AS count_dbid 
+            FROM ' . TABLE_VARIANTS . ' AS vog ' .
+           'JOIN ' . TABLE_SCR2VAR . ' AS s2v ON (vog.id = s2v.variantid AND vog.`VariantOnGenome/DBID` = "' . $aIndividual['VariantOnGenome/DBID'] . '") ' .
+           'JOIN ' . TABLE_SCREENINGS . ' AS s ON (s.id = s2v.screeningid) ' .
+           'JOIN ' . TABLE_INDIVIDUALS . ' AS i ON (s.individualid = i.id) 
+            WHERE ' . $aRules['condition'] . ' 
+            GROUP BY s.individualid';
+
+          $aCountDBID = $_DB->query($sSQL)->rowCount();
+          $aData[$sCategory]['count_dbid'] = $aCountDBID;
+      }
+
+      print('<BR><TABLE width="600px" class="data">');
+      print('<TR><TH colspan="4" style="font-size : 13px;">Observation Counts</TH></TR>');
+      print('    <TR>
+                   <TH>Category</TH>
+                   <TH>Value</TH>
+                   <TH>Total # Individuals</TH>
+                   <TH># Individuals with this variant</TH>
+                 </TR>'
+           );
+      foreach ($aData as $sCategory => $aCatData) {
+          print('<TR>
+                   <TD>' . $aCatData['label'] . '</TD>
+                   <TD>' . implode(', ', $aCatData['values']) . '</TD>
+                   <TD>' . $aCatData['total'] .'</TD>
+                   <TD>' . $aCatData['count_dbid'] .'</TD>
+                 <TR>');
+      }
+      print('</TABLE>');
+
+    // END OF RIGHT COLUMN on the curation page
+    print('</TD>
+        </TR>
+    </TABLE>' . "\n");
 
     print('      <BR><BR>' . "\n\n" .
           '      <DIV id="viewentryDiv">' . "\n" .
