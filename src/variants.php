@@ -630,7 +630,6 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && !ACTION) {
             );
         }
 
-
         $aData = array();
         foreach ($aConfig as $sCategory => $aRules) {
             $aData[$sCategory] = array();
@@ -650,6 +649,28 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && !ACTION) {
 
             $aCount = $_DB->query($sSQL, array())->rowCount();
             $aData[$sCategory]['total'] = $aCount;
+
+            // TOTAL number of affected individuals in this database
+            $sSQL = 'SELECT COUNT(s.individualid) AS total_affected
+                     FROM ' . TABLE_INDIVIDUALS . ' i 
+                     JOIN ' . TABLE_SCREENINGS . ' s ON (s.individualid = i.id AND i.`Individual/Affected` = "affected")
+                     LEFT JOIN ' . TABLE_IND2GP . ' i2gp ON (i2gp.individualid = i.id) 
+                     WHERE ' . $aRules['condition'] . ' 
+                     GROUP BY s.individualid';
+
+            $aCount = $_DB->query($sSQL, array())->rowCount();
+            $aData[$sCategory]['total_affected'] = $aCount;
+
+            // TOTAL number of affected individuals in this database
+            $sSQL = 'SELECT COUNT(s.individualid) AS total_not_affected
+                     FROM ' . TABLE_INDIVIDUALS . ' i 
+                     JOIN ' . TABLE_SCREENINGS . ' s ON (s.individualid = i.id AND i.`Individual/Affected` = "not affected")
+                     LEFT JOIN ' . TABLE_IND2GP . ' i2gp ON (i2gp.individualid = i.id) 
+                     WHERE ' . $aRules['condition'] . ' 
+                     GROUP BY s.individualid';
+
+            $aCount = $_DB->query($sSQL, array())->rowCount();
+            $aData[$sCategory]['total_not_affected'] = $aCount;
 
             // Number of individuals with this variant
             $sSQL = 'SELECT COUNT(s.individualid) AS count_dbid 
@@ -677,11 +698,13 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && !ACTION) {
     }
 
     print('<BR><TABLE width="600px" class="data">');
-    print('<TR><TH colspan="5" style="font-size : 13px;">Observation Counts</TH></TR>');
+    print('<TR><TH colspan="7" style="font-size : 13px;">Observation Counts</TH></TR>');
     print('<TR>
                <TH>Category</TH>
                <TH>Value</TH>
                <TH>Total # Individuals</TH>
+               <TH># of Affected Individuals</TH>
+               <TH># of Unaffected Individuals</TH>
                <TH># Individuals with this variant</TH>
                <TH>Percentage (%)</TH>
            </TR>');
@@ -690,6 +713,8 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && !ACTION) {
                <TD>' . $aCatData['label'] . '</TD>
                <TD>' . implode(', ', $aCatData['values']) . '</TD>
                <TD>' . $aCatData['total'] .'</TD>
+               <TD>' . $aCatData['total_affected'] .'</TD>
+               <TD>' . $aCatData['total_not_affected'] .'</TD>
                <TD>' . $aCatData['count_dbid'] .'</TD>
                <TD>' . $aCatData['percentage'] .'</TD>
            <TR>');
