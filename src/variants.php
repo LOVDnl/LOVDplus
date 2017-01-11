@@ -518,21 +518,25 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && !ACTION) {
     $zResult = $_DB->query($sSQL)->fetchAssoc();
     $sObscountJson = $zResult['obscount_json'];
 
-print_r($sObscountJson);
-
     print('
         </TD>
           <TD valign="top" id="obscount_viewlist" style="padding-left: 10px;">' . "\n");
 
     if (empty($sObscountJson)) {
 
-        $sSQL = 'SELECT i.*, s.*, vog.*
-                FROM ' . TABLE_VARIANTS . ' AS vog ' .
-               'JOIN ' . TABLE_SCR2VAR . ' AS s2v ON (vog.id = s2v.variantid AND vog.id = "' . $nID . '") ' .
-               'JOIN ' . TABLE_SCREENINGS . ' AS s ON (s.id = s2v.screeningid) ' .
-               'JOIN ' . TABLE_INDIVIDUALS . ' AS i ON (s.individualid = i.id) ' ;
+        $sSQL = 'SELECT i.*, s.*, vog.*, 
+                 GROUP_CONCAT(DISTINCT i2gp.genepanelid ORDER BY i2gp.genepanelid SEPARATOR ",") AS genepanel_ids, 
+                 GROUP_CONCAT(DISTINCT gp.name ORDER BY i2gp.genepanelid SEPARATOR ",") AS genepanel_names 
+                 FROM ' . TABLE_VARIANTS . ' AS vog 
+                 JOIN ' . TABLE_SCR2VAR . ' AS s2v ON (vog.id = s2v.variantid AND vog.id = "' . $nID . '") 
+                 JOIN ' . TABLE_SCREENINGS . ' AS s ON (s.id = s2v.screeningid) 
+                 JOIN ' . TABLE_INDIVIDUALS . ' AS i ON (s.individualid = i.id) 
+                 LEFT JOIN ' . TABLE_IND2GP . ' AS i2gp ON (i.id = i2gp.individualid) 
+                 LEFT JOIN ' . TABLE_GENE_PANELS . ' AS gp ON (i2gp.genepanelid = gp.id) 
+                 GROUP BY i.id';
 
         $aIndividual = $_DB->query($sSQL)->fetchAssoc();
+
         $aConfig = array(
             'Individual/Gender' => array(
                 'label' => 'Gender',
@@ -590,65 +594,107 @@ print_r($sObscountJson);
             )
         );
 
-        $aData = array();
-        foreach ($aConfig as $sCategory => $aRules) {
-          $aData[$sCategory] = array();
-          $aData[$sCategory]['label'] = $aRules['label'];
-          $aData[$sCategory]['values'] = array();
-          foreach ($aRules['fields'] as $sField) {
-              $aData[$sCategory]['values'][] = $aIndividual[$sField];
-          }
-
-          // TOTAL population in this database
-          $sSQL = 'SELECT COUNT(s.individualid) AS total
-            FROM ' . TABLE_INDIVIDUALS . ' i 
-            JOIN ' . TABLE_SCREENINGS . ' s ON (s.individualid = i.id)
-            WHERE ' . $aRules['condition'] . ' 
-            GROUP BY s.individualid';
-
-          $aCount = $_DB->query($sSQL, array())->rowCount();
-          $aData[$sCategory]['total'] = $aCount;
-
-          // Number of individuals with this variant
-          $sSQL = 'SELECT COUNT(s.individualid) AS count_dbid 
-            FROM ' . TABLE_VARIANTS . ' AS vog ' .
-           'JOIN ' . TABLE_SCR2VAR . ' AS s2v ON (vog.id = s2v.variantid AND vog.`VariantOnGenome/DBID` = "' . $aIndividual['VariantOnGenome/DBID'] . '") ' .
-           'JOIN ' . TABLE_SCREENINGS . ' AS s ON (s.id = s2v.screeningid) ' .
-           'JOIN ' . TABLE_INDIVIDUALS . ' AS i ON (s.individualid = i.id) 
-            WHERE ' . $aRules['condition'] . ' 
-            GROUP BY s.individualid';
-
-          $aCountDBID = $_DB->query($sSQL)->rowCount();
-          $aData[$sCategory]['count_dbid'] = $aCountDBID;
+        $aGenepanelIds = array();
+        $aGenepanelNames = array();
+        if (!empty($aIndividual['genepanel_ids']) && !empty($aIndividual['genepanel_names'])) {
+            $aGenepanelIds = explode(',', $aIndividual['genepanel_ids']);
+            $aGenepanelNames = explode(',', $aIndividual['genepanel_names']);
         }
 
-          $sObscountJson = json_encode($aData);
-          $sSQL = "UPDATE " . TABLE_VARIANTS . " SET obscount_json = '$sObscountJson' WHERE id = ?";
-          $zResult = $_DB->query($sSQL, array($nID));
+        foreach ($aGenepanelIds as $nIndex => $sGenepanelId) {
+            $aIndividual['genepanel_' . $sGenepanelId] = $aGenepanelNames[$nIndex];
 
-      } else {
+            $aConfig['genepanel_all_' . $sGenepanelId] = array(
+                'label' => 'Gene Panel',
+                'table' => TABLE_IND2GP,
+                'fields' => array('genepanel_' . $sGenepanelId),
+                'condition' => 'genepanelid = "' . $sGenepanelId . '"'
+            );
 
-          $aData = json_decode($sObscountJson, true);
-      }
+            $aConfig['genepanel_gender_' . $sGenepanelId] = array(
+                'label' => 'Gene Panel and Gender',
+                'table' => TABLE_IND2GP,
+                'fields' => array('genepanel_' . $sGenepanelId, 'Individual/Gender'),
+                'condition' => 'genepanelid = "' . $sGenepanelId . '"'
+                             . ' AND '
+                             . '`Individual/Gender` = "' . $aIndividual['Individual/Gender'] . '"'
+            );
 
-      print('<BR><TABLE width="600px" class="data">');
-      print('<TR><TH colspan="4" style="font-size : 13px;">Observation Counts</TH></TR>');
-      print('    <TR>
-                   <TH>Category</TH>
-                   <TH>Value</TH>
-                   <TH>Total # Individuals</TH>
-                   <TH># Individuals with this variant</TH>
-                 </TR>'
-           );
-      foreach ($aData as $sCategory => $aCatData) {
-          print('<TR>
-                   <TD>' . $aCatData['label'] . '</TD>
-                   <TD>' . implode(', ', $aCatData['values']) . '</TD>
-                   <TD>' . $aCatData['total'] .'</TD>
-                   <TD>' . $aCatData['count_dbid'] .'</TD>
-                 <TR>');
-      }
-      print('</TABLE>');
+            $aConfig['genepanel_ethnic_' . $sGenepanelId] = array(
+                'label' => 'Gene Panel and Ethinicity',
+                'table' => TABLE_IND2GP,
+                'fields' => array('genepanel_' . $sGenepanelId, 'Individual/Origin/Ethnic'),
+                'condition' => 'genepanelid = "' . $sGenepanelId . '"'
+                             . ' AND '
+                             . '`Individual/Origin/Ethnic` = "' . $aIndividual['Individual/Origin/Ethnic'] . '"'
+            );
+        }
+
+
+        $aData = array();
+        foreach ($aConfig as $sCategory => $aRules) {
+            $aData[$sCategory] = array();
+            $aData[$sCategory]['label'] = $aRules['label'];
+            $aData[$sCategory]['values'] = array();
+            foreach ($aRules['fields'] as $sField) {
+                $aData[$sCategory]['values'][] = $aIndividual[$sField];
+            }
+
+            // TOTAL population in this database
+            $sSQL = 'SELECT COUNT(s.individualid) AS total
+                     FROM ' . TABLE_INDIVIDUALS . ' i 
+                     JOIN ' . TABLE_SCREENINGS . ' s ON (s.individualid = i.id)
+                     LEFT JOIN ' . TABLE_IND2GP . ' i2gp ON (i2gp.individualid = i.id) 
+                     WHERE ' . $aRules['condition'] . ' 
+                     GROUP BY s.individualid';
+
+            $aCount = $_DB->query($sSQL, array())->rowCount();
+            $aData[$sCategory]['total'] = $aCount;
+
+            // Number of individuals with this variant
+            $sSQL = 'SELECT COUNT(s.individualid) AS count_dbid 
+                     FROM ' . TABLE_VARIANTS . ' AS vog 
+                     JOIN ' . TABLE_SCR2VAR . ' AS s2v ON (vog.id = s2v.variantid AND vog.`VariantOnGenome/DBID` = "' . $aIndividual['VariantOnGenome/DBID'] . '") 
+                     JOIN ' . TABLE_SCREENINGS . ' AS s ON (s.id = s2v.screeningid) 
+                     JOIN ' . TABLE_INDIVIDUALS . ' AS i ON (s.individualid = i.id) 
+                     LEFT JOIN ' . TABLE_IND2GP . ' i2gp ON (i2gp.individualid = i.id) 
+                     WHERE ' . $aRules['condition'] . ' 
+                     GROUP BY s.individualid';
+
+            $aCountDBID = $_DB->query($sSQL)->rowCount();
+            $aData[$sCategory]['count_dbid'] = $aCountDBID;
+
+            if (!empty($aData[$sCategory]['total'])) {
+                $aData[$sCategory]['percentage'] = round((float) $aData[$sCategory]['count_dbid'] / (float) $aData[$sCategory]['total'] * 100, 0);
+            }
+        }
+
+        $sObscountJson = json_encode($aData);
+        $sSQL = "UPDATE " . TABLE_VARIANTS . " SET obscount_json = '$sObscountJson' WHERE id = ?";
+        $zResult = $_DB->query($sSQL, array($nID));
+    } else {
+        $aData = json_decode($sObscountJson, true);
+    }
+
+    print('<BR><TABLE width="600px" class="data">');
+    print('<TR><TH colspan="5" style="font-size : 13px;">Observation Counts</TH></TR>');
+    print('<TR>
+               <TH>Category</TH>
+               <TH>Value</TH>
+               <TH>Total # Individuals</TH>
+               <TH># Individuals with this variant</TH>
+               <TH>Percentage (%)</TH>
+           </TR>');
+    foreach ($aData as $sCategory => $aCatData) {
+    print('<TR>
+               <TD>' . $aCatData['label'] . '</TD>
+               <TD>' . implode(', ', $aCatData['values']) . '</TD>
+               <TD>' . $aCatData['total'] .'</TD>
+               <TD>' . $aCatData['count_dbid'] .'</TD>
+               <TD>' . $aCatData['percentage'] .'</TD>
+           <TR>');
+    }
+    print('</TABLE>');
 
     // END OF RIGHT COLUMN on the curation page
     print('</TD>
