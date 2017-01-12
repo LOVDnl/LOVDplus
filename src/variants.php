@@ -514,217 +514,56 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && !ACTION) {
     lovd_showJGNavigation($aNavigation, 'Variants');
 
     // RIGHT COLUMN on the curation page
-    $sSQL = 'SELECT obscount_json FROM ' . TABLE_VARIANTS . ' WHERE id = "' . $nID . '"';
-    $zResult = $_DB->query($sSQL)->fetchAssoc();
-    $sObscountJson = $zResult['obscount_json'];
-
     print('
         </TD>
           <TD valign="top" id="obscount_viewlist" style="padding-left: 10px;">' . "\n");
 
-    if (empty($sObscountJson)) {
-
-        $sSQL = 'SELECT i.*, s.*, vog.*, 
-                 GROUP_CONCAT(DISTINCT i2gp.genepanelid ORDER BY i2gp.genepanelid SEPARATOR ",") AS genepanel_ids, 
-                 GROUP_CONCAT(DISTINCT gp.name ORDER BY i2gp.genepanelid SEPARATOR ",") AS genepanel_names 
-                 FROM ' . TABLE_VARIANTS . ' AS vog 
-                 JOIN ' . TABLE_SCR2VAR . ' AS s2v ON (vog.id = s2v.variantid AND vog.id = "' . $nID . '") 
-                 JOIN ' . TABLE_SCREENINGS . ' AS s ON (s.id = s2v.screeningid) 
-                 JOIN ' . TABLE_INDIVIDUALS . ' AS i ON (s.individualid = i.id) 
-                 LEFT JOIN ' . TABLE_IND2GP . ' AS i2gp ON (i.id = i2gp.individualid) 
-                 LEFT JOIN ' . TABLE_GENE_PANELS . ' AS gp ON (i2gp.genepanelid = gp.id) 
-                 GROUP BY i.id';
-
-        $aIndividual = $_DB->query($sSQL)->fetchAssoc();
-
-        $aConfig = array(
-            'Individual/Gender' => array(
-                'label' => 'Gender',
-                'table' => TABLE_INDIVIDUALS,
-                'fields' => array('Individual/Gender'),
-                'condition' => '`Individual/Gender` = "' . $aIndividual['Individual/Gender'] . '"'
-            ),
-            'Individual/Origin/Ethnic' => array(
-                'label' => 'Ethnic',
-                'table' => TABLE_INDIVIDUALS,
-                'fields' => array('Individual/Origin/Ethnic'),
-                'condition' => '`Individual/Origin/Ethnic` = "' . $aIndividual['Individual/Origin/Ethnic'] . '"'
-            ),
-            'Screening/Sample/Type' => array(
-                'label' => 'Sample Type',
-                'table' => TABLE_SCREENINGS,
-                'fields' => array('Screening/Sample/Type'),
-                'condition' => '`Screening/Sample/Type` = "' . $aIndividual['Screening/Sample/Type'] . '"'
-            ),
-            'Screening/Library_preparation' => array(
-                'label' => 'Capture Method',
-                'table' => TABLE_SCREENINGS,
-                'fields' => array('Screening/Library_preparation'),
-                'condition' => '`Screening/Library_preparation` = "' . $aIndividual['Screening/Library_preparation'] . '"'
-            ),
-            'Screening/Sequencing_software' => array(
-                'label' => 'Sequencing Technology',
-                'table' => TABLE_SCREENINGS,
-                'fields' => array('Screening/Sequencing_software'),
-                'condition' => '`Screening/Sequencing_Software` = "' . $aIndividual['Screening/Sequencing_software'] . '"'
-            ),
-            'Screening/Analysis_type' => array(
-                'label' => 'Analysis Pipeline',
-                'table' => TABLE_SCREENINGS,
-                'fields' => array('Screening/Analysis_type'),
-                'condition' => '`Screening/Analysis_type` = "' . $aIndividual['Screening/Analysis_type'] . '"'
-            ),
-            'Screening/Library_preparation&Screening/Sequencing_software' => array(
-                'label' => 'Same Capture Method and Sequencing Technology',
-                'table' => TABLE_SCREENINGS,
-                'fields' => array('Screening/Library_preparation', 'Screening/Sequencing_software'),
-                'condition' => '`Screening/Library_preparation` = "' . $aIndividual['Screening/Library_preparation'] . '"'
-                             . ' AND '
-                             . '`Screening/Sequencing_Software` = "' . $aIndividual['Screening/Sequencing_software'] . '"'
-            ),
-            'Screening/Library_preparation&Screening/Sequencing_software&Screening/Analysis_type' => array(
-                'label' => 'Same Capture Method, Sequencing Technology, and Analysis Pipeline',
-                'table' => TABLE_SCREENINGS,
-                'fields' => array('Screening/Library_preparation', 'Screening/Sequencing_software', 'Screening/Analysis_type'),
-                'condition' => '`Screening/Library_preparation` = "' . $aIndividual['Screening/Library_preparation'] . '"'
-                             . ' AND '
-                             . '`Screening/Sequencing_Software` = "' . $aIndividual['Screening/Sequencing_software'] . '"'
-                             . ' AND '
-                             . '`Screening/Analysis_type` = "' . $aIndividual['Screening/Analysis_type'] . '"'
-            )
-        );
-
-        $aGenepanelIds = array();
-        $aGenepanelNames = array();
-        if (!empty($aIndividual['genepanel_ids']) && !empty($aIndividual['genepanel_names'])) {
-            $aGenepanelIds = explode(',', $aIndividual['genepanel_ids']);
-            $aGenepanelNames = explode(',', $aIndividual['genepanel_names']);
-        }
-
-        foreach ($aGenepanelIds as $nIndex => $sGenepanelId) {
-            $aIndividual['genepanel_' . $sGenepanelId] = $aGenepanelNames[$nIndex];
-
-            $aConfig['genepanel_all_' . $sGenepanelId] = array(
-                'label' => 'Gene Panel',
-                'table' => TABLE_IND2GP,
-                'fields' => array('genepanel_' . $sGenepanelId),
-                'condition' => 'genepanelid = "' . $sGenepanelId . '"'
-            );
-
-            $aConfig['genepanel_gender_' . $sGenepanelId] = array(
-                'label' => 'Gene Panel and Gender',
-                'table' => TABLE_IND2GP,
-                'fields' => array('genepanel_' . $sGenepanelId, 'Individual/Gender'),
-                'condition' => 'genepanelid = "' . $sGenepanelId . '"'
-                             . ' AND '
-                             . '`Individual/Gender` = "' . $aIndividual['Individual/Gender'] . '"'
-            );
-
-            $aConfig['genepanel_ethnic_' . $sGenepanelId] = array(
-                'label' => 'Gene Panel and Ethinicity',
-                'table' => TABLE_IND2GP,
-                'fields' => array('genepanel_' . $sGenepanelId, 'Individual/Origin/Ethnic'),
-                'condition' => 'genepanelid = "' . $sGenepanelId . '"'
-                             . ' AND '
-                             . '`Individual/Origin/Ethnic` = "' . $aIndividual['Individual/Origin/Ethnic'] . '"'
-            );
-        }
-
-        $aData = array();
-        foreach ($aConfig as $sCategory => $aRules) {
-            $aData[$sCategory] = array();
-            $aData[$sCategory]['label'] = $aRules['label'];
-            $aData[$sCategory]['values'] = array();
-            foreach ($aRules['fields'] as $sField) {
-                $aData[$sCategory]['values'][] = $aIndividual[$sField];
-            }
-
-            // TOTAL population in this database
-            $sSQL = 'SELECT COUNT(s.individualid) AS total
-                     FROM ' . TABLE_INDIVIDUALS . ' i 
-                     JOIN ' . TABLE_SCREENINGS . ' s ON (s.individualid = i.id)
-                     LEFT JOIN ' . TABLE_IND2GP . ' i2gp ON (i2gp.individualid = i.id) 
-                     WHERE ' . $aRules['condition'] . ' 
-                     GROUP BY s.individualid';
-
-            $aCount = $_DB->query($sSQL, array())->rowCount();
-            $aData[$sCategory]['total'] = $aCount;
-
-            // TOTAL number of affected individuals in this database
-            $sSQL = 'SELECT COUNT(s.individualid) AS total_affected
-                     FROM ' . TABLE_INDIVIDUALS . ' i 
-                     JOIN ' . TABLE_SCREENINGS . ' s ON (s.individualid = i.id AND i.`Individual/Affected` = "affected")
-                     LEFT JOIN ' . TABLE_IND2GP . ' i2gp ON (i2gp.individualid = i.id) 
-                     WHERE ' . $aRules['condition'] . ' 
-                     GROUP BY s.individualid';
-
-            $aCount = $_DB->query($sSQL, array())->rowCount();
-            $aData[$sCategory]['total_affected'] = $aCount;
-
-            // TOTAL number of affected individuals in this database
-            $sSQL = 'SELECT COUNT(s.individualid) AS total_not_affected
-                     FROM ' . TABLE_INDIVIDUALS . ' i 
-                     JOIN ' . TABLE_SCREENINGS . ' s ON (s.individualid = i.id AND i.`Individual/Affected` = "not affected")
-                     LEFT JOIN ' . TABLE_IND2GP . ' i2gp ON (i2gp.individualid = i.id) 
-                     WHERE ' . $aRules['condition'] . ' 
-                     GROUP BY s.individualid';
-
-            $aCount = $_DB->query($sSQL, array())->rowCount();
-            $aData[$sCategory]['total_not_affected'] = $aCount;
-
-            // Number of individuals with this variant
-            $sSQL = 'SELECT COUNT(s.individualid) AS count_dbid 
-                     FROM ' . TABLE_VARIANTS . ' AS vog 
-                     JOIN ' . TABLE_SCR2VAR . ' AS s2v ON (vog.id = s2v.variantid AND vog.`VariantOnGenome/DBID` = "' . $aIndividual['VariantOnGenome/DBID'] . '") 
-                     JOIN ' . TABLE_SCREENINGS . ' AS s ON (s.id = s2v.screeningid) 
-                     JOIN ' . TABLE_INDIVIDUALS . ' AS i ON (s.individualid = i.id) 
-                     LEFT JOIN ' . TABLE_IND2GP . ' i2gp ON (i2gp.individualid = i.id) 
-                     WHERE ' . $aRules['condition'] . ' 
-                     GROUP BY s.individualid';
-
-            $aCountDBID = $_DB->query($sSQL)->rowCount();
-            $aData[$sCategory]['count_dbid'] = $aCountDBID;
-
-            if (!empty($aData[$sCategory]['total'])) {
-                $aData[$sCategory]['percentage'] = round((float) $aData[$sCategory]['count_dbid'] / (float) $aData[$sCategory]['total'] * 100, 0);
-            }
-        }
-
-        $sObscountJson = json_encode($aData);
-        $sSQL = "UPDATE " . TABLE_VARIANTS . " SET obscount_json = '$sObscountJson' WHERE id = ?";
-        $zResult = $_DB->query($sSQL, array($nID));
-    } else {
-        $aData = json_decode($sObscountJson, true);
+    require_once ROOT_PATH . 'class/ObservationCounts.php';
+    $aColumns = array(
+        'label' => 'Category',
+        'values' => 'Value',
+        'total_individuals' => 'Total # Individuals',
+        'num_affected' => '# of Affected Individuals',
+        'num_not_affected' => '# of Unaffected Individuals',
+        'num_ind_with_variant' => '# of Individuals with this variant',
+        'percentage' => 'Percentage (%)'
+    );
+    $zObsCount = new LOVD_ObservationCounts($nID, array(), $aColumns);
+    $aData = $zObsCount->getData();
+    if (empty($aData)) {
+        $aData = $zObsCount->buildData();
     }
 
-    print('<BR><TABLE width="600px" class="data">');
-    print('<TR><TH colspan="7" style="font-size : 13px;">Observation Counts</TH></TR>');
-    print('<TR>
-               <TH>Category</TH>
-               <TH>Value</TH>
-               <TH>Total # Individuals</TH>
-               <TH># of Affected Individuals</TH>
-               <TH># of Unaffected Individuals</TH>
-               <TH># Individuals with this variant</TH>
-               <TH>Percentage (%)</TH>
-           </TR>');
-    foreach ($aData as $sCategory => $aCatData) {
-    print('<TR>
-               <TD>' . $aCatData['label'] . '</TD>
-               <TD>' . implode(', ', $aCatData['values']) . '</TD>
-               <TD>' . $aCatData['total'] .'</TD>
-               <TD>' . $aCatData['total_affected'] .'</TD>
-               <TD>' . $aCatData['total_not_affected'] .'</TD>
-               <TD>' . $aCatData['count_dbid'] .'</TD>
-               <TD>' . $aCatData['percentage'] .'</TD>
-           <TR>');
+    if (!empty($aData)) {
+        print('<BR><TABLE width="600px" class="data">');
+        print('<TR><TH colspan="7" style="font-size : 13px;">Observation Counts</TH></TR>');
+        print('<TR>');
+        foreach ($aColumns as $sColumnName) {
+            print('<TH>' . $sColumnName . '</TH>');
+        }
+        print ('</TR>');
+        foreach ($aData as $sCategory => $aValues) {
+            print('<TR>');
+            foreach ($aColumns as $sKey => $sColumnName) {
+                $sValue = '-';
+                if (isset($aValues[$sKey])) {
+                    $sValue = $aValues[$sKey];
+                    if (is_array($aValues[$sKey])) {
+                        $sValue = implode(', ', $aValues[$sKey]);
+                    }
+                }
+                print('<TD>' . $sValue . '</TD>');
+            }
+            print('</TR>');
+        }
+        print('</TABLE>');
     }
-    print('</TABLE>');
 
     // END OF RIGHT COLUMN on the curation page
     print('</TD>
         </TR>
     </TABLE>' . "\n");
+
 
     print('      <BR><BR>' . "\n\n" .
           '      <DIV id="viewentryDiv">' . "\n" .
