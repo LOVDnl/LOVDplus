@@ -43,7 +43,7 @@ class LOVD_ObservationCounts
     protected $aCategories = array();
     protected $aColumns = array();
 
-    function __construct ($nVariantId, $aCategories = array(), $aColumns = array()) {
+    function __construct ($nVariantId) {
 
         $this->nVariantId = $nVariantId;
         $this->loadExistingData();
@@ -217,7 +217,7 @@ class LOVD_ObservationCounts
         return $this->aIndividual;
     }
 
-    public function buildData() {
+    public function buildData($aColumns, $aCategories) {
         global $_DB;
 
         $this->aIndividual = $this->initIndividualData();

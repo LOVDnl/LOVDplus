@@ -102,7 +102,18 @@ $_INSTANCE_CONFIG['custom_object'] = array(
 
 
 
-
+$_INSTANCE_CONFIG['observation_counts'] = array(
+    'columns' => array(
+        'label' => 'Category',
+        'values' => 'Value',
+        'total_individuals' => 'Total # Individuals',
+        'num_affected' => '# of Affected Individuals',
+        'num_not_affected' => '# of Unaffected Individuals',
+        'num_ind_with_variant' => '# of Individuals with this variant',
+        'percentage' => 'Percentage (%)'
+    ),
+    'categories' => array()
+);
 
 
 

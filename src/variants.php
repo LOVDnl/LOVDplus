@@ -513,56 +513,53 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && !ACTION) {
     }
     lovd_showJGNavigation($aNavigation, 'Variants');
 
-    // RIGHT COLUMN on the curation page
-    print('
-        </TD>
-          <TD valign="top" id="obscount_viewlist" style="padding-left: 10px;">' . "\n");
+    if (!empty($_INSTANCE_CONFIG['observation_counts'])) {
+        // RIGHT COLUMN on the curation page
+        print('
+            </TD>
+              <TD valign="top" id="obscount_viewlist" style="padding-left: 10px;">' . "\n");
 
-    require_once ROOT_PATH . 'class/ObservationCounts.php';
-    $aColumns = array(
-        'label' => 'Category',
-        'values' => 'Value',
-        'total_individuals' => 'Total # Individuals',
-        'num_affected' => '# of Affected Individuals',
-        'num_not_affected' => '# of Unaffected Individuals',
-        'num_ind_with_variant' => '# of Individuals with this variant',
-        'percentage' => 'Percentage (%)'
-    );
-    $zObsCount = new LOVD_ObservationCounts($nID, array(), $aColumns);
-    $aData = $zObsCount->getData();
-    if (empty($aData)) {
-        $aData = $zObsCount->buildData();
-    }
-
-    if (!empty($aData)) {
-        print('<BR><TABLE width="600px" class="data">');
-        print('<TR><TH colspan="7" style="font-size : 13px;">Observation Counts</TH></TR>');
-        print('<TR>');
-        foreach ($aColumns as $sColumnName) {
-            print('<TH>' . $sColumnName . '</TH>');
+        require_once ROOT_PATH . 'class/ObservationCounts.php';
+        $aColumns = (!empty($_INSTANCE_CONFIG['observation_counts']['columns'])? $_INSTANCE_CONFIG['observation_counts']['columns'] : array());
+        $aCategories = (!empty($_INSTANCE_CONFIG['observation_counts']['categories'])? $_INSTANCE_CONFIG['observation_counts']['categories'] : array());
+        $zObsCount = new LOVD_ObservationCounts($nID, array(), $aColumns);
+        $aData = $zObsCount->getData();
+        if (empty($aData)) {
+            $aData = $zObsCount->buildData($aColumns, $aCategories);
         }
-        print ('</TR>');
-        foreach ($aData as $sCategory => $aValues) {
+
+        if (!empty($aData)) {
+            print('<BR><TABLE width="600px" class="data">');
+            print('<TR><TH colspan="7" style="font-size : 13px;">Observation Counts</TH></TR>');
             print('<TR>');
-            foreach ($aColumns as $sKey => $sColumnName) {
-                $sValue = '-';
-                if (isset($aValues[$sKey])) {
-                    $sValue = $aValues[$sKey];
-                    if (is_array($aValues[$sKey])) {
-                        $sValue = implode(', ', $aValues[$sKey]);
-                    }
-                }
-                print('<TD>' . $sValue . '</TD>');
+            foreach ($aColumns as $sColumnName) {
+                print('<TH>' . $sColumnName . '</TH>');
             }
-            print('</TR>');
+            print ('</TR>');
+            foreach ($aData as $sCategory => $aValues) {
+                print('<TR>');
+                foreach ($aColumns as $sKey => $sColumnName) {
+                    $sValue = '-';
+                    if (isset($aValues[$sKey])) {
+                        $sValue = $aValues[$sKey];
+                        if (is_array($aValues[$sKey])) {
+                            $sValue = implode(', ', $aValues[$sKey]);
+                        }
+                    }
+                    print('<TD>' . $sValue . '</TD>');
+                }
+                print('</TR>');
+            }
+            print('</TABLE>');
+
         }
-        print('</TABLE>');
+
+        // END OF RIGHT COLUMN on the curation page
+        print('</TD>
+            </TR>
+        </TABLE>' . "\n");
     }
 
-    // END OF RIGHT COLUMN on the curation page
-    print('</TD>
-        </TR>
-    </TABLE>' . "\n");
 
 
     print('      <BR><BR>' . "\n\n" .
