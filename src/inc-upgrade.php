@@ -595,6 +595,7 @@ if ($sCalcVersionFiles != $sCalcVersionDB) {
                  '3.0-12v' =>
                      array(
                          'INSERT INTO ' . TABLE_COLS . ' VALUES ("VariantOnGenome/Frequency/ExAC", 255, 100, 0, 1, 0, "ExAC AF", "", "Allele frequency from the ExAC project.", "Allele frequency from the ExAC project.", "FLOAT UNSIGNED", "ExAC allele frequency||text|6", "", "", 0, 0, 1, 0, NOW(), NULL, NULL)',
+                         'ALTER TABLE ' . TABLE_VARIANTS . ' ADD COLUMN `obscount_json` TEXT NULL AFTER `confirmation_statusid`'
                      ),
              );
 
