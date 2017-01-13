@@ -38,6 +38,7 @@ class LOVD_ObservationCounts
     protected $aData = array();
     protected $aIndividual = array();
     protected $nVariantId = null;
+    protected $nTimeGenerated = null;
 
     protected $aConfig = array();
     protected $aCategories = array();
@@ -53,14 +54,22 @@ class LOVD_ObservationCounts
         return $this->aData;
     }
 
+    public function getTimeGenerated() {
+        return $this->nTimeGenerated;
+    }
+
     protected function loadExistingData() {
         global $_DB;
 
-        $sSQL = 'SELECT obscount_json FROM ' . TABLE_VARIANTS . ' WHERE id = "' . $this->nVariantId . '"';
+        $sSQL = 'SELECT obscount_json, obscount_generated FROM ' . TABLE_VARIANTS . ' WHERE id = "' . $this->nVariantId . '"';
         $zResult = $_DB->query($sSQL)->fetchAssoc();
 
         if (!empty($zResult['obscount_json'])) {
             $this->aData = json_decode($zResult['obscount_json'], true);
+        }
+
+        if (!empty($zResult['obscount_generated'])) {
+            $this->nTimeGenerated = strtotime($zResult['obscount_generated']);
         }
 
         return $this->aData;
@@ -163,6 +172,7 @@ class LOVD_ObservationCounts
                 if (isset($aConfig[$sCat])) {
                     $this->aCategories[$sCat] = $aConfig[$sCat];
                 } elseif (strpos($sCat, '*') !== false) {
+                    // genepanel category is one example that required pattern matching
                     foreach ($aConfig as $sKey => $aOneConfig) {
                         if (preg_match('/'.$sCat.'/', $sKey)) {
                             $this->aCategories[$sKey] = $aConfig[$sKey];
@@ -284,11 +294,12 @@ class LOVD_ObservationCounts
             }
         }
 
+        // Save the built data into the database so that we can reuse next time as well as keeping history
         $sObscountJson = json_encode($aData);
-        $sSQL = "UPDATE " . TABLE_VARIANTS . " SET obscount_json = '$sObscountJson' WHERE id = ?";
+        $sSQL = "UPDATE " . TABLE_VARIANTS . " SET obscount_json = '$sObscountJson', obscount_generated = NOW() WHERE id = ?";
         $_DB->query($sSQL, array($this->nVariantId));
 
-        $this->aData = $aData;
+        $this->aData = $this->loadExistingData();
         return $this->aData;
 
     }
