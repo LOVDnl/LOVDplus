@@ -523,28 +523,19 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && !ACTION) {
         $aCategories = (!empty($_INSTANCE_CONFIG['observation_counts']['categories'])? $_INSTANCE_CONFIG['observation_counts']['categories'] : array());
         $zObsCount = new LOVD_ObservationCounts($nID);
         $aData = $zObsCount->getData();
-        if (empty($aData)) {
-            $aData = $zObsCount->buildData($aColumns, $aCategories);
-        }
 
-        if (!empty($aData)) {
-            $sRefreshLink = '';
+        $sRefreshLink = '<SPAN id="obscount-refresh"> | <A href="#" onClick="lovd_generate_obscount(\'' . $nID .'\');return false;">Refresh Data</A></SPAN>';
+        $sLoading = '<SPAN id="obscount-loading"> | Updating data...</SPAN>';
 
-            $sRefreshLink = '<SPAN id="obscount-refresh"> | <A href="#" onClick="lovd_generate_obscount(\'' . $nID .'\');return false;">Refresh Data</A></SPAN>';
-            $sLoading = '<SPAN id="obscount-loading"> | Updating data...</SPAN>';
-
-            print('<TABLE width="600px" class="data">');
-            print('<THEAD>');
-            print('<TR><TH colspan="'. count($aColumns) .'" style="font-size : 13px;">Observation Counts</TH></TR>');
-            print('<TR id="obscount-info"><TH colspan="'. count($aColumns) .'">Data generated <SPAN id="obscount-timestamp">' . date('d M Y h:ia', $zObsCount->getTimeGenerated()) . '</SPAN>' . $sRefreshLink . $sLoading . '</TH></TR>');
-            print('<TR id="obscount-feedback"><TH colspan="'. count($aColumns) .'"></TH></TR>');
-            print('<TR id="obscount-header"></TR>');
-            print('</THEAD>');
-            print('<TBODY id="obscount-data">');
-            print('</TBODY>');
-            print('</TABLE>');
-
-        }
+        print('<TABLE width="600px" class="data">');
+        print('<THEAD>');
+        print('<TR><TH colspan="'. count($aColumns) .'" style="font-size : 13px;">Observation Counts</TH></TR>');
+        print('<TR id="obscount-info" style="display: none;"><TH colspan="'. count($aColumns) .'"></TH></TR>');
+        print('<TR id="obscount-feedback"><TH colspan="'. count($aColumns) .'">Loading data...</TH></TR>');
+        print('<TR id="obscount-header"></TR>');
+        print('</THEAD>');
+        print('<TBODY id="obscount-data"></TBODY>');
+        print('</TABLE>');
 
         // END OF RIGHT COLUMN on the curation page
         print('</TD>
@@ -554,8 +545,7 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && !ACTION) {
 ?>
         <SCRIPT type="text/javascript">
         $( function () {
-            $('#obscount-loading').hide();
-            $('#obscount-feedback').hide();
+            load_obscount_info('<?php echo ($zObsCount->getTimeGenerated()? date('d M Y h:ia', $zObsCount->getTimeGenerated()) : '')?>');
             lovd_load_obscount_table(<?php echo json_encode($aData)?>);
         });
 
@@ -568,11 +558,12 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && !ACTION) {
             var data = { "nVariantId" : nVariantId };
 
             $.post(url, data, function(data) {
-                $('#obscount-loading').hide();
 
+                $('#obscount-loading').hide();
                 jsonData = JSON.parse(data);
+
                 if (jsonData && typeof(jsonData['success']) !== 'undefined') {
-                    $('#obscount-timestamp').html(jsonData['success']['timestamp']);
+                    load_obscount_info(jsonData['success']['timestamp']);
                     lovd_load_obscount_table(JSON.parse(jsonData['success']['data']));
                     lovd_reload_obscount_initial_state();
                 } else {
@@ -590,7 +581,11 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && !ACTION) {
 
         }
 
-        function lovd_load_obscount_table(jsonData) {
+        function lovd_load_obscount_table(aData) {
+            if (aData && aData.length <= 0) {
+                return;
+            }
+
             var aColumns = <?php echo json_encode($aColumns) ?>;
             var sHeader = '';
             for (var sKey in aColumns) {
@@ -600,12 +595,12 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && !ACTION) {
             }
 
             sData = '';
-            for (var sCategory in jsonData) {
-                if (jsonData.hasOwnProperty(sCategory)) {
+            for (var sCategory in aData) {
+                if (aData.hasOwnProperty(sCategory)) {
                     sData += '<TR>';
                     for (var sKey in aColumns) {
                         if (aColumns.hasOwnProperty(sKey)) {
-                            sData += '<TD>' + jsonData[sCategory][sKey] + '</TD>';
+                            sData += '<TD>' + aData[sCategory][sKey] + '</TD>';
                         }
                     }
                     sData += '</TR>';
@@ -614,13 +609,23 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && !ACTION) {
 
             $('#obscount-header').html(sHeader);
             $('#obscount-data').html(sData);
+        }
 
+        function load_obscount_info(timestamp) {
+            if (!timestamp) {
+                var sInfo = 'There is no existing Observation Counts data <SPAN id="obscount-refresh"> | <A href="#" onClick="lovd_generate_obscount(\'<?php echo $nID ?>\');return false;">Generate Data</A></SPAN>';
+            } else {
+                var sInfo = 'Data updated ' + timestamp + ' <SPAN id="obscount-refresh"> | <A href="#" onClick="lovd_generate_obscount(\'<?php echo $nID ?>\');return false;">Refresh Data</A></SPAN>';
+            }
+            $('#obscount-info th').html(sInfo);
+            $('#obscount-info').show();
+            $('#obscount-feedback').hide();
         }
 
         function lovd_reload_obscount_initial_state() {
             $('#obscount-info').show();
-            $('#obscount-header').show();
-            $('#obscount-data').show();
+            $('#obscount-header').fadeTo(1000, 1);
+            $('#obscount-data').fadeTo(1000, 1);
 
             $('#obscount-refresh').show();
             $('#obscount-feedback').hide();
