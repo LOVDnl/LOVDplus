@@ -61,15 +61,15 @@ class LOVD_ObservationCounts
     protected function loadExistingData() {
         global $_DB;
 
-        $sSQL = 'SELECT obscount_json, obscount_generated FROM ' . TABLE_VARIANTS . ' WHERE id = "' . $this->nVariantId . '"';
+        $sSQL = 'SELECT obscount_json, obscount_updated FROM ' . TABLE_VARIANTS . ' WHERE id = "' . $this->nVariantId . '"';
         $zResult = $_DB->query($sSQL)->fetchAssoc();
 
         if (!empty($zResult['obscount_json'])) {
             $this->aData = json_decode($zResult['obscount_json'], true);
         }
 
-        if (!empty($zResult['obscount_generated'])) {
-            $this->nTimeGenerated = strtotime($zResult['obscount_generated']);
+        if (!empty($zResult['obscount_updated'])) {
+            $this->nTimeGenerated = strtotime($zResult['obscount_updated']);
         }
 
         return $this->aData;
@@ -296,7 +296,7 @@ class LOVD_ObservationCounts
 
         // Save the built data into the database so that we can reuse next time as well as keeping history
         $sObscountJson = json_encode($aData);
-        $sSQL = "UPDATE " . TABLE_VARIANTS . " SET obscount_json = '$sObscountJson', obscount_generated = NOW() WHERE id = ?";
+        $sSQL = "UPDATE " . TABLE_VARIANTS . " SET obscount_json = '$sObscountJson', obscount_updated = NOW() WHERE id = ?";
         $_DB->query($sSQL, array($this->nVariantId));
 
         $this->aData = $this->loadExistingData();
