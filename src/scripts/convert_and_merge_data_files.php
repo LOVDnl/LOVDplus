@@ -4,10 +4,10 @@
  * LEIDEN OPEN VARIATION DATABASE (LOVD)
  *
  * Created     : 2014-11-28
- * Modified    : 2016-11-11
- * For LOVD+   : 3.0-16
+ * Modified    : 2017-01-17
+ * For LOVD+   : 3.0-17
  *
- * Copyright   : 2004-2016 Leiden University Medical Center; http://www.LUMC.nl/
+ * Copyright   : 2004-2017 Leiden University Medical Center; http://www.LUMC.nl/
  * Programmer  : Ing. Ivo F.A.C. Fokkema <I.F.A.C.Fokkema@LUMC.nl>
  *
  *************/
@@ -880,7 +880,8 @@ $aColumnMappings = array(
     'AF1000G' => 'VariantOnGenome/Frequency/1000G',
     'rsID' => 'VariantOnGenome/dbSNP',
     'AFESP5400' => 'VariantOnGenome/Frequency/EVS', // Will be divided by 100 later.
-    'AFGONL' => 'VariantOnGenome/Frequency/GoNL',
+    'CALC_GONL_AF' => 'VariantOnGenome/Frequency/GoNL',
+    'AFGONL' => 'VariantOnGenome/Frequency/GoNL_old',
     'EXAC_AF' => 'VariantOnGenome/Frequency/ExAC',
     'MutationTaster_pred' => 'VariantOnTranscript/Prediction/MutationTaster',
     'MutationTaster_score' => 'VariantOnTranscript/Prediction/MutationTaster/Score',
