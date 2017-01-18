@@ -81,8 +81,8 @@ if ($aVariantIDs) {
         case 'remove_with_any_gmaf_gt_2':
             $aVariantIDsFiltered = $_DB->query('SELECT CAST(id AS UNSIGNED) FROM ' . TABLE_VARIANTS . ' WHERE (`VariantOnGenome/1000Gp3/Frequency` IS NULL OR `VariantOnGenome/1000Gp3/Frequency` <= 0.02) AND (`VariantOnGenome/ExAC/Frequency/Adjusted` IS NULL OR `VariantOnGenome/ExAC/Frequency/Adjusted` <= 0.02) AND id IN (?' . str_repeat(', ?', count($aVariantIDs) - 1) . ')', $aVariantIDs, false)->fetchAllColumn();
             break;
-        case 'remove_with_any_gmaf_gt_0.1':
-            $aVariantIDsFiltered = $_DB->query('SELECT CAST(id AS UNSIGNED) FROM ' . TABLE_VARIANTS . ' WHERE (`VariantOnGenome/1000Gp3/Frequency` IS NULL OR `VariantOnGenome/1000Gp3/Frequency` <= 0.001) AND (`VariantOnGenome/ExAC/Frequency/Adjusted` IS NULL OR `VariantOnGenome/ExAC/Frequency/Adjusted` <= 0.001) AND id IN (?' . str_repeat(', ?', count($aVariantIDs) - 1) . ')', $aVariantIDs, false)->fetchAllColumn();
+        case 'remove_with_any_gmaf_exac_gt_0.1':
+            $aVariantIDsFiltered = $_DB->query('SELECT CAST(id AS UNSIGNED) FROM ' . TABLE_VARIANTS . ' WHERE (`VariantOnGenome/ExAC/Frequency/Adjusted` IS NULL OR `VariantOnGenome/ExAC/Frequency/Adjusted` <= 0.001) AND id IN (?' . str_repeat(', ?', count($aVariantIDs) - 1) . ')', $aVariantIDs, false)->fetchAllColumn();
             break;
         case 'remove_with_any_gmaf_1000g':
             $aVariantIDsFiltered = $_DB->query('SELECT CAST(id AS UNSIGNED) FROM ' . TABLE_VARIANTS . ' WHERE (`VariantOnGenome/1000Gp3/Frequency` IS NULL OR `VariantOnGenome/1000Gp3/Frequency` = 0) AND id IN (?' . str_repeat(', ?', count($aVariantIDs) - 1) . ')', $aVariantIDs, false)->fetchAllColumn();
