@@ -81,10 +81,13 @@ if ($aVariantIDs) {
         case 'remove_with_any_gmaf_gt_2':
             $aVariantIDsFiltered = $_DB->query('SELECT CAST(id AS UNSIGNED) FROM ' . TABLE_VARIANTS . ' WHERE (`VariantOnGenome/1000Gp3/Frequency` IS NULL OR `VariantOnGenome/1000Gp3/Frequency` <= 0.02) AND (`VariantOnGenome/ExAC/Frequency/Adjusted` IS NULL OR `VariantOnGenome/ExAC/Frequency/Adjusted` <= 0.02) AND id IN (?' . str_repeat(', ?', count($aVariantIDs) - 1) . ')', $aVariantIDs, false)->fetchAllColumn();
             break;
+        case 'remove_with_any_gmaf_gt_0.1':
+            $aVariantIDsFiltered = $_DB->query('SELECT CAST(id AS UNSIGNED) FROM ' . TABLE_VARIANTS . ' WHERE (`VariantOnGenome/1000Gp3/Frequency` IS NULL OR `VariantOnGenome/1000Gp3/Frequency` <= 0.001) AND (`VariantOnGenome/ExAC/Frequency/Adjusted` IS NULL OR `VariantOnGenome/ExAC/Frequency/Adjusted` <= 0.001) AND id IN (?' . str_repeat(', ?', count($aVariantIDs) - 1) . ')', $aVariantIDs, false)->fetchAllColumn();
+            break;
         case 'remove_with_any_gmaf_1000g':
             $aVariantIDsFiltered = $_DB->query('SELECT CAST(id AS UNSIGNED) FROM ' . TABLE_VARIANTS . ' WHERE (`VariantOnGenome/1000Gp3/Frequency` IS NULL OR `VariantOnGenome/1000Gp3/Frequency` = 0) AND id IN (?' . str_repeat(', ?', count($aVariantIDs) - 1) . ')', $aVariantIDs, false)->fetchAllColumn();
             break;
-        case 'remove_with_any_maf_exac':
+        case 'remove_with_any_gmaf_exac':
             $aVariantIDsFiltered = $_DB->query('SELECT CAST(id AS UNSIGNED) FROM ' . TABLE_VARIANTS . ' WHERE (`VariantOnGenome/ExAC/Frequency/Adjusted` IS NULL OR `VariantOnGenome/ExAC/Frequency/Adjusted` = 0) AND id IN (?' . str_repeat(', ?', count($aVariantIDs) - 1) . ')', $aVariantIDs, false)->fetchAllColumn();
             break;
         case 'remove_deep_intronic_variants':
@@ -114,8 +117,8 @@ if ($aVariantIDs) {
         case 'not_homo_in_mother':
             $aVariantIDsFiltered = $_DB->query('SELECT DISTINCT CAST(id AS UNSIGNED) FROM ' . TABLE_VARIANTS . ' WHERE (`VariantOnGenome/Sequencing/Mother/GenoType` IS NULL OR `VariantOnGenome/Sequencing/Mother/GenoType` != "1/1") AND id IN (?' . str_repeat(', ?', count($aVariantIDs) - 1) . ')', $aVariantIDs, false)->fetchAllColumn();
             break;
-        case 'remove_obs_count_ratio_gte_1':
-            $aVariantIDsFiltered = $_DB->query('SELECT DISTINCT CAST(vog.id AS UNSIGNED) FROM ' . TABLE_VARIANTS . ' AS vog LEFT JOIN ' . TABLE_VARIANTS . ' AS ovog ON (vog.`VariantOnGenome/DBID` = ovog.`VariantOnGenome/DBID`) LEFT JOIN ' . TABLE_SCR2VAR . ' AS s2v ON (ovog.id = s2v.variantid) LEFT JOIN ' . TABLE_SCREENINGS . ' AS s ON (s2v.screeningid = s.id) WHERE vog.id IN (?' . str_repeat(', ?', count($aVariantIDs) - 1) . ') GROUP BY vog.`VariantOnGenome/DBID` HAVING ((COUNT(DISTINCT s.individualid) - 1) / (SELECT COUNT(*) FROM ' . TABLE_INDIVIDUALS . ')) < 0.01', $aVariantIDs, false)->fetchAllColumn();
+        case 'remove_obs_count_gte_5_percent':
+            $aVariantIDsFiltered = $_DB->query('SELECT DISTINCT CAST(vog.id AS UNSIGNED) FROM ' . TABLE_VARIANTS . ' AS vog LEFT JOIN ' . TABLE_VARIANTS . ' AS ovog ON (vog.`VariantOnGenome/DBID` = ovog.`VariantOnGenome/DBID`) LEFT JOIN ' . TABLE_SCR2VAR . ' AS s2v ON (ovog.id = s2v.variantid) LEFT JOIN ' . TABLE_SCREENINGS . ' AS s ON (s2v.screeningid = s.id) WHERE vog.id IN (?' . str_repeat(', ?', count($aVariantIDs) - 1) . ') GROUP BY vog.`VariantOnGenome/DBID` HAVING ((COUNT(DISTINCT s.individualid) - 1) / (SELECT COUNT(*) FROM ' . TABLE_INDIVIDUALS . ')) < 0.05', $aVariantIDs, false)->fetchAllColumn();
             break;
 
         // Filters requested by Arthur at CTP.
@@ -149,19 +152,19 @@ if ($aVariantIDs) {
         // End MGHA specific filters. You need to be careful when using anything below this line as it might not work with MGHA custom columns. The following filters are known to work:
         // chromosome_X, is_present_father_1, is_present_father_lte_4, is_present_mother_1, is_present_mother_lte_4, remove_by_quality_lte_100, select_homozygous_or_compound_heterozygous
 
-        case 'chromosome_X':
+        case 'select_variants_on_chr_x':
             $aVariantIDsFiltered = $_DB->query('SELECT CAST(id AS UNSIGNED) FROM ' . TABLE_VARIANTS . ' WHERE chromosome = "X" AND id IN (?' . str_repeat(', ?', count($aVariantIDs) - 1) . ')', $aVariantIDs, false)->fetchAllColumn();
             break;
-        case 'is_present_father_1':
+        case 'select_variants_absent_in_father_high_conf':
             $aVariantIDsFiltered = $_DB->query('SELECT CAST(id AS UNSIGNED) FROM ' . TABLE_VARIANTS . ' WHERE `VariantOnGenome/Sequencing/Father/VarPresent` = 1 AND id IN (?' . str_repeat(', ?', count($aVariantIDs) - 1) . ')', $aVariantIDs, false)->fetchAllColumn();
             break;
-        case 'is_present_father_lte_4':
+        case 'select_variants_absent_in_father_low_conf':
             $aVariantIDsFiltered = $_DB->query('SELECT CAST(id AS UNSIGNED) FROM ' . TABLE_VARIANTS . ' WHERE `VariantOnGenome/Sequencing/Father/VarPresent` <= 4 AND id IN (?' . str_repeat(', ?', count($aVariantIDs) - 1) . ')', $aVariantIDs, false)->fetchAllColumn();
             break;
-        case 'is_present_mother_1':
+        case 'select_variants_absent_in_mother_high_conf':
             $aVariantIDsFiltered = $_DB->query('SELECT CAST(id AS UNSIGNED) FROM ' . TABLE_VARIANTS . ' WHERE `VariantOnGenome/Sequencing/Mother/VarPresent` = 1 AND id IN (?' . str_repeat(', ?', count($aVariantIDs) - 1) . ')', $aVariantIDs, false)->fetchAllColumn();
             break;
-        case 'is_present_mother_lte_4':
+        case 'select_variants_absent_in_mother_low_conf':
             $aVariantIDsFiltered = $_DB->query('SELECT CAST(id AS UNSIGNED) FROM ' . TABLE_VARIANTS . ' WHERE `VariantOnGenome/Sequencing/Mother/VarPresent` <= 4 AND id IN (?' . str_repeat(', ?', count($aVariantIDs) - 1) . ')', $aVariantIDs, false)->fetchAllColumn();
             break;
         case 'remove_by_function_coding_synonymous':
