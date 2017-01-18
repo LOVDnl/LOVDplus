@@ -175,7 +175,7 @@ function lovd_runNextFilter (nAnalysisID, nRunID)
                     location.reload();
                 } else if (dataObj.result) {
                     // Success! Mark line and continue to the next, or stop if we're done...
-                    oTR = $('#' + sClassName + '_filter_' + dataObj.sFilterID);
+                    oTR = $('#' + sClassName + '_filter_' + dataObj.sFilterID.replace(/[^a-z0-9_]/i, '_'));
                     oTR.attr('class', 'filter_completed');
                     oTR.children('td:eq(1)').html(dataObj.nTime);
                     oTR.children('td:eq(2)').html(dataObj.nVariantsLeft);
