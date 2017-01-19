@@ -366,7 +366,8 @@ class LOVD_ObservationCounts
                  JOIN ' . TABLE_SCREENINGS . ' AS s ON (s.id = s2v.screeningid) 
                  JOIN ' . TABLE_INDIVIDUALS . ' AS i ON (s.individualid = i.id) 
                  LEFT JOIN ' . TABLE_IND2GP . ' AS i2gp ON (i.id = i2gp.individualid) 
-                 LEFT JOIN ' . TABLE_GENE_PANELS . ' AS gp ON (i2gp.genepanelid = gp.id) 
+                 LEFT JOIN ' . TABLE_GENE_PANELS . ' AS gp ON (i2gp.genepanelid = gp.id)
+                 WHERE gp.type != "blacklist"
                  GROUP BY i.id';
 
         $this->aIndividual = $_DB->query($sSQL)->fetchAssoc();
