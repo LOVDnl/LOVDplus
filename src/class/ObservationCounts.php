@@ -126,6 +126,7 @@ class LOVD_ObservationCounts
         $aData['num_not_affected'] = static::$EMPTY_DATA_DISPLAY;
         $aData['num_ind_with_variant'] = static::$EMPTY_DATA_DISPLAY;
         $aData['percentage'] = static::$EMPTY_DATA_DISPLAY;
+        $aData['threshold'] = static::$EMPTY_DATA_DISPLAY;
 
         // Only run query if this individual/screening has sufficient data
         if (empty($aRules['incomplete'])) {
@@ -156,6 +157,9 @@ class LOVD_ObservationCounts
 
             if (!empty($aData['total_individuals'])) {
                 $aData['percentage'] = round((float) $aData['num_ind_with_variant'] / (float) $aData['total_individuals'] * 100, 0);
+                if (!empty($aRules['threshold'])) {
+                    $aData['threshold'] = ($aData['percentage'] > $aRules['threshold']? '> ': '<= ') . $aRules['threshold'] . ' %';
+                }
             }
         }
 
@@ -170,43 +174,50 @@ class LOVD_ObservationCounts
                     'all' => array(
                         'label' => 'All',
                         'fields' => array(),
-                        'condition' => 'i.id IS NOT NULL'
+                        'condition' => 'i.id IS NOT NULL',
+                        'threshold' => 2 // 2%
                     ),
                     'Individual/Gender' => array(
                         'label' => 'Gender',
                         'fields' => array('Individual/Gender'),
                         'condition' => '`Individual/Gender` = "' . $this->aIndividual['Individual/Gender'] . '"',
-                        'incomplete' => ($this->aIndividual['Individual/Gender'] === ''? true : false)
+                        'incomplete' => ($this->aIndividual['Individual/Gender'] === ''? true : false),
+                        'threshold' => 2 // 2%
                     ),
                     'Individual/Origin/Ethnic' => array(
                         'label' => 'Ethnicity',
                         'fields' => array('Individual/Origin/Ethnic'),
                         'condition' => '`Individual/Origin/Ethnic` = "' . $this->aIndividual['Individual/Origin/Ethnic'] . '"',
-                        'incomplete' => ($this->aIndividual['Individual/Origin/Ethnic'] === ''? true : false)
+                        'incomplete' => ($this->aIndividual['Individual/Origin/Ethnic'] === ''? true : false),
+                        'threshold' => 2 // 2%
                     ),
                     'Screening/Sample/Type' => array(
                         'label' => 'Sample Type',
                         'fields' => array('Screening/Sample/Type'),
                         'condition' => '`Screening/Sample/Type` = "' . $this->aIndividual['Screening/Sample/Type'] . '"',
-                        'incomplete' => ($this->aIndividual['Screening/Sample/Type'] === ''? true : false)
+                        'incomplete' => ($this->aIndividual['Screening/Sample/Type'] === ''? true : false),
+                        'threshold' => 2 // 2%
                     ),
                     'Screening/Library_preparation' => array(
                         'label' => 'Capture Method',
                         'fields' => array('Screening/Library_preparation'),
                         'condition' => '`Screening/Library_preparation` = "' . $this->aIndividual['Screening/Library_preparation'] . '"',
-                        'incomplete' => ($this->aIndividual['Screening/Library_preparation'] === ''? true : false)
+                        'incomplete' => ($this->aIndividual['Screening/Library_preparation'] === ''? true : false),
+                        'threshold' => 2 // 2%
                     ),
                     'Screening/Sequencing_software' => array(
                         'label' => 'Sequencing Technology',
                         'fields' => array('Screening/Sequencing_software'),
                         'condition' => '`Screening/Sequencing_Software` = "' . $this->aIndividual['Screening/Sequencing_software'] . '"',
-                        'incomplete' => ($this->aIndividual['Screening/Sequencing_software'] === ''? true : false)
+                        'incomplete' => ($this->aIndividual['Screening/Sequencing_software'] === ''? true : false),
+                        'threshold' => 2 // 2%
                     ),
                     'Screening/Analysis_type' => array(
                         'label' => 'Analysis Pipeline',
                         'fields' => array('Screening/Analysis_type'),
                         'condition' => '`Screening/Analysis_type` = "' . $this->aIndividual['Screening/Analysis_type'] . '"',
-                        'incomplete' => ($this->aIndividual['Screening/Analysis_type'] === ''? true : false)
+                        'incomplete' => ($this->aIndividual['Screening/Analysis_type'] === ''? true : false),
+                        'threshold' => 2 // 2%
                     ),
                     'Screening/Library_preparation&Screening/Sequencing_software' => array(
                         'label' => 'Same Capture Method and Sequencing Technology',
@@ -215,7 +226,8 @@ class LOVD_ObservationCounts
                             . ' AND '
                             . '`Screening/Sequencing_Software` = "' . $this->aIndividual['Screening/Sequencing_software'] . '"',
                         'incomplete' => ($this->aIndividual['Screening/Library_preparation'] === ''
-                                        || $this->aIndividual['Screening/Sequencing_software'] === ''? true : false)
+                                        || $this->aIndividual['Screening/Sequencing_software'] === ''? true : false),
+                        'threshold' => 2 // 2%
                     ),
                     'Screening/Library_preparation&Screening/Sequencing_software&Screening/Analysis_type' => array(
                         'label' => 'Same Capture Method, Sequencing Technology, and Analysis Pipeline',
@@ -227,7 +239,8 @@ class LOVD_ObservationCounts
                             . '`Screening/Analysis_type` = "' . $this->aIndividual['Screening/Analysis_type'] . '"',
                         'incomplete' => ($this->aIndividual['Screening/Library_preparation'] === ''
                                         || $this->aIndividual['Screening/Sequencing_software'] === ''
-                                        || $this->aIndividual['Screening/Analysis_type'] === ''? true : false)
+                                        || $this->aIndividual['Screening/Analysis_type'] === ''? true : false),
+                        'threshold' => 2 // 2%
                     )
                 );
 
@@ -320,7 +333,8 @@ class LOVD_ObservationCounts
             'general' => array(
                 'label',
                 'values',
-                'percentage'
+                'percentage',
+                'threshold'
             )
         );
 

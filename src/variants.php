@@ -635,7 +635,12 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && !ACTION) {
                         }
                     } else {
                         for (var sCategory in aData[sType]) {
-                            sData += '<TR>';
+                            sClass = '';
+                            if (aData[sType][sCategory]['threshold'].includes('>')) {
+                                sClass = 'class="above-threshold"';
+                            }
+
+                            sData += '<TR ' + sClass + '>';
                             for (var sKey in aColumns) {
                                 if (aColumns.hasOwnProperty(sKey)) {
                                     sData += '<TD>' + aData[sType][sCategory][sKey] + '</TD>';

@@ -118,7 +118,8 @@ $_INSTANCE_CONFIG['observation_counts'] = array(
         'columns' => array(
             'label' => 'Category',
             'values' => 'Value',
-            'percentage' => 'Percentage (%)'),
+            'threshold' => 'Percentage'
+        ),
         'categories' => array()
     ),
 
