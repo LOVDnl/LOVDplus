@@ -528,9 +528,9 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && !ACTION) {
 
         print('<TABLE width="600px" class="data">');
         print('<THEAD>');
-        print('<TR><TH colspan="'. count($aColumns) .'" style="font-size : 13px;">Observation Counts</TH></TR>');
-        print('<TR id="obscount-info" style="display: none;"><TH colspan="'. count($aColumns) .'"></TH></TR>');
-        print('<TR id="obscount-feedback"><TH colspan="'. count($aColumns) .'">Loading data...</TH></TR>');
+        print('<TR><TH style="font-size : 13px;">Observation Counts</TH></TR>');
+        print('<TR id="obscount-info" style="display: none;"><TH></TH></TR>');
+        print('<TR id="obscount-feedback"><TH>Loading data...</TH></TR>');
         print('</THEAD>');
         print('</TABLE>');
 
