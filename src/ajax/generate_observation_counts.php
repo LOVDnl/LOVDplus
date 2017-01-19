@@ -46,10 +46,11 @@ if (!lovd_isAuthorized('variant', $nID)) {
 }
 
 require_once ROOT_PATH . 'class/ObservationCounts.php';
-$aColumns = (!empty($_INSTANCE_CONFIG['observation_counts']['columns'])? $_INSTANCE_CONFIG['observation_counts']['columns'] : array());
-$aCategories = (!empty($_INSTANCE_CONFIG['observation_counts']['categories'])? $_INSTANCE_CONFIG['observation_counts']['categories'] : array());
+//$aColumns = (!empty($_INSTANCE_CONFIG['observation_counts']['columns'])? $_INSTANCE_CONFIG['observation_counts']['columns'] : array());
+//$aCategories = (!empty($_INSTANCE_CONFIG['observation_counts']['categories'])? $_INSTANCE_CONFIG['observation_counts']['categories'] : array());
+$aSettings = (!empty($_INSTANCE_CONFIG['observation_counts'])? $_INSTANCE_CONFIG['observation_counts'] : array());
 $zObsCount = new LOVD_ObservationCounts($nID);
-$zObsCount->buildData($aColumns, $aCategories);
+$zObsCount->buildData($aSettings);
 
 $aResults = array('success' => array(
     'data' => json_encode($zObsCount->getData()),

@@ -75,9 +75,9 @@ class LOVD_ObservationCounts
         return $this->aData;
     }
 
-    protected function buildCategoryConfig($aCategories = array()) {
+    protected function buildCategoryConfig($aSettings = array()) {
 
-        $aConfig = array();
+        $aConfig = array('genepanel' => array(), 'general' => array());
 
         $aGenepanelIds = array();
         $aGenepanelNames = array();
@@ -89,14 +89,14 @@ class LOVD_ObservationCounts
         foreach ($aGenepanelIds as $nIndex => $sGenepanelId) {
             $this->aIndividual['genepanel_' . $sGenepanelId] = $aGenepanelNames[$nIndex];
 
-            $aConfig['genepanel_all_' . $sGenepanelId] = array(
+            $aConfig['genepanel']['all_' . $sGenepanelId] = array(
                 'label' => 'Gene Panel',
                 'table' => TABLE_IND2GP,
                 'fields' => array('genepanel_' . $sGenepanelId),
                 'condition' => 'genepanelid = "' . $sGenepanelId . '"'
             );
 
-            $aConfig['genepanel_gender_' . $sGenepanelId] = array(
+            $aConfig['genepanel']['gender_' . $sGenepanelId] = array(
                 'label' => 'Gene Panel and Gender',
                 'table' => TABLE_IND2GP,
                 'fields' => array('genepanel_' . $sGenepanelId, 'Individual/Gender'),
@@ -105,7 +105,7 @@ class LOVD_ObservationCounts
                     . '`Individual/Gender` = "' . $this->aIndividual['Individual/Gender'] . '"'
             );
 
-            $aConfig['genepanel_ethnic_' . $sGenepanelId] = array(
+            $aConfig['genepanel']['ethnic_' . $sGenepanelId] = array(
                 'label' => 'Gene Panel and Ethinicity',
                 'table' => TABLE_IND2GP,
                 'fields' => array('genepanel_' . $sGenepanelId, 'Individual/Origin/Ethnic'),
@@ -115,7 +115,7 @@ class LOVD_ObservationCounts
             );
         }
 
-        $aConfig = array_merge($aConfig, array(
+        $aConfig['general'] = array(
             'Individual/Gender' => array(
                 'label' => 'Gender',
                 'fields' => array('Individual/Gender'),
@@ -162,46 +162,61 @@ class LOVD_ObservationCounts
                     . ' AND '
                     . '`Screening/Analysis_type` = "' . $this->aIndividual['Screening/Analysis_type'] . '"'
             )
-        ));
+        );
 
-        if (empty($aCategories)) {
+        if (empty($aSettings)) {
             $this->aCategories = $aConfig;
         } else {
-            // Allow the category order to follow the order passed in $aCategories
-            foreach ($aCategories as $sCat) {
-                if (isset($aConfig[$sCat])) {
-                    $this->aCategories[$sCat] = $aConfig[$sCat];
-                } elseif (strpos($sCat, '*') !== false) {
-                    // genepanel category is one example that required pattern matching
-                    foreach ($aConfig as $sKey => $aOneConfig) {
-                        if (preg_match('/'.$sCat.'/', $sKey)) {
-                            $this->aCategories[$sKey] = $aConfig[$sKey];
+            foreach ($aSettings as $sType => $aTypeSettings) {
+                if (empty($aTypeSettings) || empty($aTypeSettings['categories'])) {
+                    $this->aCategories[$sType] = $aConfig[$sType];
+                } else {
+                    $this->aCategories[$sType] = array();
+                    foreach ($aTypeSettings['categories'] as $sCat) {
+                        if (isset($aConfig[$sType][$sCat])) {
+                            $this->aCategories[$sType] = $aConfig[$sType][$sCat];
                         }
                     }
                 }
+
             }
+
         }
 
         return $this->aCategories;
     }
 
-    protected function validateColumns($aColumns = array()) {
+    protected function validateColumns($aSettings = array()) {
 
         $aAvailableColumns = array(
-            'label',
-            'values',
-            'total_individuals',
-            'num_affected',
-            'num_not_affected',
-            'num_ind_with_variant',
-            'percentage'
+            'genepanel' => array(
+                'label',
+                'values',
+                'total_individuals',
+                'num_affected',
+                'num_not_affected',
+                'num_ind_with_variant',
+                'percentage'
+            ),
+            'general' => array(
+                'label',
+                'values',
+                'percentage'
+            )
         );
 
-        if (empty($aColumns)) {
+        if (empty($aSettings)) {
             $this->aColumns = $aAvailableColumns;
         } else {
-            // Allow the column order to follow the column order passed in $aColumns
-            $this->aColumns = array_intersect(array_keys($aColumns), $aAvailableColumns);
+            foreach ($aSettings as $sType => $aTypeSettings) {
+                if (empty($aTypeSettings) || empty($aTypeSettings['columns'])) {
+                    $this->aColumns[$sType] = $aAvailableColumns[$sType];
+                } else {
+                    // Allow the column order to follow the column order passed in $aColumns
+                    $this->aColumns[$sType] = array_intersect(array_keys($aTypeSettings['columns']), $aAvailableColumns[$sType]);
+
+                }
+            }
         }
 
         return $this->aColumns;
@@ -227,57 +242,61 @@ class LOVD_ObservationCounts
         return $this->aIndividual;
     }
 
-    public function buildData($aColumns, $aCategories) {
+    public function buildData($aSettings = array()) {
         global $_DB;
 
         $this->aIndividual = $this->initIndividualData();
-        $this->aCategories = $this->buildCategoryConfig($aCategories);
-        $this->aColumns = $this->validateColumns($aColumns);
+        $this->aCategories = $this->buildCategoryConfig($aSettings);
+        $this->aColumns = $this->validateColumns($aSettings);
 
         $aData = array();
-        foreach ($this->aCategories as $sCategory => $aRules) {
-            $aData[$sCategory] = array();
-            $aData[$sCategory]['label'] = $aRules['label'];
-            $aData[$sCategory]['values'] = array();
-            foreach ($aRules['fields'] as $sField) {
-                $aData[$sCategory]['values'][] = $this->aIndividual[$sField];
-            }
+        foreach ($this->aCategories as $sType => $aCategories) {
+            $aData[$sType] = array();
 
-            // TOTAL population in this database
-            $sSQL = 'SELECT COUNT(s.individualid) AS total
+            foreach ($aCategories as $sCategory => $aRules) {
+
+                $aData[$sType][$sCategory] = array();
+                $aData[$sType][$sCategory]['label'] = $aRules['label'];
+                $aData[$sType][$sCategory]['values'] = array();
+                foreach ($aRules['fields'] as $sField) {
+                    $aData[$sType][$sCategory]['values'][] = $this->aIndividual[$sField];
+                }
+
+                // TOTAL population in this database
+                $sSQL = 'SELECT COUNT(s.individualid) AS total
                      FROM ' . TABLE_INDIVIDUALS . ' i 
                      JOIN ' . TABLE_SCREENINGS . ' s ON (s.individualid = i.id)
                      LEFT JOIN ' . TABLE_IND2GP . ' i2gp ON (i2gp.individualid = i.id) 
                      WHERE ' . $aRules['condition'] . ' 
                      GROUP BY s.individualid';
 
-            $aCount = $_DB->query($sSQL, array())->rowCount();
-            $aData[$sCategory]['total_individuals'] = $aCount;
+                $aCount = $_DB->query($sSQL, array())->rowCount();
+                $aData[$sType][$sCategory]['total_individuals'] = $aCount;
 
-            // TOTAL number of affected individuals in this database
-            $sSQL = 'SELECT COUNT(s.individualid) AS total_affected
+                // TOTAL number of affected individuals in this database
+                $sSQL = 'SELECT COUNT(s.individualid) AS total_affected
                      FROM ' . TABLE_INDIVIDUALS . ' i 
                      JOIN ' . TABLE_SCREENINGS . ' s ON (s.individualid = i.id AND i.`Individual/Affected` = "affected")
                      LEFT JOIN ' . TABLE_IND2GP . ' i2gp ON (i2gp.individualid = i.id) 
                      WHERE ' . $aRules['condition'] . ' 
                      GROUP BY s.individualid';
 
-            $aCount = $_DB->query($sSQL, array())->rowCount();
-            $aData[$sCategory]['num_affected'] = $aCount;
+                $aCount = $_DB->query($sSQL, array())->rowCount();
+                $aData[$sType][$sCategory]['num_affected'] = $aCount;
 
-            // TOTAL number of affected individuals in this database
-            $sSQL = 'SELECT COUNT(s.individualid) AS total_not_affected
+                // TOTAL number of NOT affected individuals in this database
+                $sSQL = 'SELECT COUNT(s.individualid) AS total_not_affected
                      FROM ' . TABLE_INDIVIDUALS . ' i 
                      JOIN ' . TABLE_SCREENINGS . ' s ON (s.individualid = i.id AND i.`Individual/Affected` = "not affected")
                      LEFT JOIN ' . TABLE_IND2GP . ' i2gp ON (i2gp.individualid = i.id) 
                      WHERE ' . $aRules['condition'] . ' 
                      GROUP BY s.individualid';
 
-            $aCount = $_DB->query($sSQL, array())->rowCount();
-            $aData[$sCategory]['num_not_affected'] = $aCount;
+                $aCount = $_DB->query($sSQL, array())->rowCount();
+                $aData[$sType][$sCategory]['num_not_affected'] = $aCount;
 
-            // Number of individuals with this variant
-            $sSQL = 'SELECT COUNT(s.individualid) AS count_dbid 
+                // Number of individuals with this variant
+                $sSQL = 'SELECT COUNT(s.individualid) AS count_dbid 
                      FROM ' . TABLE_VARIANTS . ' AS vog 
                      JOIN ' . TABLE_SCR2VAR . ' AS s2v ON (vog.id = s2v.variantid AND vog.`VariantOnGenome/DBID` = "' . $this->aIndividual['VariantOnGenome/DBID'] . '") 
                      JOIN ' . TABLE_SCREENINGS . ' AS s ON (s.id = s2v.screeningid) 
@@ -286,11 +305,12 @@ class LOVD_ObservationCounts
                      WHERE ' . $aRules['condition'] . ' 
                      GROUP BY s.individualid';
 
-            $aCountDBID = $_DB->query($sSQL)->rowCount();
-            $aData[$sCategory]['num_ind_with_variant'] = $aCountDBID;
+                $aCountDBID = $_DB->query($sSQL)->rowCount();
+                $aData[$sType][$sCategory]['num_ind_with_variant'] = $aCountDBID;
 
-            if (!empty($aData[$sCategory]['total_individuals'])) {
-                $aData[$sCategory]['percentage'] = round((float) $aData[$sCategory]['num_ind_with_variant'] / (float) $aData[$sCategory]['total_individuals'] * 100, 0);
+                if (!empty($aData[$sType][$sCategory]['total_individuals'])) {
+                    $aData[$sType][$sCategory]['percentage'] = round((float) $aData[$sType][$sCategory]['num_ind_with_variant'] / (float) $aData[$sType][$sCategory]['total_individuals'] * 100, 0);
+                }
             }
         }
 

@@ -519,8 +519,7 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && !ACTION) {
             </TD>
               <TD valign="top" id="obscount_viewlist" style="padding-left: 10px;">' . "\n");
         require_once ROOT_PATH . 'class/ObservationCounts.php';
-        $aColumns = (!empty($_INSTANCE_CONFIG['observation_counts']['columns'])? $_INSTANCE_CONFIG['observation_counts']['columns'] : array());
-        $aCategories = (!empty($_INSTANCE_CONFIG['observation_counts']['categories'])? $_INSTANCE_CONFIG['observation_counts']['categories'] : array());
+        $aSettings = (!empty($_INSTANCE_CONFIG['observation_counts'])? $_INSTANCE_CONFIG['observation_counts'] : array());
         $zObsCount = new LOVD_ObservationCounts($nID);
         $aData = $zObsCount->getData();
 
@@ -532,9 +531,21 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && !ACTION) {
         print('<TR><TH colspan="'. count($aColumns) .'" style="font-size : 13px;">Observation Counts</TH></TR>');
         print('<TR id="obscount-info" style="display: none;"><TH colspan="'. count($aColumns) .'"></TH></TR>');
         print('<TR id="obscount-feedback"><TH colspan="'. count($aColumns) .'">Loading data...</TH></TR>');
-        print('<TR id="obscount-header"></TR>');
         print('</THEAD>');
-        print('<TBODY id="obscount-data"></TBODY>');
+        print('</TABLE>');
+
+        print('<TABLE width="600px" class="data">');
+        print('<THEAD>');
+        print('<TR id="obscount-header-genepanel"></TR>');
+        print('</THEAD>');
+        print('<TBODY id="obscount-data-genepanel"></TBODY>');
+        print('</TABLE>');
+
+        print('<TABLE width="600px" class="data">');
+        print('<THEAD>');
+        print('<TR id="obscount-header-general"></TR>');
+        print('</THEAD>');
+        print('<TBODY id="obscount-data-general"></TBODY>');
         print('</TABLE>');
 
         // END OF RIGHT COLUMN on the curation page
@@ -550,8 +561,11 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && !ACTION) {
         });
 
         function lovd_generate_obscount(nVariantId) {
-            $('#obscount-header').hide();
-            $('#obscount-data').hide();
+            $('#obscount-header-genepanel').hide();
+            $('#obscount-data-genepanel').hide();
+            $('#obscount-header-general').hide();
+            $('#obscount-data-general').hide();
+
             $('#obscount-refresh').hide();
             $('#obscount-loading').show();
             var url = 'ajax/generate_observation_counts.php';
@@ -582,33 +596,39 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && !ACTION) {
         }
 
         function lovd_load_obscount_table(aData) {
-            if (aData && aData.length <= 0) {
+            if (!aData || aData.length <= 0) {
                 return;
             }
 
-            var aColumns = <?php echo json_encode($aColumns) ?>;
-            var sHeader = '';
-            for (var sKey in aColumns) {
-                if (aColumns.hasOwnProperty(sKey)) {
-                    sHeader += '<TH>' + aColumns[sKey] + '</TH>';
-                }
-            }
+            var aAllColumns = <?php echo json_encode($aSettings) ?>;
+            for (var sType in aAllColumns) {
+                if (aAllColumns.hasOwnProperty(sType)) {
+                    if (!aData[sType] || aData[sType].length <= 0) {
+                        continue;
+                    }
 
-            sData = '';
-            for (var sCategory in aData) {
-                if (aData.hasOwnProperty(sCategory)) {
-                    sData += '<TR>';
+                    aColumns = aAllColumns[sType]['columns'];
+                    var sHeader = '';
                     for (var sKey in aColumns) {
                         if (aColumns.hasOwnProperty(sKey)) {
-                            sData += '<TD>' + aData[sCategory][sKey] + '</TD>';
+                            sHeader += '<TH>' + aColumns[sKey] + '</TH>';
                         }
                     }
-                    sData += '</TR>';
+
+                    sData = '';
+                    for (var sCategory in aData[sType]) {
+                        sData += '<TR>';
+                        for (var sKey in aColumns) {
+                            if (aColumns.hasOwnProperty(sKey)) {
+                                sData += '<TD>' + aData[sType][sCategory][sKey] + '</TD>';
+                            }
+                        }
+                        sData += '</TR>';
+                    }
+                    $('#obscount-header-' + sType).html(sHeader);
+                    $('#obscount-data-' + sType).html(sData);
                 }
             }
-
-            $('#obscount-header').html(sHeader);
-            $('#obscount-data').html(sData);
         }
 
         function load_obscount_info(timestamp) {
@@ -624,8 +644,10 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && !ACTION) {
 
         function lovd_reload_obscount_initial_state() {
             $('#obscount-info').show();
-            $('#obscount-header').fadeTo(1000, 1);
-            $('#obscount-data').fadeTo(1000, 1);
+            $('#obscount-header-general').fadeTo(1000, 1);
+            $('#obscount-data-general').fadeTo(1000, 1);
+            $('#obscount-header-genepanel').fadeTo(1000, 1);
+            $('#obscount-data-genepanel').fadeTo(1000, 1);
 
             $('#obscount-refresh').show();
             $('#obscount-feedback').hide();
