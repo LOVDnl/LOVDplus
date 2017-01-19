@@ -572,7 +572,6 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && !ACTION) {
             var data = { "nVariantId" : nVariantId };
 
             $.post(url, data, function(data) {
-
                 $('#obscount-loading').hide();
                 jsonData = JSON.parse(data);
 
@@ -616,15 +615,37 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && !ACTION) {
                     }
 
                     sData = '';
-                    for (var sCategory in aData[sType]) {
-                        sData += '<TR>';
-                        for (var sKey in aColumns) {
-                            if (aColumns.hasOwnProperty(sKey)) {
-                                sData += '<TD>' + aData[sType][sCategory][sKey] + '</TD>';
+                    if (sType == 'genepanel') {
+                        for (var genepanelId in aData[sType]) {
+                            for (var sCategory in aData[sType][genepanelId]) {
+                                sData += '<TR>';
+                                for (var sKey in aColumns) {
+                                    if (aColumns.hasOwnProperty(sKey)) {
+                                        colData = aData[sType][genepanelId][sCategory][sKey];
+                                        if (sCategory === 'all') {
+                                            sData += '<TH>' + colData + '</TH>';
+                                        } else {
+                                            sData += '<TD>' + colData + '</TD>';
+                                        }
+                                    }
+                                }
+                                sData += '</TR>';
                             }
+
                         }
-                        sData += '</TR>';
+                    } else {
+                        for (var sCategory in aData[sType]) {
+                            sData += '<TR>';
+                            for (var sKey in aColumns) {
+                                if (aColumns.hasOwnProperty(sKey)) {
+                                    sData += '<TD>' + aData[sType][sCategory][sKey] + '</TD>';
+                                }
+                            }
+                            sData += '</TR>';
+                        }
                     }
+
+
                     $('#obscount-header-' + sType).html(sHeader);
                     $('#obscount-data-' + sType).html(sData);
                 }

@@ -40,9 +40,11 @@ class LOVD_ObservationCounts
     protected $nVariantId = null;
     protected $nTimeGenerated = null;
 
-    protected $aConfig = array();
     protected $aCategories = array();
     protected $aColumns = array();
+
+    public static $TYPE_GENEPANEL = 'genepanel';
+    public static $TYPE_GENERAL = 'general';
 
     function __construct ($nVariantId) {
 
@@ -50,15 +52,15 @@ class LOVD_ObservationCounts
         $this->loadExistingData();
     }
 
-    public function getData() {
+    public function getData () {
         return $this->aData;
     }
 
-    public function getTimeGenerated() {
+    public function getTimeGenerated () {
         return $this->nTimeGenerated;
     }
 
-    protected function loadExistingData() {
+    protected function loadExistingData () {
         global $_DB;
 
         $sSQL = 'SELECT obscount_json, obscount_updated FROM ' . TABLE_VARIANTS . ' WHERE id = "' . $this->nVariantId . '"';
@@ -75,119 +77,206 @@ class LOVD_ObservationCounts
         return $this->aData;
     }
 
-    protected function buildCategoryConfig($aSettings = array()) {
+    public function buildData ($aSettings = array()) {
+        global $_DB;
 
-        $aConfig = array('genepanel' => array(), 'general' => array());
+        $this->aIndividual = $this->initIndividualData();
+        $aData = array();
+        foreach ($aSettings as $sType => $aTypeSettings) {
+            $this->aCategories = $this->validateCategories($sType, $aTypeSettings);
+            $this->aColumns = $this->validateColumns($sType, $aTypeSettings);
 
-        $aGenepanelIds = array();
-        $aGenepanelNames = array();
-        if (!empty($this->aIndividual['genepanel_ids']) && !empty($this->aIndividual['genepanel_names'])) {
-            $aGenepanelIds = explode(',', $this->aIndividual['genepanel_ids']);
-            $aGenepanelNames = explode(',', $this->aIndividual['genepanel_names']);
+            switch ($sType) {
+                case static::$TYPE_GENERAL:
+                    $aData[static::$TYPE_GENERAL] = array();
+                    foreach ($this->aCategories[static::$TYPE_GENERAL] as $sCategory => $aRules) {
+                        $aData[static::$TYPE_GENERAL][$sCategory] = $this->generateData($aRules);
+                    }
+                    break;
+                case static::$TYPE_GENEPANEL:
+                    $aData[static::$TYPE_GENEPANEL] = array();
+                    foreach ($this->aCategories[static::$TYPE_GENEPANEL] as $sGenepanelId => $aGenepanelRules) {
+                        foreach ($aGenepanelRules as $sCategory => $aRules) {
+                            $aData[static::$TYPE_GENEPANEL][$sGenepanelId][$sCategory] = $this->generateData($aRules);
+                        }
+                    }
+            }
         }
 
-        foreach ($aGenepanelIds as $nIndex => $sGenepanelId) {
-            $this->aIndividual['genepanel_' . $sGenepanelId] = $aGenepanelNames[$nIndex];
+        // Save the built data into the database so that we can reuse next time as well as keeping history
+        $sObscountJson = json_encode($aData);
+        $sSQL = "UPDATE " . TABLE_VARIANTS . " SET obscount_json = '$sObscountJson', obscount_updated = NOW() WHERE id = ?";
+        $_DB->query($sSQL, array($this->nVariantId));
 
-            $aConfig['genepanel']['all_' . $sGenepanelId] = array(
-                'label' => 'Gene Panel',
-                'table' => TABLE_IND2GP,
-                'fields' => array('genepanel_' . $sGenepanelId),
-                'condition' => 'genepanelid = "' . $sGenepanelId . '"'
-            );
+        $this->aData = $this->loadExistingData();
+        return $this->aData;
 
-            $aConfig['genepanel']['gender_' . $sGenepanelId] = array(
-                'label' => 'Gene Panel and Gender',
-                'table' => TABLE_IND2GP,
-                'fields' => array('genepanel_' . $sGenepanelId, 'Individual/Gender'),
-                'condition' => 'genepanelid = "' . $sGenepanelId . '"'
-                    . ' AND '
-                    . '`Individual/Gender` = "' . $this->aIndividual['Individual/Gender'] . '"'
-            );
+    }
 
-            $aConfig['genepanel']['ethnic_' . $sGenepanelId] = array(
-                'label' => 'Gene Panel and Ethinicity',
-                'table' => TABLE_IND2GP,
-                'fields' => array('genepanel_' . $sGenepanelId, 'Individual/Origin/Ethnic'),
-                'condition' => 'genepanelid = "' . $sGenepanelId . '"'
-                    . ' AND '
-                    . '`Individual/Origin/Ethnic` = "' . $this->aIndividual['Individual/Origin/Ethnic'] . '"'
-            );
+    protected function generateData ($aRules) {
+        global $_DB;
+
+        $aData = array();
+        $aData['label'] = $aRules['label'];
+        $aData['values'] = array();
+        foreach ($aRules['fields'] as $sField) {
+            $aData['values'][] = $this->aIndividual[$sField];
         }
 
-        $aConfig['general'] = array(
-            'Individual/Gender' => array(
-                'label' => 'Gender',
-                'fields' => array('Individual/Gender'),
-                'condition' => '`Individual/Gender` = "' . $this->aIndividual['Individual/Gender'] . '"'
-            ),
-            'Individual/Origin/Ethnic' => array(
-                'label' => 'Ethnicity',
-                'fields' => array('Individual/Origin/Ethnic'),
-                'condition' => '`Individual/Origin/Ethnic` = "' . $this->aIndividual['Individual/Origin/Ethnic'] . '"'
-            ),
-            'Screening/Sample/Type' => array(
-                'label' => 'Sample Type',
-                'fields' => array('Screening/Sample/Type'),
-                'condition' => '`Screening/Sample/Type` = "' . $this->aIndividual['Screening/Sample/Type'] . '"'
-            ),
-            'Screening/Library_preparation' => array(
-                'label' => 'Capture Method',
-                'fields' => array('Screening/Library_preparation'),
-                'condition' => '`Screening/Library_preparation` = "' . $this->aIndividual['Screening/Library_preparation'] . '"'
-            ),
-            'Screening/Sequencing_software' => array(
-                'label' => 'Sequencing Technology',
-                'fields' => array('Screening/Sequencing_software'),
-                'condition' => '`Screening/Sequencing_Software` = "' . $this->aIndividual['Screening/Sequencing_software'] . '"'
-            ),
-            'Screening/Analysis_type' => array(
-                'label' => 'Analysis Pipeline',
-                'fields' => array('Screening/Analysis_type'),
-                'condition' => '`Screening/Analysis_type` = "' . $this->aIndividual['Screening/Analysis_type'] . '"'
-            ),
-            'Screening/Library_preparation&Screening/Sequencing_software' => array(
-                'label' => 'Same Capture Method and Sequencing Technology',
-                'fields' => array('Screening/Library_preparation', 'Screening/Sequencing_software'),
-                'condition' => '`Screening/Library_preparation` = "' . $this->aIndividual['Screening/Library_preparation'] . '"'
-                    . ' AND '
-                    . '`Screening/Sequencing_Software` = "' . $this->aIndividual['Screening/Sequencing_software'] . '"'
-            ),
-            'Screening/Library_preparation&Screening/Sequencing_software&Screening/Analysis_type' => array(
-                'label' => 'Same Capture Method, Sequencing Technology, and Analysis Pipeline',
-                'fields' => array('Screening/Library_preparation', 'Screening/Sequencing_software', 'Screening/Analysis_type'),
-                'condition' => '`Screening/Library_preparation` = "' . $this->aIndividual['Screening/Library_preparation'] . '"'
-                    . ' AND '
-                    . '`Screening/Sequencing_Software` = "' . $this->aIndividual['Screening/Sequencing_software'] . '"'
-                    . ' AND '
-                    . '`Screening/Analysis_type` = "' . $this->aIndividual['Screening/Analysis_type'] . '"'
-            )
-        );
+        // TOTAL population in this database
+        $sSQL = static::getQueryFor('total_individuals', $aRules['condition']);
+        $aCount = $_DB->query($sSQL, array())->rowCount();
+        $aData['total_individuals'] = $aCount;
 
-        if (empty($aSettings)) {
-            $this->aCategories = $aConfig;
-        } else {
-            foreach ($aSettings as $sType => $aTypeSettings) {
-                if (empty($aTypeSettings) || empty($aTypeSettings['categories'])) {
-                    $this->aCategories[$sType] = $aConfig[$sType];
+        // TOTAL number of affected individuals in this database
+        $sSQL = static::getQueryFor('num_affected', $aRules['condition']);
+        $aCount = $_DB->query($sSQL, array())->rowCount();
+        $aData['num_affected'] = $aCount;
+
+        // TOTAL number of NOT affected individuals in this database
+        $sSQL = static::getQueryFor('num_not_affected', $aRules['condition']);
+        $aCount = $_DB->query($sSQL, array())->rowCount();
+        $aData['num_not_affected'] = $aCount;
+
+        // Number of individuals with this variant
+        $sSQL = static::getQueryFor('num_ind_with_variant', $aRules['condition'], array('dbid' => $this->aIndividual['VariantOnGenome/DBID']));
+        $aCountDBID = $_DB->query($sSQL)->rowCount();
+        $aData['num_ind_with_variant'] = $aCountDBID;
+
+        if (!empty($aData['total_individuals'])) {
+            $aData['percentage'] = round((float) $aData['num_ind_with_variant'] / (float) $aData['total_individuals'] * 100, 0);
+        }
+
+        return $aData;
+    }
+
+    protected function validateCategories ($sType, $aSettings) {
+        switch ($sType) {
+            case static::$TYPE_GENERAL:
+                // Build existing configuration options
+                $aConfig = array(
+                    'Individual/Gender' => array(
+                        'label' => 'Gender',
+                        'fields' => array('Individual/Gender'),
+                        'condition' => '`Individual/Gender` = "' . $this->aIndividual['Individual/Gender'] . '"'
+                    ),
+                    'Individual/Origin/Ethnic' => array(
+                        'label' => 'Ethnicity',
+                        'fields' => array('Individual/Origin/Ethnic'),
+                        'condition' => '`Individual/Origin/Ethnic` = "' . $this->aIndividual['Individual/Origin/Ethnic'] . '"'
+                    ),
+                    'Screening/Sample/Type' => array(
+                        'label' => 'Sample Type',
+                        'fields' => array('Screening/Sample/Type'),
+                        'condition' => '`Screening/Sample/Type` = "' . $this->aIndividual['Screening/Sample/Type'] . '"'
+                    ),
+                    'Screening/Library_preparation' => array(
+                        'label' => 'Capture Method',
+                        'fields' => array('Screening/Library_preparation'),
+                        'condition' => '`Screening/Library_preparation` = "' . $this->aIndividual['Screening/Library_preparation'] . '"'
+                    ),
+                    'Screening/Sequencing_software' => array(
+                        'label' => 'Sequencing Technology',
+                        'fields' => array('Screening/Sequencing_software'),
+                        'condition' => '`Screening/Sequencing_Software` = "' . $this->aIndividual['Screening/Sequencing_software'] . '"'
+                    ),
+                    'Screening/Analysis_type' => array(
+                        'label' => 'Analysis Pipeline',
+                        'fields' => array('Screening/Analysis_type'),
+                        'condition' => '`Screening/Analysis_type` = "' . $this->aIndividual['Screening/Analysis_type'] . '"'
+                    ),
+                    'Screening/Library_preparation&Screening/Sequencing_software' => array(
+                        'label' => 'Same Capture Method and Sequencing Technology',
+                        'fields' => array('Screening/Library_preparation', 'Screening/Sequencing_software'),
+                        'condition' => '`Screening/Library_preparation` = "' . $this->aIndividual['Screening/Library_preparation'] . '"'
+                            . ' AND '
+                            . '`Screening/Sequencing_Software` = "' . $this->aIndividual['Screening/Sequencing_software'] . '"'
+                    ),
+                    'Screening/Library_preparation&Screening/Sequencing_software&Screening/Analysis_type' => array(
+                        'label' => 'Same Capture Method, Sequencing Technology, and Analysis Pipeline',
+                        'fields' => array('Screening/Library_preparation', 'Screening/Sequencing_software', 'Screening/Analysis_type'),
+                        'condition' => '`Screening/Library_preparation` = "' . $this->aIndividual['Screening/Library_preparation'] . '"'
+                            . ' AND '
+                            . '`Screening/Sequencing_Software` = "' . $this->aIndividual['Screening/Sequencing_software'] . '"'
+                            . ' AND '
+                            . '`Screening/Analysis_type` = "' . $this->aIndividual['Screening/Analysis_type'] . '"'
+                    )
+                );
+
+                // Now build categories for this instance of LOVD based on what is specified on the settings array.
+
+                if (empty($aSettings) || empty($aSettings['categories'])) {
+                    // If categories is not specified in the settings for this type, then use ALL available categories.
+                    $this->aCategories[static::$TYPE_GENERAL] = $aConfig;
                 } else {
-                    $this->aCategories[$sType] = array();
-                    foreach ($aTypeSettings['categories'] as $sCat) {
-                        if (isset($aConfig[$sType][$sCat])) {
-                            $this->aCategories[$sType] = $aConfig[$sType][$sCat];
+                    // Otherwise, only select the category specified in the instance settings.
+                    foreach ($aSettings['categories'] as $sCategory) {
+                        if (isset($aConfig[$sCategory])) {
+                            $this->aCategories[static::$TYPE_GENERAL][$sCategory] = $aConfig[$sCategory];
                         }
                     }
                 }
 
-            }
+                break;
 
+            case static::$TYPE_GENEPANEL:
+
+                // Build existing configuration options
+                $aGenepanelIds = array();
+                $aGenepanelNames = array();
+                if (!empty($this->aIndividual['genepanel_ids']) && !empty($this->aIndividual['genepanel_names'])) {
+                    $aGenepanelIds = explode(',', $this->aIndividual['genepanel_ids']);
+                    $aGenepanelNames = explode(',', $this->aIndividual['genepanel_names']);
+                }
+
+                foreach ($aGenepanelIds as $nIndex => $sGenepanelId) {
+                    $this->aIndividual['genepanel_' . $sGenepanelId] = $aGenepanelNames[$nIndex];
+
+                    $aConfig[$sGenepanelId] = array();
+                    $aConfig[$sGenepanelId]['all'] = array(
+                        'label' => 'Gene Panel',
+                        'fields' => array('genepanel_' . $sGenepanelId),
+                        'condition' => 'genepanelid = "' . $sGenepanelId . '"'
+                    );
+
+                    $aConfig[$sGenepanelId]['gender'] = array(
+                        'label' => 'Gene Panel and Gender',
+                        'fields' => array('Individual/Gender'),
+                        'condition' => 'genepanelid = "' . $sGenepanelId . '"'
+                            . ' AND '
+                            . '`Individual/Gender` = "' . $this->aIndividual['Individual/Gender'] . '"'
+                    );
+
+                    $aConfig[$sGenepanelId]['ethnic'] = array(
+                        'label' => 'Gene Panel and Ethinicity',
+                        'fields' => array('Individual/Origin/Ethnic'),
+                        'condition' => 'genepanelid = "' . $sGenepanelId . '"'
+                            . ' AND '
+                            . '`Individual/Origin/Ethnic` = "' . $this->aIndividual['Individual/Origin/Ethnic'] . '"'
+                    );
+                }
+
+                if (empty($aSettings) || empty($aSettings['categories'])) {
+                    // If categories is not specified in the settings for this type, then use ALL available categories.
+                    $this->aCategories[static::$TYPE_GENEPANEL] = $aConfig;
+                } else {
+                    // Otherwise, only select the category specified in the instance settings.
+                    foreach ($aSettings['categories'] as $sCategory) {
+                        foreach ($aGenepanelIds as $nIndex => $sGenepanelId) {
+                            if (isset($aConfig[$sGenepanelId][$sCategory])) {
+                                $this->aCategories[static::$TYPE_GENEPANEL][$sGenepanelId][$sCategory] = $aConfig[$sGenepanelId][$sCategory];
+                            }
+                        }
+                    }
+                }
+
+
+                break;
         }
-
         return $this->aCategories;
     }
 
-    protected function validateColumns($aSettings = array()) {
-
+    protected function validateColumns ($sType, $aSettings = array()) {
         $aAvailableColumns = array(
             'genepanel' => array(
                 'label',
@@ -205,16 +294,15 @@ class LOVD_ObservationCounts
             )
         );
 
-        if (empty($aSettings)) {
-            $this->aColumns = $aAvailableColumns;
+        $this->aColumns[$sType] = array();
+        if (empty($aSettings) || empty($aSettings['columns'])) {
+            // If columns is not specified in the settings for this type, then use ALL available columns.
+            $this->aColumns[$sType] = $aAvailableColumns[$sType];
         } else {
-            foreach ($aSettings as $sType => $aTypeSettings) {
-                if (empty($aTypeSettings) || empty($aTypeSettings['columns'])) {
-                    $this->aColumns[$sType] = $aAvailableColumns[$sType];
-                } else {
-                    // Allow the column order to follow the column order passed in $aColumns
-                    $this->aColumns[$sType] = array_intersect(array_keys($aTypeSettings['columns']), $aAvailableColumns[$sType]);
-
+            // Otherwise, only select the columns specified in the settings of this LOVD instance.
+            foreach ($aSettings['columns'] as $sColumn) {
+                if (isset($aAvailableColumns[$sType][$sColumn])) {
+                    $this->aColumns[$sType][] = $aAvailableColumns[$sType][$sColumn];
                 }
             }
         }
@@ -222,7 +310,7 @@ class LOVD_ObservationCounts
         return $this->aColumns;
     }
 
-    protected function initIndividualData() {
+    protected function initIndividualData () {
         global $_DB;
 
         // Query data related to this individual
@@ -242,85 +330,43 @@ class LOVD_ObservationCounts
         return $this->aIndividual;
     }
 
-    public function buildData($aSettings = array()) {
-        global $_DB;
+    protected static function getQueryFor ($sColumn, $sCondition, $aParams = array()) {
+        switch ($sColumn) {
+            case 'total_individuals':
+                return 'SELECT COUNT(s.individualid) AS total
+                        FROM ' . TABLE_INDIVIDUALS . ' i 
+                        JOIN ' . TABLE_SCREENINGS . ' s ON (s.individualid = i.id)
+                        LEFT JOIN ' . TABLE_IND2GP . ' i2gp ON (i2gp.individualid = i.id) 
+                        WHERE ' . $sCondition . ' 
+                        GROUP BY s.individualid';
 
-        $this->aIndividual = $this->initIndividualData();
-        $this->aCategories = $this->buildCategoryConfig($aSettings);
-        $this->aColumns = $this->validateColumns($aSettings);
+            case 'num_affected':
+                return 'SELECT COUNT(s.individualid) AS total_affected
+                        FROM ' . TABLE_INDIVIDUALS . ' i 
+                        JOIN ' . TABLE_SCREENINGS . ' s ON (s.individualid = i.id AND i.`Individual/Affected` = "affected")
+                        LEFT JOIN ' . TABLE_IND2GP . ' i2gp ON (i2gp.individualid = i.id) 
+                        WHERE ' . $sCondition . ' 
+                        GROUP BY s.individualid';
 
-        $aData = array();
-        foreach ($this->aCategories as $sType => $aCategories) {
-            $aData[$sType] = array();
+            case 'num_not_affected':
+                return 'SELECT COUNT(s.individualid) AS total_not_affected
+                        FROM ' . TABLE_INDIVIDUALS . ' i 
+                        JOIN ' . TABLE_SCREENINGS . ' s ON (s.individualid = i.id AND i.`Individual/Affected` = "not affected")
+                        LEFT JOIN ' . TABLE_IND2GP . ' i2gp ON (i2gp.individualid = i.id) 
+                        WHERE ' . $sCondition . ' 
+                        GROUP BY s.individualid';
 
-            foreach ($aCategories as $sCategory => $aRules) {
+            case 'num_ind_with_variant' :
+                return 'SELECT COUNT(s.individualid) AS count_dbid 
+                        FROM ' . TABLE_VARIANTS . ' AS vog 
+                        JOIN ' . TABLE_SCR2VAR . ' AS s2v ON (vog.id = s2v.variantid AND vog.`VariantOnGenome/DBID` = "' . $aParams['dbid'] . '") 
+                        JOIN ' . TABLE_SCREENINGS . ' AS s ON (s.id = s2v.screeningid) 
+                        JOIN ' . TABLE_INDIVIDUALS . ' AS i ON (s.individualid = i.id) 
+                        LEFT JOIN ' . TABLE_IND2GP . ' i2gp ON (i2gp.individualid = i.id) 
+                        WHERE ' . $sCondition . ' 
+                        GROUP BY s.individualid';
 
-                $aData[$sType][$sCategory] = array();
-                $aData[$sType][$sCategory]['label'] = $aRules['label'];
-                $aData[$sType][$sCategory]['values'] = array();
-                foreach ($aRules['fields'] as $sField) {
-                    $aData[$sType][$sCategory]['values'][] = $this->aIndividual[$sField];
-                }
 
-                // TOTAL population in this database
-                $sSQL = 'SELECT COUNT(s.individualid) AS total
-                     FROM ' . TABLE_INDIVIDUALS . ' i 
-                     JOIN ' . TABLE_SCREENINGS . ' s ON (s.individualid = i.id)
-                     LEFT JOIN ' . TABLE_IND2GP . ' i2gp ON (i2gp.individualid = i.id) 
-                     WHERE ' . $aRules['condition'] . ' 
-                     GROUP BY s.individualid';
-
-                $aCount = $_DB->query($sSQL, array())->rowCount();
-                $aData[$sType][$sCategory]['total_individuals'] = $aCount;
-
-                // TOTAL number of affected individuals in this database
-                $sSQL = 'SELECT COUNT(s.individualid) AS total_affected
-                     FROM ' . TABLE_INDIVIDUALS . ' i 
-                     JOIN ' . TABLE_SCREENINGS . ' s ON (s.individualid = i.id AND i.`Individual/Affected` = "affected")
-                     LEFT JOIN ' . TABLE_IND2GP . ' i2gp ON (i2gp.individualid = i.id) 
-                     WHERE ' . $aRules['condition'] . ' 
-                     GROUP BY s.individualid';
-
-                $aCount = $_DB->query($sSQL, array())->rowCount();
-                $aData[$sType][$sCategory]['num_affected'] = $aCount;
-
-                // TOTAL number of NOT affected individuals in this database
-                $sSQL = 'SELECT COUNT(s.individualid) AS total_not_affected
-                     FROM ' . TABLE_INDIVIDUALS . ' i 
-                     JOIN ' . TABLE_SCREENINGS . ' s ON (s.individualid = i.id AND i.`Individual/Affected` = "not affected")
-                     LEFT JOIN ' . TABLE_IND2GP . ' i2gp ON (i2gp.individualid = i.id) 
-                     WHERE ' . $aRules['condition'] . ' 
-                     GROUP BY s.individualid';
-
-                $aCount = $_DB->query($sSQL, array())->rowCount();
-                $aData[$sType][$sCategory]['num_not_affected'] = $aCount;
-
-                // Number of individuals with this variant
-                $sSQL = 'SELECT COUNT(s.individualid) AS count_dbid 
-                     FROM ' . TABLE_VARIANTS . ' AS vog 
-                     JOIN ' . TABLE_SCR2VAR . ' AS s2v ON (vog.id = s2v.variantid AND vog.`VariantOnGenome/DBID` = "' . $this->aIndividual['VariantOnGenome/DBID'] . '") 
-                     JOIN ' . TABLE_SCREENINGS . ' AS s ON (s.id = s2v.screeningid) 
-                     JOIN ' . TABLE_INDIVIDUALS . ' AS i ON (s.individualid = i.id) 
-                     LEFT JOIN ' . TABLE_IND2GP . ' i2gp ON (i2gp.individualid = i.id) 
-                     WHERE ' . $aRules['condition'] . ' 
-                     GROUP BY s.individualid';
-
-                $aCountDBID = $_DB->query($sSQL)->rowCount();
-                $aData[$sType][$sCategory]['num_ind_with_variant'] = $aCountDBID;
-
-                if (!empty($aData[$sType][$sCategory]['total_individuals'])) {
-                    $aData[$sType][$sCategory]['percentage'] = round((float) $aData[$sType][$sCategory]['num_ind_with_variant'] / (float) $aData[$sType][$sCategory]['total_individuals'] * 100, 0);
-                }
-            }
         }
-
-        // Save the built data into the database so that we can reuse next time as well as keeping history
-        $sObscountJson = json_encode($aData);
-        $sSQL = "UPDATE " . TABLE_VARIANTS . " SET obscount_json = '$sObscountJson', obscount_updated = NOW() WHERE id = ?";
-        $_DB->query($sSQL, array($this->nVariantId));
-
-        $this->aData = $this->loadExistingData();
-        return $this->aData;
-
     }
 }
