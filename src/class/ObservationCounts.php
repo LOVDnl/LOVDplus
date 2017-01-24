@@ -39,6 +39,7 @@ class LOVD_ObservationCounts
     protected $aIndividual = array();
     protected $nVariantId = null;
     protected $nTimeGenerated = null;
+    protected $nCurrentPopulationSize = null;
 
     protected $aCategories = array();
     protected $aColumns = array();
@@ -46,6 +47,7 @@ class LOVD_ObservationCounts
     public static $TYPE_GENEPANEL = 'genepanel';
     public static $TYPE_GENERAL = 'general';
     public static $EMPTY_DATA_DISPLAY = '-';
+    protected static $DEFAULT_MIN_POP_SIZE = 100;
 
     function __construct ($nVariantId) {
 
@@ -59,6 +61,26 @@ class LOVD_ObservationCounts
 
     public function getTimeGenerated () {
         return $this->nTimeGenerated;
+    }
+
+    public function getCurrentPopulationSize() {
+        global $_DB;
+
+        if ($this->nCurrentPopulationSize === null) {
+            // Generate from database
+            $sSQL = static::getQueryFor('population_size');
+            $this->nCurrentPopulationSize = $_DB->query($sSQL)->rowCount();
+        }
+
+        return $this->nCurrentPopulationSize;
+    }
+
+    public function getDataPopulationSize() {
+        if (isset($this->aData['population_size'])) {
+            return $this->aData['population_size'];
+        }
+
+        return null;
     }
 
     protected function loadExistingData () {
@@ -83,12 +105,24 @@ class LOVD_ObservationCounts
 
         $this->aIndividual = $this->initIndividualData();
         $aData = array();
+        $aData['population_size'] = $this->getCurrentPopulationSize();
+
         foreach ($aSettings as $sType => $aTypeSettings) {
             $this->aCategories = $this->validateCategories($sType, $aTypeSettings);
             $this->aColumns = $this->validateColumns($sType, $aTypeSettings);
 
             switch ($sType) {
                 case static::$TYPE_GENERAL:
+                    $minPopSize = static::$DEFAULT_MIN_POP_SIZE;
+                    if (isset($aSettings[static::$TYPE_GENERAL]['min_population_size'])) {
+                        $minPopSize = $aSettings[static::$TYPE_GENERAL]['min_population_size'];
+                    }
+
+                    if ($aData['population_size'] < $minPopSize) {
+                        $aData[static::$TYPE_GENERAL]['error'] = 'Data cannot be generated because population size is too small.';
+                        break;
+                    }
+
                     $aData[static::$TYPE_GENERAL] = array();
                     foreach ($this->aCategories[static::$TYPE_GENERAL] as $sCategory => $aRules) {
                         $aData[static::$TYPE_GENERAL][$sCategory] = $this->generateData($aRules);
@@ -375,7 +409,7 @@ class LOVD_ObservationCounts
         return $this->aIndividual;
     }
 
-    protected static function getQueryFor ($sColumn, $sCondition, $aParams = array()) {
+    protected static function getQueryFor ($sColumn, $sCondition = '', $aParams = array()) {
         switch ($sColumn) {
             case 'total_individuals':
                 return 'SELECT COUNT(s.individualid) AS total
@@ -409,6 +443,12 @@ class LOVD_ObservationCounts
                         JOIN ' . TABLE_INDIVIDUALS . ' AS i ON (s.individualid = i.id) 
                         LEFT JOIN ' . TABLE_IND2GP . ' i2gp ON (i2gp.individualid = i.id) 
                         WHERE ' . $sCondition . ' 
+                        GROUP BY s.individualid';
+
+            case 'population_size':
+                return 'SELECT COUNT(s.individualid) AS population_size
+                        FROM ' . TABLE_SCREENINGS . ' AS s 
+                        JOIN ' . TABLE_INDIVIDUALS . ' AS i ON (s.individualid = i.id)
                         GROUP BY s.individualid';
 
 

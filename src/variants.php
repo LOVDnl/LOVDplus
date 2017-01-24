@@ -534,14 +534,14 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && !ACTION) {
         print('</THEAD>');
         print('</TABLE>');
 
-        print('<TABLE width="600px" class="data">');
+        print('<TABLE id="obscount-table-genepanel" style="display: none;" width="600px" class="data">');
         print('<THEAD>');
         print('<TR id="obscount-header-genepanel"></TR>');
         print('</THEAD>');
         print('<TBODY id="obscount-data-genepanel"></TBODY>');
         print('</TABLE>');
 
-        print('<TABLE width="600px" class="data">');
+        print('<TABLE id="obscount-table-general" style="display: none;" width="600px" class="data">');
         print('<THEAD>');
         print('<TR id="obscount-header-general"></TR>');
         print('</THEAD>');
@@ -556,7 +556,8 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && !ACTION) {
 ?>
         <SCRIPT type="text/javascript">
         $( function () {
-            load_obscount_info('<?php echo ($zObsCount->getTimeGenerated()? date('d M Y h:ia', $zObsCount->getTimeGenerated()) : '')?>');
+            load_obscount_info('<?php echo ($zObsCount->getTimeGenerated()? date('d M Y h:ia', $zObsCount->getTimeGenerated()) : '')?>',
+                               '<?php echo $zObsCount->getDataPopulationSize() ?>');
             lovd_load_obscount_table(<?php echo json_encode($aData)?>);
         });
 
@@ -576,8 +577,9 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && !ACTION) {
                 jsonData = JSON.parse(data);
 
                 if (jsonData && typeof(jsonData['success']) !== 'undefined') {
-                    load_obscount_info(jsonData['success']['timestamp']);
-                    lovd_load_obscount_table(JSON.parse(jsonData['success']['data']));
+                    var obsCountData = JSON.parse(jsonData['success']['data']);
+                    load_obscount_info(jsonData['success']['timestamp'], obsCountData['population_size']);
+                    lovd_load_obscount_table(obsCountData);
                     lovd_reload_obscount_initial_state();
                 } else {
                     var sErrorMessage = 'Failed to load Observation Counts data.';
@@ -596,6 +598,8 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && !ACTION) {
 
         function lovd_load_obscount_table(aData) {
             if (!aData || aData.length <= 0) {
+                $('#obscount-table-genepanel').hide();
+                $('#obscount-table-general').hide();
                 return;
             }
 
@@ -608,14 +612,18 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && !ACTION) {
 
                     aColumns = aAllColumns[sType]['columns'];
                     var sHeader = '';
+                    var nCols = 0;
                     for (var sKey in aColumns) {
                         if (aColumns.hasOwnProperty(sKey)) {
                             sHeader += '<TH>' + aColumns[sKey] + '</TH>';
+                            nCols++;
                         }
                     }
 
                     sData = '';
-                    if (sType == 'genepanel') {
+                    if (typeof(aData[sType]['error']) !== 'undefined') {
+                        sData = '<TD colspan="' + nCols + '">' + aData[sType]['error'] + '</TD>';
+                    } else if (sType == 'genepanel') {
                         for (var genepanelId in aData[sType]) {
                             for (var sCategory in aData[sType][genepanelId]) {
                                 sData += '<TR>';
@@ -653,15 +661,16 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && !ACTION) {
 
                     $('#obscount-header-' + sType).html(sHeader);
                     $('#obscount-data-' + sType).html(sData);
+                    $('#obscount-table-' + sType).show();
                 }
             }
         }
 
-        function load_obscount_info(timestamp) {
+        function load_obscount_info(timestamp, populationSize) {
             if (!timestamp) {
                 var sInfo = 'There is no existing Observation Counts data <SPAN id="obscount-refresh"> | <A href="#" onClick="lovd_generate_obscount(\'<?php echo $nID ?>\');return false;">Generate Data</A></SPAN>';
             } else {
-                var sInfo = 'Data updated ' + timestamp + ' <SPAN id="obscount-refresh"> | <A href="#" onClick="lovd_generate_obscount(\'<?php echo $nID ?>\');return false;">Refresh Data</A></SPAN>';
+                var sInfo = 'Data updated ' + timestamp + ' <SPAN id="obscount-refresh"> | Population size was: ' + populationSize + '  | <A href="#" onClick="lovd_generate_obscount(\'<?php echo $nID ?>\');return false;">Refresh Data</A></SPAN>';
             }
             $('#obscount-info th').html(sInfo);
             $('#obscount-info').show();

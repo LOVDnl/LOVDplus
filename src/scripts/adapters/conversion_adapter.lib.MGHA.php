@@ -120,7 +120,8 @@ $_INSTANCE_CONFIG['observation_counts'] = array(
             'values' => 'Value',
             'threshold' => 'Percentage'
         ),
-        'categories' => array()
+        'categories' => array(),
+        'min_population_size' => 100
     ),
 
 
