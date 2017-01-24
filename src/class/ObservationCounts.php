@@ -102,6 +102,7 @@ class LOVD_ObservationCounts
 
     public function buildData ($aSettings = array()) {
         global $_DB;
+        define('LOG_EVENT', 'UpdateObsCounts');
 
         $this->aIndividual = $this->initIndividualData();
         $aData = array();
@@ -142,6 +143,8 @@ class LOVD_ObservationCounts
         $sObscountJson = json_encode($aData);
         $sSQL = "UPDATE " . TABLE_VARIANTS . " SET obscount_json = '$sObscountJson', obscount_updated = NOW() WHERE id = ?";
         $_DB->query($sSQL, array($this->nVariantId));
+
+        lovd_writeLog('Event', LOG_EVENT, 'Created Observation Counts for variant #' . $this->nVariantId . '. JSON DATA: ' . $sObscountJson);
 
         $this->aData = $this->loadExistingData();
         return $this->aData;
