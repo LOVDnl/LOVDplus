@@ -102,6 +102,12 @@ class LOVD_ObservationCounts
 
     public function buildData ($aSettings = array()) {
         global $_DB;
+
+        // Check if current analysis status as well as user's permission allow data to be generated.
+        if (!$this->canUpdateData()) {
+            return array();
+        }
+
         define('LOG_EVENT', 'UpdateObsCounts');
 
         $this->aIndividual = $this->initIndividualData();
@@ -149,6 +155,30 @@ class LOVD_ObservationCounts
         $this->aData = $this->loadExistingData();
         return $this->aData;
 
+    }
+
+    public function canUpdateData() {
+        global $_DB, $_AUTH;
+
+        $sSQL = 'SELECT s.analysis_statusid
+                 FROM ' . TABLE_SCREENINGS . ' AS s
+                 JOIN ' . TABLE_SCR2VAR . ' AS s2v 
+                 ON (s.id = s2v.screeningid AND s2v.variantid = ' . $this->nVariantId . ')';
+
+        $aResult = $_DB->query($sSQL)->fetchAssoc();
+
+        if ($aResult['analysis_statusid'] == ANALYSIS_STATUS_READY) {
+            return true;
+        }
+
+        if ($aResult['analysis_statusid'] == ANALYSIS_STATUS_IN_PROGRESS) {
+            if ($_AUTH['level'] >= LEVEL_OWNER || !$this->loadExistingData()) {
+                return true;
+            }
+        }
+
+        // Every other analysis status (including CLOSED) cannot update observation count data.
+        return false;
     }
 
     protected function generateData ($aRules) {

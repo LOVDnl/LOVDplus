@@ -50,7 +50,13 @@ require_once ROOT_PATH . 'class/ObservationCounts.php';
 //$aCategories = (!empty($_INSTANCE_CONFIG['observation_counts']['categories'])? $_INSTANCE_CONFIG['observation_counts']['categories'] : array());
 $aSettings = (!empty($_INSTANCE_CONFIG['observation_counts'])? $_INSTANCE_CONFIG['observation_counts'] : array());
 $zObsCount = new LOVD_ObservationCounts($nID);
-$zObsCount->buildData($aSettings);
+$aData = $zObsCount->buildData($aSettings);
+
+if (empty($aData) && !$zObsCount->canUpdateData()) {
+    $aResults = array('error' => 'Current analysis status or your user permission does not allow Observation Counts data to be updated.');
+    print(json_encode($aResults));
+    exit;
+}
 
 $aResults = array('success' => array(
     'data' => json_encode($zObsCount->getData()),

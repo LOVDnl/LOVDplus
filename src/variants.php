@@ -523,9 +523,6 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && !ACTION) {
         $zObsCount = new LOVD_ObservationCounts($nID);
         $aData = $zObsCount->getData();
 
-        $sRefreshLink = '<SPAN id="obscount-refresh"> | <A href="#" onClick="lovd_generate_obscount(\'' . $nID .'\');return false;">Refresh Data</A></SPAN>';
-        $sLoading = '<SPAN id="obscount-loading"> | Updating data...</SPAN>';
-
         print('<TABLE width="600px" class="data">');
         print('<THEAD>');
         print('<TR><TH style="font-size : 13px;">Observation Counts</TH></TR>');
@@ -568,7 +565,7 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && !ACTION) {
             $('#obscount-data-general').hide();
 
             $('#obscount-refresh').hide();
-            $('#obscount-loading').show();
+            $('#obscount-feedback').show();
             var url = 'ajax/generate_observation_counts.php';
             var data = { "nVariantId" : nVariantId };
 
@@ -667,10 +664,19 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && !ACTION) {
         }
 
         function load_obscount_info(timestamp, populationSize) {
+            var canGenerateData = '<?php echo  $zObsCount->canUpdateData(); ?>';
+            var generateDataLink = '';
+
             if (!timestamp) {
-                var sInfo = 'There is no existing Observation Counts data <SPAN id="obscount-refresh"> | <A href="#" onClick="lovd_generate_obscount(\'<?php echo $nID ?>\');return false;">Generate Data</A></SPAN>';
+                if (canGenerateData) {
+                    generateDataLink = ' <SPAN id="obscount-refresh"> | <A href="#" onClick="lovd_generate_obscount(\'<?php echo $nID ?>\');return false;">Generate Data</A></SPAN>';
+                }
+                var sInfo = 'There is no existing Observation Counts data' + generateDataLink;
             } else {
-                var sInfo = 'Data updated ' + timestamp + ' <SPAN id="obscount-refresh"> | Population size was: ' + populationSize + '  | <A href="#" onClick="lovd_generate_obscount(\'<?php echo $nID ?>\');return false;">Refresh Data</A></SPAN>';
+                if (canGenerateData) {
+                    generateDataLink = ' <SPAN id="obscount-refresh"> | <A href="#" onClick="lovd_generate_obscount(\'<?php echo $nID ?>\');return false;">Refresh Data</A></SPAN>';
+                }
+                var sInfo = 'Data updated ' + timestamp + ' | Population size was: ' + populationSize + generateDataLink;
             }
             $('#obscount-info th').html(sInfo);
             $('#obscount-info').show();
