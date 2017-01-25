@@ -159,7 +159,7 @@ table.data tr.marked td.ordered          {background : #FAD5D5;}
 table.data tr.marked:hover td            {background : #FAD5D5;}
 table.data tr.marked:hover td.ordered    {background : #FFB5B5;}
 table.data tr.marked:hover td.checkbox   {background : #FFF0F0; cursor : default;}
-table.data tr.above-threshold td         {background : #A9A9A9	;}
+table.data tr.above-threshold td         {background : #FFF0F0;}
 
 /*table.data tr.del td.ordered    {background : #F0F3FF;}
 table.data tr.del_hover td.ordered    {background : #AFC8FA;}
