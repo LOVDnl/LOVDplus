@@ -753,7 +753,7 @@ class LOVD_MghaDataConverter extends LOVD_DefaultDataConverter {
 
 
 
-    function postValueAssignmentUpdate($sKey, $aVariant, $aData, $aMetaData)
+    function postValueAssignmentUpdate($sKey, $aVariant, $aData)
     {
         // Update $aData if there is any aggregated data that we need to update after each input line is read.
         // 0 index in  $aData[$sKey] is where we store the VOG data
@@ -765,8 +765,8 @@ class LOVD_MghaDataConverter extends LOVD_DefaultDataConverter {
 
         // Create IGV links
         $aLinkTypes = array('bhc', 'rec');
-        if (!empty($aMetaData['Individual/Sample_ID']) &&
-            !empty($aMetaData['Screening/Pipeline/Run_ID']) &&
+        if (!empty($this->aMetadata['Individual/Sample_ID']) &&
+            !empty($this->aMetadata['Screening/Pipeline/Run_ID']) &&
             !empty($aVariant['chromosome']) &&
             !empty($aVariant['position_g_start']) &&
             !empty($aVariant['position_g_end'])
@@ -775,8 +775,8 @@ class LOVD_MghaDataConverter extends LOVD_DefaultDataConverter {
             $aLinks = array();
             foreach ($aLinkTypes as $sLinkPrefix) {
                 $aLinks[] = '{' . $sLinkPrefix . ':' .
-                            implode(':', array($aMetaData['Individual/Sample_ID'],
-                                               $aMetaData['Screening/Pipeline/Run_ID'],
+                            implode(':', array($this->aMetadata['Individual/Sample_ID'],
+                                               $this->aMetadata['Screening/Pipeline/Run_ID'],
                                                $aVariant['chromosome'],
                                                $aVariant['position_g_start'],
                                                $aVariant['position_g_end']))

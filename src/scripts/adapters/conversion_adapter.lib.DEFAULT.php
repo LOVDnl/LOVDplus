@@ -4,6 +4,7 @@ class LOVD_DefaultDataConverter {
 
     var $sAdapterPath;
     var $aScriptVars;
+    var $aMetadata;
     static $sAdapterName = 'DEFAULT';
     static $NO_TRANSCRIPT = '-----';
 
@@ -79,8 +80,9 @@ class LOVD_DefaultDataConverter {
                 $bHeaderPrevRow = true;
             }
         }
-        return $aKeyedMetadata;
 
+        $this->aMetadata = $aKeyedMetadata;
+        return $this->aMetadata;
     }
 
 
@@ -1096,7 +1098,7 @@ class LOVD_DefaultDataConverter {
 
 
 
-    function postValueAssignmentUpdate($sKey, $aVariant, $aData, $aMetaData)
+    function postValueAssignmentUpdate($sKey, $aVariant, $aData)
     {
         // Update $aData if there is any aggregated data that we need to update after each input line is read.
 
