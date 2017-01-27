@@ -545,6 +545,7 @@ foreach ($aFiles as $sID) {
     $nMiracleID = 0;
 
 
+    $aKeyedMetadata = $zAdapter->readMetadata($aMetaData);
     $nScreeningID = $zAdapter->prepareScreeningID($aMetaData);
     if (empty($nScreeningID)) {
         foreach ($aMetaData as $nLine => $sLine) {
@@ -1252,7 +1253,7 @@ print('Mutalyzer returned EREF error, hg19/hg38 error?' . "\n");
             $aData[$sKey] = array($aVOG);
         }
 
-        $aData = $zAdapter->postValueAssignmentUpdate($sKey, $aVariant, $aData);
+        $aData = $zAdapter->postValueAssignmentUpdate($sKey, $aVariant, $aData, $aKeyedMetadata);
 
         // Now, store VOT data. Because I had received test files with repeated lines, and allowing repeated lines will break import, also here we will check for the key.
         // Also check for a set transcriptid, because it can be empty (transcript could not be created).
