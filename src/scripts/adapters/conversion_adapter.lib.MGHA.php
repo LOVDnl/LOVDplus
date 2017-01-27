@@ -753,7 +753,7 @@ class LOVD_MghaDataConverter extends LOVD_DefaultDataConverter {
 
 
 
-    function postValueAssignmentUpdate($sKey, $aVariant, $aData)
+    function postValueAssignmentUpdate($sKey, &$aVariant, &$aData)
     {
         // Update $aData if there is any aggregated data that we need to update after each input line is read.
         // 0 index in  $aData[$sKey] is where we store the VOG data
@@ -786,7 +786,6 @@ class LOVD_MghaDataConverter extends LOVD_DefaultDataConverter {
             $aVariant['VariantOnGenome/Sequencing/IGV'] = $aData[$sKey][0]['VariantOnGenome/Sequencing/IGV'] = implode(' ', $aLinks);
         }
 
-        return $aData;
     }
 
 
