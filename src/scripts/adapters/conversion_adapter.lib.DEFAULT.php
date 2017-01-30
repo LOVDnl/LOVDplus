@@ -4,6 +4,7 @@ class LOVD_DefaultDataConverter {
 
     var $sAdapterPath;
     var $aScriptVars;
+    var $aMetadata;
     static $sAdapterName = 'DEFAULT';
     static $NO_TRANSCRIPT = '-----';
 
@@ -28,6 +29,60 @@ class LOVD_DefaultDataConverter {
         if ($adapterResult !== 0){
             die('Adapter Failed');
         }
+    }
+
+
+
+
+
+    function readMetadata($aMetaDataLines) {
+        // Read array of lines from .meta.lovd file of each .directvep.lovd file.
+        // Return an array of metadata keyed by column names.
+
+        $aKeyedMetadata = array();
+        $aColNamesByPos = array();
+        $bHeaderPrevRow = false;
+        foreach ($aMetaDataLines as $sLine) {
+            $sLine = trim($sLine);
+            if (empty($sLine)) {
+                continue;
+            }
+
+            if ($bHeaderPrevRow) {
+                // Assuming we always only have 1 row of data after each header.
+
+                // Some lines are commented out so that they can be skipped during import.
+                // But, this metadata is still valid and we want this data.
+                $sLine = trim($sLine, "# ");
+                $aDataRow = explode("\t", $sLine);
+                $aDataRow = array_map(function($sData) {
+                    return trim($sData, '"');
+                }, $aDataRow);
+
+                foreach ($aColNamesByPos as $nPos => $sColName) {
+                    // Read data.
+                    $aKeyedMetadata[$sColName] = $aDataRow[$nPos];
+                }
+
+                $bHeaderPrevRow = false;
+            }
+
+            if (substr($sLine, 0) == '#') {
+                continue;
+            } elseif (substr($sLine, 0, 3) == '"{{') {
+                // Read header
+                $aColNamesByPos = array();
+                $aCols = explode("\t", $sLine);
+                foreach ($aCols as $sColName) {
+                    $sColName = trim($sColName, '"{}');
+                    $aColNamesByPos[] = $sColName;
+                }
+                $bHeaderPrevRow = true;
+            }
+        }
+
+        $this->aMetadata = $aKeyedMetadata;
+        return $this->aMetadata;
     }
 
 
@@ -1043,7 +1098,7 @@ class LOVD_DefaultDataConverter {
 
 
 
-    function postValueAssignmentUpdate($sKey, $aVariant, $aData)
+    function postValueAssignmentUpdate($sKey, &$aVariant, &$aData)
     {
         // Update $aData if there is any aggregated data that we need to update after each input line is read.
 

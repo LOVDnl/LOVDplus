@@ -352,8 +352,8 @@ class LOVD_MghaDataConverter extends LOVD_DefaultDataConverter {
             'Variant_Priority' => 'VariantOnGenome/Variant_priority',
 
             // Extra column for us to store data related to dropped transcripts
-            'Variant_Remarks' => 'VariantOnGenome/Remarks'
-
+            'Variant_Remarks' => 'VariantOnGenome/Remarks',
+            'IGV_Link' => 'VariantOnGenome/Sequencing/IGV'
 
         );
 
@@ -372,6 +372,7 @@ class LOVD_MghaDataConverter extends LOVD_DefaultDataConverter {
         // Make a copy of some columns so that they can be mapped to more than one columns
         // Here, we only import one copy of these columns.
         // We just don't want to modify existing mappings because they are used by the convert_and_merge script.
+        $aLine['IGV_Link'] = '';
         $aLine['vog_alt'] = $aLine['ALT'];
         $aLine['vog_ref'] = $aLine['REF'];
         $aLine['vog_pos'] = $aLine['POS'];
@@ -775,16 +776,39 @@ class LOVD_MghaDataConverter extends LOVD_DefaultDataConverter {
 
 
 
-    function postValueAssignmentUpdate($sKey, $aVariant, $aData)
+    function postValueAssignmentUpdate($sKey, &$aVariant, &$aData)
     {
         // Update $aData if there is any aggregated data that we need to update after each input line is read.
+        // 0 index in  $aData[$sKey] is where we store the VOG data
 
         if ($aVariant['VariantOnGenome/Variant_priority'] > $aData[$sKey][0]['VariantOnGenome/Variant_priority']){
             // update the VOG record to have the higher variant priority
             $aData[$sKey][0]['VariantOnGenome/Variant_priority'] = $aVariant['VariantOnGenome/Variant_priority'];
         }
 
-        return $aData;
+        // Create IGV links
+        $aLinkTypes = array('bhc', 'rec');
+        if (!empty($this->aMetadata['Individual/Sample_ID']) &&
+            !empty($this->aMetadata['Screening/Pipeline/Run_ID']) &&
+            !empty($aVariant['chromosome']) &&
+            !empty($aVariant['position_g_start']) &&
+            !empty($aVariant['position_g_end'])
+        ) {
+            $aData[$sKey][0]['VariantOnGenome/Sequencing/IGV'] = '';
+            $aLinks = array();
+            foreach ($aLinkTypes as $sLinkPrefix) {
+                $aLinks[] = '{' . $sLinkPrefix . ':' .
+                            implode(':', array($this->aMetadata['Individual/Sample_ID'],
+                                               $this->aMetadata['Screening/Pipeline/Run_ID'],
+                                               $aVariant['chromosome'],
+                                               $aVariant['position_g_start'],
+                                               $aVariant['position_g_end']))
+                            . '}';
+            }
+
+            $aVariant['VariantOnGenome/Sequencing/IGV'] = $aData[$sKey][0]['VariantOnGenome/Sequencing/IGV'] = implode(' ', $aLinks);
+        }
+
     }
 
 
