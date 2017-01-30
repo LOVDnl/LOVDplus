@@ -272,7 +272,7 @@ if (PATH_COUNT == 3 && $_PE[1] == 'DBID' && preg_match('/^chr/', $_PE[2]) && !AC
         'VariantOnTranscript/DNA', 'VariantOnTranscript/Protein', 'geneid', 'diseases'
         );
     $aColsToHide = array_diff(array_keys($_DATA->aColumnsViewList), $aColsToShow);
-    $_GET['search_VariantOnGenome/DBID'] = $sDbId;
+    $_GET['search_VariantOnGenome/DBID'] = '="' . $sDbId . '"';
     $_DATA->viewList('', $aColsToHide, false, false, false);
 
     $_T->printFooter();
