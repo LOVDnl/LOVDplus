@@ -4,6 +4,13 @@
  *
  *************/
 
+ * Fixed several problems with MySQL's new default strict mode. LOVD wasn't
+   installable, and transcripts couldn't be created if this setting was enabled.
+   Closes #143: "LOVD won't install with error "Invalid default value for
+   'start_date'""
+   Closes #173: "Installation failed on ubuntu 16"
+
+
 /************************************
  * 3.0 Build 17 patch 02 (tag:3.0-17)
  * 2016-09-27
