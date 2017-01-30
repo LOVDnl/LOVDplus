@@ -246,8 +246,18 @@ class LOVD_CustomViewListMOD extends LOVD_CustomViewList {
                         $aSQL['FROM'] .= ' LEFT JOIN ' . TABLE_TRANSCRIPTS . ' AS t ON (vot.transcriptid = t.id) LEFT JOIN ' . TABLE_GENES . ' AS g ON (t.geneid = g.id)';
                         // We have no fallback, so we'll easily detect an error if we messed up somewhere.
 
-                        // Display the gene panels that this variant is found in.
-                        $aSQL['FROM'] .= ' LEFT JOIN ' . TABLE_GP2GENE . ' AS gp2g ON (t.geneid = gp2g.geneid) LEFT JOIN ' . TABLE_GENE_PANELS . ' AS gp ON (gp2g.genepanelid = gp.id)';
+                    }
+                    break;
+
+                case 'GenePanels':
+                    $nKeyVOT = array_search('VariantOnTranscript', $aObjects);
+                    if (!$aSQL['FROM']) {
+                        $aSQL['SELECT'] .= (!$aSQL['SELECT']? '' : ', ') . 'GROUP_CONCAT(DISTINCT gp.name SEPARATOR ", ") AS gene_panels';
+                        $aSQL['FROM'] = TABLE_GP2GENE . ' AS gp2g  
+                                        LEFT JOIN ' . TABLE_GENE_PANELS . ' AS gp ON (gp2g.genepanelid = gp.id)';
+                    } elseif ($nKeyVOT !== false && $nKeyVOT < $nKey) {
+                        $aSQL['FROM'] .= ' LEFT JOIN ' . TABLE_GP2GENE . ' AS gp2g ON (t.geneid = gp2g.geneid) 
+                                           LEFT JOIN ' . TABLE_GENE_PANELS . ' AS gp ON (gp2g.genepanelid = gp.id)';
                         $aSQL['SELECT'] .= (!$aSQL['SELECT']? '' : ', ') . 'GROUP_CONCAT(DISTINCT gp.name SEPARATOR ", ") AS gene_panels';
                     }
                     break;
@@ -371,9 +381,6 @@ class LOVD_CustomViewListMOD extends LOVD_CustomViewList {
                             'gene_OMIM_' => array(
                                 'view' => array('OMIM links', 100),
                                 'db'   => array('__gene_OMIM', 'ASC', 'TEXT')),
-                            'gene_panels' => array(
-                                'view' => array('Gene panels', 150),
-                                'db'   => array('gene_panels', 'DESC', 'TEXT')),
                         ));
                     break;
                 case 'VariantOnGenome':
@@ -400,6 +407,15 @@ class LOVD_CustomViewListMOD extends LOVD_CustomViewList {
                                 'db'   => array('obs_var_dis_ind_ratio', 'ASC', 'DECIMAL'),
                                 'legend' => array('The ratio of the number of individuals with this variant and this disease divided by the total number of individuals with this disease within this database.',
                                     'The ratio of the number of individuals with this variant and this disease divided by the total number of individuals with this disease within this database.')),
+                        ));
+                    break;
+
+                case 'GenePanels':
+                    $this->aColumnsViewList = array_merge($this->aColumnsViewList,
+                        array(
+                            'gene_panels' => array(
+                                'view' => array('Gene panels', 150),
+                                'db'   => array('gene_panels', 'DESC', 'TEXT')),
                         ));
                     break;
             }
