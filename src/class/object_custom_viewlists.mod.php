@@ -275,13 +275,21 @@ class LOVD_CustomViewListMOD extends LOVD_CustomViewList {
                         $aSQL['FROM'] .= ' LEFT JOIN ' . TABLE_TRANSCRIPTS . ' AS t ON (vot.transcriptid = t.id) LEFT JOIN ' . TABLE_GENES . ' AS g ON (t.geneid = g.id)';
                         // We have no fallback, so we'll easily detect an error if we messed up somewhere.
 
-                        // Display the gene panels that this variant is found in.
+                    }
+                    break;
+                case 'GenePanels':
+                    $nKeyVOT = array_search('VariantOnTranscript', $aObjects);
+                    $sSelect = 'GROUP_CONCAT(DISTINCT gp.name SEPARATOR ", ") AS gene_panels,
+                             IFNULL(GROUP_CONCAT(DISTINCT t_preferred.id_ncbi SEPARATOR ", "),  GROUP_CONCAT(DISTINCT t.id_ncbi SEPARATOR ";") ) AS preferred_transcripts';
+                    if (!$aSQL['FROM']) {
+                        $aSQL['SELECT'] .= (!$aSQL['SELECT']? '' : ', ') . $sSelect;
+                        $aSQL['FROM'] = TABLE_GP2GENE . ' AS gp2g  
+                                        LEFT JOIN ' . TABLE_GENE_PANELS . ' AS gp ON (gp2g.genepanelid = gp.id)';
+                    } elseif ($nKeyVOT !== false && $nKeyVOT < $nKey) {
+                        $aSQL['SELECT'] .= (!$aSQL['SELECT']? '' : ', ') . $sSelect;
                         $aSQL['FROM'] .= ' LEFT JOIN ' . TABLE_GP2GENE . ' AS gp2g ON (t.geneid = gp2g.geneid) 
                                            LEFT JOIN ' . TABLE_GENE_PANELS . ' AS gp ON (gp2g.genepanelid = gp.id)
                                            LEFT JOIN ' . TABLE_TRANSCRIPTS . ' AS t_preferred ON (gp2g.transcriptid = t_preferred.id)' ;
-                        $aSQL['SELECT'] .= (!$aSQL['SELECT']? '' : ', ') .
-                            'GROUP_CONCAT(DISTINCT gp.name SEPARATOR ", ") AS gene_panels,
-                             IFNULL(GROUP_CONCAT(DISTINCT t_preferred.id_ncbi SEPARATOR ", "),  GROUP_CONCAT(DISTINCT t.id_ncbi SEPARATOR ";") ) AS preferred_transcripts'; // if no preferred transcript found, display all transcripts
                     }
                     break;
             }
