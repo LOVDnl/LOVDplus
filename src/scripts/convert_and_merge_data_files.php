@@ -4,11 +4,11 @@
  * LEIDEN OPEN VARIATION DATABASE (LOVD)
  *
  * Created     : 2014-11-28
- * Modified    : 2016-11-11
- * For LOVD+   : 3.0-16
+ * Modified    : 2017-01-31
+ * For LOVD+   : 3.0-17
  *
- * Copyright   : 2004-2016 Leiden University Medical Center; http://www.LUMC.nl/
- * Programmer  : Ing. Ivo F.A.C. Fokkema <I.F.A.C.Fokkema@LUMC.nl>
+ * Copyright   : 2004-2017 Leiden University Medical Center; http://www.LUMC.nl/
+ * Programmer  : Ivo F.A.C. Fokkema <I.F.A.C.Fokkema@LUMC.nl>
  *
  *************/
 
@@ -1584,13 +1584,16 @@ $aTranscriptInfo = array(array('id' => 'NO_TRANSCRIPTS')); // Basically, any tex
                             die('Can\'t create transcript ' . $aTranscript['id_ncbi'] . ' for gene ' . $aLine['SYMBOL'] . '.' . "\n");
                         }
 
+                        // Save the ID before the writeLog deletes it...
+                        $nTranscriptID = $_DB->lastInsertId();
+
                         // Write to log...
                         lovd_writeLog('Event', LOG_EVENT, 'Transcript entry successfully added to gene ' . $aGenes[$aLine['SYMBOL']]['id'] . ' - ' . $sTranscriptName);
                         print('Created transcript ' . $aTranscript['id'] . ".\n");
                         flush();
 
                         // Store in memory.
-                        $aTranscripts[$aLine['Feature']] = array_merge($aTranscript, array('id' => $_DB->lastInsertId())); // Contains a lot more info than needed, but whatever.
+                        $aTranscripts[$aLine['Feature']] = array_merge($aTranscript, array('id' => $nTranscriptID)); // Contains a lot more info than needed, but whatever.
                     }
                 }
 
@@ -1892,7 +1895,7 @@ if (!$aVariant['VariantOnTranscript/RNA']) {
             $aColumnsForVOG[] = $sCol;
         }
     }
-    // Assuming here that *all* variants actually have at least one VOT... Take VOT columns.
+    // Assuming here that at least *one* variant actually has a VOT... Take VOT columns.
     foreach (array_keys($aVOT) as $sCol) {
         if (substr($sCol, 0, 20) == 'VariantOnTranscript/') {
             $aColumnsForVOT[] = $sCol;
