@@ -260,18 +260,13 @@ if (PATH_COUNT == 3 && $_PE[1] == 'DBID' && preg_match('/^chr/', $_PE[2]) && !AC
     define('PAGE_TITLE', 'View genomic variants');
     $_T->printHeader();
     $_T->printTitle();
-    require ROOT_PATH . 'class/object_genome_variants.php';
-    $_DATA = new LOVD_GenomeVariant();
-    $aColsToShow = array (
-        'id_', 'effect', 'allele_', 'Individual/Sample_ID', 'Individual/Clinical_indication',
-        'Screening/Library_preparation', 'Screening/Sequencing_chemistry', 'Screening/Pipeline/Run_ID',
-        'VariantOnGenome/Curation/Classification','VariantOnGenome/Sequencing/IGV', 'VariantOnGenome/Reference',
-        'VariantOnTranscript/DNA', 'VariantOnTranscript/Protein', 'geneid', 'diseases'
-        );
-    $aColsToHide = array_diff(array_keys($_DATA->aColumnsViewList), $aColsToShow);
-    $_GET['search_VariantOnGenome/DBID'] = '="' . $sDbId . '"';
+    
+    require ROOT_PATH . 'class/object_custom_viewlists.mod.php';
+    $_DATA = new LOVD_CustomViewListMOD(array('VariantOnGenome', 'VariantOnTranscript', 'Screening', 'Individual'));
 
-    $_DATA->viewList('', $aColsToHide, false, false, false);
+    $_GET['search_VariantOnGenome/DBID'] = '="' . $sDbId . '"';
+    $_DATA->viewList('CustomVL_ObsCounts');
+
     $_T->printFooter();
     exit;
 }
@@ -671,7 +666,7 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && !ACTION) {
 
                                             sIds = '';
                                             if (aVariantIds.length > 0) {
-                                                sIds = '?search_id_=' + aVariantIds.join('|');
+                                                sIds = '?search_variantid=' + aVariantIds.join('|');
                                             }
                                             colData = '<A href="/variants/DBID/<?php echo $zObsCount->getVogDBID()?>' + sIds + '" target="_blank">' + colData + '</A>';
                                         }

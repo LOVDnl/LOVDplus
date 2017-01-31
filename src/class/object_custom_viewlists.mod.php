@@ -142,6 +142,7 @@ class LOVD_CustomViewListMOD extends LOVD_CustomViewList {
                             'VariantOnGenome/Sequencing/Depth/Alt/Fraction',
                             'VariantOnGenome/Sequencing/Quality',
                             'VariantOnGenome/Sequencing/GATKcaller',
+                            'VariantOnGenome/DBID'
                         );
 
                     // Read from adapter config if it exists.
@@ -175,9 +176,6 @@ class LOVD_CustomViewListMOD extends LOVD_CustomViewList {
                     // Check if we have found any diseases and set the boolean flag accordingly.
                     $bDiseases = (bool) $sDiseaseIDs;
 
-                    $aSQL['SELECT'] .= ', COUNT(DISTINCT os.individualid) AS obs_variant';
-                    $aSQL['SELECT'] .= ', COUNT(DISTINCT os.individualid) / ' . $_DB->query('SELECT COUNT(*) FROM ' . TABLE_INDIVIDUALS)->fetchColumn() . ' AS obs_var_ind_ratio';
-
                     if ($bDiseases) {
                         // If this individual has diseases then setup the disease specific observation count columns.
                         $aSQL['SELECT'] .= ', COUNT(DISTINCT odi2d.individualid) AS obs_disease';
@@ -207,23 +205,34 @@ class LOVD_CustomViewListMOD extends LOVD_CustomViewList {
                         }
                         // We have no fallback, so we'll easily detect an error if we messed up somewhere.
                     }
+
                     $aSQL['FROM'] .= ' LEFT OUTER JOIN ' . TABLE_ALLELES . ' AS a ON (vog.allele = a.id)';
                     $aSQL['FROM'] .= ' LEFT OUTER JOIN ' . TABLE_EFFECT . ' AS eg ON (vog.effectid = eg.id)';
                     $aSQL['FROM'] .= ' LEFT OUTER JOIN ' . TABLE_CURATION_STATUS . ' AS cs ON (vog.curation_statusid = cs.id)';
-
-                    // Outer joins for the observation counts.
-                    // Join the variants table using the DBID to get all of the variants that are the same as this one.
-                    $aSQL['FROM'] .= ' LEFT OUTER JOIN ' . TABLE_VARIANTS . ' AS ovog USING (`VariantOnGenome/DBID`)';
-                    // Join the screening2variants table to get the screening IDs for all these variants.
-                    $aSQL['FROM'] .= ' LEFT OUTER JOIN ' . TABLE_SCR2VAR . ' AS os2v ON (ovog.id = os2v.variantid)';
-                    // Join the screening table to to get the individual IDs for these variants as we count the DISTINCT individualids.
-                    $aSQL['FROM'] .= ' LEFT OUTER JOIN ' . TABLE_SCREENINGS . ' AS os ON (os2v.screeningid = os.id)';
 
                     // Outer join for the disease specific observation counts.
                     if ($bDiseases) {
                         // Join the individuals2diseases table to get the individuals with this variant and this individuals diseases.
                         $aSQL['FROM'] .= ' LEFT OUTER JOIN ' . TABLE_IND2DIS . ' AS odi2d ON (os.individualid = odi2d.individualid AND odi2d.diseaseid in(' . $sDiseaseIDs . '))';
                     }
+
+                    break;
+
+                case 'ObservationCounts':
+                    $nKeyVOG = array_search('VariantOnGenome', $aObjects);
+                    if ($nKeyVOG !== false && $nKeyVOG < $nKey) {
+                        $aSQL['SELECT'] .= ', COUNT(DISTINCT os.individualid) AS obs_variant';
+                        $aSQL['SELECT'] .= ', COUNT(DISTINCT os.individualid) / ' . $_DB->query('SELECT COUNT(*) FROM ' . TABLE_INDIVIDUALS)->fetchColumn() . ' AS obs_var_ind_ratio';
+
+                        // Outer joins for the observation counts.
+                        // Join the variants table using the DBID to get all of the variants that are the same as this one.
+                        $aSQL['FROM'] .= ' LEFT OUTER JOIN ' . TABLE_VARIANTS . ' AS ovog USING (`VariantOnGenome/DBID`)';
+                        // Join the screening2variants table to get the screening IDs for all these variants.
+                        $aSQL['FROM'] .= ' LEFT OUTER JOIN ' . TABLE_SCR2VAR . ' AS os2v ON (ovog.id = os2v.variantid)';
+                        // Join the screening table to to get the individual IDs for these variants as we count the DISTINCT individualids.
+                        $aSQL['FROM'] .= ' LEFT OUTER JOIN ' . TABLE_SCREENINGS . ' AS os ON (os2v.screeningid = os.id)';
+                    }
+
                     break;
 
                 case 'VariantOnTranscript':
@@ -275,6 +284,43 @@ class LOVD_CustomViewListMOD extends LOVD_CustomViewList {
                         $aSQL['FROM'] .= ' LEFT JOIN ' . TABLE_TRANSCRIPTS . ' AS t ON (vot.transcriptid = t.id) LEFT JOIN ' . TABLE_GENES . ' AS g ON (t.geneid = g.id)';
                         // We have no fallback, so we'll easily detect an error if we messed up somewhere.
 
+                    }
+                    break;
+                case 'Screening':
+                    // Read from adapter config if it exists.
+                    if (isset($_INSTANCE_CONFIG['custom_object']['viewList']['colsToShow'][0])) {
+                        $aColsNames = $_INSTANCE_CONFIG['custom_object']['viewList']['colsToShow'][0];
+                        $aScreeningCols = array();
+
+                        foreach ($aColsNames as $sCol) {
+                            if (strpos($sCol, 'Screening/') === 0) {
+                                $aScreeningCols[] = $sCol;
+                            }
+                        }
+                        $aColumnsToShow['Screening'] = $aScreeningCols;
+                    }
+
+                    $nKeyVOG = array_search('VariantOnGenome', $aObjects);
+                    $sSelect = 's.*';
+                    if (!$aSQL['FROM']) {
+                        $aSQL['SELECT'] .= (!$aSQL['SELECT']? '' : ', ') . $sSelect;
+                        $aSQL['FROM'] = TABLE_SCR2VAR . ' AS s2v
+                                        LEFT JOIN ' . TABLE_SCREENINGS . ' AS s ON (vog.id = s2v.screeningid)';
+                    } elseif ($nKeyVOG !== false && $nKeyVOG < $nKey) {
+                        $aSQL['SELECT'] .= (!$aSQL['SELECT']? '' : ', ') . $sSelect;
+                        $aSQL['FROM'] .= ' LEFT JOIN ' . TABLE_SCR2VAR . ' AS s2v ON (vog.id = s2v.variantid)
+                                           LEFT JOIN ' . TABLE_SCREENINGS . ' AS s ON (s.id = s2v.screeningid)';
+                    }
+                    break;
+                case 'Individual':
+                    $nKeyScreening = array_search('Screening', $aObjects);
+                    $sSelect = 'i.*';
+                    if (!$aSQL['FROM']) {
+                        $aSQL['SELECT'] .= (!$aSQL['SELECT']? '' : ', ') . $sSelect;
+                        $aSQL['FROM'] = TABLE_INDIVIDUALS . ' AS i';
+                    } elseif ($nKeyScreening !== false && $nKeyScreening < $nKey) {
+                        $aSQL['SELECT'] .= (!$aSQL['SELECT']? '' : ', ') . $sSelect;
+                        $aSQL['FROM'] .= ' LEFT JOIN ' . TABLE_INDIVIDUALS . ' AS i ON (s.individualid = i.id)';
                     }
                     break;
                 case 'GenePanels':
@@ -349,6 +395,12 @@ class LOVD_CustomViewListMOD extends LOVD_CustomViewList {
                                 'chromosome' => array(
                                         'view' => array('Chr', 40),
                                         'db'   => array('vog.chromosome', 'ASC', true)),
+                                'VariantOnGenome/DBID' => array(
+                                        'view' => false,
+                                        'db'   => array('vog.`VariantOnGenome/DBID`', 'ASC', true)),
+                                'allele_' => array(
+                                        'view' => array('Allele', 'ASC', true),
+                                        'db'   => array('allele_', 'ASC', true)),
                               ));
 
                     if (!$this->sSortDefault) {
@@ -430,6 +482,20 @@ class LOVD_CustomViewListMOD extends LOVD_CustomViewList {
                         ));
                     break;
                 case 'VariantOnGenome':
+                        if ($_INI['instance']['name'] == 'mgha') {
+                            $this->aColumnsViewList = array_merge($this->aColumnsViewList, array(
+                                'zygosity_' => array(
+                                    'view' => array('Zygosity', 70),
+                                    'db' => array('zygosity_', 'ASC', 'TEXT'),
+                                ),
+                                'var_frac_' => array(
+                                    'view' => array('Var Frac', 70),
+                                    'db' => array('var_frac_', 'ASC', 'DECIMAL'),
+                                ),
+                            ));
+                        }
+                    break;
+                case 'ObservationCounts':
                     // The fixed columns.
                     $this->aColumnsViewList = array_merge($this->aColumnsViewList,
                         array(
@@ -454,19 +520,6 @@ class LOVD_CustomViewListMOD extends LOVD_CustomViewList {
                                 'legend' => array('The ratio of the number of individuals with this variant and this disease divided by the total number of individuals with this disease within this database.',
                                     'The ratio of the number of individuals with this variant and this disease divided by the total number of individuals with this disease within this database.')),
                         ));
-
-                        if ($_INI['instance']['name'] == 'mgha') {
-                            $this->aColumnsViewList = array_merge($this->aColumnsViewList, array(
-                                'zygosity_' => array(
-                                    'view' => array('Zygosity', 70),
-                                    'db' => array('zygosity_', 'ASC', 'TEXT'),
-                                ),
-                                'var_frac_' => array(
-                                    'view' => array('Var Frac', 70),
-                                    'db' => array('var_frac_', 'ASC', 'DECIMAL'),
-                                ),
-                            ));
-                        }
                     break;
             }
         }

@@ -52,6 +52,9 @@ $_INSTANCE_CONFIG['custom_object'] = array(
                 'VariantOnGenome/Sequencing/Depth/Total',
                 'VariantOnGenome/Sequencing/Allele/Frequency',
                 'VariantOnGenome/Sequencing/Depth/Alt/Fraction',
+                'VariantOnGenome/Curation/Classification',
+                'VariantOnGenome/Sequencing/IGV',
+                'VariantOnGenome/Reference',
 
                 // VOT
                 'VariantOnTranscript/DNA',
@@ -59,7 +62,12 @@ $_INSTANCE_CONFIG['custom_object'] = array(
                 'VariantOnTranscript/Consequence_Type',
                 'VariantOnTranscript/Consequence_Impact',
                 'VariantOnTranscript/Clinical_Significance',
-                'VariantOnGenome/Frequency/EVS/VEP/European_American'
+                'VariantOnGenome/Frequency/EVS/VEP/European_American',
+
+                // Screening
+                'Screening/Library_preparation',
+                'Screening/Sequencing_chemistry',
+                'Screening/Pipeline/Run_ID',
             ),
 
             'CustomVL_AnalysisRunResults_for_I_VE' => array(
@@ -95,6 +103,30 @@ $_INSTANCE_CONFIG['custom_object'] = array(
                 'obs_var_ind_ratio',
                 'gene_panels',
                 'VariantOnGenome/Frequency/EVS/VEP/European_American'
+            ),
+
+            'CustomVL_ObsCounts' => array(
+                // Invisible.
+                'variantid',
+                'VariantOnGenome/DBID',
+
+                // Visible.
+                'vog_effect',
+                'allele_',
+                'Individual/Sample_ID',
+                'Individual/Clinical_indication',
+                'Screening/Library_preparation',
+                'Screening/Sequencing_chemistry',
+                'Screening/Pipeline/Run_ID',
+
+                'VariantOnGenome/Curation/Classification',
+                'VariantOnGenome/Sequencing/IGV',
+                'VariantOnGenome/Reference',
+                'VariantOnTranscript/DNA',
+                'VariantOnTranscript/Protein',
+                'symbol',
+                'gene_OMIM_'
+
             )
         )
     )
