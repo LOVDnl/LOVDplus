@@ -253,6 +253,33 @@ if (!ACTION && (empty($_PE[1]) || preg_match('/^chr[0-9A-Z]{1,2}$/', $_PE[1]))) 
 
 
 
+if (PATH_COUNT == 3 && $_PE[1] == 'DBID' && preg_match('/^chr/', $_PE[2]) && !ACTION) {
+    // URL: /variants/DBID/chr_00001
+    // View all genomic variant entries with the same DBID
+    $sDbId = $_PE[2];
+    define('PAGE_TITLE', 'View genomic variants');
+    $_T->printHeader();
+    $_T->printTitle();
+    require ROOT_PATH . 'class/object_genome_variants.php';
+    $_DATA = new LOVD_GenomeVariant();
+    $aColsToShow = array (
+        'id_', 'effect', 'allele_', 'Individual/Sample_ID', 'Individual/Clinical_indication',
+        'Screening/Library_preparation', 'Screening/Sequencing_chemistry', 'Screening/Pipeline/Run_ID',
+        'VariantOnGenome/Curation/Classification','VariantOnGenome/Sequencing/IGV', 'VariantOnGenome/Reference',
+        'VariantOnTranscript/DNA', 'VariantOnTranscript/Protein', 'geneid', 'diseases'
+        );
+    $aColsToHide = array_diff(array_keys($_DATA->aColumnsViewList), $aColsToShow);
+    $_GET['search_VariantOnGenome/DBID'] = '="' . $sDbId . '"';
+
+    $_DATA->viewList('', $aColsToHide, false, false, false);
+    $_T->printFooter();
+    exit;
+}
+
+
+
+
+
 if (PATH_COUNT == 2 && $_PE[1] == 'in_gene' && !ACTION) {
     // URL: /variants/in_gene
     // View all entries effecting a transcript.
@@ -621,12 +648,35 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && !ACTION) {
                     if (typeof(aData[sType]['error']) !== 'undefined') {
                         sData = '<TD colspan="' + nCols + '">' + aData[sType]['error'] + '</TD>';
                     } else if (sType == 'genepanel') {
+
                         for (var genepanelId in aData[sType]) {
+                            // Loop through each gene panel
+
                             for (var sCategory in aData[sType][genepanelId]) {
+                                // Loop through each category per gene panel
+
                                 sData += '<TR>';
                                 for (var sKey in aColumns) {
+                                    // Now print each column per row
+
                                     if (aColumns.hasOwnProperty(sKey)) {
                                         colData = aData[sType][genepanelId][sCategory][sKey];
+                                        
+                                        // URL in the percentage column
+                                        if (sKey == 'percentage') {
+                                            aVariantIds = []
+                                            if (typeof(aData[sType][genepanelId][sCategory]['variant_ids']) !== 'undefined') {
+                                                aVariantIds = aData[sType][genepanelId][sCategory]['variant_ids'];
+                                            }
+
+                                            sIds = '';
+                                            if (aVariantIds.length > 0) {
+                                                sIds = '?search_id_=' + aVariantIds.join('|');
+                                            }
+                                            colData = '<A href="/variants/DBID/<?php echo $zObsCount->getVogDBID()?>' + sIds + '" target="_blank">' + colData + '</A>';
+                                        }
+
+                                        // Gene panel header
                                         if (sCategory === 'all') {
                                             sData += '<TH>' + colData + '</TH>';
                                         } else {
@@ -636,8 +686,8 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && !ACTION) {
                                 }
                                 sData += '</TR>';
                             }
-
                         }
+                        
                     } else {
                         for (var sCategory in aData[sType]) {
                             sClass = '';
@@ -654,7 +704,6 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && !ACTION) {
                             sData += '</TR>';
                         }
                     }
-
 
                     $('#obscount-header-' + sType).html(sHeader);
                     $('#obscount-data-' + sType).html(sData);

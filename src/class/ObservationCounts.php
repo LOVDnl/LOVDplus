@@ -52,6 +52,7 @@ class LOVD_ObservationCounts
     function __construct ($nVariantId) {
 
         $this->nVariantId = $nVariantId;
+        $this->aIndividual = $this->initIndividualData();
         $this->loadExistingData();
     }
 
@@ -83,6 +84,10 @@ class LOVD_ObservationCounts
         return null;
     }
 
+    public function getVogDBID() {
+        return (empty($this->aIndividual['VariantOnGenome/DBID'])? '' : $this->aIndividual['VariantOnGenome/DBID']);
+    }
+
     protected function loadExistingData () {
         global $_DB;
 
@@ -110,7 +115,6 @@ class LOVD_ObservationCounts
 
         define('LOG_EVENT', 'UpdateObsCounts');
 
-        $this->aIndividual = $this->initIndividualData();
         $aData = array();
         $aData['population_size'] = $this->getCurrentPopulationSize();
 
@@ -204,23 +208,28 @@ class LOVD_ObservationCounts
 
             // TOTAL population in this database
             $sSQL = static::getQueryFor('total_individuals', $aRules['condition']);
-            $aCount = $_DB->query($sSQL, array())->rowCount();
-            $aData['total_individuals'] = $aCount;
+            $nCount = $_DB->query($sSQL, array())->rowCount();
+            $aData['total_individuals'] = $nCount;
 
             // TOTAL number of affected individuals in this database
             $sSQL = static::getQueryFor('num_affected', $aRules['condition']);
-            $aCount = $_DB->query($sSQL, array())->rowCount();
-            $aData['num_affected'] = $aCount;
+            $nCount = $_DB->query($sSQL, array())->rowCount();
+            $aData['num_affected'] = $nCount;
 
             // TOTAL number of NOT affected individuals in this database
             $sSQL = static::getQueryFor('num_not_affected', $aRules['condition']);
-            $aCount = $_DB->query($sSQL, array())->rowCount();
-            $aData['num_not_affected'] = $aCount;
+            $nCount = $_DB->query($sSQL, array())->rowCount();
+            $aData['num_not_affected'] = $nCount;
 
             // Number of individuals with this variant
             $sSQL = static::getQueryFor('num_ind_with_variant', $aRules['condition'], array('dbid' => $this->aIndividual['VariantOnGenome/DBID']));
-            $aCountDBID = $_DB->query($sSQL)->rowCount();
-            $aData['num_ind_with_variant'] = $aCountDBID;
+            $aData['variant_ids'] = array();
+            $aData['num_ind_with_variant'] = 0;
+            $zResult = $_DB->query($sSQL);
+            while ($aRow = $zResult->fetchAssoc()) {
+                $aData['num_ind_with_variant']++;
+                $aData['variant_ids'] = array_merge($aData['variant_ids'], explode(';', $aRow['variant_ids']));
+            }
 
             if (!empty($aData['total_individuals'])) {
                 $aData['percentage'] = round((float) $aData['num_ind_with_variant'] / (float) $aData['total_individuals'] * 100, 0);
@@ -469,7 +478,7 @@ class LOVD_ObservationCounts
                         GROUP BY s.individualid';
 
             case 'num_ind_with_variant' :
-                return 'SELECT COUNT(s.individualid) AS count_dbid 
+                return 'SELECT COUNT(s.individualid) AS count_dbid, GROUP_CONCAT(DISTINCT vog.id SEPARATOR ";") as variant_ids
                         FROM ' . TABLE_VARIANTS . ' AS vog 
                         JOIN ' . TABLE_SCR2VAR . ' AS s2v ON (vog.id = s2v.variantid AND vog.`VariantOnGenome/DBID` = "' . $aParams['dbid'] . '") 
                         JOIN ' . TABLE_SCREENINGS . ' AS s ON (s.id = s2v.screeningid) 
