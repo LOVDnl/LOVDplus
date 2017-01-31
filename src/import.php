@@ -38,16 +38,6 @@ set_time_limit(0); // Disable time limit, parsing may take a long time.
 session_write_close(); // Also don't care about the session (in fact, it locks the whole LOVD while this page is running).
 ini_set('memory_limit', '4096M'); // 4GB.
 
-// Require at least curator clearance.
-lovd_isAuthorized('gene', $_AUTH['curates']); // Any gene will do.
-lovd_requireAUTH(LEVEL_CURATOR);
-if ($_AUTH['level'] == LEVEL_CURATOR) {
-    // If user has level curator, only simulate is allowed.
-    $_POST['simulate'] = 1;
-}
-
-// FIXME: How do we implement authorization? First parse everything, THEN using the parsed data we check if user has rights to insert this data?
-
 
 
 
@@ -266,6 +256,16 @@ if (ACTION == 'autoupload_scheduled_file' && PATH_COUNT == 1 && FORMAT == 'text/
 
 
 
+
+// Require at least curator clearance.
+lovd_isAuthorized('gene', $_AUTH['curates']); // Any gene will do.
+lovd_requireAUTH(LEVEL_CURATOR);
+if ($_AUTH['level'] == LEVEL_CURATOR) {
+    // If user has level curator, only simulate is allowed.
+    $_POST['simulate'] = 1;
+}
+
+// FIXME: How do we implement authorization? First parse everything, THEN using the parsed data we check if user has rights to insert this data?
 
 require ROOT_PATH . 'inc-lib-form.php';
 // FIXME:
