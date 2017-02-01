@@ -433,6 +433,12 @@ class LOVD_CustomViewListMOD extends LOVD_CustomViewList {
                         $this->sSortDefault = 'VariantOnTranscript/DNA';
                     }
                     break;
+                case 'Screening':
+                    $sPrefix = 's.';
+                    break;
+                case 'Individual':
+                    $sPrefix = 'i.';
+                    break;
             }
 
 
