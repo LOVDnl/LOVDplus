@@ -544,6 +544,7 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && !ACTION) {
         $aSettings = (!empty($_INSTANCE_CONFIG['observation_counts'])? $_INSTANCE_CONFIG['observation_counts'] : array());
         $zObsCount = new LOVD_ObservationCounts($nID);
         $aData = $zObsCount->getData();
+        $bHasPermissionToViewVariants = ($_AUTH['level'] >= LEVEL_MANAGER? true: false);
 
         print('<TABLE width="600px" class="data">');
         print('<THEAD>');
@@ -657,18 +658,36 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && !ACTION) {
                                     if (aColumns.hasOwnProperty(sKey)) {
                                         colData = aData[sType][genepanelId][sCategory][sKey];
                                         
+                                        // If data is empty, then show the category label
+                                        if (sKey == 'values') {
+                                            noValue = true;
+                                            for (var i in colData) {
+                                                if (colData[i] != '<?php echo $zObsCount::$EMPTY_DATA_DISPLAY?>') {
+                                                    noValue = false;
+                                                    break;
+                                                }
+                                            }
+                                            
+                                            if (noValue) {
+                                                colData = '[' + aData[sType][genepanelId][sCategory]['label'] + ']';
+                                            }
+
+                                        }
+                                        
                                         // URL in the percentage column
                                         if (sKey == 'percentage') {
-                                            aVariantIds = []
+                                            aVariantIds = [];
                                             if (typeof(aData[sType][genepanelId][sCategory]['variant_ids']) !== 'undefined') {
                                                 aVariantIds = aData[sType][genepanelId][sCategory]['variant_ids'];
                                             }
 
+                                            nMaxVariantsToEnableLink = 100;
+                                            bCanEnableLink = <?php echo ($bHasPermissionToViewVariants? 1 : 0) ?> && aVariantIds.length > 0 && aVariantIds.length <= nMaxVariantsToEnableLink;
                                             sIds = '';
-                                            if (aVariantIds.length > 0) {
+                                            if (bCanEnableLink) {
                                                 sIds = '?search_variantid=' + aVariantIds.join('|');
+                                                colData = '<A href="/variants/DBID/<?php echo $zObsCount->getVogDBID()?>' + sIds + '" target="_blank">' + colData + '</A>';
                                             }
-                                            colData = '<A href="/variants/DBID/<?php echo $zObsCount->getVogDBID()?>' + sIds + '" target="_blank">' + colData + '</A>';
                                         }
 
                                         // Gene panel header

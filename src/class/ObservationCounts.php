@@ -65,6 +65,8 @@ class LOVD_ObservationCounts
     }
 
     public function getCurrentPopulationSize() {
+        // Retrieve the total number of individuals in the database NOW.
+
         global $_DB;
 
         if ($this->nCurrentPopulationSize === null) {
@@ -77,6 +79,8 @@ class LOVD_ObservationCounts
     }
 
     public function getDataPopulationSize() {
+        // Retrieve the total number of individuals at the time the loaded data was generated.
+
         if (isset($this->aData['population_size'])) {
             return $this->aData['population_size'];
         }
@@ -89,6 +93,8 @@ class LOVD_ObservationCounts
     }
 
     protected function loadExistingData () {
+        // Retrieve data that was previously stored in the database as json.
+        
         global $_DB;
 
         $sSQL = 'SELECT obscount_json, obscount_updated FROM ' . TABLE_VARIANTS . ' WHERE id = "' . $this->nVariantId . '"';
@@ -106,6 +112,8 @@ class LOVD_ObservationCounts
     }
 
     public function buildData ($aSettings = array()) {
+        // Generate observation counts data and store it in the database in json format.
+
         global $_DB;
 
         // Check if current analysis status as well as user's permission allow data to be generated.
@@ -139,6 +147,7 @@ class LOVD_ObservationCounts
                         $aData[static::$TYPE_GENERAL][$sCategory] = $this->generateData($aRules);
                     }
                     break;
+
                 case static::$TYPE_GENEPANEL:
                     $aData[static::$TYPE_GENEPANEL] = array();
                     foreach ($this->aCategories[static::$TYPE_GENEPANEL] as $sGenepanelId => $aGenepanelRules) {
@@ -146,6 +155,7 @@ class LOVD_ObservationCounts
                             $aData[static::$TYPE_GENEPANEL][$sGenepanelId][$sCategory] = $this->generateData($aRules);
                         }
                     }
+                    break;
             }
         }
 
@@ -162,6 +172,10 @@ class LOVD_ObservationCounts
     }
 
     public function canUpdateData() {
+        // Check if this user can update/generate new observation counts data depending on:
+        // - Their roles.
+        // - The current status of the analysis.
+
         global $_DB, $_AUTH;
 
         $sSQL = 'SELECT s.analysis_statusid
@@ -186,6 +200,9 @@ class LOVD_ObservationCounts
     }
 
     protected function generateData ($aRules) {
+        // Given the configuration of a category, construct an array of data for that category.
+        // No data is saved into the database here.
+
         global $_DB;
 
         $aData = array();
@@ -243,6 +260,9 @@ class LOVD_ObservationCounts
     }
 
     protected function validateCategories ($sType, $aSettings) {
+        // Check if the categories specified in $aSettings is a valid category.
+        // We then  load the configuration for all the valid categories into $this->aCategories.
+
         switch ($sType) {
             case static::$TYPE_GENERAL:
                 // Build existing configuration options
@@ -357,7 +377,7 @@ class LOVD_ObservationCounts
                     );
 
                     $aConfig[$sGenepanelId]['gender'] = array(
-                        'label' => 'Gene Panel and Gender',
+                        'label' => 'Gender',
                         'fields' => array('Individual/Gender'),
                         'condition' => 'genepanelid = "' . $sGenepanelId . '"'
                             . ' AND '
@@ -366,7 +386,7 @@ class LOVD_ObservationCounts
                     );
 
                     $aConfig[$sGenepanelId]['ethnic'] = array(
-                        'label' => 'Gene Panel and Ethinicity',
+                        'label' => 'Ethinicity',
                         'fields' => array('Individual/Origin/Ethnic'),
                         'condition' => 'genepanelid = "' . $sGenepanelId . '"'
                             . ' AND '
@@ -396,6 +416,9 @@ class LOVD_ObservationCounts
     }
 
     protected function validateColumns ($sType, $aSettings = array()) {
+        // Validate if the columns in $aSettings are valid.
+        // We then populate the valid columns into $this->aColumns.
+
         $aAvailableColumns = array(
             'genepanel' => array(
                 'label',
@@ -431,6 +454,8 @@ class LOVD_ObservationCounts
     }
 
     protected function initIndividualData () {
+        // Retrieve information about this individual who has this variant ID $this->nVariantId.
+
         global $_DB;
 
         // Query data related to this individual
@@ -452,6 +477,9 @@ class LOVD_ObservationCounts
     }
 
     protected static function getQueryFor ($sColumn, $sCondition = '', $aParams = array()) {
+        // Generate a string of SQL query for different columns of a category.
+        // Each observation count category requires a different SQL WHERE query which is passed by $sCondition.
+
         switch ($sColumn) {
             case 'total_individuals':
                 return 'SELECT COUNT(s.individualid) AS total
