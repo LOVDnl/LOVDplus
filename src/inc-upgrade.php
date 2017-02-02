@@ -595,6 +595,9 @@ if ($sCalcVersionFiles != $sCalcVersionDB) {
                  '3.0-12v' =>
                      array(
                          'INSERT INTO ' . TABLE_COLS . ' VALUES ("VariantOnGenome/Frequency/ExAC", 255, 100, 0, 1, 0, "ExAC AF", "", "Allele frequency from the ExAC project.", "Allele frequency from the ExAC project.", "FLOAT UNSIGNED", "ExAC allele frequency||text|6", "", "", 0, 0, 1, 0, NOW(), NULL, NULL)',
+                         'INSERT INTO ' . TABLE_COLS . ' VALUES ("VariantOnGenome/Frequency/GoNL_old", 255, 100, 0, 1, 0, "GoNL AF (old)", "", "Allele frequency from the GoNL project, not properly calculated based on the converage.", "Allele frequency from the GoNL project, not properly calculated based on the converage.", "FLOAT UNSIGNED", "GoNL allele frequency (old)||text|6", "", "", 0, 0, 1, 0, NOW(), NULL, NULL)',
+                         // This will enable the columns for sure, so that new data will go in, but it won't register them as active yet. Let's do that manually, logging that action.
+                         'ALTER TABLE ' . TABLE_VARIANTS . ' ADD COLUMN `VariantOnGenome/Frequency/ExAC` FLOAT UNSIGNED, ADD COLUMN `VariantOnGenome/Frequency/GoNL_old` FLOAT UNSIGNED',
                      ),
              );
 
