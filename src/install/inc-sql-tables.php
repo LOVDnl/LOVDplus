@@ -207,6 +207,7 @@ $aTableSQL =
     id SMALLINT(5) UNSIGNED ZEROFILL NOT NULL AUTO_INCREMENT,
     symbol VARCHAR(15) NOT NULL,
     name VARCHAR(255) NOT NULL,
+    inheritance VARCHAR(45) NULL,
     id_omim INT(10) UNSIGNED,
     created_by SMALLINT(5) UNSIGNED ZEROFILL,
     created_date DATETIME NOT NULL,

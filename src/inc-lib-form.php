@@ -797,7 +797,6 @@ function lovd_viewForm ($a,
     if (!in_array($sMethod, array('GET', 'POST'))) {
         $sMethod = 'POST';
     }
-
     // Class names and widths.
     $aCats = array('Header', 'Help', 'Data');
     foreach ($aCats as $sCat) {
