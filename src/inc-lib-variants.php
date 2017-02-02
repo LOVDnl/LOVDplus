@@ -68,7 +68,7 @@ function lovd_getRNAProteinPrediction ($sReference, $sGene, $sNCBITranscriptID, 
         }
         // Gene is defined in the mito_genes_aliases in file inc-init.php: use the NCBI gene symbol.
         $sNCBITranscriptID = str_replace($sGene, $_SETT['mito_genes_aliases'][$sGene],
-            $sNCBITranscriptID);
+                                         $sNCBITranscriptID);
 
         // For mitochondrial genes, Mutalyzer specifies the NCBI transcript ID actually
         // as an NC_ accession number with NCBI gene alias (e.g. 'NC_012920.1(TRNF_v001)')
@@ -163,7 +163,7 @@ function lovd_getRNAProteinPrediction ($sReference, $sGene, $sNCBITranscriptID, 
             // Select protein description based on protein isoform (i-number).
             $sProteinDescriptions = implode('|', $oOutput->proteinDescriptions->string);
             preg_match('/' . $sRefseqPattern . '\(' . preg_quote($sMutProteinName) .
-                '\):(p\..+?)(\||$)/', $sProteinDescriptions, $aProteinMatches);
+                       '\):(p\..+?)(\||$)/', $sProteinDescriptions, $aProteinMatches);
             if (isset($aProteinMatches[2])) {
                 $aMutalyzerData['predict']['protein'] = $aProteinMatches[2];
             }
@@ -214,7 +214,7 @@ function lovd_getRNAProteinPrediction ($sReference, $sGene, $sNCBITranscriptID, 
 
         if (isset($oSoapMessage->errorcode) && substr($oSoapMessage->errorcode, 0, 1) === 'E') {
             $aMutalyzerData['error'][trim($oSoapMessage->errorcode)] =  trim($oSoapMessage->message);
-        } else if (isset($oSoapMessage->errorcode)) {
+        } elseif (isset($oSoapMessage->errorcode)) {
             $aMutalyzerData['warning'][trim($oSoapMessage->errorcode)] = trim($oSoapMessage->message);
         }
     }

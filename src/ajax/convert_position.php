@@ -4,11 +4,12 @@
  * LEIDEN OPEN VARIATION DATABASE (LOVD)
  *
  * Created     : 2011-09-09
- * Modified    : 2014-07-25
- * For LOVD    : 3.0-11
+ * Modified    : 2015-11-20
+ * For LOVD    : 3.0-15
  *
- * Copyright   : 2004-2014 Leiden University Medical Center; http://www.LUMC.nl/
+ * Copyright   : 2004-2015 Leiden University Medical Center; http://www.LUMC.nl/
  * Programmer  : Ing. Ivo F.A.C. Fokkema <I.F.A.C.Fokkema@LUMC.nl>
+ *               Msc. Daan Asscheman <D.Asscheman@LUMC.nl>
  *
  *
  * This file is part of LOVD.
@@ -46,8 +47,14 @@ if (!$_AUTH) {
 require ROOT_PATH . 'class/soap_client.php';
 $_Mutalyzer = new LOVD_SoapClient();
 
+$sGene = $_GET['gene'];
+// If the gene is defined in the mito_genes_aliases in inc-init.php, use the NCBI gene symbol.
+if (isset($_SETT['mito_genes_aliases'][$_GET['gene']])) {
+    $sGene = $_SETT['mito_genes_aliases'][$_GET['gene']];
+}
+
 try {
-    $oOutput = $_Mutalyzer->numberConversion(array('build' => 'hg19', 'variant' => $_GET['variant'], 'gene' => $_GET['gene']))->numberConversionResult;
+    $oOutput = $_Mutalyzer->numberConversion(array('build' => $_CONF['refseq_build'], 'variant' => $_GET['variant'], 'gene' => $sGene))->numberConversionResult;
 } catch (SoapFault $e) {
     // FIXME: Perhaps indicate an error? Like in the check_hgvs script?
     die(AJAX_FALSE);

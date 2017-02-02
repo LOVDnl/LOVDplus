@@ -4,11 +4,11 @@
  * LEIDEN OPEN VARIATION DATABASE (LOVD)
  *
  * Created     : 2010-01-19
- * Modified    : 2013-02-20
- * For LOVD    : 3.0-03
+ * Modified    : 2016-08-26
+ * For LOVD    : 3.0-17
  *
- * Copyright   : 2004-2013 Leiden University Medical Center; http://www.LUMC.nl/
- * Programmers : Ing. Ivo F.A.C. Fokkema <I.F.A.C.Fokkema@LUMC.nl>
+ * Copyright   : 2004-2016 Leiden University Medical Center; http://www.LUMC.nl/
+ * Programmers : Ivo F.A.C. Fokkema <I.F.A.C.Fokkema@LUMC.nl>
  *               Ing. Ivar C. Lugtenburg <I.C.Lugtenburg@LUMC.nl>
  *
  *
@@ -63,7 +63,18 @@ if (!empty($_POST)) {
                 // Instead of having inc-auth.php stop the user when his IP is not allowed to log in, it's better to do that here.
                 if ($zUser['allowed_ip'] && !lovd_validateIP($zUser['allowed_ip'], $_SERVER['REMOTE_ADDR'])) {
                     lovd_writeLog('Auth', 'AuthError', $_SERVER['REMOTE_ADDR'] . ' (' . gethostbyaddr($_SERVER['REMOTE_ADDR']) . ') is not in IP allow list for ' . $_POST['username'] . ': "' . $zUser['allowed_ip'] . '"');
-                    lovd_errorAdd('', 'Your current IP address does not allow you access using this username.');
+
+                    // Provide manager information, so that the user knows where to go for help.
+                    $aManagers = $_DB->query('SELECT name, email FROM ' . TABLE_USERS . ' WHERE level = ? ORDER BY name', array(LEVEL_MANAGER))->fetchAllAssoc();
+                    if (!$aManagers) {
+                        $aManagers = array($_SETT['admin']);
+                    }
+                    $sManagers = 'For technical assistance, please contact ' . (count($aManagers) == 1? 'the system\'s manager' : 'one of the system\'s managers') . ':';
+                    foreach ($aManagers as $aManager) {
+                        $sManagers .= '<BR><A href="mailto:' . str_replace(array("\r\n", "\r", "\n"), ', ', trim($aManager['email'])) . '">' . $aManager['name'] . '</A>';
+                    }
+
+                    lovd_errorAdd('', 'Your current IP address does not allow you access using this username. ' . $sManagers);
                 }
 
 
@@ -102,6 +113,13 @@ if (!empty($_POST)) {
                     // Spit out error.
                     // FIXME; if we release the data of the admin and the managers online, because of the privacy policy, then we can mention the info (or a link) here, too.
                     lovd_errorAdd('', 'Your account is locked, usually because a wrong password was provided three times. ' . ($_CONF['allow_unlock_accounts']? 'Did you <A href="reset_password">forget your password</A>?' : 'Please contact a LOVD manager or the database administrator to unlock your account.'));
+                }
+
+
+
+                // User is logged in, but system is set to read only.
+                elseif (lovd_verifyPassword($_POST['password'], $zUser['password']) && $_CONF['lovd_read_only'] && $zUser['level'] < LEVEL_MANAGER) {
+                    lovd_errorAdd('', 'This installation is currently configured to be read-only. Your user level is not sufficient to log in.');
                 }
 
 
@@ -194,6 +212,10 @@ if (!$_AUTH) {
         } else {
             $_POST['referer'] = '';
         }
+    }
+
+    if ($_CONF['lovd_read_only']) {
+        lovd_showInfoTable('This installation is currently configured to be read-only. Only Managers and higher level users can log in.', 'warning');
     }
 
     lovd_errorPrint();

@@ -4,12 +4,13 @@
  * LEIDEN OPEN VARIATION DATABASE (LOVD)
  *
  * Created     : 2009-10-23
- * Modified    : 2016-04-06
- * For LOVD    : 3.0-15
+ * Modified    : 2016-10-13
+ * For LOVD    : 3.0-18
  *
  * Copyright   : 2004-2016 Leiden University Medical Center; http://www.LUMC.nl/
  * Programmers : Ing. Ivo F.A.C. Fokkema <I.F.A.C.Fokkema@LUMC.nl>
  *               Ing. Ivar C. Lugtenburg <I.C.Lugtenburg@LUMC.nl>
+ *               M. Kroon <m.kroon@lumc.nl>
  *
  *
  * This file is part of LOVD.
@@ -209,7 +210,7 @@ class LOVD_SystemSetting extends LOVD_Object {
                         'skip',
                         array('', '', 'note', 'The following two fields only apply if the proxy server requires authentication.'),
                         array('Proxy server username', 'In case the proxy server requires authentication, please enter the required username here.', 'text', 'proxy_username', 20),
-                        array('Proxy server password', 'In case the proxy server requires authentication, please enter the required password here.', 'password', 'proxy_password', 20),
+                        array('Proxy server password', 'In case the proxy server requires authentication, please enter the required password here.', 'password', 'proxy_password', 20, true),
                         'hr',
                         'skip',
                         'skip',
@@ -232,6 +233,7 @@ class LOVD_SystemSetting extends LOVD_Object {
                         array('', '', 'print', '<B>Security settings</B>'),
                         array('', '', 'note', 'Using the following settings you can control some security settings of LOVD.'),
                         'hr',
+                        array('Allow submitter registration?', 'Enabling this setting allows submitters to create their own accounts in your LOVD installation. Having it enabled is the default setting, and this could not be disabled prior to LOVD 3.0-17.<BR>Note, that submitters can never register when your LOVD installation is set to read-only because of an active announcement with the read-only setting enabled. See the Announcements section in the Setup area for more information.', 'checkbox', 'allow_submitter_registration'),
                         array('Lock users after 3rd failed login?', 'Do you want to lock users (submitters, curators and managers) after three failed attempts to log in using their username?<BR>(This does <I>not</I> affect the database administrator account)', 'checkbox', 'lock_users'),
                         array('Allow (locked) users to retrieve a new password?', 'Do you want to enable an "I forgot my password" option that allows users who forgot their password to retrieve a new one?', 'checkbox', 'allow_unlock_accounts'),
                         array('Enable submitters to change data?', 'Enabling this setting allows submitters to make changes to data previously submitted by them or assigned to them.', 'checkbox', 'allow_submitter_mods'),
@@ -259,12 +261,13 @@ class LOVD_SystemSetting extends LOVD_Object {
         // Sets default values of fields in $_POST.
         $_POST['system_title'] = 'LOVD - Leiden Open Variation Database';
         $_POST['location_url'] = ($_SERVER['HTTP_HOST'] == 'localhost' || lovd_matchIPRange($_SERVER['HTTP_HOST'])? '' : lovd_getInstallURL());
-        $_POST['refseq_build'] = 'hg19';
+        $_POST['refseq_build'] = 'hg38';
         $_POST['api_feed_history'] = 3;
         $_POST['logo_uri'] = 'gfx/' . (LOVD_plus? 'LOVD_plus_logo200x50' : 'LOVD3_logo145x50') . '.jpg';
         $_POST['mutalyzer_soap_url'] = 'https://mutalyzer.nl/services';
         $_POST['send_stats'] = 1;
         $_POST['include_in_listing'] = 1;
+        $_POST['allow_submitter_registration'] = (int) (!LOVD_plus);
         $_POST['allow_submitter_mods'] = 1;
         if (!SSL) {
             $_POST['use_ssl'] = 0;

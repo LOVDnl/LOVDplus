@@ -5,7 +5,7 @@
  *
  * Created     : 2010-01-15
  * Modified    : 2016-08-18
- * For LOVD    : 3.0-13
+ * For LOVD    : 3.0-17
  *
  * Copyright   : 2004-2016 Leiden University Medical Center; http://www.LUMC.nl/
  * Programmers : Jerry Hoogenboom <J.Hoogenboom@LUMC.nl>
@@ -182,7 +182,7 @@ $_SESSION['mapping']['time_complete'] = 0;
 // Now we unlock the session. We'll update the unmappable, todo and time_complete values
 // when exiting the script. We do it this way because the mapping script is called
 // asynchronously, but the session data is locked by PHP to prevent race conditions.
-// This forces it to be come completely synchronous. Without closing the session, the
+// This forces it to become completely synchronous. Without closing the session, the
 // user will not be able to do anything in LOVD until this script finishes.
 session_write_close();
 
@@ -487,7 +487,7 @@ if (!empty($aVariants)) {
 
                 // Get UD.
                 try {
-                    $sRefseqUD = $_Mutalyzer->sliceChromosomeByGene(array('geneSymbol' => $sSymbol, 'organism' => 'Man', 'upStream' => '5000', 'downStream' => '2000'))->sliceChromosomeByGeneResult;
+                    $sRefseqUD = lovd_getUDForGene($_CONF['refseq_build'], $sSymbol);
                     $sRef = $sRefseqUD;
                 } catch (SoapFault $e) {} // Silent error.
                 if (!is_string($sRefseqUD) || substr($sRefseqUD, 0, 3) != 'UD_') {
