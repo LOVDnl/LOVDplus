@@ -239,7 +239,7 @@ class LOVD_CustomViewListMOD extends LOVD_CustomViewList {
                         }
                         // Security checks in this file's prepareData() need geneid to see if the column in question is set to non-public for one of the genes.
                         $aSQL['SELECT'] .= (!$aSQL['SELECT']? '' : ', ') . 'GROUP_CONCAT(DISTINCT t.geneid SEPARATOR ";") AS _geneid, GROUP_CONCAT(DISTINCT IF(IFNULL(g.id_omim, 0) = 0, "", CONCAT(g.id, ";", g.id_omim)) SEPARATOR ";;") AS __gene_OMIM';
-                        $aSQL['SELECT'] .= (!$aSQL['SELECT']? '' : ', ') . '(SELECT GROUP_CONCAT(d.name SEPARATOR \'; \') FROM ' . TABLE_GEN2DIS . ' g2d INNER JOIN ' . TABLE_DISEASES . ' d ON (g2d.diseaseid = d.id) WHERE g2d.geneid = g.id) AS gene_disease_name';
+                        $aSQL['SELECT'] .= (!$aSQL['SELECT']? '' : ', ') . '(SELECT GROUP_CONCAT(CONCAT(d.name, IF(d.inheritance = "", "", ": " ), d.inheritance) SEPARATOR \'; \') FROM ' . TABLE_GEN2DIS . ' g2d INNER JOIN ' . TABLE_DISEASES . ' d ON (g2d.diseaseid = d.id) WHERE g2d.geneid = g.id) AS gene_disease_name';
                         $aSQL['FROM'] .= ' LEFT JOIN ' . TABLE_VARIANTS_ON_TRANSCRIPTS . ' AS vot ON (';
                         // Earlier, VOG was used, join to that.
                         $aSQL['FROM'] .= 'vog.id = vot.id)';
