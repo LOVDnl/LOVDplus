@@ -315,6 +315,14 @@ class LOVD_CustomViewListMOD extends LOVD_CustomViewList {
                     break;
 
                 case 'VariantOnTranscript':
+                    require_once ROOT_PATH . 'class/object_diseases.php';
+                    $sInheritance_legend = '<BR/>Inheritance<BR/><TABLE>';
+                    foreach (LOVD_Disease::$aInheritances as $sKey => $sDescription) {
+                        $sInheritance_legend .= '<TR><TD>' . $sKey . '</TD><TD>: ' . $sDescription . '</TD></TR>';
+                    }
+                    $sInheritance_legend .= '</TABLE>';
+
+
                     $sPrefix = 'vot.';
                     // The fixed columns.
                     $this->aColumnsViewList = array_merge($this->aColumnsViewList,
@@ -325,8 +333,8 @@ class LOVD_CustomViewListMOD extends LOVD_CustomViewList {
                                  'gene_disease_name' => array(
                                      'view' => array('Diseases', 200),
                                      'db'   => array('gene_disease_name', 'ASC', 'TEXT'),
-                                     'legend' => array('The diseases associated with this gene.',
-                                         'The diseases associated with this gene.')),
+                                     'legend' => array('The diseases associated with this gene.' . str_replace(array("\r", "\n"), '', $sInheritance_legend),
+                                         'The diseases associated with this gene.' . str_replace(array("\r", "\n"), '', $sInheritance_legend))),
                               ));
                     if (!$this->sSortDefault) {
                         // First data table in view.
