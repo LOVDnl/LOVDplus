@@ -4,8 +4,8 @@
  * LEIDEN OPEN VARIATION DATABASE (LOVD)
  *
  * Created     : 2014-11-28
- * Modified    : 2017-01-31
- * For LOVD+   : 3.0-17
+ * Modified    : 2017-02-06
+ * For LOVD+   : 3.0-18
  *
  * Copyright   : 2004-2017 Leiden University Medical Center; http://www.LUMC.nl/
  * Programmer  : Ivo F.A.C. Fokkema <I.F.A.C.Fokkema@LUMC.nl>
@@ -1592,7 +1592,7 @@ $aTranscriptInfo = array(array('id' => 'NO_TRANSCRIPTS')); // Basically, any tex
                         }
 
                         // Save the ID before the writeLog deletes it...
-                        $nTranscriptID = $_DB->lastInsertId();
+                        $nTranscriptID = str_pad($_DB->lastInsertId(), $_SETT['objectid_length']['transcripts'], '0', STR_PAD_LEFT);
 
                         // Write to log...
                         lovd_writeLog('Event', LOG_EVENT, 'Transcript entry successfully added to gene ' . $aGenes[$aLine['SYMBOL']]['id'] . ' - ' . $sTranscriptName);
