@@ -261,11 +261,17 @@ if (PATH_COUNT == 3 && $_PE[1] == 'DBID' && preg_match('/^chr/', $_PE[2]) && !AC
     $_T->printHeader();
     $_T->printTitle();
     
-    require ROOT_PATH . 'class/object_custom_viewlists.mod.php';
-    $_DATA = new LOVD_CustomViewListMOD(array('VariantOnGenome', 'VariantOnTranscript', 'Screening', 'Individual'));
+    lovd_requireAUTH(LEVEL_MANAGER);
 
-    $_GET['search_VariantOnGenome/DBID'] = '="' . $sDbId . '"';
-    $_DATA->viewList('CustomVL_ObsCounts');
+    if (!empty($_GET['search_variantid'])) {
+        require ROOT_PATH . 'class/object_custom_viewlists.mod.php';
+        $_DATA = new LOVD_CustomViewListMOD(array('VariantOnGenome', 'VariantOnTranscript', 'Screening', 'Individual'));
+
+        $_GET['search_VariantOnGenome/DBID'] = '="' . $sDbId . '"';
+        $_DATA->viewList('CustomVL_ObsCounts');
+    }
+    
+
 
     $_T->printFooter();
     exit;
