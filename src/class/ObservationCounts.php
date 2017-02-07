@@ -506,7 +506,7 @@ class LOVD_ObservationCounts
                         GROUP BY s.individualid';
 
             case 'num_ind_with_variant' :
-                return 'SELECT COUNT(s.individualid) AS count_dbid, GROUP_CONCAT(DISTINCT vog.id SEPARATOR ";") as variant_ids
+                return 'SELECT COUNT(s.individualid) AS count_dbid, GROUP_CONCAT(DISTINCT TRIM(LEADING "0" FROM vog.id) SEPARATOR ";") as variant_ids
                         FROM ' . TABLE_VARIANTS . ' AS vog 
                         JOIN ' . TABLE_SCR2VAR . ' AS s2v ON (vog.id = s2v.variantid AND vog.`VariantOnGenome/DBID` = "' . $aParams['dbid'] . '") 
                         JOIN ' . TABLE_SCREENINGS . ' AS s ON (s.id = s2v.screeningid) 
