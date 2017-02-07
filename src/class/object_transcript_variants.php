@@ -47,7 +47,7 @@ class LOVD_TranscriptVariant extends LOVD_Custom {
     var $sObject = 'Transcript_Variant';
     var $sCategory = 'VariantOnTranscript';
     var $sTable = 'TABLE_VARIANTS_ON_TRANSCRIPTS';
-    var $bShared = true;
+    var $bShared = (LOVD_plus? false: true);
     var $aTranscripts = array();
 
 
@@ -55,8 +55,6 @@ class LOVD_TranscriptVariant extends LOVD_Custom {
     {
         // Default constructor.
         global $_DB;
-
-        $this->bShared = (LOVD_plus? false: true);
 
         // SQL code for loading an entry for an edit form.
         $this->sSQLLoadEntry = 'SELECT vot.* ' .

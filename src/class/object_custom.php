@@ -342,13 +342,11 @@ class LOVD_Custom extends LOVD_Object {
         // Note: object_custom_viewlists.php implements their own version of this code.
         global $_AUTH;
 
-        // In LOVD_plus, public_view field is used to check if a custom column will be displayed or not.
-        // So, in LOVD_plus we need to check for ALL USERS if a custom column has public_view flag turned on or not.
-        $bCheckPublicView = (LOVD_plus? true : $_AUTH['level'] < LEVEL_OWNER);
-
         $aViewList = array();
         foreach ($this->aColumns as $sID => $aCol) {
-            if ($bCheckPublicView && !$aCol['public_view'] && $_AUTH['level'] < LEVEL_COLLABORATOR) {
+            // In LOVD_plus, the public_view field is used to set if a custom column will be displayed in a VL or not.
+            // So, in LOVD_plus we need to check for ALL USERS if a custom column has public_view flag turned on or not.
+            if (!$aCol['public_view'] && (LOVD_plus? true : $_AUTH['level'] < LEVEL_COLLABORATOR)) {
                 continue;
             }
             $bAlignRight = preg_match('/^(DEC|FLOAT|(TINY|SMALL|MEDIUM|BIG)?INT)/', $aCol['mysql_type']);
