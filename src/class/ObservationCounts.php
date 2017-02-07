@@ -125,7 +125,6 @@ class LOVD_ObservationCounts
 
         $aData = array();
         $aData['population_size'] = $this->getCurrentPopulationSize();
-
         foreach ($aSettings as $sType => $aTypeSettings) {
             $this->aCategories = $this->validateCategories($sType, $aTypeSettings);
             $this->aColumns = $this->validateColumns($sType, $aTypeSettings);
@@ -366,6 +365,7 @@ class LOVD_ObservationCounts
                     $aGenepanelNames = explode(',', $this->aIndividual['genepanel_names']);
                 }
 
+                $aConfig = array();
                 foreach ($aGenepanelIds as $nIndex => $sGenepanelId) {
                     $this->aIndividual['genepanel_' . $sGenepanelId] = $aGenepanelNames[$nIndex];
 
@@ -468,7 +468,7 @@ class LOVD_ObservationCounts
                  JOIN ' . TABLE_INDIVIDUALS . ' AS i ON (s.individualid = i.id) 
                  LEFT JOIN ' . TABLE_IND2GP . ' AS i2gp ON (i.id = i2gp.individualid) 
                  LEFT JOIN ' . TABLE_GENE_PANELS . ' AS gp ON (i2gp.genepanelid = gp.id)
-                 WHERE gp.type != "blacklist"
+                 WHERE gp.type IS NULL OR gp.type != "blacklist"
                  GROUP BY i.id';
 
         $this->aIndividual = $_DB->query($sSQL)->fetchAssoc();
