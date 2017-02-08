@@ -4,10 +4,10 @@
  * LEIDEN OPEN VARIATION DATABASE (LOVD)
  *
  * Created     : 2010-01-22
- * Modified    : 2013-07-03
- * For LOVD    : 3.0-07
+ * Modified    : 2016-10-11
+ * For LOVD    : 3.0-18
  *
- * Copyright   : 2004-2013 Leiden University Medical Center; http://www.LUMC.nl/
+ * Copyright   : 2004-2016 Leiden University Medical Center; http://www.LUMC.nl/
  * Programmers : Ing. Ivo F.A.C. Fokkema <I.F.A.C.Fokkema@LUMC.nl>
  *               Ing. Ivar C. Lugtenburg <I.C.Lugtenburg@LUMC.nl>
  *
@@ -48,14 +48,18 @@ function lovd_formatSearchExpression ($sExpression, $sColumnType)
 {
     // Formats the search expressions for the "title" text of the input field so that the users can understand what their search does.
     if ($sColumnType == 'DATETIME') {
-        $sExpression = preg_replace('/ (\d)/', "{{SPACE}}$1", $sExpression);
+        $sExpression = preg_replace('/ (\d)/', "{{SPACE}}$1", trim($sExpression));
     } else {
-        $sExpression = preg_replace_callback('/("[^"]+")/', create_function('$aRegs', 'return str_replace(\' \', \'{{SPACE}}\', $aRegs[1]);'), $sExpression);
+        $sExpression = preg_replace_callback('/("[^"]+")/', create_function('$aRegs', 'return str_replace(\' \', \'{{SPACE}}\', $aRegs[1]);'), trim($sExpression));
     }
     $aANDExpressions = explode(' ', $sExpression);
     $nANDLength = count($aANDExpressions);
     $sFormattedExpressions = '';
     foreach ($aANDExpressions as $nANDIndex => $sANDExpression) {
+        if (!trim($sANDExpression)) {
+            // Double spaces in the search terms.
+            continue;
+        }
         $aORExpressions = explode('|', $sANDExpression);
         $nORLength = count($aORExpressions);
         $sFormattedExpression = ($sColumnType == 'TEXT'? ' - ' : ' ');
@@ -160,7 +164,7 @@ function lovd_pagesplitInit ()
         // Special allowance for page_size = 1 for Ajax retrieval of 1 row after deleting one.
         $_GET['page_size'] = (int) $_GET['page_size'];
     } else {
-        $_GET['page_size'] = 25;
+        $_GET['page_size'] = (LOVD_plus? 25 : 100);
     }
 
     global $_PAGESPLIT;

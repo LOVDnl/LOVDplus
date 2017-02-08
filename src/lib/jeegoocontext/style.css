@@ -1,4 +1,4 @@
-﻿body ul.jeegoocontext, body ul.jeegoocontext ul
+body ul.jeegoocontext, body ul.jeegoocontext ul
 {
 	/* Required settings */
 	top:-1000px; left:-1000px; position:absolute; z-index:999;
@@ -11,7 +11,7 @@
 	box-shadow: 3px 3px 4px #888;
 }
 /* FIXME; Anything I put here is completely ignored, and I have no clue why?!!?? */
- body ul.jeegooviewlist, body ul.jeegooviewlist ul
+body ul.jeegooviewlist, body ul.jeegooviewlist ul
 {
 	/* Additional settings */
 	border-top: solid 1px #000000;

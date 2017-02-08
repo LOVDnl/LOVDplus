@@ -1,16 +1,16 @@
 <?php
-// DMD_SPECIFIC: REMEMBER. If you add code that adds SQL for all genes, you MUST add the key first to the large array. Otherwise, the order in which upgrades are done is WRONG!!!
 /*******************************************************************************
  *
  * LEIDEN OPEN VARIATION DATABASE (LOVD)
  *
  * Created     : 2010-01-14
- * Modified    : 2016-09-16
- * For LOVD    : 3.0-13
+ * Modified    : 2016-10-17
+ * For LOVD    : 3.0-18
  *
- * Copyright   : 2004-2015 Leiden University Medical Center; http://www.LUMC.nl/
+ * Copyright   : 2004-2016 Leiden University Medical Center; http://www.LUMC.nl/
  * Programmers : Ing. Ivo F.A.C. Fokkema <I.F.A.C.Fokkema@LUMC.nl>
  *               Ing. Ivar C. Lugtenburg <I.C.Lugtenburg@LUMC.NL>
+ *               M. Kroon <m.kroon@lumc.nl>
  *
  *
  * This file is part of LOVD.
@@ -283,8 +283,8 @@ if ($sCalcVersionFiles != $sCalcVersionDB) {
                             'UPDATE ' . TABLE_COLS . ' SET form_type = "GVS function||select|1|true|false|false", select_options = "intergenic\r\nnear-gene-5\r\nutr-5\r\ncoding\r\ncoding-near-splice\r\ncodingComplex\r\ncodingComplex-near-splice\r\nframeshift\r\nframeshift-near-splice\r\nsplice-5\r\nintron\r\nsplice-3\r\nutr-3\r\nnear-gene-3" WHERE id = "VariantOnTranscript/GVS/Function" and form_type LIKE "GVS function|%|text|%"',
                             'UPDATE ' . TABLE_COLS . ' SET form_type = "Protein change (HGVS format)|Description of variant at protein level (following HGVS recommendations); e.g. p.(Arg345Pro) = change predicted from DNA (RNA not analysed), p.Arg345Pro = change derived from RNA analysis, p.0 (no protein produced), p.? (unknown effect).|text|30" WHERE id = "VariantOnTranscript/Protein" and form_type LIKE "Protein change (HGVS format)||text|%"',
                             'UPDATE ' . TABLE_COLS . ' SET form_type = "RNA change (HGVS format)|Description of variant at RNA level (following HGVS recommendations); e.g. r.123c>u, r.? = unknown, r.(?) = RNA not analysed but probably transcribed copy of DNA variant, r.spl? = RNA not analysed but variant probably affects splicing, r.(spl?) = RNA not analysed but variant may affect splicing.|text|30" WHERE id = "VariantOnTranscript/RNA" and form_type LIKE "RNA change (HGVS format)||text|%"',
-                            'INSERT INTO ' . TABLE_DISEASES . ' (symbol, name, created_by, created_date) VALUES ("Healty/Control", "Healthy individual / control", 0, NOW())',
-                            'UPDATE ' . TABLE_DISEASES . ' SET id = 0 WHERE id_omim IS NULL AND created_by = 0 AND symbol = "Healty/Control"',
+                            'INSERT INTO ' . TABLE_DISEASES . ' (symbol, name, created_by, created_date) VALUES ("Healthy/Control", "Healthy individual / control", 0, NOW())',
+                            'UPDATE ' . TABLE_DISEASES . ' SET id = 0 WHERE id_omim IS NULL AND created_by = 0 AND symbol = "Healthy/Control"',
                         ),
                     '3.0-beta-08' =>
                         array(
@@ -342,7 +342,7 @@ if ($sCalcVersionFiles != $sCalcVersionDB) {
                  ),
                  '3.0-05' =>
                  array(
-/////////////////// DMD_SPECIFIC: I would expect these to fail if I don't remove the FKs first. But they don't.
+                     // I would expect these to fail if I don't remove the FKs first. But they don't. Apparently, VARCHARs are different than INT columns (see 3.0-14b update).
                      'ALTER TABLE ' . TABLE_GENES . ' MODIFY COLUMN id VARCHAR(25) NOT NULL',
                      'ALTER TABLE ' . TABLE_CURATES . ' MODIFY COLUMN geneid VARCHAR(25) NOT NULL',
                      'ALTER TABLE ' . TABLE_TRANSCRIPTS . ' MODIFY COLUMN geneid VARCHAR(25) NOT NULL',
@@ -597,6 +597,75 @@ if ($sCalcVersionFiles != $sCalcVersionDB) {
                  '3.0-12v' =>
                      array(
                          'INSERT INTO ' . TABLE_COLS . ' VALUES ("VariantOnGenome/Frequency/ExAC", 255, 100, 0, 1, 0, "ExAC AF", "", "Allele frequency from the ExAC project.", "Allele frequency from the ExAC project.", "FLOAT UNSIGNED", "ExAC allele frequency||text|6", "", "", 0, 0, 1, 0, NOW(), NULL, NULL)',
+                         'INSERT INTO ' . TABLE_COLS . ' VALUES ("VariantOnGenome/Frequency/GoNL_old", 255, 100, 0, 1, 0, "GoNL AF (old)", "", "Allele frequency from the GoNL project, not properly calculated based on the converage.", "Allele frequency from the GoNL project, not properly calculated based on the converage.", "FLOAT UNSIGNED", "GoNL allele frequency (old)||text|6", "", "", 0, 0, 1, 0, NOW(), NULL, NULL)',
+                         // This will enable the columns for sure, so that new data will go in, but it won't register them as active yet. Let's do that manually, logging that action.
+                         'ALTER TABLE ' . TABLE_VARIANTS . ' ADD COLUMN `VariantOnGenome/Frequency/ExAC` FLOAT UNSIGNED, ADD COLUMN `VariantOnGenome/Frequency/GoNL_old` FLOAT UNSIGNED',
+                     ),
+                 '3.0-14' =>
+                     array(
+                         'ALTER TABLE ' . TABLE_DISEASES . ' MODIFY COLUMN symbol VARCHAR(25) NOT NULL',
+                     ),
+                 '3.0-14d' =>
+                     array(
+                         'UPDATE ' . TABLE_DISEASES . ' SET symbol = "Healthy/Control" WHERE id_omim IS NULL AND created_by = 0 AND symbol = "Healty/Control"',
+                     ),
+                 '3.0-15a' =>
+                     array('CREATE TABLE IF NOT EXISTS ' . TABLE_COLLEAGUES . '(
+                            userid_from SMALLINT(5) UNSIGNED ZEROFILL NOT NULL,
+                            userid_to   SMALLINT(5) UNSIGNED ZEROFILL NOT NULL,
+                            allow_edit  BOOLEAN NOT NULL DEFAULT 0,
+                            PRIMARY KEY (userid_from, userid_to),
+                            INDEX (userid_to),
+                            CONSTRAINT ' . TABLE_COLLEAGUES .  '_fk_userid_from FOREIGN KEY (userid_from) REFERENCES ' . TABLE_USERS . ' (id) ON DELETE CASCADE ON UPDATE CASCADE,
+                            CONSTRAINT ' . TABLE_COLLEAGUES . '_fk_userid_to FOREIGN KEY (userid_to) REFERENCES ' . TABLE_USERS . ' (id) ON DELETE CASCADE ON UPDATE CASCADE)
+                            ENGINE=InnoDB, DEFAULT CHARACTER SET utf8',
+                     ),
+                 '3.0-16a' =>
+                    array('ALTER TABLE ' . TABLE_TRANSCRIPTS . ' ADD COLUMN remarks TEXT NOT NULL AFTER id_protein_uniprot'),
+                 '3.0-16b' =>
+                    array('ALTER TABLE ' . TABLE_DISEASES .
+                               ' ADD COLUMN tissues  TEXT NOT NULL AFTER id_omim, 
+                                 ADD COLUMN features TEXT NOT NULL AFTER tissues,
+                                 ADD COLUMN remarks TEXT NOT NULL AFTER features',
+                        ),
+                 '3.0-16c' =>
+                    array(
+                        'ALTER TABLE ' . TABLE_CONFIG . ' ADD COLUMN allow_submitter_registration BOOLEAN NOT NULL DEFAULT ' . (int) (!LOVD_plus) . ' AFTER include_in_listing',
+                        'CREATE TABLE ' . TABLE_ANNOUNCEMENTS . ' (
+                            id SMALLINT(5) UNSIGNED ZEROFILL NOT NULL AUTO_INCREMENT,
+                            type VARCHAR(15) NOT NULL DEFAULT "information",
+                            announcement TEXT NOT NULL,
+                            start_date DATETIME NOT NULL DEFAULT "0000-00-00 00:00:00",
+                            end_date DATETIME NOT NULL DEFAULT "9999-12-31 23:59:59",
+                            lovd_read_only BOOLEAN NOT NULL DEFAULT 0,
+                            created_by SMALLINT(5) UNSIGNED ZEROFILL,
+                            created_date DATETIME NOT NULL,
+                            edited_by SMALLINT(5) UNSIGNED ZEROFILL,
+                            edited_date DATETIME,
+                            PRIMARY KEY (id),
+                            INDEX (created_by),
+                            INDEX (edited_by),
+                            CONSTRAINT ' . TABLE_ANNOUNCEMENTS . '_fk_created_by FOREIGN KEY (created_by) REFERENCES ' . TABLE_USERS . ' (id) ON DELETE SET NULL ON UPDATE CASCADE,
+                            CONSTRAINT ' . TABLE_ANNOUNCEMENTS . '_fk_edited_by FOREIGN KEY (edited_by) REFERENCES ' . TABLE_USERS . ' (id) ON DELETE SET NULL ON UPDATE CASCADE)
+                            ENGINE=InnoDB,
+                            DEFAULT CHARACTER SET utf8',
+                    ),
+                 '3.0-17b' =>
+                     array(
+                         'ALTER TABLE ' . TABLE_USERS . ' ADD COLUMN auth_token CHAR(32) AFTER password_force_change, ADD COLUMN auth_token_expires DATETIME AFTER auth_token',
+                     ),
+                 '3.0-17c' =>
+                     array(
+                         'UPDATE ' . TABLE_VARIANTS_ON_TRANSCRIPTS . ' SET position_c_start_intron = 0 WHERE position_c_start IS NOT NULL AND position_c_start_intron IS NULL',
+                         'UPDATE ' . TABLE_VARIANTS_ON_TRANSCRIPTS . ' SET position_c_end_intron = 0 WHERE position_c_end IS NOT NULL AND position_c_end_intron IS NULL',
+                     ),
+                 '3.0-17d' => array(), // Placeholder for LOVD+ queries, defined below.
+                 '3.0-18' =>
+                     array(
+                         // These two will be ignored by LOVD+.
+                         'INSERT IGNORE INTO ' . TABLE_SOURCES . ' VALUES ("pubmed_article", "http://www.ncbi.nlm.nih.gov/pubmed/{{ ID }}")',
+                         'INSERT IGNORE INTO ' . TABLE_LINKS . ' VALUES (NULL, "Alamut", "{Alamut:[1]:[2]}", "<A href=\"http://127.0.0.1:10000/show?request=[1]:[2]\" target=\"_blank\">Alamut</A>", "Links directly to the variant in the Alamut software.\r\n[1] = The chromosome letter or number.\r\n[2] = The genetic change on genome level.\r\n\r\nExample:\r\n{Alamut:16:21854780G>A}", 0, NOW(), NULL, NULL)',
+                         'UPDATE ' . TABLE_COLS . ' SET mandatory = 0 WHERE id = "VariantOnTranscript/Exon"',
                      ),
              );
 
@@ -720,6 +789,19 @@ if ($sCalcVersionFiles != $sCalcVersionDB) {
         $aUpdates['3.0-12u'][] = 'UPDATE ' . TABLE_VARIANTS . ' vog LEFT OUTER JOIN ' . TABLE_ANALYSES_RUN_RESULTS . ' arr ON (vog.id = arr.variantid) SET vog.effectid = CAST(REPLACE(vog.effectid, 5, 0) AS UNSIGNED) WHERE arr.variantid IS NULL';
     }
 
+    if (LOVD_plus && $sCalcVersionDB < lovd_calculateVersion('3.0-17d')) {
+        // Run LOVD+ specific queries.
+        $aUpdates['3.0-17d'] = array_merge(
+            $aUpdates['3.0-17d'],
+            array(
+                'DELETE FROM ' . TABLE_SHARED_COLS,
+                'UPDATE ' . TABLE_PHENOTYPES . ' SET statusid = ' . STATUS_HIDDEN,
+                'UPDATE ' . TABLE_INDIVIDUALS . ' SET statusid = ' . STATUS_HIDDEN,
+                'UPDATE ' . TABLE_VARIANTS . ' SET statusid = ' . STATUS_HIDDEN,
+            )
+        );
+    }
+
 
 
 
@@ -759,10 +841,6 @@ if ($sCalcVersionFiles != $sCalcVersionDB) {
     // Try to update the upgrade lock.
     $sQ = 'UPDATE ' . TABLE_STATUS . ' SET lock_update = 1 WHERE lock_update = 0';
     $nMax = 30;
-    // DMD_SPECIFIC
-    if ($_SERVER['SERVER_ADMIN'] == 'i.f.a.c.fokkema@lumc.nl' && $_SERVER['HTTP_HOST'] == 'localhost') {
-        $nMax = 3;
-    }
 
     for ($i = 0; $i < $nMax; $i ++) {
         $bLocked = !$_DB->exec($sQ);

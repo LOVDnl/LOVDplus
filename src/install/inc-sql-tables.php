@@ -4,12 +4,13 @@
  * LEIDEN OPEN VARIATION DATABASE (LOVD)
  *
  * Created     : 2009-10-22
- * Modified    : 2016-04-06
- * For LOVD    : 3.0-15
+ * Modified    : 2016-09-05
+ * For LOVD    : 3.0-17
  *
  * Copyright   : 2004-2016 Leiden University Medical Center; http://www.LUMC.nl/
  * Programmers : Ing. Ivo F.A.C. Fokkema <I.F.A.C.Fokkema@LUMC.nl>
  *               Ing. Ivar C. Lugtenburg <I.C.Lugtenburg@LUMC.nl>
+ *               M. Kroon <m.kroon@lumc.nl>
  *
  *
  * This file is part of LOVD.
@@ -29,10 +30,6 @@
  *
  *************/
 
-// STILL TODO:
-// variant <-> pathogenicity <-> disease? Link pathogenicity specifically to one of the phenotypes or diseases?
-// Functional assays / computer predictions, hoe toevoegen??? Aan variant én aan individual???
-
 // IDs:
 // WARNING: If editing any of these, also edit $_SETT['objectid_length']!
 // userid SMALLINT(5) UNSIGNED (65K)
@@ -46,10 +43,10 @@
 // colid VARCHAR(100) (100 characters)
 // linkid TINYINT(3) UNSIGNED (255)
 
-// DMD_SPECIFIC
 if (!defined('ROOT_PATH')) {
     define('ROOT_PATH', '../');
     require ROOT_PATH . 'inc-init.php';
+    lovd_requireAUTH(LEVEL_MANAGER);
 }
 
 $sSettings = 'ENGINE=InnoDB,
@@ -101,6 +98,17 @@ $aTableSQL =
     CONSTRAINT ' . TABLE_USERS . '_fk_countryid FOREIGN KEY (countryid) REFERENCES ' . TABLE_COUNTRIES . ' (id) ON DELETE SET NULL ON UPDATE CASCADE,
     CONSTRAINT ' . TABLE_USERS . '_fk_created_by FOREIGN KEY (created_by) REFERENCES ' . TABLE_USERS . ' (id) ON DELETE SET NULL ON UPDATE CASCADE,
     CONSTRAINT ' . TABLE_USERS . '_fk_edited_by FOREIGN KEY (edited_by) REFERENCES ' . TABLE_USERS . ' (id) ON DELETE SET NULL ON UPDATE CASCADE)
+    ' . $sSettings
+
+         , 'TABLE_COLLEAGUES' =>
+             'CREATE TABLE ' . TABLE_COLLEAGUES . '(
+    userid_from SMALLINT(5) UNSIGNED ZEROFILL NOT NULL,
+    userid_to   SMALLINT(5) UNSIGNED ZEROFILL NOT NULL,
+    allow_edit  BOOLEAN NOT NULL DEFAULT 0,
+    PRIMARY KEY (userid_from, userid_to),
+    INDEX (userid_to),
+    CONSTRAINT ' . TABLE_COLLEAGUES .  '_fk_userid_from FOREIGN KEY (userid_from) REFERENCES ' . TABLE_USERS . ' (id) ON DELETE CASCADE ON UPDATE CASCADE,
+    CONSTRAINT ' . TABLE_COLLEAGUES . '_fk_userid_to FOREIGN KEY (userid_to) REFERENCES ' . TABLE_USERS . ' (id) ON DELETE CASCADE ON UPDATE CASCADE)
     ' . $sSettings
 
         , 'TABLE_CHROMOSOMES' =>
@@ -183,6 +191,7 @@ $aTableSQL =
     id_protein_ncbi VARCHAR(255) NOT NULL,
     id_protein_ensembl VARCHAR(255) NOT NULL,
     id_protein_uniprot VARCHAR(8) NOT NULL,
+    remarks TEXT NOT NULL,
     position_c_mrna_start SMALLINT(5) NOT NULL,
     position_c_mrna_end MEDIUMINT(8) UNSIGNED NOT NULL,
     position_c_cds_end MEDIUMINT(8) UNSIGNED NOT NULL,
@@ -205,9 +214,12 @@ $aTableSQL =
          , 'TABLE_DISEASES' =>
    'CREATE TABLE ' . TABLE_DISEASES . ' (
     id SMALLINT(5) UNSIGNED ZEROFILL NOT NULL AUTO_INCREMENT,
-    symbol VARCHAR(15) NOT NULL,
+    symbol VARCHAR(25) NOT NULL,
     name VARCHAR(255) NOT NULL,
     id_omim INT(10) UNSIGNED,
+    tissues TEXT NOT NULL,
+    features TEXT NOT NULL,
+    remarks TEXT NOT NULL,
     created_by SMALLINT(5) UNSIGNED ZEROFILL,
     created_date DATETIME NOT NULL,
     edited_by SMALLINT(5) UNSIGNED ZEROFILL,
@@ -702,6 +714,7 @@ $aTableSQL =
     omim_apikey VARCHAR(40) NOT NULL,
     send_stats BOOLEAN NOT NULL,
     include_in_listing BOOLEAN NOT NULL,
+    allow_submitter_registration BOOLEAN NOT NULL DEFAULT ' . (int) (!LOVD_plus) . ',
     lock_users BOOLEAN NOT NULL,
     allow_unlock_accounts BOOLEAN NOT NULL,
     allow_submitter_mods BOOLEAN NOT NULL,
@@ -723,6 +736,25 @@ $aTableSQL =
     update_released_date DATE,
     installed_date DATE NOT NULL,
     updated_date DATE)
+    ' . $sSettings
+
+         , 'TABLE_ANNOUNCEMENTS' =>
+   'CREATE TABLE ' . TABLE_ANNOUNCEMENTS . ' (
+    id SMALLINT(5) UNSIGNED ZEROFILL NOT NULL AUTO_INCREMENT,
+    type VARCHAR(15) NOT NULL DEFAULT "information",
+    announcement TEXT NOT NULL,
+    start_date DATETIME NOT NULL DEFAULT "0000-00-00 00:00:00",
+    end_date DATETIME NOT NULL DEFAULT "9999-12-31 23:59:59",
+    lovd_read_only BOOLEAN NOT NULL DEFAULT 0,
+    created_by SMALLINT(5) UNSIGNED ZEROFILL,
+    created_date DATETIME NOT NULL,
+    edited_by SMALLINT(5) UNSIGNED ZEROFILL,
+    edited_date DATETIME,
+    PRIMARY KEY (id),
+    INDEX (created_by),
+    INDEX (edited_by),
+    CONSTRAINT ' . TABLE_ANNOUNCEMENTS . '_fk_created_by FOREIGN KEY (created_by) REFERENCES ' . TABLE_USERS . ' (id) ON DELETE SET NULL ON UPDATE CASCADE,
+    CONSTRAINT ' . TABLE_ANNOUNCEMENTS . '_fk_edited_by FOREIGN KEY (edited_by) REFERENCES ' . TABLE_USERS . ' (id) ON DELETE SET NULL ON UPDATE CASCADE)
     ' . $sSettings
 
          , 'TABLE_SOURCES' =>
@@ -1043,7 +1075,6 @@ $aTableSQL =
     ' . $sSettings
           );
 
-// DMD_SPECIFIC;
 if (lovd_getProjectFile() == '/install/inc-sql-tables.php') {
     header('Content-type: text/plain; charset=UTF-8');
     var_dump($aTableSQL);

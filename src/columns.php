@@ -4,12 +4,13 @@
  * LEIDEN OPEN VARIATION DATABASE (LOVD)
  *
  * Created     : 2010-03-04
- * Modified    : 2016-03-03
- * For LOVD    : 3.0-15
+ * Modified    : 2016-10-14
+ * For LOVD    : 3.0-18
  *
  * Copyright   : 2004-2016 Leiden University Medical Center; http://www.LUMC.nl/
  * Programmers : Ing. Ivo F.A.C. Fokkema <I.F.A.C.Fokkema@LUMC.nl>
  *               Ing. Ivar C. Lugtenburg <I.C.Lugtenburg@LUMC.nl>
+ *               M. Kroon <m.kroon@lumc.nl>
  *
  *
  * This file is part of LOVD.
@@ -53,7 +54,7 @@ if (PATH_COUNT < 3 && !ACTION) {
             $_GET['search_category'] = $_PE[1];
             define('PAGE_TITLE', 'Browse ' . $_PE[1] . ' custom data columns');
 
-            require ROOT_PATH . 'inc-lib-columns.php';
+            require_once ROOT_PATH . 'inc-lib-columns.php';
             $aTableInfo = lovd_getTableInfoByCategory($_PE[1]);
         } else {
             header('Location:' . lovd_getInstallURL() . $_PE[0] . '?search_category=' . $_PE[1]);
@@ -121,7 +122,7 @@ if (PATH_COUNT > 2 && !ACTION) {
     lovd_isAuthorized('gene', $_AUTH['curates']); // Will set user's level to LEVEL_CURATOR if he is one at all.
     lovd_requireAUTH(LEVEL_CURATOR);
 
-    require ROOT_PATH . 'inc-lib-columns.php';
+    require_once ROOT_PATH . 'inc-lib-columns.php';
     require ROOT_PATH . 'class/object_columns.php';
     $_DATA = new LOVD_Column();
     $zData = $_DATA->viewEntry($sColumnID);
@@ -155,7 +156,7 @@ if (PATH_COUNT == 2 && ACTION == 'order') {
 
     $sCategory = $_PE[1];
 
-    require ROOT_PATH . 'inc-lib-columns.php';
+    require_once ROOT_PATH . 'inc-lib-columns.php';
     $aTableInfo = lovd_getTableInfoByCategory($sCategory);
     if (!$aTableInfo) {
         $_T->printHeader();
@@ -198,7 +199,7 @@ if (PATH_COUNT == 2 && ACTION == 'order') {
             // We're in a new window, refresh opener en close window.
             print('      <SCRIPT type="text/javascript">setTimeout(\'opener.location.reload();self.close();\', 1000);</SCRIPT>' . "\n\n");
         } else {
-            print('      <SCRIPT type="text/javascript">setTimeout(\'window.location.href=\\\'' . lovd_getInstallURL() . $_PE[0] . '/' . $sID . '\\\';\', 1000);</SCRIPT>' . "\n\n");
+            print('      <SCRIPT type="text/javascript">setTimeout(\'window.location.href=\\\'' . lovd_getInstallURL() . $_PE[0] . '/' . $_PE[1] . '\\\';\', 1000);</SCRIPT>' . "\n\n");
         }
 
         $_T->printFooter();
@@ -572,7 +573,7 @@ if (PATH_COUNT == 1 && ACTION == 'data_type_wizard') {
                     array('POST', '', '', '', '40%', '14', '60%'),
                     array('', '', 'print', '<B>Column options</B>'),
                     array('Column name on form', '', 'text', 'name', 30),
-                    array('Help text (optional)', 'If you think the data field needs clarification given as an icon such as this one, add it here.', 'text', 'help_text', 50),
+                    array('Help text (optional)', 'If you think the data field needs clarification given as an icon such as this one, add it here. Please note that the column\'s "full legend description" will also be shown as help text.', 'text', 'help_text', 50),
                     array('Notes on form (optional)<BR>(HTML enabled)', '', 'textarea', 'description_form', 40, 2),
                     array('', '', 'note', 'If you think the data field needs clarification on the data entry form, add it here - it will appear below the field on the data entry form just like this piece of text.'),
                   );
@@ -852,7 +853,7 @@ if (PATH_COUNT > 2 && ACTION == 'edit') {
 
     // Require form functions.
     require ROOT_PATH . 'inc-lib-form.php';
-    require ROOT_PATH . 'inc-lib-columns.php';
+    require_once ROOT_PATH . 'inc-lib-columns.php';
 
     // Generate a unique workID, that is sortable.
     if (!isset($_POST['workID'])) {
@@ -1285,7 +1286,7 @@ lovd_requireAUTH(LEVEL_MANAGER);
             }
 
             // Write to log...
-            lovd_writeLog('MySQL:Event', 'ColEditColID', $_AUTH['username'] . ' (' . mysql_real_escape_string($_AUTH['name']) . ') successfully changed column ID ' . $zData['colid'] . ' to ' . $_POST['colid']);
+            lovd_writeLog('MySQL:Event', 'ColEditColID', $_AUTH['username'] . ' (' . $_DB->quote($_AUTH['name']) . ') successfully changed column ID ' . $zData['colid'] . ' to ' . $_POST['colid']);
 
             // 2008-12-03; 2.0-15; Update links (whether they exist or not)
             $sQ = 'UPDATE ' . TABLE_COLS2LINKS . ' SET colid="' . $_POST['colid'] . '" WHERE colid="' . $zData['colid'] . '"';
@@ -1374,7 +1375,7 @@ if (PATH_COUNT > 2 && ACTION == 'add') {
 
     // Require form & column functions.
     require ROOT_PATH . 'inc-lib-form.php';
-    require ROOT_PATH . 'inc-lib-columns.php';
+    require_once ROOT_PATH . 'inc-lib-columns.php';
 
     // Required clearance depending on which type of column is being added.
     $aTableInfo = lovd_getTableInfoByCategory($sCategory);
@@ -1432,7 +1433,11 @@ if (PATH_COUNT > 2 && ACTION == 'add') {
                 $aSQL = array_merge($aSQL, $_AUTH['curates']);
             }
             $sSQL .= ' ORDER BY (d.symbol != "" AND d.symbol != "-") DESC, d.symbol, d.name';
-            $aPossibleTargets = array_map('lovd_shortenString', $_DB->query($sSQL, $aSQL)->fetchAllCombine());
+
+            $aPossibleTargets = array_map(
+                function ($sInput) {
+                    return lovd_shortenString($sInput, 75);
+                }, $_DB->query($sSQL, $aSQL)->fetchAllCombine());
             $nPossibleTargets = count($aPossibleTargets);
         }
 
@@ -1695,7 +1700,7 @@ if (!isset($_GET['in_window'])) {
 
     // Array which will make up the form table.
     $aForm = array(
-                    array('POST', '', '', '', '40%', '14', '60%'),
+                    array('POST', '', '', '', '35%', '14', '65%'),
                   );
 
     if ($aTableInfo['shared']) {
@@ -1747,7 +1752,7 @@ if (PATH_COUNT > 2 && ACTION == 'remove') {
 
     // Require form & column functions.
     require ROOT_PATH . 'inc-lib-form.php';
-    require ROOT_PATH . 'inc-lib-columns.php';
+    require_once ROOT_PATH . 'inc-lib-columns.php';
 
     // Required clearance depending on which type of column is being added.
     $aTableInfo = lovd_getTableInfoByCategory($sCategory);
@@ -1795,7 +1800,10 @@ if (PATH_COUNT > 2 && ACTION == 'remove') {
                 $aSQL = array_merge($aSQL, $_AUTH['curates']);
             }
             $sSQL .= ' ORDER BY d.symbol';
-            $aPossibleTargets = array_map('lovd_shortenString', $_DB->query($sSQL, $aSQL)->fetchAllCombine());
+            $aPossibleTargets = array_map(
+                function ($sInput) {
+                    return lovd_shortenString($sInput, 75);
+                }, $_DB->query($sSQL, $aSQL)->fetchAllCombine());
             $nPossibleTargets = count($aPossibleTargets);
         }
 
@@ -1967,7 +1975,7 @@ if (PATH_COUNT > 2 && ACTION == 'remove') {
 
     // Array which will make up the form table.
     $aForm = array(
-                    array('POST', '', '', '', '40%', 14, '60%')
+                    array('POST', '', '', '', '35%', 14, '65%')
                   );
 
     if ($aTableInfo['shared']) {
@@ -2108,7 +2116,6 @@ if (PATH_COUNT > 2 && ACTION == 'delete') {
 
     // Require form & column functions.
     require ROOT_PATH . 'inc-lib-form.php';
-    require ROOT_PATH . 'inc-lib-columns.php';
 
     define('PAGE_TITLE', 'Delete custom data column ' . $sColumnID);
     define('LOG_EVENT', 'ColDelete');

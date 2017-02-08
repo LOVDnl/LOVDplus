@@ -4,10 +4,10 @@
  * LEIDEN OPEN VARIATION DATABASE (LOVD)
  *
  * Created     : 2012-06-10
- * Modified    : 2013-05-17
- * For LOVD    : 3.0-05
+ * Modified    : 2016-10-14
+ * For LOVD    : 3.0-18
  *
- * Copyright   : 2004-2013 Leiden University Medical Center; http://www.LUMC.nl/
+ * Copyright   : 2004-2016 Leiden University Medical Center; http://www.LUMC.nl/
  * Programmer  : Ing. Ivo F.A.C. Fokkema <I.F.A.C.Fokkema@LUMC.nl>
  *
  *
@@ -50,6 +50,7 @@ if (ACTION || PATH_COUNT < 2) {
 
 if (($_PE[1] == 'all' && (empty($_PE[2]) || in_array($_PE[2], array('gene', 'mine', 'user')))) ||
     ($_PE[1] == 'columns' && PATH_COUNT <= 3) ||
+    ($_PE[1] == 'genes' && PATH_COUNT == 2) ||
     ($_PE[1] == 'gene_panels' && PATH_COUNT == 3 && ctype_digit($_PE[2]))) {
     // URL: /download/all
     // URL: /download/all/gene/IVD
@@ -57,10 +58,11 @@ if (($_PE[1] == 'all' && (empty($_PE[2]) || in_array($_PE[2], array('gene', 'min
     // URL: /download/all/user/00001
     // URL: /download/columns
     // URL: /download/columns/(VariantOnGenome|VariantOnTranscript|Individual|...)
+    // URL: /download/genes
     // URL: /download/gene_panels/00001
     // Download data from the database, so that we can import it elsewhere.
 
-    if (!(LOVD_plus && $_PE[1] == 'gene_panels')) {
+    if (LOVD_plus && $_PE[1] != 'gene_panels') {
         // For LOVD+, in general downloads are closed.
         // We have an exception for gene panels.
         $_T->printHeader();
@@ -69,16 +71,16 @@ if (($_PE[1] == 'all' && (empty($_PE[2]) || in_array($_PE[2], array('gene', 'min
         exit;
     }
 
-    $sFileName = '';
-    $sHeader = '';
-    $sFilter = '';
+    $sFileName = ''; // What name to give the file that is provided?
+    $sHeader = '';   // What header to put in the file? "<header> download".
+    $sFilter = '';   // Do you want to filter the data? If so, put some string here, that marks this type of filter.
     $ID = '';
     if ($_PE[1] == 'all' && empty($_PE[2])) {
         // Download all data.
         $sFileName = 'full_download';
         $sHeader = 'Full data';
         lovd_requireAuth(LEVEL_MANAGER);
-    } elseif ($_PE[1] == 'all' && $_PE[2] == 'gene'  && PATH_COUNT == 4 && preg_match('/^[a-z][a-z0-9#@-]+$/i', rawurldecode($_PE[3]))) {
+    } elseif ($_PE[1] == 'all' && $_PE[2] == 'gene'  && PATH_COUNT == 4 && preg_match('/^[a-z][a-z0-9#@-]*$/i', rawurldecode($_PE[3]))) {
         // Gene database contents.
         $sFileName = 'full_download_' . $_PE[3];
         $sHeader = 'Full data';
@@ -114,6 +116,13 @@ if (($_PE[1] == 'all' && (empty($_PE[2]) || in_array($_PE[2], array('gene', 'min
         $sFilter = 'category';
         $ID = $_PE[2];
         lovd_requireAuth(LEVEL_MANAGER);
+
+    } elseif ($_PE[1] == 'genes' && empty($_PE[2])) {
+        // Download all genes.
+        $sFileName = 'genes';
+        $sHeader = 'Gene data';
+        lovd_requireAuth(LEVEL_MANAGER);
+
     } elseif (LOVD_plus && $_PE[1] == 'gene_panels' && PATH_COUNT == 3 && ctype_digit($_PE[2])) {
         // Download a single gene panel.
         $sFileName = 'gene_panel_' . $_PE[2];
@@ -131,7 +140,7 @@ if (($_PE[1] == 'all' && (empty($_PE[2]) || in_array($_PE[2], array('gene', 'min
     print('### LOVD-version ' . lovd_calculateVersion($_SETT['system']['version']) . ' ### ' . $sHeader . ' download ### To import, do not remove or alter this header ###' . "\r\n");
     if ($sFilter == 'owner') {
         print('## Filter: (created_by = ' . $ID . ' || owned_by = ' . $ID . ')' . "\r\n");
-    } elseif (in_array($sFilter, array('gene', 'category', 'genepanel'))) {
+    } elseif (in_array($sFilter, array('category', 'gene', 'genepanel'))) {
         print('## Filter: (' . $sFilter . ' = ' . $ID . ')' . "\r\n");
     }
     print('# charset = UTF-8' . "\r\n\r\n");
@@ -293,6 +302,13 @@ if (($_PE[1] == 'all' && (empty($_PE[2]) || in_array($_PE[2], array('gene', 'min
             $aObjects['Columns']['filters']['category'] = $ID;
         }
 
+    } elseif ($_PE[1] == 'genes') {
+        $aObjects =
+            array(
+                'Genes' => $aDataTypeSettings,
+                'Transcripts' => $aDataTypeSettings,
+            );
+
     } elseif (LOVD_plus && $_PE[1] == 'gene_panels') {
         $aObjects =
             array(
@@ -369,18 +385,20 @@ foreach ($aObjectsToBeFiltered as $sObject) {
 
     // Build the query.
     // Ugly hack: we will change $sTable for the VOT to a string that joins VOG such that we can apply filters.
+    // We'll add table alias 't' everywhere to make sure the SELECT * doesn't take data from both tables, if we're using two tables here.
+    //   VOG values can overwrite VOT values (effectid).
     if ($sObject == 'Variants_On_Transcripts') {
-        $sTable = TABLE_VARIANTS_ON_TRANSCRIPTS . ' INNER JOIN ' . TABLE_VARIANTS . ' USING (id)';
+        $sTable = TABLE_VARIANTS_ON_TRANSCRIPTS . ' AS t INNER JOIN ' . TABLE_VARIANTS . ' USING (id)';
     } elseif ($sObject == 'Columns') {
-        $sTable = TABLE_COLS;
+        $sTable = TABLE_COLS . ' AS t';
     } else {
-        $sTable = @constant('TABLE_' . strtoupper($sObject));
+        $sTable = @constant('TABLE_' . strtoupper($sObject)) . ' AS t';
         if (!$sTable) {
             die('Error: Could not find data table for object ' . $sObject . "\r\n");
         }
     }
     // Store in data array.
-    $aObjects[$sObject]['query'] = 'SELECT * FROM ' . $sTable . (!$sWHERE? '' : ' WHERE ' . $sWHERE) . ' ORDER BY ' . (empty($aSettings['order_by'])? 'id' : $aSettings['order_by']);
+    $aObjects[$sObject]['query'] = 'SELECT t.* FROM ' . $sTable . (!$sWHERE? '' : ' WHERE ' . $sWHERE) . ' ORDER BY ' . (empty($aSettings['order_by'])? 'id' : $aSettings['order_by']);
     $aObjects[$sObject]['args']  = $aArgs;
 
     // If prefetch is requested, request data right here. We will then loop through the results to create the filters for the other objects.
@@ -397,12 +415,17 @@ foreach ($aObjectsToBeFiltered as $sObject) {
                 }
                 // Now loop the list of filters to apply.
                 foreach ($aFiltersToRun as $sColumnToFilter => $sColToMatch) {
+                    // Make sure this object has a functional 'filters' array for this column.
+                    if (!isset($aObjects[$sObjectToFilter]['filters'][$sColumnToFilter]) || !is_array($aObjects[$sObjectToFilter]['filters'][$sColumnToFilter])) {
+                        $aObjects[$sObjectToFilter]['filters'][$sColumnToFilter] = array();
+                    }
                     // Now loop the data to collect all the $sValueToFilter data.
                     $aValuesToFilter = array();
                     foreach ($aObjects[$sObject]['data'] as $zData) {
                         $aValuesToFilter[] = $zData[$sColToMatch];
                     }
-                    $aObjects[$sObjectToFilter]['filters'][$sColumnToFilter] = array_unique($aValuesToFilter);
+                    // 2015-05-01; 3.0-14; Do not overwrite previous filters on this column! Merge them, instead.
+                    $aObjects[$sObjectToFilter]['filters'][$sColumnToFilter] = array_unique(array_merge($aObjects[$sObjectToFilter]['filters'][$sColumnToFilter], $aValuesToFilter));
                 }
             }
         }
