@@ -128,7 +128,6 @@ class LOVD_ObservationCounts
         foreach ($aSettings as $sType => $aTypeSettings) {
             $this->aCategories = $this->validateCategories($sType, $aTypeSettings);
             $this->aColumns = $this->validateColumns($sType, $aTypeSettings);
-
             switch ($sType) {
                 case static::$TYPE_GENERAL:
                     $minPopSize = static::$DEFAULT_MIN_POP_SIZE;
@@ -143,7 +142,7 @@ class LOVD_ObservationCounts
 
                     $aData[static::$TYPE_GENERAL] = array();
                     foreach ($this->aCategories[static::$TYPE_GENERAL] as $sCategory => $aRules) {
-                        $aData[static::$TYPE_GENERAL][$sCategory] = $this->generateData($aRules);
+                        $aData[static::$TYPE_GENERAL][$sCategory] = $this->generateData($aRules, static::$TYPE_GENERAL);
                     }
                     break;
 
@@ -151,7 +150,7 @@ class LOVD_ObservationCounts
                     $aData[static::$TYPE_GENEPANEL] = array();
                     foreach ($this->aCategories[static::$TYPE_GENEPANEL] as $sGenepanelId => $aGenepanelRules) {
                         foreach ($aGenepanelRules as $sCategory => $aRules) {
-                            $aData[static::$TYPE_GENEPANEL][$sGenepanelId][$sCategory] = $this->generateData($aRules);
+                            $aData[static::$TYPE_GENEPANEL][$sGenepanelId][$sCategory] = $this->generateData($aRules, static::$TYPE_GENEPANEL);
                         }
                     }
                     break;
@@ -198,7 +197,7 @@ class LOVD_ObservationCounts
         return false;
     }
 
-    protected function generateData ($aRules) {
+    protected function generateData ($aRules, $sType) {
         // Given the configuration of a category, construct an array of data for that category.
         // No data is saved into the database here.
 
@@ -227,16 +226,6 @@ class LOVD_ObservationCounts
             $nCount = $_DB->query($sSQL, array())->rowCount();
             $aData['total_individuals'] = $nCount;
 
-            // TOTAL number of affected individuals in this database
-            $sSQL = static::getQueryFor('num_affected', $aRules['condition']);
-            $nCount = $_DB->query($sSQL, array())->rowCount();
-            $aData['num_affected'] = $nCount;
-
-            // TOTAL number of NOT affected individuals in this database
-            $sSQL = static::getQueryFor('num_not_affected', $aRules['condition']);
-            $nCount = $_DB->query($sSQL, array())->rowCount();
-            $aData['num_not_affected'] = $nCount;
-
             // Number of individuals with this variant
             $sSQL = static::getQueryFor('num_ind_with_variant', $aRules['condition'], array('dbid' => $this->aIndividual['VariantOnGenome/DBID']));
             $aData['variant_ids'] = array();
@@ -248,10 +237,25 @@ class LOVD_ObservationCounts
             }
 
             if (!empty($aData['total_individuals'])) {
-                $aData['percentage'] = round((float) $aData['num_ind_with_variant'] / (float) $aData['total_individuals'] * 100, 0);
+                $aData['percentage'] = round((float)$aData['num_ind_with_variant'] / (float)$aData['total_individuals'] * 100, 0);
                 if (!empty($aRules['threshold'])) {
-                    $aData['threshold'] = ($aData['percentage'] > $aRules['threshold']? '> ': '<= ') . $aRules['threshold'] . ' %';
+                    $aData['threshold'] = ($aData['percentage'] > $aRules['threshold'] ? '> ' : '<= ') . $aRules['threshold'] . ' %';
                 }
+            }
+
+            // These are the columns that don't always need to be calculated if this instance of LOVD does not need it.
+            // TOTAL number of affected individuals in this database
+            if (!empty($this->aColumns[$sType]['num_affected'])) {
+                $sSQL = static::getQueryFor('num_affected', $aRules['condition']);
+                $nCount = $_DB->query($sSQL, array())->rowCount();
+                $aData['num_affected'] = $nCount;
+            }
+
+            // TOTAL number of NOT affected individuals in this database
+            if (!empty($this->aColumns[$sType]['num_not_affected'])) {
+                $sSQL = static::getQueryFor('num_not_affected', $aRules['condition']);
+                $nCount = $_DB->query($sSQL, array())->rowCount();
+                $aData['num_not_affected'] = $nCount;
             }
         }
 
@@ -419,33 +423,46 @@ class LOVD_ObservationCounts
         // Validate if the columns in $aSettings are valid.
         // We then populate the valid columns into $this->aColumns.
 
+        global $_DB;
+
         $aAvailableColumns = array(
             'genepanel' => array(
-                'label',
-                'values',
-                'total_individuals',
-                'num_affected',
-                'num_not_affected',
-                'num_ind_with_variant',
-                'percentage'
+                'label' => 'Category',
+                'values' => 'Gene Panel',
+                'total_individuals' => 'Total # Individuals',
+                'num_affected' => '# of Affected Individuals',
+                'num_not_affected' => '# of Unaffected Individuals',
+                'num_ind_with_variant' => '# of Unaffected Individuals',
+                'percentage' => 'Percentage (%)'
             ),
             'general' => array(
-                'label',
-                'values',
-                'percentage',
-                'threshold'
+                'label' => 'Category',
+                'values' => 'Value',
+                'percentage' => 'Percentage',
+                'threshold' => 'Percentage'
             )
         );
 
+        // Some columns require custom columns to be active.
+        $sSQL = 'SELECT colid FROM ' . TABLE_ACTIVE_COLS . ' WHERE colid = "Individual/Affected"';
+        $zResult = $_DB->query($sSQL)->fetchAssoc();
+        $bIndAffectedColActive = ($zResult && $zResult['colid']? true: false);
+
+        if (!$bIndAffectedColActive) {
+            unset($aAvailableColumns['genepanel']['num_affected']);
+            unset($aAvailableColumns['genepanel']['num_not_affected']);
+        }
+
+        // Now build the list of valid columns for this LOVD instance.
         $this->aColumns[$sType] = array();
         if (empty($aSettings) || empty($aSettings['columns'])) {
             // If columns is not specified in the settings for this type, then use ALL available columns.
             $this->aColumns[$sType] = $aAvailableColumns[$sType];
         } else {
             // Otherwise, only select the columns specified in the settings of this LOVD instance.
-            foreach ($aSettings['columns'] as $sColumn) {
+            foreach ($aSettings['columns'] as $sColumn => $sLabel) {
                 if (isset($aAvailableColumns[$sType][$sColumn])) {
-                    $this->aColumns[$sType][] = $aAvailableColumns[$sType][$sColumn];
+                    $this->aColumns[$sType][$sColumn] = $sColumn;
                 }
             }
         }
