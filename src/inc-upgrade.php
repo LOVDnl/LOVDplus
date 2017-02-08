@@ -648,11 +648,21 @@ if ($sCalcVersionFiles != $sCalcVersionDB) {
                             ENGINE=InnoDB,
                             DEFAULT CHARACTER SET utf8',
                     ),
+                 '3.0-17b' =>
+                     array(
+                         'ALTER TABLE ' . TABLE_USERS . ' ADD COLUMN auth_token CHAR(32) AFTER password_force_change, ADD COLUMN auth_token_expires DATETIME AFTER auth_token',
+                     ),
+                 '3.0-17c' =>
+                     array(
+                         'UPDATE ' . TABLE_VARIANTS_ON_TRANSCRIPTS . ' SET position_c_start_intron = 0 WHERE position_c_start IS NOT NULL AND position_c_start_intron IS NULL',
+                         'UPDATE ' . TABLE_VARIANTS_ON_TRANSCRIPTS . ' SET position_c_end_intron = 0 WHERE position_c_end IS NOT NULL AND position_c_end_intron IS NULL',
+                     ),
                  '3.0-18' =>
                      array(
                          // These two will be ignored by LOVD+.
                          'INSERT IGNORE INTO ' . TABLE_SOURCES . ' VALUES ("pubmed_article", "http://www.ncbi.nlm.nih.gov/pubmed/{{ ID }}")',
                          'INSERT IGNORE INTO ' . TABLE_LINKS . ' VALUES (NULL, "Alamut", "{Alamut:[1]:[2]}", "<A href=\"http://127.0.0.1:10000/show?request=[1]:[2]\" target=\"_blank\">Alamut</A>", "Links directly to the variant in the Alamut software.\r\n[1] = The chromosome letter or number.\r\n[2] = The genetic change on genome level.\r\n\r\nExample:\r\n{Alamut:16:21854780G>A}", 0, NOW(), NULL, NULL)',
+                         'UPDATE ' . TABLE_COLS . ' SET mandatory = 0 WHERE id = "VariantOnTranscript/Exon"',
                      ),
              );
 
