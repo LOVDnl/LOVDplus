@@ -310,7 +310,7 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && ACTION == 'edit') {
 
         if (!lovd_error()) {
             // Fields to be used.
-            $aFields = array('symbol', 'name', 'id_omim', 'edited_by', 'edited_date');
+            $aFields = array('symbol', 'name', 'inheritance', 'id_omim', 'edited_by', 'edited_date');
 
             // Prepare values.
             $_POST['edited_by'] = $_AUTH['id'];

@@ -44,6 +44,23 @@ class LOVD_Disease extends LOVD_Object {
     // This class extends the basic Object class and it handles the Link object.
     var $sObject = 'Disease';
 
+    static $aInheritances = array(
+        'AD' => 'Autosomal dominant',
+        'AR' => 'Autosomal recessive',
+        'DD' => 'Digenic dominant',
+        'DR' => 'Digenic recessive',
+        'IC' => 'Isolated cases',
+        'ICB' => 'Inherited chromosomal imbalance',
+        'Mi' => 'Mitochondrial',
+        'Mu' => 'Multifactorial',
+        'SMo' => 'Somatic mosaicism',
+        'SMu' => 'Somatic mutation',
+        'XLD' => 'X-linked dominant' ,
+        'XLR' => 'X-linked recessive',
+        'XL' => 'X-linked' ,
+        'YL' => 'Y-linked'
+    );
+
 
 
 
@@ -54,7 +71,7 @@ class LOVD_Disease extends LOVD_Object {
         global $_AUTH;
 
         // SQL code for loading an entry for an edit form.
-        $this->sSQLLoadEntry = 'SELECT d.*, ' .
+        $this->sSQLLoadEntry = 'SELECT d.*, d.inheritance as _inheritance, ' .
                                'GROUP_CONCAT(g2d.geneid ORDER BY g2d.geneid SEPARATOR ";") AS _genes ' .
                                'FROM ' . TABLE_DISEASES . ' AS d ' .
                                'LEFT OUTER JOIN ' . TABLE_GEN2DIS . ' AS g2d ON (d.id = g2d.diseaseid) ' .
@@ -88,12 +105,20 @@ class LOVD_Disease extends LOVD_Object {
         $this->aSQLViewList['WHERE']    = 'd.id > 0';
         $this->aSQLViewList['GROUP_BY'] = 'd.id';
 
+        $sInheritance_legend = '<TABLE>';
+        foreach (static::$aInheritances as $sKey => $sDescription) {
+            $sInheritance_legend .= '<TR><TD>' . $sKey . '</TD><TD>: ' . $sDescription . '</TD></TR>';
+        }
+
+        $sInheritance_legend .= '</TABLE>';
+
         // List of columns and (default?) order for viewing an entry.
         $this->aColumnsViewEntry =
                  array(
                         'symbol' => 'Official abbreviation',
                         'name' => 'Name',
                         'id_omim' => 'OMIM ID',
+                        'inheritance' => 'Inheritance',
                         'individuals' => 'Individuals reported having this disease',
                         'phenotypes_' => 'Phenotype entries for this disease',
                         'genes_' => 'Associated with',
@@ -118,6 +143,12 @@ class LOVD_Disease extends LOVD_Object {
                         'id_omim' => array(
                                     'view' => array('OMIM ID', 75),
                                     'db'   => array('d.id_omim', 'ASC', true)),
+                        'inheritance' => array(
+                                    'view' => array('Inheritance', 75),
+                                    'db'   => array('inheritance', 'ASC', true),
+                                    'legend' => array(str_replace(array("\r", "\n"), '', $sInheritance_legend),
+                                        str_replace(array("\r", "\n"), '', $sInheritance_legend)
+                                    )),
                         'individuals' => array(
                                     'view' => array('Individuals', 80, 'style="text-align : right;"'),
                                     'db'   => array('individuals', 'DESC', 'INT_UNSIGNED')),
@@ -249,6 +280,7 @@ class LOVD_Disease extends LOVD_Object {
                         array('Disease abbreviation', '', 'text', 'symbol', 15),
                         array('Disease name', '', 'text', 'name', 40),
                         array('OMIM ID (optional)', '', 'text', 'id_omim', 10),
+                        array('Inheritance', '', 'select', 'inheritance', count(static::$aInheritances), static::$aInheritances, false, true, false),
                         'hr',
                         'skip',
                         array('', '', 'print', '<B>Relation to genes (optional)</B>'),
