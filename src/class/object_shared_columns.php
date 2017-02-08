@@ -112,7 +112,7 @@ class LOVD_SharedColumn extends LOVD_Object {
                         'description_legend_short' => 'Description on short legend',
                         'description_legend_full' => 'Description on full legend',
                         'select_options' => 'Select options',
-                        'public_view_' => (!LOVD_plus? 'Show to public' : 'Show column on view list'),
+                        'public_view_' => 'Show to public',
                         'public_add_' => 'Show on submission form',
                         'created_by_' => 'Created by',
                         'created_date' => 'Date created',
@@ -139,7 +139,7 @@ class LOVD_SharedColumn extends LOVD_Object {
                                     'view' => array('Mandatory', 60, 'style="text-align : center;"'),
                                     'db'   => array('sc.mandatory', 'DESC', true)),
                         'public_view_' => array(
-                                    'view' => array((!LOVD_plus? 'Public' : 'View List'), 60, 'style="text-align : center;"'),
+                                    'view' => array('Public', 60, 'style="text-align : center;"'),
                                     'db'   => array('sc.public_view', 'DESC', true)),
                         'col_order' => array(
                                     'view' => array('Order&nbsp;', 60, 'style="text-align : right;"'),

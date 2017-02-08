@@ -51,6 +51,9 @@ class LOVD_TranscriptVariant extends LOVD_Custom {
     var $aTranscripts = array();
 
 
+
+
+
     function __construct ($sObjectID = '', $nID = '')
     {
         // Default constructor.
