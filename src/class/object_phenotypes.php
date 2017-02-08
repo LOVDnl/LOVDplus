@@ -45,7 +45,7 @@ require_once ROOT_PATH . 'class/object_custom.php';
 class LOVD_Phenotype extends LOVD_Custom {
     // This class extends the basic Object class and it handles the Link object.
     var $sObject = 'Phenotype';
-    var $bShared = true;
+    var $bShared = (LOVD_plus? false : true);
 
 
 

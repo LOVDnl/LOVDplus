@@ -105,7 +105,7 @@ function lovd_getTableInfoByCategory ($sCategory)
                             'table_sql' => TABLE_PHENOTYPES,
                             'table_name' => 'Phenotype',
                             'table_alias' => 'p',
-                            'shared' => true,
+                            'shared' => (LOVD_plus? false : true),
                             'unit' => 'disease', // Is also used to determine the key (diseaseid).
                           ),
                 'Screening' =>
