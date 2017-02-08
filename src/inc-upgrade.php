@@ -657,6 +657,7 @@ if ($sCalcVersionFiles != $sCalcVersionDB) {
                          'UPDATE ' . TABLE_VARIANTS_ON_TRANSCRIPTS . ' SET position_c_start_intron = 0 WHERE position_c_start IS NOT NULL AND position_c_start_intron IS NULL',
                          'UPDATE ' . TABLE_VARIANTS_ON_TRANSCRIPTS . ' SET position_c_end_intron = 0 WHERE position_c_end IS NOT NULL AND position_c_end_intron IS NULL',
                      ),
+                 '3.0-17d' => array(), // Placeholder for LOVD+ queries, defined below.
                  '3.0-18' =>
                      array(
                          // These two will be ignored by LOVD+.
@@ -755,7 +756,6 @@ if ($sCalcVersionFiles != $sCalcVersionDB) {
     }
 
     if (LOVD_plus && $sCalcVersionDB < lovd_calculateVersion('3.0-12u')) {
-        $aUpdates['3.0-12u'][] = 'DELETE FROM ' . TABLE_SHARED_COLS . ' WHERE colid LIKE "VariantOnTranscript/%"';
         // Insert the curation status records.
         $aCurationStatusSQL = array();
         foreach ($_SETT['curation_status'] as $nStatus => $sStatus) {
@@ -774,6 +774,19 @@ if ($sCalcVersionFiles != $sCalcVersionDB) {
         $aUpdates['3.0-12u'][] = 'UPDATE ' . TABLE_VARIANTS . ' SET curation_statusid = ' . CUR_STATUS_ARTEFACT . ' WHERE effectid LIKE "0_" OR effectid LIKE "_0"';
         // Replaces all the current "VUS" with "Not curated" if the variant is not part of an analysis result.
         $aUpdates['3.0-12u'][] = 'UPDATE ' . TABLE_VARIANTS . ' vog LEFT OUTER JOIN ' . TABLE_ANALYSES_RUN_RESULTS . ' arr ON (vog.id = arr.variantid) SET vog.effectid = CAST(REPLACE(vog.effectid, 5, 0) AS UNSIGNED) WHERE arr.variantid IS NULL';
+    }
+
+    if (LOVD_plus && $sCalcVersionDB < lovd_calculateVersion('3.0-17d')) {
+        // Run LOVD+ specific queries.
+        $aUpdates['3.0-17d'] = array_merge(
+            $aUpdates['3.0-17d'],
+            array(
+                'DELETE FROM ' . TABLE_SHARED_COLS,
+                'UPDATE ' . TABLE_PHENOTYPES . ' SET statusid = ' . STATUS_HIDDEN,
+                'UPDATE ' . TABLE_INDIVIDUALS . ' SET statusid = ' . STATUS_HIDDEN,
+                'UPDATE ' . TABLE_VARIANTS . ' SET statusid = ' . STATUS_HIDDEN,
+            )
+        );
     }
 
 
