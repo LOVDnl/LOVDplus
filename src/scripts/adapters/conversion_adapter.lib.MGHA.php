@@ -135,7 +135,10 @@ $_INSTANCE_CONFIG['custom_object'] = array(
 
 
 $_INSTANCE_CONFIG['observation_counts'] = array(
+    // If we want to display genepanel observation counts using default config,
+    // then simply add 'genepanel' => array()
     'genepanel' => array(
+        // if columns is empty, use default columns list
         'columns' => array(
             'values' => 'Gene Panel',
             'total_individuals' => 'Total # Individuals',
@@ -143,15 +146,20 @@ $_INSTANCE_CONFIG['observation_counts'] = array(
             'num_not_affected' => '# of Unaffected Individuals',
             'percentage' => 'Percentage (%)'
         ),
+        // if categories is empty, use default categories listhahh
         'categories' => array()
     ),
 
+    // If we want to display general categories observation counts using default config,
+    // then simply add 'general' => array()
     'general' => array(
+        // if columns is empty, use default columns list
         'columns' => array(
             'label' => 'Category',
             'values' => 'Value',
             'threshold' => 'Percentage'
         ),
+        // if categories is empty, use default categories list
         'categories' => array(),
         'min_population_size' => 100
     ),
