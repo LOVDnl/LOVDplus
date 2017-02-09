@@ -4,11 +4,11 @@
  * LEIDEN OPEN VARIATION DATABASE (LOVD)
  *
  * Created     : 2013-11-07
- * Modified    : 2016-10-14
+ * Modified    : 2017-02-08
  * For LOVD    : 3.0-18
  *
- * Copyright   : 2004-2016 Leiden University Medical Center; http://www.LUMC.nl/
- * Programmer  : Ing. Ivo F.A.C. Fokkema <I.F.A.C.Fokkema@LUMC.nl>
+ * Copyright   : 2004-2017 Leiden University Medical Center; http://www.LUMC.nl/
+ * Programmer  : Ivo F.A.C. Fokkema <I.F.A.C.Fokkema@LUMC.nl>
  *
  *
  * This file is part of LOVD.
@@ -65,19 +65,13 @@ class LOVD_CustomViewListMOD extends LOVD_CustomViewList {
         }
 
 
-        // FIXME: Disable this part when not using any of the custom column data types...
-        // Collect custom column information, all active columns (possibly restricted per gene).
-        // FIXME; This join is not always needed (it's done for VOT columns, but sometimes they are excluded, or the join is not necessary because of the user level), exclude when not needed to speed up the query?
-        //   Also, the select of public_view makes no sense of VOTs are restricted by gene.
-        $sSQL = 'SELECT c.id, c.width, c.head_column, c.description_legend_short, c.description_legend_full, c.mysql_type, c.form_type, c.select_options, c.col_order, GROUP_CONCAT(sc.geneid, ":", sc.public_view SEPARATOR ";") AS public_view FROM ' . TABLE_ACTIVE_COLS . ' AS ac INNER JOIN ' . TABLE_COLS . ' AS c ON (c.id = ac.colid) LEFT OUTER JOIN ' . TABLE_SHARED_COLS . ' AS sc ON (sc.colid = ac.colid) ' .
-                    'WHERE ' . ($_AUTH['level'] >= ($sGene? LEVEL_COLLABORATOR : LEVEL_MANAGER)? '' : '((c.id NOT LIKE "VariantOnTranscript/%" AND c.public_view = 1) OR sc.public_view = 1) AND ') . '(c.id LIKE ?' . str_repeat(' OR c.id LIKE ?', count($aObjects)-1) . ') ' .
-                    (!$sGene? 'GROUP BY c.id ' :
-                      // If gene is given, only shown VOT columns active in the given gene! We'll use an UNION for that, so that we'll get the correct width and order also.
-                      'AND c.id NOT LIKE "VariantOnTranscript/%" GROUP BY c.id ' . // Exclude the VOT columns from the normal set, we'll load them below.
-                      'UNION ' .
-                      'SELECT c.id, sc.width, c.head_column, c.description_legend_short, c.description_legend_full, c.mysql_type, c.form_type, c.select_options, sc.col_order, CONCAT(sc.geneid, ":", sc.public_view) AS public_view FROM ' . TABLE_COLS . ' AS c INNER JOIN ' . TABLE_SHARED_COLS . ' AS sc ON (c.id = sc.colid) WHERE sc.geneid = ? ' .
-                      ($_AUTH['level'] >= LEVEL_COLLABORATOR? '' : 'AND sc.public_view = 1 ')) .
-                    'ORDER BY col_order';
+        // Collect custom column information, all public and active columns.
+        // In LOVD_plus, the public_view field is used to set if a custom column will be displayed in a VL or not.
+        // So, in LOVD_plus we need to check for ALL USERS if a custom column has public_view flag turned on or not.
+        $sSQL = 'SELECT c.id, c.width, c.head_column, c.description_legend_short, c.description_legend_full, c.mysql_type, c.form_type, c.select_options, c.col_order, c.public_view FROM ' . TABLE_ACTIVE_COLS . ' AS ac INNER JOIN ' . TABLE_COLS . ' AS c ON (c.id = ac.colid) ' .
+                'WHERE c.public_view = 1 AND (c.id LIKE ?' . str_repeat(' OR c.id LIKE ?', count($aObjects)-1) . ') ' .
+                'GROUP BY c.id ' .
+                'ORDER BY col_order';
         $aSQL = array();
         foreach ($aObjects as $sObject) {
             $aSQL[] = $sObject . '/%';
@@ -212,6 +206,8 @@ class LOVD_CustomViewListMOD extends LOVD_CustomViewList {
                     break;
 
                 case 'VariantOnTranscript':
+                    // FIXME: In a later stadium, this will be replaced by instance-specific code. The public_view flag
+                    //  now controls the selection of custom columns for custom viewlists.
                     $aColumnsToShow['VariantOnTranscript'] =
                         array(
                             'VariantOnTranscript/DNA',
