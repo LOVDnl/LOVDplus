@@ -4,12 +4,12 @@
  * LEIDEN OPEN VARIATION DATABASE (LOVD)
  *
  * Created     : 2016-04-12
- * Modified    : 2016-06-03
- * For LOVD    : 3.0-13
+ * Modified    : 2017-02-09
+ * For LOVD    : 3.0-18
  *
- * Copyright   : 2004-2016 Leiden University Medical Center; http://www.LUMC.nl/
+ * Copyright   : 2004-2017 Leiden University Medical Center; http://www.LUMC.nl/
  * Programmers : Anthony Marty <anthony.marty@unimelb.edu.au>
- *               Ing. Ivo F.A.C. Fokkema <I.F.A.C.Fokkema@LUMC.nl>
+ *               Ivo F.A.C. Fokkema <I.F.A.C.Fokkema@LUMC.nl>
  *
  *
  * This file is part of LOVD.
@@ -90,6 +90,12 @@ class LOVD_SummaryAnnotation extends LOVD_Custom {
     function checkFields ($aData, $zData = false)
     {
         // Checks fields before submission of data.
+
+        // Mandatory fields.
+        $this->aCheckMandatory =
+            array(
+                'effectid',
+            );
         parent::checkFields($aData);
 
         lovd_checkXSS();
@@ -108,13 +114,19 @@ class LOVD_SummaryAnnotation extends LOVD_Custom {
         }
         global $_SETT;
 
+        // Manipulate the effectid list to remove the "Not curated" option, and make the field mandatory.
+        $aEffectIDs = $_SETT['var_effect'];
+        unset($aEffectIDs[0]);
+
+
         $this->aFormData = array_merge(
             array(
                 array('POST', '', '', '', '50%', '14', '50%'),
             ),
             $this->buildForm(),
             array(
-                array('Affects function', '', 'select', 'effectid', 6, $_SETT['var_effect'], false, false, false),
+                array('Affects function', '', 'select', 'effectid', 1, $aEffectIDs, true, false, false),
+                'skip',
                 array('Enter your password for authorization', '', 'password', 'password', 20)
             )
         );

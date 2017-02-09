@@ -548,8 +548,8 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && !ACTION) {
         $zData = $_DATA->viewEntry($sSummaryAnnotationsID);
 
         $aNavigation = array();
-        $aNavigation['summary_annotations/' . $sSummaryAnnotationsID . '?edit&variant_id=' . $nID . (isset($_GET['in_window'])? '&amp;in_window' : '')]       = array('menu_edit.png', 'Edit summary annotations entry', 1);
-        $aNavigation['summary_annotations/' . $sSummaryAnnotationsID . '?history&variant_id=' . $nID . (isset($_GET['in_window'])? '&amp;in_window' : '')]       = array('menu_clock.png', 'View history of this entry', 1);
+        $aNavigation['summary_annotations/' . $sSummaryAnnotationsID . '?edit&redirect_to=' . $nID . (isset($_GET['in_window'])? '&amp;in_window' : '')]       = array('menu_edit.png', 'Edit summary annotations entry', 1);
+        $aNavigation['summary_annotations/' . $sSummaryAnnotationsID . '?history' . (isset($_GET['in_window'])? '&amp;in_window' : '')]       = array('menu_clock.png', 'View history of this entry', 1);
         lovd_showJGNavigation($aNavigation, 'SummaryAnnotations');
 
     } else {
@@ -558,7 +558,7 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && !ACTION) {
               '              <TR>' . "\n" .
               '                <TH colspan="2">Summary annotations</TH>' . "\n" .
               '              </TR>' . "\n" .
-              '              <TR class="pointer" onclick="window.location.href=\'' . lovd_getInstallURL() . 'summary_annotations/' . $zData['DBID'] . '?create&variant_id=' . $nID . (isset($_GET['in_window'])? '&in_window' : '') . '\';">' . "\n" .
+              '              <TR class="pointer" onclick="window.location.href=\'' . lovd_getInstallURL() . 'summary_annotations/' . $zData['DBID'] . '?create&redirect_to=' . $nID . (isset($_GET['in_window'])? '&in_window' : '') . '\';">' . "\n" .
               '                <TD align="center" width="40"><IMG src="gfx/lovd_variants_create.png" alt="Summary annotations" width="32" height="32"></TD>' . "\n" .
               '                <TD>Annotations that may be applicable to any instance of a particular variant can be stored in a summary annotations entry. Click here to create a summary annotation entry for this variant.</TD>' . "\n" .
               '              </TR>' . "\n" .

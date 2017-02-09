@@ -5,7 +5,7 @@
  *
  * Created     : 2016-05-04
  * Modified    : 2017-02-09
- * For LOVD    : 3.0-13
+ * For LOVD    : 3.0-18
  *
  * Copyright   : 2004-2017 Leiden University Medical Center; http://www.LUMC.nl/
  * Programmers : Anthony Marty <anthony.marty@unimelb.edu.au>
@@ -51,7 +51,7 @@ if (PATH_COUNT == 2 && ACTION == 'create') {
     define('LOG_EVENT', 'SARCreate');
 
     // For redirection.
-    $nIDToRedirectTo = (!empty($_REQUEST['variant_id'])? $_REQUEST['variant_id'] : null);
+    $nIDToRedirectTo = (!empty($_REQUEST['redirect_to'])? $_REQUEST['redirect_to'] : null);
 
     lovd_requireAUTH((LOVD_plus? LEVEL_ANALYZER : LEVEL_CURATOR));
 
@@ -118,7 +118,7 @@ if (PATH_COUNT == 2 && ACTION == 'create') {
     // Table.
     print('      <FORM action="' . CURRENT_PATH . '?' . ACTION . (isset($_GET['in_window'])? '&in_window' : '') . '" method="post">' . "\n" .
         (!$nIDToRedirectTo? '' :
-            '        <INPUT type="hidden" name="variant_id" value="' . $nIDToRedirectTo . '">' . "\n"));
+            '        <INPUT type="hidden" name="redirect_to" value="' . $nIDToRedirectTo . '">' . "\n"));
 
     // Array which will make up the form table.
     $aForm = array_merge(
@@ -147,7 +147,7 @@ if (PATH_COUNT == 2 && ACTION == 'edit') {
     define('LOG_EVENT', 'SAREdit');
 
     // For redirection.
-    $nIDToRedirectTo = (!empty($_REQUEST['variant_id'])? $_REQUEST['variant_id'] : null);
+    $nIDToRedirectTo = (!empty($_REQUEST['redirect_to'])? $_REQUEST['redirect_to'] : null);
 
     lovd_requireAUTH((LOVD_plus? LEVEL_ANALYZER : LEVEL_CURATOR));
 
@@ -217,7 +217,7 @@ if (PATH_COUNT == 2 && ACTION == 'edit') {
 
     print('      <FORM action="' . CURRENT_PATH . '?' . ACTION . (isset($_GET['in_window'])? '&in_window' : '') . '" method="post">' . "\n" .
         (!$nIDToRedirectTo? '' :
-            '        <INPUT type="hidden" name="variant_id" value="' . $nIDToRedirectTo . '">' . "\n"));
+            '        <INPUT type="hidden" name="redirect_to" value="' . $nIDToRedirectTo . '">' . "\n"));
 
     // Array which will make up the form table.
     $aForm = array_merge(
