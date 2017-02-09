@@ -467,9 +467,9 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && !ACTION) {
 
     require ROOT_PATH . 'class/object_genome_variants.php';
     lovd_isAuthorized('variant', $nID);
-    print('  <TABLE cellpadding="0" cellspacing="0" border="0">
-    <TR>
-      <TD valign="top">' . "\n");
+    print('      <TABLE cellpadding="0" cellspacing="0" border="0">
+        <TR>
+          <TD valign="top">' . "\n");
     $_DATA = new LOVD_GenomeVariant();
     $zData = $_DATA->viewEntry($nID);
 
@@ -536,11 +536,12 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && !ACTION) {
     lovd_showJGNavigation($aNavigation, 'Variants');
 
     print('
-      </TD>
-      <TD valign="top" id="summary_annotation_view_entry" style="padding-left: 10px;">' . "\n");
-        // Load the variant data so as we can search by the DBID.
-    if ($zData['said']) {
-        $sSummaryAnnotationsID = $zData['said'];
+          </TD>
+          <TD valign="top" id="summary_annotation_view_entry" style="padding-left: 10px;">' . "\n\n\n");
+
+    // Load the variant data so as we can search by the DBID.
+    if ($zData['summaryannotationid']) {
+        $sSummaryAnnotationsID = $zData['summaryannotationid'];
         // Checks if there is an existing summary annotation record.
         require ROOT_PATH . 'class/object_summary_annotations.php';
         $_DATA = new LOVD_SummaryAnnotation();
@@ -553,24 +554,24 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && !ACTION) {
 
     } else {
         // Otherwise show a button that can be used to create a new summary annotation record.
-        print('        <TABLE border="0" cellpadding="2" cellspacing="0" class="setup" width="400px">' . "\n" .
-              '          <TR>' . "\n" .
-              '            <TH colspan="2">Summary annotations</TH>' . "\n" .
-              '          </TR>' . "\n" .
-              '          <TR class="pointer" onclick="window.location.href=\'' . lovd_getInstallURL() . 'summary_annotations/' . $zData['dbid'] . '?create&variant_id=' . $nID . (isset($_GET['in_window'])? '&in_window' : '') . '\';">' . "\n" .
-              '            <TD align="center" width="40"><IMG src="gfx/lovd_variants_create.png" alt="Summary annotations" width="32" height="32"></TD>' . "\n" .
-              '            <TD>Annotations that may be applicable to any instance of a particular variant can be stored in a summary annotations entry. Click here to create a summary annotation entry for this variant.</TD>' . "\n" .
-              '          </TR>' . "\n" .
-              '        </TABLE><BR>' . "\n\n");
+        print('            <TABLE border="0" cellpadding="2" cellspacing="0" class="setup" width="400px">' . "\n" .
+              '              <TR>' . "\n" .
+              '                <TH colspan="2">Summary annotations</TH>' . "\n" .
+              '              </TR>' . "\n" .
+              '              <TR class="pointer" onclick="window.location.href=\'' . lovd_getInstallURL() . 'summary_annotations/' . $zData['DBID'] . '?create&variant_id=' . $nID . (isset($_GET['in_window'])? '&in_window' : '') . '\';">' . "\n" .
+              '                <TD align="center" width="40"><IMG src="gfx/lovd_variants_create.png" alt="Summary annotations" width="32" height="32"></TD>' . "\n" .
+              '                <TD>Annotations that may be applicable to any instance of a particular variant can be stored in a summary annotations entry. Click here to create a summary annotation entry for this variant.</TD>' . "\n" .
+              '              </TR>' . "\n" .
+              '            </TABLE><BR>' . "\n\n");
     }
 
-    print('      </TD>
-    </TR>
-  </TABLE>' . "\n");
-
-    print('      <BR>' . "\n" .
-          '      <DIV id="viewentryDiv">' . "\n" .
-          '      </DIV>' . "\n\n");
+    print('          </TD>
+        </TR>
+      </TABLE><BR><BR>
+  
+  
+      <DIV id="viewentryDiv">
+      </DIV>' . "\n\n");
 
     $_GET['search_id_'] = $nID;
     print('      <BR><BR>' . "\n\n");
@@ -602,12 +603,17 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && !ACTION) {
                     // Set the correct status for the TRs in the viewList (highlight the active TR).
                     $( '#VOT_' + prevHash ).attr('class', 'data');
                     $( '#VOT_' + hash ).attr('class', 'data bold');
-                    $( '#viewentryDiv' ).stop().css('opacity','0'); // Stop execution of actions, set opacity = 0 (hidden, but not taken out of the flow).
+
+                    if (!navigator.userAgent.match(/msie/i)) {
+                        $( '#viewentryDiv' ).stop().css('opacity','0'); // Stop execution of actions, set opacity = 0 (hidden, but not taken out of the flow).
+                    }
                     $.get('ajax/viewentry.php', { object: 'Transcript_Variant', id: '<?php echo $nID; ?>,' + hash },
                         function(sData) {
                             if (sData.length > 2) {
                                 $( '#viewentryDiv' ).html('\n' + sData);
-                                $( '#viewentryDiv' ).fadeTo(1000, 1);
+                                if (!navigator.userAgent.match(/msie/i)) {
+                                    $( '#viewentryDiv' ).fadeTo(1000, 1);
+                                }
                             }
                         });
                     prevHash = hash;

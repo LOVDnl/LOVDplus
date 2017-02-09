@@ -71,14 +71,14 @@ class LOVD_GenomeVariant extends LOVD_Custom {
                                            'a.name AS allele_, ' .
                                            'GROUP_CONCAT(DISTINCT i.id, ";", i.statusid SEPARATOR ";;") AS __individuals, ' .
                                            'GROUP_CONCAT(s2v.screeningid SEPARATOR "|") AS screeningids, ' .
-                                           'sa.id AS said, ' .
-                                           'vog.`VariantOnGenome/DBID` AS dbid, ' .
+                                           'sa.id AS summaryannotationid, ' .
                                            'uo.name AS owned_by_, ' .
                                            'uc.name AS created_by_, ' .
                                            'ue.name AS edited_by_';
         if (LOVD_plus) {
             // Add curation status and confirmation status.
             $this->aSQLViewEntry['SELECT'] .= ', ' .
+                                           'vog.`VariantOnGenome/DBID` AS DBID, ' . // We need a copy before prepareData() messes it up.
                                            'curs.name AS curation_status_, ' .
                                            'cons.name AS confirmation_status_';
         }
