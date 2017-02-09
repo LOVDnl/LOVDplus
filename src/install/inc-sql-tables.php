@@ -1052,6 +1052,6 @@ $aTableSQL =
 
 if (lovd_getProjectFile() == '/install/inc-sql-tables.php') {
     header('Content-type: text/plain; charset=UTF-8');
-    print_r($aTableSQL);
+    var_dump($aTableSQL);
 }
 ?>
