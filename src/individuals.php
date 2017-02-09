@@ -287,10 +287,10 @@ if (PATH_COUNT >= 2 && ctype_digit($_PE[1]) && !ACTION && (PATH_COUNT == 2 || PA
 
         // If we're ready to analyze, or if we are analyzing already, show analysis options.
         // Both already run analyses and analyses not yet run will be shown. Analyses already run are fetched differently, though.
-        $zAnalysesRun    = $_DB->query('SELECT a.id, a.name, a.description, a.filters, IFNULL(MAX(arf.run_time)>-1, 0) AS analysis_run, ar.id AS runid,   ar.modified, GROUP_CONCAT(arf.filterid, ";", IFNULL(arf.filtered_out, "-"), ";", IFNULL(arf.run_time, "-") ORDER BY arf.filter_order SEPARATOR ";;") AS __run_filters
+        $zAnalysesRun    = $_DB->query('SELECT a.id, a.name, a.version, a.description, a.filters, IFNULL(MAX(arf.run_time)>-1, 0) AS analysis_run, ar.id AS runid,   ar.modified, GROUP_CONCAT(arf.filterid, ";", IFNULL(arf.filtered_out, "-"), ";", IFNULL(arf.run_time, "-") ORDER BY arf.filter_order SEPARATOR ";;") AS __run_filters
                                         FROM ' . TABLE_ANALYSES . ' AS a INNER JOIN ' . TABLE_ANALYSES_RUN . ' AS ar ON (a.id = ar.analysisid) INNER JOIN ' . TABLE_ANALYSES_RUN_FILTERS . ' AS arf ON (ar.id = arf.runid)
                                         WHERE ar.screeningid = ? GROUP BY ar.id ORDER BY ar.modified, ar.id', array($nScreeningToAnalyze))->fetchAllAssoc();
-        $zAnalysesNotRun = $_DB->query('SELECT a.id, a.name, a.description, a.filters, 0                               AS analysis_run, 0     AS runid, 0 AS modified
+        $zAnalysesNotRun = $_DB->query('SELECT a.id, a.name, a.version, a.description, a.filters, 0                               AS analysis_run, 0     AS runid, 0 AS modified
                                         FROM ' . TABLE_ANALYSES . ' AS a
                                         WHERE a.id NOT IN (SELECT ar.analysisid
                                                            FROM ' . TABLE_ANALYSES_RUN . ' AS ar
@@ -343,7 +343,7 @@ if (PATH_COUNT >= 2 && ctype_digit($_PE[1]) && !ACTION && (PATH_COUNT == 2 || PA
                 <TR>
                   <TH colspan="3">
                     <DIV style="position : relative">
-                      ' . $zAnalysis['name'] . (!$zAnalysis['modified']? '' : ' (modified)') .
+                      ' . $zAnalysis['name'] . ' (v' . $zAnalysis['version'] . (!$zAnalysis['modified']? '' : ' modified') . ')' .
                 ($_AUTH['level'] < LEVEL_OWNER || $zScreening['analysis_statusid'] >= ANALYSIS_STATUS_CLOSED? '' :
                 // FIXME: Probably an Ajax call would be better maybe? The window opening with refresh is ugly... we could just let this table disappear when successful (which may not work for the last run analysis because of the divider)...
                 (!$zAnalysis['runid']? '' : '
