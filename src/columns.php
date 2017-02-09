@@ -683,7 +683,7 @@ if (PATH_COUNT == 1 && ACTION == 'create') {
                                   ),
                              array(
                                     'onclick'     => 'javascript:$(\'#optionForm input\').attr(\'value\', \'SummaryAnnotation\'); $(\'#optionForm\').submit();',
-                                    'option_text' => '<B>Information on a variant, shared amongst all instances of that variant</B>, such as summary annotations',
+                                    'option_text' => '<B>Information on a variant, shared amongst all instances of that variant</B>, such as external IDs',
                                   ),
                               ),
                   );
@@ -916,11 +916,24 @@ if (PATH_COUNT > 2 && ACTION == 'edit') {
                 if (in_array($sColumnID, $aColumns)) {
                     // Column active for this table.
                     // This variables have been checked using regexps, so can be considered safe.
-                    $q = $_DB->query('ALTER TABLE ' . $aColumnInfo['table_sql'] . ' MODIFY COLUMN `' . $sColumnID . '` ' . $_POST['mysql_type']);
+                    $sSQL = 'ALTER TABLE ' . $aColumnInfo['table_sql'] . ' MODIFY COLUMN `' . $sColumnID . '` ' . $_POST['mysql_type'];
+                    $dStart = time();
+                    $q = $_DB->query($sSQL, false, false);
+                    if ($q === false) {
+                        $sError = $_DB->formatError(); // Save the PDO error before it disappears.
+                        $tPassed = time() - $dStart;
+                        $sMessage = ($tPassed < 2 ? '' : ' (fail after ' . $tPassed . ' seconds - disk full maybe?)');
+                        lovd_queryError(LOG_EVENT . $sMessage, $sSQL, $sError);
+                    }
+
+                    // We're assuming here, that the column exists in the revisions table. If not, this will lead
+                    //  to a query error and you won't be able to edit this column's MySQL type anymore.
+                    // Can we handle this in a better way?
                     if (!empty($aColumnInfo['table_sql_rev'])) {
                         // Modify the same column in the revision table.
                         $sSQL = 'ALTER TABLE ' . $aColumnInfo['table_sql_rev'] . ' MODIFY COLUMN `' . $sColumnID . '` ' . $_POST['mysql_type'];
-                        $q = $_DB->query($sSQL,false,false);
+                        $dStart = time();
+                        $q = $_DB->query($sSQL, false, false);
                         if ($q === false) {
                             $sError = $_DB->formatError(); // Save the PDO error before it disappears.
                             $tPassed = time() - $dStart;
