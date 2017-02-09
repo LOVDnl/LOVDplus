@@ -46,30 +46,91 @@ if (PATH_COUNT == 2 && ACTION == 'create') {
     // URL: /summary_annotations/chrX_000030?create
     // Create a new summary annotation entry.
 
-    $DBID = sprintf('%s', $_PE[1]);
-    $nVariantID = $_GET['variant_id'];
-
+    $sID = $_PE[1];
     define('PAGE_TITLE', 'Create a new summary annotation entry');
     define('LOG_EVENT', 'SARCreate');
 
-    lovd_requireAUTH(LEVEL_ANALYZER);
+    // For redirection.
+    $nIDToRedirectTo = (!empty($_REQUEST['variant_id'])? $_REQUEST['variant_id'] : null);
+
+    lovd_requireAUTH((LOVD_plus? LEVEL_ANALYZER : LEVEL_CURATOR));
 
     require ROOT_PATH . 'class/object_summary_annotations.php';
     $_DATA = new LOVD_SummaryAnnotation();
+    require ROOT_PATH . 'inc-lib-form.php';
 
-    // Fields to be used.
-    $aFields = array( 'id', 'effectid', 'created_by', 'created_date');
+    if (!empty($_POST)) {
+        lovd_errorClean();
 
-    // Prepare values.
-    $_POST['id'] = $DBID;
-    $_POST['created_by'] = $_AUTH['id'];
-    $_POST['created_date'] = date('Y-m-d H:i:s');
+        $_DATA->checkFields($_POST);
 
-    $_DATA->insertEntry($_POST, $aFields);
+        if (!lovd_error()) {
+            // Fields to be used.
+            $aFields = array_merge(
+                array('id', 'effectid', 'created_by', 'created_date'),
+                $_DATA->buildFields());
 
-    // Write to log...
-    lovd_writeLog('Event', LOG_EVENT, 'Created summary annotation entry - ' . $DBID);
-    header('Refresh: 0; url=' . lovd_getInstallURL() . CURRENT_PATH . '?edit&variant_id=' . $nVariantID . (isset($_GET['in_window'])? '&in_window' : ''));
+            // Prepare values.
+            $_POST['id'] = $sID;
+            $_POST['created_by'] = $_AUTH['id'];
+            $_POST['created_date'] = date('Y-m-d H:i:s');
+
+            $_DATA->insertEntry($_POST, $aFields);
+
+            // Write to log...
+            lovd_writeLog('Event', LOG_EVENT, 'Created summary annotation entry - ' . $sID);
+
+            // Thank the user...
+            if ($nIDToRedirectTo) {
+                header('Refresh: 3; url=' . lovd_getInstallURL() . 'variants/' . $nIDToRedirectTo . (isset($_GET['in_window'])? '?&in_window' : ''));
+            }
+
+            $_T->printHeader();
+            $_T->printTitle();
+
+            lovd_showInfoTable('Successfully created the summary annotation record!', 'success');
+
+            $_T->printFooter();
+            exit;
+        }
+
+    } else {
+        // Default values.
+        $_DATA->setDefaultValues();
+    }
+
+
+
+    $_T->printHeader();
+    $_T->printTitle();
+
+    if (GET) {
+        print('      To create a new summary annotation record, please fill out the form below.<BR>' . "\n" .
+              '      <BR>' . "\n\n");
+    }
+
+    lovd_errorPrint();
+
+    // Tooltip JS code.
+    lovd_includeJS('inc-js-tooltip.php');
+    lovd_includeJS('inc-js-custom_links.php');
+
+    // Table.
+    print('      <FORM action="' . CURRENT_PATH . '?' . ACTION . (isset($_GET['in_window'])? '&in_window' : '') . '" method="post">' . "\n" .
+        (!$nIDToRedirectTo? '' :
+            '        <INPUT type="hidden" name="variant_id" value="' . $nIDToRedirectTo . '">' . "\n"));
+
+    // Array which will make up the form table.
+    $aForm = array_merge(
+        $_DATA->getForm(),
+        array(
+            array('', '', 'submit', 'Create summary annotation record'),
+        ));
+    lovd_viewForm($aForm);
+
+    print('</FORM>' . "\n\n");
+
+    $_T->printFooter();
     exit;
 }
 
