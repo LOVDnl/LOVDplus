@@ -44,22 +44,6 @@ class LOVD_Disease extends LOVD_Object {
     // This class extends the basic Object class and it handles the Link object.
     var $sObject = 'Disease';
 
-    static $aInheritances = array(
-        'AD' => 'Autosomal dominant',
-        'AR' => 'Autosomal recessive',
-        'DD' => 'Digenic dominant',
-        'DR' => 'Digenic recessive',
-        'IC' => 'Isolated cases',
-        'ICB' => 'Inherited chromosomal imbalance',
-        'Mi' => 'Mitochondrial',
-        'Mu' => 'Multifactorial',
-        'SMo' => 'Somatic mosaicism',
-        'SMu' => 'Somatic mutation',
-        'XLD' => 'X-linked dominant' ,
-        'XLR' => 'X-linked recessive',
-        'XL' => 'X-linked' ,
-        'YL' => 'Y-linked'
-    );
 
 
 
