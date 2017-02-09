@@ -59,7 +59,7 @@ if (PATH_COUNT == 2 && ACTION == 'create') {
     $_DATA = new LOVD_SummaryAnnotation();
     require ROOT_PATH . 'inc-lib-form.php';
 
-    if (!empty($_POST)) {
+    if (POST) {
         lovd_errorClean();
 
         $_DATA->checkFields($_POST);
@@ -142,27 +142,27 @@ if (PATH_COUNT == 2 && ACTION == 'edit') {
     // URL: /summary_annotations/chrX_000030?edit
     // Edit a specific entry.
 
-    $DBID = sprintf('%s', $_PE[1]);
-    $nVariantID = $_GET['variant_id'];
-
-
-    define('PAGE_TITLE', 'Edit summary annotations for variant ' . $DBID);
+    $sID = $_PE[1];
+    define('PAGE_TITLE', 'Edit summary annotations for variant ' . $sID);
     define('LOG_EVENT', 'SAREdit');
 
-    lovd_requireAUTH(LEVEL_ANALYZER);
+    // For redirection.
+    $nIDToRedirectTo = (!empty($_REQUEST['variant_id'])? $_REQUEST['variant_id'] : null);
+
+    lovd_requireAUTH((LOVD_plus? LEVEL_ANALYZER : LEVEL_CURATOR));
 
     require ROOT_PATH . 'class/object_summary_annotations.php';
     $_DATA = new LOVD_SummaryAnnotation();
-
-    $zData = $_DATA->loadEntry($DBID);
+    $zData = $_DATA->loadEntry($sID);
     require ROOT_PATH . 'inc-lib-form.php';
-    if (!empty($_POST)) {
+
+    if (POST) {
         lovd_errorClean();
 
         $_DATA->checkFields($_POST, $zData);
+
         if (!lovd_error()) {
             // Fields to be used.
-
             $aFields = array_merge(
                 array('effectid', 'edited_by', 'edited_date'),
                 $_DATA->buildFields());
@@ -170,25 +170,27 @@ if (PATH_COUNT == 2 && ACTION == 'edit') {
             // Prepare values.
             $_POST['edited_by'] = $_AUTH['id'];
             $_POST['edited_date'] = date('Y-m-d H:i:s');
-        
-            $_DATA->updateEntry($DBID, $_POST, $aFields);
+
+            $_DATA->updateEntry($sID, $_POST, $aFields);
 
             // Write to log...
-            lovd_writeLog('Event', LOG_EVENT, 'Edited summary annotation entry - ' . $DBID);
+            lovd_writeLog('Event', LOG_EVENT, 'Edited summary annotation entry - ' . $sID);
 
             // Thank the user...
-            header('Refresh: 3; url=' . lovd_getInstallURL() . 'variants/' . $nVariantID . (isset($_GET['in_window'])? '?&in_window' : ''));
+            if ($nIDToRedirectTo) {
+                header('Refresh: 3; url=' . lovd_getInstallURL() . 'variants/' . $nIDToRedirectTo . (isset($_GET['in_window'])? '?&in_window' : ''));
+            }
 
             $_T->printHeader();
             $_T->printTitle();
-            lovd_showInfoTable('Successfully edited the summary annotation entry!', 'success');
-            lovd_errorPrint();
+
+            lovd_showInfoTable('Successfully edited the summary annotation record!', 'success');
 
             $_T->printFooter();
             exit;
 
         } else {
-            // Because we're sending the data back to the form, I need to unset the password fields!
+            // Because we're sending the data back to the form, I need to unset the password field!
             unset($_POST['password']);
         }
 
@@ -202,14 +204,20 @@ if (PATH_COUNT == 2 && ACTION == 'edit') {
     $_T->printHeader();
     $_T->printTitle();
 
+    if (GET) {
+        print('      To edit the summary annotation record, please fill out the form below.<BR>' . "\n" .
+              '      <BR>' . "\n\n");
+    }
+
     lovd_errorPrint();
 
     // Tooltip JS code.
     lovd_includeJS('inc-js-tooltip.php');
     lovd_includeJS('inc-js-custom_links.php');
 
-    // Table.
-    print('      <FORM action="' . CURRENT_PATH . '?' . ACTION . '&variant_id=' . $nVariantID . (isset($_GET['in_window'])? '&amp;in_window' : '') . '" method="post">' . "\n");
+    print('      <FORM action="' . CURRENT_PATH . '?' . ACTION . (isset($_GET['in_window'])? '&in_window' : '') . '" method="post">' . "\n" .
+        (!$nIDToRedirectTo? '' :
+            '        <INPUT type="hidden" name="variant_id" value="' . $nIDToRedirectTo . '">' . "\n"));
 
     // Array which will make up the form table.
     $aForm = array_merge(
