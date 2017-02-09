@@ -44,10 +44,10 @@ if ($_AUTH) {
 
 if (PATH_COUNT == 2 && ACTION == 'create') {
     // URL: /summary_annotations/chrX_000030?create
-    // Create a new summary annotation entry.
+    // Create a new summary annotation record.
 
     $sID = $_PE[1];
-    define('PAGE_TITLE', 'Create a new summary annotation entry');
+    define('PAGE_TITLE', 'Create a new summary annotation record');
     define('LOG_EVENT', 'SARCreate');
 
     // For redirection.
@@ -78,7 +78,7 @@ if (PATH_COUNT == 2 && ACTION == 'create') {
             $_DATA->insertEntry($_POST, $aFields);
 
             // Write to log...
-            lovd_writeLog('Event', LOG_EVENT, 'Created summary annotation entry - ' . $sID);
+            lovd_writeLog('Event', LOG_EVENT, 'Created summary annotation record - ' . $sID);
 
             // Thank the user...
             if ($nIDToRedirectTo) {
@@ -174,7 +174,7 @@ if (PATH_COUNT == 2 && ACTION == 'edit') {
             $_DATA->updateEntry($sID, $_POST, $aFields);
 
             // Write to log...
-            lovd_writeLog('Event', LOG_EVENT, 'Edited summary annotation entry - ' . $sID);
+            lovd_writeLog('Event', LOG_EVENT, 'Edited summary annotation record - ' . $sID);
 
             // Thank the user...
             if ($nIDToRedirectTo) {
@@ -223,7 +223,7 @@ if (PATH_COUNT == 2 && ACTION == 'edit') {
     $aForm = array_merge(
         $_DATA->getForm(),
         array(
-            array('', '', 'submit', 'Edit summary annotation entry'),
+            array('', '', 'submit', 'Edit summary annotation record'),
         ));
     lovd_viewForm($aForm);
 
@@ -244,7 +244,7 @@ if (PATH_COUNT == 2 && ACTION == 'history') {
     $sID = $_PE[1];
     define('PAGE_TITLE', 'View history for summary annotation record #' . $sID);
 
-    lovd_requireAUTH();
+    lovd_requireAUTH((LOVD_plus? LEVEL_ANALYZER : LEVEL_CURATOR));
 
     $_T->printHeader();
     $_T->printTitle();

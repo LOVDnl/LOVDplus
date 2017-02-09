@@ -4,11 +4,12 @@
  * LEIDEN OPEN VARIATION DATABASE (LOVD)
  *
  * Created     : 2016-06-06
- * Modified    : 2016-06-06
- * For LOVD    : 3.0-13
+ * Modified    : 2017-02-09
+ * For LOVD    : 3.0-18
  *
- * Copyright   : 2004-2016 Leiden University Medical Center; http://www.LUMC.nl/
+ * Copyright   : 2004-2017 Leiden University Medical Center; http://www.LUMC.nl/
  * Programmers : Anthony Marty <anthony.marty@unimelb.edu.au>
+ *               Ivo F.A.C. Fokkema <I.F.A.C.Fokkema@LUMC.nl>
  *
  *
  * This file is part of LOVD.
@@ -79,19 +80,19 @@ class LOVD_SummaryAnnotationREV extends LOVD_SummaryAnnotation {
                 'created_by_' => array(
                     'view' => array('Added By', 110),
                     'db'   => array('uc.name', 'DESC', true),
-                    'legend' => array('The user created this summary annotation entry.')),
+                    'legend' => array('The user created this summary annotation record.')),
                 'created_date' => array(
                     'view' => array('Added Date', 110),
                     'db'   => array('sa.created_date', 'DESC', true),
-                    'legend' => array('The date this summary annotation entry was created.')),
+                    'legend' => array('The date this summary annotation record was created.')),
                 'edited_by_' => array(
                     'view' => array('Edited By', 110),
                     'db'   => array('ue.name', 'DESC', true),
-                    'legend' => array('The user last edited this summary annotation entry.')),
+                    'legend' => array('The user last edited this summary annotation record.')),
                 'edited_date' => array(
                     'view' => array('Date edited', 110),
                     'db'   => array('sa.edited_date', 'DESC', true),
-                    'legend' => array('The date the summary annotation entry was last edited.')),
+                    'legend' => array('The date the summary annotation record was last edited.')),
                 'valid_from' => array(
                     'view' => array('Valid From', 110),
                     'db'   => array('sa.valid_from', 'ASC', true),
@@ -111,7 +112,7 @@ class LOVD_SummaryAnnotationREV extends LOVD_SummaryAnnotation {
                 'deleted_by_' => array(
                     'view' => array('Deleted by', 110),
                     'db'   => array('ud.name', 'ASC', true),
-                    'legend' => array('The user that deleted this summary annotation entry.')),
+                    'legend' => array('The user that deleted this summary annotation record.')),
             ));
         $this->sSortDefault = 'valid_from';
         $this->sRowLink = '';
@@ -124,6 +125,7 @@ class LOVD_SummaryAnnotationREV extends LOVD_SummaryAnnotation {
     function prepareData ($zData = '', $sView = 'list') {
         // Prepares the data by "enriching" the variable received with links, pictures, etc.
         global $_SETT;
+
         if (!in_array($sView, array('list', 'entry'))) {
             $sView = 'list';
         }
