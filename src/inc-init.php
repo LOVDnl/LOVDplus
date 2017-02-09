@@ -4,12 +4,14 @@
  * LEIDEN OPEN VARIATION DATABASE (LOVD)
  *
  * Created     : 2009-10-19
- * Modified    : 2016-05-13
- * For LOVD    : 3.0-16
+ * Modified    : 2016-10-17
+ * For LOVD    : 3.0-18
  *
  * Copyright   : 2004-2016 Leiden University Medical Center; http://www.LUMC.nl/
- * Programmers : Ing. Ivo F.A.C. Fokkema <I.F.A.C.Fokkema@LUMC.nl>
+ * Programmers : Ivo F.A.C. Fokkema <I.F.A.C.Fokkema@LUMC.nl>
  *               Ing. Ivar C. Lugtenburg <I.C.Lugtenburg@LUMC.nl>
+ *               Msc. Daan Asscheman <D.Asscheman@LUMC.nl>
+ *               M. Kroon <m.kroon@lumc.nl>
  *
  *
  * This file is part of LOVD.
@@ -35,7 +37,7 @@ if (!defined('ROOT_PATH')) {
 }
 
 // Require library standard functions.
-require ROOT_PATH . 'inc-lib-init.php';
+require_once ROOT_PATH . 'inc-lib-init.php';
 
 // Define module path.
 // FIXME; do we still need this?
@@ -58,7 +60,7 @@ if ($_SERVER['HTTP_HOST'] == 'localhost') {
 
 // Define constants needed throughout LOVD.
 // Find out whether or not we're using SSL.
-if (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] == 'on' && !empty($_SERVER['SSL_PROTOCOL'])) {
+if ((!empty($_SERVER['HTTP_X_FORWARDED_PROTO']) && $_SERVER['HTTP_X_FORWARDED_PROTO'] == 'https') || (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] != 'off') || !empty($_SERVER['SSL_PROTOCOL'])) {
     // We're using SSL!
     define('SSL', true);
     define('SSL_PROTOCOL', $_SERVER['SSL_PROTOCOL']);
@@ -79,7 +81,12 @@ if (!empty($_GET['format']) && in_array($_GET['format'], $aFormats)) {
 } else {
     define('FORMAT', $aFormats[0]);
 }
-header('Content-type: ' . FORMAT . '; charset=UTF-8');
+// @ is to suppress errors in Travis test.
+@header('Content-type: ' . FORMAT . '; charset=UTF-8');
+
+define('COLLEAGUE_CAN_EDIT', 1);    // Colleagues that have edit permissions.
+define('COLLEAGUE_CANNOT_EDIT', 2); // Colleagues that have no edit permissions.
+define('COLLEAGUE_ALL', 3);         // All colleagues.
 
 define('LEVEL_SUBMITTER', 1);    // Also includes collaborators and curators. Authorization is depending on assignments, not user levels anymore.
 define('LEVEL_ANALYZER', 2);     // Diagnostics: LOVD+ introduced this user level.
@@ -94,22 +101,6 @@ define('STATUS_PENDING', 2);     // Submission completed and curator notified, b
 define('STATUS_HIDDEN', 4);
 define('STATUS_MARKED', 7);
 define('STATUS_OK', 9);
-
-define('CUR_STATUS_VARIANT_OF_INTEREST', 10); // A curator has determined that this variant requires curation. We still need a second person to confirm this before any curation takes place.
-define('CUR_STATUS_FOR_CURATION', 20); // A second curator has confirmed that this variant should be curated so the curation can begin.
-define('CUR_STATUS_REQUIRES_CONFIRMATION', 30); // Needs additional labwork to confirm the variant is correct, e.g. sanger.
-define('CUR_STATUS_CONFIRMED', 40); // Additional labwork has been completed and the variant is confirmed to be correct. (We don't have a status if the variant turns out to be incorrect, maybe we need one?)
-define('CUR_STATUS_PROPOSED', 50); // A curator has completed the curation process and proposed a classification. It will be discussed at a meeting before a final classification is decided.
-define('CUR_STATUS_CURATED_REPORTABLE', 70); // A final classification has been determined and this variant is to appear on a report. The curation process is now finished.
-define('CUR_STATUS_CURATED_NOT_REPORTABLE', 80); // A final classification has been determined but this variant is not to appear on a report. The curation process is now finished.
-define('CUR_STATUS_NOT_FOR_CURATION', 90); // A curator has determined that this variant does not require curation and no further action will be taken on this variant.
-define('CUR_STATUS_ARTEFACT', 91); // A curator has determined that this variant does not exist as a result of a sequencing error.
-
-define('CON_STATUS_NOT_PERFORMED', 0); // The variant has not yet been assessed.
-define('CON_STATUS_NOT_REQUIRED', 1); // A curator has determined that this variant does not require confirmation so curation can begin immediately.
-define('CON_STATUS_REQUIRED', 3); // A curator has determined that this variant requires confirmation.
-define('CON_STATUS_PASSED', 5); // This variant has been confirmed to be real and passes the confirmation process.
-define('CON_STATUS_FAILED', 7); // This variant has been confirmed to not be real and fails the confirmation process.
 
 define('AJAX_FALSE', '0');
 define('AJAX_TRUE', '1');
@@ -128,9 +119,9 @@ define('MAPPING_DONE', 32);             // FIXME; Create a button in Setup which
 // Define constant to quickly check if we're on Windows, since sending emails on Windows requires different settings.
 define('ON_WINDOWS', (strtoupper(substr(PHP_OS, 0, 3) == 'WIN')));
 
-// Diagnostics: To later make it easier to share certain code
-// between LOVD and LOVD+, simply define if we're active or not.
-define('LOVD_plus', true);
+// Diagnostics: To make it easier to share certain code between
+// LOVD and LOVD+, simply define if we're active or not.
+@define('LOVD_plus', true);
 
 // For the installation process (and possibly later somewhere else, too).
 $aRequired =
@@ -153,7 +144,7 @@ $aRequired =
 $_SETT = array(
                 'system' =>
                      array(
-                            'version' => '3.0-12u',
+                            'version' => '3.0-17d',
                           ),
                 'user_levels' =>
                      array(
@@ -196,26 +187,6 @@ $_SETT = array(
                             STATUS_MARKED => 'Marked',
                             STATUS_OK => 'Public',
                           ),
-                'curation_status' =>
-                     array(
-                            CUR_STATUS_VARIANT_OF_INTEREST => 'Variant of Interest',
-                            CUR_STATUS_NOT_FOR_CURATION => 'Not for Curation',
-                            CUR_STATUS_ARTEFACT => 'Artefact',
-                            CUR_STATUS_FOR_CURATION => 'For Curation',
-                            CUR_STATUS_REQUIRES_CONFIRMATION => 'Requires Confirmation',
-                            CUR_STATUS_CONFIRMED => 'Confirmed',
-                            CUR_STATUS_PROPOSED => 'Proposed Classification',
-                            CUR_STATUS_CURATED_REPORTABLE => 'Curated & Reportable',
-                            CUR_STATUS_CURATED_NOT_REPORTABLE => 'Curated & Not Reportable',
-                          ),
-                'confirmation_status' =>
-                     array(
-                            CON_STATUS_NOT_PERFORMED => 'Not performed',
-                            CON_STATUS_NOT_REQUIRED => 'Not required',
-                            CON_STATUS_REQUIRED => 'Required',
-                            CON_STATUS_PASSED => 'Passed',
-                            CON_STATUS_FAILED => 'Failed',
-                          ),
                 'update_levels' =>
                      array(
                             1 => 'Optional',
@@ -226,8 +197,8 @@ $_SETT = array(
                             9 => '<SPAN style="color:red;"><B>Critical</B></SPAN>',
                           ),
                 'upstream_URL' => 'http://www.LOVD.nl/',
-                'upstream_BTS_URL' => 'https://humgenprojects.lumc.nl/trac/LOVD3/report/1',
-                'upstream_BTS_URL_new_ticket' => 'https://humgenprojects.lumc.nl/trac/LOVD3/newticket',
+                'upstream_BTS_URL' => 'https://github.com/LOVDnl/LOVD3/issues/',
+                'upstream_BTS_URL_new_ticket' => 'https://github.com/LOVDnl/LOVD3/issues/new',
                 'wikiprofessional_iprange' => '131.174.88.0-255',
                 'list_sizes' =>
                      array(
@@ -241,7 +212,7 @@ $_SETT = array(
                           ),
                 'lists' =>
                     array(
-                        'max_sortable_rows' => 50000,
+                        'max_sortable_rows' => 250000,
                     ),
                 'notes_align' =>
                      array(
@@ -249,6 +220,19 @@ $_SETT = array(
                             0  => 'center',
                             1  => 'right',
                           ),
+                'unique_view_max_string_length' => 100,
+                'objectid_length' =>
+                    array(
+                        'diseases' => 5,
+                        'individuals' => 8,
+                        'links' => 3,
+                        'phenotypes' => 10,
+                        'screenings' => 10,
+                        // Warning! Length of transcript IDs also configured in inc-js-variants.php.
+                        'transcripts' => 8,
+                        'users' => 5,
+                        'variants' => 10,
+                    ),
                 'human_builds' =>
                      array(
                             '----' => array('ncbi_name' => 'non-Human'),
@@ -318,8 +302,73 @@ $_SETT = array(
                                                             'M'  => 'NC_012920.1',
                                                           ),
                                           ),
-                          ),
-              );
+                            // http://www.ncbi.nlm.nih.gov/projects/genome/assembly/grc/human/data/
+                            'hg38' =>
+                                     array(
+                                            'ncbi_name'      => 'GRCh38',
+                                            'ncbi_sequences' =>
+                                                     array(
+                                                            '1'  => 'NC_000001.11',
+                                                            '2'  => 'NC_000002.12',
+                                                            '3'  => 'NC_000003.12',
+                                                            '4'  => 'NC_000004.12',
+                                                            '5'  => 'NC_000005.10',
+                                                            '6'  => 'NC_000006.12',
+                                                            '7'  => 'NC_000007.14',
+                                                            '8'  => 'NC_000008.11',
+                                                            '9'  => 'NC_000009.12',
+                                                            '10' => 'NC_000010.11',
+                                                            '11' => 'NC_000011.10',
+                                                            '12' => 'NC_000012.12',
+                                                            '13' => 'NC_000013.11',
+                                                            '14' => 'NC_000014.9',
+                                                            '15' => 'NC_000015.10',
+                                                            '16' => 'NC_000016.10',
+                                                            '17' => 'NC_000017.11',
+                                                            '18' => 'NC_000018.10',
+                                                            '19' => 'NC_000019.10',
+                                                            '20' => 'NC_000020.11',
+                                                            '21' => 'NC_000021.9',
+                                                            '22' => 'NC_000022.11',
+                                                            'X'  => 'NC_000023.11',
+                                                            'Y'  => 'NC_000024.10',
+                                                            'M'  => 'NC_012920.1',
+                                                          ),
+                                          ),
+                    ),
+                // Mitochondrial aliases. The key is the gene symbol used by HGNC, the value is the gene symbol used by NCBI.
+                'mito_genes_aliases' =>
+                    array(
+                            'MT-TF' => 'TRNF',
+                            'MT-RNR1' => 'RNR1',
+                            'MT-TV' => 'TRNV',
+                            'MT-RNR2' => 'RNR2',
+                            'MT-TL1' => 'TRNL1',
+                            'MT-ND1' => 'ND1',
+                            'MT-TI' => 'TRNI',
+                            'MT-TM' => 'TRNM',
+                            'MT-ND2' => 'ND2',
+                            'MT-TW' => 'TRNW',
+                            'MT-CO1' => 'COX1',
+                            'MT-TD' => 'TRND',
+                            'MT-CO2' => 'COX2',
+                            'MT-TK' => 'TRNK',
+                            'MT-ATP8' => 'ATP8',
+                            'MT-ATP6' => 'ATP6',
+                            'MT-CO3' => 'COX3',
+                            'MT-TG' => 'TRNG',
+                            'MT-ND3' => 'ND3',
+                            'MT-TR' => 'TRNR',
+                            'MT-ND4L' => 'ND4L',
+                            'MT-ND4' => 'ND4',
+                            'MT-TH' => 'TRNH',
+                            'MT-TS2' => 'TRNS2',
+                            'MT-TL2' => 'TRNL2',
+                            'MT-ND5' => 'ND5',
+                            'MT-CYB' => 'CYTB',
+                            'MT-TT' => 'TRNT',
+                    ),
+            );
 
 // Complete version info.
 list($_SETT['system']['tree'], $_SETT['system']['build']) = explode('-', $_SETT['system']['version'], 2);
@@ -335,6 +384,23 @@ if (LOVD_plus) {
     define('ANALYSIS_STATUS_WAIT_CONFIRMATION', 6); // Staff has checked, now waiting for confirmation of variants in the lab.
     define('ANALYSIS_STATUS_CONFIRMED', 7);         // Variants were confirmed, analysis is completely done now.
     define('ANALYSIS_STATUS_ARCHIVED', 9);          // Variants have been taken offline.
+
+    define('CON_STATUS_NOT_PERFORMED', 0); // The variant has not yet been assessed.
+    define('CON_STATUS_NOT_REQUIRED', 1);  // A curator has determined that this variant does not require confirmation so curation can begin immediately.
+    define('CON_STATUS_REQUIRED', 3);      // A curator has determined that this variant requires confirmation.
+    define('CON_STATUS_PASSED', 5);        // This variant has been confirmed to be real and passes the confirmation process.
+    define('CON_STATUS_FAILED', 7);        // This variant has been confirmed to not be real and fails the confirmation process.
+
+    define('CUR_STATUS_VARIANT_OF_INTEREST', 10);    // A curator has determined that this variant requires curation. We still need a second person to confirm this before any curation takes place.
+    define('CUR_STATUS_FOR_CURATION', 20);           // A second curator has confirmed that this variant should be curated so the curation can begin.
+    define('CUR_STATUS_REQUIRES_CONFIRMATION', 30);  // Needs additional labwork to confirm the variant is correct, e.g. sanger.
+    define('CUR_STATUS_CONFIRMED', 40);              // Additional labwork has been completed and the variant is confirmed to be correct. (We don't have a status if the variant turns out to be incorrect, maybe we need one?)
+    define('CUR_STATUS_PROPOSED', 50);               // A curator has completed the curation process and proposed a classification. It will be discussed at a meeting before a final classification is decided.
+    define('CUR_STATUS_CURATED_REPORTABLE', 70);     // A final classification has been determined and this variant is to appear on a report. The curation process is now finished.
+    define('CUR_STATUS_CURATED_NOT_REPORTABLE', 80); // A final classification has been determined but this variant is not to appear on a report. The curation process is now finished.
+    define('CUR_STATUS_NOT_FOR_CURATION', 90);       // A curator has determined that this variant does not require curation and no further action will be taken on this variant.
+    define('CUR_STATUS_ARTEFACT', 91);               // A curator has determined that this variant does not exist as a result of a sequencing error.
+
     $_SETT['analysis_status'] =
         array(
             ANALYSIS_STATUS_WAIT => 'Waiting for data upload',
@@ -344,6 +410,26 @@ if (LOVD_plus) {
             ANALYSIS_STATUS_WAIT_CONFIRMATION => 'Awaiting confirmation',
             ANALYSIS_STATUS_CONFIRMED => 'Confirmed',
             ANALYSIS_STATUS_ARCHIVED => 'Archived',
+        );
+    $_SETT['confirmation_status'] =
+        array(
+            CON_STATUS_NOT_PERFORMED => 'Not performed',
+            CON_STATUS_NOT_REQUIRED => 'Not required',
+            CON_STATUS_REQUIRED => 'Required',
+            CON_STATUS_PASSED => 'Passed',
+            CON_STATUS_FAILED => 'Failed',
+        );
+    $_SETT['curation_status'] =
+        array(
+            CUR_STATUS_VARIANT_OF_INTEREST => 'Variant of Interest',
+            CUR_STATUS_NOT_FOR_CURATION => 'Not for Curation',
+            CUR_STATUS_ARTEFACT => 'Artefact',
+            CUR_STATUS_FOR_CURATION => 'For Curation',
+            CUR_STATUS_REQUIRES_CONFIRMATION => 'Requires Confirmation',
+            CUR_STATUS_CONFIRMED => 'Confirmed',
+            CUR_STATUS_PROPOSED => 'Proposed Classification',
+            CUR_STATUS_CURATED_REPORTABLE => 'Curated & Reportable',
+            CUR_STATUS_CURATED_NOT_REPORTABLE => 'Curated & Not Reportable',
         );
     // Diagnostics: Added one level, and changed the submitter level's name.
     unset($_SETT['user_levels'][LEVEL_SUBMITTER]); // To make space, we need to rename it anyway.
@@ -359,195 +445,7 @@ $_T = new LOVD_Template();
 
 // We define CONFIG_URI as the location of the config file.
 define('CONFIG_URI', ROOT_PATH . 'config.ini.php');
-
-// Config file exists?
-if (!file_exists(CONFIG_URI)) {
-    lovd_displayError('Init', 'Can\'t find config.ini.php');
-}
-
-// Config file readable?
-if (!is_readable(CONFIG_URI)) {
-    lovd_displayError('Init', 'Can\'t read config.ini.php');
-}
-
-// Open config file.
-if (!$aConfig = file(CONFIG_URI)) {
-    lovd_displayError('Init', 'Can\'t open config.ini.php');
-}
-
-
-
-// Parse config file.
-$_INI = array();
-unset($aConfig[0]); // The first line is the PHP code with the exit() call.
-
-$sKey = '';
-foreach ($aConfig as $nLine => $sLine) {
-    // Go through the file line by line.
-    $sLine = trim($sLine);
-
-    // Empty line or comment.
-    if (!$sLine || substr($sLine, 0, 1) == '#') {
-        continue;
-    }
-
-    // New section.
-    if (preg_match('/^\[([A-Z][A-Z_ ]+[A-Z])\]$/i', $sLine, $aRegs)) {
-        $sKey = $aRegs[1];
-        $_INI[$sKey] = array();
-        continue;
-    }
-
-    // Setting.
-    if (preg_match('/^([A-Z_]+) *=(.*)$/i', $sLine, $aRegs)) {
-        list(,$sVar, $sVal) = $aRegs;
-        $sVal = trim($sVal, ' "\'“”');
-
-        if (!$sVal) {
-            $sVal = false;
-        }
-
-        // Set value in array.
-        if ($sKey) {
-            $_INI[$sKey][$sVar] = $sVal;
-        } else {
-            $_INI[$sVar] = $sVal;
-        }
-
-    } else {
-        // Couldn't parse value.
-        lovd_displayError('Init', 'Error parsing config file at line ' . ($nLine + 1));
-    }
-}
-
-// We now have the $_INI variable filled according to the file's contents.
-// Check the settings' values to see if they are valid.
-$aConfigValues =
-         array(
-                'database' =>
-                         array(
-                                'driver' =>
-                                         array(
-                                                'required' => true,
-                                                'default'  => 'mysql',
-                                                'pattern'  => '/^[a-z]+$/',
-                                                'values' => array('mysql' => 'MySQL', 'sqlite' => 'SQLite'),
-                                              ),
-                                'hostname' =>
-                                         array(
-                                                'required' => true,
-                                                'default'  => 'localhost',
-                                                // Also include hostname:port and :/path/to/socket values.
-                                                'pattern'  => '/^([0-9a-z][-0-9a-z.]*[0-9a-z](:[0-9]+)?|:[-0-9a-z.\/]+)$/i',
-                                              ),
-                                'username' =>
-                                         array(
-                                                'required' => true,
-                                              ),
-                                'password' =>
-                                         array(
-                                                'required' => false, // XAMPP and other systems have 'root' without password as default!
-                                              ),
-                                'database' =>
-                                         array(
-                                                'required' => true,
-                                              ),
-                                'table_prefix' =>
-                                         array(
-                                                'required' => true,
-                                                'default'  => 'lovd',
-                                                'pattern'  => '/^[A-Z0-9_]+$/i',
-                                              ),
-                              ),
-              );
-if (LOVD_plus) {
-    // Configure data file paths.
-    $aConfigValues['paths'] = array(
-        'data_files' =>
-            array(
-                'required' => true,
-                'path_is_readable' => true,
-                'path_is_writable' => true,
-            ),
-        'data_files_archive' =>
-            array(
-                'required' => false,
-                'path_is_readable' => true,
-                'path_is_writable' => true,
-            ),
-        'alternative_ids' =>
-            array(
-                'required' => false,
-                'path_is_readable' => true,
-                'path_is_writable' => false,
-            ),
-        'confirm_variants' =>
-            array(
-                'required' => false,
-                'path_is_readable' => true,
-                'path_is_writable' => true,
-            ),
-    );
-    // Configure instance details.
-    $aConfigValues['instance'] = array(
-        'name' =>
-            array(
-                'required' => false,
-                'default'  => '',
-            ),
-    );
-}
-// SQLite doesn't need an username and password...
-if (isset($_INI['database']['driver']) && $_INI['database']['driver'] == 'sqlite') {
-    unset($aConfigValues['database']['username']);
-    unset($aConfigValues['database']['password']);
-}
-
-foreach ($aConfigValues as $sSection => $aVars) {
-    foreach ($aVars as $sVar => $aVar) {
-        if (!isset($_INI[$sSection][$sVar]) || !$_INI[$sSection][$sVar]) {
-            // Nothing filled in...
-
-            if (isset($aVar['default']) && $aVar['default']) {
-                // Set default value.
-                $_INI[$sSection][$sVar] = $aVar['default'];
-            } elseif (isset($aVar['required']) && $aVar['required']) {
-                // No default value, required setting not filled in.
-                lovd_displayError('Init', 'Error parsing config file: missing required value for setting \'' . $sVar . '\' in section [' . $sSection . ']');
-            } elseif (!isset($_INI[$sSection][$sVar])){
-                // Add the setting to the $_INI array to avoid notices.
-                $_INI[$sSection][$sVar] = false;
-            }
-
-        } else {
-            // Value is present in $_INI.
-            if (isset($aVar['pattern']) && !preg_match($aVar['pattern'], $_INI[$sSection][$sVar])) {
-                // Error: a pattern is available, but it doesn't match the input!
-                lovd_displayError('Init', 'Error parsing config file: incorrect value for setting \'' . $sVar . '\' in section [' . $sSection . ']');
-
-            } elseif (isset($aVar['values']) && is_array($aVar['values'])) {
-                // Value must be present in list of possible values.
-                $_INI[$sSection][$sVar] = strtolower($_INI[$sSection][$sVar]);
-                if (!array_key_exists($_INI[$sSection][$sVar], $aVar['values'])) {
-                    // Error: a value list is available, but it doesn't match the input!
-                    lovd_displayError('Init', 'Error parsing config file: incorrect value for setting \'' . $sVar . '\' in section [' . $sSection . ']');
-                }
-            }
-
-            // For paths, check readability or writability.
-            if (!empty($aVar['path_is_readable']) && !is_readable($_INI[$sSection][$sVar])) {
-                // Error: The path should be readable, but it's not!
-                lovd_displayError('Init', 'Error parsing config file: path for \'' . $sVar . '\' in section [' . $sSection . '] is not readable.');
-            }
-            if (!empty($aVar['path_is_writable']) && !is_writable($_INI[$sSection][$sVar])) {
-                // Error: The path should be writable, but it's not!
-                lovd_displayError('Init', 'Error parsing config file: path for \'' . $sVar . '\' in section [' . $sSection . '] is not writable.');
-            }
-        }
-    }
-}
-
-
+$_INI = lovd_parseConfigFile(CONFIG_URI);
 
 
 
@@ -562,6 +460,7 @@ $_TABLES =
          array(
                 'TABLE_COUNTRIES' => TABLEPREFIX . '_countries',
                 'TABLE_USERS' => TABLEPREFIX . '_users',
+                'TABLE_COLLEAGUES' => TABLEPREFIX . '_colleagues',
                 'TABLE_CHROMOSOMES' => TABLEPREFIX . '_chromosomes',
                 'TABLE_GENES' => TABLEPREFIX . '_genes',
                 'TABLE_CURATES' => TABLEPREFIX . '_users2genes',
@@ -594,6 +493,7 @@ $_TABLES =
                 'TABLE_COLS2LINKS' => TABLEPREFIX . '_columns2links',
                 'TABLE_CONFIG' => TABLEPREFIX . '_config',
                 'TABLE_STATUS' => TABLEPREFIX . '_status',
+                'TABLE_ANNOUNCEMENTS' => TABLEPREFIX . '_announcements',
                 'TABLE_SOURCES' => TABLEPREFIX . '_external_sources',
                 'TABLE_LOGS' => TABLEPREFIX . '_logs',
                 'TABLE_MODULES' => TABLEPREFIX . '_modules',
@@ -661,6 +561,12 @@ mb_internal_encoding('UTF-8');
 if ($_CONF = $_DB->query('SELECT * FROM ' . TABLE_CONFIG, false, false)) {
     // Must be two-step, since $_CONF can be false and therefore does not have ->fetchAssoc().
     $_CONF = $_CONF->fetchAssoc();
+    if ($_CONF) {
+        // See if the database is read-only at the moment, due to an announcement with the configuration.
+        // Ignore errors, in case the table doesn't exist yet.
+        $qAnnouncements = @$_DB->query('SELECT COUNT(*) FROM ' . TABLE_ANNOUNCEMENTS . ' WHERE start_date <= NOW() AND end_date >= NOW() AND lovd_read_only = 1', array(), false);
+        $_CONF['lovd_read_only'] = ($qAnnouncements && $qAnnouncements->fetchColumn());
+    }
 }
 if (!$_CONF) {
     // Basic configuration, in case we're not installed properly.
@@ -669,6 +575,7 @@ if (!$_CONF) {
          array(
                 'system_title' => 'LOVD 3.0 - Leiden Open Variation Database',
                 'logo_uri' => 'gfx/' . (LOVD_plus? 'LOVD_plus_logo200x50' : 'LOVD3_logo145x50') . '.jpg',
+                'lovd_read_only' => false,
               );
 }
 
@@ -773,7 +680,8 @@ session_name('PHPSESSID_' . $_SETT['cookie_id']);
 
 // Start sessions - use cookies.
 @session_start(); // On some Ubuntu distributions this can cause a distribution-specific error message when session cleanup is triggered.
-header('X-LOVD-version: ' . $_SETT['system']['version'] . (empty($_STAT['version']) || $_STAT['version'] == $_SETT['system']['version']? '' : ' (DB @ ' . $_STAT['version'] . ')'));
+// @ is to suppress errors in Travis test.
+@header('X-LOVD-version: ' . $_SETT['system']['version'] . (empty($_STAT['version']) || $_STAT['version'] == $_SETT['system']['version']? '' : ' (DB @ ' . $_STAT['version'] . ')'));
 
 
 
@@ -781,6 +689,17 @@ header('X-LOVD-version: ' . $_SETT['system']['version'] . (empty($_STAT['version
 if (!defined('NOT_INSTALLED')) {
     // Load session data.
     require ROOT_PATH . 'inc-auth.php';
+
+    // If we're read only, log user out when lower than Manager.
+    if ($_AUTH && $_CONF['lovd_read_only'] && $_AUTH['level'] < LEVEL_MANAGER) {
+        // We won't let the user know, because this usually only happens when a
+        //  new message has appeared that sets the installation to read-only.
+        // So let's hope the new message on the screen attracks attention and
+        //  that it speaks for itself.
+        // (In principle, it can also happen when an existing message is edited
+        //   to lock the installation.)
+        $_AUTH = false;
+    }
 
     // Define $_PE ($_PATH_ELEMENTS) and CURRENT_PATH.
     $sPath = preg_replace('/^' . preg_quote(lovd_getInstallURL(false), '/') . '/', '', lovd_cleanDirName(rawurldecode($_SERVER['REQUEST_URI']))); // 'login' or 'genes?create' or 'users/00001?edit'
@@ -792,18 +711,8 @@ if (!defined('NOT_INSTALLED')) {
             $_PE[$key] = '';
         }
     }
-    $aObjectPadding = array(
-                        'variants' => 10,
-                        'transcripts' => 5,
-                        'diseases' => 5,
-                        'individuals' => 8,
-                        'screenings' => 10,
-                        'links' => 3,
-                        'phenotypes' => 10,
-                        'users' => 5,
-                     );
-    if (isset($aObjectPadding[$_PE[0]]) && isset($_PE[1]) && ctype_digit($_PE[1])) {
-        $_PE[1] = sprintf('%0' . $aObjectPadding[$_PE[0]] . 'd', $_PE[1]);
+    if (isset($_SETT['objectid_length'][$_PE[0]]) && isset($_PE[1]) && ctype_digit($_PE[1])) {
+        $_PE[1] = sprintf('%0' . $_SETT['objectid_length'][$_PE[0]] . 'd', $_PE[1]);
     }
     define('CURRENT_PATH', implode('/', $_PE));
     define('PATH_COUNT', count($_PE)); // So you don't need !empty($_PE[1]) && ...
@@ -845,7 +754,7 @@ if (!defined('NOT_INSTALLED')) {
 
         // Switch gene.
         // Gene switch will occur automatically at certain pages. They can be accessed by following links in LOVD itself, or possibly from outer sources.
-        if (preg_match('/^(configuration|genes|transcripts|variants|view)\/([^\/]+)/', CURRENT_PATH, $aRegs)) {
+        if (preg_match('/^(configuration|genes|transcripts|variants|individuals|screenings|view)\/([^\/]+)/', CURRENT_PATH, $aRegs)) {
             // We'll check this value further down in this code.
             if (!in_array($aRegs[2], array('in_gene', 'upload')) && !ctype_digit($aRegs[2])) {
                 $_SESSION['currdb'] = $aRegs[2]; // Not checking capitalization here yet.
@@ -865,7 +774,6 @@ if (!defined('NOT_INSTALLED')) {
         $_SETT['email_headers'] = 'MIME-Version: 1.0' . PHP_EOL .
                                   'Content-Type: text/plain; charset=UTF-8' . PHP_EOL .
                                   'X-Priority: 3' . PHP_EOL .
-                                  'X-MSMail-Priority: Normal' . PHP_EOL .
                                   'X-Mailer: PHP/' . phpversion() . PHP_EOL .
                                   'From: ' . (ON_WINDOWS? '' : '"LOVD (' . lovd_shortenString($_CONF['system_title'], 50) . ')" ') . '<' . $_CONF['email_address'] . '>';
         $_SETT['email_mime_headers'] =

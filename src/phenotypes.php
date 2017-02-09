@@ -4,12 +4,14 @@
  * LEIDEN OPEN VARIATION DATABASE (LOVD)
  *
  * Created     : 2011-05-23
- * Modified    : 2014-03-31
- * For LOVD    : 3.0-10
+ * Modified    : 2016-10-14
+ * For LOVD    : 3.0-18
  *
- * Copyright   : 2004-2014 Leiden University Medical Center; http://www.LUMC.nl/
+ * Copyright   : 2004-2016 Leiden University Medical Center; http://www.LUMC.nl/
  * Programmers : Ing. Ivar C. Lugtenburg <I.C.Lugtenburg@LUMC.nl>
  *               Ing. Ivo F.A.C. Fokkema <I.F.A.C.Fokkema@LUMC.nl>
+ *               Msc. Daan Asscheman <D.Asscheman@LUMC.nl>
+ *               M. Kroon <m.kroon@lumc.nl>
  *
  *
  * This file is part of LOVD.
@@ -88,7 +90,7 @@ if (PATH_COUNT == 3 && $_PE[1] == 'disease' && ctype_digit($_PE[2]) && !ACTION) 
 
     $_DATA = new LOVD_Phenotype($nDiseaseID);
     $_GET['search_diseaseid'] = $nDiseaseID;
-    $_DATA->viewList('Phenotypes_for_Disease_' . $nDiseaseID, array('diseaseid'), false, false, (bool) ($_AUTH['level'] >= LEVEL_MANAGER));
+    $_DATA->viewList('Phenotypes_for_Disease_' . $nDiseaseID, array('diseaseid'), false, false, (bool) ($_AUTH['level'] >= LEVEL_MANAGER), false, true);
 
     $_T->printFooter();
     exit;
@@ -107,7 +109,7 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && !ACTION) {
     $_T->printHeader();
     $_T->printTitle();
 
-    // Load appropiate user level for this phenotype entry.
+    // Load appropriate user level for this phenotype entry.
     lovd_isAuthorized('phenotype', $nID);
 
     require ROOT_PATH . 'class/object_phenotypes.php';
@@ -136,7 +138,7 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && !ACTION) {
 
 
 if (PATH_COUNT == 1 && ACTION == 'create' && !empty($_GET['target']) && ctype_digit($_GET['target'])) {
-    // URL: /phenotypes?create
+    // URL: /phenotypes?create&target=00000001
     // Create a new entry.
 
     // FIXME; ik vind nog steeds dat vooral het begin van deze code nog enigszins rommelig is.
@@ -246,6 +248,22 @@ if (PATH_COUNT == 1 && ACTION == 'create' && !empty($_GET['target']) && ctype_di
 
             $nID = $_DATA->insertEntry($_POST, $aFields);
 
+            // Get genes which are modified only when phenotype, individual and variant are marked or public.
+            if ($_POST['statusid'] >= STATUS_MARKED) {
+                $aGenes = $_DB->query('SELECT DISTINCT t.geneid FROM ' . TABLE_TRANSCRIPTS . ' AS t ' .
+                                      'INNER JOIN ' . TABLE_VARIANTS_ON_TRANSCRIPTS . ' AS vot ON (vot.transcriptid = t.id) ' .
+                                      'INNER JOIN ' . TABLE_VARIANTS . ' AS vog ON (vog.id = vot.id) ' .
+                                      'INNER JOIN ' . TABLE_SCR2VAR . ' AS s2v ON (s2v.variantid = vog.id) ' .
+                                      'INNER JOIN ' . TABLE_SCREENINGS . ' AS s ON (s.id = s2v.screeningid) ' .
+                                      'INNER JOIN ' . TABLE_INDIVIDUALS . ' AS i ON (i.id = s.individualid) ' .
+                                      'INNER JOIN ' . TABLE_PHENOTYPES . ' AS p ON (p.individualid = i.id) ' .
+                                      'WHERE vog.statusid >= ? AND i.statusid >= ? AND p.id = ?', array(STATUS_MARKED, STATUS_MARKED, $nID))->fetchAllColumn();
+                if ($aGenes) {
+                    // Change updated date for genes.
+                    lovd_setUpdatedDate($aGenes);
+                }
+            }
+
             // Write to log...
             lovd_writeLog('Event', LOG_EVENT, 'Created phenotype information entry ' . $nID . ' for individual ' . $_POST['individualid'] . ' related to disease ' . $_POST['diseaseid']);
 
@@ -337,7 +355,7 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && in_array(ACTION, array('edit', 'p
     define('PAGE_TITLE', 'Edit phenotype #' . $nID);
     define('LOG_EVENT', 'PhenotypeEdit');
 
-    // Load appropiate user level for this phenotype entry.
+    // Load appropriate user level for this phenotype entry.
     lovd_isAuthorized('phenotype', $nID);
     if (ACTION == 'publish') {
         lovd_requireAUTH(LEVEL_CURATOR);
@@ -391,6 +409,22 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && in_array(ACTION, array('edit', 'p
 
             // FIXME: implement versioning in updateEntry!
             $_DATA->updateEntry($nID, $_POST, $aFields);
+
+            // Get genes which are modified only when phenotype, individual and variant are marked or public.
+            if ($zData['statusid'] >= STATUS_MARKED || $_POST['statusid'] >= STATUS_MARKED) {
+                $aGenes = $_DB->query('SELECT DISTINCT t.geneid FROM ' . TABLE_TRANSCRIPTS . ' AS t ' .
+                                      'INNER JOIN ' . TABLE_VARIANTS_ON_TRANSCRIPTS . ' AS vot ON (vot.transcriptid = t.id) ' .
+                                      'INNER JOIN ' . TABLE_VARIANTS . ' AS vog ON (vog.id = vot.id) ' .
+                                      'INNER JOIN ' . TABLE_SCR2VAR . ' AS s2v ON (s2v.variantid = vog.id) ' .
+                                      'INNER JOIN ' . TABLE_SCREENINGS . ' AS s ON (s.id = s2v.screeningid) ' .
+                                      'INNER JOIN ' . TABLE_INDIVIDUALS . ' AS i ON (i.id = s.individualid) ' .
+                                      'INNER JOIN ' . TABLE_PHENOTYPES . ' AS p ON (p.individualid = i.id) ' .
+                                      'WHERE vog.statusid >= ? AND i.statusid >= ? AND p.id = ?', array(STATUS_MARKED, STATUS_MARKED, $nID))->fetchAllColumn();
+                if ($aGenes) {
+                    // Change updated date for genes.
+                    lovd_setUpdatedDate($aGenes);
+                }
+            }
 
             // Write to log...
             lovd_writeLog('Event', LOG_EVENT, 'Edited phenotype information entry ' . $nID);
@@ -471,7 +505,7 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && ACTION == 'delete') {
     define('LOG_EVENT', 'PhenotypeDelete');
 
     // FIXME; hier moet een goede controle komen, wanneer lager is toegestaan.
-    // Load appropiate user level for this phenotype entry.
+    // Load appropriate user level for this phenotype entry.
     lovd_isAuthorized('phenotype', $nID);
     lovd_requireAUTH(LEVEL_CURATOR);
 
@@ -494,7 +528,25 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && ACTION == 'delete') {
         }
 
         if (!lovd_error()) {
+            // Get genes which are modified before we delete the entry.
+            // Only when phenotype, individual and variant are marked or public.
+            if ($zData['statusid'] >= STATUS_MARKED) {
+                $aGenes = $_DB->query('SELECT DISTINCT t.geneid FROM ' . TABLE_TRANSCRIPTS . ' AS t ' .
+                                      'INNER JOIN ' . TABLE_VARIANTS_ON_TRANSCRIPTS . ' AS vot ON (vot.transcriptid = t.id) ' .
+                                      'INNER JOIN ' . TABLE_VARIANTS . ' AS vog ON (vog.id = vot.id) ' .
+                                      'INNER JOIN ' . TABLE_SCR2VAR . ' AS s2v ON (s2v.variantid = vog.id) ' .
+                                      'INNER JOIN ' . TABLE_SCREENINGS . ' AS s ON (s.id = s2v.screeningid) ' .
+                                      'INNER JOIN ' . TABLE_INDIVIDUALS . ' AS i ON (i.id = s.individualid) ' .
+                                      'INNER JOIN ' . TABLE_PHENOTYPES . ' AS p ON (p.individualid = i.id) ' .
+                                      'WHERE vog.statusid >= ? AND i.statusid >= ? AND p.id = ?', array(STATUS_MARKED, STATUS_MARKED, $nID))->fetchAllColumn();
+            }
+
             $_DATA->deleteEntry($nID);
+
+            if ($zData['statusid'] >= STATUS_MARKED && $aGenes) {
+                // Change updated date for genes.
+                lovd_setUpdatedDate($aGenes);
+            }
 
             // Write to log...
             lovd_writeLog('Event', LOG_EVENT, 'Deleted phenotype information entry ' . $nID . ' (Owner: ' . $zData['owner'] . ')');
