@@ -1031,10 +1031,6 @@ $aTableSQL =
     PRIMARY KEY (id))
 ' . $sSettings
 
-
-
-
-
         , 'TABLE_SUMMARY_ANNOTATIONS' =>
     'CREATE TABLE ' . TABLE_SUMMARY_ANNOTATIONS . ' (
     id VARCHAR(50) NOT NULL,
@@ -1044,7 +1040,6 @@ $aTableSQL =
     edited_by SMALLINT(5) UNSIGNED ZEROFILL,
     edited_date DATETIME,
     PRIMARY KEY (id),
-    INDEX (effectid),
     INDEX (created_by),
     INDEX (edited_by),
     CONSTRAINT ' . TABLE_SUMMARY_ANNOTATIONS . '_fk_created_by FOREIGN KEY (created_by) REFERENCES ' . TABLE_USERS . ' (id) ON DELETE SET NULL ON UPDATE CASCADE,
@@ -1065,7 +1060,6 @@ $aTableSQL =
     deleted_by SMALLINT(5) UNSIGNED ZEROFILL,
     reason TEXT,
     PRIMARY KEY (id, valid_from),
-    INDEX (effectid),
     INDEX (created_by),
     INDEX (edited_by),
     INDEX (deleted_by),

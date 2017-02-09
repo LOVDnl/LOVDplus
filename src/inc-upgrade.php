@@ -583,11 +583,8 @@ if ($sCalcVersionFiles != $sCalcVersionDB) {
                          'PREPARE Statement FROM @sSQL',
                          'EXECUTE Statement',
                      ),
-                 // Summary annotation record.
                  '3.0-12u' =>
                      array(
-                         'CREATE TABLE IF NOT EXISTS ' . TABLE_SUMMARY_ANNOTATIONS . ' (id VARCHAR(50) NOT NULL, effectid TINYINT(1) UNSIGNED ZEROFILL, created_by SMALLINT(5) UNSIGNED ZEROFILL, created_date DATETIME NOT NULL, edited_by SMALLINT(5) UNSIGNED ZEROFILL, edited_date DATETIME, PRIMARY KEY (id), INDEX (effectid), INDEX (created_by), INDEX (edited_by), CONSTRAINT ' . TABLE_SUMMARY_ANNOTATIONS . '_fk_created_by FOREIGN KEY (created_by) REFERENCES ' . TABLE_USERS . ' (id) ON DELETE SET NULL ON UPDATE CASCADE, CONSTRAINT ' . TABLE_SUMMARY_ANNOTATIONS . '_fk_edited_by FOREIGN KEY (edited_by) REFERENCES ' . TABLE_USERS . ' (id) ON DELETE SET NULL ON UPDATE CASCADE) ENGINE=InnoDB, DEFAULT CHARACTER SET utf8',
-                         'CREATE TABLE IF NOT EXISTS ' . TABLE_SUMMARY_ANNOTATIONS_REV . ' (id VARCHAR(50) NOT NULL, effectid TINYINT(1) UNSIGNED ZEROFILL, created_by SMALLINT(5) UNSIGNED ZEROFILL, created_date DATETIME NOT NULL, edited_by SMALLINT(5) UNSIGNED ZEROFILL, edited_date DATETIME, valid_from DATETIME NOT NULL, valid_to DATETIME NOT NULL DEFAULT "9999-12-31", deleted BOOLEAN NOT NULL, deleted_by SMALLINT(5) UNSIGNED ZEROFILL, reason TEXT, PRIMARY KEY (id, valid_from), INDEX (effectid), INDEX (created_by), INDEX (edited_by), INDEX (deleted_by), CONSTRAINT ' . TABLE_SUMMARY_ANNOTATIONS_REV . '_fk_created_by FOREIGN KEY (created_by) REFERENCES ' . TABLE_USERS . ' (id) ON DELETE SET NULL ON UPDATE CASCADE, CONSTRAINT ' . TABLE_SUMMARY_ANNOTATIONS_REV . '_fk_edited_by FOREIGN KEY (edited_by) REFERENCES ' . TABLE_USERS . ' (id) ON DELETE SET NULL ON UPDATE CASCADE, CONSTRAINT ' . TABLE_SUMMARY_ANNOTATIONS_REV . '_fk_deleted_by FOREIGN KEY (deleted_by) REFERENCES ' . TABLE_USERS . ' (id) ON DELETE SET NULL ON UPDATE CASCADE) ENGINE=InnoDB, DEFAULT CHARACTER SET utf8',
                          'CREATE TABLE IF NOT EXISTS ' . TABLE_CURATION_STATUS . ' (id TINYINT(2) UNSIGNED ZEROFILL NOT NULL, name VARCHAR(50) NOT NULL, PRIMARY KEY (id)) ENGINE=InnoDB, DEFAULT CHARACTER SET utf8', // We are inserting the curation status records below by using array merge to add them into this array.
                          'ALTER TABLE ' . TABLE_VARIANTS . ' ADD COLUMN curation_statusid TINYINT(2) UNSIGNED NULL AFTER statusid, ADD INDEX (curation_statusid), ADD CONSTRAINT ' . TABLE_VARIANTS . '_fk_curation_statusid FOREIGN KEY (curation_statusid) REFERENCES ' . TABLE_CURATION_STATUS . ' (id) ON DELETE SET NULL ON UPDATE CASCADE',
                          'CREATE TABLE IF NOT EXISTS ' . TABLE_CONFIRMATION_STATUS . ' (id TINYINT(1) UNSIGNED NOT NULL, name VARCHAR(50) NOT NULL, PRIMARY KEY (id)) ENGINE=InnoDB, DEFAULT CHARACTER SET utf8', // We are inserting the confirmation status records below by using array merge to add them into this array.
@@ -660,6 +657,7 @@ if ($sCalcVersionFiles != $sCalcVersionDB) {
                          'UPDATE ' . TABLE_VARIANTS_ON_TRANSCRIPTS . ' SET position_c_end_intron = 0 WHERE position_c_end IS NOT NULL AND position_c_end_intron IS NULL',
                      ),
                  '3.0-17d' => array(), // Placeholder for LOVD+ queries, defined below.
+                 '3.0-17e' => array(), // Placeholder for LOVD+ queries, defined below.
                  '3.0-18' =>
                      array(
                          // These two will be ignored by LOVD+.
@@ -798,6 +796,50 @@ if ($sCalcVersionFiles != $sCalcVersionDB) {
                 'UPDATE ' . TABLE_PHENOTYPES . ' SET statusid = ' . STATUS_HIDDEN,
                 'UPDATE ' . TABLE_INDIVIDUALS . ' SET statusid = ' . STATUS_HIDDEN,
                 'UPDATE ' . TABLE_VARIANTS . ' SET statusid = ' . STATUS_HIDDEN,
+            )
+        );
+    }
+
+    if (LOVD_plus && $sCalcVersionDB < lovd_calculateVersion('3.0-17e')) {
+        // Run LOVD+ specific queries.
+        $aUpdates['3.0-17e'] = array_merge(
+            $aUpdates['3.0-17e'],
+            array(
+                'CREATE TABLE IF NOT EXISTS ' . TABLE_SUMMARY_ANNOTATIONS . ' (
+                    id VARCHAR(50) NOT NULL,
+                    effectid TINYINT(1) UNSIGNED ZEROFILL,
+                    created_by SMALLINT(5) UNSIGNED ZEROFILL,
+                    created_date DATETIME NOT NULL,
+                    edited_by SMALLINT(5) UNSIGNED ZEROFILL,
+                    edited_date DATETIME,
+                    PRIMARY KEY (id),
+                    INDEX (created_by),
+                    INDEX (edited_by),
+                    CONSTRAINT ' . TABLE_SUMMARY_ANNOTATIONS . '_fk_created_by FOREIGN KEY (created_by) REFERENCES ' . TABLE_USERS . ' (id) ON DELETE SET NULL ON UPDATE CASCADE,
+                    CONSTRAINT ' . TABLE_SUMMARY_ANNOTATIONS . '_fk_edited_by FOREIGN KEY (edited_by) REFERENCES ' . TABLE_USERS . ' (id) ON DELETE SET NULL ON UPDATE CASCADE)
+                    ENGINE=InnoDB,
+                    DEFAULT CHARACTER SET utf8',
+                'CREATE TABLE IF NOT EXISTS ' . TABLE_SUMMARY_ANNOTATIONS_REV . ' (
+                    id VARCHAR(50) NOT NULL,
+                    effectid TINYINT(1) UNSIGNED ZEROFILL, 
+                    created_by SMALLINT(5) UNSIGNED ZEROFILL, 
+                    created_date DATETIME NOT NULL, 
+                    edited_by SMALLINT(5) UNSIGNED ZEROFILL, 
+                    edited_date DATETIME, 
+                    valid_from DATETIME NOT NULL, 
+                    valid_to DATETIME NOT NULL DEFAULT "9999-12-31", 
+                    deleted BOOLEAN NOT NULL, 
+                    deleted_by SMALLINT(5) UNSIGNED ZEROFILL, 
+                    reason TEXT, 
+                    PRIMARY KEY (id, valid_from), 
+                    INDEX (created_by), 
+                    INDEX (edited_by), 
+                    INDEX (deleted_by), 
+                    CONSTRAINT ' . TABLE_SUMMARY_ANNOTATIONS_REV . '_fk_created_by FOREIGN KEY (created_by) REFERENCES ' . TABLE_USERS . ' (id) ON DELETE SET NULL ON UPDATE CASCADE,
+                    CONSTRAINT ' . TABLE_SUMMARY_ANNOTATIONS_REV . '_fk_edited_by FOREIGN KEY (edited_by) REFERENCES ' . TABLE_USERS . ' (id) ON DELETE SET NULL ON UPDATE CASCADE,
+                    CONSTRAINT ' . TABLE_SUMMARY_ANNOTATIONS_REV . '_fk_deleted_by FOREIGN KEY (deleted_by) REFERENCES ' . TABLE_USERS . ' (id) ON DELETE SET NULL ON UPDATE CASCADE)
+                    ENGINE=InnoDB,
+                    DEFAULT CHARACTER SET utf8',
             )
         );
     }
