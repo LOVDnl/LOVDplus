@@ -297,6 +297,27 @@ if (PATH_COUNT == 1 && ACTION == 'create') {
                 lovd_writeLog('Event', LOG_EVENT, 'Disease entr' . (count($aSuccessDiseases) > 1 ? 'ies' : 'y') . ' successfully added to gene panel ' . $nID . ' - ' . $_POST['name']);
             }
 
+            // Add analyses.
+            $aSuccessAnalyses = array();
+            if (!empty($_POST['active_analyses']) && is_array($_POST['active_analyses'])) {
+                foreach ($_POST['active_analyses'] as $nAnalyses) {
+                    // Add analyses to gene.
+                    if ($nAnalyses) {
+                        $q = $_DB->query('INSERT INTO ' . TABLE_GP2AN . ' VALUES (?, ?)', array($nID, $nAnalyses), false);
+                        if (!$q) {
+                            // Silent error.
+                            lovd_writeLog('Error', LOG_EVENT, 'Analyses information entry ' . $nAnalyses . ' - could not be added to gene panel ' . $nID);
+                        } else {
+                            $aSuccessAnalyses[] = $nAnalyses;
+                        }
+                    }
+                }
+            }
+
+            if (count($aSuccessAnalyses)) {
+                lovd_writeLog('Event', LOG_EVENT, 'Analyses entr' . (count($aSuccessAnalyses) > 1 ? 'ies' : 'y') . ' successfully added to gene panel ' . $nID . ' - ' . $_POST['name']);
+            }
+
             // Thank the user...
             header('Refresh: 3; url=' . lovd_getInstallURL() . CURRENT_PATH . '/' . $nID . '?manage_genes');
 
@@ -384,7 +405,7 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && ACTION == 'edit') {
             lovd_writeLog('Event', LOG_EVENT, 'Edited gene panel entry ' . $nID . ' - ' . $_POST['name']);
 
             // Change linked diseases?
-            // Diseases the gene is currently linked to.
+            // Diseases the gene panel is currently linked to.
 
             // Remove diseases.
             $aToRemove = array();
@@ -396,12 +417,12 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && ACTION == 'edit') {
             }
 
             if ($aToRemove) {
-                $q = $_DB->query('DELETE FROM ' . TABLE_GP2DIS . ' WHERE geneid = ? AND diseaseid IN (?' . str_repeat(', ?', count($aToRemove) - 1) . ')', array_merge(array($zData['id']), $aToRemove), false);
+                $q = $_DB->query('DELETE FROM ' . TABLE_GP2DIS . ' WHERE genepanelid = ? AND diseaseid IN (?' . str_repeat(', ?', count($aToRemove) - 1) . ')', array_merge(array($zData['id']), $aToRemove), false);
                 if (!$q) {
                     // Silent error.
                     lovd_writeLog('Error', LOG_EVENT, 'Disease information entr' . (count($aToRemove) == 1 ? 'y' : 'ies') . ' ' . implode(', ', $aToRemove) . ' could not be removed from gene panel ' . $nID);
                 } else {
-                    lovd_writeLog('Event', LOG_EVENT, 'Disease information entr' . (count($aToRemove) == 1 ? 'y' : 'ies') . ' ' . implode(', ', $aToRemove) . ' successfully removed from gene ' . $nID);
+                    lovd_writeLog('Event', LOG_EVENT, 'Disease information entr' . (count($aToRemove) == 1 ? 'y' : 'ies') . ' ' . implode(', ', $aToRemove) . ' successfully removed from gene panel ' . $nID);
                 }
             }
 
@@ -424,6 +445,49 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && ACTION == 'edit') {
                 lovd_writeLog('Error', LOG_EVENT, 'Disease information entr' . (count($aFailed) == 1 ? 'y' : 'ies') . ' ' . implode(', ', $aFailed) . ' could not be added to gene panel ' . $nID);
             } elseif ($aSuccess) {
                 lovd_writeLog('Event', LOG_EVENT, 'Disease information entr' . (count($aSuccess) == 1 ? 'y' : 'ies') . ' ' . implode(', ', $aSuccess) . ' successfully added to gene panel ' . $nID);
+            }
+
+            // Change linked analyses?
+            // Analyses the gene panel is currently linked to.
+
+            // Remove analyses.
+            $aToRemove = array();
+            foreach ($zData['active_analyses'] as $nAnalyses) {
+                if ($nAnalyses && !in_array($nAnalyses, $_POST['active_analyses'])) {
+                    // User has requested removal...
+                    $aToRemove[] = $nAnalyses;
+                }
+            }
+
+            if ($aToRemove) {
+                $q = $_DB->query('DELETE FROM ' . TABLE_GP2AN . ' WHERE genepanelid = ? AND analysisid IN (?' . str_repeat(', ?', count($aToRemove) - 1) . ')', array_merge(array($zData['id']), $aToRemove), false);
+                if (!$q) {
+                    // Silent error.
+                    lovd_writeLog('Error', LOG_EVENT, 'Analysis information entr' . (count($aToRemove) == 1 ? 'y' : 'ies') . ' ' . implode(', ', $aToRemove) . ' could not be removed from gene panel ' . $nID);
+                } else {
+                    lovd_writeLog('Event', LOG_EVENT, 'Analysis information entr' . (count($aToRemove) == 1 ? 'y' : 'ies') . ' ' . implode(', ', $aToRemove) . ' successfully removed from gene panel ' . $nID);
+                }
+            }
+
+            // Add analyses.
+            $aSuccess = array();
+            $aFailed = array();
+            foreach ($_POST['active_analyses'] as $nAnalyses) {
+                if ($nAnalyses && !in_array($nAnalyses, $zData['active_analyses'])) {
+                    // Add analyses to gene.
+                    $q = $_DB->query('INSERT IGNORE INTO ' . TABLE_GP2AN . ' VALUES (?, ?)', array($nID, $nAnalyses), false);
+                    if (!$q) {
+                        $aFailed[] = $nAnalyses;
+                    } else {
+                        $aSuccess[] = $nAnalyses;
+                    }
+                }
+            }
+            if ($aFailed) {
+                // Silent error.
+                lovd_writeLog('Error', LOG_EVENT, 'Analysis information entr' . (count($aFailed) == 1 ? 'y' : 'ies') . ' ' . implode(', ', $aFailed) . ' could not be added to gene panel ' . $nID);
+            } elseif ($aSuccess) {
+                lovd_writeLog('Event', LOG_EVENT, 'Analysis information entr' . (count($aSuccess) == 1 ? 'y' : 'ies') . ' ' . implode(', ', $aSuccess) . ' successfully added to gene panel ' . $nID);
             }
 
             // Thank the user...
@@ -540,7 +604,7 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && ACTION == 'delete') {
     $_T->printHeader();
     $_T->printTitle();
 
-    lovd_showInfoTable('This will delete the <B>' . $zData['name'] . '</B> gene panel and unlink all the genes and diseases assigned to it. This action cannot be undone.', 'warning');
+    lovd_showInfoTable('This will delete the <B>' . $zData['name'] . '</B> gene panel and unlink all the genes, diseases and analyses assigned to it. This action cannot be undone.', 'warning');
 
     lovd_errorPrint();
 

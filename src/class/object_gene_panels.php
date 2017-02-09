@@ -54,9 +54,11 @@ class LOVD_GenePanel extends LOVD_Object {
 
         // SQL code for loading an entry for an edit form.
         $this->sSQLLoadEntry = 'SELECT gp.*, COUNT(DISTINCT i2gp.individualid) AS individuals, ' .
-                               'GROUP_CONCAT(DISTINCT gp2d.diseaseid ORDER BY gp2d.diseaseid SEPARATOR ";") AS _active_diseases ' .
+                               'GROUP_CONCAT(DISTINCT gp2d.diseaseid ORDER BY gp2d.diseaseid SEPARATOR ";") AS _active_diseases, ' .
+                               'GROUP_CONCAT(DISTINCT gp2an.analysisid ORDER BY gp2an.analysisid SEPARATOR ";") AS _active_analyses ' .
                                'FROM ' . TABLE_GENE_PANELS . ' AS gp ' .
                                'LEFT OUTER JOIN ' . TABLE_GP2DIS . ' AS gp2d ON (gp.id = gp2d. genepanelid) ' .
+                               'LEFT OUTER JOIN ' . TABLE_GP2AN . ' AS gp2an ON (gp.id = gp2an.genepanelid) ' .
                                'LEFT OUTER JOIN ' . TABLE_IND2GP . ' i2gp ON (gp.id = i2gp.genepanelid) ' .
                                'WHERE gp.id = ? ' .
                                'GROUP BY gp.id';
@@ -64,6 +66,7 @@ class LOVD_GenePanel extends LOVD_Object {
         // SQL code for viewing an entry.
         $this->aSQLViewEntry['SELECT']   = 'gp.*, COUNT(DISTINCT i2gp.individualid) AS individuals, ' .
             'GROUP_CONCAT(DISTINCT d.id, ";", IFNULL(d.id_omim, 0), ";", IF(CASE d.symbol WHEN "-" THEN "" ELSE d.symbol END = "", d.name, d.symbol), ";", d.name ORDER BY (d.symbol != "" AND d.symbol != "-") DESC, d.symbol, d.name SEPARATOR ";;") AS __diseases, ' .
+            'GROUP_CONCAT(DISTINCT CONCAT(a.name, " (v", a.version, ")") ORDER BY a.name SEPARATOR ", ") AS analyses_, ' .
             'uc.name AS created_by_,' .
             'ue.name AS edited_by_';
         $this->aSQLViewEntry['FROM']     = TABLE_GENE_PANELS . ' AS gp ' .
@@ -71,12 +74,15 @@ class LOVD_GenePanel extends LOVD_Object {
             'LEFT OUTER JOIN ' . TABLE_DISEASES . ' AS d ON (gp2d.diseaseid = d.id) ' .
             'LEFT OUTER JOIN ' . TABLE_IND2GP . ' i2gp ON (gp.id = i2gp.genepanelid) ' .
             'LEFT OUTER JOIN ' . TABLE_USERS . ' AS uc ON (gp.created_by = uc.id) ' .
-            'LEFT OUTER JOIN ' . TABLE_USERS . ' AS ue ON (gp.edited_by = ue.id) ';
+            'LEFT OUTER JOIN ' . TABLE_USERS . ' AS ue ON (gp.edited_by = ue.id) ' .
+            'LEFT OUTER JOIN ' . TABLE_GP2AN . ' AS gp2an ON (gp.id = gp2an.genepanelid) ' .
+            'LEFT OUTER JOIN ' . TABLE_ANALYSES . ' AS a ON (gp2an.analysisid = a.id) ';
         $this->aSQLViewEntry['GROUP_BY'] = 'gp.id';
 
         // SQL code for viewing the list of gene panels
         $this->aSQLViewList['SELECT']   = 'gp.*, COUNT(DISTINCT i2gp.individualid) AS individuals, ' .
                                           'GROUP_CONCAT(DISTINCT IF(CASE d.symbol WHEN "-" THEN "" ELSE d.symbol END = "", d.name, d.symbol) ORDER BY (d.symbol != "" AND d.symbol != "-") DESC, d.symbol, d.name SEPARATOR ", ") AS diseases_, ' .
+                                          'GROUP_CONCAT(DISTINCT CONCAT(a.name, " (v", a.version, ")") ORDER BY a.name SEPARATOR ", ") AS analyses_, ' .
                                           'uc.name AS created_by_,' .
                                           'COUNT(DISTINCT gp2g.geneid) AS genes';
         $this->aSQLViewList['FROM']     = TABLE_GENE_PANELS . ' AS gp ' .
@@ -84,7 +90,9 @@ class LOVD_GenePanel extends LOVD_Object {
                                           'LEFT OUTER JOIN ' . TABLE_GP2GENE . ' AS gp2g ON (gp.id = gp2g.genepanelid) ' .
                                           'LEFT OUTER JOIN ' . TABLE_IND2GP . ' i2gp ON gp.id = i2gp.genepanelid ' .
                                           'LEFT OUTER JOIN ' . TABLE_USERS . ' AS uc ON (gp.created_by = uc.id) ' .
-                                          'LEFT OUTER JOIN ' . TABLE_DISEASES . ' AS d ON (gp2d.diseaseid = d.id)';
+                                          'LEFT OUTER JOIN ' . TABLE_DISEASES . ' AS d ON (gp2d.diseaseid = d.id)' .
+                                          'LEFT OUTER JOIN ' . TABLE_GP2AN . ' AS gp2an ON (gp.id = gp2an.genepanelid) ' .
+                                          'LEFT OUTER JOIN ' . TABLE_ANALYSES . ' AS a ON (gp2an.analysisid = a.id) ';
         $this->aSQLViewList['GROUP_BY'] = 'gp.id';
 
         // List of columns and (default?) order for viewing an entry.
@@ -96,6 +104,7 @@ class LOVD_GenePanel extends LOVD_Object {
                 'type_' => 'Type',
                 'pmid_mandatory_' => 'PMID Mandatory',
                 'diseases_' => 'Associated with diseases',
+                'analyses_' => 'Associated with analyses',
                 'individuals' => 'Individuals',
                 'created_by_' => 'Created by',
                 'created_date' => 'Created date',
@@ -137,6 +146,10 @@ class LOVD_GenePanel extends LOVD_Object {
                     'view' => array('Associated with diseases', 150),
                     'db'   => array('diseases_', false, 'TEXT'),
                     'legend' => array('The diseases associated with this gene panel.')),
+                'analyses_' => array(
+                    'view' => array('Associated with analyses', 150),
+                    'db'   => array('analyses_', false, 'TEXT'),
+                    'legend' => array('The analyses associated with this gene panel.')),
                 'created_date' => array(
                     'view' => array('Created Date', 110),
                     'db'   => array('gp.created_date', 'DESC', true),
@@ -191,6 +204,17 @@ class LOVD_GenePanel extends LOVD_Object {
             $nDiseasesFormSize = ($nDiseases < 15? $nDiseases : 15);
         }
 
+        // Get the available analyses.
+        $aAnalysesForm = $_DB->query('SELECT id, CONCAT(name, " (v", version, ")") FROM ' . TABLE_ANALYSES . ' ORDER BY name')->fetchAllCombine();
+        $nAnalyses = count($aAnalysesForm);
+        if (!$nAnalyses) {
+            $aAnalysesForm = array('' => 'No analysis entries available');
+            $nAnalysesFormSize = 1;
+        } else {
+            $aAnalysesForm = array_combine(array_keys($aAnalysesForm), array_map('lovd_shortenString', $aAnalysesForm, array_fill(0, $nAnalyses, 75)));
+            $nAnalysesFormSize = ($nAnalyses < 15? $nAnalyses : 15);
+        }
+
         $aSelectType = array(
             'gene_panel' => 'Gene Panel',
             'blacklist' => 'Blacklist',
@@ -211,6 +235,10 @@ class LOVD_GenePanel extends LOVD_Object {
                 array('', '', 'print', '<B>Relation to diseases (optional)</B>'),
                 'hr',
                 array('This gene panel has been linked to these diseases', 'Listed are all disease entries currently configured in LOVD.', 'select', 'active_diseases', $nDiseasesFormSize, $aDiseasesForm, false, true, false),
+                'hr','skip',
+                array('', '', 'print', '<B>Relation to analyses (optional)</B>'),
+                'hr',
+                array('This gene panel has been linked to these analyses', 'Listed are all analysis entries currently configured in LOVD.', 'select', 'active_analyses', $nAnalysesFormSize, $aAnalysesForm, false, true, false),
                 'hr',
                 'skip'
             );

@@ -648,7 +648,7 @@ if ($sCalcVersionFiles != $sCalcVersionDB) {
                             ENGINE=InnoDB,
                             DEFAULT CHARACTER SET utf8',
                     ),
-                 '3.0-17e' => array(), // This reserves the correct order for the analyses improvement SQL which can be found below.
+                 '3.0-17f' => array(), // This reserves the correct order for the analyses improvement SQL which can be found below.
                  '3.0-18' =>
                      array(
                          // These two will be ignored by LOVD+.
@@ -766,7 +766,7 @@ if ($sCalcVersionFiles != $sCalcVersionDB) {
         $aUpdates['3.0-12u'][] = 'UPDATE ' . TABLE_VARIANTS . ' vog LEFT OUTER JOIN ' . TABLE_ANALYSES_RUN_RESULTS . ' arr ON (vog.id = arr.variantid) SET vog.effectid = CAST(REPLACE(vog.effectid, 5, 0) AS UNSIGNED) WHERE arr.variantid IS NULL';
     }
 
-    if (LOVD_plus && $sCalcVersionDB < lovd_calculateVersion('3.0-17e')) { // Improvements to the way analyses are stored and displayed.
+    if (LOVD_plus && $sCalcVersionDB < lovd_calculateVersion('3.0-17f')) { // Improvements to the way analyses are stored and displayed.
 
         // Return the existing analyses records as we need these to populate the new tables.
         $aAnalyses = $_DB->query('SELECT * FROM ' . TABLE_ANALYSES)->fetchAllAssoc();
@@ -786,7 +786,7 @@ if ($sCalcVersionFiles != $sCalcVersionDB) {
 
         $aFiltersSQL = array_unique($aFiltersSQL); // Duplicates were added when this array was created so return the unique SQL.
 
-        $aUpdates['3.0-17e'] = array_merge($aUpdates['3.0-17e'],
+        $aUpdates['3.0-17f'] = array_merge($aUpdates['3.0-17f'],
             array(
                 'CREATE TABLE ' . TABLE_ANALYSIS_FILTERS . ' (
                                 id VARCHAR(50) NOT NULL,
