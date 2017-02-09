@@ -44,22 +44,6 @@ class LOVD_Disease extends LOVD_Object {
     // This class extends the basic Object class and it handles the Link object.
     var $sObject = 'Disease';
 
-    static $aInheritances = array(
-        'AD' => 'Autosomal dominant',
-        'AR' => 'Autosomal recessive',
-        'DD' => 'Digenic dominant',
-        'DR' => 'Digenic recessive',
-        'IC' => 'Isolated cases',
-        'ICB' => 'Inherited chromosomal imbalance',
-        'Mi' => 'Mitochondrial',
-        'Mu' => 'Multifactorial',
-        'SMo' => 'Somatic mosaicism',
-        'SMu' => 'Somatic mutation',
-        'XLD' => 'X-linked dominant' ,
-        'XLR' => 'X-linked recessive',
-        'XL' => 'X-linked' ,
-        'YL' => 'Y-linked'
-    );
 
 
 
@@ -68,7 +52,7 @@ class LOVD_Disease extends LOVD_Object {
     function __construct ()
     {
         // Default constructor.
-        global $_AUTH;
+        global $_AUTH, $_SETT;
 
         // SQL code for loading an entry for an edit form.
         $this->sSQLLoadEntry = 'SELECT d.*, d.inheritance as _inheritance, ' .
@@ -106,7 +90,7 @@ class LOVD_Disease extends LOVD_Object {
         $this->aSQLViewList['GROUP_BY'] = 'd.id';
 
         $sInheritance_legend = '<TABLE>';
-        foreach (static::$aInheritances as $sKey => $sDescription) {
+        foreach ($_SETT['diseases_inheritance'] as $sKey => $sDescription) {
             $sInheritance_legend .= '<TR><TD>' . $sKey . '</TD><TD>: ' . $sDescription . '</TD></TR>';
         }
 
@@ -242,6 +226,8 @@ class LOVD_Disease extends LOVD_Object {
 
     function getForm ()
     {
+        global $_SETT;
+
         // Build the form.
 
         // If we've built the form before, simply return it. Especially imports will repeatedly call checkFields(), which calls getForm().
@@ -280,7 +266,7 @@ class LOVD_Disease extends LOVD_Object {
                         array('Disease abbreviation', '', 'text', 'symbol', 15),
                         array('Disease name', '', 'text', 'name', 40),
                         array('OMIM ID (optional)', '', 'text', 'id_omim', 10),
-                        array('Inheritance', '', 'select', 'inheritance', count(static::$aInheritances), static::$aInheritances, false, true, false),
+                        array('Inheritance', '', 'select', 'inheritance', count($_SETT['diseases_inheritance']), $_SETT['diseases_inheritance'], false, true, false),
                         'hr',
                         'skip',
                         array('', '', 'print', '<B>Relation to genes (optional)</B>'),

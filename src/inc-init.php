@@ -209,6 +209,22 @@ $_SETT = array(
                             CUR_STATUS_CURATED_REPORTABLE => 'Curated & Reportable',
                             CUR_STATUS_CURATED_NOT_REPORTABLE => 'Curated & Not Reportable',
                           ),
+                'diseases_inheritance' => array(
+                            'AD' => 'Autosomal dominant',
+                            'AR' => 'Autosomal recessive',
+                            'DD' => 'Digenic dominant',
+                            'DR' => 'Digenic recessive',
+                            'IC' => 'Isolated cases',
+                            'ICB' => 'Inherited chromosomal imbalance',
+                            'Mi' => 'Mitochondrial',
+                            'Mu' => 'Multifactorial',
+                            'SMo' => 'Somatic mosaicism',
+                            'SMu' => 'Somatic mutation',
+                            'XLD' => 'X-linked dominant' ,
+                            'XLR' => 'X-linked recessive',
+                            'XL' => 'X-linked' ,
+                            'YL' => 'Y-linked'
+                ),
                 'confirmation_status' =>
                      array(
                             CON_STATUS_NOT_PERFORMED => 'Not performed',
