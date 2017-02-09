@@ -918,7 +918,7 @@ if (PATH_COUNT > 2 && ACTION == 'edit') {
                     // This variables have been checked using regexps, so can be considered safe.
                     $sSQL = 'ALTER TABLE ' . $aColumnInfo['table_sql'] . ' MODIFY COLUMN `' . $sColumnID . '` ' . $_POST['mysql_type'];
                     $dStart = time();
-                    $q = $_DB->query($sSQL, false, false);
+                    $q = $_DB->exec($sSQL, false);
                     if ($q === false) {
                         $sError = $_DB->formatError(); // Save the PDO error before it disappears.
                         $tPassed = time() - $dStart;
@@ -933,7 +933,7 @@ if (PATH_COUNT > 2 && ACTION == 'edit') {
                         // Modify the same column in the revision table.
                         $sSQL = 'ALTER TABLE ' . $aColumnInfo['table_sql_rev'] . ' MODIFY COLUMN `' . $sColumnID . '` ' . $_POST['mysql_type'];
                         $dStart = time();
-                        $q = $_DB->query($sSQL, false, false);
+                        $q = $_DB->exec($sSQL, false);
                         if ($q === false) {
                             $sError = $_DB->formatError(); // Save the PDO error before it disappears.
                             $tPassed = time() - $dStart;
@@ -1547,7 +1547,7 @@ if (PATH_COUNT > 2 && ACTION == 'add') {
 
 
             // Now, start with ALTER TABLE if necessary, since that will take the longest time and ends a transaction anyway.
-            // If it fails directly after this, one can always just redo the add. LOVD will detect properly that it needs to be added to the ACTIVE_COLS table, then.
+            // If it fails directly after this, one can always just redo the add. LOVD will detect properly that it only needs to be added to the ACTIVE_COLS table, then.
             if (!$zData['active_checked']) {
                 $sSQL = 'ALTER TABLE ' . $aTableInfo['table_sql'] . ' ADD COLUMN `' . $zData['id'] . '` ' . $zData['mysql_type'];
                 $dStart = time();
@@ -1555,35 +1555,38 @@ if (PATH_COUNT > 2 && ACTION == 'add') {
                 if ($q === false) {
                     $sError = $_DB->formatError(); // Save the PDO error before it disappears.
                     $tPassed = time() - $dStart;
-                    $sMessage = ($tPassed < 2? '' : ' (fail after ' . $tPassed . ' seconds - disk full maybe?)');
+                    $sMessage = ($tPassed < 2 ? '' : ' (fail after ' . $tPassed . ' seconds - disk full maybe?)');
                     lovd_queryError(LOG_EVENT . $sMessage, $sSQL, $sError);
-                } elseif (!empty($aTableInfo['table_sql_rev'])) {
-                    // Insert the same column into the revision table.
-                    // Since we do not remove columns from the revisions table it could be possible that this column already exists so lets check.
-                    $aTableColumns = lovd_getColumnData($aTableInfo['table_sql_rev']); // Load the column details of this table into an array.
-                    if (!isset($aTableColumns[$zData['id']])) {
-                        // This column doesn't already exist so it is safe to create it in the revision table.
-                        $sSQL = 'ALTER TABLE ' . $aTableInfo['table_sql_rev'] . ' ADD COLUMN `' . $zData['id'] . '` ' . $zData['mysql_type'];
-                        $dStart = time();
-                        $q = $_DB->exec($sSQL, false);
-                        if ($q === false) {
-                            $sError = $_DB->formatError(); // Save the PDO error before it disappears.
-                            $tPassed = time() - $dStart;
-                            $sMessage = ($tPassed < 2 ? '' : ' (fail after ' . $tPassed . ' seconds - disk full maybe?)');
-                            lovd_queryError(LOG_EVENT . $sMessage, $sSQL, $sError);
-                        }
-                    } elseif ($aTableColumns[$zData['id']]['type'] != $zData['mysql_type']) {
-                        // This column already exists but it is a different data type, change it to match the main tables new data type.
-                        $sSQL = 'ALTER TABLE ' . $aTableInfo['table_sql_rev'] . ' MODIFY COLUMN `' . $zData['id'] . '` ' . $zData['mysql_type'];
-                        $q = $_DB->query($sSQL,false,false);
-                        if ($q === false) {
-                            $sError = $_DB->formatError(); // Save the PDO error before it disappears.
-                            $tPassed = time() - $dStart;
-                            $sMessage = ($tPassed < 2 ? '' : ' (fail after ' . $tPassed . ' seconds - disk full maybe?)');
-                            lovd_queryError(LOG_EVENT . $sMessage, $sSQL, $sError);
-                        }
-                    } // Otherwise we do nothing as this column already exists in the revisions table.
                 }
+            }
+            // Separating this to make sure this runs also when we don't need to add the column to the main data table.
+            if (!empty($aTableInfo['table_sql_rev'])) {
+                // Insert the same column into the revision table.
+                // Since we do not remove columns from the revisions table it could be possible that this column already exists so lets check.
+                $aTableColumns = lovd_getColumnData($aTableInfo['table_sql_rev']); // Load the column details of this table into an array.
+                if (!isset($aTableColumns[$zData['id']])) {
+                    // This column doesn't already exist so it is safe to create it in the revision table.
+                    $sSQL = 'ALTER TABLE ' . $aTableInfo['table_sql_rev'] . ' ADD COLUMN `' . $zData['id'] . '` ' . $zData['mysql_type'];
+                    $dStart = time();
+                    $q = $_DB->exec($sSQL, false);
+                    if ($q === false) {
+                        $sError = $_DB->formatError(); // Save the PDO error before it disappears.
+                        $tPassed = time() - $dStart;
+                        $sMessage = ($tPassed < 2? '' : ' (fail after ' . $tPassed . ' seconds - disk full maybe?)');
+                        lovd_queryError(LOG_EVENT . $sMessage, $sSQL, $sError);
+                    }
+                } elseif ($aTableColumns[$zData['id']]['type'] != $zData['mysql_type']) {
+                    // This column already exists but it is a different data type, change it to match the main tables new data type.
+                    $sSQL = 'ALTER TABLE ' . $aTableInfo['table_sql_rev'] . ' MODIFY COLUMN `' . $zData['id'] . '` ' . $zData['mysql_type'];
+                    $dStart = time();
+                    $q = $_DB->exec($sSQL, false);
+                    if ($q === false) {
+                        $sError = $_DB->formatError(); // Save the PDO error before it disappears.
+                        $tPassed = time() - $dStart;
+                        $sMessage = ($tPassed < 2? '' : ' (fail after ' . $tPassed . ' seconds - disk full maybe?)');
+                        lovd_queryError(LOG_EVENT . $sMessage, $sSQL, $sError);
+                    }
+                } // Otherwise we do nothing as this column already exists in the revisions table.
             }
 
             $_BAR->setProgress(80);
