@@ -4,10 +4,10 @@
  * LEIDEN OPEN VARIATION DATABASE (LOVD)
  *
  * Created     : 2016-05-04
- * Modified    : 2016-06-06
+ * Modified    : 2017-02-09
  * For LOVD    : 3.0-13
  *
- * Copyright   : 2004-2016 Leiden University Medical Center; http://www.LUMC.nl/
+ * Copyright   : 2004-2017 Leiden University Medical Center; http://www.LUMC.nl/
  * Programmers : Anthony Marty <anthony.marty@unimelb.edu.au>
  *               Ivo F.A.C. Fokkema <I.F.A.C.Fokkema@LUMC.nl>
  *
@@ -36,6 +36,41 @@ require ROOT_PATH . 'inc-init.php';
 if ($_AUTH) {
     // If authorized, check for updates.
     require ROOT_PATH . 'inc-upgrade.php';
+}
+
+
+
+
+
+if (PATH_COUNT == 2 && ACTION == 'create') {
+    // URL: /summary_annotations/chrX_000030?create
+    // Create a new summary annotation entry.
+
+    $DBID = sprintf('%s', $_PE[1]);
+    $nVariantID = $_GET['variant_id'];
+
+    define('PAGE_TITLE', 'Create a new summary annotation entry');
+    define('LOG_EVENT', 'SARCreate');
+
+    lovd_requireAUTH(LEVEL_ANALYZER);
+
+    require ROOT_PATH . 'class/object_summary_annotations.php';
+    $_DATA = new LOVD_SummaryAnnotation();
+
+    // Fields to be used.
+    $aFields = array( 'id', 'effectid', 'created_by', 'created_date');
+
+    // Prepare values.
+    $_POST['id'] = $DBID;
+    $_POST['created_by'] = $_AUTH['id'];
+    $_POST['created_date'] = date('Y-m-d H:i:s');
+
+    $_DATA->insertEntry($_POST, $aFields);
+
+    // Write to log...
+    lovd_writeLog('Event', LOG_EVENT, 'Created summary annotation entry - ' . $DBID);
+    header('Refresh: 0; url=' . lovd_getInstallURL() . CURRENT_PATH . '?edit&variant_id=' . $nVariantID . (isset($_GET['in_window'])? '&in_window' : ''));
+    exit;
 }
 
 
@@ -126,41 +161,6 @@ if (PATH_COUNT == 2 && ACTION == 'edit') {
     print('</FORM>' . "\n\n");
 
     $_T->printFooter();
-    exit;
-}
-
-
-
-
-
-if (PATH_COUNT == 2 && ACTION == 'create') {
-    // URL: /summary_annotations/chrX_000030?create
-    // Create a new summary annotation entry.
-
-    $DBID = sprintf('%s', $_PE[1]);
-    $nVariantID = $_GET['variant_id'];
-
-    define('PAGE_TITLE', 'Create a new summary annotation entry');
-    define('LOG_EVENT', 'SARCreate');
-
-    lovd_requireAUTH(LEVEL_ANALYZER);
-
-    require ROOT_PATH . 'class/object_summary_annotations.php';
-    $_DATA = new LOVD_SummaryAnnotation();
-
-    // Fields to be used.
-    $aFields = array( 'id', 'effectid', 'created_by', 'created_date');
-
-    // Prepare values.
-    $_POST['id'] = $DBID;
-    $_POST['created_by'] = $_AUTH['id'];
-    $_POST['created_date'] = date('Y-m-d H:i:s');
-
-    $_DATA->insertEntry($_POST, $aFields);
-
-    // Write to log...
-    lovd_writeLog('Event', LOG_EVENT, 'Created summary annotation entry - ' . $DBID);
-    header('Refresh: 0; url=' . lovd_getInstallURL() . CURRENT_PATH . '?edit&variant_id=' . $nVariantID . (isset($_GET['in_window'])? '&in_window' : ''));
     exit;
 }
 
