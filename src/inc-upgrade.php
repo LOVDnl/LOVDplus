@@ -665,6 +665,47 @@ if ($sCalcVersionFiles != $sCalcVersionDB) {
                  '3.0-17d' => array(), // Placeholder for LOVD+ queries, defined below.
                  '3.0-17e' => array(), // Placeholder for LOVD+ queries, defined below.
                  '3.0-17f' => array(), // Placeholder for LOVD+ queries, defined below.
+                 '3.0-17g' => array(
+                     'SET @bExists := (SELECT COUNT(*) FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = "' . TABLE_GENE_STATISTICS . '" AND COLUMN_NAME = "hgnc")',
+                     'SET @sSQL := IF(@bExists > 0, \'SELECT "INFO: Column already exists."\', "
+                      ALTER TABLE ' . TABLE_GENE_STATISTICS . ' 
+                            ADD COLUMN hgnc VARCHAR(25) AFTER id,
+                            ADD COLUMN chromosome VARCHAR(10) AFTER hgnc, 
+                            ADD COLUMN start_pos INT(10) AFTER chromosome, 
+                            ADD COLUMN end_pos INT(10) AFTER start_pos, 
+                            CHANGE cds_coverage nextera_cds_coverage DECIMAL(5,2), 
+                            CHANGE exon_coverage nextera_exon_coverage DECIMAL(5,2), 
+                            CHANGE exon_mean_of_mean_coverage nextera_exon_mean_of_mean_coverage DECIMAL(6,2), 
+                            CHANGE exon_mean_coverage_sd nextera_exon_mean_coverage_sd DECIMAL(6,2), 
+                            CHANGE exon_mean_of_median_coverage nextera_exon_mean_of_median_coverage DECIMAL(6,2), 
+                            CHANGE exon_mean_of_percent_20x nextera_exon_mean_of_percent_20x DECIMAL(6,2), 
+                            CHANGE exon_mean_percent_sd nextera_exon_mean_percent_sd DECIMAL(6,2), 
+                            CHANGE cds_mean_of_mean_coverage nextera_cds_mean_of_mean_coverage DECIMAL(6,2), 
+                            CHANGE cds_mean_coverage_sd nextera_cds_mean_coverage_sd DECIMAL(6,2), 
+                            CHANGE cds_mean_of_median_coverage nextera_cds_mean_of_median_coverage DECIMAL(6,2), 
+                            CHANGE cds_mean_of_percent_20x nextera_cds_mean_of_percent_20x DECIMAL(5,2), 
+                            CHANGE cds_mean_percent_sd nextera_cds_mean_percent_sd DECIMAL(5,2), 
+                            ADD COLUMN cre_cds_bases INT(10), 
+                            ADD COLUMN cre_exon_bases INT(10), 
+                            ADD COLUMN cre_cds_coverage DECIMAL(5,2), 
+                            ADD COLUMN cre_exon_coverage DECIMAL(5,2), 
+                            ADD COLUMN cre_exon_mean_of_mean_coverage DECIMAL(6,2), 
+                            ADD COLUMN cre_exon_mean_coverage_sd DECIMAL(6,2), 
+                            ADD COLUMN cre_exon_mean_of_median_coverage DECIMAL(6,2), 
+                            ADD COLUMN cre_exon_mean_of_percent_20x DECIMAL(6,2), 
+                            ADD COLUMN cre_exon_mean_percent_sd DECIMAL(6,2), 
+                            ADD COLUMN cre_cds_mean_of_mean_coverage DECIMAL(6,2), 
+                            ADD COLUMN cre_cds_mean_coverage_sd DECIMAL(6,2), 
+                            ADD COLUMN cre_cds_mean_of_median_coverage DECIMAL(6,2), 
+                            ADD COLUMN cre_cds_mean_of_percent_20x DECIMAL(5,2), 
+                            ADD COLUMN cre_cds_mean_percent_sd DECIMAL(5,2), 
+                            MODIFY created_date DATETIME NOT NULL AFTER cre_cds_mean_percent_sd, 
+                            MODIFY alternative_names VARCHAR(1000) AFTER vep_annotation, 
+                            MODIFY refseq_cds_bases INT(10) AFTER alternative_names, 
+                            MODIFY refseq_exon_bases INT(10) AFTER refseq_cds_bases")',
+                     'PREPARE Statement FROM @sSQL',
+                     'EXECUTE Statement',
+                 ),
                  '3.0-18' =>
                      array(
                          // These two will be ignored by LOVD+.
