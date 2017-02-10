@@ -294,7 +294,7 @@ class LOVD_Column extends LOVD_Object {
              'width' => array('Column display width in pixels', '', 'text', 'width', 5),
                         array('', '', 'print', '<IMG src="gfx/trans.png" alt="" width="' . (int) $_POST['width'] . '" height="3" style="background : #000000;"><BR><SPAN class="form_note">(This is ' . (int) $_POST['width'] . ' pixels)</SPAN>'),
          'mandatory' => array('Mandatory field', '', 'checkbox', 'mandatory'),
-       'public_view' => array((LOVD_plus) ? 'Show column on data listings' :'Show contents to public', '', 'checkbox', 'public_view'),
+       'public_view' => array((LOVD_plus)? 'Show column on data listings' :'Show contents to public', '', 'checkbox', 'public_view'),
         'public_add' => array('Show field on submission form', '', 'checkbox', 'public_add'),
                         'hr',
 // FIXME; implement this later.

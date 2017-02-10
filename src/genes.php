@@ -946,7 +946,7 @@ if (PATH_COUNT == 2 && preg_match('/^[a-z][a-z0-9#@-]*$/i', rawurldecode($_PE[1]
             $sMessage = '';
             if (count($aDone)) {
                 foreach ($aDone as $sSection => $n) {
-                    $sMessage .= (!$sMessage ? '' : ', ') . $n . ' ' . $sSection;
+                    $sMessage .= (!$sMessage? '' : ', ') . $n . ' ' . $sSection;
                 }
                 $sMessage = 'deleted ' . preg_replace('/, ([^,]+)/', " and $1", $sMessage);
             } else {

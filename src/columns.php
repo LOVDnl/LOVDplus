@@ -922,7 +922,7 @@ if (PATH_COUNT > 2 && ACTION == 'edit') {
                     if ($q === false) {
                         $sError = $_DB->formatError(); // Save the PDO error before it disappears.
                         $tPassed = time() - $dStart;
-                        $sMessage = ($tPassed < 2 ? '' : ' (fail after ' . $tPassed . ' seconds - disk full maybe?)');
+                        $sMessage = ($tPassed < 2? '' : ' (fail after ' . $tPassed . ' seconds - disk full maybe?)');
                         lovd_queryError(LOG_EVENT . $sMessage, $sSQL, $sError);
                     }
 
@@ -937,7 +937,7 @@ if (PATH_COUNT > 2 && ACTION == 'edit') {
                         if ($q === false) {
                             $sError = $_DB->formatError(); // Save the PDO error before it disappears.
                             $tPassed = time() - $dStart;
-                            $sMessage = ($tPassed < 2 ? '' : ' (fail after ' . $tPassed . ' seconds - disk full maybe?)');
+                            $sMessage = ($tPassed < 2? '' : ' (fail after ' . $tPassed . ' seconds - disk full maybe?)');
                             lovd_queryError(LOG_EVENT . $sMessage, $sSQL, $sError);
                         }
                     }
@@ -1555,7 +1555,7 @@ if (PATH_COUNT > 2 && ACTION == 'add') {
                 if ($q === false) {
                     $sError = $_DB->formatError(); // Save the PDO error before it disappears.
                     $tPassed = time() - $dStart;
-                    $sMessage = ($tPassed < 2 ? '' : ' (fail after ' . $tPassed . ' seconds - disk full maybe?)');
+                    $sMessage = ($tPassed < 2? '' : ' (fail after ' . $tPassed . ' seconds - disk full maybe?)');
                     lovd_queryError(LOG_EVENT . $sMessage, $sSQL, $sError);
                 }
             }

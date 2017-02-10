@@ -2336,7 +2336,7 @@ if (!lovd_isCurator($_SESSION['currdb'])) {
                 if (count($aDone)) {
                     $sMessage = '';
                     foreach ($aDone as $sSection => $n) {
-                        $sMessage .= (!$sMessage ? '' : ', ') . $n . ' ' . $sSection;
+                        $sMessage .= (!$sMessage? '' : ', ') . $n . ' ' . $sSection;
                     }
                     $sMessage = preg_replace('/, ([^,]+)/', " and $1", $sMessage);
                 } else {
