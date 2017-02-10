@@ -502,13 +502,11 @@ if ($_SERVER['SERVER_ADMIN'] == 'i.f.a.c.fokkema@lumc.nl' && $_SERVER['HTTP_HOST
     // (8) Creating standard LOVD custom columns.
     // AND
     // (9) Activating standard custom columns.
-    require_once 'inc-sql-columns.php';
-    $aInstallSQL['Activating LOVD standard custom columns...'] = (empty($aInstallSQL['Activating LOVD standard custom columns...'])? array() : $aInstallSQL['Activating LOVD standard custom columns...']);
-    $aInstallSQL['Activating LOVD standard custom columns...'] = array_merge($aInstallSQL['Activating LOVD standard custom columns...'], lovd_getActivateCustomColumnQuery(false, true));
+    require_once ROOT_PATH . 'inc-lib-columns.php';
+    $aInstallSQL['Activating LOVD standard custom columns...'] = lovd_getActivateCustomColumnQuery();
 
     if (LOVD_plus) {
-        $aTableInfo = lovd_getTableInfoByCategory('VariantOnGenome');
-        $aInstallSQL['Activating LOVD standard custom columns...'][] = 'ALTER TABLE ' . $aTableInfo['table_sql'] . ' ADD INDEX(`VariantOnGenome/DBID`)';
+        $aInstallSQL['Activating LOVD standard custom columns...'][] = 'ALTER TABLE ' . TABLE_VARIANTS . ' ADD INDEX(`VariantOnGenome/DBID`)';
     }
 
     // (10) Creating the "Healthy / Control" disease. Maybe later enable some more default columns? (IQ, ...)

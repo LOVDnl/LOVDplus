@@ -40,8 +40,6 @@ $sCalcVersionFiles = lovd_calculateVersion($_SETT['system']['version']);
 $sCalcVersionDB = lovd_calculateVersion($_STAT['version']);
 
 
-require_once ROOT_PATH . 'inc-lib-columns.php';
-require_once ROOT_PATH . 'install/inc-sql-columns.php';
 
 
 
@@ -61,6 +59,8 @@ if ($sCalcVersionFiles != $sCalcVersionDB) {
     define('PAGE_TITLE', 'Upgrading LOVD...');
     $_T->printHeader();
     $_T->printTitle();
+
+    require_once ROOT_PATH . 'inc-lib-columns.php';
 
     print('      Please wait while LOVD is upgrading the database backend from ' . $_STAT['version'] . ' to ' . $_SETT['system']['version'] . '.<BR><BR>' . "\n");
 
@@ -664,6 +664,7 @@ if ($sCalcVersionFiles != $sCalcVersionDB) {
                      ),
                  '3.0-17d' => array(), // Placeholder for LOVD+ queries, defined below.
                  '3.0-17e' => array(), // Placeholder for LOVD+ queries, defined below.
+                 '3.0-17f' => array(), // Placeholder for LOVD+ queries, defined below.
                  '3.0-18' =>
                      array(
                          // These two will be ignored by LOVD+.
@@ -673,13 +674,9 @@ if ($sCalcVersionFiles != $sCalcVersionDB) {
                      ),
              );
 
-
-    // '3.0-12u'
-    $aNewCustomCols = array('SummaryAnnotation/Curation/Interpretation', 'SummaryAnnotation/Remarks');
-    $aUpdates['3.0-12u'] = array_merge($aUpdates['3.0-12u'], lovd_getActivateCustomColumnQuery($aNewCustomCols, true));
-
     if ($sCalcVersionDB < lovd_calculateVersion('3.0-alpha-01')) {
         // Simply reload all custom columns.
+        require_once ROOT_PATH . 'install/inc-sql-columns.php';
         $aUpdates['3.0-alpha-01'][] = 'DELETE FROM ' . TABLE_COLS . ' WHERE col_order < 255';
         $aUpdates['3.0-alpha-01'] = array_merge($aUpdates['3.0-alpha-01'], $aColSQL);
     }
@@ -843,6 +840,14 @@ if ($sCalcVersionFiles != $sCalcVersionDB) {
         );
     }
 
+    if (LOVD_plus && $sCalcVersionDB < lovd_calculateVersion('3.0-17f')) {
+        // Run LOVD+ specific queries.
+        $aNewCustomCols = array('SummaryAnnotation/Curation/Interpretation', 'SummaryAnnotation/Remarks');
+        $aUpdates['3.0-17f'] = array_merge(
+            $aUpdates['3.0-17f'],
+            lovd_getActivateCustomColumnQuery($aNewCustomCols)
+        );
+    }
 
 
 
