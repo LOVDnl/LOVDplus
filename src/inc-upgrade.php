@@ -600,7 +600,6 @@ if ($sCalcVersionFiles != $sCalcVersionDB) {
                  '3.0-12v' =>
                      array(
                          'INSERT INTO ' . TABLE_COLS . ' VALUES ("VariantOnGenome/Frequency/ExAC", 255, 100, 0, 1, 0, "ExAC AF", "", "Allele frequency from the ExAC project.", "Allele frequency from the ExAC project.", "FLOAT UNSIGNED", "ExAC allele frequency||text|6", "", "", 0, 0, 1, 0, NOW(), NULL, NULL)',
-                         'ALTER TABLE ' . TABLE_GENE_STATISTICS . ' ADD COLUMN hgnc VARCHAR(25) AFTER id, ADD COLUMN chromosome VARCHAR(10) AFTER hgnc, ADD COLUMN start_pos INT(10) AFTER chromosome, ADD COLUMN end_pos INT(10) AFTER start_pos, CHANGE cds_coverage nextera_cds_coverage DECIMAL(5,2), CHANGE exon_coverage nextera_exon_coverage DECIMAL(5,2), CHANGE exon_mean_of_mean_coverage nextera_exon_mean_of_mean_coverage DECIMAL(6,2), CHANGE exon_mean_coverage_sd nextera_exon_mean_coverage_sd DECIMAL(6,2), CHANGE exon_mean_of_median_coverage nextera_exon_mean_of_median_coverage DECIMAL(6,2), CHANGE exon_mean_of_percent_20x nextera_exon_mean_of_percent_20x DECIMAL(6,2), CHANGE exon_mean_percent_sd nextera_exon_mean_percent_sd DECIMAL(6,2), CHANGE cds_mean_of_mean_coverage nextera_cds_mean_of_mean_coverage DECIMAL(6,2), CHANGE cds_mean_coverage_sd nextera_cds_mean_coverage_sd DECIMAL(6,2), CHANGE cds_mean_of_median_coverage nextera_cds_mean_of_median_coverage DECIMAL(6,2), CHANGE cds_mean_of_percent_20x nextera_cds_mean_of_percent_20x DECIMAL(5,2), CHANGE cds_mean_percent_sd nextera_cds_mean_percent_sd DECIMAL(5,2), ADD COLUMN cre_cds_bases INT(10), ADD COLUMN cre_exon_bases INT(10), ADD COLUMN cre_cds_coverage DECIMAL(5,2), ADD COLUMN cre_exon_coverage DECIMAL(5,2), ADD COLUMN cre_exon_mean_of_mean_coverage DECIMAL(6,2), ADD COLUMN cre_exon_mean_coverage_sd DECIMAL(6,2), ADD COLUMN cre_exon_mean_of_median_coverage DECIMAL(6,2), ADD COLUMN cre_exon_mean_of_percent_20x DECIMAL(6,2), ADD COLUMN cre_exon_mean_percent_sd DECIMAL(6,2), ADD COLUMN cre_cds_mean_of_mean_coverage DECIMAL(6,2), ADD COLUMN cre_cds_mean_coverage_sd DECIMAL(6,2), ADD COLUMN cre_cds_mean_of_median_coverage DECIMAL(6,2), ADD COLUMN cre_cds_mean_of_percent_20x DECIMAL(5,2), ADD COLUMN cre_cds_mean_percent_sd DECIMAL(5,2), MODIFY created_date DATETIME NOT NULL AFTER cre_cds_mean_percent_sd, MODIFY alternative_names VARCHAR(1000) AFTER vep_annotation, MODIFY refseq_cds_bases INT(10) AFTER alternative_names, MODIFY refseq_exon_bases INT(10) AFTER refseq_cds_bases',
                          'INSERT INTO ' . TABLE_COLS . ' VALUES ("VariantOnGenome/Frequency/GoNL_old", 255, 100, 0, 1, 0, "GoNL AF (old)", "", "Allele frequency from the GoNL project, not properly calculated based on the converage.", "Allele frequency from the GoNL project, not properly calculated based on the converage.", "FLOAT UNSIGNED", "GoNL allele frequency (old)||text|6", "", "", 0, 0, 1, 0, NOW(), NULL, NULL)',
                          // This will enable the columns for sure, so that new data will go in, but it won't register them as active yet. Let's do that manually, logging that action.
                          'ALTER TABLE ' . TABLE_VARIANTS . ' ADD COLUMN `VariantOnGenome/Frequency/ExAC` FLOAT UNSIGNED, ADD COLUMN `VariantOnGenome/Frequency/GoNL_old` FLOAT UNSIGNED',
@@ -666,6 +665,47 @@ if ($sCalcVersionFiles != $sCalcVersionDB) {
                  '3.0-17d' => array(), // Placeholder for LOVD+ queries, defined below.
                  '3.0-17e' => array(), // Placeholder for LOVD+ queries, defined below.
                  '3.0-17f' => array(), // Placeholder for LOVD+ queries, defined below.
+                 '3.0-17g' => array(
+                     'SET @bExists := (SELECT COUNT(*) FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = "' . TABLE_GENE_STATISTICS . '" AND COLUMN_NAME = "hgnc")',
+                     'SET @sSQL := IF(@bExists > 0, \'SELECT "INFO: Column already exists."\', "
+                      ALTER TABLE ' . TABLE_GENE_STATISTICS . ' 
+                            ADD COLUMN hgnc VARCHAR(25) AFTER id,
+                            ADD COLUMN chromosome VARCHAR(10) AFTER hgnc, 
+                            ADD COLUMN start_pos INT(10) AFTER chromosome, 
+                            ADD COLUMN end_pos INT(10) AFTER start_pos, 
+                            CHANGE cds_coverage nextera_cds_coverage DECIMAL(5,2), 
+                            CHANGE exon_coverage nextera_exon_coverage DECIMAL(5,2), 
+                            CHANGE exon_mean_of_mean_coverage nextera_exon_mean_of_mean_coverage DECIMAL(6,2), 
+                            CHANGE exon_mean_coverage_sd nextera_exon_mean_coverage_sd DECIMAL(6,2), 
+                            CHANGE exon_mean_of_median_coverage nextera_exon_mean_of_median_coverage DECIMAL(6,2), 
+                            CHANGE exon_mean_of_percent_20x nextera_exon_mean_of_percent_20x DECIMAL(6,2), 
+                            CHANGE exon_mean_percent_sd nextera_exon_mean_percent_sd DECIMAL(6,2), 
+                            CHANGE cds_mean_of_mean_coverage nextera_cds_mean_of_mean_coverage DECIMAL(6,2), 
+                            CHANGE cds_mean_coverage_sd nextera_cds_mean_coverage_sd DECIMAL(6,2), 
+                            CHANGE cds_mean_of_median_coverage nextera_cds_mean_of_median_coverage DECIMAL(6,2), 
+                            CHANGE cds_mean_of_percent_20x nextera_cds_mean_of_percent_20x DECIMAL(5,2), 
+                            CHANGE cds_mean_percent_sd nextera_cds_mean_percent_sd DECIMAL(5,2), 
+                            ADD COLUMN cre_cds_bases INT(10), 
+                            ADD COLUMN cre_exon_bases INT(10), 
+                            ADD COLUMN cre_cds_coverage DECIMAL(5,2), 
+                            ADD COLUMN cre_exon_coverage DECIMAL(5,2), 
+                            ADD COLUMN cre_exon_mean_of_mean_coverage DECIMAL(6,2), 
+                            ADD COLUMN cre_exon_mean_coverage_sd DECIMAL(6,2), 
+                            ADD COLUMN cre_exon_mean_of_median_coverage DECIMAL(6,2), 
+                            ADD COLUMN cre_exon_mean_of_percent_20x DECIMAL(6,2), 
+                            ADD COLUMN cre_exon_mean_percent_sd DECIMAL(6,2), 
+                            ADD COLUMN cre_cds_mean_of_mean_coverage DECIMAL(6,2), 
+                            ADD COLUMN cre_cds_mean_coverage_sd DECIMAL(6,2), 
+                            ADD COLUMN cre_cds_mean_of_median_coverage DECIMAL(6,2), 
+                            ADD COLUMN cre_cds_mean_of_percent_20x DECIMAL(5,2), 
+                            ADD COLUMN cre_cds_mean_percent_sd DECIMAL(5,2), 
+                            MODIFY created_date DATETIME NOT NULL AFTER cre_cds_mean_percent_sd, 
+                            MODIFY alternative_names VARCHAR(1000) AFTER vep_annotation, 
+                            MODIFY refseq_cds_bases INT(10) AFTER alternative_names, 
+                            MODIFY refseq_exon_bases INT(10) AFTER refseq_cds_bases")',
+                     'PREPARE Statement FROM @sSQL',
+                     'EXECUTE Statement',
+                 ),
                  '3.0-18' =>
                      array(
                          // These two will be ignored by LOVD+.
