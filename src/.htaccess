@@ -45,6 +45,7 @@ php_flag mysql.trace_mode Off
     RewriteRule ^setup(.*)$ setup.php
     RewriteRule ^status(.*)$ status.php
     RewriteRule ^submit(.*)$ submit.php
+    RewriteRule ^summary_annotations(.*)$ summary_annotations.php
     RewriteRule ^transcripts(.*)$ transcripts.php
     RewriteRule ^uninstall(.*)$ uninstall.php
     RewriteRule ^users(.*)$ users.php

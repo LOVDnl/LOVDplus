@@ -142,7 +142,7 @@ function lovd_checkORCIDChecksum ($sID)
     }
     $nRemainder = $nTotal % 11;
     $nResult = (12 - $nRemainder) % 11;
-    $sResult = ($nResult == 10 ? 'X' : (string) $nResult);
+    $sResult = ($nResult == 10? 'X' : (string) $nResult);
     return ($sResult == substr($sID, -1));
 }
 
@@ -450,8 +450,9 @@ function lovd_fetchDBID ($aData)
             // no entries found with these combinations and a DBID, so we are going to use the gene symbol
             // (or chromosome if there is no gene) and take the first number available to make a DBID.
             // Query for getting the first available number for the new DBID.
-            if (empty($aGenes)) {
+            if (LOVD_plus || empty($aGenes)) {
                 // No genes, simple query only on TABLE_VARIANTS.
+                // Also, LOVD_plus doesn't like it when chr DBIDs get changed on edits, so stick to chr DBIDs.
                 // 2013-02-28; 3.0-03; By querying the chromosome also we sped up this query from 0.43s to 0.09s when having 1M variants.
                 // NOTE: By adding an index on `VariantOnGenome/DBID` this query time can be reduced to 0.00s because of the LIKE on the DBID field.
                 $sSymbol = 'chr' . $aData['chromosome'];
@@ -657,7 +658,7 @@ function lovd_sendMail ($aTo, $sSubject, $sBody, $sHeaders, $bHalt = true, $bFwd
         $sSubject = 'FW: ' . $sSubject;
         // 2013-08-26; 3.0-08; Encode the subject as well. Prefixing with "Subject: " to make sure the first line including the SMTP header does not exceed the 76 chars.
         $sSubjectEncoded = substr(mb_encode_mimeheader('Subject: ' . $sSubject, 'UTF-8'), 9);
-        return lovd_sendMail(array($_SETT['admin']), $sSubjectEncoded, $sBody, $_SETT['email_headers'] . ($sAdditionalHeaders ? PHP_EOL . $sAdditionalHeaders : ''), $bHalt, false);
+        return lovd_sendMail(array($_SETT['admin']), $sSubjectEncoded, $sBody, $_SETT['email_headers'] . ($sAdditionalHeaders? PHP_EOL . $sAdditionalHeaders : ''), $bHalt, false);
     } elseif (!$bMail) {
         // $sSubject is used here as it can always be used to describe the email type. This function also logs the email error.
         lovd_emailError(LOG_EVENT, $sSubject, $sTo, $bHalt);

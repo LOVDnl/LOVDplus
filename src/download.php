@@ -108,7 +108,7 @@ if (($_PE[1] == 'all' && (empty($_PE[2]) || in_array($_PE[2], array('gene', 'min
         $sFileName = 'custom_columns';
         $sHeader = 'Custom column';
         lovd_requireAuth(LEVEL_MANAGER);
-    } elseif ($_PE[1] == 'columns' && in_array($_PE[2], array('Individual', 'Phenotype', 'Screening', 'VariantOnGenome', 'VariantOnTranscript'))) {
+    } elseif ($_PE[1] == 'columns' && in_array($_PE[2], array('Individual', 'Phenotype', 'Screening', 'VariantOnGenome', 'VariantOnTranscript', 'SummaryAnnotation'))) {
         // FIXME; Is there a better way checking if it's a valid category?
         // Category given.
         $sFileName = 'custom_columns_' . $_PE[2];
