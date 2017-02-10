@@ -39,6 +39,10 @@ if (!defined('ROOT_PATH')) {
 $sCalcVersionFiles = lovd_calculateVersion($_SETT['system']['version']);
 $sCalcVersionDB = lovd_calculateVersion($_STAT['version']);
 
+
+
+
+
 if ($sCalcVersionFiles != $sCalcVersionDB) {
     // Version of files are not equal to version of database backend.
 
@@ -55,6 +59,8 @@ if ($sCalcVersionFiles != $sCalcVersionDB) {
     define('PAGE_TITLE', 'Upgrading LOVD...');
     $_T->printHeader();
     $_T->printTitle();
+
+    require_once ROOT_PATH . 'inc-lib-columns.php';
 
     print('      Please wait while LOVD is upgrading the database backend from ' . $_STAT['version'] . ' to ' . $_SETT['system']['version'] . '.<BR><BR>' . "\n");
 
@@ -584,7 +590,6 @@ if ($sCalcVersionFiles != $sCalcVersionDB) {
                          'EXECUTE Statement',
                      ),
                  '3.0-12u' =>
-                 // TODO This might cause a merge conflict with the summary annotation record as I am trying to bundle this change with that one to re use this release version as we are running out of letters. Remove this line when merging.
                      array(
                          'CREATE TABLE IF NOT EXISTS ' . TABLE_CURATION_STATUS . ' (id TINYINT(2) UNSIGNED ZEROFILL NOT NULL, name VARCHAR(50) NOT NULL, PRIMARY KEY (id)) ENGINE=InnoDB, DEFAULT CHARACTER SET utf8', // We are inserting the curation status records below by using array merge to add them into this array.
                          'ALTER TABLE ' . TABLE_VARIANTS . ' ADD COLUMN curation_statusid TINYINT(2) UNSIGNED NULL AFTER statusid, ADD INDEX (curation_statusid), ADD CONSTRAINT ' . TABLE_VARIANTS . '_fk_curation_statusid FOREIGN KEY (curation_statusid) REFERENCES ' . TABLE_CURATION_STATUS . ' (id) ON DELETE SET NULL ON UPDATE CASCADE',
@@ -659,6 +664,8 @@ if ($sCalcVersionFiles != $sCalcVersionDB) {
                          'UPDATE ' . TABLE_VARIANTS_ON_TRANSCRIPTS . ' SET position_c_end_intron = 0 WHERE position_c_end IS NOT NULL AND position_c_end_intron IS NULL',
                      ),
                  '3.0-17d' => array(), // Placeholder for LOVD+ queries, defined below.
+                 '3.0-17e' => array(), // Placeholder for LOVD+ queries, defined below.
+                 '3.0-17f' => array(), // Placeholder for LOVD+ queries, defined below.
                  '3.0-18' =>
                      array(
                          // These two will be ignored by LOVD+.
@@ -670,7 +677,7 @@ if ($sCalcVersionFiles != $sCalcVersionDB) {
 
     if ($sCalcVersionDB < lovd_calculateVersion('3.0-alpha-01')) {
         // Simply reload all custom columns.
-        require ROOT_PATH . 'install/inc-sql-columns.php';
+        require_once ROOT_PATH . 'install/inc-sql-columns.php';
         $aUpdates['3.0-alpha-01'][] = 'DELETE FROM ' . TABLE_COLS . ' WHERE col_order < 255';
         $aUpdates['3.0-alpha-01'] = array_merge($aUpdates['3.0-alpha-01'], $aColSQL);
     }
@@ -790,6 +797,58 @@ if ($sCalcVersionFiles != $sCalcVersionDB) {
         );
     }
 
+    if (LOVD_plus && $sCalcVersionDB < lovd_calculateVersion('3.0-17e')) {
+        // Run LOVD+ specific queries.
+        $aUpdates['3.0-17e'] = array_merge(
+            $aUpdates['3.0-17e'],
+            array(
+                'CREATE TABLE IF NOT EXISTS ' . TABLE_SUMMARY_ANNOTATIONS . ' (
+                    id VARCHAR(50) NOT NULL,
+                    effectid TINYINT(1) UNSIGNED ZEROFILL,
+                    created_by SMALLINT(5) UNSIGNED ZEROFILL,
+                    created_date DATETIME NOT NULL,
+                    edited_by SMALLINT(5) UNSIGNED ZEROFILL,
+                    edited_date DATETIME,
+                    PRIMARY KEY (id),
+                    INDEX (created_by),
+                    INDEX (edited_by),
+                    CONSTRAINT ' . TABLE_SUMMARY_ANNOTATIONS . '_fk_created_by FOREIGN KEY (created_by) REFERENCES ' . TABLE_USERS . ' (id) ON DELETE SET NULL ON UPDATE CASCADE,
+                    CONSTRAINT ' . TABLE_SUMMARY_ANNOTATIONS . '_fk_edited_by FOREIGN KEY (edited_by) REFERENCES ' . TABLE_USERS . ' (id) ON DELETE SET NULL ON UPDATE CASCADE)
+                    ENGINE=InnoDB,
+                    DEFAULT CHARACTER SET utf8',
+                'CREATE TABLE IF NOT EXISTS ' . TABLE_SUMMARY_ANNOTATIONS_REV . ' (
+                    id VARCHAR(50) NOT NULL,
+                    effectid TINYINT(1) UNSIGNED ZEROFILL, 
+                    created_by SMALLINT(5) UNSIGNED ZEROFILL, 
+                    created_date DATETIME NOT NULL, 
+                    edited_by SMALLINT(5) UNSIGNED ZEROFILL, 
+                    edited_date DATETIME, 
+                    valid_from DATETIME NOT NULL, 
+                    valid_to DATETIME NOT NULL DEFAULT "9999-12-31", 
+                    deleted BOOLEAN NOT NULL, 
+                    deleted_by SMALLINT(5) UNSIGNED ZEROFILL, 
+                    reason TEXT, 
+                    PRIMARY KEY (id, valid_from), 
+                    INDEX (created_by), 
+                    INDEX (edited_by), 
+                    INDEX (deleted_by), 
+                    CONSTRAINT ' . TABLE_SUMMARY_ANNOTATIONS_REV . '_fk_created_by FOREIGN KEY (created_by) REFERENCES ' . TABLE_USERS . ' (id) ON DELETE SET NULL ON UPDATE CASCADE,
+                    CONSTRAINT ' . TABLE_SUMMARY_ANNOTATIONS_REV . '_fk_edited_by FOREIGN KEY (edited_by) REFERENCES ' . TABLE_USERS . ' (id) ON DELETE SET NULL ON UPDATE CASCADE,
+                    CONSTRAINT ' . TABLE_SUMMARY_ANNOTATIONS_REV . '_fk_deleted_by FOREIGN KEY (deleted_by) REFERENCES ' . TABLE_USERS . ' (id) ON DELETE SET NULL ON UPDATE CASCADE)
+                    ENGINE=InnoDB,
+                    DEFAULT CHARACTER SET utf8',
+            )
+        );
+    }
+
+    if (LOVD_plus && $sCalcVersionDB < lovd_calculateVersion('3.0-17f')) {
+        // Run LOVD+ specific queries.
+        $aNewCustomCols = array('SummaryAnnotation/Curation/Interpretation', 'SummaryAnnotation/Remarks');
+        $aUpdates['3.0-17f'] = array_merge(
+            $aUpdates['3.0-17f'],
+            lovd_getActivateCustomColumnQuery($aNewCustomCols)
+        );
+    }
 
 
 

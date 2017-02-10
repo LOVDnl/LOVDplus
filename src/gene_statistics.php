@@ -86,7 +86,7 @@ if (PATH_COUNT == 1 && !ACTION) {
             }
             // Create a table of any bad gene symbols and try to work out if there is a correct gene symbol available.
             if ($aBadGeneSymbols) {
-                $sBadGenesHTML .= '    <H3>' . count($aBadGeneSymbols) . ' gene' . (count($aBadGeneSymbols) <= 1 ? '' : 's') . ' not found!</H3>' . "\n" .
+                $sBadGenesHTML .= '    <H3>' . count($aBadGeneSymbols) . ' gene' . (count($aBadGeneSymbols) <= 1? '' : 's') . ' not found!</H3>' . "\n" .
                                   '    These genes were not found, please review them and correct them before proceeding.' . "\n" .
                                   '    <TABLE  border="0" cellpadding="0" cellspacing="1" class="data">' . "\n" .
                                   '      <TR>' . "\n" .
@@ -183,7 +183,7 @@ if (PATH_COUNT == 1 && !ACTION) {
     // Show an info box if the gene lists are limited by the search.
     if ($aCorrectGeneSymbols) {
         print('    <DIV id="searchInfo">' . "\n");
-        lovd_showInfoTable(count($aCorrectGeneSymbols) . ' gene' . (count($aCorrectGeneSymbols) <= 1 ? '' : 's') . ' from the search above ' . (count($aCorrectGeneSymbols) <= 1 ? 'has' : 'have') . ' been selected in the list below. <A href="javascript:lovd_AJAX_viewListSubmit(\'' . $sViewListID . '\', function(){lovd_AJAX_viewListCheckedFilter(\'' . $sViewListID . '\', true);});">Click here</A> to limit the list to only ' . (count($aCorrectGeneSymbols) <= 1 ? 'this' : 'those') . ' gene' . (count($aCorrectGeneSymbols) <= 1 ? '' : 's') . '.');
+        lovd_showInfoTable(count($aCorrectGeneSymbols) . ' gene' . (count($aCorrectGeneSymbols) <= 1? '' : 's') . ' from the search above ' . (count($aCorrectGeneSymbols) <= 1? 'has' : 'have') . ' been selected in the list below. <A href="javascript:lovd_AJAX_viewListSubmit(\'' . $sViewListID . '\', function(){lovd_AJAX_viewListCheckedFilter(\'' . $sViewListID . '\', true);});">Click here</A> to limit the list to only ' . (count($aCorrectGeneSymbols) <= 1? 'this' : 'those') . ' gene' . (count($aCorrectGeneSymbols) <= 1? '' : 's') . '.');
         print('    </DIV>' . "\n");
     }
     print('    <DIV id="searchChecked" style="display: none;">' . "\n");
