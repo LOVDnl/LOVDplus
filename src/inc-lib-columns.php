@@ -146,4 +146,71 @@ function lovd_getTableInfoByCategory ($sCategory)
     }
     return $aTables[$sCategory];
 }
+
+
+
+
+
+
+function lovd_getActivateCustomColumnQuery($aColumns = array(), $bActivate = false) {
+    // Create custom columns based on the column listed in inc-sql-columns.php file
+    
+    global $aColSQL;
+
+    // Make sure it's an array.
+    if (!empty($aColumns) && !is_array($aColumns)) {
+        $aColumns = array($aColumns);
+    }
+
+    // When no column is specified, we want to make sure $nColsLEft never reaches zero.
+    $nColsLeft = (empty($aColumns)? -1 : count($aColumns));
+
+    $aSql = array();
+    foreach ($aColSQL as $sInsertSQL) {
+        // Make sure we stop looping once we have processed all columns listed in $aColumns.
+        if ($nColsLeft === 0) {
+            break;
+        }
+
+        // Find the beginning of field values of an SQL INSERT query
+        // INSERT INTO table_name VALUES(...)
+        $nIndex = strpos($sInsertSQL, '(');
+        $aValues = array();
+        if ($nIndex !== false) {
+            // Get the string inside brackets VALUES(...)
+            $sInsertFields = rtrim(substr($sInsertSQL, $nIndex+1), ')');
+            
+            // Split the string into an array
+            $aValues = str_getcsv($sInsertFields);
+
+            // When no column is specified, process all columns
+            if (empty($aColumns) || in_array($aValues[0], $aColumns)) {
+                $nColsLeft--;
+
+                $aSql[] = $sInsertSQL;
+
+                // Only activate column of they a hgvs and standard column
+                if ($bActivate && ($aValues[3] == '1' || $aValues[4] == '1')) {
+                    $sColId = stripslashes(trim($aValues[0], ' "'));
+                    $sColType = stripslashes(trim($aValues[10], ' "'));
+
+                    list($sCategory) = explode('/', $sColId);
+                    $aTableInfo = lovd_getTableInfoByCategory($sCategory);
+
+                    $aSql = array_merge($aSql, array(
+                        'INSERT INTO ' . TABLE_ACTIVE_COLS . ' VALUES ("' . $sColId . '", "00000", NOW())',
+                        'ALTER TABLE ' . $aTableInfo['table_sql'] . ' ADD COLUMN `' . $sColId . '` ' . $sColType
+                    ));
+
+                    if (!empty($aTableInfo['table_sql_rev'])) {
+                        $aSql[] = 'ALTER TABLE ' . $aTableInfo['table_sql_rev'] . ' ADD COLUMN `' . $sColId . '` ' . $sColType;
+                    }
+                }
+            }
+        }
+    }
+
+    return $aSql;
+}
+
 ?>

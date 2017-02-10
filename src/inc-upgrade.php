@@ -39,6 +39,12 @@ if (!defined('ROOT_PATH')) {
 $sCalcVersionFiles = lovd_calculateVersion($_SETT['system']['version']);
 $sCalcVersionDB = lovd_calculateVersion($_STAT['version']);
 
+
+require_once ROOT_PATH . 'inc-lib-columns.php';
+require_once ROOT_PATH . 'install/inc-sql-columns.php';
+
+
+
 if ($sCalcVersionFiles != $sCalcVersionDB) {
     // Version of files are not equal to version of database backend.
 
@@ -667,17 +673,10 @@ if ($sCalcVersionFiles != $sCalcVersionDB) {
                      ),
              );
 
-    require ROOT_PATH . 'install/inc-sql-columns.php';
-    // '3.0-12u'
-    $aValues = array(
-        array('"SummaryAnnotation/Curation/Interpretation"',    255, 200, 0, 1, 0, '"Interpretation"',    '""', '"Interpretation of variant for reporting"', '"Interpretation of variant for reporting"', '"TEXT"', '"Interpretation||textarea|40|4"', '""', '""', 0, 0, 1, 0, 'NOW()', 'NULL', 'NULL'),
-        array('"SummaryAnnotation/Curation/Remarks"',           10, 200, 0, 0, 1, '"Variant remarks"',      '"Remarks regarding the variant described, e.g. germline mosaicism in mother, 345 kb deletion, muscle RNA analysed, not in 200 control chromosomes tested, on founder haplotype, etc."', '"Remarks regarding the variant described."', '"Remarks regarding the variant described, e.g. germline mosaicism in mother, 345 kb deletion, muscle RNA analysed, not in 200 control chromosomes tested, on founder haplotype, etc."', '"TEXT"', '"Remarks||textarea|50|3"', '""', '""', 1, 1, 1, 0, 'NOW()', 'NULL', 'NULL')
-    );
 
-    foreach ($aValues as $sValues) {
-        $aUpdates['3.0-12u'][] = 'INSERT INTO ' . TABLE_COLS . ' VALUES ('. implode(', ', $sValues)  .')';
-        $aUpdates['3.0-12u'] = array_merge($aUpdates['3.0-12u'], lovd_getActivateCustomColumnQuery($sValues));
-    }
+    // '3.0-12u'
+    $aNewCustomCols = array('SummaryAnnotation/Curation/Interpretation', 'SummaryAnnotation/Remarks');
+    $aUpdates['3.0-12u'] = array_merge($aUpdates['3.0-12u'], lovd_getActivateCustomColumnQuery($aNewCustomCols, true));
 
     if ($sCalcVersionDB < lovd_calculateVersion('3.0-alpha-01')) {
         // Simply reload all custom columns.

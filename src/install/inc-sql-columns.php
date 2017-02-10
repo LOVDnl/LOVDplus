@@ -35,26 +35,8 @@ if (!defined('ROOT_PATH')) {
     lovd_requireAUTH(LEVEL_MANAGER);
 }
 
-require ROOT_PATH . 'inc-lib-columns.php';
+require_once ROOT_PATH . 'inc-lib-columns.php';
 
-function lovd_getActivateCustomColumnQuery($aValues) {
-    $sColId = stripslashes(trim($aValues[0], ' "'));
-    $sColType = stripslashes(trim($aValues[10], ' "'));
-
-    list($sCategory) = explode('/', $sColId);
-    $aTableInfo = lovd_getTableInfoByCategory($sCategory);
-
-    $aSql = array(
-        'INSERT INTO ' . TABLE_ACTIVE_COLS . ' VALUES ("' . $sColId . '", "00000", NOW())',
-        'ALTER TABLE ' . $aTableInfo['table_sql'] . ' ADD COLUMN `' . $sColId . '` ' . $sColType
-    );
-
-    if (!empty($aTableInfo['table_sql_rev'])) {
-        $aSql[] = 'ALTER TABLE ' . $aTableInfo['table_sql_rev'] . ' ADD COLUMN `' . $sColId . '` ' . $sColType;
-    }
-    
-    return $aSql;
-}
 
 $aColSQL =
          array(

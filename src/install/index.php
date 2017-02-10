@@ -500,39 +500,16 @@ if ($_SERVER['SERVER_ADMIN'] == 'i.f.a.c.fokkema@lumc.nl' && $_SERVER['HTTP_HOST
 
 
     // (8) Creating standard LOVD custom columns.
-    require 'inc-sql-columns.php';
-    $nCols = count($aColSQL);
-    $aInstallSQL['Creating LOVD custom columns...'] = $aColSQL;
-    $nInstallSQL += $nCols;
-
-
+    // AND
     // (9) Activating standard custom columns.
-    foreach ($aColSQL as $sCol) {
-        $sCol = str_replace('INSERT INTO ' . TABLE_COLS . ' VALUES ', '', $sCol);
+    require_once 'inc-sql-columns.php';
+    $aInstallSQL['Activating LOVD standard custom columns...'] = (empty($aInstallSQL['Activating LOVD standard custom columns...'])? array() : $aInstallSQL['Activating LOVD standard custom columns...']);
+    $aInstallSQL['Activating LOVD standard custom columns...'] = array_merge($aInstallSQL['Activating LOVD standard custom columns...'], lovd_getActivateCustomColumnQuery(false, true));
 
-        // FIXME; add some comments here, I can't follow this code.
-        preg_match_all("/(\"(?:.*[^\\\\])?\"|\d+|NULL|NOW\(\)),\s+/U", trim($sCol, '()') . ', ', $aCol);
-        // FIXME; misschien een list() hier?
-        $aCol = array_map('preg_replace', array_fill(0, count($aCol[1]), '/^"(.*)"$/'), array_fill(0, count($aCol[1]), '$1'), $aCol[1]);
-        if ($aCol[3] == '1' || $aCol[4] == '1') {
-            $sCategory = preg_replace('/\/.*$/', '', $aCol[0]);
-            $aTableInfo = lovd_getTableInfoByCategory($sCategory);
-            if (!empty($aTableInfo['table_sql'])) {
-                $sTable = $aTableInfo['table_sql'];
-            } else {
-                $sTable = constant('TABLE_' . strtoupper($sCategory) . 'S');
-            }
-
-            $aInstallSQL['Activating LOVD standard custom columns...'] = (empty($aInstallSQL['Activating LOVD standard custom columns...'])? array() : $aInstallSQL['Activating LOVD standard custom columns...']);
-            $aInstallSQL['Activating LOVD standard custom columns...'] = array_merge($aInstallSQL['Activating LOVD standard custom columns...'], lovd_getActivateCustomColumnQuery($aCol));
-
-            if (LOVD_plus && $aCol[0] == 'VariantOnGenome/DBID') {
-                // Make sure the DBID column is indexed.
-                $aInstallSQL['Activating LOVD standard custom columns...'][] = 'ALTER TABLE ' . $sTable . ' ADD INDEX(`' . $aCol[0] . '`)';
-            }
-        }
+    if (LOVD_plus) {
+        $aTableInfo = lovd_getTableInfoByCategory('VariantOnGenome');
+        $aInstallSQL['Activating LOVD standard custom columns...'][] = 'ALTER TABLE ' . $aTableInfo['table_sql'] . ' ADD INDEX(`VariantOnGenome/DBID`)';
     }
-
 
     // (10) Creating the "Healthy / Control" disease. Maybe later enable some more default columns? (IQ, ...)
     $aInstallSQL['Registering phenotype columns for healthy controls...'] =
