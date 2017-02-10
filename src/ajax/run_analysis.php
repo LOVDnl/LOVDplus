@@ -74,8 +74,8 @@ if ($_GET['runid']) {
 
 } else {
     // Check if analysis exists.
-    $zAnalysis = $_DB->query('SELECT id, name, filters FROM ' . TABLE_ANALYSES . ' WHERE id = ?', array($_GET['analysisid']))->fetchAssoc();
-    if (!$zAnalysis || !$zAnalysis['filters']) {
+    $zAnalysis = $_DB->query('SELECT a.id, a.name, GROUP_CONCAT(a2af.filterid ORDER BY a2af.filterid SEPARATOR ";") AS _filters FROM ' . TABLE_ANALYSES . ' AS a INNER JOIN ' . TABLE_AN2AF . ' as a2af ON (a.id = a2af.analysisid) WHERE id = ? GROUP BY a.id', array($_GET['analysisid']))->fetchAssoc();
+    if (!$zAnalysis || !$zAnalysis['_filters']) {
         die('Analysis not recognized or no filters defined. If the analysis is defined properly, this is an error in the software.');
     }
 
@@ -117,7 +117,7 @@ if (!$_GET['runid']) {
     $nRunID = (int) $_DB->lastInsertId(); // (int) is to prevent zerofill from messing things up.
 
     // Insert filters...
-    $aFilters = preg_split('/\s+/', $zAnalysis['filters']);
+    $aFilters = explode(';', $zAnalysis['_filters']);
     foreach ($aFilters as $i => $sFilter) {
         $q = $_DB->query('INSERT INTO ' . TABLE_ANALYSES_RUN_FILTERS . ' (runid, filterid, filter_order) VALUES (?, ?, ?)', array($nRunID, $sFilter, ($i+1)));
         if (!$q) {

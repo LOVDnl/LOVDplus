@@ -287,15 +287,19 @@ if (PATH_COUNT >= 2 && ctype_digit($_PE[1]) && !ACTION && (PATH_COUNT == 2 || PA
 
         // If we're ready to analyze, or if we are analyzing already, show analysis options.
         // Both already run analyses and analyses not yet run will be shown. Analyses already run are fetched differently, though.
-        $zAnalysesRun    = $_DB->query('SELECT a.id, a.name, a.version, a.description, a.filters, IFNULL(MAX(arf.run_time)>-1, 0) AS analysis_run, ar.id AS runid,   ar.modified, GROUP_CONCAT(arf.filterid, ";", IFNULL(arf.filtered_out, "-"), ";", IFNULL(arf.run_time, "-") ORDER BY arf.filter_order SEPARATOR ";;") AS __run_filters
-                                        FROM ' . TABLE_ANALYSES . ' AS a INNER JOIN ' . TABLE_ANALYSES_RUN . ' AS ar ON (a.id = ar.analysisid) INNER JOIN ' . TABLE_ANALYSES_RUN_FILTERS . ' AS arf ON (ar.id = arf.runid)
+        $zAnalysesRun    = $_DB->query('SELECT a.id, a.name, a.version, a.description, GROUP_CONCAT(DISTINCT a2af.filterid ORDER BY a2af.filter_order ASC SEPARATOR ";") AS _filters, IFNULL(MAX(arf.run_time)>-1, 0) AS analysis_run, ar.id AS runid,   ar.modified, GROUP_CONCAT(DISTINCT arf.filterid, ";", IFNULL(arf.filtered_out, "-"), ";", IFNULL(arf.run_time, "-") ORDER BY arf.filter_order SEPARATOR ";;") AS __run_filters
+                                        FROM ' . TABLE_ANALYSES . ' AS a INNER JOIN ' . TABLE_ANALYSES_RUN . ' AS ar ON (a.id = ar.analysisid)
+                                        INNER JOIN ' . TABLE_ANALYSES_RUN_FILTERS . ' AS arf ON (ar.id = arf.runid)
+                                        INNER JOIN ' . TABLE_AN2AF . ' as a2af ON (ar.analysisid = a2af.analysisid)
                                         WHERE ar.screeningid = ? GROUP BY ar.id ORDER BY ar.modified, ar.id', array($nScreeningToAnalyze))->fetchAllAssoc();
-        $zAnalysesNotRun = $_DB->query('SELECT a.id, a.name, a.version, a.description, a.filters, 0                               AS analysis_run, 0     AS runid, 0 AS modified
+        $zAnalysesNotRun = $_DB->query('SELECT a.id, a.name, a.version, a.description, GROUP_CONCAT(a2af.filterid ORDER BY a2af.filter_order ASC SEPARATOR ";") AS _filters, 0                               AS analysis_run, 0     AS runid, 0 AS modified
                                         FROM ' . TABLE_ANALYSES . ' AS a
+                                        INNER JOIN ' . TABLE_AN2AF . ' as a2af ON (a.id = a2af.analysisid)
                                         WHERE a.id NOT IN (SELECT ar.analysisid
                                                            FROM ' . TABLE_ANALYSES_RUN . ' AS ar
-                                                           WHERE ar.screeningid = ? AND ar.modified = 0) ORDER BY a.sortid, a.id', array($nScreeningToAnalyze))->fetchAllAssoc();
+                                                           WHERE ar.screeningid = ? AND ar.modified = 0) GROUP BY a.id ORDER BY a.sortid, a.id', array($nScreeningToAnalyze))->fetchAllAssoc();
         $zAnalyses = array_merge($zAnalysesRun, array(''), $zAnalysesNotRun);
+        $aFilterInfo = $_DB->query('SELECT id, name, description FROM ' . TABLE_ANALYSIS_FILTERS)->fetchAllGroupAssoc(); // TODO AM - Ivo I found this quite hard to work out how to integrate into the above queries so I ended up creating a separate query. Let me know if you definitely want this query integrated into the above queries.
         // Fetch all (numeric) variant IDs of all variants that have a curation status. They will be shown by default, when no analysis has been selected yet.
         $aScreeningVariantIDs = $_DB->query('SELECT CAST(s2v.variantid AS UNSIGNED) FROM ' . TABLE_SCR2VAR . ' s2v INNER JOIN ' . TABLE_VARIANTS . ' AS vog ON (s2v.variantid = vog.id) WHERE s2v.screeningid = ? AND vog.curation_statusid IS NOT NULL', array($nScreeningToAnalyze))->fetchAllColumn();
         require ROOT_PATH . 'inc-lib-analyses.php';
@@ -314,7 +318,7 @@ if (PATH_COUNT >= 2 && ctype_digit($_PE[1]) && !ACTION && (PATH_COUNT == 2 || PA
                 }
                 continue;
             }
-            $aFilters = preg_split('/\s+/', $zAnalysis['filters']);
+            $aFilters = explode(';', $zAnalysis['_filters']); // $_DATA->autoExplode was considered to be used here but there are existing examples of this implementation (run_analysis.php).
             $aFiltersRun = array();
             $aFiltersRunRaw = array();
             if (!empty($zAnalysis['__run_filters'])) {
@@ -379,9 +383,16 @@ if (PATH_COUNT >= 2 && ctype_digit($_PE[1]) && !ACTION && (PATH_COUNT == 2 || PA
                     $sGenePanelsInfo = getSelectedGenePanelsByRunID($zAnalysis['runid']);
                 }
 
+                // Format the display of the filters.
+                if (array_key_exists($sFilter, $aFilterInfo) && !empty($aFilterInfo[$sFilter]['name'])) {
+                    $sFormattedFilter = $aFilterInfo[$sFilter]['name'];
+                } else {
+                    $sFormattedFilter = $sFilter;
+                }
+
                 print('
                 <TR id="' . ($zAnalysis['runid']? 'run_' . $zAnalysis['runid'] : 'analysis_' . $zAnalysis['id']) . '_filter_' . preg_replace('/[^a-z0-9_]/i', '_', $sFilter) . '"' . (!$sFilterClassName? '' : ' class="' . $sFilterClassName . '"') . ' valign="top">
-                  <TD>' . $sFilter . $sGenePanelsInfo . '</TD>
+                  <TD>' . $sFormattedFilter . $sGenePanelsInfo . '</TD>
                   <TD>' . ($nTime == '-'? '-' : lovd_convertSecondsToTime($nTime, 1)) . '</TD>
                   <TD>' . ($nTime == '-'? '-' : $nVariantsLeft) . '</TD>
                 </TR>');
