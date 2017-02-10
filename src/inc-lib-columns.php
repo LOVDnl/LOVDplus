@@ -62,6 +62,84 @@ function lovd_describeFormType ($zData) {
 
 
 
+
+function lovd_getActivateCustomColumnQuery ($aColumns = array(), $bActivate = false)
+{
+    // Create custom columns based on the column listed in inc-sql-columns.php file.
+
+    global $aColSQL;
+
+    // Make sure it's an array.
+    if (!empty($aColumns) && !is_array($aColumns)) {
+        $aColumns = array($aColumns);
+    }
+
+    // When no column is specified, we want to make sure $nColsLEft never reaches zero.
+    $nColsLeft = (empty($aColumns)? -1 : count($aColumns));
+
+    $aSql = array();
+    foreach ($aColSQL as $sInsertSQL) {
+        // Make sure we stop looping once we have processed all columns listed in $aColumns.
+        if ($nColsLeft === 0) {
+            break;
+        }
+
+        // Find the beginning of field values of an SQL INSERT query
+        // INSERT INTO table_name VALUES(...)
+        $nIndex = strpos($sInsertSQL, '(');
+        $aValues = array();
+        if ($nIndex !== false) {
+            // Get the string inside brackets VALUES(...)
+            $sInsertFields = rtrim(substr($sInsertSQL, $nIndex+1), ')');
+
+            // Split the string into an array
+            $aValues = str_getcsv($sInsertFields);
+
+            // When no column is specified, process all columns
+            if (empty($aColumns) || in_array($aValues[0], $aColumns)) {
+                $nColsLeft--;
+
+                $aSql[] = str_replace("INSERT INTO", "INSERT IGNORE INTO", $sInsertSQL);
+
+                // Only activate column of they a hgvs and standard column
+                if ($bActivate && ($aValues[3] == '1' || $aValues[4] == '1')) {
+                    $sColId = stripslashes(trim($aValues[0], ' "'));
+                    $sColType = stripslashes(trim($aValues[10], ' "'));
+
+                    list($sCategory) = explode('/', $sColId);
+                    $aTableInfo = lovd_getTableInfoByCategory($sCategory);
+
+                    $sAlterTable = 'ALTER TABLE ' . $aTableInfo['table_sql'] . ' ADD COLUMN `' . $sColId . '` ' . $sColType;
+                    $aSql = array_merge($aSql, array(
+                        'INSERT IGNORE INTO ' . TABLE_ACTIVE_COLS . ' VALUES ("' . $sColId . '", "00000", NOW())',
+                        'SET @bExists := (SELECT COUNT(*) FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = "' . $aTableInfo['table_sql'] . '" AND COLUMN_NAME = "'. $sColId .'")',
+                        'SET @sSQL := IF(@bExists > 0, \'SELECT "INFO: Column already exists."\', "' . $sAlterTable .'")',
+                        'PREPARE Statement FROM @sSQL',
+                        'EXECUTE Statement',
+
+                    ));
+
+                    if (!empty($aTableInfo['table_sql_rev'])) {
+                        $sAlterRevTable = 'ALTER TABLE ' . $aTableInfo['table_sql_rev'] . ' ADD COLUMN `' . $sColId . '` ' . $sColType;
+                        $aSql = array_merge($aSql, array(
+                            'SET @bExists := (SELECT COUNT(*) FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = "' . $aTableInfo['table_sql_rev'] . '" AND COLUMN_NAME = "'. $sColId .'")',
+                            'SET @sSQL := IF(@bExists > 0, \'SELECT "INFO: Column already exists."\', "' . $sAlterRevTable .'")',
+                            'PREPARE Statement FROM @sSQL',
+                            'EXECUTE Statement',
+                        ));
+                    }
+                }
+            }
+        }
+    }
+
+    return $aSql;
+}
+
+
+
+
+
 function lovd_getCategoryCustomColFromName ($sName)
 {
     // Returns category (object type) for custom column fieldname. Fieldname
@@ -146,82 +224,4 @@ function lovd_getTableInfoByCategory ($sCategory)
     }
     return $aTables[$sCategory];
 }
-
-
-
-
-
-
-function lovd_getActivateCustomColumnQuery($aColumns = array(), $bActivate = false) {
-    // Create custom columns based on the column listed in inc-sql-columns.php file
-    
-    global $aColSQL;
-
-    // Make sure it's an array.
-    if (!empty($aColumns) && !is_array($aColumns)) {
-        $aColumns = array($aColumns);
-    }
-
-    // When no column is specified, we want to make sure $nColsLEft never reaches zero.
-    $nColsLeft = (empty($aColumns)? -1 : count($aColumns));
-
-    $aSql = array();
-    foreach ($aColSQL as $sInsertSQL) {
-        // Make sure we stop looping once we have processed all columns listed in $aColumns.
-        if ($nColsLeft === 0) {
-            break;
-        }
-
-        // Find the beginning of field values of an SQL INSERT query
-        // INSERT INTO table_name VALUES(...)
-        $nIndex = strpos($sInsertSQL, '(');
-        $aValues = array();
-        if ($nIndex !== false) {
-            // Get the string inside brackets VALUES(...)
-            $sInsertFields = rtrim(substr($sInsertSQL, $nIndex+1), ')');
-            
-            // Split the string into an array
-            $aValues = str_getcsv($sInsertFields);
-
-            // When no column is specified, process all columns
-            if (empty($aColumns) || in_array($aValues[0], $aColumns)) {
-                $nColsLeft--;
-
-                $aSql[] = str_replace("INSERT INTO", "INSERT IGNORE INTO", $sInsertSQL);
-
-                // Only activate column of they a hgvs and standard column
-                if ($bActivate && ($aValues[3] == '1' || $aValues[4] == '1')) {
-                    $sColId = stripslashes(trim($aValues[0], ' "'));
-                    $sColType = stripslashes(trim($aValues[10], ' "'));
-
-                    list($sCategory) = explode('/', $sColId);
-                    $aTableInfo = lovd_getTableInfoByCategory($sCategory);
-
-                    $sAlterTable = 'ALTER TABLE ' . $aTableInfo['table_sql'] . ' ADD COLUMN `' . $sColId . '` ' . $sColType;
-                    $aSql = array_merge($aSql, array(
-                        'INSERT IGNORE INTO ' . TABLE_ACTIVE_COLS . ' VALUES ("' . $sColId . '", "00000", NOW())',
-                        'SET @bExists := (SELECT COUNT(*) FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = "' . $aTableInfo['table_sql'] . '" AND COLUMN_NAME = "'. $sColId .'")',
-                        'SET @sSQL := IF(@bExists > 0, \'SELECT "INFO: Column already exists."\', "' . $sAlterTable .'")',
-                        'PREPARE Statement FROM @sSQL',
-                        'EXECUTE Statement',
-
-                    ));
-
-                    if (!empty($aTableInfo['table_sql_rev'])) {
-                        $sAlterRevTable = 'ALTER TABLE ' . $aTableInfo['table_sql_rev'] . ' ADD COLUMN `' . $sColId . '` ' . $sColType;
-                        $aSql = array_merge($aSql, array(
-                            'SET @bExists := (SELECT COUNT(*) FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = "' . $aTableInfo['table_sql_rev'] . '" AND COLUMN_NAME = "'. $sColId .'")',
-                            'SET @sSQL := IF(@bExists > 0, \'SELECT "INFO: Column already exists."\', "' . $sAlterRevTable .'")',
-                            'PREPARE Statement FROM @sSQL',
-                            'EXECUTE Statement',
-                        ));
-                    }
-                }
-            }
-        }
-    }
-
-    return $aSql;
-}
-
 ?>
