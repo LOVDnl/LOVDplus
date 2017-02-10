@@ -74,7 +74,7 @@ if ($_GET['runid']) {
 
 } else {
     // Check if analysis exists.
-    $zAnalysis = $_DB->query('SELECT a.id, a.name, GROUP_CONCAT(a2af.filterid ORDER BY a2af.filterid SEPARATOR ";") AS _filters FROM ' . TABLE_ANALYSES . ' AS a INNER JOIN ' . TABLE_AN2AF . ' as a2af ON (a.id = a2af.analysisid) WHERE id = ? GROUP BY a.id', array($_GET['analysisid']))->fetchAssoc();
+    $zAnalysis = $_DB->query('SELECT a.id, a.name, GROUP_CONCAT(a2af.filterid ORDER BY a2af.filterid SEPARATOR ";") AS _filters FROM ' . TABLE_ANALYSES . ' AS a INNER JOIN ' . TABLE_AN2AF . ' AS a2af ON (a.id = a2af.analysisid) WHERE id = ? GROUP BY a.id', array($_GET['analysisid']))->fetchAssoc();
     if (!$zAnalysis || !$zAnalysis['_filters']) {
         die('Analysis not recognized or no filters defined. If the analysis is defined properly, this is an error in the software.');
     }

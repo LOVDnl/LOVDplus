@@ -290,11 +290,11 @@ if (PATH_COUNT >= 2 && ctype_digit($_PE[1]) && !ACTION && (PATH_COUNT == 2 || PA
         $zAnalysesRun    = $_DB->query('SELECT a.id, a.name, a.version, a.description, GROUP_CONCAT(DISTINCT a2af.filterid ORDER BY a2af.filter_order ASC SEPARATOR ";") AS _filters, IFNULL(MAX(arf.run_time)>-1, 0) AS analysis_run, ar.id AS runid,   ar.modified, GROUP_CONCAT(DISTINCT arf.filterid, ";", IFNULL(arf.filtered_out, "-"), ";", IFNULL(arf.run_time, "-") ORDER BY arf.filter_order SEPARATOR ";;") AS __run_filters
                                         FROM ' . TABLE_ANALYSES . ' AS a INNER JOIN ' . TABLE_ANALYSES_RUN . ' AS ar ON (a.id = ar.analysisid)
                                         INNER JOIN ' . TABLE_ANALYSES_RUN_FILTERS . ' AS arf ON (ar.id = arf.runid)
-                                        INNER JOIN ' . TABLE_AN2AF . ' as a2af ON (ar.analysisid = a2af.analysisid)
+                                        INNER JOIN ' . TABLE_AN2AF . ' AS a2af ON (ar.analysisid = a2af.analysisid)
                                         WHERE ar.screeningid = ? GROUP BY ar.id ORDER BY ar.modified, ar.id', array($nScreeningToAnalyze))->fetchAllAssoc();
         $zAnalysesNotRun = $_DB->query('SELECT a.id, a.name, a.version, a.description, GROUP_CONCAT(a2af.filterid ORDER BY a2af.filter_order ASC SEPARATOR ";") AS _filters, 0                               AS analysis_run, 0     AS runid, 0 AS modified
                                         FROM ' . TABLE_ANALYSES . ' AS a
-                                        INNER JOIN ' . TABLE_AN2AF . ' as a2af ON (a.id = a2af.analysisid)
+                                        INNER JOIN ' . TABLE_AN2AF . ' AS a2af ON (a.id = a2af.analysisid)
                                         WHERE a.id NOT IN (SELECT ar.analysisid
                                                            FROM ' . TABLE_ANALYSES_RUN . ' AS ar
                                                            WHERE ar.screeningid = ? AND ar.modified = 0) GROUP BY a.id ORDER BY a.sortid, a.id', array($nScreeningToAnalyze))->fetchAllAssoc();
@@ -385,7 +385,8 @@ if (PATH_COUNT >= 2 && ctype_digit($_PE[1]) && !ACTION && (PATH_COUNT == 2 || PA
 
                 // Format the display of the filters.
                 if (array_key_exists($sFilter, $aFilterInfo) && !empty($aFilterInfo[$sFilter]['name'])) {
-                    $sFormattedFilter = $aFilterInfo[$sFilter]['name'];
+                    $sToolTip = '<TABLE border="0" cellpadding="0" cellspacing="3" class="filterinfo"><TR><TH>Filter name: </TH><TD>' . htmlspecialchars($aFilterInfo[$sFilter]['name']) . '</TD></TR><TR><TH>Description: </TH><TD>' . $aFilterInfo[$sFilter]['description'] . '</TD></TR><TR><TH>Key: </TH><TD>' . $sFilter . '</TD></TR></TABLE>';
+                    $sFormattedFilter = '<SPAN class="filtername" onmouseover="lovd_showToolTip(\'' . htmlspecialchars($sToolTip) . '\', this, [30, 6]);">' . htmlspecialchars($aFilterInfo[$sFilter]['name']) . '</SPAN>';
                 } else {
                     $sFormattedFilter = $sFilter;
                 }
