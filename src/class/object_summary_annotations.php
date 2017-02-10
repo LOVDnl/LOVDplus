@@ -4,7 +4,7 @@
  * LEIDEN OPEN VARIATION DATABASE (LOVD)
  *
  * Created     : 2016-04-12
- * Modified    : 2017-02-09
+ * Modified    : 2017-02-10
  * For LOVD    : 3.0-18
  *
  * Copyright   : 2004-2017 Leiden University Medical Center; http://www.LUMC.nl/
@@ -122,10 +122,10 @@ class LOVD_SummaryAnnotation extends LOVD_Custom {
         $this->aFormData = array_merge(
             array(
                 array('POST', '', '', '', '50%', '14', '50%'),
+                array('Affects function', '', 'select', 'effectid', 1, $aEffectIDs, true, false, false),
             ),
             $this->buildForm(),
             array(
-                array('Affects function', '', 'select', 'effectid', 1, $aEffectIDs, true, false, false),
                 'skip',
                 array('Enter your password for authorization', '', 'password', 'password', 20)
             )

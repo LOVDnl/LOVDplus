@@ -445,13 +445,14 @@ function lovd_fetchDBID ($aData)
                 }
             }
         }
-        if (!LOVD_plus && ((substr($sDBID, 0, 3) == 'chr' && !empty($aGenes)) || $sDBID == 'chr' . $aData['chromosome'] . '_999999')) {
+        if ((substr($sDBID, 0, 3) == 'chr' && !empty($aGenes)) || $sDBID == 'chr' . $aData['chromosome'] . '_999999') {
             // Either this variant has a DBID with chr, but also a VOT that we want to change to, or
             // no entries found with these combinations and a DBID, so we are going to use the gene symbol
             // (or chromosome if there is no gene) and take the first number available to make a DBID.
             // Query for getting the first available number for the new DBID.
-            if (empty($aGenes)) {
+            if (LOVD_plus || empty($aGenes)) {
                 // No genes, simple query only on TABLE_VARIANTS.
+                // Also, LOVD_plus doesn't like it when chr DBIDs get changed on edits, so stick to chr DBIDs.
                 // 2013-02-28; 3.0-03; By querying the chromosome also we sped up this query from 0.43s to 0.09s when having 1M variants.
                 // NOTE: By adding an index on `VariantOnGenome/DBID` this query time can be reduced to 0.00s because of the LIKE on the DBID field.
                 $sSymbol = 'chr' . $aData['chromosome'];
@@ -1085,24 +1086,5 @@ function lovd_wrapText ($s, $l = 70, $sCut = ' ')
     }
 
     return $s;
-}
-
-
-
-
-
-function lovd_authorizeByPassword() {
-    global $_AUTH, $_ERROR, $_POST;
-
-    $sEmptyErrorMsg = 'Please fill in the \'Enter your password for authorization\' field.';
-    $sInvalidPasswordErrorMsg = 'Please enter your correct password for authorization.';
-    if (empty($_POST['password']) && (empty($_ERROR) || !in_array($sEmptyErrorMsg, $_ERROR['messages']))) {
-        lovd_errorAdd('password', $sEmptyErrorMsg);
-    }
-
-    // User had to enter his/her password for authorization.
-    if (!empty($_POST['password']) && !lovd_verifyPassword($_POST['password'], $_AUTH['password'])) {
-        lovd_errorAdd('password', $sInvalidPasswordErrorMsg);
-    }
 }
 ?>

@@ -4,7 +4,7 @@
  * LEIDEN OPEN VARIATION DATABASE (LOVD)
  *
  * Created     : 2016-05-04
- * Modified    : 2017-02-09
+ * Modified    : 2017-02-10
  * For LOVD    : 3.0-18
  *
  * Copyright   : 2004-2017 Leiden University Medical Center; http://www.LUMC.nl/
@@ -92,6 +92,10 @@ if (PATH_COUNT == 2 && ACTION == 'create') {
 
             $_T->printFooter();
             exit;
+
+        } else {
+            // Because we're sending the data back to the form, I need to unset the password field!
+            unset($_POST['password']);
         }
 
     } else {
