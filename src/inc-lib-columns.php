@@ -187,7 +187,7 @@ function lovd_getActivateCustomColumnQuery($aColumns = array(), $bActivate = fal
             if (empty($aColumns) || in_array($aValues[0], $aColumns)) {
                 $nColsLeft--;
 
-                $aSql[] = $sInsertSQL;
+                $aSql[] = str_replace("INSERT INTO", "INSERT IGNORE INTO", $sInsertSQL);
 
                 // Only activate column of they a hgvs and standard column
                 if ($bActivate && ($aValues[3] == '1' || $aValues[4] == '1')) {
@@ -197,13 +197,24 @@ function lovd_getActivateCustomColumnQuery($aColumns = array(), $bActivate = fal
                     list($sCategory) = explode('/', $sColId);
                     $aTableInfo = lovd_getTableInfoByCategory($sCategory);
 
+                    $sAlterTable = 'ALTER TABLE ' . $aTableInfo['table_sql'] . ' ADD COLUMN `' . $sColId . '` ' . $sColType;
                     $aSql = array_merge($aSql, array(
-                        'INSERT INTO ' . TABLE_ACTIVE_COLS . ' VALUES ("' . $sColId . '", "00000", NOW())',
-                        'ALTER TABLE ' . $aTableInfo['table_sql'] . ' ADD COLUMN `' . $sColId . '` ' . $sColType
+                        'INSERT IGNORE INTO ' . TABLE_ACTIVE_COLS . ' VALUES ("' . $sColId . '", "00000", NOW())',
+                        'SET @bExists := (SELECT COUNT(*) FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = "' . $aTableInfo['table_sql'] . '" AND COLUMN_NAME = "'. $sColId .'")',
+                        'SET @sSQL := IF(@bExists > 0, \'SELECT "INFO: Column already exists."\', "' . $sAlterTable .'")',
+                        'PREPARE Statement FROM @sSQL',
+                        'EXECUTE Statement',
+
                     ));
 
                     if (!empty($aTableInfo['table_sql_rev'])) {
-                        $aSql[] = 'ALTER TABLE ' . $aTableInfo['table_sql_rev'] . ' ADD COLUMN `' . $sColId . '` ' . $sColType;
+                        $sAlterRevTable = 'ALTER TABLE ' . $aTableInfo['table_sql_rev'] . ' ADD COLUMN `' . $sColId . '` ' . $sColType;
+                        $aSql = array_merge($aSql, array(
+                            'SET @bExists := (SELECT COUNT(*) FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = "' . $aTableInfo['table_sql_rev'] . '" AND COLUMN_NAME = "'. $sColId .'")',
+                            'SET @sSQL := IF(@bExists > 0, \'SELECT "INFO: Column already exists."\', "' . $sAlterRevTable .'")',
+                            'PREPARE Statement FROM @sSQL',
+                            'EXECUTE Statement',
+                        ));
                     }
                 }
             }
