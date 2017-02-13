@@ -172,19 +172,24 @@ class LOVD_MghaSeqDataConverter extends LOVD_DefaultDataConverter {
 
             // Re-use from MGHA
             'FILTER' => 'VariantOnGenome/Sequencing/Filter',
-            'AC' => 'VariantOnGenome/Sequencing/Allele/Count',
-            'AF' => 'VariantOnGenome/Sequencing/Allele/Frequency',
-            'AN' => 'VariantOnGenome/Sequencing/Allele/Total',
-            'BaseQRankSum' => 'VariantOnGenome/Sequencing/Base_Qualities_Score',
+            'vcf_AC' => 'VariantOnGenome/Sequencing/Allele/Count',
+            'vcf_AF' => 'VariantOnGenome/Sequencing/Allele/Frequency',
+            'vcf_AN' => 'VariantOnGenome/Sequencing/Allele/Total',
+            'vcf_BaseQRankSum' => 'VariantOnGenome/Sequencing/Base_Qualities_Score',
+
+            'vcf_ClippingRankSum' => 'VariantOnGenome/Sequencing/Num_Hard_Clipped_Bases',
+            'vcf_ExcessHet' => 'VariantOnGenome/Sequencing/Excess_Heterozygosity',
+            'vcf_SOR' => 'VariantOnGenome/Sequencing/Odds_Ratio',
+
 //            'DB' => 'VariantOnGenome/Sequencing/dbSNP_Membership',
-            'DP' => 'VariantOnGenome/Sequencing/Depth/Unfiltered_All',
-            'FS' => 'VariantOnGenome/Sequencing/Fisher_Strand_Bias',
-            'MLEAC' => 'VariantOnGenome/Sequencing/Max_Likelihood_Exp_Allele_Count',
-            'MLEAF' => 'VariantOnGenome/Sequencing/Max_Likelihood_Exp_Allele_Freq',
-            'MQ' => 'VariantOnGenome/Sequencing/Mapping_Quality',
-            'MQRankSum' => 'VariantOnGenome/Sequencing/Mapping_Quality_Score',
-            'QD' => 'VariantOnGenome/Sequencing/Quality_by_depth',
-            'ReadPosRankSum' => 'VariantOnGenome/Sequencing/Read_Position_Bias_Score',
+            'vcf_DP' => 'VariantOnGenome/Sequencing/Depth/Unfiltered_All',
+            'vcf_FS' => 'VariantOnGenome/Sequencing/Fisher_Strand_Bias',
+            'vcf_MLEAC' => 'VariantOnGenome/Sequencing/Max_Likelihood_Exp_Allele_Count',
+            'vcf_MLEAF' => 'VariantOnGenome/Sequencing/Max_Likelihood_Exp_Allele_Freq',
+            'vcf_MQ' => 'VariantOnGenome/Sequencing/Mapping_Quality',
+            'vcf_MQRankSum' => 'VariantOnGenome/Sequencing/Mapping_Quality_Score',
+            'vcf_QD' => 'VariantOnGenome/Sequencing/Quality_by_depth',
+            'vcf_ReadPosRankSum' => 'VariantOnGenome/Sequencing/Read_Position_Bias_Score',
             'GMAF' => 'VariantOnGenome/Frequency/1000G/VEP',
             'EUR_MAF' => 'VariantOnGenome/Frequency/1000G/VEP/European',
             'AFR_MAF' => 'VariantOnGenome/Frequency/1000G/VEP/African',
@@ -204,7 +209,7 @@ class LOVD_MghaSeqDataConverter extends LOVD_DefaultDataConverter {
             'PUBMED' => 'VariantOnTranscript/Pubmed',
             'BIOTYPE' => 'VariantOnTranscript/Biotype',
             'CLIN_SIG' => 'VariantOnTranscript/Clinical_Significance',
-            'SOMATIC' => 'VariantOnTranscript/Somatic_Status',
+            'vcf_SOMATIC' => 'VariantOnTranscript/Somatic_Status',
             'STRAND' => 'VariantOnTranscript/DNA_Strand',
             'Feature_type' => 'VariantOnTranscript/Feature_Type',
 
@@ -261,8 +266,62 @@ class LOVD_MghaSeqDataConverter extends LOVD_DefaultDataConverter {
             'tumour:PMCRDR' => 'VariantOnGenome/Sequencing/Tumour/BI/Depth/Ref/Reverse',
 
             // Tummour Normal Combined
-            'GPV' => 'VariantOnGenome/Sequencing/Fisher/Germline',
-            'Identified' => 'VariantOnGenome/Sequencing/VCF_Source',
+            'vcf_GPV' => 'VariantOnGenome/Sequencing/Fisher/Germline',
+            'vcf_Identified' => 'VariantOnGenome/Sequencing/VCF_Source',
+
+            'vcf_LSEQ' => 'VariantOnGenome/Sequencing/5_Prime_Flanking_Seq',
+            'vcf_MSI' => 'VariantOnGenome/Sequencing/MicroSattelite',
+            'vcf_MSILEN' => 'VariantOnGenome/Sequencing/MSI_Length',
+            'vcf_RSEQ' => 'VariantOnGenome/Sequencing/3_Prime_Flanking_Seq',
+            'vcf_SAMPLE' => 'VariantOnGenome/Sequencing/Sample_Name',
+            'vcf_SHIFT3' => 'VariantOnGenome/Sequencing/3_Prime_Shift',
+
+            'vcf_SL_N_AD_VARDICT' => 'VariantOnGenome/Sequencing/Normal/Seqliner/Allele/Vardict',
+            'vcf_SL_N_DP_VARDICT' => 'VariantOnGenome/Sequencing/Normal/Seqliner/Coverage/Vardict',
+            'vcf_SL_T_AD_VARDICT' => 'VariantOnGenome/Sequencing/Tumour/Seqliner/Allele/Vardict',
+            'vcf_SL_T_DP_VARDICT' => 'VariantOnGenome/Sequencing/Tumour/Seqliner/Coverage/Vardict',
+
+            'vcf_SSF' => 'VariantOnGenome/Sequencing/P_Value',
+            'vcf_STATUS' => 'VariantOnGenome/Sequencing/Status',
+            'vcf_TYPE' => 'VariantOnGenome/Sequencing/Type',
+
+            'normal:ADJAF' => 'VariantOnGenome/Sequencing/Normal/Allele/Frequency/Adjusted',
+            'normal:AF' => 'VariantOnGenome/Sequencing/Normal/Allele/Frequency',
+           'normal:BIAS' => 'VariantOnGenome/Sequencing/Normal/Bias',
+
+            'normal:HIAF' => 'VariantOnGenome/Sequencing/Normal/Allele/Frequency/High_Quality',
+            'normal:MQ' => 'VariantOnGenome/Sequencing/Normal/Mean_Mapping_Quality',
+            'normal:NM' => 'VariantOnGenome/Sequencing/Normal/Mean_Mismatch',
+            'normal:ODDRATIO' => 'VariantOnGenome/Sequencing/Normal/Oddratio',
+
+            'normal:PMEAN' => 'VariantOnGenome/Sequencing/Normal/Mean_Position',
+            'normal:PSTD' => 'VariantOnGenome/Sequencing/Normal/Position_STD',
+            'normal:QSTD' => 'VariantOnGenome/Sequencing/Normal/Quality_Score_STD',
+            'normal:QUAL' => 'VariantOnGenome/Sequencing/Normal/Mean_Quality',
+
+            'normal:SBF' => 'VariantOnGenome/Sequencing/Normal/Strand_Bias_Fisher_P_Value',
+            'normal:SN' => 'VariantOnGenome/Sequencing/Normal/Signal_To_Noise',
+            'normal:VD' => 'VariantOnGenome/Sequencing/Normal/Variant_Depth',
+
+            'tumour:ADJAF' => 'VariantOnGenome/Sequencing/Tumour/Allele/Frequency/Adjusted',
+            'tumour:AF' => 'VariantOnGenome/Sequencing/Tumour/Allele/Frequency',
+            'tumour:BIAS' => 'VariantOnGenome/Sequencing/Tumour/Bias',
+
+            'tumour:HIAF' => 'VariantOnGenome/Sequencing/Tumour/Allele/Frequency/High_Quality',
+            'tumour:MQ' => 'VariantOnGenome/Sequencing/Tumour/Mean_Mapping_Quality',
+            'tumour:NM' => 'VariantOnGenome/Sequencing/Tumour/Mean_Mismatch',
+            'tumour:ODDRATIO' => 'VariantOnGenome/Sequencing/Tumour/Oddratio',
+
+            'tumour:PMEAN' => 'VariantOnGenome/Sequencing/Tumour/Mean_Position',
+            'tumour:PSTD' => 'VariantOnGenome/Sequencing/Tumour/Position_STD',
+            'tumour:QSTD' => 'VariantOnGenome/Sequencing/Tumour/Quality_Score_STD',
+            'tumour:QUAL' => 'VariantOnGenome/Sequencing/Tumour/Mean_Quality',
+
+            'tumour:SBF' => 'VariantOnGenome/Sequencing/Tumour/Strand_Bias_Fisher_P_Value',
+            'tumour:SN' => 'VariantOnGenome/Sequencing/Tumour/Signal_To_Noise',
+            'tumour:VD' => 'VariantOnGenome/Sequencing/Tumour/Variant_Depth',
+
+
 //            'N_AC' => 'VariantOnGenome/Sequencing/Normal/Indel/Reads',
 //            'N_DP' => 'VariantOnGenome/Sequencing/Normal/Total_Coverage',
 //            'N_MM' => 'VariantOnGenome/Sequencing/Normal/Indel/Mismatches/Average',
@@ -282,9 +341,9 @@ class LOVD_MghaSeqDataConverter extends LOVD_DefaultDataConverter {
 //            'SL_T_DP_INDELOCATOR' => 'VariantOnGenome/Sequencing/Tumour/Seqliner/Coverage/Indelocator',
 //            'SL_T_DP_MUTECT' => 'VariantOnGenome/Sequencing/Tumour/Seqliner/Coverage/Mutect',
             'SL_T_DP_VARSCAN' => 'VariantOnGenome/Sequencing/Tumour/Seqliner/Coverage/Varscan',
-            'SPV' => 'VariantOnGenome/Sequencing/Fisher/Somatic',
-            'SS' => 'VariantOnGenome/Sequencing/Somatic/Status',
-            'SSC' => 'VariantOnGenome/Sequencing/Somatic/Score',
+            'vcf_SPV' => 'VariantOnGenome/Sequencing/Fisher/Somatic',
+            'vcf_SS' => 'VariantOnGenome/Sequencing/Somatic/Status',
+            'vcf_SSC' => 'VariantOnGenome/Sequencing/Somatic/Score',
 //            'T_AC' => 'VariantOnGenome/Sequencing/Tumour/Indel/Reads',
 //            'T_DP' => 'VariantOnGenome/Sequencing/Tumour/Total_Coverage',
 //            'T_MM' => 'VariantOnGenome/Sequencing/Tumour/Indel/Mismatches/Average',
