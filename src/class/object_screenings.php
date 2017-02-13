@@ -4,12 +4,14 @@
  * LEIDEN OPEN VARIATION DATABASE (LOVD)
  *
  * Created     : 2011-03-18
- * Modified    : 2013-08-08
- * For LOVD    : 3.0-07
+ * Modified    : 2016-07-20
+ * For LOVD    : 3.0-17
  *
- * Copyright   : 2004-2013 Leiden University Medical Center; http://www.LUMC.nl/
+ * Copyright   : 2004-2016 Leiden University Medical Center; http://www.LUMC.nl/
  * Programmers : Ing. Ivar C. Lugtenburg <I.C.Lugtenburg@LUMC.nl>
  *               Ing. Ivo F.A.C. Fokkema <I.F.A.C.Fokkema@LUMC.nl>
+ *               Msc. Daan Asscheman <D.Asscheman@LUMC.nl>
+ *               M. Kroon <m.kroon@lumc.nl>
  *
  *
  * This file is part of LOVD.
@@ -73,11 +75,16 @@ class LOVD_Screening extends LOVD_Custom {
                                            'uo.name AS owned_by_, ' .
                                            'uc.name AS created_by_, ' .
                                            'ue.name AS edited_by_';
+
+        // Construct list of user IDs for current user and users who share access with him.
+        $aOwnerIDs = array_merge(array($_AUTH['id']), lovd_getColleagues(COLLEAGUE_ALL));
+        $sOwnerIDsSQL = join(', ', $aOwnerIDs);
+
         $this->aSQLViewEntry['FROM']     = TABLE_SCREENINGS . ' AS s ' .
                                            'LEFT OUTER JOIN ' . TABLE_SCR2GENE . ' AS s2g ON (s.id = s2g.screeningid) ' .
                                            'LEFT OUTER JOIN ' . TABLE_SCR2VAR . ' AS s2v ON (s.id = s2v.screeningid) ' .
                                            ($_AUTH['level'] >= LEVEL_COLLABORATOR? '' :
-                                               'LEFT OUTER JOIN ' . TABLE_VARIANTS . ' AS vog ON (s2v.variantid = vog.id AND (vog.statusid >= ' . STATUS_MARKED . (!$_AUTH? '' : ' OR vog.created_by = "' . $_AUTH['id'] . '" OR vog.owned_by = "' . $_AUTH['id'] . '"') . ')) ') .
+                                               'LEFT OUTER JOIN ' . TABLE_VARIANTS . ' AS vog ON (s2v.variantid = vog.id AND (vog.statusid >= ' . STATUS_MARKED . (!$_AUTH? '' : ' OR vog.created_by = "' . $_AUTH['id'] . '" OR vog.owned_by IN (' . $sOwnerIDsSQL . ')') . ')) ') .
                                            'LEFT OUTER JOIN ' . TABLE_USERS . ' AS uo ON (s.owned_by = uo.id) ' .
                                            'LEFT OUTER JOIN ' . TABLE_INDIVIDUALS . ' AS i ON (s.individualid = i.id) ' .
                                            'LEFT OUTER JOIN ' . TABLE_USERS . ' AS uc ON (s.created_by = uc.id) ' .
@@ -96,7 +103,7 @@ class LOVD_Screening extends LOVD_Custom {
         $this->aSQLViewList['FROM']     = TABLE_SCREENINGS . ' AS s ' .
                                           'LEFT OUTER JOIN ' . TABLE_SCR2VAR . ' AS s2v ON (s.id = s2v.screeningid) ' .
                                           ($_AUTH['level'] >= LEVEL_COLLABORATOR? '' :
-                                              'LEFT OUTER JOIN ' . TABLE_VARIANTS . ' AS vog ON (s2v.variantid = vog.id AND (vog.statusid >= ' . STATUS_MARKED . (!$_AUTH? '' : ' OR vog.created_by = "' . $_AUTH['id'] . '" OR vog.owned_by = "' . $_AUTH['id'] . '"') . ')) ') .
+                                              'LEFT OUTER JOIN ' . TABLE_VARIANTS . ' AS vog ON (s2v.variantid = vog.id AND (vog.statusid >= ' . STATUS_MARKED . (!$_AUTH? '' : ' OR vog.created_by = "' . $_AUTH['id'] . '" OR vog.owned_by IN (' . $sOwnerIDsSQL . ')') . ')) ') .
                                           'LEFT OUTER JOIN ' . TABLE_SCR2GENE . ' AS s2g ON (s.id = s2g.screeningid) ' .
                                           'LEFT OUTER JOIN ' . TABLE_INDIVIDUALS . ' AS i ON (s.individualid = i.id) ' .
                                           'LEFT OUTER JOIN ' . TABLE_USERS . ' AS uo ON (s.owned_by = uo.id)';
@@ -127,10 +134,10 @@ class LOVD_Screening extends LOVD_Custom {
                                     'view' => false,
                                     'db'   => array('s.id', 'ASC', true)),
                         'id' => array(
-                                    'view' => array('Screening ID', 110),
+                                    'view' => array('Screening ID', 110, 'style="text-align : right;"'),
                                     'db'   => array('s.id', 'ASC', true)),
                         'individualid' => array(
-                                    'view' => array('Individual ID', 110),
+                                    'view' => array('Individual ID', 110, 'style="text-align : right;"'),
                                     'db'   => array('s.individualid', 'ASC', true)),
                       ),
                  $this->buildViewList(),
@@ -139,7 +146,7 @@ class LOVD_Screening extends LOVD_Custom {
                                     'view' => array('Genes screened', 20),
                                     'db'   => array('genes', 'ASC', 'TEXT')),
                         'variants_found_' => array(
-                                    'view' => array('Variants found', 100),
+                                    'view' => array('Variants found', 100, 'style="text-align : right;"'),
                                     'db'   => array('variants_found_', 'ASC', 'INT_UNSIGNED')),
                         'owned_by_' => array(
                                     'view' => array('Owner', 160),
@@ -194,8 +201,7 @@ class LOVD_Screening extends LOVD_Custom {
         global $_AUTH, $_DB, $nID;
 
         if ($_AUTH['level'] >= LEVEL_CURATOR) {
-            $aSelectOwner = $_DB->query('SELECT id, name FROM ' . TABLE_USERS .
-                (ACTION == 'edit' && (int) $_POST['owned_by'] === 0 || true? '' : ' WHERE id > 0') .
+            $aSelectOwner = $_DB->query('SELECT id, CONCAT(name, " (#", id, ")") as name_id FROM ' . TABLE_USERS .
                 ' ORDER BY name')->fetchAllCombine();
             $aFormOwner = array('Owner of this data', '', 'select', 'owned_by', 1, $aSelectOwner, false, false, false);
         } else {
@@ -218,7 +224,7 @@ class LOVD_Screening extends LOVD_Custom {
         // Array which will make up the form table.
         $this->aFormData = array_merge(
                  array(
-                        array('POST', '', '', '', '40%', '14', '60%'),
+                        array('POST', '', '', '', '35%', '14', '65%'),
                         array('', '', 'print', '<B>Screening information</B>'),
                         'hr',
                       ),
@@ -240,7 +246,7 @@ class LOVD_Screening extends LOVD_Custom {
         if (ACTION == 'create' || (ACTION == 'publish' && GET)) {
             // When creating, or when publishing without any changes, unset the authorization.
             unset($this->aFormData['authorization']);
-        } else {
+        } elseif (lovd_getProjectFile() != '/import.php') {
             if ($_DB->query('SELECT COUNT(variantid) FROM ' . TABLE_SCR2VAR . ' WHERE screeningid = ?', array($nID))->fetchColumn()) {
                 unset($this->aFormData['variants_found']);
             };

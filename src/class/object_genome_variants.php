@@ -4,12 +4,14 @@
  * LEIDEN OPEN VARIATION DATABASE (LOVD)
  *
  * Created     : 2010-12-20
- * Modified    : 2015-03-11
- * For LOVD    : 3.0-13
+ * Modified    : 2016-10-14
+ * For LOVD    : 3.0-18
  *
- * Copyright   : 2004-2015 Leiden University Medical Center; http://www.LUMC.nl/
+ * Copyright   : 2004-2016 Leiden University Medical Center; http://www.LUMC.nl/
  * Programmers : Ing. Ivar C. Lugtenburg <I.C.Lugtenburg@LUMC.nl>
  *               Ing. Ivo F.A.C. Fokkema <I.F.A.C.Fokkema@LUMC.nl>
+ *               Msc. Daan Asscheman <D.Asscheman@LUMC.nl>
+ *               M. Kroon <m.kroon@lumc.nl>
  *
  *
  * This file is part of LOVD.
@@ -54,7 +56,7 @@ class LOVD_GenomeVariant extends LOVD_Custom {
     function __construct ()
     {
         // Default constructor.
-        global $_AUTH, $_SETT;
+        global $_AUTH, $_CONF, $_SETT;
 
         // SQL code for loading an entry for an edit form.
         // FIXME; change owner to owned_by_ in the load entry query below.
@@ -69,21 +71,32 @@ class LOVD_GenomeVariant extends LOVD_Custom {
                                            'a.name AS allele_, ' .
                                            'GROUP_CONCAT(DISTINCT i.id, ";", i.statusid SEPARATOR ";;") AS __individuals, ' .
                                            'GROUP_CONCAT(s2v.screeningid SEPARATOR "|") AS screeningids, ' .
+                                           'sa.id AS summaryannotationid, ' .
                                            'uo.name AS owned_by_, ' .
                                            'uc.name AS created_by_, ' .
-                                           'ue.name AS edited_by_, ' .
+                                           'ue.name AS edited_by_';
+        if (LOVD_plus) {
+            // Add curation status and confirmation status.
+            $this->aSQLViewEntry['SELECT'] .= ', ' .
+                                           'vog.`VariantOnGenome/DBID` AS DBID, ' . // We need a copy before prepareData() messes it up.
                                            'curs.name AS curation_status_, ' .
                                            'cons.name AS confirmation_status_';
+        }
         $this->aSQLViewEntry['FROM']     = TABLE_VARIANTS . ' AS vog ' .
                                            'LEFT OUTER JOIN ' . TABLE_SCR2VAR . ' AS s2v ON (vog.id = s2v.variantid) ' .
                                            'LEFT OUTER JOIN ' . TABLE_SCREENINGS . ' AS s ON (s.id = s2v.screeningid) ' .
                                            'LEFT OUTER JOIN ' . TABLE_INDIVIDUALS . ' AS i ON (s.individualid = i.id) ' .
                                            'LEFT OUTER JOIN ' . TABLE_ALLELES . ' AS a ON (vog.allele = a.id) ' .
+                                           'LEFT OUTER JOIN ' . TABLE_SUMMARY_ANNOTATIONS . ' AS sa ON (vog.`VariantOnGenome/DBID` = sa.id) ' .
                                            'LEFT OUTER JOIN ' . TABLE_USERS . ' AS uo ON (vog.owned_by = uo.id) ' .
                                            'LEFT OUTER JOIN ' . TABLE_USERS . ' AS uc ON (vog.created_by = uc.id) ' .
-                                           'LEFT OUTER JOIN ' . TABLE_USERS . ' AS ue ON (vog.edited_by = ue.id) ' .
+                                           'LEFT OUTER JOIN ' . TABLE_USERS . ' AS ue ON (vog.edited_by = ue.id)';
+        if (LOVD_plus) {
+            // Add curation status and confirmation status.
+            $this->aSQLViewEntry['FROM'] .= ' ' .
                                            'LEFT OUTER JOIN ' . TABLE_CURATION_STATUS . ' AS curs ON (vog.curation_statusid = curs.id)' .
                                            'LEFT OUTER JOIN ' . TABLE_CONFIRMATION_STATUS . ' AS cons ON (vog.confirmation_statusid = cons.id)';
+        }
         $this->aSQLViewEntry['GROUP_BY'] = 'vog.id';
 
         // SQL code for viewing the list of variants
@@ -136,6 +149,10 @@ class LOVD_GenomeVariant extends LOVD_Custom {
                         'edited_by_' => array('Last edited by', LEVEL_COLLABORATOR),
                         'edited_date_' => array('Date last edited', LEVEL_COLLABORATOR),
                       ));
+        if (!LOVD_plus) {
+            unset($this->aColumnsViewEntry['curation_status_']);
+            unset($this->aColumnsViewEntry['confirmation_status_']);
+        }
 
         // List of columns and (default?) order for viewing a list of entries.
         $this->aColumnsViewList = array_merge(
@@ -144,13 +161,13 @@ class LOVD_GenomeVariant extends LOVD_Custom {
                                     'view' => false,
                                     'db'   => array('screeningids', 'ASC', 'TEXT')),
                         'id_' => array(
-                                    'view' => array('Variant ID', 90),
+                                    'view' => array('Variant ID', 90, 'style="text-align : right;"'),
                                     'db'   => array('vog.id', 'ASC', true)),
                         'effect' => array(
                                     'view' => array('Effect', 70),
                                     'db'   => array('e.name', 'ASC', true),
                                     'legend' => array('The variant\'s effect on a protein\'s function, in the format Reported/Curator concluded; ranging from \'+\' (variant affects function) to \'-\' (does not affect function).',
-                                                      'The variant\'s affect on a protein\'s function, in the format Reported/Curator concluded; \'+\' indicating the variant affects function, \'+?\' probably affects function, \'-\' does not affect function, \'-?\' probably does not affect function, \'?\' effect unknown, \'.\' effect not classified.')),
+                                                      'The variant\'s effect on a protein\'s function, in the format Reported/Curator concluded; \'+\' indicating the variant affects function, \'+?\' probably affects function, \'-\' does not affect function, \'-?\' probably does not affect function, \'?\' effect unknown, \'.\' effect not classified.')),
                         'allele_' => array(
                                     'view' => array('Allele', 120),
                                     'db'   => array('a.name', 'ASC', true),
@@ -165,6 +182,9 @@ class LOVD_GenomeVariant extends LOVD_Custom {
                         'owned_by_' => array(
                                     'view' => array('Owner', 160),
                                     'db'   => array('uo.name', 'ASC', true)),
+                        'owner_countryid' => array(
+                                    'view' => false,
+                                    'db'   => array('uo.countryid', 'ASC', true)),
                         'status' => array(
                                     'view' => array('Status', 70),
                                     'db'   => array('ds.name', false, true),
@@ -178,6 +198,10 @@ class LOVD_GenomeVariant extends LOVD_Custom {
                       ));
 
         $this->sSortDefault = 'VariantOnGenome/DNA';
+
+        // 2015-10-09; 3.0-14; Add genome build name to the VOG/DNA field.
+        $this->aColumnsViewEntry['VariantOnGenome/DNA'] .= ' (Relative to ' . $_CONF['refseq_build'] . ' / ' . $_SETT['human_builds'][$_CONF['refseq_build']]['ncbi_name'] . ')';
+        $this->aColumnsViewList['VariantOnGenome/DNA']['view'][0] .= ' (' . $_CONF['refseq_build'] . ')';
 
         // Because the information is publicly available, remove some columns for the public.
         $this->unsetColsByAuthLevel();
@@ -285,12 +309,16 @@ class LOVD_GenomeVariant extends LOVD_Custom {
         }
 
         if ($_AUTH['level'] >= LEVEL_CURATOR) {
-            $aSelectOwner = $_DB->query('SELECT id, name FROM ' . TABLE_USERS .
-                (ACTION == 'edit' && (int) $_POST['owned_by'] === 0 || true? '' : ' WHERE id > 0') .
+            $aSelectOwner = $_DB->query('SELECT id, CONCAT(name, " (#", id, ")") as name_id FROM ' . TABLE_USERS .
                 ' ORDER BY name')->fetchAllCombine();
             $aFormOwner = array('Owner of this data', '', 'select', 'owned_by', 1, $aSelectOwner, false, false, false);
             $aSelectStatus = $_SETT['data_status'];
-            unset($aSelectStatus[STATUS_PENDING], $aSelectStatus[STATUS_IN_PROGRESS]);
+            if (lovd_getProjectFile() == '/import.php') {
+                // During an import the status pending is allowed, therefore only status in progress is unset.
+                unset($aSelectStatus[STATUS_IN_PROGRESS]);
+            } else {
+                unset($aSelectStatus[STATUS_PENDING], $aSelectStatus[STATUS_IN_PROGRESS]);
+            }
             $aFormStatus = array('Status of this data', '', 'select', 'statusid', 1, $aSelectStatus, false, false, false);
         } else {
             $aFormOwner = array();
@@ -304,7 +332,7 @@ class LOVD_GenomeVariant extends LOVD_Custom {
             }
         }
 
-        // Add '(hg19)' to VOG/DNA field. NOTE: If you choose to remove this, make sure the additional fix after the aFormData array creation is also removed.
+        // Add genome build name to VOG/DNA field.
         $this->aColumns['VariantOnGenome/DNA']['description_form'] = '<B>Relative to ' . $_CONF['refseq_build'] . ' / ' . $_SETT['human_builds'][$_CONF['refseq_build']]['ncbi_name'] . '.</B>' .
             (!$this->aColumns['VariantOnGenome/DNA']['description_form']? '' : '<BR>' . $this->aColumns['VariantOnGenome/DNA']['description_form']);
 
@@ -313,7 +341,7 @@ class LOVD_GenomeVariant extends LOVD_Custom {
         // Array which will make up the form table.
         $this->aFormData = array_merge(
                  array(
-                        array('POST', '', '', '', '50%', '14', '50%'),
+                        array('POST', '', '', '', '35%', '14', '65%'),
                       ),
                 $aTranscriptsForm,
                 array(
@@ -345,9 +373,6 @@ class LOVD_GenomeVariant extends LOVD_Custom {
         if ($_AUTH['level'] < LEVEL_CURATOR) {
             unset($this->aFormData['effect'], $this->aFormData['general_skip'], $this->aFormData['general'], $this->aFormData['general_hr1'], $this->aFormData['owner'], $this->aFormData['status'], $this->aFormData['general_hr2']);
         }
-        // Reset VOG/DNA field to normal, because getForm() can be called twice per page load (checkFields && normal call).
-        // NOTE: Bastardly annoying preg pattern, very hard to make it not eat everything away. Maybe just put the hg reference in the field's name?
-        $this->aColumns['VariantOnGenome/DNA']['description_form'] = preg_replace('/^<B>[^<]+<\/B>(<BR>)?/', '', $this->aColumns['VariantOnGenome/DNA']['description_form']);
 
         return parent::getForm();
     }
@@ -445,15 +470,14 @@ class LOVD_GenomeVariant extends LOVD_Custom {
             } else {
                 $zData['average_frequency_'] = round($zData['average_frequency'], 5) . ' <SPAN style="float: right"><A href="http://databases.lovd.nl/whole_genome/variants/chr' . $zData['chromosome'] . '?search_VariantOnGenome/DNA=' . $zData['VariantOnGenome/DNA'] . '" title="" target="_blank">View details</A></SPAN>';
             }
-            if (!empty($zData['curation_status_'])) {
+            if (LOVD_plus && !empty($zData['curation_status_'])) {
                 // Add a link to the curation status to show the curation status history for this variant.
                 $zData['curation_status_'] .= '<SPAN style="float: right"><A href="#" onclick="lovd_openWindow(\'' . lovd_getInstallURL(). 'variants/' . $zData['id'] . '?curation_status_log&in_window\', \'curationStatusHistory\', 1050, 450);return false;">View History</A></SPAN>';
             }
-            if (!empty($zData['confirmation_status_'])) {
+            if (LOVD_plus && !empty($zData['confirmation_status_'])) {
                 // Add a link to the confirmation status to show the confirmation status history for this variant.
-                $zData['confirmation_status_'] .= '<SPAN style="float: right"><A href="#" onclick="lovd_openWindow(\'' . lovd_getInstallURL(). 'variants/' . $zData['id'] . '?confirmation_status_log&in_window\', \'curationStatusHistory\', 1050, 450);return false;">View History</A></SPAN>';
+                $zData['confirmation_status_'] .= '<SPAN style="float: right"><A href="#" onclick="lovd_openWindow(\'' . lovd_getInstallURL(). 'variants/' . $zData['id'] . '?confirmation_status_log&in_window\', \'confirmationStatusHistory\', 1050, 450);return false;">View History</A></SPAN>';
             }
-
         }
         // Replace rs numbers with dbSNP links.
         if (!empty($zData['VariantOnGenome/dbSNP'])) {
