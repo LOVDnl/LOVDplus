@@ -66,11 +66,12 @@ function lovd_resetAfterFailedRun (sClassName)
 
 function lovd_runAnalysis (nScreeningID, nAnalysisID, nRunID, aSelectedGenePanels)
 {
-    // Starts the analysis of the given screening.
+    // When 'apply_selected_gene_panels' filter is NOT selected, aSelectedGenePanels is undefined.
     if (typeof(aSelectedGenePanels) == 'undefined') {
         aSelectedGenePanels = [];
     }
 
+    // Starts the analysis of the given screening.
     if (typeof(nScreeningID) == 'undefined' || typeof(nAnalysisID) == 'undefined') {
         alert('Incorrect argument(s) passed to runAnalysis function.');
         return false;

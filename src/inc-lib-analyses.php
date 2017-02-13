@@ -78,12 +78,14 @@ function getSelectedGenePanelsByRunID ($nRunID)
         // Add the custom panel info to the table.
         $sToolTip = '<B>Custom&nbsp;panel</B><BR>' . $sCustomPanel;
         $aCustomPanelGenes = explode(', ', $sCustomPanel);
+
+        // If there is less than 5 genes in a custome gne panel, simply display all the gene symbols.
         $sCustomPanelDisplayText = (count($aCustomPanelGenes) <= 5? ': ' . $sCustomPanel : '(' . count($aCustomPanelGenes) . ' genes)');
         $sGenePanelsInfo .= '<TR onmouseover="lovd_showToolTip(\'' . htmlspecialchars($sToolTip) . '\', this, [100, -10]);"><TD>Custom panel '. $sCustomPanelDisplayText .'</TD></TR>' . "\n";
     }
 
     if (!$sGenePanelsInfo) {
-        // Display a message if there are no gene panels selected for this analysis.
+        // Display a message if there is gene panel selected for this analysis.
         $sGenePanelsInfo = '<TR><TD>No gene panels selected</TD></TR>';
     }
 
