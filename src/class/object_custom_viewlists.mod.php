@@ -4,11 +4,12 @@
  * LEIDEN OPEN VARIATION DATABASE (LOVD)
  *
  * Created     : 2013-11-07
- * Modified    : 2016-09-29
- * For LOVD    : 3.0-13
+ * Modified    : 2017-02-13
+ * For LOVD    : 3.0-18
  *
- * Copyright   : 2004-2016 Leiden University Medical Center; http://www.LUMC.nl/
- * Programmer  : Ing. Ivo F.A.C. Fokkema <I.F.A.C.Fokkema@LUMC.nl>
+ * Copyright   : 2004-2017 Leiden University Medical Center; http://www.LUMC.nl/
+ * Programmers : Ivo F.A.C. Fokkema <I.F.A.C.Fokkema@LUMC.nl>
+ *               Anthony Marty <anthony.marty@unimelb.edu.au>
  *
  *
  * This file is part of LOVD.
@@ -239,7 +240,7 @@ class LOVD_CustomViewListMOD extends LOVD_CustomViewList {
                         }
                         // Security checks in this file's prepareData() need geneid to see if the column in question is set to non-public for one of the genes.
                         $aSQL['SELECT'] .= (!$aSQL['SELECT']? '' : ', ') . 'GROUP_CONCAT(DISTINCT t.geneid SEPARATOR ";") AS _geneid, GROUP_CONCAT(DISTINCT IF(IFNULL(g.id_omim, 0) = 0, "", CONCAT(g.id, ";", g.id_omim)) SEPARATOR ";;") AS __gene_OMIM';
-                        $aSQL['SELECT'] .= ', (SELECT GROUP_CONCAT(d.name SEPARATOR "; ") FROM ' . TABLE_GEN2DIS . ' g2d INNER JOIN ' . TABLE_DISEASES . ' d ON (g2d.diseaseid = d.id) WHERE g2d.geneid = g.id) AS gene_disease_name';
+                        $aSQL['SELECT'] .= ', (SELECT GROUP_CONCAT(DISTINCT IF(CASE d.symbol WHEN "-" THEN "" ELSE d.symbol END = "", d.name, d.symbol) ORDER BY (d.symbol != "" AND d.symbol != "-") DESC, d.symbol, d.name SEPARATOR "; ") FROM ' . TABLE_GEN2DIS . ' g2d INNER JOIN ' . TABLE_DISEASES . ' d ON (g2d.diseaseid = d.id) WHERE g2d.geneid = g.id) AS gene_disease_names';
                         $aSQL['FROM'] .= ' LEFT JOIN ' . TABLE_VARIANTS_ON_TRANSCRIPTS . ' AS vot ON (';
                         // Earlier, VOG was used, join to that.
                         $aSQL['FROM'] .= 'vog.id = vot.id)';
@@ -322,11 +323,11 @@ class LOVD_CustomViewListMOD extends LOVD_CustomViewList {
                                 'transcriptid' => array(
                                         'view' => false,
                                         'db'   => array('vot.transcriptid', 'ASC', true)),
-                                 'gene_disease_name' => array(
-                                     'view' => array('Diseases', 200),
-                                     'db'   => array('gene_disease_name', 'ASC', 'TEXT'),
-                                     'legend' => array('The diseases associated with this gene.',
-                                         'The diseases associated with this gene.')),
+                                 'gene_disease_names' => array(
+                                     'view' => array('Associated diseases', 200),
+                                     'db'   => array('gene_disease_names', 'ASC', 'TEXT'),
+                                     'legend' => array('The diseases associated with this variant\'s gene.',
+                                         'The diseases associated with this variant\'s gene.')),
                               ));
                     if (!$this->sSortDefault) {
                         // First data table in view.
