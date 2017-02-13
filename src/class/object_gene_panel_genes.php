@@ -242,15 +242,15 @@ class LOVD_GenePanelGene extends LOVD_Object {
         if (FORMAT == 'text/html') {
             // Format the pubmed URL.
             if ($zData['pmid']) {
-                $zData['pmid_'] = '<SPAN' . ($sView != 'list' ? '' : ' onclick="cancelParentEvent(event);"') . '><A href="' . lovd_getExternalSource('pubmed_article', $zData['pmid'], true) . '" target="_blank">' . $zData['pmid'] . '</A></SPAN>';
+                $zData['pmid_'] = '<SPAN' . ($sView != 'list'? '' : ' onclick="cancelParentEvent(event);"') . '><A href="' . lovd_getExternalSource('pubmed_article', $zData['pmid'], true) . '" target="_blank">' . $zData['pmid'] . '</A></SPAN>';
             }
             // Format the OMIM URL.
             if (!empty($zData['id_omim'])) {
-                $zData['id_omim_'] = '<SPAN' . ($sView != 'list' ? '' : ' onclick="cancelParentEvent(event);"') . '><A href="' . lovd_getExternalSource('omim', $zData['id_omim'], true) . '" target="_blank">' . $zData['id_omim'] . '</A></SPAN>';
+                $zData['id_omim_'] = '<SPAN' . ($sView != 'list'? '' : ' onclick="cancelParentEvent(event);"') . '><A href="' . lovd_getExternalSource('omim', $zData['id_omim'], true) . '" target="_blank">' . $zData['id_omim'] . '</A></SPAN>';
             }
             // Create a link to a transcript.
             if ($zData['transcriptid']) {
-                $zData['transcript_ncbi_'] = '<SPAN' . ($sView != 'list' ? '' : ' onclick="cancelParentEvent(event);"') . '><A href="transcripts/' . $zData['transcriptid'] . '">' . $zData['transcript_ncbi'] . '</A></SPAN>';
+                $zData['transcript_ncbi_'] = '<SPAN' . ($sView != 'list'? '' : ' onclick="cancelParentEvent(event);"') . '><A href="transcripts/' . $zData['transcriptid'] . '">' . $zData['transcript_ncbi'] . '</A></SPAN>';
             }
         }
         return $zData;

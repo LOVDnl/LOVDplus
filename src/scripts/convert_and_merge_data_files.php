@@ -4,11 +4,11 @@
  * LEIDEN OPEN VARIATION DATABASE (LOVD)
  *
  * Created     : 2014-11-28
- * Modified    : 2016-11-11
- * For LOVD+   : 3.0-16
+ * Modified    : 2017-02-06
+ * For LOVD+   : 3.0-18
  *
- * Copyright   : 2004-2016 Leiden University Medical Center; http://www.LUMC.nl/
- * Programmer  : Ing. Ivo F.A.C. Fokkema <I.F.A.C.Fokkema@LUMC.nl>
+ * Copyright   : 2004-2017 Leiden University Medical Center; http://www.LUMC.nl/
+ * Programmer  : Ivo F.A.C. Fokkema <I.F.A.C.Fokkema@LUMC.nl>
  *
  *************/
 
@@ -61,6 +61,7 @@ $aSuffixes = array(
 // LOC* genes are always ignored, because they never work (HGNC doesn't know them).
 $aGenesToIgnore = array(
     // 2015-01-19; Not recognized by HGNC.
+/*
     'FLJ12825',
     'FLJ27354',
     'FLJ37453',
@@ -633,6 +634,7 @@ $aGenesToIgnore = array(
     'ZNF812P',
     'ZPR1',
     // 2016-03-04; No transcripts could be found.
+*/
 );
 
 // Define list of gene aliases. Genes not mentioned in here, are searched for in the database. If not found,
@@ -880,7 +882,8 @@ $aColumnMappings = array(
     'AF1000G' => 'VariantOnGenome/Frequency/1000G',
     'rsID' => 'VariantOnGenome/dbSNP',
     'AFESP5400' => 'VariantOnGenome/Frequency/EVS', // Will be divided by 100 later.
-    'AFGONL' => 'VariantOnGenome/Frequency/GoNL',
+    'CALC_GONL_AF' => 'VariantOnGenome/Frequency/GoNL',
+    'AFGONL' => 'VariantOnGenome/Frequency/GoNL_old',
     'EXAC_AF' => 'VariantOnGenome/Frequency/ExAC',
     'MutationTaster_pred' => 'VariantOnTranscript/Prediction/MutationTaster',
     'MutationTaster_score' => 'VariantOnTranscript/Prediction/MutationTaster/Score',
@@ -1503,8 +1506,10 @@ print('Can\'t load UD for gene ' . $aGeneInfo['symbol'] . '.' . "\n");
 
                     // Not getting an UD no longer kills the script, so...
                     if ($sRefseqUD) {
-                        if (!$_DB->query('INSERT INTO ' . TABLE_GENES . ' (id, name, chromosome, chrom_band, refseq_genomic, refseq_UD, id_hgnc, id_entrez, id_omim, created_by, created_date, updated_by, updated_date) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), ?, NOW())',
-                            array($aGeneInfo['symbol'], $aGeneInfo['name'], $aGeneInfo['chromosome'], $aGeneInfo['chrom_band'], $_SETT['human_builds'][$_CONF['refseq_build']]['ncbi_sequences'][$aGeneInfo['chromosome']], $sRefseqUD, $aGeneInfo['hgnc_id'], $aGeneInfo['entrez_id'], $aGeneInfo['omim_id'], 0, 0))) {
+                        if (!$_DB->query('INSERT INTO ' . TABLE_GENES . '
+                             (id, name, chromosome, chrom_band, refseq_genomic, refseq_UD, reference, url_homepage, url_external, allow_download, allow_index_wiki, id_hgnc, id_entrez, id_omim, show_hgmd, show_genecards, show_genetests, note_index, note_listing, refseq, refseq_url, disclaimer, disclaimer_text, header, header_align, footer, footer_align, created_by, created_date, updated_by, updated_date)
+                            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), ?, NOW())',
+                            array($aGeneInfo['symbol'], $aGeneInfo['name'], $aGeneInfo['chromosome'], $aGeneInfo['chrom_band'], $_SETT['human_builds'][$_CONF['refseq_build']]['ncbi_sequences'][$aGeneInfo['chromosome']], $sRefseqUD, '', '', '', 0, 0, $aGeneInfo['hgnc_id'], $aGeneInfo['entrez_id'], (!$aGeneInfo['omim_id']? NULL : $aGeneInfo['omim_id']), 0, 0, 0, '', '', '', '', 0, '', '', 0, '', 0, 0, 0))) {
                             die('Can\'t create gene ' . $aLine['SYMBOL'] . '.' . "\n");
                         }
 
@@ -1579,10 +1584,15 @@ $aTranscriptInfo = array(array('id' => 'NO_TRANSCRIPTS')); // Basically, any tex
                         $aTranscript['position_c_cds_end'] = $aTranscript['cCDSStop']; // To calculate VOT variant position, if in 3'UTR.
 
                         // Add transcript to gene.
-                        if (!$_DB->query('INSERT INTO ' . TABLE_TRANSCRIPTS . ' (id, geneid, name, id_mutalyzer, id_ncbi, id_ensembl, id_protein_ncbi, id_protein_ensembl, id_protein_uniprot, position_c_mrna_start, position_c_mrna_end, position_c_cds_end, position_g_mrna_start, position_g_mrna_end, created_date, created_by) VALUES (NULL, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), ?)',
-                            array($aGenes[$aLine['SYMBOL']]['id'], $sTranscriptName, $aTranscript['id_mutalyzer'], $aTranscript['id_ncbi'], '', $sTranscriptProtein, '', '', $aTranscript['cTransStart'], $aTranscript['sortableTransEnd'], $aTranscript['cCDSStop'], $aTranscript['chromTransStart'], $aTranscript['chromTransEnd'], 0))) {
+                        if (!$_DB->query('INSERT INTO ' . TABLE_TRANSCRIPTS . '
+                             (id, geneid, name, id_mutalyzer, id_ncbi, id_ensembl, id_protein_ncbi, id_protein_ensembl, id_protein_uniprot, remarks, position_c_mrna_start, position_c_mrna_end, position_c_cds_end, position_g_mrna_start, position_g_mrna_end, created_date, created_by)
+                            VALUES (NULL, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), ?)',
+                            array($aGenes[$aLine['SYMBOL']]['id'], $sTranscriptName, $aTranscript['id_mutalyzer'], $aTranscript['id_ncbi'], '', $sTranscriptProtein, '', '', '', $aTranscript['cTransStart'], $aTranscript['sortableTransEnd'], $aTranscript['cCDSStop'], $aTranscript['chromTransStart'], $aTranscript['chromTransEnd'], 0))) {
                             die('Can\'t create transcript ' . $aTranscript['id_ncbi'] . ' for gene ' . $aLine['SYMBOL'] . '.' . "\n");
                         }
+
+                        // Save the ID before the writeLog deletes it...
+                        $nTranscriptID = str_pad($_DB->lastInsertId(), $_SETT['objectid_length']['transcripts'], '0', STR_PAD_LEFT);
 
                         // Write to log...
                         lovd_writeLog('Event', LOG_EVENT, 'Transcript entry successfully added to gene ' . $aGenes[$aLine['SYMBOL']]['id'] . ' - ' . $sTranscriptName);
@@ -1590,7 +1600,7 @@ $aTranscriptInfo = array(array('id' => 'NO_TRANSCRIPTS')); // Basically, any tex
                         flush();
 
                         // Store in memory.
-                        $aTranscripts[$aLine['Feature']] = array_merge($aTranscript, array('id' => $_DB->lastInsertId())); // Contains a lot more info than needed, but whatever.
+                        $aTranscripts[$aLine['Feature']] = array_merge($aTranscript, array('id' => $nTranscriptID)); // Contains a lot more info than needed, but whatever.
                     }
                 }
 
@@ -1736,7 +1746,7 @@ print('Reloading Mutalyzer ID for ' . $aTranscripts[$aLine['Feature']]['id_ncbi'
 print('Running mutalyzer to predict protein change for ' . $aGenes[$aLine['SYMBOL']]['refseq_UD'] . '(' . $aGenes[$aLine['SYMBOL']]['id'] . '_v' . $aTranscripts[$aLine['Feature']]['id_mutalyzer'] . '):' . $aVariant['VariantOnTranscript/DNA'] . "\n");
                 $aMutalyzerCalls['runMutalyzer'] ++;
                 $tMutalyzerStart = microtime(true);
-                $sJSONResponse = file_get_contents('https://mutalyzer.nl/json/runMutalyzer?variant=' . rawurlencode($aGenes[$aLine['SYMBOL']]['refseq_UD'] . '(' . $aGenes[$aLine['SYMBOL']]['id'] . '_v' . $aTranscripts[$aLine['Feature']]['id_mutalyzer'] . '):' . $aVariant['VariantOnTranscript/DNA']));
+                $sJSONResponse = file_get_contents('https://mutalyzer.nl/json/runMutalyzer?variant=' . rawurlencode($aGenes[$aLine['SYMBOL']]['refseq_UD'] . '(' . $aTranscripts[$aLine['Feature']]['id_ncbi'] . '):' . $aVariant['VariantOnTranscript/DNA']));
                 $tMutalyzerCalls += (microtime(true) - $tMutalyzerStart);
 //var_dump('https://mutalyzer.nl/json/runMutalyzer?variant=' . rawurlencode($aGenes[$aLine['SYMBOL']]['refseq_UD'] . '(' . $aGenes[$aLine['SYMBOL']]['id'] . '_v' . $aTranscripts[$aLine['Feature']]['id_mutalyzer'] . '):' . $aVariant['VariantOnTranscript/DNA']));
                 if ($sJSONResponse && $aResponse = json_decode($sJSONResponse, true)) {
@@ -1892,7 +1902,7 @@ if (!$aVariant['VariantOnTranscript/RNA']) {
             $aColumnsForVOG[] = $sCol;
         }
     }
-    // Assuming here that *all* variants actually have at least one VOT... Take VOT columns.
+    // Assuming here that at least *one* variant actually has a VOT... Take VOT columns.
     foreach (array_keys($aVOT) as $sCol) {
         if (substr($sCol, 0, 20) == 'VariantOnTranscript/') {
             $aColumnsForVOT[] = $sCol;

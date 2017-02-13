@@ -4,12 +4,13 @@
  * LEIDEN OPEN VARIATION DATABASE (LOVD)
  *
  * Created     : 2011-02-17
- * Modified    : 2015-03-11
- * For LOVD    : 3.0-13
+ * Modified    : 2016-10-11
+ * For LOVD    : 3.0-18
  *
- * Copyright   : 2004-2015 Leiden University Medical Center; http://www.LUMC.nl/
+ * Copyright   : 2004-2016 Leiden University Medical Center; http://www.LUMC.nl/
  * Programmers : Ing. Ivar C. Lugtenburg <I.C.Lugtenburg@LUMC.nl>
  *               Ing. Ivo F.A.C. Fokkema <I.F.A.C.Fokkema@LUMC.nl>
+ *               M. Kroon <m.kroon@lumc.nl>
  *
  *
  * This file is part of LOVD.
@@ -154,14 +155,19 @@ class LOVD_Custom extends LOVD_Object {
         parent::__construct();
 
         // Hide entries that are not marked or public.
-        if ($_AUTH['level'] < $_SETT['user_level_settings']['see_nonpublic_data']) {
+        if ($_AUTH['level'] < $_SETT['user_level_settings']['see_nonpublic_data']) { // This check assumes lovd_isAuthorized() has already been called for gene-specific overviews.
             if (in_array($this->sCategory, array('VariantOnGenome', 'VariantOnTranscript'))) {
                 $sAlias = 'vog';
             } else {
                 $sAlias = strtolower($this->sCategory{0});
             }
-            $this->aSQLViewList['WHERE'] .= (!empty($this->aSQLViewList['WHERE'])? ' AND ' : '') . '(' . ($this->sObject == 'Screening'? 'i' : $sAlias) . '.statusid >= ' . STATUS_MARKED . (!$_AUTH? '' : ' OR (' . $sAlias . '.created_by = "' . $_AUTH['id'] . '" OR ' . $sAlias . '.owned_by = "' . $_AUTH['id'] . '")') . '';
-            $this->aSQLViewEntry['WHERE'] .= (!empty($this->aSQLViewEntry['WHERE'])? ' AND ' : '') . '(' . ($this->sObject == 'Screening'? 'i' : $sAlias) . '.statusid >= ' . STATUS_MARKED . (!$_AUTH? '' : ' OR (' . $sAlias . '.created_by = "' . $_AUTH['id'] . '" OR ' . $sAlias . '.owned_by = "' . $_AUTH['id'] . '")') . ')';
+
+            // Construct list of user IDs for current user and users who share access with him.
+            $aOwnerIDs = array_merge(array($_AUTH['id']), lovd_getColleagues(COLLEAGUE_ALL));
+            $sOwnerIDsSQL = join(', ', $aOwnerIDs);
+
+            $this->aSQLViewList['WHERE'] .= (!empty($this->aSQLViewList['WHERE'])? ' AND ' : '') . '(' . ($this->sObject == 'Screening'? 'i' : $sAlias) . '.statusid >= ' . STATUS_MARKED . (!$_AUTH? '' : ' OR (' . $sAlias . '.created_by = "' . $_AUTH['id'] . '" OR ' . $sAlias . '.owned_by IN (' . $sOwnerIDsSQL . '))') . '';
+            $this->aSQLViewEntry['WHERE'] .= (!empty($this->aSQLViewEntry['WHERE'])? ' AND ' : '') . '(' . ($this->sObject == 'Screening'? 'i' : $sAlias) . '.statusid >= ' . STATUS_MARKED . (!$_AUTH? '' : ' OR (' . $sAlias . '.created_by = "' . $_AUTH['id'] . '" OR ' . $sAlias . '.owned_by IN (' . $sOwnerIDsSQL . '))') . ')';
             if ($this->sCategory == 'VariantOnGenome' && $_AUTH && (count($_AUTH['curates']) || count($_AUTH['collaborates']))) {
                 // Added so that Curators and Collaborators can view the variants for which they have viewing rights in the genomic variant viewlist.
                 $this->aSQLViewList['WHERE'] .= ' OR t.geneid IN ("' . implode('", "', array_merge($_AUTH['curates'], $_AUTH['collaborates'])) . '"))';
@@ -314,10 +320,11 @@ class LOVD_Custom extends LOVD_Object {
     function buildViewEntry ()
     {
         // Gathers the columns which are active for the current data type and returns them in a viewEntry format
+        // Note: object_custom_viewlists.php implements their own version of this code.
         global $_AUTH;
         $aViewEntry = array();
         foreach ($this->aColumns as $sID => $aCol) {
-            if (!$aCol['public_view'] && $_AUTH['level'] < LEVEL_OWNER) {
+            if (!$aCol['public_view'] && $_AUTH['level'] < LEVEL_COLLABORATOR) {
                 continue;
             }
             $aViewEntry[$sID] = $aCol['head_column'];
@@ -332,10 +339,14 @@ class LOVD_Custom extends LOVD_Object {
     function buildViewList ()
     {
         // Gathers the columns which are active for the current data type and returns them in a viewList format
+        // Note: object_custom_viewlists.php implements their own version of this code.
         global $_AUTH;
+
         $aViewList = array();
         foreach ($this->aColumns as $sID => $aCol) {
-            if (!$aCol['public_view'] && $_AUTH['level'] < LEVEL_OWNER) {
+            // In LOVD_plus, the public_view field is used to set if a custom column will be displayed in a VL or not.
+            // So, in LOVD_plus we need to check for ALL USERS if a custom column has public_view flag turned on or not.
+            if (!$aCol['public_view'] && (LOVD_plus? true : $_AUTH['level'] < LEVEL_COLLABORATOR)) {
                 continue;
             }
             $bAlignRight = preg_match('/^(DEC|FLOAT|(TINY|SMALL|MEDIUM|BIG)?INT)/', $aCol['mysql_type']);
@@ -345,6 +356,7 @@ class LOVD_Custom extends LOVD_Object {
                                     'view'   => array($aCol['head_column'], $aCol['width'], ($bAlignRight? ' align="right"' : '')),
                                     'db'     => array('`' . $aCol['colid'] . '`', 'ASC', lovd_getColumnType('', $aCol['mysql_type'])),
                                     'legend' => array($aCol['description_legend_short'], $aCol['description_legend_full']),
+                                    'allowfnr' => true, // All custom columns allow Find & Replace.
                                  );
         }
         return $aViewList;
@@ -362,24 +374,29 @@ class LOVD_Custom extends LOVD_Object {
             if ($aCol['mandatory']) {
                 $this->aCheckMandatory[] = $sCol;
             }
-            // DIAGNOSTICS: Disabled, as it takes a lot of time, and we don't use it.
-//            // Make it easier for users to fill in the age fields. Change 5d into 00y00m05d, for instance.
-//            if (preg_match('/\/Age(\/.+|_.+)?$/', $sCol) && $aData[$sCol] && preg_match('/^([<>])?(\d{1,2}y)?(\d{1,2}m)?(\d{1,2}d)?(\?)?$/', $aData[$sCol], $aRegs)) {
-//                $aRegs = array_pad($aRegs, 6, '');
-//                if ($aRegs[2] || $aRegs[3] || $aRegs[4]) {
-//                    // At least some data needs to be filled in!
-//                    // First, pad the numbers.
-//                    foreach ($aRegs as $key => $val) {
-//                        if (preg_match('/^\d{1}[ymd]$/', $val)) {
-//                            $aRegs[$key] = '0' . $val;
-//                        }
-//                    }
-//                    // Then, glue everything together.
-//                    $aData[$sCol] = $_POST[$sCol] = $aRegs[1] . (!$aRegs[2]? '00y' : $aRegs[2]) . (!$aRegs[3] && $aRegs[4]? '00m' : $aRegs[3]) . (!$aRegs[4]? '' : $aRegs[4]) . (!$aRegs[5]? '' : $aRegs[5]);
-//                }
-//            }
+            if (!LOVD_plus) {
+                // Disabled for LOVD+, as it takes a lot of time, and we don't use it.
+                // Make it easier for users to fill in the age fields. Change 5d into 00y00m05d, for instance.
+                if (preg_match('/\/Age(\/.+|_.+)?$/', $sCol) && $aData[$sCol] && preg_match('/^([<>])?(\d{1,2}y)?(\d{1,2}m)?(\d{1,2}d)?(\?)?$/', $aData[$sCol], $aRegs)) {
+                    $aRegs = array_pad($aRegs, 6, '');
+                    if ($aRegs[2] || $aRegs[3] || $aRegs[4]) {
+                        // At least some data needs to be filled in!
+                        // First, pad the numbers.
+                        foreach ($aRegs as $key => $val) {
+                            if (preg_match('/^\d{1}[ymd]$/', $val)) {
+                                $aRegs[$key] = '0' . $val;
+                            }
+                        }
+                        // Then, glue everything together.
+                        $aData[$sCol] = $_POST[$sCol] = $aRegs[1] . (!$aRegs[2]? '00y' : $aRegs[2]) . (!$aRegs[3] && $aRegs[4]? '00m' : $aRegs[3]) . (!$aRegs[4]? '' : $aRegs[4]) . (!$aRegs[5]? '' : $aRegs[5]);
+                    }
+                }
+            }
             if (!empty($aData[$sCol])) {
-                //$this->checkInputRegExp($sCol, $aData[$sCol]); // Disabled for DIAGNOSTICS, to speed up the import.
+                if (!LOVD_plus) {
+                    // Disabled for LOVD+, to speed up the import.
+                    $this->checkInputRegExp($sCol, $aData[$sCol]);
+                }
                 $this->checkSelectedInput($sCol, $aData[$sCol]);
             }
         }
@@ -410,7 +427,9 @@ class LOVD_Custom extends LOVD_Object {
     function checkInputRegExp ($sCol, $val)
     {
         // Checks if field input corresponds to the given regexp pattern.
-        $sColClean = preg_replace('/^\d{5}_/', '', $sCol); // Remove prefix (transcriptid) that LOVD_TranscriptVariants puts there.
+        global $_SETT;
+
+        $sColClean = preg_replace('/^\d{' . $_SETT['objectid_length']['transcripts'] . '}_/', '', $sCol); // Remove prefix (transcriptid) that LOVD_TranscriptVariants puts there.
         if ($this->aColumns[$sColClean]['preg_pattern'] && $val) {
             if (!preg_match($this->aColumns[$sColClean]['preg_pattern'], $val)) {
                 lovd_errorAdd($sCol, 'The input in the \'' . (lovd_getProjectFile() == '/import.php'? $sColClean : $this->aColumns[$sColClean]['form_type'][0]) . '\' field does not correspond to the required input pattern.');
@@ -425,7 +444,9 @@ class LOVD_Custom extends LOVD_Object {
     function checkSelectedInput ($sCol, $Val)
     {
         // Checks if the selected values are indeed from the selection list.
-        $sColClean = preg_replace('/^\d{5}_/', '', $sCol); // Remove prefix (transcriptid) that LOVD_TranscriptVariants puts there.
+        global $_SETT;
+
+        $sColClean = preg_replace('/^\d{' . $_SETT['objectid_length']['transcripts'] . '}_/', '', $sCol); // Remove prefix (transcriptid) that LOVD_TranscriptVariants puts there.
         if ($this->aColumns[$sColClean]['form_type'][2] == 'select' && $this->aColumns[$sColClean]['form_type'][3] >= 1) {
             if (!empty($Val)) {
                 $aOptions = preg_replace('/ *(=.*)?$/', '', $this->aColumns[$sColClean]['select_options']); // Trim whitespace from the options.

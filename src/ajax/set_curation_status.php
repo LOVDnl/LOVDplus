@@ -65,7 +65,7 @@ if (!empty($_GET['id']) && $_AUTH && ACTION !== false && (isset($_SETT['curation
     }
 
     $nSwitched = 0;
-    $q = $_DB->query('UPDATE ' . TABLE_VARIANTS . ' SET curation_statusid = ' . (ACTION == 'clear' ? '?' : 'CAST(? AS UNSIGNED)') . ' WHERE id IN (?' . str_repeat(', ?', count($aIDs) - 1) . ')', array_merge(array((ACTION == 'clear' ? NULL : ACTION)), $aIDs), false);
+    $q = $_DB->query('UPDATE ' . TABLE_VARIANTS . ' SET curation_statusid = ' . (ACTION == 'clear'? '?' : 'CAST(? AS UNSIGNED)') . ' WHERE id IN (?' . str_repeat(', ?', count($aIDs) - 1) . ')', array_merge(array((ACTION == 'clear'? NULL : ACTION)), $aIDs), false);
     if ($q) {
         $nSwitched = $q->rowCount();
         if ($_GET['id'] == 'selected') {
@@ -73,7 +73,7 @@ if (!empty($_GET['id']) && $_AUTH && ACTION !== false && (isset($_SETT['curation
         }
         foreach ($aIDs as $nID) {
             // Write to log...
-            lovd_writeLog('Event', 'CurationStatus', 'Updated curation status for variant #' . $nID . ' to "' . (ACTION == 'clear' ? 'Clear curation status' : $_SETT['curation_status'][ACTION]) . '".');
+            lovd_writeLog('Event', 'CurationStatus', 'Updated curation status for variant #' . $nID . ' to "' . (ACTION == 'clear'? 'Clear curation status' : $_SETT['curation_status'][ACTION]) . '".');
         }
     }
     die((int) ($nSwitched > 0) . ' ' . $nSwitched);
