@@ -9,6 +9,10 @@
    Closes #143: "LOVD won't install with error "Invalid default value for
    'start_date'""
    Closes #173: "Installation failed on ubuntu 16"
+ * Added the summary annotation record feature; Curators and up may now store
+   annotations to variants, independent of the observation. These annotations
+   will show up for every observation of the variant. Examples of annotations
+   are external IDs or information on the clinical significance of the variant.
 
 
 /************************************

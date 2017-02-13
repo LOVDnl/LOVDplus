@@ -86,7 +86,7 @@ if (PATH_COUNT == 1 && !ACTION) {
             }
             // Create a table of any bad gene symbols and try to work out if there is a correct gene symbol available.
             if ($aBadGeneSymbols) {
-                $sBadGenesHTML .= '    <H3>' . count($aBadGeneSymbols) . ' gene' . (count($aBadGeneSymbols) <= 1 ? '' : 's') . ' not found!</H3>' . "\n" .
+                $sBadGenesHTML .= '    <H3>' . count($aBadGeneSymbols) . ' gene' . (count($aBadGeneSymbols) <= 1? '' : 's') . ' not found!</H3>' . "\n" .
                                   '    These genes were not found, please review them and correct them before proceeding.' . "\n" .
                                   '    <TABLE  border="0" cellpadding="0" cellspacing="1" class="data">' . "\n" .
                                   '      <TR>' . "\n" .
@@ -183,7 +183,7 @@ if (PATH_COUNT == 1 && !ACTION) {
     // Show an info box if the gene lists are limited by the search.
     if ($aCorrectGeneSymbols) {
         print('    <DIV id="searchInfo">' . "\n");
-        lovd_showInfoTable(count($aCorrectGeneSymbols) . ' gene' . (count($aCorrectGeneSymbols) <= 1 ? '' : 's') . ' from the search above ' . (count($aCorrectGeneSymbols) <= 1 ? 'has' : 'have') . ' been selected in the list below. <A href="javascript:lovd_AJAX_viewListSubmit(\'' . $sViewListID . '\', function(){lovd_AJAX_viewListCheckedFilter(\'' . $sViewListID . '\', true);});">Click here</A> to limit the list to only ' . (count($aCorrectGeneSymbols) <= 1 ? 'this' : 'those') . ' gene' . (count($aCorrectGeneSymbols) <= 1 ? '' : 's') . '.');
+        lovd_showInfoTable(count($aCorrectGeneSymbols) . ' gene' . (count($aCorrectGeneSymbols) <= 1? '' : 's') . ' from the search above ' . (count($aCorrectGeneSymbols) <= 1? 'has' : 'have') . ' been selected in the list below. <A href="javascript:lovd_AJAX_viewListSubmit(\'' . $sViewListID . '\', function(){lovd_AJAX_viewListCheckedFilter(\'' . $sViewListID . '\', true);});">Click here</A> to limit the list to only ' . (count($aCorrectGeneSymbols) <= 1? 'this' : 'those') . ' gene' . (count($aCorrectGeneSymbols) <= 1? '' : 's') . '.');
         print('    </DIV>' . "\n");
     }
     print('    <DIV id="searchChecked" style="display: none;">' . "\n");
@@ -286,7 +286,9 @@ if (PATH_COUNT == 1 && ACTION == 'import') {
                     $aMissingColumns = array();
                     $aMissingColumnIDs = array();
 
-                    if ($aFileColumnNames[0] != 'id') {
+                    if ($aFileColumnNames[0] == 'original_gene') { // We are going to use the gene symbols stored in the pipeline BED file as the main symbol.
+                        $aFileColumnNames[0] = 'id'; // Map this column to the ID column within LOVD+.
+                    } else { // We are expecting the original_gene column to be the first column in this file and that doesn't seem to be true here.
                         lovd_errorAdd('import', 'This does not look like a correct gene statistics file as the gene id column is not in the first position. Please check the file and try again.');
                     }
 
@@ -317,6 +319,8 @@ if (PATH_COUNT == 1 && ACTION == 'import') {
             // Get all the current gene symbols in LOVD.
             $aGenesInLOVD = $_DB->query('SELECT UPPER(id), id FROM ' . TABLE_GENES)->fetchAllCombine();
             $sDateNow = date('Y-m-d H:i:s');
+            $nAltSymbolKey = array_search('alternative_names',$aFileColumnNames); // Record the array location for the alternative gene names, used for matching statistics if there is not an exact gene name match.
+            $nHGNCSymbolKey = array_search('hgnc',$aFileColumnNames); // Record the array location for the HGNC symbol, used for matching statistics if there is not an exact gene name match.
             // Loop through each of the gene symbols and check to see if they exist within LOVD, create an error log. Remove genes that are not within LOVD?
             foreach ($aData as $i => $sLine) {
                 // Skip the first line with the headers in it.
@@ -325,18 +329,49 @@ if (PATH_COUNT == 1 && ACTION == 'import') {
                 }
                 $sLine = trim($sLine);
                 $aColumns = explode("\t", $sLine);
-
+                $bFoundGene = false;
                 $sFileGeneSymbol = $aColumns[0];
+
                 // Check if the gene symbol exists within LOVD.
-                if (!isset($aGenesInLOVD[strtoupper($sFileGeneSymbol)])) {
-                    $aMissingGenes[] = $sFileGeneSymbol;
-                } else {
-                    foreach ($aMissingColumnIDs as $iMissingColumnID) {
+                if (!isset($aGenesInLOVD[strtoupper($sFileGeneSymbol)])) { // We did not find the gene symbol within LOVD+ using our first check.
+
+                    if ($nHGNCSymbolKey !== false) { // We have a HGNC symbol to use to search.
+                        $sHGNCGeneSymbol = trim($aColumns[$nAltSymbolKey]);
+                        if (isset($aGenesInLOVD[strtoupper($sHGNCGeneSymbol)])) { // We found a match so lets use this symbol in LOVD+.
+                            $aColumns[0] = $sHGNCGeneSymbol; // Replace the given gene symbol with the one found within LOVD+.
+                            $bFoundGene = true;
+                        }
+                    }
+
+                    if ($nAltSymbolKey !== false && !$bFoundGene) { // We have alternative gene names to search through.
+                        // Clean up spaces and trim alternative gene names.
+                        $sAltGeneSymbols = str_replace(' ', '', trim($aColumns[$nAltSymbolKey]));
+                        // Explode the alternative gene names out.
+                        $aAltGeneSymbols = explode(",", $sAltGeneSymbols);
+                        // Loop through the alternative gene names and see if we can find a match within LOVD+.
+                        foreach ($aAltGeneSymbols as $sAltGeneSymbol) {
+                            if (isset($aGenesInLOVD[strtoupper($sAltGeneSymbol)])) { // We found a match so lets use this symbol in LOVD+.
+                                $aColumns[0] = $sAltGeneSymbol; // Replace the given gene symbol with the one found within LOVD+.
+                                $bFoundGene = true;
+                                break;
+                            }
+                        }
+                    }
+
+                } else { // We have found the gene symbol in our first check.
+                    $bFoundGene = true;
+                }
+
+                if ($bFoundGene) { // We have found this gene within LOVD+ so insert the gene statistics data.
+                    foreach ($aMissingColumnIDs as $iMissingColumnID) { // Remove any columns that are not present within LOVD+.
                         unset($aColumns[$iMissingColumnID]);
                     }
                     $aColumns = array_values($aColumns);
                     $aColumns[] = $sDateNow;
-                    $pdoInsert->execute($aColumns);
+                    $pdoInsert->execute($aColumns); // Insert the gene statistics record.
+                } else {
+                    // We didn't find a match so this is a missing gene symbol, add it to the list of missing genes.
+                    $aMissingGenes[] = $sFileGeneSymbol;
                 }
                 // Update the progress bar every 1000 records.
                 $_BAR->setProgress(($i / $iGeneFileCount) * 100);
@@ -345,6 +380,7 @@ if (PATH_COUNT == 1 && ACTION == 'import') {
                 }
             }
 
+            // We are all done so lets clean up.
             $_BAR->setProgress(100);
             $_BAR->setMessage('Done!');
             $_BAR->setMessageVisibility('done', true);

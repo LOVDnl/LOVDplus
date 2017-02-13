@@ -143,6 +143,9 @@ if (LOVD_plus) {
             'INSERT INTO ' . TABLE_COLS . ' VALUES ("VariantOnTranscript/Prediction/MutationTaster/Score",  255, 100, 0, 1, 0, "MutationTaster score", "", "MutationTaster score.", "The MutationTaster score, predicting the effect of the DNA variant on the function of the protein.", "FLOAT", "MutationTaster score||text|6", "", "", 0, 0, 1, 0, NOW(), NULL, NULL)',
             'INSERT INTO ' . TABLE_COLS . ' VALUES ("VariantOnTranscript/Prediction/SIFT",                  255, 100, 0, 1, 0, "SIFT score", "", "SIFT score.", "The SIFT score, predicting the effect of the DNA variant on the function of the protein.", "VARCHAR(50)", "SIFT score||text|6", "", "", 0, 0, 1, 0, NOW(), NULL, NULL)',
             'INSERT INTO ' . TABLE_COLS . ' VALUES ("VariantOnTranscript/Prediction/Grantham",              255, 100, 0, 1, 0, "Grantham score", "", "Grantham score.", "The Grantham score, predicting the effect of the DNA variant on the function of the protein.", "TINYINT UNSIGNED", "Grantham score||text|6", "", "", 0, 0, 1, 0, NOW(), NULL, NULL)',
+            'INSERT INTO ' . TABLE_COLS . ' VALUES ("SummaryAnnotation/Remarks",                             10, 200, 0, 1, 0, "Variant remarks", "", "Remarks regarding the variant described, independent of a specific observation.", "Remarks regarding the variant described, independent of a specific observation, e.g. 345 kb deletion, association with disease from other studies, etc.", "TEXT", "Remarks||textarea|50|3", "", "", 0, 0, 1, 0, NOW(), NULL, NULL)',
+            'INSERT INTO ' . TABLE_COLS . ' VALUES ("SummaryAnnotation/Curation/Interpretation",            255, 200, 0, 1, 0, "Interpretation", "", "Interpretation of variant for reporting.", "Interpretation of variant for reporting.", "TEXT", "Interpretation||textarea|40|4", "", "", 0, 0, 1, 0, NOW(), NULL, NULL)',
+
         ));
 
     if ($_INI['instance']['name'] == 'leiden') {

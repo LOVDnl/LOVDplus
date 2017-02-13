@@ -148,7 +148,7 @@ class LOVD_CustomViewList extends LOVD_Object {
             switch ($sObject) {
                 case 'Gene':
                     if (!$bSetRowID) {
-                        $aSQL['SELECT'] .= (!$aSQL['SELECT'] ? '' : ', ') . 'g.id AS row_id';
+                        $aSQL['SELECT'] .= (!$aSQL['SELECT']? '' : ', ') . 'g.id AS row_id';
                         $bSetRowID = true;
                     }
                     if (!$aSQL['FROM']) {
@@ -159,7 +159,7 @@ class LOVD_CustomViewList extends LOVD_Object {
                     break;
 
                 case 'Transcript':
-                    $aSQL['SELECT'] .= (!$aSQL['SELECT'] ? '' : ', ') . 't.id AS tid, ' .
+                    $aSQL['SELECT'] .= (!$aSQL['SELECT']? '' : ', ') . 't.id AS tid, ' .
                         't.geneid, t.name, t.id_ncbi, t.id_protein_ncbi';
                     if (!$bSetRowID) {
                         $aSQL['SELECT'] .= ', t.id AS row_id';
@@ -336,7 +336,7 @@ class LOVD_CustomViewList extends LOVD_Object {
 
                 case 'Screening':
                     if (!$bSetRowID) {
-                        $aSQL['SELECT'] .= (!$aSQL['SELECT'] ? '' : ', ') . 's.id AS row_id';
+                        $aSQL['SELECT'] .= (!$aSQL['SELECT']? '' : ', ') . 's.id AS row_id';
                         $bSetRowID = true;
                     }
                     if (!$aSQL['FROM']) {
@@ -370,7 +370,7 @@ class LOVD_CustomViewList extends LOVD_Object {
 
                 case 'Scr2Var':
                     if (!$bSetRowID) {
-                        $aSQL['SELECT'] .= (!$aSQL['SELECT'] ? '' : ', ') . 's2v.id AS row_id';
+                        $aSQL['SELECT'] .= (!$aSQL['SELECT']? '' : ', ') . 's2v.id AS row_id';
                         $bSetRowID = true;
                     }
                     if ($aSQL['FROM']) {
