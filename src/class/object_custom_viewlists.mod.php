@@ -321,8 +321,8 @@ class LOVD_CustomViewListMOD extends LOVD_CustomViewList {
                                  'gene_disease_names' => array(
                                      'view' => array('Associated diseases', 200),
                                      'db'   => array('gene_disease_names', 'ASC', 'TEXT'),
-                                     'legend' => array('The diseases associated with this variant\'s gene.',
-                                         'The diseases associated with this variant\'s gene.')),
+                                     'legend' => array('The diseases associated with this variant\'s gene(s).',
+                                         'The diseases associated with this variant\'s gene(s).')),
                               ));
                     if (!$this->sSortDefault) {
                         // First data table in view.
