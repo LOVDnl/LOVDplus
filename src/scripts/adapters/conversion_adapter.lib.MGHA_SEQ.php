@@ -276,9 +276,7 @@ class LOVD_MghaSeqDataConverter extends LOVD_DefaultDataConverter {
             'vcf_SAMPLE' => 'VariantOnGenome/Sequencing/Sample_Name',
             'vcf_SHIFT3' => 'VariantOnGenome/Sequencing/3_Prime_Shift',
 
-            'vcf_SL_N_AD_VARDICT' => 'VariantOnGenome/Sequencing/Normal/Seqliner/Allele/Vardict',
             'vcf_SL_N_DP_VARDICT' => 'VariantOnGenome/Sequencing/Normal/Seqliner/Coverage/Vardict',
-            'vcf_SL_T_AD_VARDICT' => 'VariantOnGenome/Sequencing/Tumour/Seqliner/Allele/Vardict',
             'vcf_SL_T_DP_VARDICT' => 'VariantOnGenome/Sequencing/Tumour/Seqliner/Coverage/Vardict',
 
             'vcf_SSF' => 'VariantOnGenome/Sequencing/P_Value',
@@ -373,23 +371,29 @@ class LOVD_MghaSeqDataConverter extends LOVD_DefaultDataConverter {
             'Tumour_Depth_Ref' => 'VariantOnGenome/Sequencing/Tumour/Allele/Depth/Ref', // Derived from Tumour:AD.
             'Tumour_Depth_Alt' => 'VariantOnGenome/Sequencing/Tumour/Allele/Depth/Alt', // Derived from Tumour:AD.
 
-            'Normal_Seqliner_Indel_Depth_Ref' => 'VariantOnGenome/Sequencing/Normal/Seqliner/Indel/Depth/Ref', // Derived from SL_N_AD_INDELOCATOR.
-            'Normal_Seqliner_Indel_Depth_Alt' => 'VariantOnGenome/Sequencing/Normal/Seqliner/Indel/Depth/Alt', // Derived from SL_N_AD_INDELOCATOR.
+//            'Normal_Seqliner_Indel_Depth_Ref' => 'VariantOnGenome/Sequencing/Normal/Seqliner/Indel/Depth/Ref', // Derived from SL_N_AD_INDELOCATOR.
+//            'Normal_Seqliner_Indel_Depth_Alt' => 'VariantOnGenome/Sequencing/Normal/Seqliner/Indel/Depth/Alt', // Derived from SL_N_AD_INDELOCATOR.
 
-            'Normal_Seqliner_Mutect_Depth_Ref' => 'VariantOnGenome/Sequencing/Normal/Seqliner/Mutect/Depth/Ref', // Derived from SL_N_AD_MUTECT.
-            'Normal_Seqliner_Mutect_Depth_Alt' => 'VariantOnGenome/Sequencing/Normal/Seqliner/Mutect/Depth/Alt', // Derived from SL_N_AD_MUTECT.
+//            'Normal_Seqliner_Mutect_Depth_Ref' => 'VariantOnGenome/Sequencing/Normal/Seqliner/Mutect/Depth/Ref', // Derived from SL_N_AD_MUTECT.
+//            'Normal_Seqliner_Mutect_Depth_Alt' => 'VariantOnGenome/Sequencing/Normal/Seqliner/Mutect/Depth/Alt', // Derived from SL_N_AD_MUTECT.
 
-            'Normal_Seqliner_Varscan_Depth_Ref' => 'VariantOnGenome/Sequencing/Normal/Seqliner/Varscan/Depth/Ref', // Derived from SL_N_AD_VARSCAN.
-            'Normal_Seqliner_Varscan_Depth_Alt' => 'VariantOnGenome/Sequencing/Normal/Seqliner/Varscan/Depth/Alt', // Derived from SL_N_AD_VARSCAN.
+            'Normal_Seqliner_Varscan_Depth_Ref' => 'VariantOnGenome/Sequencing/Normal/Seqliner/Varscan/Depth/Ref', // Derived from vcf_SL_N_AD_VARSCAN.
+            'Normal_Seqliner_Varscan_Depth_Alt' => 'VariantOnGenome/Sequencing/Normal/Seqliner/Varscan/Depth/Alt', // Derived from vcf_SL_N_AD_VARSCAN.
 
-            'Tumour_Seqliner_Indel_Depth_Ref' => 'VariantOnGenome/Sequencing/Tumour/Seqliner/Indel/Depth/Ref', // Derived from SL_T_AD_INDELOCATOR.
-            'Tumour_Seqliner_Indel_Depth_Alt' => 'VariantOnGenome/Sequencing/Tumour/Seqliner/Indel/Depth/Alt', // Derived from SL_T_AD_INDELOCATOR.
+            'Normal_Seqliner_Vardict_Depth_Ref' => 'VariantOnGenome/Sequencing/Normal/Seqliner/Vardict/Depth/Ref', // Derived from vcf_SL_N_AD_VARDICT.
+            'Normal_Seqliner_Vardict_Depth_Alt' => 'VariantOnGenome/Sequencing/Normal/Seqliner/Vardict/Depth/Alt', // Derived from vcf_SL_N_AD_VARDICT.
 
-            'Tumour_Seqliner_Mutect_Depth_Ref' => 'VariantOnGenome/Sequencing/Tumour/Seqliner/Mutect/Depth/Ref', // Derived from SL_T_AD_MUTECT.
-            'Tumour_Seqliner_Mutect_Depth_Alt' => 'VariantOnGenome/Sequencing/Tumour/Seqliner/Mutect/Depth/Alt', // Derived from SL_T_AD_MUTECT.
+//            'Tumour_Seqliner_Indel_Depth_Ref' => 'VariantOnGenome/Sequencing/Tumour/Seqliner/Indel/Depth/Ref', // Derived from SL_T_AD_INDELOCATOR.
+//            'Tumour_Seqliner_Indel_Depth_Alt' => 'VariantOnGenome/Sequencing/Tumour/Seqliner/Indel/Depth/Alt', // Derived from SL_T_AD_INDELOCATOR.
 
-            'Tumour_Seqliner_Varscan_Depth_Ref' => 'VariantOnGenome/Sequencing/Tumour/Seqliner/Varscan/Depth/Ref', // Derived from SL_T_AD_VARSCAN.
-            'Tumour_Seqliner_Varscan_Depth_Alt' => 'VariantOnGenome/Sequencing/Tumour/Seqliner/Varscan/Depth/Alt', // Derived from SL_T_AD_VARSCAN.
+//            'Tumour_Seqliner_Mutect_Depth_Ref' => 'VariantOnGenome/Sequencing/Tumour/Seqliner/Mutect/Depth/Ref', // Derived from SL_T_AD_MUTECT.
+//            'Tumour_Seqliner_Mutect_Depth_Alt' => 'VariantOnGenome/Sequencing/Tumour/Seqliner/Mutect/Depth/Alt', // Derived from SL_T_AD_MUTECT.
+
+            'Tumour_Seqliner_Varscan_Depth_Ref' => 'VariantOnGenome/Sequencing/Tumour/Seqliner/Varscan/Depth/Ref', // Derived from vcf_SL_T_AD_VARSCAN.
+            'Tumour_Seqliner_Varscan_Depth_Alt' => 'VariantOnGenome/Sequencing/Tumour/Seqliner/Varscan/Depth/Alt', // Derived from vcf_SL_T_AD_VARSCAN.
+
+            'Tumour_Seqliner_Vardict_Depth_Ref' => 'VariantOnGenome/Sequencing/Tumour/Seqliner/Vardict/Depth/Ref', // Derived from vcf_SL_T_AD_VARDICT.
+            'Tumour_Seqliner_Vardict_Depth_Alt' => 'VariantOnGenome/Sequencing/Tumour/Seqliner/Vardict/Depth/Alt', // Derived from vcf_SL_T_AD_VARDICT.
 
         );
 
@@ -527,13 +531,15 @@ class LOVD_MghaSeqDataConverter extends LOVD_DefaultDataConverter {
             'normal:AD' => 'Normal_Depth_',
             'tumour:AD' => 'Tumour_Depth_',
 
-            'SL_N_AD_INDELOCATOR' => 'Normal_Seqliner_Indel_Depth_',
-            'SL_N_AD_MUTECT' => 'Normal_Seqliner_Mutect_Depth_',
-            'SL_N_AD_VARSCAN' => 'Normal_Seqliner_Varscan_Depth_',
+            //'SL_N_AD_INDELOCATOR' => 'Normal_Seqliner_Indel_Depth_',
+            //'SL_N_AD_MUTECT' => 'Normal_Seqliner_Mutect_Depth_',
+            'vcf_SL_N_AD_VARSCAN' => 'Normal_Seqliner_Varscan_Depth_',
+            'vcf_SL_N_AD_VARDICT' => 'Normal_Seqliner_Vardict_Depth_',
 
-            'SL_T_AD_INDELOCATOR' => 'Tumour_Seqliner_Indel_Depth_',
-            'SL_T_AD_MUTECT' => 'Tumour_Seqliner_Mutect_Depth_',
-            'SL_T_AD_VARSCAN' => 'Tumour_Seqliner_Varscan_Depth_',
+            //'SL_T_AD_INDELOCATOR' => 'Tumour_Seqliner_Indel_Depth_',
+            //'SL_T_AD_MUTECT' => 'Tumour_Seqliner_Mutect_Depth_',
+            'vcf_SL_T_AD_VARSCAN' => 'Tumour_Seqliner_Varscan_Depth_',
+            'vcf_SL_T_AD_VARDICT' => 'Tumour_Seqliner_Vardict_Depth_',
         );
 
         foreach ($aADColumns as $sVepCol => $sNewCol) {
