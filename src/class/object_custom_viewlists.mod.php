@@ -4,12 +4,13 @@
  * LEIDEN OPEN VARIATION DATABASE (LOVD)
  *
  * Created     : 2013-11-07
- * Modified    : 2017-02-13
+ * Modified    : 2017-02-14
  * For LOVD    : 3.0-18
  *
  * Copyright   : 2004-2017 Leiden University Medical Center; http://www.LUMC.nl/
  * Programmers : Ivo F.A.C. Fokkema <I.F.A.C.Fokkema@LUMC.nl>
  *               Anthony Marty <anthony.marty@unimelb.edu.au>
+ *               Juny Kesumadewi <juny.kesumadewi@unimelb.edu.au>
  *
  *
  * This file is part of LOVD.
@@ -247,15 +248,16 @@ class LOVD_CustomViewListMOD extends LOVD_CustomViewList {
                     break;
 
                 case 'GenePanels':
+                    $aSQL['SELECT'] .= (!$aSQL['SELECT']? '' : ', ') . 'GROUP_CONCAT(DISTINCT gp.name SEPARATOR ", ") AS gene_panels';
+
                     $nKeyVOT = array_search('VariantOnTranscript', $aObjects);
                     if (!$aSQL['FROM']) {
-                        $aSQL['SELECT'] .= (!$aSQL['SELECT']? '' : ', ') . 'GROUP_CONCAT(DISTINCT gp.name SEPARATOR ", ") AS gene_panels';
+                        // First data table in query.
                         $aSQL['FROM'] = TABLE_GP2GENE . ' AS gp2g  
-                                        LEFT JOIN ' . TABLE_GENE_PANELS . ' AS gp ON (gp2g.genepanelid = gp.id)';
+                                        LEFT OUTER JOIN ' . TABLE_GENE_PANELS . ' AS gp ON (gp2g.genepanelid = gp.id)';
                     } elseif ($nKeyVOT !== false && $nKeyVOT < $nKey) {
-                        $aSQL['FROM'] .= ' LEFT JOIN ' . TABLE_GP2GENE . ' AS gp2g ON (t.geneid = gp2g.geneid) 
-                                           LEFT JOIN ' . TABLE_GENE_PANELS . ' AS gp ON (gp2g.genepanelid = gp.id)';
-                        $aSQL['SELECT'] .= (!$aSQL['SELECT']? '' : ', ') . 'GROUP_CONCAT(DISTINCT gp.name SEPARATOR ", ") AS gene_panels';
+                        $aSQL['FROM'] .= ' LEFT OUTER JOIN ' . TABLE_GP2GENE . ' AS gp2g ON (t.geneid = gp2g.geneid) 
+                                           LEFT OUTER JOIN ' . TABLE_GENE_PANELS . ' AS gp ON (gp2g.genepanelid = gp.id)';
                     }
                     break;
             }

@@ -4,12 +4,13 @@
  * LEIDEN OPEN VARIATION DATABASE (LOVD)
  *
  * Created     : 2016-05-03
- * Modified    : 2016-05-25
- * For LOVD    : 3.0-13
+ * Modified    : 2017-02-14
+ * For LOVD    : 3.0-18
  *
  * Copyright   : 2004-2016 Leiden University Medical Center; http://www.LUMC.nl/
  * Programmers : Anthony Marty <anthony.marty@unimelb.edu.au>
  *               Ivo F.A.C. Fokkema <I.F.A.C.Fokkema@LUMC.nl>
+ *               Juny Kesumadewi <juny.kesumadewi@unimelb.edu.au>
  *
  *
  * This file is part of LOVD.
@@ -51,7 +52,7 @@ function getSelectedGenePanelsByRunID ($nRunID)
     $aGenePanels = $_DB->query('SELECT gp.id, gp.name, gp.type FROM ' . TABLE_AR2GP . ' AS ar2gp INNER JOIN ' . TABLE_GENE_PANELS . ' AS gp on (ar2gp.genepanelid = gp.id) WHERE ar2gp.runid = ? ORDER BY gp.type DESC, gp.name ASC', array($nRunID))->fetchAllGroupAssoc();
 
     foreach ($aGenePanels as $nGenePanelID => $aGenePanel) {
-        // Group the gene panels together and make sub arrays to contain the gene panel information.
+        // Group the gene panels together based on type, and make sub arrays to contain the gene panel information.
         $aGenePanelsFormatted[$aGenePanel['type']][] = array('id' => $nGenePanelID, 'name' => $aGenePanel['name']);
     }
 
@@ -62,8 +63,9 @@ function getSelectedGenePanelsByRunID ($nRunID)
         $sToolTip = '<B>' . ucfirst(str_replace('_', '&nbsp;', $sType)) . ($nGenePanelCount > 1? 's' : '') . '</B><BR>';
 
         foreach ($aGenePanels as $aGenePanel) {
+            // Add the gene panel name to the tooltip and the text to show. We might shorted the text to show later.
             $sToolTip .= '<A href="gene_panels/' . $aGenePanel['id'] . '">' . str_replace(' ', '&nbsp;', addslashes($aGenePanel['name'])) . '</A><BR>';
-            $sDisplayText = $aGenePanel['name'];
+            $sDisplayText .= (!$sDisplayText? '' : ', ') . $aGenePanel['name'];
         }
 
         // If there is more than 1 of each type of gene panel selected, then display the summary.
@@ -77,9 +79,9 @@ function getSelectedGenePanelsByRunID ($nRunID)
     if ($sCustomPanel) {
         // Add the custom panel info to the table.
         $sToolTip = '<B>Custom&nbsp;panel</B><BR>' . $sCustomPanel;
-        $aCustomPanelGenes = explode(', ', $sCustomPanel);
+        $aCustomPanelGenes = explode(', ', $sCustomPanel); // Custom panels are always stored separated by ', '.
 
-        // If there is less than 5 genes in a custome gne panel, simply display all the gene symbols.
+        // If there are less than 5 genes in a custom gene panel, simply display all the gene symbols.
         $sCustomPanelDisplayText = (count($aCustomPanelGenes) <= 5? ': ' . $sCustomPanel : '(' . count($aCustomPanelGenes) . ' genes)');
         $sGenePanelsInfo .= '<TR onmouseover="lovd_showToolTip(\'' . htmlspecialchars($sToolTip) . '\', this, [100, -10]);"><TD>Custom panel '. $sCustomPanelDisplayText .'</TD></TR>' . "\n";
     }

@@ -4,12 +4,13 @@
  * LEIDEN OPEN VARIATION DATABASE (LOVD)
  *
  * Created     : 2013-11-05
- * Modified    : 2016-07-19
- * For LOVD    : 3.0-13
+ * Modified    : 2017-02-14
+ * For LOVD    : 3.0-18
  *
- * Copyright   : 2004-2016 Leiden University Medical Center; http://www.LUMC.nl/
- * Programmer  : Ing. Ivo F.A.C. Fokkema <I.F.A.C.Fokkema@LUMC.nl>
+ * Copyright   : 2004-20176 Leiden University Medical Center; http://www.LUMC.nl/
+ * Programmer  : Ivo F.A.C. Fokkema <I.F.A.C.Fokkema@LUMC.nl>
  *               Anthony Marty <anthony.marty@unimelb.edu.au>
+ *               Juny Kesumadewi <juny.kesumadewi@unimelb.edu.au>
  *
  *
  * This file is part of LOVD.
@@ -165,14 +166,15 @@ function lovd_runNextFilter (nAnalysisID, nRunID)
     $.get('<?php echo lovd_getInstallURL(); ?>ajax/run_next_filter.php?runid=' + escape(nRunID))
         .done(
             function (data) {
-                // The results from the filter are passed back as a JSON string from the run_next_filter.php page, load them into an object.
+                // The results from the filter are passed back as an int status code or a
+                // JSON string from the run_next_filter.php page, load them into an object.
                 var dataObj = $.parseJSON(data);
                 if (data == '0') {
                     // Failure, we're in trouble, reload view.
                     alert('Filter step not valid or no authorization to start a new filter step. Refreshing the page...');
                     location.reload();
                 } else if (dataObj.result == false) {
-                    alert(dataObj.msg);
+                    alert(dataObj.message);
                     location.reload();
                 } else if (dataObj.result) {
                     // Success! Mark line and continue to the next, or stop if we're done...
@@ -203,7 +205,7 @@ function lovd_runNextFilter (nAnalysisID, nRunID)
                     sOnClickLink = $('#run_' + nRunID + ' img.modify').attr('onclick');
                     $('#run_' + nRunID + ' img.modify').attr('onclick', sOnClickLink.replace('analyses/' + nAnalysisID, 'analyses/run/' + nRunID));
 
-                    // Display remove link and replace url with the run ID after successful run.
+                    // Display the hidden "remove" link and replace URL with the run ID after a successful run.
                     sRemoveOnClickLink = $('#run_' + nRunID + ' div.analysis-tools img.remove').attr('onclick');
                     $('#run_' + nRunID + ' div.analysis-tools img.remove').attr('onclick', sRemoveOnClickLink.replace('run/0?', 'run/' + nRunID + '?'));
                     $('#run_' + nRunID + ' div.analysis-tools img.remove').show();
