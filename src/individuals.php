@@ -431,8 +431,8 @@ if (PATH_COUNT >= 2 && ctype_digit($_PE[1]) && !ACTION && (PATH_COUNT == 2 || PA
 
                     // Format the display of the filters.
                     if (array_key_exists($sFilter, $aFilterInfo) && !empty($aFilterInfo[$sFilter]['name'])) {
-                        $sToolTip = '<TABLE border="0" cellpadding="0" cellspacing="3" class="filterinfo"><TR><TH>Filter name: </TH><TD>' . htmlspecialchars($aFilterInfo[$sFilter]['name']) . '</TD></TR><TR><TH>Description: </TH><TD>' . $aFilterInfo[$sFilter]['description'] . '</TD></TR><TR><TH>Key: </TH><TD>' . $sFilter . '</TD></TR></TABLE>';
-                        $sFormattedFilter = '<SPAN class="filtername" onmouseover="lovd_showToolTip(\'' . htmlspecialchars($sToolTip) . '\', this, [30, 6]);">' . htmlspecialchars($aFilterInfo[$sFilter]['name']) . '</SPAN>';
+                        $sToolTip = '<TABLE border="0" cellpadding="0" cellspacing="3" class="filterinfo"><TR><TH>Filter name: </TH><TD>' . str_replace("\r\n", ' ', htmlspecialchars($aFilterInfo[$sFilter]['name'])) . '</TD></TR><TR><TH>Description: </TH><TD>' . $aFilterInfo[$sFilter]['description'] . '</TD></TR><TR><TH>Key: </TH><TD>' . $sFilter . '</TD></TR></TABLE>';
+                        $sFormattedFilter = '<SPAN class="filtername" onmouseover="lovd_showToolTip(\'' . htmlspecialchars($sToolTip) . '\', this, [30, 6]);">' . str_replace(' ', '&nbsp;', str_replace("\r\n", '<BR>', htmlspecialchars($aFilterInfo[$sFilter]['name']))) . '</SPAN>';
                     } else {
                         $sFormattedFilter = $sFilter;
                     }
