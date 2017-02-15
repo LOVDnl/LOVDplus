@@ -64,7 +64,7 @@ function lovd_resetAfterFailedRun (sClassName)
 
 
 
-function lovd_runAnalysis (nScreeningID, nAnalysisID, nRunID, aSelectedGenePanels)
+function lovd_runAnalysis (nScreeningID, nAnalysisID, nRunID, aSelectedGenePanels, sClassName)
 {
     // Starts the analysis of the given screening.
 
@@ -84,15 +84,6 @@ function lovd_runAnalysis (nScreeningID, nAnalysisID, nRunID, aSelectedGenePanel
     $.get('<?php echo lovd_getInstallURL(); ?>ajax/run_analysis.php?screeningid=' + escape(nScreeningID) + '&analysisid=' + escape(nAnalysisID) + '&runid=' + escape(nRunID) + sGenePanels,
         function () {
             // Remove onClick handler and change class of table, to visually show that it's running.
-            // But first check if we're dealing with a modified run or an unmodified analysis.
-            if ($('#run_' + nRunID).length > 0) {
-                // Run was already started (usually a modified run).
-                sClassName = 'run_' + nRunID;
-            } else {
-                // Analysis started from page.
-                sClassName = 'analysis_' + nAnalysisID;
-            }
-
             $('#' + sClassName)
                 .attr('onclickold', $('#' + sClassName).attr('onclick'))
                 .attr('onclick', '');
@@ -113,7 +104,7 @@ function lovd_runAnalysis (nScreeningID, nAnalysisID, nRunID, aSelectedGenePanel
                     // Success! We're running...
                     // Now call the script that will start filtering.
                     var nRunID = oRegExp[1];
-                    return lovd_runNextFilter(nAnalysisID, nRunID);
+                    return lovd_runNextFilter(nAnalysisID, nRunID, sClassName);
                 } else if (data == '8') {
                     // Failure, reset table.
                     lovd_resetAfterFailedRun(sClassName);
@@ -141,21 +132,13 @@ function lovd_runAnalysis (nScreeningID, nAnalysisID, nRunID, aSelectedGenePanel
 
 
 
-function lovd_runNextFilter (nAnalysisID, nRunID)
+function lovd_runNextFilter (nAnalysisID, nRunID, sClassName)
 {
     // Calls the script to run the next filter.
 
     if (typeof(nAnalysisID) == 'undefined' || typeof(nRunID) == 'undefined') {
         alert('Incorrect argument(s) passed to runNextFilter function.');
         return false;
-    }
-
-    if ($('#run_' + nRunID).length > 0) {
-        // Run was already started (usually a modified run).
-        sClassName = 'run_' + nRunID;
-    } else {
-        // Analysis started from page.
-        sClassName = 'analysis_' + nAnalysisID;
     }
 
     $.get('<?php echo lovd_getInstallURL(); ?>ajax/run_next_filter.php?runid=' + escape(nRunID))
@@ -181,7 +164,7 @@ function lovd_runNextFilter (nAnalysisID, nRunID)
                     }
 
                     if (!dataObj.bDone) {
-                        return lovd_runNextFilter(nAnalysisID, nRunID);
+                        return lovd_runNextFilter(nAnalysisID, nRunID, sClassName);
                     }
 
                     // And also, we're done...
@@ -229,10 +212,11 @@ function lovd_runNextFilter (nAnalysisID, nRunID)
 
 
 
-function lovd_popoverGenePanelSelectionForm (nScreeningID, nAnalysisID, nRunID)
+function lovd_popoverGenePanelSelectionForm (nScreeningID, nAnalysisID, nRunID, clicked_id)
 {
     // Makes the gene panel selection form dialog visible and prepares it for the user.
 
+    sClassName = clicked_id;
     // Popup the gene panel selection form dialog.
     $("#gene_panel_selection").dialog(
         {
@@ -263,6 +247,7 @@ function lovd_popoverGenePanelSelectionForm (nScreeningID, nAnalysisID, nRunID)
     $("#gene_panel_selection_form input[name=nScreeningID]").val(nScreeningID);
     $("#gene_panel_selection_form input[name=nAnalysisID]").val(nAnalysisID);
     $("#gene_panel_selection_form input[name=nRunID]").val(nRunID);
+    $("#gene_panel_selection_form input[name=sClassName]").val(sClassName);
 }
 
 
@@ -282,9 +267,10 @@ function lovd_processGenePanelSelectionForm ()
     nScreeningID = $("#gene_panel_selection_form input[name=nScreeningID]").val();
     nAnalysisID = $("#gene_panel_selection_form input[name=nAnalysisID]").val();
     nRunID = $("#gene_panel_selection_form input[name=nRunID]").val();
+    sClassName = $("#gene_panel_selection_form input[name=sClassName]").val();
 
     // Call lovd_runAnalysis and pass all the extra values.
-    lovd_runAnalysis(nScreeningID, nAnalysisID, nRunID, aSelectedGenePanels);
+    lovd_runAnalysis(nScreeningID, nAnalysisID, nRunID, aSelectedGenePanels, sClassName);
 }
 
 

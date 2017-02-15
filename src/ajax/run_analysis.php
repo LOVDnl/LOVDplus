@@ -78,12 +78,6 @@ if ($_GET['runid']) {
     if (!$zAnalysis || !$zAnalysis['_filters']) {
         die('Analysis not recognized or no filters defined. If the analysis is defined properly, this is an error in the software.');
     }
-
-    // Check if this analysis has not been run before. If so, return a specific error. If somehow things don't complete, we should maybe just delete them and run again.
-    //   Otherwise, this check needs to be modified.
-    if ($_DB->query('SELECT COUNT(*) FROM ' . TABLE_ANALYSES_RUN . ' AS ar WHERE ar.analysisid = ? AND ar.screeningid = ? AND modified = 0', array($zAnalysis['id'], $_GET['screeningid']))->fetchColumn()) {
-        die('This analysis has already been performed on this screening.');
-    }
 }
 
 $sCustomPanel = '';
