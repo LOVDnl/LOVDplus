@@ -41,6 +41,8 @@ table.analysis th
   img.remove                 {position: absolute; top: -1px; right: 30px; display: none;}
 table.analysis th
   img.modify                 {position: absolute; top: -1px; right: 15px; display: none;}
+table.analysis th
+  img.clone                 {position: absolute; top: -1px; right: 45px; display: none;}
 table.analysis tr.message    {text-align: center; font-weight: bold; display: none;}
 table.analysis tr.message td {border-top: 1px dotted #000;}
 table.analysis
@@ -54,6 +56,8 @@ table.analysis_run th        {background: #B0E0B0;}
 table.analysis_run th
   img.remove                 {display: inline;}
 table.analysis_run th
+  img.clone                 {display: inline;}
+table.analysis_run th
   img.modify                 {display: inline;}
 table.analysis_run td        {background: #E0FFE0;}
 
@@ -66,6 +70,7 @@ table.analysis_not_run td    {background: #EEEEEE;}
 
 table.analysis_not_run th
 img.remove                 {display: inline; cursor: pointer;}
+
 
 table.analysis_running       {border: 3px double #000; margin: 0px;}
 table.analysis_running

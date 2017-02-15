@@ -159,21 +159,23 @@ if (PATH_COUNT == 3 && $_PE[1] == 'run' && ctype_digit($_PE[2]) && ACTION == 'mo
     $zData['filters'] = $_DB->query('SELECT filterid FROM ' . TABLE_ANALYSES_RUN_FILTERS . ' WHERE runid = ? ORDER BY filter_order', array($nID))->fetchAllColumn();
     $nFilters = count($zData['filters']);
 
+    if (count($zData['filters']) <= 1) {
+        // Column has already been removed from everything it can be removed from.
+        $_T->printHeader();
+        $_T->printTitle();
+        lovd_showInfoTable('This analysis run already has no filters left to remove.', 'stop');
+        $_T->printFooter();
+        exit;
+    }
+
     if (POST) {
 
-        // If 'clone' option is selected.
-        if (!empty($_POST['clone'])) {
-            $aRemovedFilters = array();
-        // If 'Remove filters' option is selected.
-        // Should have selected at least one filter.
-        } elseif (empty($_POST['remove_filters'])) {
+        if (empty($_POST['remove_filters'])) {
             lovd_errorAdd('target', 'Please select at least one filter to remove from this analysis run.');
         } elseif (count($_POST['remove_filters']) >= $nFilters) {
             // But can't select them all.
             lovd_errorAdd('target', 'You cannot remove all filters from this analysis run.');
         // If 'Remove filters' option is selected and there is no form validation error.
-        } else {
-            $aRemovedFilters = $_POST['remove_filters'];
         }
 
         if (!lovd_error()) {
@@ -186,7 +188,7 @@ if (PATH_COUNT == 3 && $_PE[1] == 'run' && ctype_digit($_PE[2]) && ACTION == 'mo
             $nNewRunID = $_DB->lastInsertId();
             // Now insert filters.
             foreach ($zData['filters'] as $nOrder => $sFilter) {
-                if (in_array($sFilter, $aRemovedFilters)) {
+                if (in_array($sFilter, $_POST['remove_filters'])) {
                     continue; // Column selected to be removed.
                 }
                 $_DB->query('INSERT INTO ' . TABLE_ANALYSES_RUN_FILTERS . ' (runid, filterid, filter_order) VALUES (?, ?, ?)', array($nNewRunID, $sFilter, $nOrder));
@@ -196,9 +198,9 @@ if (PATH_COUNT == 3 && $_PE[1] == 'run' && ctype_digit($_PE[2]) && ACTION == 'mo
             $_DB->commit();
 
             // Write to log...
-            $sLogMessage = ' with all filters cloned';
-            if (!empty($aRemovedFilters)) {
-                $sLogMessage = ' with filter(s) \'' . implode('\', \'', $aRemovedFilters) . '\' removed';
+            $sLogMessage = '';
+            if (!empty($_POST['remove_filters'])) {
+                $sLogMessage = ' with filter(s) \'' . implode('\', \'', $_POST['remove_filters']) . '\' removed';
             }
             lovd_writeLog('Event', LOG_EVENT, 'Created analysis run ' . str_pad($nNewRunID, 5, '0', STR_PAD_LEFT) . ' based on ' . $nID . ' (' . $zData['name'] . ') on individual ' . $zData['individualid'] . ':' . $zData['screeningid'] . $sLogMessage);
 
@@ -235,8 +237,8 @@ if (PATH_COUNT == 3 && $_PE[1] == 'run' && ctype_digit($_PE[2]) && ACTION == 'mo
         array('POST', '', '', '', '40%', 14, '60%')
     );
 
-    $aForm[] = array('<B>Option 1:</B> Clone this analysis', '', 'submit', 'clone', 'clone');
-    $aForm[] = array('<B>Option 2:</B> Remove filters<BR><BR>', '', 'print', '');
+//    $aForm[] = array('<B>Option 1:</B> Clone this analysis', '', 'submit', 'clone', 'clone');
+    $aForm[] = array('<B>Remove the following filters</B><BR><BR>', '', 'print', '');
 
     if ($nFilters > 1) {
         $aForm[] = array('Please select the filters that you would like to <B>remove</B> from the analysis.<BR><BR>', '', 'print', '');

@@ -33,24 +33,26 @@ require ROOT_PATH . 'inc-init.php';
 header('Content-type: text/javascript; charset=UTF-8');
 
 // Check for basic format.
-if (PATH_COUNT != 3 || !ctype_digit($_PE[2]) || !in_array(ACTION, array('delete'))) {
+if (PATH_COUNT != 3 || !ctype_digit($_PE[2]) || !in_array(ACTION, array('delete', 'clone'))) {
     die('alert("Error while sending data.");');
 }
 
 // Require LEVEL_OWNER or higher (return value: 1).
-if (!$_AUTH || !lovd_isAuthorized('analysisrun', $_PE[2])) {
+$nRunID = $_PE[2];
+if (!$_AUTH || !lovd_isAuthorized('analysisrun', $nRunID)) {
     // If not authorized, die with error message.
     die('alert("Lost your session. Please log in again.");');
 }
 
-$nID = sprintf('%0' . $_SETT['objectid_length']['analysisruns'] . 'd', $_PE[2]);
+$nID = sprintf('%0' . $_SETT['objectid_length']['analysisruns'] . 'd', $nRunID);
 define('LOG_EVENT', 'AnalysisRunDelete');
 
 // Now get the analysis run's data, and check the screening's status.
 // We can't do anything if the screening has been closed, so then we'll fail here.
-$sSQL = 'SELECT ar.*, s.individualid
+$sSQL = 'SELECT a.*, ar.*, s.individualid
          FROM ' . TABLE_ANALYSES_RUN . ' AS ar
            INNER JOIN ' . TABLE_SCREENINGS . ' AS s ON (ar.screeningid = s.id)
+           INNER JOIN ' . TABLE_ANALYSES . ' AS a ON (ar.analysisid = a.id)
          WHERE ar.id = ? AND s.analysis_statusid < ?';
 $aSQL = array($nID, ANALYSIS_STATUS_CLOSED);
 
@@ -77,12 +79,15 @@ if (!$("#analysis_run_dialog").hasClass("ui-dialog-content") || !$("#analysis_ru
 
 // Implement an CSRF protection by working with tokens.
 $sFormDelete    = '<FORM id=\'analysis_run_delete_form\'><INPUT type=\'hidden\' name=\'csrf_token\' value=\'{{CSRF_TOKEN}}\'>Are you sure you want to remove this analysis run? The variants will not be deleted.<BR></FORM>';
+$sFormClone    = '<FORM id=\'analysis_run_clone_form\'><INPUT type=\'hidden\' name=\'csrf_token\' value=\'{{CSRF_TOKEN}}\'>Are you sure you want to duplicate this analysis run?<BR></FORM>';
 
 // Set JS variables and objects.
 print('
 var oButtonFormDelete = {"Delete":function () { $.post("' . CURRENT_PATH . '?' . ACTION . '", $("#analysis_run_delete_form").serialize()); }};
 var oButtonCancel  = {"Cancel":function () { $(this).dialog("close"); }};
 var oButtonClose   = {"Close":function () { $(this).dialog("close"); }};
+
+var oButtonFormClone = {"Duplicate":function () { $.post("' . CURRENT_PATH . '?' . ACTION . '", $("#analysis_run_clone_form").serialize()); }};
 
 
 ');
@@ -132,6 +137,71 @@ if (ACTION == 'delete' && POST) {
     print('
     $("#analysis_run_dialog").dialog("close");
     $("#run_' . $nID . '").fadeOut(500, function () { $(this).remove(); });
+    ');
+    exit;
+}
+
+
+
+
+
+if (ACTION == 'clone' && GET) {
+error_log('in clone GET');
+    // Request confirmation.
+    // We do this in two steps, not only because we'd like the user to confirm, but also to prevent CSRF.
+
+    $_SESSION['csrf_tokens']['analysis_run_clone'] = md5(uniqid());
+    $sFormClone = str_replace('{{CSRF_TOKEN}}', $_SESSION['csrf_tokens']['analysis_run_clone'], $sFormClone);
+
+    // Display the form, and put the right buttons in place.
+    print('
+    $("#analysis_run_dialog").html("' . $sFormClone . '<BR>");
+
+    // Select the right buttons.
+    $("#analysis_run_dialog").dialog({buttons: $.extend({}, oButtonFormClone, oButtonCancel)});
+    ');
+    exit;
+}
+
+
+
+
+
+if (ACTION == 'clone' && POST) {
+
+    define('LOG_EVENT', 'AnalysisRunClone');
+
+    // Process delete form.
+    // We do this in two steps, not only because we'd like the user to confirm, but also to prevent CSRF.
+
+    if (empty($_POST['csrf_token']) || $_POST['csrf_token'] != $_SESSION['csrf_tokens']['analysis_run_clone']) {
+        die('alert("Error while sending data, possible security risk. Please reload the page, and try again.");');
+    }
+
+    $zData['filters'] = $_DB->query('SELECT filterid FROM ' . TABLE_ANALYSES_RUN_FILTERS . ' WHERE runid = ? ORDER BY filter_order', array($nRunID))->fetchAllColumn();
+    $nFilters = count($zData['filters']);
+    $_DB->beginTransaction();
+    // First, copy the analysis run.
+    $_DB->query('INSERT INTO ' . TABLE_ANALYSES_RUN . ' (analysisid, screeningid, modified, created_by, created_date) VALUES (?, ?, ?, ?, NOW())', array($zData['analysisid'], $zData['screeningid'], $zData['modified'], $_AUTH['id']));
+    $nNewRunID = $_DB->lastInsertId();
+
+    // Now insert filters.
+    foreach ($zData['filters'] as $nOrder => $sFilter) {
+        $_DB->query('INSERT INTO ' . TABLE_ANALYSES_RUN_FILTERS . ' (runid, filterid, filter_order) VALUES (?, ?, ?)', array($nNewRunID, $sFilter, $nOrder));
+    }
+
+    if ($_DB->commit()) {
+        // If we get here, it all succeeded.
+        // Write to log...
+        lovd_writeLog('Event', LOG_EVENT, 'Created analysis run ' . str_pad($nNewRunID, 5, '0', STR_PAD_LEFT) . ' based on ' . $nID . ' (' . $zData['name'] . ') on individual ' . $zData['individualid'] . ':' . $zData['screeningid'] . ' with all filters cloned');
+    } else {
+        die('alert("Failed to duplicate analysis run.\n' . htmlspecialchars($_DB->formatError()) . '");');
+    }
+
+    // Just close the display, and remove the table.
+    print('
+    $("#analysis_run_dialog").dialog("close");
+    location.reload();
     ');
     exit;
 }
