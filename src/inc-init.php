@@ -223,6 +223,8 @@ $_SETT = array(
                 'unique_view_max_string_length' => 100,
                 'objectid_length' =>
                     array(
+                        'analyses' => 3,
+                        'analysisruns' => 5,
                         'diseases' => 5,
                         'individuals' => 8,
                         'links' => 3,
