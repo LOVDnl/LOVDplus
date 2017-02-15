@@ -362,6 +362,8 @@ if (PATH_COUNT >= 2 && ctype_digit($_PE[1]) && !ACTION && (PATH_COUNT == 2 || PA
             if ($zAnalysis['analysis_run']) {
                 $sJSAction = 'lovd_showAnalysisResults(\''. $zAnalysis['runid'] .'\')';
             } elseif ($bHasAuthorization) {
+                // FIXME: code duplicated from analysis_runs.php when we first render analyses tables.
+                // Can probably check for the call of lovd_popoverGenePanelSelectionForm from within lovd_runAnalysis.
                 $sFunctionName = ($bHasGenePanelFilter? 'lovd_popoverGenePanelSelectionForm' : 'lovd_runAnalysis');
                 $sRunID = (!$zAnalysis['runid']? '' : $zAnalysis['runid']);
                 $sJSAction = $sFunctionName . '(\''. $nScreeningToAnalyze  .'\', \''. $zAnalysis['id'] .'\', \'' . $sRunID . '\')';
@@ -375,8 +377,8 @@ if (PATH_COUNT >= 2 && ctype_digit($_PE[1]) && !ACTION && (PATH_COUNT == 2 || PA
                     <DIV style="position : relative" class="analysis-tools">
                       ' . $zAnalysis['name'] . (!$zAnalysis['modified']? '' : ' (modified)') .
                 (!$bHasAuthorization? '' : '
-                      <IMG ' . ($bCanRemoveAnalysis? '' : 'style="display:none;"') . ' src="gfx/cross.png" alt="Remove" onclick="$.get(\'ajax/analysis_runs.php/' . $zAnalysis['runid'] . '?delete\').fail(function(){alert(\'Error deleting analysis run, please try again later.\');}); return false;" width="16" height="16" class="remove">
-                      <IMG src="gfx/menu_logs.png" alt="Duplicate" onclick="$.get(\'ajax/analysis_runs.php/' . $zAnalysis['runid'] . '?clone\').fail(function(){alert(\'Error duplicating analysis run, please try again later.\');}); return false;" width="16" height="16" class="clone">
+                      <IMG ' . ($bCanRemoveAnalysis? '' : 'style="display:none;"') . ' src="gfx/cross.png" alt="Remove" onclick="$.get(\'ajax/analysis_runs.php/' . $zAnalysis['runid'] . '?delete\').fail(function(){alert(\'Error deleting analysis run, please try again later.\');}); cancelParentEvent(event);" width="16" height="16" class="remove">
+                      <IMG src="gfx/menu_logs.png" alt="Duplicate" onclick="$.get(\'ajax/analysis_runs.php/' . $zAnalysis['runid'] . '?clone\').fail(function(){alert(\'Error duplicating analysis run, please try again later.\');}); cancelParentEvent(event);" width="16" height="16" class="clone">
                       <IMG src="gfx/menu_edit.png" alt="Modify" onclick="lovd_openWindow(\'' . lovd_getInstallURL() . 'analyses/' . ($zAnalysis['runid']? 'run/' . $zAnalysis['runid'] : $zAnalysis['id']) . '?modify&amp;in_window\', \'ModifyAnalysisRun\', 780, 400); cancelParentEvent(event);" width="16" height="16" class="modify">') . '
                       <IMG src="gfx/lovd_form_question.png" alt="" onmouseover="lovd_showToolTip(\'' . $zAnalysis['description'] . '\');" onmouseout="lovd_hideToolTip();" width="14" height="14" class="help" style="position: absolute; top: -4px; right: 0px;">
                     </DIV>

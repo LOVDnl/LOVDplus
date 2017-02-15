@@ -67,7 +67,7 @@ if (!$zData) {
 // If we get here, we want to show the dialog for sure.
 print('// Make sure we have and show the dialog.
 if (!$("#analysis_run_dialog").length) {
-    $("body").append("<DIV id=\'analysis_run_dialog\' title=\'' . ucfirst(ACTION) . ' Analysis Run\'></DIV>");
+    $("body").append("<DIV id=\'analysis_run_dialog\'></DIV>");
 }
 if (!$("#analysis_run_dialog").hasClass("ui-dialog-content") || !$("#analysis_run_dialog").dialog("isOpen")) {
     $("#analysis_run_dialog").dialog({draggable:false,resizable:false,minWidth:600,show:"fade",closeOnEscape:true,hide:"fade",modal:true});
@@ -211,6 +211,7 @@ if (ACTION == 'clone' && POST) {
     
     // Update gene panel description to un-run state.
     $(\'#run_' . $nPaddedNewRunID . '_filter_apply_selected_gene_panels td:eq(0)\').html(\'apply_selected_gene_panels\');
+
 
     if ($("#run_' . $nPaddedNewRunID . '_filter_apply_selected_gene_panels").hasClass("filter_skipped")) {
         var sAction = "lovd_runAnalysis";
