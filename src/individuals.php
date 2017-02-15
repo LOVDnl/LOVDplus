@@ -263,7 +263,7 @@ if (PATH_COUNT >= 2 && ctype_digit($_PE[1]) && !ACTION && (PATH_COUNT == 2 || PA
             // Add the gene panel to the form.
             print('
             <TR>
-              <TD><INPUT type="checkbox" name="gene_panel"  id="gene_panel_' . $nKey . '" value="' . $aGenePanel[0] . '"' . ($aGenePanel[2] == 'mendeliome'? '' : ' checked') . '></TD>
+              <TD><INPUT type="checkbox" name="gene_panel" id="gene_panel_' . $nKey . '" value="' . $aGenePanel[0] . '"' . ($aGenePanel[2] == 'mendeliome'? '' : ' checked') . '></TD>
               <TD><LABEL for="gene_panel_'. $nKey .'">' . $aGenePanel[1] . '</LABEL></TD>
             </TR>');
         }
@@ -349,7 +349,7 @@ if (PATH_COUNT >= 2 && ctype_digit($_PE[1]) && !ACTION && (PATH_COUNT == 2 || PA
             }
 
             // Select a js function to be executed when an analysis table is clicked.
-            $sJsAction = '';
+            $sJSAction = '';
 
             // $aFilters contains ALL the filters this analysis has before it was modified.
             // $aFiltersRun contains all the filters that have been run or prepared to be run.
@@ -360,16 +360,16 @@ if (PATH_COUNT >= 2 && ctype_digit($_PE[1]) && !ACTION && (PATH_COUNT == 2 || PA
             $bHasAuthorization = ($_AUTH['level'] >= LEVEL_OWNER && $zScreening['analysis_statusid'] < ANALYSIS_STATUS_CLOSED);
             $bCanRemoveAnalysis = ($bHasAuthorization && ($zAnalysis['runid'] || $zAnalysis['modified']));
             if ($zAnalysis['analysis_run']) {
-                $sJsAction = 'lovd_showAnalysisResults(\''. $zAnalysis['runid'] .'\')';
+                $sJSAction = 'lovd_showAnalysisResults(\''. $zAnalysis['runid'] .'\')';
             } elseif ($bHasAuthorization) {
                 $sFunctionName = ($bHasGenePanelFilter? 'lovd_popoverGenePanelSelectionForm' : 'lovd_runAnalysis');
-                $sRunId = (!$zAnalysis['runid']? '' : $zAnalysis['runid']);
-                $sJsAction = $sFunctionName . '(\''. $nScreeningToAnalyze  .'\', \''. $zAnalysis['id'] .'\', \'' . $sRunId . '\')';
+                $sRunID = (!$zAnalysis['runid']? '' : $zAnalysis['runid']);
+                $sJSAction = $sFunctionName . '(\''. $nScreeningToAnalyze  .'\', \''. $zAnalysis['id'] .'\', \'' . $sRunID . '\')';
             }
 
             print('
             <TD class="analysis" valign="top">
-              <TABLE border="0" cellpadding="0" cellspacing="1" id="' . ($zAnalysis['runid']? 'run_' . $zAnalysis['runid'] : 'analysis_' . $zAnalysis['id']) . '" class="analysis ' . $sAnalysisClassName . '" onclick="'. $sJsAction .';">
+              <TABLE border="0" cellpadding="0" cellspacing="1" id="' . ($zAnalysis['runid']? 'run_' . $zAnalysis['runid'] : 'analysis_' . $zAnalysis['id']) . '" class="analysis ' . $sAnalysisClassName . '" onclick="' . $sJSAction . ';">
                 <TR>
                   <TH colspan="3">
                     <DIV style="position : relative" class="analysis-tools">
@@ -392,8 +392,10 @@ if (PATH_COUNT >= 2 && ctype_digit($_PE[1]) && !ACTION && (PATH_COUNT == 2 || PA
                 $sFilterClassName = '';
                 $nTime = '-';
                 if ($aFiltersRun && !isset($aFiltersRun[$sFilter])) {
+                    // We are an analysis that has been run, or a modified analysis, and we didn't use this filter.
                     $sFilterClassName = 'filter_skipped';
                 } elseif ($zAnalysis['analysis_run']) {
+                    // This analysis has been run.
                     list($nVariantsFiltered, $nTime) = $aFiltersRun[$sFilter];
                     if ($nVariantsFiltered != '-' && $nTime != '-') {
                         $nVariantsLeft -= $nVariantsFiltered;
@@ -402,9 +404,9 @@ if (PATH_COUNT >= 2 && ctype_digit($_PE[1]) && !ACTION && (PATH_COUNT == 2 || PA
                 }
 
                 // Check if we need to display the information for the gene panels used in this analysis.
-                // FIXME: I need to check this part again, but my brain isn't working properly anymore...
                 $sGenePanelsInfo = '';
-                if ($sFilter == 'apply_selected_gene_panels' && $bHasGenePanelFilter && !empty($zAnalysis['runid']) && $zAnalysis['analysis_run']) {
+                if ($sFilter == 'apply_selected_gene_panels' && $bHasGenePanelFilter && $zAnalysis['analysis_run']) {
+                    // We're currently showing the gene panel filter, AND the gene panel filter was active AND this analysis has been run.
                     $sGenePanelsInfo = getSelectedGenePanelsByRunID($zAnalysis['runid']);
                 }
 
@@ -492,9 +494,6 @@ if (PATH_COUNT >= 2 && ctype_digit($_PE[1]) && !ACTION && (PATH_COUNT == 2 || PA
                 print('            <LI class="icon"><A click="lovd_AJAX_viewListSubmit(\'CustomVL_AnalysisRunResults_for_I_VE\', function(){$.get(\'ajax/set_confirmation_status.php?' . $nConfirmationStatusID . '&id=selected\', function(sResponse){if(sResponse.substring(0,1) == \'1\'){alert(\'Successfully set confirmation status of \' + sResponse.substring(2) + \' variants to \\\'' . $sConfirmationStatus . '\\\'.\');lovd_AJAX_viewListSubmit(\'CustomVL_AnalysisRunResults_for_I_VE\');lovd_AJAX_viewEntryLoad();}else if(sResponse.substring(0,1) == \'9\'){alert(\'Error: \' + sResponse.substring(2));}}).error(function(){alert(\'Error while setting confirmation status.\');});});"><SPAN class="icon" style="background-image: url(gfx/menu_edit.png);"></SPAN>' . $sConfirmationStatus . '</A></LI>' . "\n");
             }
             print('          </UL>' . "\n" . '        </LI>' . "\n");
-        }
-        if ($_INI['instance']['name'] == 'mgha') { // Allow the results of the analysis to be downloaded for MGHA. TODO Confirm the permission level required to do this, currently submitter and above can do this.
-            print('        <LI class="icon"><A click="lovd_AJAX_viewListSubmit(\'CustomVL_AnalysisRunResults_for_I_VE\', function(){lovd_AJAX_viewListDownload(\'CustomVL_AnalysisRunResults_for_I_VE\', true);});"><SPAN class="icon" style="background-image: url(gfx/menu_save.png);"></SPAN>Download variants</A></LI>' . "\n");
         }
         print('      </UL>' . "\n\n");
         $_DATA->viewList('CustomVL_AnalysisRunResults_for_I_VE', array(), false, false, $bMenu);

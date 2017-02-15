@@ -4,8 +4,8 @@
  * LEIDEN OPEN VARIATION DATABASE (LOVD)
  *
  * Created     : 2014-01-31
- * Modified    : 2016-03-02
- * For LOVD    : 3.0-15
+ * Modified    : 2017-02-15
+ * For LOVD    : 3.0-18
  *
  * Copyright   : 2004-2016 Leiden University Medical Center; http://www.LUMC.nl/
  * Programmer  : Ing. Ivo F.A.C. Fokkema <I.F.A.C.Fokkema@LUMC.nl>
@@ -169,13 +169,12 @@ if (PATH_COUNT == 3 && $_PE[1] == 'run' && ctype_digit($_PE[2]) && ACTION == 'mo
     }
 
     if (POST) {
-
+        // Should have selected at least one filter.
         if (empty($_POST['remove_filters'])) {
             lovd_errorAdd('target', 'Please select at least one filter to remove from this analysis run.');
         } elseif (count($_POST['remove_filters']) >= $nFilters) {
             // But can't select them all.
             lovd_errorAdd('target', 'You cannot remove all filters from this analysis run.');
-        // If 'Remove filters' option is selected and there is no form validation error.
         }
 
         if (!lovd_error()) {
@@ -198,11 +197,7 @@ if (PATH_COUNT == 3 && $_PE[1] == 'run' && ctype_digit($_PE[2]) && ACTION == 'mo
             $_DB->commit();
 
             // Write to log...
-            $sLogMessage = '';
-            if (!empty($_POST['remove_filters'])) {
-                $sLogMessage = ' with filter(s) \'' . implode('\', \'', $_POST['remove_filters']) . '\' removed';
-            }
-            lovd_writeLog('Event', LOG_EVENT, 'Created analysis run ' . str_pad($nNewRunID, 5, '0', STR_PAD_LEFT) . ' based on ' . $nID . ' (' . $zData['name'] . ') on individual ' . $zData['individualid'] . ':' . $zData['screeningid'] . $sLogMessage);
+            lovd_writeLog('Event', LOG_EVENT, 'Created analysis run ' . str_pad($nNewRunID, 5, '0', STR_PAD_LEFT) . ' based on ' . $nID . ' (' . $zData['name'] . ') on individual ' . $zData['individualid'] . ':' . $zData['screeningid'] . ' with filter(s) \'' . implode('\', \'', $_POST['remove_filters']) . '\' removed');
 
             // Thank the user...
             lovd_showInfoTable('Successfully created a new analysis run!', 'success');
@@ -237,24 +232,18 @@ if (PATH_COUNT == 3 && $_PE[1] == 'run' && ctype_digit($_PE[2]) && ACTION == 'mo
         array('POST', '', '', '', '40%', 14, '60%')
     );
 
-//    $aForm[] = array('<B>Option 1:</B> Clone this analysis', '', 'submit', 'clone', 'clone');
-    $aForm[] = array('<B>Remove the following filters</B><BR><BR>', '', 'print', '');
+    print('      Please select the filters that you would like to <B>remove</B> from the analysis.<BR><BR>' . "\n");
 
-    if ($nFilters > 1) {
-        $aForm[] = array('Please select the filters that you would like to <B>remove</B> from the analysis.<BR><BR>', '', 'print', '');
-        $nOptions = ($nFilters > 15? 15 : $nFilters);
-        $aForm[] = array('Remove the following filters', '', 'select', 'remove_filters', $nOptions, array_combine(array_values($zData['filters']), $zData['filters']), false, true, false);
-        $aForm[] = 'skip';
+    $nOptions = ($nFilters > 15? 15 : $nFilters);
+    $aForm[] = array('Remove the following filters', '', 'select', 'remove_filters', $nOptions, array_combine(array_values($zData['filters']), $zData['filters']), false, true, false);
+    $aForm[] = 'skip';
 
-        $aForm = array_merge($aForm,
-            array(
-                array('', '', 'submit', 'Remove filters'),
-            )
-        );
-    } else {
-        $aForm[] = array('This analysis run already has no filters left to remove.', '', 'print', '');
-    }
-
+    $aForm = array_merge(
+        $aForm,
+        array(
+            array('', '', 'submit', 'Remove filters'),
+        )
+    );
     lovd_viewForm($aForm);
 
     print('</FORM>' . "\n\n");
