@@ -45,7 +45,6 @@ if (!$_AUTH || !lovd_isAuthorized('analysisrun', $nRunID)) {
 }
 
 $nID = sprintf('%0' . $_SETT['objectid_length']['analysisruns'] . 'd', $nRunID);
-define('LOG_EVENT', 'AnalysisRunDelete');
 
 // Now get the analysis run's data, and check the screening's status.
 // We can't do anything if the screening has been closed, so then we'll fail here.
@@ -108,7 +107,7 @@ if (ACTION == 'delete' && GET) {
     $("#analysis_run_dialog").html("' . $sFormDelete . '<BR>");
 
     // Select the right buttons.
-    $("#analysis_run_dialog").dialog({buttons: $.extend({}, oButtonFormDelete, oButtonCancel)});
+    $("#analysis_run_dialog").dialog({title: "Delete Analysis Run", buttons: $.extend({}, oButtonFormDelete, oButtonCancel)});
     ');
     exit;
 }
@@ -120,6 +119,7 @@ if (ACTION == 'delete' && GET) {
 if (ACTION == 'delete' && POST) {
     // Process delete form.
     // We do this in two steps, not only because we'd like the user to confirm, but also to prevent CSRF.
+    define('LOG_EVENT', 'AnalysisRunDelete');
 
     if (empty($_POST['csrf_token']) || $_POST['csrf_token'] != $_SESSION['csrf_tokens']['analysis_run_delete']) {
         die('alert("Error while sending data, possible security risk. Please reload the page, and try again.");');
@@ -146,7 +146,6 @@ if (ACTION == 'delete' && POST) {
 
 
 if (ACTION == 'clone' && GET) {
-error_log('in clone GET');
     // Request confirmation.
     // We do this in two steps, not only because we'd like the user to confirm, but also to prevent CSRF.
 
@@ -158,7 +157,7 @@ error_log('in clone GET');
     $("#analysis_run_dialog").html("' . $sFormClone . '<BR>");
 
     // Select the right buttons.
-    $("#analysis_run_dialog").dialog({buttons: $.extend({}, oButtonFormClone, oButtonCancel)});
+    $("#analysis_run_dialog").dialog({title: "Duplicate Analysis Run" ,buttons: $.extend({}, oButtonFormClone, oButtonCancel)});
     ');
     exit;
 }
@@ -190,10 +189,11 @@ if (ACTION == 'clone' && POST) {
         $_DB->query('INSERT INTO ' . TABLE_ANALYSES_RUN_FILTERS . ' (runid, filterid, filter_order) VALUES (?, ?, ?)', array($nNewRunID, $sFilter, $nOrder));
     }
 
+    $nPaddedNewRunID = str_pad($nNewRunID, $_SETT['objectid_length']['analysisruns'], '0', STR_PAD_LEFT);
     if ($_DB->commit()) {
         // If we get here, it all succeeded.
         // Write to log...
-        lovd_writeLog('Event', LOG_EVENT, 'Created analysis run ' . str_pad($nNewRunID, 5, '0', STR_PAD_LEFT) . ' based on ' . $nID . ' (' . $zData['name'] . ') on individual ' . $zData['individualid'] . ':' . $zData['screeningid'] . ' with all filters cloned');
+        lovd_writeLog('Event', LOG_EVENT, 'Created analysis run ' . $nPaddedNewRunID . ' based on ' . $nID . ' (' . $zData['name'] . ') on individual ' . $zData['individualid'] . ':' . $zData['screeningid'] . ' with all filters cloned');
     } else {
         die('alert("Failed to duplicate analysis run.\n' . htmlspecialchars($_DB->formatError()) . '");');
     }
@@ -201,7 +201,24 @@ if (ACTION == 'clone' && POST) {
     // Just close the display, and remove the table.
     print('
     $("#analysis_run_dialog").dialog("close");
-    location.reload();
+    var sNewAnalysis = $(\'#run_' . $nRunID . '\').parent().html().split(\'' . $nRunID . '\').join(\'' . $nPaddedNewRunID . '\');
+    $(\'<TD class="analysis" valign="top">\' + sNewAnalysis + \'</TD>\').insertAfter($(\'#run_' . $nRunID . '\').parent());
+    $(\'#run_' . $nPaddedNewRunID . '\').removeClass(\'analysis_run\').addClass(\'analysis_not_run\');
+    $(\'#run_' . $nPaddedNewRunID . ' tr.filter_completed td.filter_time\').html(\'-\');
+    $(\'#run_' . $nPaddedNewRunID . ' tr.filter_completed td.filter_var_left\').html(\'-\');
+    $(\'#run_' . $nPaddedNewRunID . ' tr.message\').html(\'<TD colspan="3">Click to run this analysis</TD>\');
+    $(\'#run_' . $nPaddedNewRunID . ' tr\').removeClass(\'filter_completed\');
+    
+    // Update gene panel description to un-run state.
+    $(\'#run_' . $nPaddedNewRunID . '_filter_apply_selected_gene_panels td:eq(0)\').html(\'apply_selected_gene_panels\');
+
+    if ($("#run_' . $nPaddedNewRunID . '_filter_apply_selected_gene_panels").hasClass("filter_skipped")) {
+        var sAction = "lovd_runAnalysis";
+    } else {
+        var sAction = "lovd_popoverGenePanelSelectionForm";        
+    }
+    
+    $(\'#run_' . $nPaddedNewRunID . '\').attr("onclick", sAction + "(\''. $zData['screeningid'] .'\', \''. $zData['id'] .'\', \''. $nPaddedNewRunID .'\')");
     ');
     exit;
 }
