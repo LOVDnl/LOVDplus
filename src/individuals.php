@@ -348,7 +348,7 @@ if (PATH_COUNT >= 2 && ctype_digit($_PE[1]) && !ACTION && (PATH_COUNT == 2 || PA
         ' . $sTabMenu);
 
         foreach ($aTabsInfo as $sTabKey => $aTabData) {
-            print('        <DIV id="' . $sTabKey . '">
+            print('        <DIV id="' . $sTabKey . '" style="overflow: auto;">
             ');
 
             print('
@@ -388,7 +388,7 @@ if (PATH_COUNT >= 2 && ctype_digit($_PE[1]) && !ACTION && (PATH_COUNT == 2 || PA
                 }
                 print('
               <TD class="analysis" valign="top">
-                <TABLE border="0" cellpadding="0" cellspacing="1" id="' . ($zAnalysis['runid']? $aTabData['prefix'] . $zAnalysis['runid'] : $aTabData['prefix'] . 'analysis_' . $zAnalysis['id']) . '" class="analysis ' . $sAnalysisClassName . '" onclick="' .
+                <TABLE width="300" border="0" cellpadding="0" cellspacing="1" id="' . ($zAnalysis['runid']? $aTabData['prefix'] . $zAnalysis['runid'] : $aTabData['prefix'] . 'analysis_' . $zAnalysis['id']) . '" class="analysis ' . $sAnalysisClassName . '" onclick="' .
                       ($zAnalysis['analysis_run']? 'lovd_showAnalysisResults(\'' . $zAnalysis['runid'] . '\');' : ($_AUTH['level'] < LEVEL_OWNER || $zScreening['analysis_statusid'] >= ANALYSIS_STATUS_CLOSED? '' : 'lovd_popoverGenePanelSelectionForm(\'' . $nScreeningToAnalyze . '\', \'' . $zAnalysis['id'] . '\'' . (!$zAnalysis['runid']? '' : ', \'' . $zAnalysis['runid'] . '\'') . ', undefined, this.id);')) . '">
                   <TR>
                     <TH colspan="3">

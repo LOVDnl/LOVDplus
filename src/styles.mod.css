@@ -28,6 +28,7 @@
  *************/
 
 /* Styles for diagnostic module */
+div#analyses                 {width: 97%;  width: 97vw;}
 div#analyses td.divider      {width: 50px;}
 
 table#analysesTable
