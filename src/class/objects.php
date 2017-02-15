@@ -2577,7 +2577,7 @@ $sFRMenuOption
 '            ');
 OPMENU
 );
-                if (!LOVD_plus) {
+                if (!LOVD_plus || (isset($_INI['instance']['name']) && $_INI['instance']['name'] == 'mgha')) {
                     print(<<<OPMENU
         $('#viewlistMenu_$sViewListID').append(
 '            <LI class="icon">' +

@@ -63,7 +63,7 @@ function getSelectedGenePanelsByRunID ($nRunID)
         $sToolTip = '<B>' . ucfirst(str_replace('_', '&nbsp;', $sType)) . ($nGenePanelCount > 1? 's' : '') . '</B><BR>';
 
         foreach ($aGenePanels as $aGenePanel) {
-            // Add the gene panel name to the tooltip and the text to show. We might shorted the text to show later.
+            // Add the gene panel name to the tooltip and the text to show. We might shorten the text to show later.
             $sToolTip .= '<A href="gene_panels/' . $aGenePanel['id'] . '">' . str_replace(' ', '&nbsp;', addslashes($aGenePanel['name'])) . '</A><BR>';
             $sDisplayText .= (!$sDisplayText? '' : ', ') . $aGenePanel['name'];
         }
