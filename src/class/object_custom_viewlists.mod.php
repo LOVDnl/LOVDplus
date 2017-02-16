@@ -261,33 +261,6 @@ class LOVD_CustomViewListMOD extends LOVD_CustomViewList {
         }
 
 
-        $sEffect_legend = '<P>The variant&#39;s affect on a protein&#39;s function, in the format <STRONG>[Reported]/[Curator concluded]</STRONG> indicating:</P>
-                              <TABLE border="0" cellpadding="3" cellspacing="2">
-                                 <TR>
-                                     <TD>+</TD>
-                                     <TD>The variant affects function</TD>
-                                 </TR>
-                                 <TR>
-                                     <TD>+?</TD>
-                                     <TD>The variant probably affects function</TD>
-                                 </TR>
-                                 <TR>
-                                     <TD>-</TD>
-                                     <TD>The variant does not affect function</TD>
-                                 </TR>
-                                 <TR>
-                                     <TD>-?</TD>
-                                     <TD>The variant probably does not affect function</TD>
-                                 </TR>
-                                 <TR>
-                                     <TD>?</TD>
-                                     <TD>Effect unknown</TD>
-                                 </TR>
-                                 <TR>
-                                     <TD>.</TD>
-                                     <TD>Effect not classified</TD>
-                                 </TR>
-                             </TABLE>';
 
         // Now build $this->aColumnsViewList, from the order given by $aObjects and TABLE_COLS.col_order.
         foreach ($aObjects as $nKey => $sObject) {
@@ -305,6 +278,35 @@ class LOVD_CustomViewListMOD extends LOVD_CustomViewList {
 
                 case 'VariantOnGenome':
                     $sPrefix = 'vog.';
+
+                    $sEffectLegend = 'The variant&#39;s affect on a protein&#39;s function, in the format <STRONG>[Reported]/[Curator concluded]</STRONG> indicating:
+                    <TABLE border="0" cellpadding="0" cellspacing="0">
+                      <TR>
+                        <TD width="50">+</TD>
+                        <TD>The variant affects function</TD>
+                      </TR>
+                      <TR>
+                        <TD>+?</TD>
+                        <TD>The variant probably affects function</TD>
+                      </TR>
+                      <TR>
+                        <TD>-</TD>
+                        <TD>The variant does not affect function</TD>
+                      </TR>
+                      <TR>
+                        <TD>-?</TD>
+                        <TD>The variant probably does not affect function</TD>
+                      </TR>
+                      <TR>
+                        <TD>?</TD>
+                        <TD>Effect unknown</TD>
+                      </TR>
+                      <TR>
+                        <TD>.</TD>
+                        <TD>Effect not classified</TD>
+                      </TR>
+                    </TABLE>';
+
                     // The fixed columns.
                     $this->aColumnsViewList = array_merge($this->aColumnsViewList,
                          array(
@@ -324,8 +326,8 @@ class LOVD_CustomViewListMOD extends LOVD_CustomViewList {
                                         'view' => array('Effect', 70),
                                         'db'   => array('eg.name', 'ASC', true),
                                         'legend' => array(
-                                            str_replace(array("\r", "\n"), '', $sEffect_legend),
-                                            $sEffect_legend)),
+                                            preg_replace('/\s+/', ' ', str_replace(array("\r", "\n"), '', $sEffectLegend)),
+                                            $sEffectLegend)),
                                 'chromosome' => array(
                                         'view' => array('Chr', 50),
                                         'db'   => array('vog.chromosome', 'ASC', true)),
