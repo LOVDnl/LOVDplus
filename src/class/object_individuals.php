@@ -4,13 +4,14 @@
  * LEIDEN OPEN VARIATION DATABASE (LOVD)
  *
  * Created     : 2011-02-16
- * Modified    : 2015-03-11
- * For LOVD    : 3.0-13
+ * Modified    : 2016-10-14
+ * For LOVD    : 3.0-18
  *
- * Copyright   : 2004-2015 Leiden University Medical Center; http://www.LUMC.nl/
+ * Copyright   : 2004-2016 Leiden University Medical Center; http://www.LUMC.nl/
  * Programmers : Ing. Ivar C. Lugtenburg <I.C.Lugtenburg@LUMC.nl>
  *               Ing. Ivo F.A.C. Fokkema <I.F.A.C.Fokkema@LUMC.nl>
  *               Msc. Daan Asscheman <D.Asscheman@LUMC.nl>
+ *               M. Kroon <m.kroon@lumc.nl>
  *
  *
  * This file is part of LOVD.
@@ -93,20 +94,28 @@ class LOVD_Individual extends LOVD_Custom {
                                         // FIXME; Can we get this order correct, such that diseases without abbreviation nicely mix with those with? Right now, the diseases without symbols are in the back.
                                           'GROUP_CONCAT(DISTINCT IF(CASE d.symbol WHEN "-" THEN "" ELSE d.symbol END = "", d.name, d.symbol) ORDER BY (d.symbol != "" AND d.symbol != "-") DESC, d.symbol, d.name SEPARATOR ", ") AS diseases_, ' .
                                           'GROUP_CONCAT(DISTINCT s2g.geneid ORDER BY s2g.geneid SEPARATOR ", ") AS genes_screened_, ' .
+                                          'GROUP_CONCAT(DISTINCT t.geneid ORDER BY t.geneid SEPARATOR ", ") AS variants_in_genes_, ' .
                                           'COUNT(DISTINCT ' . ($_AUTH['level'] >= LEVEL_COLLABORATOR? 's2v.variantid' : 'vog.id') . ') AS variants_, ' . // Counting s2v.variantid will not include the limit opposed to vog in the join's ON() clause.
                                           'uo.name AS owned_by_, ' .
                                           'CONCAT_WS(";", uo.id, uo.name, uo.email, uo.institute, uo.department, IFNULL(uo.countryid, "")) AS _owner, ' .
                                           ($_AUTH['level'] < LEVEL_COLLABORATOR? '' :
                                               'CASE ds.id WHEN ' . STATUS_MARKED . ' THEN "marked" WHEN ' . STATUS_HIDDEN .' THEN "del" WHEN ' . STATUS_PENDING .' THEN "del" END AS class_name,') .
                                           'ds.name AS status';
+
+        // Construct list of user IDs for current user and users who share access with him.
+        $aOwnerIDs = array_merge(array($_AUTH['id']), lovd_getColleagues(COLLEAGUE_ALL));
+        $sOwnerIDsSQL = join(', ', $aOwnerIDs);
+
         $this->aSQLViewList['FROM']     = TABLE_INDIVIDUALS . ' AS i ' .
                                           'LEFT OUTER JOIN ' . TABLE_IND2DIS . ' AS i2d ON (i.id = i2d.individualid) ' .
                                           'LEFT OUTER JOIN ' . TABLE_DISEASES . ' AS d ON (i2d.diseaseid = d.id) ' .
                                           'LEFT OUTER JOIN ' . TABLE_SCREENINGS . ' AS s ON (i.id = s.individualid) ' .
                                           'LEFT OUTER JOIN ' . TABLE_SCR2VAR . ' AS s2v ON (s2v.screeningid = s.id) ' .
                                           ($_AUTH['level'] >= LEVEL_COLLABORATOR? '' :
-                                              'LEFT OUTER JOIN ' . TABLE_VARIANTS . ' AS vog ON (s2v.variantid = vog.id AND (vog.statusid >= ' . STATUS_MARKED . (!$_AUTH? '' : ' OR vog.created_by = "' . $_AUTH['id'] . '" OR vog.owned_by = "' . $_AUTH['id'] . '"') . ')) ') .
+                                              'LEFT OUTER JOIN ' . TABLE_VARIANTS . ' AS vog ON (s2v.variantid = vog.id AND (vog.statusid >= ' . STATUS_MARKED . (!$_AUTH? '' : ' OR vog.created_by = "' . $_AUTH['id'] . '" OR vog.owned_by IN (' . $sOwnerIDsSQL . ')') . ')) ') .
                                           'LEFT OUTER JOIN ' . TABLE_SCR2GENE . ' AS s2g ON (s.id = s2g.screeningid) ' .
+                                          'LEFT OUTER JOIN ' . TABLE_VARIANTS_ON_TRANSCRIPTS . ' AS vot ON (' . ($_AUTH['level'] >= LEVEL_COLLABORATOR? 's2v.variantid' : 'vog.id') . ' = vot.id) ' .
+                                          'LEFT OUTER JOIN ' . TABLE_TRANSCRIPTS . ' AS t ON (t.id = vot.transcriptid) ' .
                                           'LEFT OUTER JOIN ' . TABLE_USERS . ' AS uo ON (i.owned_by = uo.id) ' .
                                           'LEFT OUTER JOIN ' . TABLE_DATA_STATUS . ' AS ds ON (i.statusid = ds.id)';
         $this->aSQLViewList['GROUP_BY'] = 'i.id';
@@ -137,10 +146,10 @@ class LOVD_Individual extends LOVD_Custom {
                                     'view' => false,
                                     'db'   => array('i.id', 'ASC', true)),
                         'id' => array(
-                                    'view' => array('Individual ID', 110),
+                                    'view' => array('Individual ID', 110, 'style="text-align : right;"'),
                                     'db'   => array('i.id', 'ASC', true)),
                         'panelid' => array(
-                                    'view' => array('Panel ID', 70),
+                                    'view' => array('Panel ID', 70, 'style="text-align : right;"'),
                                     'db'   => array('i.panelid', 'ASC', true)),
                       ),
                  $this->buildViewList(),
@@ -153,20 +162,27 @@ class LOVD_Individual extends LOVD_Custom {
                                     'db'   => array('diseases_', 'ASC', true)),
                         'genes_searched' => array(
                                     'view' => false,
-                                    'db'   => array('s2g.geneid', false, true)),
+                                    'db'   => array('t.geneid', false, true)),
                         'genes_screened_' => array(
                                     'view' => array('Genes screened', 175),
                                     'db'   => array('genes_screened_', false, true)),
+                        'variants_in_genes_' => array(
+                                    'view' => array('Variants in genes', 175),
+                                    'db'   => array('variants_in_genes_', false, true),
+                                    'legend' => array('The individual has variants for this gene.')),
                         'variants_' => array(
-                                    'view' => array('Variants', 75),
+                                    'view' => array('Variants', 75, 'style="text-align : right;"'),
                                     'db'   => array('variants_', 'DESC', 'INT_UNSIGNED')),
                         'panel_size' => array(
-                                    'view' => array('Panel size', 70),
+                                    'view' => array('Panel size', 70, 'style="text-align : right;"'),
                                     'db'   => array('i.panel_size', 'DESC', true),
                                     'legend' => array('How many individuals does this entry represent?')),
                         'owned_by_' => array(
                                     'view' => array('Owner', 160),
                                     'db'   => array('uo.name', 'ASC', true)),
+                        'owner_countryid' => array(
+                                    'view' => false,
+                                    'db'   => array('uo.countryid', 'ASC', true)),
                         'status' => array(
                                     'view' => array('Status', 70),
                                     'db'   => array('ds.name', false, true),
@@ -186,6 +202,9 @@ class LOVD_Individual extends LOVD_Custom {
     {
         global $_DB;
 
+        // During import panelid, fatherid and motherid are checked in import.php.
+        $bImport = (lovd_getProjectFile() == '/import.php');
+
         // Mandatory fields.
         $this->aCheckMandatory =
                  array(
@@ -198,7 +217,8 @@ class LOVD_Individual extends LOVD_Custom {
         parent::checkFields($aData);
 
         foreach (array('fatherid', 'motherid') as $sParentalField) {
-            if (isset($aData[$sParentalField]) && ctype_digit($aData[$sParentalField])) {
+            // This is not yet implemented correctly. These checks are implemented correctly in import.php in section "Individuals".
+            if (isset($aData[$sParentalField]) && ctype_digit($aData[$sParentalField]) && !$bImport) {
                 // FIXME: Also check gender!!! Check if field is available, download value (or '' if not available), then check possible conflicts.
                 // Partially, the code is already written below.
                 $nParentID = $_DB->query('SELECT id FROM ' . TABLE_INDIVIDUALS . ' WHERE id = ?', array($aData[$sParentalField]))->fetchColumn();
@@ -210,16 +230,13 @@ class LOVD_Individual extends LOVD_Custom {
                 } elseif ($sParentalField == 'motherid' && false) {
                     lovd_errorAdd($sParentalField, 'The \'' . $sParentalField . '\' you entered does not refer to a female individual.');
                 } elseif ($aData[$sParentalField] == $this->nID) {
-                    lovd_errorAdd('panel_size', 'The \'' . $sParentalField . '\' can not link to itself; this field is used to indicate which individual in the database is the parent of the given individual.');
+                    lovd_errorAdd($sParentalField, 'The \'' . $sParentalField . '\' can not link to itself; this field is used to indicate which individual in the database is the parent of the given individual.');
                 }
-            } elseif (!empty($aData[$sParentalField])) {
-                // FIXME: Normally we don't have to check this, because objects.php is taking care of this.
-                // But as long as the field is not defined on the form, there is no check.
-                lovd_errorAdd($sParentalField, 'The \'' . $sParentalField . '\' must contain a positive integer.');
             }
         }
 
-        if (isset($aData['panelid']) && ctype_digit($aData['panelid'])) {
+        // Changes in these checks should also be implemented in import.php in section "Individuals"
+        if (isset($aData['panelid']) && ctype_digit($aData['panelid']) && !$bImport) {
             $nPanel = $_DB->query('SELECT panel_size FROM ' . TABLE_INDIVIDUALS . ' WHERE id = ?', array($aData['panelid']))->fetchColumn();
             if (empty($nPanel)) {
                 lovd_errorAdd('panelid', 'No Panel found with this \'Panel ID\'.');
@@ -245,9 +262,9 @@ class LOVD_Individual extends LOVD_Custom {
             }
         }
 
-        // DIAGNOSTICS: Don't allow individuals with an identical Lab-ID.
+        // Diagnostics: Don't allow individuals with an identical Lab-ID.
         // Can't enforce this in the table, because it's a custom column that's not active during installation, so I'll just do it like this.
-        if (!empty($aData['Individual/Lab_ID'])) {
+        if (LOVD_plus && !empty($aData['Individual/Lab_ID'])) {
             if ($zData && isset($zData['id']) && isset($zData['Individual/Lab_ID'])) {
                 if ($_DB->query('SELECT id FROM ' . TABLE_INDIVIDUALS . ' WHERE `Individual/Lab_ID` = ? AND id != ?', array($aData['Individual/Lab_ID'], $zData['id']))->fetchColumn()) {
                     lovd_errorAdd('Individual/Lab_ID', 'Another individual with this Lab ID already exists in the database.');
@@ -288,12 +305,16 @@ class LOVD_Individual extends LOVD_Custom {
         }
 
         if ($_AUTH['level'] >= LEVEL_CURATOR) {
-            $aSelectOwner = $_DB->query('SELECT id, name FROM ' . TABLE_USERS .
-                (ACTION == 'edit' && (int) $_POST['owned_by'] === 0 || true? '' : ' WHERE id > 0') .
+            $aSelectOwner = $_DB->query('SELECT id, CONCAT(name, " (#", id, ")") as name_id FROM ' . TABLE_USERS .
                 ' ORDER BY name')->fetchAllCombine();
             $aFormOwner = array('Owner of this data', '', 'select', 'owned_by', 1, $aSelectOwner, false, false, false);
             $aSelectStatus = $_SETT['data_status'];
-            unset($aSelectStatus[STATUS_PENDING], $aSelectStatus[STATUS_IN_PROGRESS]);
+            if (lovd_getProjectFile() == '/import.php') {
+                // During an import the status pending is allowed, therefore only status in progress is unset.
+                unset($aSelectStatus[STATUS_IN_PROGRESS]);
+            } else {
+                unset($aSelectStatus[STATUS_PENDING], $aSelectStatus[STATUS_IN_PROGRESS]);
+            }
             $aFormStatus = array('Status of this data', '', 'select', 'statusid', 1, $aSelectStatus, false, false, false);
         } else {
             $aFormOwner = array();
@@ -305,7 +326,7 @@ class LOVD_Individual extends LOVD_Custom {
         // Array which will make up the form table.
         $this->aFormData = array_merge(
                  array(
-                        array('POST', '', '', '', '50%', '14', '50%'),
+                        array('POST', '', '', '', '35%', '14', '65%'),
                         array('', '', 'print', '<B>Individual information</B>'),
                         'hr',
                       ),
@@ -313,7 +334,7 @@ class LOVD_Individual extends LOVD_Custom {
                  array(
                         array('Panel size', '', 'text', 'panel_size', 10),
                         array('', '', 'note', 'Fill in how many individuals this entry represents (default: 1).'),
-//                        array('ID of panel this entry belongs to (optional)', 'Fill in LOVD\'s individual ID of the group to which this individual or group of individuals belong to (Optional).', 'text', 'panelid', 10),
+           'panelid' => array('ID of panel this entry belongs to (optional)', 'Fill in LOVD\'s individual ID of the group to which this individual or group of individuals belong to (Optional).', 'text', 'panelid', 10),
                         'hr',
                         'skip',
                         array('', '', 'print', '<B>Relation to diseases</B>'),
@@ -342,6 +363,9 @@ class LOVD_Individual extends LOVD_Custom {
             unset($this->aFormData['diseases_create']);
         } else {
             unset($this->aFormData['diseases_info']);
+        }
+        if (LOVD_plus) {
+            unset($this->aFormData['panelid']);
         }
 
         return parent::getForm();

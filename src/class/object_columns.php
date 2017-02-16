@@ -4,12 +4,14 @@
  * LEIDEN OPEN VARIATION DATABASE (LOVD)
  *
  * Created     : 2010-03-04
- * Modified    : 2015-03-11
- * For LOVD    : 3.0-13
+ * Modified    : 2016-09-15
+ * For LOVD    : 3.0-17
  *
- * Copyright   : 2004-2015 Leiden University Medical Center; http://www.LUMC.nl/
+ * Copyright   : 2004-2016 Leiden University Medical Center; http://www.LUMC.nl/
  * Programmers : Ing. Ivo F.A.C. Fokkema <I.F.A.C.Fokkema@LUMC.nl>
  *               Ing. Ivar C. Lugtenburg <I.C.Lugtenburg@LUMC.nl>
+ *               Msc. Daan Asscheman <D.Asscheman@LUMC.nl>
+ *               M. Kroon <m.kroon@lumc.nl>
  *
  *
  * This file is part of LOVD.
@@ -63,17 +65,26 @@ class LOVD_Column extends LOVD_Object {
                                'WHERE c.id = ? ' .
                                'GROUP BY c.id';
 
+        // SQL code for preparing view entry query.
+        // Increase DB limits to allow concatenation of large number of gene/disease IDs.
+        $this->sSQLPreViewEntry = 'SET group_concat_max_len = 200000';
+
         // SQL code for viewing an entry.
         $this->aSQLViewEntry['SELECT']   = 'c.*, ' .
                                            'SUBSTRING_INDEX(c.id, "/", 1) AS category, ' .
                                            'SUBSTRING(c.id, LOCATE("/", c.id)+1) AS colid, ' .
                                            '(a.colid IS NOT NULL) AS active, ' .
                                            'uc.name AS created_by_, ' .
-                                           'ue.name AS edited_by_';
+                                           'ue.name AS edited_by_, ' .
+                                           'GROUP_CONCAT(sc.geneid ORDER BY sc.geneid SEPARATOR ";") AS _genes, ' .
+                                           'GROUP_CONCAT(DISTINCT d.id, ";", IF(CASE d.symbol WHEN "-" THEN "" ELSE d.symbol END = "", d.name, d.symbol) ORDER BY (d.symbol != "" AND d.symbol != "-") DESC, d.symbol, d.name SEPARATOR ";;") AS __diseases';
         $this->aSQLViewEntry['FROM']     = TABLE_COLS . ' AS c ' .
-                                           'LEFT JOIN ' . TABLE_ACTIVE_COLS . ' AS a ON (c.id = a.colid) ' .
-                                           'LEFT JOIN ' . TABLE_USERS . ' AS uc ON (c.created_by = uc.id) ' .
-                                           'LEFT JOIN ' . TABLE_USERS . ' AS ue ON (c.edited_by = ue.id)';
+                                           'LEFT OUTER JOIN ' . TABLE_ACTIVE_COLS . ' AS a ON (c.id = a.colid) ' .
+                                           'LEFT OUTER JOIN ' . TABLE_USERS . ' AS uc ON (c.created_by = uc.id) ' .
+                                           'LEFT OUTER JOIN ' . TABLE_USERS . ' AS ue ON (c.edited_by = ue.id) ' .
+                                           'LEFT OUTER JOIN ' . TABLE_SHARED_COLS . ' AS sc ON (c.id = sc.colid) ' .
+                                           'LEFT OUTER JOIN ' . TABLE_DISEASES . ' AS d ON (sc.diseaseid = d.id)';
+        $this->aSQLViewEntry['GROUP_BY'] = 'c.id';
 
         // SQL code for viewing a list of entries.
         $this->aSQLViewList['SELECT']   = 'c.*, ' .
@@ -103,9 +114,10 @@ class LOVD_Column extends LOVD_Object {
                         'form_type_' => 'Form type',
                         'select_options' => 'Select options',
                         'preg_pattern' => 'Regular expression pattern',
-                        'public_view_' => 'Show to public',
+                        'public_view_' => (!LOVD_plus? 'Show to public' : 'Show column on data listing'),
                         'public_add_' => 'Show on submission form',
                         'allow_count_all_' => 'Include in search form',
+                        'parent_objects' => 'Column activated for',
                         'created_by_' => 'Created by',
                         'created_date' => 'Date created',
                         'edited_by_' => 'Last edited by',
@@ -138,7 +150,7 @@ class LOVD_Column extends LOVD_Object {
                                     'db'   => array('c.standard', 'DESC', true),
                                     'legend' => array('Whether this column is activated by default. For shared columns (Phenotype or VariantOnTranscript columns) this means newly created diseases or genes, include this column by default.')),
                         'public_view_' => array(
-                                    'view' => array('Public', 60, 'style="text-align : center;"'),
+                                    'view' => array((!LOVD_plus? 'Public' : 'Visible'), 60, 'style="text-align : center;"'),
                                     'db'   => array('c.public_view', 'DESC', true),
                                     'legend' => array('Whether the public can see this column\'s contents or not.')),
                         'col_order' => array(
@@ -186,8 +198,8 @@ class LOVD_Column extends LOVD_Object {
         parent::checkFields($aData);
 
         // Category; not chosen on this form, but we want to make sure it's correct anyways.
-        if (!empty($aData['category']) && !in_array($aData['category'], array('Individual', 'Phenotype', 'Screening', 'VariantOnGenome', 'VariantOnTranscript'))) {
-            lovd_errorAdd('category', 'The category is not correct. Please choose one of the following: Individual, Phenotype, Screening, VariantOnGenome or VariantOnTranscript.');
+        if (!empty($aData['category']) && !in_array($aData['category'], array('Individual', 'Phenotype', 'Screening', 'VariantOnGenome', 'VariantOnTranscript', 'SummaryAnnotation'))) {
+            lovd_errorAdd('category', 'The category is not correct. Please choose one of the following: Individual, Phenotype, Screening, VariantOnGenome, VariantOnTranscript or SummaryAnnotation.');
         }
 
         // ColID format.
@@ -254,7 +266,7 @@ class LOVD_Column extends LOVD_Object {
         // Array which will make up the form table.
         $this->aFormData =
                  array(
-                        array('POST', '', '', '', '60%', '14', '40%'),
+                        array('POST', '', '', '', '35%', '14', '65%'),
                         array('', '', 'print', '<B>Column name and descriptions</B>'),
                         'hr',
           'category' => array('', '', 'print', '<I>Selected category: ' . $_POST['category'] . '</I>'),
@@ -263,6 +275,7 @@ class LOVD_Column extends LOVD_Object {
                         array('Column heading', 'This will appear above the column in data tables.', 'text', 'head_column', 30),
                         array('Description on short legend<BR>(HTML enabled)', '', 'textarea', 'description_legend_short', 40, 2),
                         array('Description on full legend<BR>(HTML enabled)', '', 'textarea', 'description_legend_full', 40, 4),
+                        array('', '', 'note', 'The full legend description will also serve as help text. In create and edit forms where this custom column is present, the text will be shown when someone hovers their mouse over the blue question mark next to the input field.'),
                         'hr',
                         'skip',
                         array('', '', 'print', '<B>Data and form settings</B> (Use data type wizard to change values)'),
@@ -279,7 +292,7 @@ class LOVD_Column extends LOVD_Object {
              'width' => array('Column display width in pixels', '', 'text', 'width', 5),
                         array('', '', 'print', '<IMG src="gfx/trans.png" alt="" width="' . (int) $_POST['width'] . '" height="3" style="background : #000000;"><BR><SPAN class="form_note">(This is ' . (int) $_POST['width'] . ' pixels)</SPAN>'),
          'mandatory' => array('Mandatory field', '', 'checkbox', 'mandatory'),
-       'public_view' => array('Show contents to public', '', 'checkbox', 'public_view'),
+       'public_view' => array((LOVD_plus)? 'Show column on data listings' :'Show contents to public', '', 'checkbox', 'public_view'),
         'public_add' => array('Show field on submission form', '', 'checkbox', 'public_add'),
                         'hr',
 // FIXME; implement this later.
@@ -334,6 +347,12 @@ class LOVD_Column extends LOVD_Object {
                 $this->aFormData['public_add'][0] .= ' *';
                 $this->aFormData['apply_to_all'][0] = str_replace('{{ UNIT }}', 'genes', $this->aFormData['apply_to_all'][0]);
                 break;
+            case 'SummaryAnnotation':
+                unset($this->aFormData['settings_note']);
+                unset($this->aFormData['standard']);
+                unset($this->aFormData['apply_to_all']);
+                $this->aFormData['colid_note'][3] = str_replace('{{ EXAMPLE }}', 'Reference/PubMed', $this->aFormData['colid_note'][3]);
+                break;
         }
 
         // Het hele formulier moet anders met het editen... het display gedeelte moet apart denk ik - "edit display settings"; variant en phenotype cols hebben "set defaults for new genes/diseases", alle hebben "edit data types" ofzo.
@@ -364,10 +383,6 @@ class LOVD_Column extends LOVD_Object {
         // Makes sure it's an array and htmlspecialchars() all the values.
         $zData = parent::prepareData($zData, $sView);
 
-        if (!function_exists('lovd_describeFormType')) {
-            require ROOT_PATH . 'inc-lib-columns.php';
-        }
-
         if ($sView == 'list') {
             $zData['row_id']      = $zData['id'];
             $zData['row_link']    = 'columns/' . $zData['id']; // Note: I chose not to use rawurlencode() here!
@@ -394,6 +409,19 @@ class LOVD_Column extends LOVD_Object {
             $zData['form_type_']       = lovd_describeFormType($zData) . '<BR>' . $zData['form_type'];
             $zData['public_add_']      = '<IMG src="gfx/mark_' . $zData['public_add'] . '.png" alt="" width="11" height="11">';
             $zData['allow_count_all_'] = '<IMG src="gfx/mark_' . $zData['allow_count_all'] . '.png" alt="" width="11" height="11">';
+
+            if ($zData['category'] == 'VariantOnTranscript') {
+                // Show genes for which this column is activated.
+                $this->aColumnsViewEntry['parent_objects'] = 'Column activated for genes';
+                $zData['parent_objects'] = $this->lovd_getObjectLinksHTML($zData['genes'], 'genes/%s');
+
+            } elseif ($zData['category'] == 'Phenotype') {
+                // Show diseases for which this column is activated.
+                $this->aColumnsViewEntry['parent_objects'] = "Column activated for diseases";
+                $zData['parent_objects'] = $this->lovd_getObjectLinksHTML($zData['diseases'], 'diseases/%s');
+            } else {
+                unset($this->aColumnsViewEntry['parent_objects']);
+            }
         }
         // FIXME; for titles use tooltips?
         $zData['active_']      = '<IMG src="gfx/mark_' . (int) $zData['active'] . '.png" alt="" width="11" height="11">';

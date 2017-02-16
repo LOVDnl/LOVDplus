@@ -42,6 +42,11 @@ function lovd_addAllDefaultCustomColumns ($sObjectType, $ID, $nUserID = false)
     // This function enables all (HGVS)standard custom columns for the given gene or disease.
     global $_AUTH, $_DB;
 
+    // In LOVD+, we don't "do" shared columns.
+    if (LOVD_plus) {
+        return false;
+    }
+
     if ($sObjectType == 'gene') {
         $sCategory = 'VariantOnTranscript';
         $sTableName = TABLE_VARIANTS_ON_TRANSCRIPTS;
