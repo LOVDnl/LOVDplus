@@ -80,6 +80,7 @@ class LOVD_Object {
     var $sRowID = ''; // FIXME; needs getter and setter?
     var $sRowLink = ''; // FIXME; needs getter and setter?
     var $nCount = '';
+    var $aRowClassGenerators = array();
 
 
 
@@ -2485,8 +2486,16 @@ FROptions
             if (FORMAT == 'text/html') {
                 // FIXME; rawurldecode() in the line below should have a better solution.
                 // IE (who else) refuses to respect the BASE href tag when using JS. So we have no other option than to include the full path here.
+
+                $sClasses = '';
+                foreach ($this->aRowClassGenerators as $zAppendClass) {
+                    // $zAppendClass is a function that returns a string of class names to be added to this row
+                    // The value may differ depending on the data of each row. That is why we need to pass the $zData variable into this function.
+                    $sClasses .=  $zAppendClass($zData) . ' ';
+                }
+
                 print("\n" .
-                      '        <TR class="' . (empty($zData['class_name'])? 'data' : $zData['class_name']) . '"' . (!$zData['row_id']? '' : ' id="' . $zData['row_id'] . '"') . ' valign="top"' . (!$zData['row_link']? '' : ' style="cursor : pointer;"') . (!$zData['row_link']? '' : ' onclick="' . (substr($zData['row_link'], 0, 11) == 'javascript:'? rawurldecode(substr($zData['row_link'], 11)) : 'window.location.href = \'' . lovd_getInstallURL(false) . $zData['row_link'] . '\';') . '"') . '>');
+                      '        <TR ' . ' class="' . $sClasses . (empty($zData['class_name'])? 'data' : $zData['class_name']) . '"' . (!$zData['row_id']? '' : ' id="' . $zData['row_id'] . '"') . ' valign="top"' . (!$zData['row_link']? '' : ' style="cursor : pointer;"') . (!$zData['row_link']? '' : ' onclick="' . (substr($zData['row_link'], 0, 11) == 'javascript:'? rawurldecode(substr($zData['row_link'], 11)) : 'window.location.href = \'' . lovd_getInstallURL(false) . $zData['row_link'] . '\';') . '"') . '>');
                 if ($bOptions) {
                     print("\n" . '          <TD align="center" class="checkbox" onclick="cancelParentEvent(event);"><INPUT id="check_' . $zData['row_id'] . '" class="checkbox" type="checkbox" name="check_' . $zData['row_id'] . '" onclick="lovd_recordCheckChanges(this, \'' . $sViewListID . '\');"' . (in_array($zData['row_id'], $aSessionViewList['checked'])? ' checked' : '') . '></TD>');
                 }
@@ -2603,6 +2612,21 @@ OPMENU
         }
 
         return $nTotal;
+    }
+
+
+
+
+
+
+    function appendRowClass($zConditionClosure) {
+        // Insert html classes into each row of view list.
+        // The classes for each row may differ depending on the data.
+        // Therefore $zConditionClosure has to be a function that takes $zData.
+        //
+        // Places that instantiate this object can then set in this function $zConditionClosure their own conditions
+        // of what html classes to be inserted based on the values in $zData.
+        $this->aRowClassGenerators[] = $zConditionClosure;
     }
 }
 ?>
