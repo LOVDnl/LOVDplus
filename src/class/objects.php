@@ -2347,8 +2347,12 @@ FROptions
                         $sImg = ($aOrder[1] == 'DESC'? '_desc' : '_asc');
                         $sAlt = ($aOrder[1] == 'DESC'? 'Descending' : 'Ascending');
                     }
-                    print("\n" . '          <TH valign="top"' . ($bSortable? ' class="order' . ($aOrder[0] == $sField? 'ed' : '') . '"' : '') . (empty($aCol['legend'][0])? '' : ' title="' . htmlspecialchars($aCol['legend'][0]) . '"') .
-                                 ' data-allowfnr="' . $nAllowFindAndReplace . '" data-fieldname="' . $sField . '">' . "\n" .
+                    $sColId = 'vl-head-' . $sField;
+                    $sLegend = (empty($aCol['legend'])? '' : addslashes(htmlspecialchars($aCol['legend'][0])));
+                    $sOnMouseOver = (empty($aCol['legend'][0])? '' : 'lovd_showToolTip(\'' . $sLegend . '\');');
+                    $sOnMouseOut = (empty($aCol['legend'][0])? '' : 'lovd_hideToolTip();');
+                    print("\n" . '          <TH id="' . $sColId . '" onmouseover="' . $sOnMouseOver . '" onmouseout="'. $sOnMouseOut .'" valign="top"' . (!empty($aCol['view'][2])? ' ' . $aCol['view'][2] : '') . ($bSortable? ' class="order' . ($aOrder[0] == $sField? 'ed' : '') . '"' : '') .
+                        ' data-allowfnr="' . $nAllowFindAndReplace . '" data-fieldname="' . $sField . '">' . "\n" .
                                  '            <IMG src="gfx/trans.png" alt="" width="' . $aCol['view'][1] . '" height="1" id="viewlistTable_' . $sViewListID . '_colwidth_' . $sField . '"><BR>' .
                             (!$bSortable? str_replace(' ', '&nbsp;', $aCol['view'][0]) . '<BR>' :
                                  "\n" .
