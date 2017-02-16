@@ -47,7 +47,7 @@ class LOVD_TranscriptVariant extends LOVD_Custom {
     var $sObject = 'Transcript_Variant';
     var $sCategory = 'VariantOnTranscript';
     var $sTable = 'TABLE_VARIANTS_ON_TRANSCRIPTS';
-    var $bShared = (LOVD_plus? false: true);
+    var $bShared = true;
     var $aTranscripts = array();
 
 
@@ -58,6 +58,8 @@ class LOVD_TranscriptVariant extends LOVD_Custom {
     {
         // Default constructor.
         global $_DB, $_INI;
+
+        $this->bShared = (LOVD_plus? false : true);
 
         // SQL code for loading an entry for an edit form.
         $this->sSQLLoadEntry = 'SELECT vot.* ' .
@@ -107,6 +109,9 @@ class LOVD_TranscriptVariant extends LOVD_Custom {
         if (LOVD_plus) {
             unset($this->aColumnsViewEntry['effect_reported']);
             unset($this->aColumnsViewEntry['effect_concluded']);
+            if (lovd_verifyInstance('mgha', false) && !isset($this->aColumnsViewEntry['VariantOnTranscript/dbNSFP/ClinVar/Clinical_Significance'])) {
+                unset($this->aColumnsViewEntry['clinvar_']);
+            }
         }
 
         // List of columns and (default?) order for viewing a list of entries.
