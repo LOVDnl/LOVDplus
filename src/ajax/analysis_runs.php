@@ -77,19 +77,101 @@ if (!$("#analysis_run_dialog").hasClass("ui-dialog-content") || !$("#analysis_ru
 ');
 
 // Implement an CSRF protection by working with tokens.
-$sFormDelete    = '<FORM id=\'analysis_run_delete_form\'><INPUT type=\'hidden\' name=\'csrf_token\' value=\'{{CSRF_TOKEN}}\'>Are you sure you want to remove this analysis run? The variants will not be deleted.<BR></FORM>';
-$sFormClone    = '<FORM id=\'analysis_run_clone_form\'><INPUT type=\'hidden\' name=\'csrf_token\' value=\'{{CSRF_TOKEN}}\'>Are you sure you want to duplicate this analysis run?<BR></FORM>';
+$sFormClone  = '<FORM id=\'analysis_run_clone_form\'><INPUT type=\'hidden\' name=\'csrf_token\' value=\'{{CSRF_TOKEN}}\'>Are you sure you want to duplicate this analysis run?<BR></FORM>';
+$sFormDelete = '<FORM id=\'analysis_run_delete_form\'><INPUT type=\'hidden\' name=\'csrf_token\' value=\'{{CSRF_TOKEN}}\'>Are you sure you want to remove this analysis run? The variants will not be deleted.<BR></FORM>';
 
 // Set JS variables and objects.
 print('
+var oButtonFormClone  = {"Duplicate":function () { $.post("' . CURRENT_PATH . '?' . ACTION . '", $("#analysis_run_clone_form").serialize()); }};
 var oButtonFormDelete = {"Delete":function () { $.post("' . CURRENT_PATH . '?' . ACTION . '", $("#analysis_run_delete_form").serialize()); }};
-var oButtonCancel  = {"Cancel":function () { $(this).dialog("close"); }};
-var oButtonClose   = {"Close":function () { $(this).dialog("close"); }};
-
-var oButtonFormClone = {"Duplicate":function () { $.post("' . CURRENT_PATH . '?' . ACTION . '", $("#analysis_run_clone_form").serialize()); }};
+var oButtonCancel = {"Cancel":function () { $(this).dialog("close"); }};
+var oButtonClose  = {"Close":function () { $(this).dialog("close"); }};
 
 
 ');
+
+
+
+
+
+if (ACTION == 'clone' && GET) {
+    // Request confirmation.
+    // We do this in two steps, not only because we'd like the user to confirm, but also to prevent CSRF.
+
+    $_SESSION['csrf_tokens']['analysis_run_clone'] = md5(uniqid());
+    $sFormClone = str_replace('{{CSRF_TOKEN}}', $_SESSION['csrf_tokens']['analysis_run_clone'], $sFormClone);
+
+    // Display the form, and put the right buttons in place.
+    print('
+    $("#analysis_run_dialog").html("' . $sFormClone . '<BR>");
+
+    // Select the right buttons.
+    $("#analysis_run_dialog").dialog({title: "Duplicate Analysis Run" ,buttons: $.extend({}, oButtonFormClone, oButtonCancel)});
+    ');
+    exit;
+}
+
+
+
+
+
+if (ACTION == 'clone' && POST) {
+    // Process the clone form.
+    // We do this in two steps, not only because we'd like the user to confirm, but also to prevent CSRF.
+
+    define('LOG_EVENT', 'AnalysisRunClone');
+
+    if (empty($_POST['csrf_token']) || $_POST['csrf_token'] != $_SESSION['csrf_tokens']['analysis_run_clone']) {
+        die('alert("Error while sending data, possible security risk. Please reload the page, and try again.");');
+    }
+
+    $zData['filters'] = $_DB->query('SELECT filterid FROM ' . TABLE_ANALYSES_RUN_FILTERS . ' WHERE runid = ? ORDER BY filter_order', array($nRunID))->fetchAllColumn();
+    $nFilters = count($zData['filters']);
+    $_DB->beginTransaction();
+    // First, copy the analysis run.
+    $_DB->query('INSERT INTO ' . TABLE_ANALYSES_RUN . ' (analysisid, screeningid, modified, created_by, created_date) VALUES (?, ?, ?, ?, NOW())', array($zData['analysisid'], $zData['screeningid'], $zData['modified'], $_AUTH['id']));
+    $nNewRunID = $_DB->lastInsertId();
+
+    // Now insert filters.
+    foreach ($zData['filters'] as $nOrder => $sFilter) {
+        $_DB->query('INSERT INTO ' . TABLE_ANALYSES_RUN_FILTERS . ' (runid, filterid, filter_order) VALUES (?, ?, ?)', array($nNewRunID, $sFilter, $nOrder));
+    }
+
+    $nPaddedNewRunID = str_pad($nNewRunID, $_SETT['objectid_length']['analysisruns'], '0', STR_PAD_LEFT);
+    if ($_DB->commit()) {
+        // If we get here, it all succeeded.
+        // Write to log...
+        lovd_writeLog('Event', LOG_EVENT, 'Created analysis run ' . $nPaddedNewRunID . ' based on ' . $nID . ' (' . $zData['name'] . ') on individual ' . $zData['individualid'] . ':' . $zData['screeningid'] . ' with all filters cloned');
+    } else {
+        die('alert("Failed to duplicate analysis run.\n' . htmlspecialchars($_DB->formatError()) . '");');
+    }
+
+    // Just close the display, and clone the table.
+    print('
+    $("#analysis_run_dialog").dialog("close");
+    var sNewAnalysis = $(\'#run_' . $nRunID . '\').parent().html().split(\'' . $nRunID . '\').join(\'' . $nPaddedNewRunID . '\');
+    $(\'<TD class="analysis" valign="top">\' + sNewAnalysis + \'</TD>\').insertAfter($(\'#run_' . $nRunID . '\').parent());
+    $(\'#run_' . $nPaddedNewRunID . '\').removeClass(\'analysis_run\').addClass(\'analysis_not_run\');
+    $(\'#run_' . $nPaddedNewRunID . ' tr.filter_completed td.filter_time\').html(\'-\');
+    $(\'#run_' . $nPaddedNewRunID . ' tr.filter_completed td.filter_var_left\').html(\'-\');
+    $(\'#run_' . $nPaddedNewRunID . ' tr.message\').html(\'<TD colspan="3">Click to run this analysis</TD>\');
+    $(\'#run_' . $nPaddedNewRunID . ' tr\').removeClass(\'filter_completed\');
+    
+    // Update gene panel description to un-run state.
+    $(\'#run_' . $nPaddedNewRunID . '_filter_apply_selected_gene_panels td:eq(0)\').html(\'apply_selected_gene_panels\');
+
+    if ($("#run_' . $nPaddedNewRunID . '_filter_apply_selected_gene_panels").html() === "undefined" 
+        || $("#run_' . $nPaddedNewRunID . '_filter_apply_selected_gene_panels").hasClass("filter_skipped")) {
+        // If there gene panel filter is not active or is not included in this analysis.
+        var sAction = "lovd_runAnalysis";
+    } else {
+        var sAction = "lovd_popoverGenePanelSelectionForm";
+    }
+    
+    $(\'#run_' . $nPaddedNewRunID . '\').attr("onclick", sAction + "(\''. $zData['screeningid'] .'\', \''. $zData['id'] .'\', \''. $nPaddedNewRunID .'\')");
+    ');
+    exit;
+}
 
 
 
@@ -137,90 +219,6 @@ if (ACTION == 'delete' && POST) {
     print('
     $("#analysis_run_dialog").dialog("close");
     $("#run_' . $nID . '").fadeOut(500, function () { $(this).remove(); });
-    ');
-    exit;
-}
-
-
-
-
-
-if (ACTION == 'clone' && GET) {
-    // Request confirmation.
-    // We do this in two steps, not only because we'd like the user to confirm, but also to prevent CSRF.
-
-    $_SESSION['csrf_tokens']['analysis_run_clone'] = md5(uniqid());
-    $sFormClone = str_replace('{{CSRF_TOKEN}}', $_SESSION['csrf_tokens']['analysis_run_clone'], $sFormClone);
-
-    // Display the form, and put the right buttons in place.
-    print('
-    $("#analysis_run_dialog").html("' . $sFormClone . '<BR>");
-
-    // Select the right buttons.
-    $("#analysis_run_dialog").dialog({title: "Duplicate Analysis Run" ,buttons: $.extend({}, oButtonFormClone, oButtonCancel)});
-    ');
-    exit;
-}
-
-
-
-
-
-if (ACTION == 'clone' && POST) {
-
-    define('LOG_EVENT', 'AnalysisRunClone');
-
-    // Process delete form.
-    // We do this in two steps, not only because we'd like the user to confirm, but also to prevent CSRF.
-
-    if (empty($_POST['csrf_token']) || $_POST['csrf_token'] != $_SESSION['csrf_tokens']['analysis_run_clone']) {
-        die('alert("Error while sending data, possible security risk. Please reload the page, and try again.");');
-    }
-
-    $zData['filters'] = $_DB->query('SELECT filterid FROM ' . TABLE_ANALYSES_RUN_FILTERS . ' WHERE runid = ? ORDER BY filter_order', array($nRunID))->fetchAllColumn();
-    $nFilters = count($zData['filters']);
-    $_DB->beginTransaction();
-    // First, copy the analysis run.
-    $_DB->query('INSERT INTO ' . TABLE_ANALYSES_RUN . ' (analysisid, screeningid, modified, created_by, created_date) VALUES (?, ?, ?, ?, NOW())', array($zData['analysisid'], $zData['screeningid'], $zData['modified'], $_AUTH['id']));
-    $nNewRunID = $_DB->lastInsertId();
-
-    // Now insert filters.
-    foreach ($zData['filters'] as $nOrder => $sFilter) {
-        $_DB->query('INSERT INTO ' . TABLE_ANALYSES_RUN_FILTERS . ' (runid, filterid, filter_order) VALUES (?, ?, ?)', array($nNewRunID, $sFilter, $nOrder));
-    }
-
-    $nPaddedNewRunID = str_pad($nNewRunID, $_SETT['objectid_length']['analysisruns'], '0', STR_PAD_LEFT);
-    if ($_DB->commit()) {
-        // If we get here, it all succeeded.
-        // Write to log...
-        lovd_writeLog('Event', LOG_EVENT, 'Created analysis run ' . $nPaddedNewRunID . ' based on ' . $nID . ' (' . $zData['name'] . ') on individual ' . $zData['individualid'] . ':' . $zData['screeningid'] . ' with all filters cloned');
-    } else {
-        die('alert("Failed to duplicate analysis run.\n' . htmlspecialchars($_DB->formatError()) . '");');
-    }
-
-    // Just close the display, and remove the table.
-    print('
-    $("#analysis_run_dialog").dialog("close");
-    var sNewAnalysis = $(\'#run_' . $nRunID . '\').parent().html().split(\'' . $nRunID . '\').join(\'' . $nPaddedNewRunID . '\');
-    $(\'<TD class="analysis" valign="top">\' + sNewAnalysis + \'</TD>\').insertAfter($(\'#run_' . $nRunID . '\').parent());
-    $(\'#run_' . $nPaddedNewRunID . '\').removeClass(\'analysis_run\').addClass(\'analysis_not_run\');
-    $(\'#run_' . $nPaddedNewRunID . ' tr.filter_completed td.filter_time\').html(\'-\');
-    $(\'#run_' . $nPaddedNewRunID . ' tr.filter_completed td.filter_var_left\').html(\'-\');
-    $(\'#run_' . $nPaddedNewRunID . ' tr.message\').html(\'<TD colspan="3">Click to run this analysis</TD>\');
-    $(\'#run_' . $nPaddedNewRunID . ' tr\').removeClass(\'filter_completed\');
-    
-    // Update gene panel description to un-run state.
-    $(\'#run_' . $nPaddedNewRunID . '_filter_apply_selected_gene_panels td:eq(0)\').html(\'apply_selected_gene_panels\');
-
-    if ($("#run_' . $nPaddedNewRunID . '_filter_apply_selected_gene_panels").html() === "undefined" 
-        || $("#run_' . $nPaddedNewRunID . '_filter_apply_selected_gene_panels").hasClass("filter_skipped")) {
-        // If there gene panel filter is not active or is not included in this analysis.
-        var sAction = "lovd_runAnalysis";
-    } else {
-        var sAction = "lovd_popoverGenePanelSelectionForm";
-    }
-    
-    $(\'#run_' . $nPaddedNewRunID . '\').attr("onclick", sAction + "(\''. $zData['screeningid'] .'\', \''. $zData['id'] .'\', \''. $nPaddedNewRunID .'\')");
     ');
     exit;
 }
