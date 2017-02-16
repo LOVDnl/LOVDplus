@@ -4,11 +4,12 @@
  * LEIDEN OPEN VARIATION DATABASE (LOVD)
  *
  * Created     : 2017-02-13
- * Modified    : 2017-02-13
+ * Modified    : 2017-02-16
  * For LOVD    : 3.0-18
  *
  * Copyright   : 2004-2017 Leiden University Medical Center; http://www.LUMC.nl/
  * Programmer  : Ivo F.A.C. Fokkema <I.F.A.C.Fokkema@LUMC.nl>
+ *               Juny Kesumadewi <juny.kesumadewi@unimelb.edu.au>
  *
  *
  * This file is part of LOVD.
@@ -118,7 +119,6 @@ if (ACTION == 'clone' && GET) {
 if (ACTION == 'clone' && POST) {
     // Process the clone form.
     // We do this in two steps, not only because we'd like the user to confirm, but also to prevent CSRF.
-
     define('LOG_EVENT', 'AnalysisRunClone');
 
     if (empty($_POST['csrf_token']) || $_POST['csrf_token'] != $_SESSION['csrf_tokens']['analysis_run_clone']) {
@@ -129,11 +129,13 @@ if (ACTION == 'clone' && POST) {
     $nFilters = count($zData['filters']);
     $_DB->beginTransaction();
     // First, copy the analysis run.
-    $_DB->query('INSERT INTO ' . TABLE_ANALYSES_RUN . ' (analysisid, screeningid, modified, created_by, created_date) VALUES (?, ?, ?, ?, NOW())', array($zData['analysisid'], $zData['screeningid'], $zData['modified'], $_AUTH['id']));
+    $_DB->query('INSERT INTO ' . TABLE_ANALYSES_RUN . ' (analysisid, screeningid, modified, created_by, created_date) VALUES (?, ?, ?, ?, NOW())',
+        array($zData['analysisid'], $zData['screeningid'], $zData['modified'], $_AUTH['id']));
     $nNewRunID = $_DB->lastInsertId();
 
     // Now insert filters.
     foreach ($zData['filters'] as $nOrder => $sFilter) {
+        $nOrder ++; // Let order begin by 1, not 0.
         $_DB->query('INSERT INTO ' . TABLE_ANALYSES_RUN_FILTERS . ' (runid, filterid, filter_order) VALUES (?, ?, ?)', array($nNewRunID, $sFilter, $nOrder));
     }
 
@@ -149,18 +151,24 @@ if (ACTION == 'clone' && POST) {
     // Just close the display, and clone the table.
     print('
     $("#analysis_run_dialog").dialog("close");
-    var sNewAnalysis = $(\'#run_' . $nRunID . '\').parent().html().split(\'' . $nRunID . '\').join(\'' . $nPaddedNewRunID . '\');
-    $(\'<TD class="analysis" valign="top">\' + sNewAnalysis + \'</TD>\').insertAfter($(\'#run_' . $nRunID . '\').parent());
-    $(\'#run_' . $nPaddedNewRunID . '\').removeClass(\'analysis_run\').addClass(\'analysis_not_run\');
-    $(\'#run_' . $nPaddedNewRunID . ' tr.filter_completed td.filter_time\').html(\'-\');
-    $(\'#run_' . $nPaddedNewRunID . ' tr.filter_completed td.filter_var_left\').html(\'-\');
-    $(\'#run_' . $nPaddedNewRunID . ' tr.message\').html(\'<TD colspan="3">Click to run this analysis</TD>\');
-    $(\'#run_' . $nPaddedNewRunID . ' tr\').removeClass(\'filter_completed\');
+    // Store the table\'s HTML, replacing all old IDs with the new ID.
+    var sNewAnalysis = $("#run_' . $nRunID . '").parent().html().split("' . $nRunID . '").join("' . $nPaddedNewRunID . '");
+    // Get the whole TD and duplicate, then overwrite the duplicate because of the new IDs.
+    // We do a complete copy anyway, because we need the TD\'s information as well.
+    $("#run_' . $nRunID . '").parent().clone().insertAfter($("#run_' . $nRunID . '").parent()).html(sNewAnalysis);
+    // Now, make modifications to the new table to make it look and function like a new analysis.
+    $("#run_' . $nPaddedNewRunID . '").removeClass("analysis_run").addClass("analysis_not_run");
+    $("#run_' . $nPaddedNewRunID . ' tr.filter_completed td.filter_time").html("-");
+    $("#run_' . $nPaddedNewRunID . ' tr.filter_completed td.filter_var_left").html("-");
+    $("#run_' . $nPaddedNewRunID . ' tr.filter_completed").removeClass("filter_completed");
+    $("#run_' . $nPaddedNewRunID . ' tr.message td").html("Click to run this analysis");
     
     // Update gene panel description to un-run state.
-    $(\'#run_' . $nPaddedNewRunID . '_filter_apply_selected_gene_panels td:eq(0)\').html(\'apply_selected_gene_panels\');
+    sGenePanelFilterName = $("#run_' . $nPaddedNewRunID . '_filter_apply_selected_gene_panels td:eq(0)").html();
+    $("#run_' . $nPaddedNewRunID . '_filter_apply_selected_gene_panels td:eq(0)").html(sGenePanelFilterName.replace(/<table.+/, ""));
 
-    if ($("#run_' . $nPaddedNewRunID . '_filter_apply_selected_gene_panels").html() === "undefined" 
+    // Define which JS function to run when clicking this table.
+    if ($("#run_' . $nPaddedNewRunID . '_filter_apply_selected_gene_panels").length == 0 
         || $("#run_' . $nPaddedNewRunID . '_filter_apply_selected_gene_panels").hasClass("filter_skipped")) {
         // If there gene panel filter is not active or is not included in this analysis.
         var sAction = "lovd_runAnalysis";
@@ -168,7 +176,7 @@ if (ACTION == 'clone' && POST) {
         var sAction = "lovd_popoverGenePanelSelectionForm";
     }
     
-    $(\'#run_' . $nPaddedNewRunID . '\').attr("onclick", sAction + "(\''. $zData['screeningid'] .'\', \''. $zData['id'] .'\', \''. $nPaddedNewRunID .'\')");
+    $("#run_' . $nPaddedNewRunID . '").attr("onclick", sAction + "(\'' . $zData['screeningid'] . '\', \'' . $zData['id'] . '\', \'' . $nPaddedNewRunID . '\')");
     ');
     exit;
 }
