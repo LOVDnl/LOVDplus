@@ -49,8 +49,8 @@ table.analysis
 table.analysis
   tr.filter_skipped:hover td {background: #FFB5B5;}
 
-table.analysis_run           {cursor: pointer;}
-table.analysis_run:hover     {border: 3px double #000; margin: 0px; width: 304px}
+table.analysis_run           {cursor: pointer; width: 300px;}
+table.analysis_run:hover     {border: 3px double #000; margin: 0px; width: 304px;}
 table.analysis_run:hover
   tr.message                 {display: table-row;}
 table.analysis_run th        {background: #B0E0B0;}
