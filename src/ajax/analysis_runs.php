@@ -38,14 +38,13 @@ if (PATH_COUNT != 3 || !ctype_digit($_PE[2]) || !in_array(ACTION, array('delete'
     die('alert("Error while sending data.");');
 }
 
+$nID = sprintf('%0' . $_SETT['objectid_length']['analysisruns'] . 'd', $_PE[2]);
+
 // Require LEVEL_OWNER or higher (return value: 1).
-$nRunID = $_PE[2];
-if (!$_AUTH || !lovd_isAuthorized('analysisrun', $nRunID)) {
+if (!$_AUTH || !lovd_isAuthorized('analysisrun', $nID)) {
     // If not authorized, die with error message.
     die('alert("Lost your session. Please log in again.");');
 }
-
-$nID = sprintf('%0' . $_SETT['objectid_length']['analysisruns'] . 'd', $nRunID);
 
 // Now get the analysis run's data, and check the screening's status.
 // We can't do anything if the screening has been closed, so then we'll fail here.
@@ -125,7 +124,7 @@ if (ACTION == 'clone' && POST) {
         die('alert("Error while sending data, possible security risk. Please reload the page, and try again.");');
     }
 
-    $zData['filters'] = $_DB->query('SELECT filterid FROM ' . TABLE_ANALYSES_RUN_FILTERS . ' WHERE runid = ? ORDER BY filter_order', array($nRunID))->fetchAllColumn();
+    $zData['filters'] = $_DB->query('SELECT filterid FROM ' . TABLE_ANALYSES_RUN_FILTERS . ' WHERE runid = ? ORDER BY filter_order', array($nID))->fetchAllColumn();
     $nFilters = count($zData['filters']);
     $_DB->beginTransaction();
     // First, copy the analysis run.
@@ -152,10 +151,10 @@ if (ACTION == 'clone' && POST) {
     print('
     $("#analysis_run_dialog").dialog("close");
     // Store the table\'s HTML, replacing all old IDs with the new ID.
-    var sNewAnalysis = $("#run_' . $nRunID . '").parent().html().split("' . $nRunID . '").join("' . $nPaddedNewRunID . '");
+    var sNewAnalysis = $("#run_' . $nID . '").parent().html().split("' . $nID . '").join("' . $nPaddedNewRunID . '");
     // Get the whole TD and duplicate, then overwrite the duplicate because of the new IDs.
     // We do a complete copy anyway, because we need the TD\'s information as well.
-    $("#run_' . $nRunID . '").parent().clone().insertAfter($("#run_' . $nRunID . '").parent()).html(sNewAnalysis);
+    $("#run_' . $nID . '").parent().clone().insertAfter($("#run_' . $nID . '").parent()).html(sNewAnalysis);
     // Now, make modifications to the new table to make it look and function like a new analysis.
     $("#run_' . $nPaddedNewRunID . '").removeClass("analysis_run").addClass("analysis_not_run");
     $("#run_' . $nPaddedNewRunID . ' tr.filter_completed td.filter_time").html("-");
