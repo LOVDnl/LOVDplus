@@ -3,11 +3,12 @@
  * LEIDEN OPEN VARIATION DATABASE (LOVD)
  *
  * Created     : 2013-11-05
- * Modified    : 2014-05-02
- * For LOVD    : 3.0-10
+ * Modified    : 2017-02-15
+ * For LOVD    : 3.0-18
  *
- * Copyright   : 2004-2014 Leiden University Medical Center; http://www.LUMC.nl/
- * Programmer  : Ing. Ivo F.A.C. Fokkema <I.F.A.C.Fokkema@LUMC.nl>
+ * Copyright   : 2004-2017 Leiden University Medical Center; http://www.LUMC.nl/
+ * Programmers : Ivo F.A.C. Fokkema <I.F.A.C.Fokkema@LUMC.nl>
+ *               Juny Kesumadewi <juny.kesumadewi@unimelb.edu.au>
  *
  *
  * This file is part of LOVD.
@@ -42,6 +43,8 @@ table.analysis th
   img.remove                 {position: absolute; top: -1px; right: 30px; display: none;}
 table.analysis th
   img.modify                 {position: absolute; top: -1px; right: 15px; display: none;}
+table.analysis th
+  img.clone                  {position: absolute; top: -1px; right: 45px; display: none;}
 table.analysis tr.message    {text-align: center; font-weight: bold; display: none;}
 table.analysis tr.message td {border-top: 1px dotted #000;}
 table.analysis
@@ -57,6 +60,8 @@ table.analysis_run th        {background: #B0E0B0;}
 table.analysis_run th
   img.remove                 {display: inline;}
 table.analysis_run th
+  img.clone                 {display: inline;}
+table.analysis_run th
   img.modify                 {display: inline;}
 table.analysis_run td        {background: #E0FFE0;}
 table.analysis_run tr:hover td {background: #B0E0B0;}
@@ -66,6 +71,8 @@ table.analysis_not_run:hover {border: 3px double #000; margin: 0px;}
 table.analysis_not_run:hover
   tr.message                 {display: table-row;}
 table.analysis_not_run th    {background: #C0C0C0;}
+table.analysis_not_run th
+img.remove                   {display: inline; cursor: pointer;}
 table.analysis_not_run td    {background: #EEEEEE;}
 table.analysis_not_run tr:hover td {background: #C0C0C0;}
 
