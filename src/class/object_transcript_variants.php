@@ -79,14 +79,20 @@ class LOVD_TranscriptVariant extends LOVD_Custom {
         $this->aSQLViewList['SELECT']   = 'vot.*, ' .
                                           't.geneid, t.id_ncbi, ' .
                                           'e.name AS effect, ' .
-                                          'ds.name AS status, ' .
-                                          'gp2g.genepanelid';
+                                          'ds.name AS status';
+        // LOVD+ adds the check if this transcript is a preferred transcript.
+        if (LOVD_plus) {
+            $this->aSQLViewList['SELECT'] .= ', gp2g.genepanelid';
+        }
         $this->aSQLViewList['FROM']     = TABLE_VARIANTS_ON_TRANSCRIPTS . ' AS vot ' .
                                           'INNER JOIN ' . TABLE_VARIANTS . ' AS vog ON (vot.id = vog.id) ' .
                                           'LEFT OUTER JOIN ' . TABLE_EFFECT . ' AS e ON (vot.effectid = e.id) ' .
                                           'LEFT OUTER JOIN ' . TABLE_DATA_STATUS . ' AS ds ON (vog.statusid = ds.id) ' .
-                                          'LEFT OUTER JOIN ' . TABLE_TRANSCRIPTS . ' AS t ON (t.id = vot.transcriptid)' .
-                                          'LEFT OUTER JOIN ' . TABLE_GP2GENE . ' as gp2g ON (vot.transcriptid = gp2g.transcriptid)';
+                                          'LEFT OUTER JOIN ' . TABLE_TRANSCRIPTS . ' AS t ON (t.id = vot.transcriptid)';
+        // LOVD+ adds the check if this transcript is a preferred transcript in any gene panel.
+        if (LOVD_plus) {
+            $this->aSQLViewList['FROM'] .= ' LEFT OUTER JOIN ' . TABLE_GP2GENE . ' AS gp2g ON (vot.transcriptid = gp2g.transcriptid)';
+        }
 
         $this->sObjectID = $sObjectID;
         $this->nID = $nID;

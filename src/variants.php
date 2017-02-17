@@ -585,12 +585,15 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && !ACTION) {
     $sViewListID = 'VOT_for_VOG_VE';
     $_DATA->setRowID($sViewListID, 'VOT_{{transcriptid}}');
     $_DATA->setRowLink($sViewListID, 'javascript:window.location.hash = \'{{transcriptid}}\'; return false');
-    $_DATA->appendRowClass(function($zData) {
-    if (!empty($zData['genepanelid'])) {
-             return 'preferred-transcript';
-         }
-         return '';
-     });
+    if (LOVD_plus) {
+        // LOVD+ adds a check whether the transcript is a preferred transcript in any gene panel.
+        $_DATA->appendRowClass(function($zData) {
+            if (!empty($zData['genepanelid'])) {
+                return 'preferred-transcript';
+            }
+            return '';
+        });
+    }
     $_DATA->viewList($sViewListID, array('id_', 'transcriptid', 'status'), true, true);
     unset($_GET['search_id_']);
 ?>
