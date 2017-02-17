@@ -603,7 +603,11 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && !ACTION) {
         $( function () {
             lovd_AJAX_viewEntryLoad();
             setInterval(lovd_AJAX_viewEntryLoad, 250);
-            displayOneTranscript();
+
+            // If there is only one row of VOT, then trigger click on the first row so that the details of that transcript is displayed.
+            if ($('#viewlistTable_<?php echo $sViewListID; ?> tr').length === 2) { // Table heading + first row.
+                $('#viewlistTable_<?php echo $sViewListID; ?> tr')[1].click();
+            }
         });
 
 
@@ -637,19 +641,6 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && !ACTION) {
                     $( '#VOT_' + hash ).addClass('bold');
                 }
             }
-        }
-
-
-
-
-
-        function displayOneTranscript() {
-            // NOTE: IF THE URL already opens from row link don't do this!!!!!
-
-             // If there is only one row of VOT, then trigger click on the first row so that the details of that transcript is displayed.
-              if ($('#viewlistTable_<?php echo $sViewListID?> tr').length === 2) { // Table heading + first row.
-                 $('#viewlistTable_<?php echo $sViewListID?> tr')[1].click();
-             }
         }
       </SCRIPT>
 <?php
