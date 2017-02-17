@@ -80,8 +80,7 @@ switch ($_INI['instance']['name']) {
                   ("select_homozygous_or_compound_heterozygous", "", ""), 
                   ("select_gatkcaller_ug_hc", "", ""), 
                   ("remove_missense_with_phylop_lte_2.5", "", ""), 
-                  ("remove_not_imprinted", "", "")
-                ',
+                  ("remove_not_imprinted", "", "")',
                 'INSERT INTO ' . TABLE_AN2AF . ' (`analysisid`, `filterid`, `filter_order`) VALUES 
                   (1, "apply_selected_gene_panels", 1), 
                   (1, "remove_by_quality_lte_100", 2), 
