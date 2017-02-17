@@ -115,15 +115,10 @@ if ($_AUTH['level'] < LEVEL_MANAGER && (!empty($_AUTH['curates']) || !empty($_AU
 }
 
 
-$aColsToSkip = (!empty($_REQUEST['skip'])? $_REQUEST['skip'] : array());
-$aColsToShow = (!empty($_REQUEST['show'])? $_REQUEST['show'] : array());
-if (empty($aColsToSkip) && !empty($aColsToShow)) {
-    // If the URL sends the list of columns to show instead of columns to hide, then let's get the list of columns to skip.
-    $aColsToSkip = array_diff(array_keys($_DATA->aColumnsViewList), $aColsToShow);
-}
-
 // 2016-07-14; 3.0-17; Submitters should not be allowed to retrieve more
 // information about users than the info the access sharing page gives them.
+$aColsToSkip = (!empty($_REQUEST['skip'])? $_REQUEST['skip'] : array());
+$aColsToSkip = array_keys($aColsToSkip);
 if ($sObject == 'User' && $_AUTH['level'] == LEVEL_SUBMITTER) {
     // Force removal of certain columns, regardless of this has been requested or not.
     $aColsToSkip = array_unique(array_merge($aColsToSkip, array('username', 'status_', 'last_login_', 'created_date_', 'curates', 'level_')));

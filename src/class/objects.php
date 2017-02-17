@@ -1970,28 +1970,18 @@ class LOVD_Object {
                   '        <INPUT type="hidden" name="' . ACTION . '" value="">' . "\n") .
                   '        <INPUT type="hidden" name="order" value="' . implode(',', $aOrder) . '">' . "\n");
             // Skipping (permanently hiding) columns.
-            $aColsToShow = array_diff(array_keys($this->aColumnsViewList), $aColsToSkip);
-            $sSubmittedField = 'skip';
-            $aColsToBeSubmitted = $aColsToSkip;
-            if (count($aColsToShow) < count($aColsToSkip)) {
-                // If we have more columns to skip than columns to display, then let the ajax url submits the columns to display instead.
-                // This reduces our chances of reaching url max length limit.
-                $sSubmittedField = 'show';
-                $aColsToBeSubmitted = $aColsToShow;
-            }
-            foreach ($aColsToBeSubmitted as $sCol) {
+            foreach ($aColsToSkip as $sCol) {
                 if (array_key_exists($sCol, $this->aColumnsViewList)) {
                     // Internet Explorer refuses to submit input with equal names. If names are different, everything works fine.
                     // Somebody please tell me it's a bug and nobody's logical thinking. Had to include $sCol to make it work.
-                    print('        <INPUT type="hidden" name="'. $sSubmittedField .'[' . $sCol . ']" value="' . $sCol . '">' . "\n");
+                    print('        <INPUT type="hidden" name="skip[' . $sCol . ']" value="1">' . "\n");
+                    // Check if we're skipping columns, that do have a search value. If so, it needs to be sent on like this.
+                    if (isset($_GET['search_' . $sCol])) {
+                        print('        <INPUT type="hidden" name="search_' . $sCol . '" value="' . htmlspecialchars($_GET['search_' . $sCol]) . '">' . "\n");
+                    }
                 }
             }
-            foreach ($aColsToSkip as $sCol) {
-                // Check if we're skipping columns, that do have a search value. If so, it needs to be sent on like this.
-                if (isset($_GET['search_' . $sCol])) {
-                    print('        <INPUT type="hidden" name="search_' . $sCol . '" value="' . htmlspecialchars($_GET['search_' . $sCol]) . '">' . "\n");
-                }
-            }
+
             if ($bHideNav) {
                 print('        <INPUT type="hidden" name="hidenav" value="true">' . "\n");
             }
