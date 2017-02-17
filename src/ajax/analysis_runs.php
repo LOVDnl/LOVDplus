@@ -4,7 +4,7 @@
  * LEIDEN OPEN VARIATION DATABASE (LOVD)
  *
  * Created     : 2017-02-13
- * Modified    : 2017-02-16
+ * Modified    : 2017-02-17
  * For LOVD    : 3.0-18
  *
  * Copyright   : 2004-2017 Leiden University Medical Center; http://www.LUMC.nl/
@@ -156,6 +156,7 @@ if (ACTION == 'clone' && POST) {
     // We do a complete copy anyway, because we need the TD\'s information as well.
     $("#run_' . $nID . '").parent().clone().insertAfter($("#run_' . $nID . '").parent()).html(sNewAnalysis);
     // Now, make modifications to the new table to make it look and function like a new analysis.
+    $("#run_' . $nPaddedNewRunID . '").parent().attr("style", ""); // Prevent the grey background to be duplicated, in case it\'s there.
     $("#run_' . $nPaddedNewRunID . '").removeClass("analysis_run").addClass("analysis_not_run");
     $("#run_' . $nPaddedNewRunID . ' tr.filter_completed td.filter_time").html("-");
     $("#run_' . $nPaddedNewRunID . ' tr.filter_completed td.filter_var_left").html("-");

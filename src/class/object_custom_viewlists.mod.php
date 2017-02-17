@@ -294,6 +294,35 @@ class LOVD_CustomViewListMOD extends LOVD_CustomViewList {
 
                 case 'VariantOnGenome':
                     $sPrefix = 'vog.';
+
+                    $sEffectLegend = 'The variant\'s affect on a protein\'s function, in the format <STRONG>[Reported]/[Curator concluded]</STRONG> indicating:
+                    <TABLE border="0" cellpadding="0" cellspacing="0">
+                      <TR>
+                        <TD width="30">+</TD>
+                        <TD>The variant affects function</TD>
+                      </TR>
+                      <TR>
+                        <TD>+?</TD>
+                        <TD>The variant probably affects function</TD>
+                      </TR>
+                      <TR>
+                        <TD>-</TD>
+                        <TD>The variant does not affect function</TD>
+                      </TR>
+                      <TR>
+                        <TD>-?</TD>
+                        <TD>The variant probably does not affect function</TD>
+                      </TR>
+                      <TR>
+                        <TD>?</TD>
+                        <TD>Effect unknown</TD>
+                      </TR>
+                      <TR>
+                        <TD>.</TD>
+                        <TD>Effect not classified</TD>
+                      </TR>
+                    </TABLE>';
+
                     // The fixed columns.
                     $this->aColumnsViewList = array_merge($this->aColumnsViewList,
                          array(
@@ -312,8 +341,9 @@ class LOVD_CustomViewListMOD extends LOVD_CustomViewList {
                                 'vog_effect' => array(
                                         'view' => array('Effect', 70),
                                         'db'   => array('eg.name', 'ASC', true),
-                                        'legend' => array('The variant\'s effect on a protein\'s function, in the format Reported/Curator concluded; ranging from \'+\' (variant affects function) to \'-\' (does not affect function).',
-                                                          'The variant\'s affect on a protein\'s function, in the format Reported/Curator concluded; \'+\' indicating the variant affects function, \'+?\' probably affects function, \'-\' does not affect function, \'-?\' probably does not affect function, \'?\' effect unknown.')),
+                                        'legend' => array(
+                                            strip_tags(str_replace(array('<TR>', '</TD> <TD>'), array("\n", '      '), preg_replace('/\s+/', ' ', strip_tags($sEffectLegend, '<tr><td>')))),
+                                            $sEffectLegend)),
                                 'chromosome' => array(
                                         'view' => array('Chr', 50),
                                         'db'   => array('vog.chromosome', 'ASC', true)),
