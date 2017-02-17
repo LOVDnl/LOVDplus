@@ -429,9 +429,9 @@ if (PATH_COUNT >= 2 && ctype_digit($_PE[1]) && !ACTION && (PATH_COUNT == 2 || PA
 
         require ROOT_PATH . 'class/object_custom_viewlists.mod.php';
         // VOG needs to be first, so it groups by the VOG ID.
-        $_DATA = new LOVD_CustomViewListMOD(array('VariantOnGenome', 'VariantOnTranscript', 'AnalysisRunResults'));
+        $_DATA = new LOVD_CustomViewListMOD(array('VariantOnGenome', 'VariantOnTranscript', 'AnalysisRunResults', 'GenePanels'));
         // Define menu, to set pathogenicity flags of multiple variants in one go.
-        $_DATA->setRowLink('CustomVL_AnalysisRunResults_for_I_VE', 'javascript:lovd_openWindow(\'' . lovd_getInstallURL() . 'variants/{{ID}}?&in_window\', \'VarVE_{{ID}}\', 1250); return false;');
+        $_DATA->setRowLink('CustomVL_AnalysisRunResults_for_I_VE', 'javascript:lovd_openWindow(\'' . lovd_getInstallURL() . 'variants/{{ID}}?&in_window#{{zData_preferred_transcript_id}}\', \'VarVE_{{ID}}\', 1250); return false;');
         $bMenu         = true; // Show the gear-menu, with which users can mark and label variants?
         $bCurationStatus = true; // Are users allowed to set the curation status of variants? Value is ignored when $bMenu = false.
         if (!($_AUTH['level'] >= LEVEL_OWNER && $zScreening['analysis_statusid'] < ANALYSIS_STATUS_CLOSED) &&

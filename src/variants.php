@@ -640,13 +640,10 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && !ACTION) {
 
 
         function displayOneTranscript() {
-             // There is at least one preferred-transcript row, then trigger click on the first preferred transcript row
-             // so that the details of that transcript is displayed.
-             if ($('#viewlistTable_<?php echo $sViewListID?> tr.preferred-transcript').length >= 1) {
-                 $('#viewlistTable_<?php echo $sViewListID?> tr.preferred-transcript')[0].click();
+            // NOTE: IF THE URL already opens from row link don't do this!!!!!
 
              // If there is only one row of VOT, then trigger click on the first row so that the details of that transcript is displayed.
-             } else if ($('#viewlistTable_<?php echo $sViewListID?> tr').length === 2) { // Table heading + first row.
+              if ($('#viewlistTable_<?php echo $sViewListID?> tr').length === 2) { // Table heading + first row.
                  $('#viewlistTable_<?php echo $sViewListID?> tr')[1].click();
              }
         }
