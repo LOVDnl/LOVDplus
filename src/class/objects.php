@@ -80,6 +80,8 @@ class LOVD_Object {
     var $sRowID = ''; // FIXME; needs getter and setter?
     var $sRowLink = ''; // FIXME; needs getter and setter?
     var $nCount = '';
+    var $bDisableVLSearch = false; // FIXME: Implement this later as an argument to viewList().
+    var $aDisableVLSearchExclude = array(); // List of columns excluded from the disabling the search functionality.
     var $aRowClassGenerators = array();
 
 
@@ -1973,18 +1975,25 @@ class LOVD_Object {
                 if (array_key_exists($sCol, $this->aColumnsViewList)) {
                     // Internet Explorer refuses to submit input with equal names. If names are different, everything works fine.
                     // Somebody please tell me it's a bug and nobody's logical thinking. Had to include $sCol to make it work.
-                    print('        <INPUT type="hidden" name="skip[' . $sCol . ']" value="' . $sCol . '">' . "\n");
+                    print('        <INPUT type="hidden" name="skip[' . $sCol . ']" value="1">' . "\n");
                     // Check if we're skipping columns, that do have a search value. If so, it needs to be sent on like this.
                     if (isset($_GET['search_' . $sCol])) {
                         print('        <INPUT type="hidden" name="search_' . $sCol . '" value="' . htmlspecialchars($_GET['search_' . $sCol]) . '">' . "\n");
                     }
                 }
             }
+
             if ($bHideNav) {
                 print('        <INPUT type="hidden" name="hidenav" value="true">' . "\n");
             }
             if ($bOptions) {
                 print('        <INPUT type="hidden" name="options" value="true">' . "\n");
+            }
+            if ($this->bDisableVLSearch) {
+                print('        <INPUT type="hidden" name="disableVLSearch" value="true">' . "\n");
+                foreach ($this->aDisableVLSearchExclude as $sCol) {
+                    print('        <INPUT type="hidden" name="disableVLSearchExclude[]" value="'. $sCol . '">' . "\n");
+                }
             }
             print("\n");
         }
@@ -2083,7 +2092,7 @@ class LOVD_Object {
             // Manipulate SELECT to include SQL_CALC_FOUND_ROWS.
             $bSQLCALCFOUNDROWS = false;
             // TODO: Remove this block. For now, this will be bypassed because $bTrueCount will always be true.
-            if (!$bTrueCount && $_INI['database']['driver'] == 'mysql' && ($aSessionViewList['counts'][$sFilterMD5]['t'] < 1 || $aSessionViewList['counts'][$sFilterMD5]['d'] < (time() - (60*15)))) {
+            if (!$bTrueCount && $_INI['database']['driver'] == 'mysql' && ($aSessionViewList['counts'][$sFilterMD5]['t'] < 2 || $aSessionViewList['counts'][$sFilterMD5]['d'] < (time() - (60*15)))) {
                 // But only if we're using MySQL and it takes less than a second to get the correct number of results, or it's been more than 15 minutes since the last check!
                 $this->aSQLViewList['SELECT'] = 'SQL_CALC_FOUND_ROWS ' . $this->aSQLViewList['SELECT'];
                 $bSQLCALCFOUNDROWS = true;
@@ -2141,7 +2150,7 @@ class LOVD_Object {
             }
 
             // ORDER BY will only occur when we estimate we have time for it.
-            if ($aSessionViewList['counts'][$sFilterMD5]['t'] < 1 && $aSessionViewList['counts'][$sFilterMD5]['n'] <= $_SETT['lists']['max_sortable_rows']) {
+            if ($aSessionViewList['counts'][$sFilterMD5]['t'] < 2 && $aSessionViewList['counts'][$sFilterMD5]['n'] <= $_SETT['lists']['max_sortable_rows']) {
                 $bSortableVL = true;
             } else {
                 // Not sortable, indicate this on the VL...
@@ -2586,7 +2595,7 @@ $sFRMenuOption
 '            ');
 OPMENU
 );
-                if (!LOVD_plus) {
+                if (!LOVD_plus || (isset($_INI['instance']['name']) && $_INI['instance']['name'] == 'mgha')) {
                     print(<<<OPMENU
         $('#viewlistMenu_$sViewListID').append(
 '            <LI class="icon">' +
@@ -2618,7 +2627,6 @@ OPMENU
 
 
 
-
     function appendRowClass($zConditionClosure) {
         // Insert html classes into each row of view list.
         // The classes for each row may differ depending on the data.
@@ -2627,6 +2635,36 @@ OPMENU
         // Places that instantiate this object can then set in this function $zConditionClosure their own conditions
         // of what html classes to be inserted based on the values in $zData.
         $this->aRowClassGenerators[] = $zConditionClosure;
+    }
+
+
+
+
+
+    function disableVLSearch ($aExclude = array())
+    {
+        // This function disables the search functionality of this object by
+        //  disabling the search for each column in the aColumnsViewList array.
+        // The next time a viewList() is run, none of the columns will be able
+        //  to be searched on.
+        // $aExclude contains a list of columns that will be exempt for this
+        //  disabling.
+        // FIXME: Implement this later as an argument to viewList().
+
+        $this->bDisableVLSearch = true;
+        $this->aDisableVLSearchExclude = $aExclude;
+
+        // Disables the search functionality in the VL.
+        foreach ($this->aColumnsViewList as $sCol => $aCol) {
+            if (in_array($sCol, $aExclude)) {
+                continue;
+            }
+
+            if (isset($aCol['db'][2]) && $aCol['view']) {
+                $aCol['db'][2] = false;
+            }
+            $this->aColumnsViewList[$sCol] = $aCol;
+        }
     }
 }
 ?>

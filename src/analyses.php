@@ -4,8 +4,8 @@
  * LEIDEN OPEN VARIATION DATABASE (LOVD)
  *
  * Created     : 2014-01-31
- * Modified    : 2016-03-02
- * For LOVD    : 3.0-15
+ * Modified    : 2017-02-15
+ * For LOVD    : 3.0-18
  *
  * Copyright   : 2004-2016 Leiden University Medical Center; http://www.LUMC.nl/
  * Programmer  : Ing. Ivo F.A.C. Fokkema <I.F.A.C.Fokkema@LUMC.nl>
@@ -238,11 +238,12 @@ if (PATH_COUNT == 3 && $_PE[1] == 'run' && ctype_digit($_PE[2]) && ACTION == 'mo
     $aForm[] = array('Remove the following filters', '', 'select', 'remove_filters', $nOptions, array_combine(array_values($zData['filters']), $zData['filters']), false, true, false);
     $aForm[] = 'skip';
 
-    $aForm = array_merge($aForm,
-             array(
-                    array('', '', 'submit', 'Remove filters'),
-                  )
-                       );
+    $aForm = array_merge(
+        $aForm,
+        array(
+            array('', '', 'submit', 'Remove filters'),
+        )
+    );
     lovd_viewForm($aForm);
 
     print('</FORM>' . "\n\n");

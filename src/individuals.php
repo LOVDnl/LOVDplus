@@ -263,8 +263,8 @@ if (PATH_COUNT >= 2 && ctype_digit($_PE[1]) && !ACTION && (PATH_COUNT == 2 || PA
             // Add the gene panel to the form.
             print('
             <TR>
-              <TD><INPUT type="checkbox" name="gene_panel" value="' . $aGenePanel[0] . '"' . ($aGenePanel[2] == 'mendeliome'? '' : ' checked') . '></TD>
-              <TD>' . $aGenePanel[1] . '</TD>
+              <TD><INPUT type="checkbox" name="gene_panel" id="gene_panel_' . $nKey . '" value="' . $aGenePanel[0] . '"' . ($aGenePanel[2] == 'mendeliome'? '' : ' checked') . '></TD>
+              <TD><LABEL for="gene_panel_'. $nKey .'">' . $aGenePanel[1] . '</LABEL></TD>
             </TR>');
         }
 
@@ -275,9 +275,20 @@ if (PATH_COUNT >= 2 && ctype_digit($_PE[1]) && !ACTION && (PATH_COUNT == 2 || PA
               <TD class="gpheader" colspan="2">Custom panel</TD>
             </TR>
             <TR>
-              <TD><INPUT type="checkbox" name="gene_panel" value="custom_panel" checked></TD>
-              <TD>' . $zData['custom_panel'] . '</TD>
+              <TD><INPUT type="checkbox" name="gene_panel" value="custom_panel" id="custom_panel" checked></TD>
+              <TD><LABEL for="custom_panel">' . $zData['custom_panel'] . '</LABEL></TD>
             </TR>');
+        }
+
+        // Display a notice that 'apply_selected_gene_panels' is selected for this analysis,
+        //  but no gene panel has been added to this individual.
+        if (empty($zData['gene_panels']) && empty($zData['custom_panel'] )) {
+            print('<P>There is no Gene Panel assigned to this individual. To continue running this analysis, please try one of the following options: </P>
+                   <UL>
+                     <LI>Add a gene panel to this individual, OR</LI>
+                     <LI>Remove the apply_selected_gene_panels filter from this analysis, OR</LI>
+                     <LI>Continue running this analysis without any gene panel selected.</LI>
+                   </UL>');
         }
 
         print('
@@ -336,18 +347,38 @@ if (PATH_COUNT >= 2 && ctype_digit($_PE[1]) && !ACTION && (PATH_COUNT == 2 || PA
             } else {
                 $sAnalysisClassName = 'analysis_not_run';
             }
+
+            // Select a js function to be executed when an analysis table is clicked.
+            $sJSAction = '';
+
+            // $aFilters contains ALL the filters this analysis has before it was modified.
+            // $aFiltersRun contains all the filters that have been run or prepared to be run.
+            // $aFiltersRun is always empty before a non-modified analysis is run, but it is pre-populated before a modified analysis is run.
+            // Check for the gene panel filter; this will define if we'll ask for the gene panel when running the analysis.
+            $bHasGenePanelFilter = (empty($aFiltersRun) && in_array('apply_selected_gene_panels', $aFilters)) || // Original analysis, gene panel filter is present.
+                                    isset($aFiltersRun['apply_selected_gene_panels']); // Gene panel has been run or modified, and gene panel filter is present.
+            $bHasAuthorization = ($_AUTH['level'] >= LEVEL_OWNER && $zScreening['analysis_statusid'] < ANALYSIS_STATUS_CLOSED);
+            $bCanRemoveAnalysis = ($bHasAuthorization && ($zAnalysis['runid'] || $zAnalysis['modified']));
+            if ($zAnalysis['analysis_run']) {
+                $sJSAction = 'lovd_showAnalysisResults(\''. $zAnalysis['runid'] .'\')';
+            } elseif ($bHasAuthorization) {
+                // FIXME: code duplicated from analysis_runs.php when we first render analyses tables.
+                // Can probably check for the call of lovd_popoverGenePanelSelectionForm from within lovd_runAnalysis.
+                $sFunctionName = ($bHasGenePanelFilter? 'lovd_popoverGenePanelSelectionForm' : 'lovd_runAnalysis');
+                $sRunID = (!$zAnalysis['runid']? '' : $zAnalysis['runid']);
+                $sJSAction = $sFunctionName . '(\''. $nScreeningToAnalyze  .'\', \''. $zAnalysis['id'] .'\', \'' . $sRunID . '\')';
+            }
+
             print('
             <TD class="analysis" valign="top">
-              <TABLE border="0" cellpadding="0" cellspacing="1" id="' . ($zAnalysis['runid']? 'run_' . $zAnalysis['runid'] : 'analysis_' . $zAnalysis['id']) . '" class="analysis ' . $sAnalysisClassName . '" onclick="' .
-                ($zAnalysis['analysis_run']? 'lovd_showAnalysisResults(\'' . $zAnalysis['runid'] . '\');' : ($_AUTH['level'] < LEVEL_OWNER || $zScreening['analysis_statusid'] >= ANALYSIS_STATUS_CLOSED? '' : 'lovd_popoverGenePanelSelectionForm(\'' . $nScreeningToAnalyze . '\', \'' . $zAnalysis['id'] . '\'' . (!$zAnalysis['runid']? '' : ', \'' . $zAnalysis['runid'] . '\'') . ');')) . '">
+              <TABLE border="0" cellpadding="0" cellspacing="1" id="' . ($zAnalysis['runid']? 'run_' . $zAnalysis['runid'] : 'analysis_' . $zAnalysis['id']) . '" class="analysis ' . $sAnalysisClassName . '" onclick="' . $sJSAction . ';">
                 <TR>
                   <TH colspan="3">
-                    <DIV style="position : relative">
+                    <DIV style="position : relative" class="analysis-tools">
                       ' . $zAnalysis['name'] . (!$zAnalysis['modified']? '' : ' (modified)') .
-                ($_AUTH['level'] < LEVEL_OWNER || $zScreening['analysis_statusid'] >= ANALYSIS_STATUS_CLOSED? '' :
-                // FIXME: Probably an Ajax call would be better maybe? The window opening with refresh is ugly... we could just let this table disappear when successful (which may not work for the last run analysis because of the divider)...
-                (!$zAnalysis['runid']? '' : '
-                      <IMG src="gfx/cross.png" alt="Remove" onclick="$.get(\'ajax/analysis_runs.php/' . $zAnalysis['runid'] . '?delete\').fail(function(){alert(\'Error deleting analysis run, please try again later.\');}); return false;" width="16" height="16" class="remove">') . '
+                (!$bHasAuthorization? '' : '
+                      <IMG ' . ($bCanRemoveAnalysis? '' : 'style="display:none;"') . ' src="gfx/cross.png" alt="Remove" onclick="$.get(\'ajax/analysis_runs.php/' . $zAnalysis['runid'] . '?delete\').fail(function(){alert(\'Error deleting analysis run, please try again later.\');}); cancelParentEvent(event);" width="16" height="16" class="remove">
+                      <IMG src="gfx/menu_clone.png" alt="Duplicate" onclick="$.get(\'ajax/analysis_runs.php/' . $zAnalysis['runid'] . '?clone\').fail(function(){alert(\'Error duplicating analysis run, please try again later.\');}); cancelParentEvent(event);" width="16" height="16" class="clone">
                       <IMG src="gfx/menu_edit.png" alt="Modify" onclick="lovd_openWindow(\'' . lovd_getInstallURL() . 'analyses/' . ($zAnalysis['runid']? 'run/' . $zAnalysis['runid'] : $zAnalysis['id']) . '?modify&amp;in_window\', \'ModifyAnalysisRun\', 780, 400); cancelParentEvent(event);" width="16" height="16" class="modify">') . '
                       <IMG src="gfx/lovd_form_question.png" alt="" onmouseover="lovd_showToolTip(\'' . $zAnalysis['description'] . '\');" onmouseout="lovd_hideToolTip();" width="14" height="14" class="help" style="position: absolute; top: -4px; right: 0px;">
                     </DIV>
@@ -363,8 +394,10 @@ if (PATH_COUNT >= 2 && ctype_digit($_PE[1]) && !ACTION && (PATH_COUNT == 2 || PA
                 $sFilterClassName = '';
                 $nTime = '-';
                 if ($aFiltersRun && !isset($aFiltersRun[$sFilter])) {
+                    // We are an analysis that has been run, or a modified analysis, and we didn't use this filter.
                     $sFilterClassName = 'filter_skipped';
                 } elseif ($zAnalysis['analysis_run']) {
+                    // This analysis has been run.
                     list($nVariantsFiltered, $nTime) = $aFiltersRun[$sFilter];
                     if ($nVariantsFiltered != '-' && $nTime != '-') {
                         $nVariantsLeft -= $nVariantsFiltered;
@@ -372,18 +405,18 @@ if (PATH_COUNT >= 2 && ctype_digit($_PE[1]) && !ACTION && (PATH_COUNT == 2 || PA
                     }
                 }
 
-                // Display the information for the gene panels used in this analysis.
+                // Check if we need to display the information for the gene panels used in this analysis.
                 $sGenePanelsInfo = '';
-                if ($sFilter == 'apply_selected_gene_panels' && !empty($zAnalysis['runid']) && $zAnalysis['analysis_run']) {
-                    // Check to see if this is the right filter to show the info under and that we actually have some gene panels or custom panel assigned.
+                if ($sFilter == 'apply_selected_gene_panels' && $bHasGenePanelFilter && $zAnalysis['analysis_run']) {
+                    // We're currently showing the gene panel filter, AND the gene panel filter was active AND this analysis has been run.
                     $sGenePanelsInfo = getSelectedGenePanelsByRunID($zAnalysis['runid']);
                 }
 
                 print('
                 <TR id="' . ($zAnalysis['runid']? 'run_' . $zAnalysis['runid'] : 'analysis_' . $zAnalysis['id']) . '_filter_' . preg_replace('/[^a-z0-9_]/i', '_', $sFilter) . '"' . (!$sFilterClassName? '' : ' class="' . $sFilterClassName . '"') . ' valign="top">
-                  <TD>' . $sFilter . $sGenePanelsInfo . '</TD>
-                  <TD>' . ($nTime == '-'? '-' : lovd_convertSecondsToTime($nTime, 1)) . '</TD>
-                  <TD>' . ($nTime == '-'? '-' : $nVariantsLeft) . '</TD>
+                  <TD class="filter_description">' . $sFilter . $sGenePanelsInfo . '</TD>
+                  <TD class="filter_time">' . ($nTime == '-'? '-' : lovd_convertSecondsToTime($nTime, 1)) . '</TD>
+                  <TD class="filter_var_left">' . ($nTime == '-'? '-' : $nVariantsLeft) . '</TD>
                 </TR>');
             }
             print('
