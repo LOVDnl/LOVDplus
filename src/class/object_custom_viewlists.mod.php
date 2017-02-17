@@ -295,10 +295,10 @@ class LOVD_CustomViewListMOD extends LOVD_CustomViewList {
                 case 'VariantOnGenome':
                     $sPrefix = 'vog.';
 
-                    $sEffectLegend = 'The variant&#39;s affect on a protein&#39;s function, in the format <STRONG>[Reported]/[Curator concluded]</STRONG> indicating:
+                    $sEffectLegend = 'The variant\'s affect on a protein\'s function, in the format <STRONG>[Reported]/[Curator concluded]</STRONG> indicating:
                     <TABLE border="0" cellpadding="0" cellspacing="0">
                       <TR>
-                        <TD width="50">+</TD>
+                        <TD width="30">+</TD>
                         <TD>The variant affects function</TD>
                       </TR>
                       <TR>
@@ -342,7 +342,7 @@ class LOVD_CustomViewListMOD extends LOVD_CustomViewList {
                                         'view' => array('Effect', 70),
                                         'db'   => array('eg.name', 'ASC', true),
                                         'legend' => array(
-                                            preg_replace('/\s+/', ' ', str_replace(array("\r", "\n"), '', $sEffectLegend)),
+                                            strip_tags(str_replace(array('<TR>', '</TD> <TD>'), array("\n", '      '), preg_replace('/\s+/', ' ', strip_tags($sEffectLegend, '<tr><td>')))),
                                             $sEffectLegend)),
                                 'chromosome' => array(
                                         'view' => array('Chr', 50),
