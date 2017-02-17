@@ -82,6 +82,7 @@ class LOVD_Object {
     var $nCount = '';
     var $bDisableVLSearch = false; // FIXME: Implement this later as an argument to viewList().
     var $aDisableVLSearchExclude = array(); // List of columns excluded from the disabling the search functionality.
+    var $aRowClassGenerators = array();
 
 
 
@@ -2488,14 +2489,26 @@ FROptions
             $zData = $this->autoExplode($zData);
 
             // Only the CustomViewList object has this 3rd argument, but other objects' prepareData()
-            // don't complain when called with this 3 argument they didn't define.
+            //  don't complain when called with this 3rd argument they didn't define.
             $zData = $this->prepareData($zData, 'list', $sViewListID);
 
             if (FORMAT == 'text/html') {
+                // If defined, run the functions that define a row's class name.
+                if (empty($zData['class_name'])) {
+                    $zData['class_name'] = 'data';
+                }
+                foreach ($this->aRowClassGenerators as $appendClass) {
+                    // $appendClass is a function, defined through $this->appendRowClass(),
+                    //  that returns a string of class name(s) to be added to this row.
+                    // The value may differ depending on the data of each row,
+                    //  so we need to pass the $zData variable into this function.
+                    $zData['class_name'] .= ' ' . $appendClass($zData);
+                }
+
                 // FIXME; rawurldecode() in the line below should have a better solution.
                 // IE (who else) refuses to respect the BASE href tag when using JS. So we have no other option than to include the full path here.
                 print("\n" .
-                      '        <TR class="' . (empty($zData['class_name'])? 'data' : $zData['class_name']) . '"' . (!$zData['row_id']? '' : ' id="' . $zData['row_id'] . '"') . ' valign="top"' . (!$zData['row_link']? '' : ' style="cursor : pointer;"') . (!$zData['row_link']? '' : ' onclick="' . (substr($zData['row_link'], 0, 11) == 'javascript:'? rawurldecode(substr($zData['row_link'], 11)) : 'window.location.href = \'' . lovd_getInstallURL(false) . $zData['row_link'] . '\';') . '"') . '>');
+                      '        <TR class="' . ltrim($zData['class_name']) . '"' . (!$zData['row_id']? '' : ' id="' . $zData['row_id'] . '"') . ' valign="top"' . (!$zData['row_link']? '' : ' style="cursor : pointer;"') . (!$zData['row_link']? '' : ' onclick="' . (substr($zData['row_link'], 0, 11) == 'javascript:'? rawurldecode(substr($zData['row_link'], 11)) : 'window.location.href = \'' . lovd_getInstallURL(false) . $zData['row_link'] . '\';') . '"') . '>');
                 if ($bOptions) {
                     print("\n" . '          <TD align="center" class="checkbox" onclick="cancelParentEvent(event);"><INPUT id="check_' . $zData['row_id'] . '" class="checkbox" type="checkbox" name="check_' . $zData['row_id'] . '" onclick="lovd_recordCheckChanges(this, \'' . $sViewListID . '\');"' . (in_array($zData['row_id'], $aSessionViewList['checked'])? ' checked' : '') . '></TD>');
                 }
@@ -2612,6 +2625,25 @@ OPMENU
         }
 
         return $nTotal;
+    }
+
+
+
+
+
+    function appendRowClass ($conditionClosure)
+    {
+        // This functions allows you to pass functions that will define a VL's row's class name.
+        // The classes for each row may differ depending on the data.
+        // Therefore $conditionClosure has to be a function that takes $zData.
+
+        // Places that instantiate this object can then set in this function $conditionClosure their own conditions
+        //  of what HTML classes to be inserted based on the values in $zData.
+        if (!is_callable($conditionClosure)) {
+            return false;
+        }
+
+        $this->aRowClassGenerators[] = $conditionClosure;
     }
 
 

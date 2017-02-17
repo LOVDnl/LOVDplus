@@ -84,6 +84,7 @@
 4.0.0 ini_set
 4.0.0 intval
 4.0.0 is_array
+4.0.6 is_callable
 4.0.0 is_dir
 4.0.0 is_executable
 4.0.0 is_int

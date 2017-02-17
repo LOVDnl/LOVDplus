@@ -582,9 +582,19 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && !ACTION) {
     $_T->printTitle('Variant on transcripts', 'H4');
     require ROOT_PATH . 'class/object_transcript_variants.php';
     $_DATA = new LOVD_TranscriptVariant('', $nID);
-    $_DATA->setRowID('VOT_for_VOG_VE', 'VOT_{{transcriptid}}');
-    $_DATA->setRowLink('VOT_for_VOG_VE', 'javascript:window.location.hash = \'{{transcriptid}}\'; return false');
-    $_DATA->viewList('VOT_for_VOG_VE', array('id_', 'transcriptid', 'status'), true, true);
+    $sViewListID = 'VOT_for_VOG_VE';
+    $_DATA->setRowID($sViewListID, 'VOT_{{transcriptid}}');
+    $_DATA->setRowLink($sViewListID, 'javascript:window.location.hash = \'{{transcriptid}}\'; return false');
+    if (LOVD_plus) {
+        // LOVD+ adds a check whether the transcript is a preferred transcript in any gene panel.
+        $_DATA->appendRowClass(function($zData) {
+            if (!empty($zData['genepanelid'])) {
+                return 'preferred-transcript';
+            }
+            return '';
+        });
+    }
+    $_DATA->viewList($sViewListID, array('id_', 'transcriptid', 'status'), true, true);
     unset($_GET['search_id_']);
 ?>
 
@@ -593,6 +603,11 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && !ACTION) {
         $( function () {
             lovd_AJAX_viewEntryLoad();
             setInterval(lovd_AJAX_viewEntryLoad, 250);
+
+            // If there is only one row of VOT, then trigger click on the first row so that the details of that transcript is displayed.
+            if ($('#viewlistTable_<?php echo $sViewListID; ?> tr').length === 2) { // Table heading + first row.
+                $('#viewlistTable_<?php echo $sViewListID; ?> tr')[1].click();
+            }
         });
 
 
@@ -605,8 +620,8 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && !ACTION) {
                 if (hash != prevHash) {
                     // Hash changed, (re)load viewEntry.
                     // Set the correct status for the TRs in the viewList (highlight the active TR).
-                    $( '#VOT_' + prevHash ).attr('class', 'data');
-                    $( '#VOT_' + hash ).attr('class', 'data bold');
+                    $( '#VOT_' + prevHash ).removeClass('bold');
+                    $( '#VOT_' + hash ).addClass('bold');
 
                     if (!navigator.userAgent.match(/msie/i)) {
                         $( '#viewentryDiv' ).stop().css('opacity','0'); // Stop execution of actions, set opacity = 0 (hidden, but not taken out of the flow).
@@ -623,7 +638,7 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && !ACTION) {
                     prevHash = hash;
                 } else {
                     // The viewList could have been resubmitted now, so reset this value (not very efficient).
-                    $( '#VOT_' + hash ).attr('class', 'data bold');
+                    $( '#VOT_' + hash ).addClass('bold');
                 }
             }
         }
