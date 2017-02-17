@@ -80,8 +80,8 @@ class LOVD_Object {
     var $sRowID = ''; // FIXME; needs getter and setter?
     var $sRowLink = ''; // FIXME; needs getter and setter?
     var $nCount = '';
-    var $bDisableVLSearch = false;
-    var $aDisableVLSearchExclude = array();
+    var $bDisableVLSearch = false; // FIXME: Implement this later as an argument to viewList().
+    var $aDisableVLSearchExclude = array(); // List of columns excluded from the disabling the search functionality.
 
 
 
@@ -2618,8 +2618,16 @@ OPMENU
 
 
 
-    function disableVLSearch($aExclude = array())
+    function disableVLSearch ($aExclude = array())
     {
+        // This function disables the search functionality of this object by
+        //  disabling the search for each column in the aColumnsViewList array.
+        // The next time a viewList() is run, none of the columns will be able
+        //  to be searched on.
+        // $aExclude contains a list of columns that will be exempt for this
+        //  disabling.
+        // FIXME: Implement this later as an argument to viewList().
+
         $this->bDisableVLSearch = true;
         $this->aDisableVLSearchExclude = $aExclude;
 
@@ -2629,7 +2637,7 @@ OPMENU
                 continue;
             }
 
-            if ( isset($aCol['db'][2]) && $aCol['view']) {
+            if (isset($aCol['db'][2]) && $aCol['view']) {
                 $aCol['db'][2] = false;
             }
             $this->aColumnsViewList[$sCol] = $aCol;
