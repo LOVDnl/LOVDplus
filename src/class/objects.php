@@ -80,6 +80,8 @@ class LOVD_Object {
     var $sRowID = ''; // FIXME; needs getter and setter?
     var $sRowLink = ''; // FIXME; needs getter and setter?
     var $nCount = '';
+    var $bDisableVLSearch = false; // FIXME: Implement this later as an argument to viewList().
+    var $aDisableVLSearchExclude = array(); // List of columns excluded from the disabling the search functionality.
 
 
 
@@ -1972,18 +1974,25 @@ class LOVD_Object {
                 if (array_key_exists($sCol, $this->aColumnsViewList)) {
                     // Internet Explorer refuses to submit input with equal names. If names are different, everything works fine.
                     // Somebody please tell me it's a bug and nobody's logical thinking. Had to include $sCol to make it work.
-                    print('        <INPUT type="hidden" name="skip[' . $sCol . ']" value="' . $sCol . '">' . "\n");
+                    print('        <INPUT type="hidden" name="skip[' . $sCol . ']" value="1">' . "\n");
                     // Check if we're skipping columns, that do have a search value. If so, it needs to be sent on like this.
                     if (isset($_GET['search_' . $sCol])) {
                         print('        <INPUT type="hidden" name="search_' . $sCol . '" value="' . htmlspecialchars($_GET['search_' . $sCol]) . '">' . "\n");
                     }
                 }
             }
+
             if ($bHideNav) {
                 print('        <INPUT type="hidden" name="hidenav" value="true">' . "\n");
             }
             if ($bOptions) {
                 print('        <INPUT type="hidden" name="options" value="true">' . "\n");
+            }
+            if ($this->bDisableVLSearch) {
+                print('        <INPUT type="hidden" name="disableVLSearch" value="true">' . "\n");
+                foreach ($this->aDisableVLSearchExclude as $sCol) {
+                    print('        <INPUT type="hidden" name="disableVLSearchExclude[]" value="'. $sCol . '">' . "\n");
+                }
             }
             print("\n");
         }
@@ -2603,6 +2612,36 @@ OPMENU
         }
 
         return $nTotal;
+    }
+
+
+
+
+
+    function disableVLSearch ($aExclude = array())
+    {
+        // This function disables the search functionality of this object by
+        //  disabling the search for each column in the aColumnsViewList array.
+        // The next time a viewList() is run, none of the columns will be able
+        //  to be searched on.
+        // $aExclude contains a list of columns that will be exempt for this
+        //  disabling.
+        // FIXME: Implement this later as an argument to viewList().
+
+        $this->bDisableVLSearch = true;
+        $this->aDisableVLSearchExclude = $aExclude;
+
+        // Disables the search functionality in the VL.
+        foreach ($this->aColumnsViewList as $sCol => $aCol) {
+            if (in_array($sCol, $aExclude)) {
+                continue;
+            }
+
+            if (isset($aCol['db'][2]) && $aCol['view']) {
+                $aCol['db'][2] = false;
+            }
+            $this->aColumnsViewList[$sCol] = $aCol;
+        }
     }
 }
 ?>
