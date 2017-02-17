@@ -156,7 +156,7 @@ if (PATH_COUNT == 3 && $_PE[1] == 'run' && ctype_digit($_PE[2]) && ACTION == 'mo
 
     // See above, I had to split the queries.
     // $zData['filters'] = explode(';', $zData['_filters']);
-    $zData['filters'] = $_DB->query('SELECT arf.filterid, CASE af.name WHEN "" THEN af.id ELSE af.name END AS name FROM ' . TABLE_ANALYSES_RUN_FILTERS . ' AS arf INNER JOIN ' . TABLE_ANALYSIS_FILTERS . ' AS af ON (arf.filterid = af.id) WHERE runid = ? ORDER BY filter_order', array($nID))->fetchAllCombine();
+    $zData['filters'] = $_DB->query('SELECT arf.filterid, CASE af.name WHEN "" THEN af.id ELSE af.name END AS name FROM ' . TABLE_ANALYSES_RUN_FILTERS . ' AS arf INNER JOIN ' . TABLE_ANALYSIS_FILTERS . ' AS af ON (arf.filterid = af.id) WHERE runid = ? ORDER BY arf.filter_order', array($nID))->fetchAllCombine();
     $nFilters = count($zData['filters']);
 
     if (count($zData['filters']) <= 1) {

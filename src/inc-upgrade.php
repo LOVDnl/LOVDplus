@@ -706,7 +706,7 @@ if ($sCalcVersionFiles != $sCalcVersionDB) {
                      'PREPARE Statement FROM @sSQL',
                      'EXECUTE Statement',
                  ),
-                 '3.0-17h' => array(), // This reserves the correct order for the analyses improvement SQL which can be found below.
+                 '3.0-17h' => array(), // Placeholder for LOVD+ queries, defined below.
                  '3.0-18' =>
                      array(
                          // These two will be ignored by LOVD+.
