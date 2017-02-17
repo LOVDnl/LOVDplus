@@ -49,6 +49,8 @@ class LOVD_Column extends LOVD_Object {
 
 
 
+
+
     function __construct ()
     {
         // Default constructor.

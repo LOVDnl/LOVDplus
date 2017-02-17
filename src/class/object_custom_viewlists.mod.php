@@ -281,33 +281,7 @@ class LOVD_CustomViewListMOD extends LOVD_CustomViewList {
             $aObjects = array('Transcript', 'VariantOnGenome', 'VariantOnTranscript');
         }
 
-        $sEffect_legend = '<P>The variant&#39;s affect on a protein&#39;s function, in the format <STRONG>[Reported]/[Curator concluded]</STRONG> indicating:</P>
-                             <TABLE border="0" cellpadding="3" cellspacing="2">
-                                <TR>
-                                    <TD>+</TD>
-                                    <TD>The variant affects function</TD>
-                                </TR>
-                                <TR>
-                                    <TD>+?</TD>
-                                    <TD>The variant probably affects function</TD>
-                                </TR>
-                                <TR>
-                                    <TD>-</TD>
-                                    <TD>The variant does not affect function</TD>
-                                </TR>
-                                <TR>
-                                    <TD>-?</TD>
-                                    <TD>The variant probably does not affect function</TD>
-                                </TR>
-                                <TR>
-                                    <TD>?</TD>
-                                    <TD>Effect unknown</TD>
-                                </TR>
-                                <TR>
-                                    <TD>.</TD>
-                                    <TD>Effect not classified</TD>
-                                </TR>
-                            </TABLE>';
+
 
         // Now build $this->aColumnsViewList, from the order given by $aObjects and TABLE_COLS.col_order.
         foreach ($aObjects as $nKey => $sObject) {
