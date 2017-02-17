@@ -165,8 +165,7 @@ table.data tr.marked td.ordered          {background : #FAD5D5;}
 table.data tr.marked:hover td            {background : #FAD5D5;}
 table.data tr.marked:hover td.ordered    {background : #FFB5B5;}
 table.data tr.marked:hover td.checkbox   {background : #FFF0F0; cursor : default;}
-table.data tr.preferred-transcript td      {background : #90EE90;}
-
+table.data tr.preferred-transcript td    {background : #90EE90;}
 
 /* Viewlist find and replace column selectors */
 div.vl_overlay       {background : #224488; opacity : 0.4; filter: alpha(opacity=40); /* For IE8 and earlier */}

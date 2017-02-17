@@ -80,8 +80,8 @@ class LOVD_Object {
     var $sRowID = ''; // FIXME; needs getter and setter?
     var $sRowLink = ''; // FIXME; needs getter and setter?
     var $nCount = '';
-    var $bDisableVLSearch = false;
-    var $aDisableVLSearchExclude = array();
+    var $bDisableVLSearch = false; // FIXME: Implement this later as an argument to viewList().
+    var $aDisableVLSearchExclude = array(); // List of columns excluded from the disabling the search functionality.
     var $aRowClassGenerators = array();
 
 
@@ -1969,26 +1969,18 @@ class LOVD_Object {
                   '        <INPUT type="hidden" name="' . ACTION . '" value="">' . "\n") .
                   '        <INPUT type="hidden" name="order" value="' . implode(',', $aOrder) . '">' . "\n");
             // Skipping (permanently hiding) columns.
-            $aColsToShow = array_diff(array_keys($this->aColumnsViewList), $aColsToSkip);
-            $sSubmittedField = 'skip';
-            $aColsToBeSubmitted = $aColsToSkip;
-            if (count($aColsToShow) < count($aColsToSkip)) {
-                $sSubmittedField = 'show';
-                $aColsToBeSubmitted = $aColsToShow;
-            }
-            foreach ($aColsToBeSubmitted as $sCol) {
+            foreach ($aColsToSkip as $sCol) {
                 if (array_key_exists($sCol, $this->aColumnsViewList)) {
                     // Internet Explorer refuses to submit input with equal names. If names are different, everything works fine.
                     // Somebody please tell me it's a bug and nobody's logical thinking. Had to include $sCol to make it work.
-                    print('        <INPUT type="hidden" name="'. $sSubmittedField .'[' . $sCol . ']" value="' . $sCol . '">' . "\n");
+                    print('        <INPUT type="hidden" name="skip[' . $sCol . ']" value="1">' . "\n");
+                    // Check if we're skipping columns, that do have a search value. If so, it needs to be sent on like this.
+                    if (isset($_GET['search_' . $sCol])) {
+                        print('        <INPUT type="hidden" name="search_' . $sCol . '" value="' . htmlspecialchars($_GET['search_' . $sCol]) . '">' . "\n");
+                    }
                 }
             }
-            foreach ($aColsToSkip as $sCol) {
-                // Check if we're skipping columns, that do have a search value. If so, it needs to be sent on like this.
-                if (isset($_GET['search_' . $sCol])) {
-                    print('        <INPUT type="hidden" name="search_' . $sCol . '" value="' . htmlspecialchars($_GET['search_' . $sCol]) . '">' . "\n");
-                }
-            }
+
             if ($bHideNav) {
                 print('        <INPUT type="hidden" name="hidenav" value="true">' . "\n");
             }
@@ -2363,11 +2355,7 @@ FROptions
                         $sImg = ($aOrder[1] == 'DESC'? '_desc' : '_asc');
                         $sAlt = ($aOrder[1] == 'DESC'? 'Descending' : 'Ascending');
                     }
-                    $sColId = 'vl-head-' . $sField;
-                    $sLegend = (empty($aCol['legend'])? '' : addslashes(htmlspecialchars($aCol['legend'][0])));
-                    $sOnMouseOver = (empty($aCol['legend'][0])? '' : 'lovd_showToolTip(\'' . $sLegend . '\');');
-                    $sOnMouseOut = (empty($aCol['legend'][0])? '' : 'lovd_hideToolTip();');
-                    print("\n" . '          <TH id="' . $sColId . '" onmouseover="' . $sOnMouseOver . '" onmouseout="'. $sOnMouseOut .'" valign="top"' . (!empty($aCol['view'][2])? ' ' . $aCol['view'][2] : '') . ($bSortable? ' class="order' . ($aOrder[0] == $sField? 'ed' : '') . '"' : '') .
+                    print("\n" . '          <TH valign="top"' . ($bSortable? ' class="order' . ($aOrder[0] == $sField? 'ed' : '') . '"' : '') . (empty($aCol['legend'][0])? '' : ' title="' . htmlspecialchars($aCol['legend'][0]) . '"') .
                                  ' data-allowfnr="' . $nAllowFindAndReplace . '" data-fieldname="' . $sField . '">' . "\n" .
                                  '            <IMG src="gfx/trans.png" alt="" width="' . $aCol['view'][1] . '" height="1" id="viewlistTable_' . $sViewListID . '_colwidth_' . $sField . '"><BR>' .
                             (!$bSortable? str_replace(' ', '&nbsp;', $aCol['view'][0]) . '<BR>' :
@@ -2499,20 +2487,26 @@ FROptions
             $zData = $this->autoExplode($zData);
 
             // Only the CustomViewList object has this 3rd argument, but other objects' prepareData()
-            // don't complain when called with this 3 argument they didn't define.
+            //  don't complain when called with this 3rd argument they didn't define.
             $zData = $this->prepareData($zData, 'list', $sViewListID);
 
             if (FORMAT == 'text/html') {
+                // If defined, run the functions that define a row's class name.
+                if (empty($zData['class_name'])) {
+                    $zData['class_name'] = 'data';
+                }
+                foreach ($this->aRowClassGenerators as $appendClass) {
+                    // $appendClass is a function, defined through $this->appendRowClass(),
+                    //  that returns a string of class name(s) to be added to this row.
+                    // The value may differ depending on the data of each row,
+                    //  so we need to pass the $zData variable into this function.
+                    $zData['class_name'] .= ' ' . $appendClass($zData);
+                }
+
                 // FIXME; rawurldecode() in the line below should have a better solution.
                 // IE (who else) refuses to respect the BASE href tag when using JS. So we have no other option than to include the full path here.
-                $sClasses = '';
-                foreach ($this->aRowClassGenerators as $zAppendClass) {
-                    // $zAppendClass is a function that returns a string of class names to be added to this row
-                    // The value may differ depending on the data of each row. That is why we need to pass the $zData variable into this function.
-                    $sClasses .=  $zAppendClass($zData) . ' ';
-                }
                 print("\n" .
-                      '        <TR ' . ' class="' . $sClasses . (empty($zData['class_name'])? 'data' : $zData['class_name']) . '"' . (!$zData['row_id']? '' : ' id="' . $zData['row_id'] . '"') . ' valign="top"' . (!$zData['row_link']? '' : ' style="cursor : pointer;"') . (!$zData['row_link']? '' : ' onclick="' . (substr($zData['row_link'], 0, 11) == 'javascript:'? rawurldecode(substr($zData['row_link'], 11)) : 'window.location.href = \'' . lovd_getInstallURL(false) . $zData['row_link'] . '\';') . '"') . '>');
+                      '        <TR class="' . ltrim($zData['class_name']) . '"' . (!$zData['row_id']? '' : ' id="' . $zData['row_id'] . '"') . ' valign="top"' . (!$zData['row_link']? '' : ' style="cursor : pointer;"') . (!$zData['row_link']? '' : ' onclick="' . (substr($zData['row_link'], 0, 11) == 'javascript:'? rawurldecode(substr($zData['row_link'], 11)) : 'window.location.href = \'' . lovd_getInstallURL(false) . $zData['row_link'] . '\';') . '"') . '>');
                 if ($bOptions) {
                     print("\n" . '          <TD align="center" class="checkbox" onclick="cancelParentEvent(event);"><INPUT id="check_' . $zData['row_id'] . '" class="checkbox" type="checkbox" name="check_' . $zData['row_id'] . '" onclick="lovd_recordCheckChanges(this, \'' . $sViewListID . '\');"' . (in_array($zData['row_id'], $aSessionViewList['checked'])? ' checked' : '') . '></TD>');
                 }
@@ -2635,8 +2629,35 @@ OPMENU
 
 
 
-    function disableVLSearch($aExclude = array())
+    function appendRowClass ($conditionClosure)
     {
+        // This functions allows you to pass functions that will define a VL's row's class name.
+        // The classes for each row may differ depending on the data.
+        // Therefore $conditionClosure has to be a function that takes $zData.
+
+        // Places that instantiate this object can then set in this function $conditionClosure their own conditions
+        //  of what HTML classes to be inserted based on the values in $zData.
+        if (!is_callable($conditionClosure)) {
+            return false;
+        }
+
+        $this->aRowClassGenerators[] = $conditionClosure;
+    }
+
+
+
+
+
+    function disableVLSearch ($aExclude = array())
+    {
+        // This function disables the search functionality of this object by
+        //  disabling the search for each column in the aColumnsViewList array.
+        // The next time a viewList() is run, none of the columns will be able
+        //  to be searched on.
+        // $aExclude contains a list of columns that will be exempt for this
+        //  disabling.
+        // FIXME: Implement this later as an argument to viewList().
+
         $this->bDisableVLSearch = true;
         $this->aDisableVLSearchExclude = $aExclude;
 
@@ -2646,25 +2667,11 @@ OPMENU
                 continue;
             }
 
-            if ( isset($aCol['db'][2]) && $aCol['view']) {
+            if (isset($aCol['db'][2]) && $aCol['view']) {
                 $aCol['db'][2] = false;
             }
             $this->aColumnsViewList[$sCol] = $aCol;
         }
-    }
-
-
-
-
-
-    function appendRowClass($zConditionClosure) {
-        // Insert html classes into each row of view list.
-        // The classes for each row may differ depending on the data.
-        // Therefore $zConditionClosure has to be a function that takes $zData.
-        //
-        // Places that instantiate this object can then set in this function $zConditionClosure their own conditions
-        // of what html classes to be inserted based on the values in $zData.
-        $this->aRowClassGenerators[] = $zConditionClosure;
     }
 }
 ?>

@@ -114,13 +114,15 @@ if ($_AUTH['level'] < LEVEL_MANAGER && (!empty($_AUTH['curates']) || !empty($_AU
     }
 }
 
+
 // 2016-07-14; 3.0-17; Submitters should not be allowed to retrieve more
 // information about users than the info the access sharing page gives them.
-$aColsToSkip = (!empty($_REQUEST['skip'])? $_REQUEST['skip'] : array());
+$aColsToSkip = (!empty($_REQUEST['skip'])? array_keys($_REQUEST['skip']) : array());
 if ($sObject == 'User' && $_AUTH['level'] == LEVEL_SUBMITTER) {
     // Force removal of certain columns, regardless of this has been requested or not.
     $aColsToSkip = array_unique(array_merge($aColsToSkip, array('username', 'status_', 'last_login_', 'created_date_', 'curates', 'level_')));
 }
+
 
 // Require special clearance?
 if ($nNeededLevel && (!$_AUTH || $_AUTH['level'] < $nNeededLevel)) {
@@ -158,17 +160,18 @@ require $sFile;
 $sObjectClassname = 'LOVD_' . str_replace('_', '', $sObject);
 $_DATA = new $sObjectClassname($sObjectID, $nID);
 
-$aColsToSkip = (!empty($_GET['skip'])? $_GET['skip'] : array());
-$aColsToShow = (!empty($_GET['show'])? $_GET['show'] : array());
-if (empty($aColsToSkip) && !empty($aColsToShow)) {
-    $aColsToSkip = array_diff(array_keys($_DATA->aColumnsViewList), $aColsToShow);
-}
+
 
 // Check if search forms need to be disabled.
+// FIXME: Implement this later as an argument to viewList().
 if (!empty($_GET['disableVLSearch'])) {
+    // Columns to be excluded from disabling the search
+    //  functionality can be specified in this array.
+    if (!isset($_GET['disableVLSearchExclude']) || !is_array($_GET['disableVLSearchExclude'])) {
+        $_GET['disableVLSearchExclude'] = array();
+    }
     $_DATA->disableVLSearch($_GET['disableVLSearchExclude']);
 }
-
 
 if (POST && ACTION == 'applyFR') {
     // Apply find & replace.
