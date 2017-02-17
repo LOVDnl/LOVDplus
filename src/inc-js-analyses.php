@@ -4,7 +4,7 @@
  * LEIDEN OPEN VARIATION DATABASE (LOVD)
  *
  * Created     : 2013-11-05
- * Modified    : 2017-02-14
+ * Modified    : 2017-02-17
  * For LOVD    : 3.0-18
  *
  * Copyright   : 2004-2017 Leiden University Medical Center; http://www.LUMC.nl/
@@ -188,9 +188,11 @@ function lovd_runNextFilter (nAnalysisID, nRunID, sClassName)
                     sOnClickLink = $('#run_' + nRunID + ' img.modify').attr('onclick');
                     $('#run_' + nRunID + ' img.modify').attr('onclick', sOnClickLink.replace('analyses/' + nAnalysisID, 'analyses/run/' + nRunID));
 
-                    // Display the hidden "remove" link and replace URL with the run ID after a successful run.
-                    sRemoveOnClickLink = $('#run_' + nRunID + ' div.analysis-tools img.remove').attr('onclick');
-                    $('#run_' + nRunID + ' div.analysis-tools img.remove').attr('onclick', sRemoveOnClickLink.replace('run/0?', 'run/' + nRunID + '?'));
+                    // Replace all URLs that still have the run ID '0' to use the new run ID, all in one go.
+                    var sNewAnalysis = $('#run_' + nRunID).html().split('/0?').join('/' + nRunID + '?');
+                    $('#run_' + nRunID).html(sNewAnalysis);
+
+                    // Display the hidden "remove" link.
                     $('#run_' + nRunID + ' div.analysis-tools img.remove').show();
 
                     // Now load the VL.
