@@ -171,11 +171,13 @@ if (ACTION == 'clone' && POST) {
         || $("#run_' . $nPaddedNewRunID . '_filter_apply_selected_gene_panels").hasClass("filter_skipped")) {
         // If there gene panel filter is not active or is not included in this analysis.
         var sAction = "lovd_runAnalysis";
+        var sGenePanel = "undefined, ";
     } else {
         var sAction = "lovd_popoverGenePanelSelectionForm";
+        var sGenePanel = "";
     }
     
-    $("#run_' . $nPaddedNewRunID . '").attr("onclick", sAction + "(\'' . $zData['screeningid'] . '\', \'' . $zData['id'] . '\', \'' . $nPaddedNewRunID . '\')");
+    $("#run_' . $nPaddedNewRunID . '").attr("onclick", sAction + "(\'' . $zData['screeningid'] . '\', \'' . $zData['analysisid'] . '\', \'' . $nPaddedNewRunID . '\', " + sGenePanel + "this.id)");
     ');
     exit;
 }

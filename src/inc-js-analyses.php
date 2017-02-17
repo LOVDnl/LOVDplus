@@ -179,8 +179,11 @@ function lovd_runNextFilter (nAnalysisID, nRunID, sClassName)
                     $('#' + sClassName).attr('class', 'analysis analysis_run');
                     $('#' + sClassName + '_message td').html('Click to see results');
 
-                    // Table should get a new ID, maybe also the filter lines (although those IDs are not used anymore).
+                    // Table should get a new ID.
                     $('#' + sClassName).attr('id', 'run_' + nRunID);
+                    // Replace all the filter IDs with the new run ID.
+                    var sNewFilterIDs = $('#run_' + nRunID).html().split(sClassName).join('run_' + nRunID);
+                    $('#run_' + nRunID).html(sNewFilterIDs);
                     // Also fix onclick.
                     $('#run_' + nRunID).attr('onclick', 'lovd_showAnalysisResults(\'' + nRunID + '\');');
                     $('#run_' + nRunID).attr('onclickold', '');

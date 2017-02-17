@@ -416,7 +416,7 @@ if (PATH_COUNT >= 2 && ctype_digit($_PE[1]) && !ACTION && (PATH_COUNT == 2 || PA
                     // Can probably check for the call of lovd_popoverGenePanelSelectionForm from within lovd_runAnalysis.
                     $sFunctionName = ($bHasGenePanelFilter? 'lovd_popoverGenePanelSelectionForm' : 'lovd_runAnalysis');
                     $sRunID = (!$zAnalysis['runid']? '' : $zAnalysis['runid']);
-                    $sJSAction = $sFunctionName . '(\''. $nScreeningToAnalyze  .'\', \''. $zAnalysis['id'] .'\', \'' . $sRunID . '\', this.id)';
+                    $sJSAction = $sFunctionName . '(\''. $nScreeningToAnalyze  .'\', \''. $zAnalysis['id'] .'\', \'' . $sRunID . '\', ' . ($bHasGenePanelFilter? '' : 'undefined, ') . 'this.id)';
                 }
 
                 print('
