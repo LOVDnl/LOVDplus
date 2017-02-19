@@ -80,6 +80,9 @@ class LOVD_Object {
     var $sRowID = ''; // FIXME; needs getter and setter?
     var $sRowLink = ''; // FIXME; needs getter and setter?
     var $nCount = '';
+    var $bDisableVLSearch = false; // FIXME: Implement this later as an argument to viewList().
+    var $aDisableVLSearchExclude = array(); // List of columns excluded from the disabling the search functionality.
+    var $aRowClassGenerators = array();
 
 
 
@@ -1972,18 +1975,25 @@ class LOVD_Object {
                 if (array_key_exists($sCol, $this->aColumnsViewList)) {
                     // Internet Explorer refuses to submit input with equal names. If names are different, everything works fine.
                     // Somebody please tell me it's a bug and nobody's logical thinking. Had to include $sCol to make it work.
-                    print('        <INPUT type="hidden" name="skip[' . $sCol . ']" value="' . $sCol . '">' . "\n");
+                    print('        <INPUT type="hidden" name="skip[' . $sCol . ']" value="1">' . "\n");
                     // Check if we're skipping columns, that do have a search value. If so, it needs to be sent on like this.
                     if (isset($_GET['search_' . $sCol])) {
                         print('        <INPUT type="hidden" name="search_' . $sCol . '" value="' . htmlspecialchars($_GET['search_' . $sCol]) . '">' . "\n");
                     }
                 }
             }
+
             if ($bHideNav) {
                 print('        <INPUT type="hidden" name="hidenav" value="true">' . "\n");
             }
             if ($bOptions) {
                 print('        <INPUT type="hidden" name="options" value="true">' . "\n");
+            }
+            if ($this->bDisableVLSearch) {
+                print('        <INPUT type="hidden" name="disableVLSearch" value="true">' . "\n");
+                foreach ($this->aDisableVLSearchExclude as $sCol) {
+                    print('        <INPUT type="hidden" name="disableVLSearchExclude[]" value="'. $sCol . '">' . "\n");
+                }
             }
             print("\n");
         }
@@ -2479,14 +2489,26 @@ FROptions
             $zData = $this->autoExplode($zData);
 
             // Only the CustomViewList object has this 3rd argument, but other objects' prepareData()
-            // don't complain when called with this 3 argument they didn't define.
+            //  don't complain when called with this 3rd argument they didn't define.
             $zData = $this->prepareData($zData, 'list', $sViewListID);
 
             if (FORMAT == 'text/html') {
+                // If defined, run the functions that define a row's class name.
+                if (empty($zData['class_name'])) {
+                    $zData['class_name'] = 'data';
+                }
+                foreach ($this->aRowClassGenerators as $appendClass) {
+                    // $appendClass is a function, defined through $this->appendRowClass(),
+                    //  that returns a string of class name(s) to be added to this row.
+                    // The value may differ depending on the data of each row,
+                    //  so we need to pass the $zData variable into this function.
+                    $zData['class_name'] .= ' ' . $appendClass($zData);
+                }
+
                 // FIXME; rawurldecode() in the line below should have a better solution.
                 // IE (who else) refuses to respect the BASE href tag when using JS. So we have no other option than to include the full path here.
                 print("\n" .
-                      '        <TR class="' . (empty($zData['class_name'])? 'data' : $zData['class_name']) . '"' . (!$zData['row_id']? '' : ' id="' . $zData['row_id'] . '"') . ' valign="top"' . (!$zData['row_link']? '' : ' style="cursor : pointer;"') . (!$zData['row_link']? '' : ' onclick="' . (substr($zData['row_link'], 0, 11) == 'javascript:'? rawurldecode(substr($zData['row_link'], 11)) : 'window.location.href = \'' . lovd_getInstallURL(false) . $zData['row_link'] . '\';') . '"') . '>');
+                      '        <TR class="' . ltrim($zData['class_name']) . '"' . (!$zData['row_id']? '' : ' id="' . $zData['row_id'] . '"') . ' valign="top"' . (!$zData['row_link']? '' : ' style="cursor : pointer;"') . (!$zData['row_link']? '' : ' onclick="' . (substr($zData['row_link'], 0, 11) == 'javascript:'? rawurldecode(substr($zData['row_link'], 11)) : 'window.location.href = \'' . lovd_getInstallURL(false) . $zData['row_link'] . '\';') . '"') . '>');
                 if ($bOptions) {
                     print("\n" . '          <TD align="center" class="checkbox" onclick="cancelParentEvent(event);"><INPUT id="check_' . $zData['row_id'] . '" class="checkbox" type="checkbox" name="check_' . $zData['row_id'] . '" onclick="lovd_recordCheckChanges(this, \'' . $sViewListID . '\');"' . (in_array($zData['row_id'], $aSessionViewList['checked'])? ' checked' : '') . '></TD>');
                 }
@@ -2603,6 +2625,55 @@ OPMENU
         }
 
         return $nTotal;
+    }
+
+
+
+
+
+    function appendRowClass ($conditionClosure)
+    {
+        // This functions allows you to pass functions that will define a VL's row's class name.
+        // The classes for each row may differ depending on the data.
+        // Therefore $conditionClosure has to be a function that takes $zData.
+
+        // Places that instantiate this object can then set in this function $conditionClosure their own conditions
+        //  of what HTML classes to be inserted based on the values in $zData.
+        if (!is_callable($conditionClosure)) {
+            return false;
+        }
+
+        $this->aRowClassGenerators[] = $conditionClosure;
+    }
+
+
+
+
+
+    function disableVLSearch ($aExclude = array())
+    {
+        // This function disables the search functionality of this object by
+        //  disabling the search for each column in the aColumnsViewList array.
+        // The next time a viewList() is run, none of the columns will be able
+        //  to be searched on.
+        // $aExclude contains a list of columns that will be exempt for this
+        //  disabling.
+        // FIXME: Implement this later as an argument to viewList().
+
+        $this->bDisableVLSearch = true;
+        $this->aDisableVLSearchExclude = $aExclude;
+
+        // Disables the search functionality in the VL.
+        foreach ($this->aColumnsViewList as $sCol => $aCol) {
+            if (in_array($sCol, $aExclude)) {
+                continue;
+            }
+
+            if (isset($aCol['db'][2]) && $aCol['view']) {
+                $aCol['db'][2] = false;
+            }
+            $this->aColumnsViewList[$sCol] = $aCol;
+        }
     }
 }
 ?>

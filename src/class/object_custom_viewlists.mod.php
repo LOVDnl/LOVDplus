@@ -248,8 +248,8 @@ class LOVD_CustomViewListMOD extends LOVD_CustomViewList {
                     break;
 
                 case 'GenePanels':
-                    $aSQL['SELECT'] .= (!$aSQL['SELECT']? '' : ', ') . 'GROUP_CONCAT(DISTINCT gp.name SEPARATOR ", ") AS gene_panels';
-
+                    $aSQL['SELECT'] .= (!$aSQL['SELECT']? '' : ', ') . 'GROUP_CONCAT(DISTINCT gp.name SEPARATOR ", ") AS gene_panels,
+                        MIN(t_preferred.id) AS preferred_transcriptid';
                     $nKeyVOT = array_search('VariantOnTranscript', $aObjects);
                     if (!$aSQL['FROM']) {
                         // First data table in query.
@@ -257,7 +257,11 @@ class LOVD_CustomViewListMOD extends LOVD_CustomViewList {
                                         LEFT OUTER JOIN ' . TABLE_GENE_PANELS . ' AS gp ON (gp2g.genepanelid = gp.id)';
                     } elseif ($nKeyVOT !== false && $nKeyVOT < $nKey) {
                         $aSQL['FROM'] .= ' LEFT OUTER JOIN ' . TABLE_GP2GENE . ' AS gp2g ON (t.geneid = gp2g.geneid) 
-                                           LEFT OUTER JOIN ' . TABLE_GENE_PANELS . ' AS gp ON (gp2g.genepanelid = gp.id)';
+                                           LEFT OUTER JOIN ' . TABLE_GENE_PANELS . ' AS gp ON (gp2g.genepanelid = gp.id)
+                                           LEFT OUTER JOIN ' . TABLE_TRANSCRIPTS . ' AS t_preferred ON (gp2g.transcriptid = t_preferred.id)';
+                    }
+                    if (array_search('VariantOnGenome', $aObjects)) {
+                        $aSQL['GROUP_BY'] = 'vog.id'; // Necessary for GROUP_CONCAT().
                     }
                     break;
             }
