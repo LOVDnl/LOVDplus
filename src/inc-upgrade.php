@@ -911,7 +911,7 @@ if ($sCalcVersionFiles != $sCalcVersionDB) {
 
         $aFiltersSQL = array_unique($aFiltersSQL); // Duplicates were added when this array was created so return the unique SQL.
 
-        $aUpdates['3.0-17f'] = array_merge($aUpdates['3.0-17f'],
+        $aUpdates['3.0-17h'] = array_merge($aUpdates['3.0-17h'],
             array(
                 'CREATE TABLE ' . TABLE_ANALYSIS_FILTERS . ' (
                                 id VARCHAR(50) NOT NULL,
