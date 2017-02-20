@@ -4,12 +4,13 @@
  * LEIDEN OPEN VARIATION DATABASE (LOVD)
  *
  * Created     : 2013-11-07
- * Modified    : 2017-02-13
+ * Modified    : 2017-02-14
  * For LOVD    : 3.0-18
  *
  * Copyright   : 2004-2017 Leiden University Medical Center; http://www.LUMC.nl/
  * Programmers : Ivo F.A.C. Fokkema <I.F.A.C.Fokkema@LUMC.nl>
  *               Anthony Marty <anthony.marty@unimelb.edu.au>
+ *               Juny Kesumadewi <juny.kesumadewi@unimelb.edu.au>
  *
  *
  * This file is part of LOVD.
@@ -274,19 +275,25 @@ class LOVD_CustomViewListMOD extends LOVD_CustomViewList {
 
                     }
                     break;
+
+
                 case 'GenePanels':
+                    $aSQL['SELECT'] .= (!$aSQL['SELECT']? '' : ', ') . 'GROUP_CONCAT(DISTINCT gp.name SEPARATOR ", ") AS gene_panels,
+                        IFNULL(GROUP_CONCAT(DISTINCT t_preferred.id_ncbi SEPARATOR ";"),  GROUP_CONCAT(DISTINCT t.id_ncbi SEPARATOR ";") ) AS preferred_transcripts,
+                        MIN(t_preferred.id) AS preferred_transcriptid';
                     $nKeyVOT = array_search('VariantOnTranscript', $aObjects);
-                    $sSelect = 'GROUP_CONCAT(DISTINCT gp.name SEPARATOR ", ") AS gene_panels,
-                             IFNULL(GROUP_CONCAT(DISTINCT t_preferred.id_ncbi SEPARATOR ", "),  GROUP_CONCAT(DISTINCT t.id_ncbi SEPARATOR ";") ) AS preferred_transcripts';
+
                     if (!$aSQL['FROM']) {
-                        $aSQL['SELECT'] .= (!$aSQL['SELECT']? '' : ', ') . $sSelect;
+                        // First data table in query.
                         $aSQL['FROM'] = TABLE_GP2GENE . ' AS gp2g  
-                                        LEFT JOIN ' . TABLE_GENE_PANELS . ' AS gp ON (gp2g.genepanelid = gp.id)';
+                                        LEFT OUTER JOIN ' . TABLE_GENE_PANELS . ' AS gp ON (gp2g.genepanelid = gp.id)';
                     } elseif ($nKeyVOT !== false && $nKeyVOT < $nKey) {
-                        $aSQL['SELECT'] .= (!$aSQL['SELECT']? '' : ', ') . $sSelect;
-                        $aSQL['FROM'] .= ' LEFT JOIN ' . TABLE_GP2GENE . ' AS gp2g ON (t.geneid = gp2g.geneid) 
-                                           LEFT JOIN ' . TABLE_GENE_PANELS . ' AS gp ON (gp2g.genepanelid = gp.id)
-                                           LEFT JOIN ' . TABLE_TRANSCRIPTS . ' AS t_preferred ON (gp2g.transcriptid = t_preferred.id)' ;
+                        $aSQL['FROM'] .= ' LEFT OUTER JOIN ' . TABLE_GP2GENE . ' AS gp2g ON (t.geneid = gp2g.geneid) 
+                                           LEFT OUTER JOIN ' . TABLE_GENE_PANELS . ' AS gp ON (gp2g.genepanelid = gp.id)
+                                           LEFT OUTER JOIN ' . TABLE_TRANSCRIPTS . ' AS t_preferred ON (gp2g.transcriptid = t_preferred.id)';
+                    }
+                    if (array_search('VariantOnGenome', $aObjects)) {
+                        $aSQL['GROUP_BY'] = 'vog.id'; // Necessary for GROUP_CONCAT().
                     }
                     break;
             }
@@ -323,6 +330,35 @@ class LOVD_CustomViewListMOD extends LOVD_CustomViewList {
 
                 case 'VariantOnGenome':
                     $sPrefix = 'vog.';
+
+                    $sEffectLegend = 'The variant\'s affect on a protein\'s function, in the format <STRONG>[Reported]/[Curator concluded]</STRONG> indicating:
+                    <TABLE border="0" cellpadding="0" cellspacing="0">
+                      <TR>
+                        <TD width="30">+</TD>
+                        <TD>The variant affects function</TD>
+                      </TR>
+                      <TR>
+                        <TD>+?</TD>
+                        <TD>The variant probably affects function</TD>
+                      </TR>
+                      <TR>
+                        <TD>-</TD>
+                        <TD>The variant does not affect function</TD>
+                      </TR>
+                      <TR>
+                        <TD>-?</TD>
+                        <TD>The variant probably does not affect function</TD>
+                      </TR>
+                      <TR>
+                        <TD>?</TD>
+                        <TD>Effect unknown</TD>
+                      </TR>
+                      <TR>
+                        <TD>.</TD>
+                        <TD>Effect not classified</TD>
+                      </TR>
+                    </TABLE>';
+
                     // The fixed columns.
                     $this->aColumnsViewList = array_merge($this->aColumnsViewList,
                          array(
@@ -341,8 +377,9 @@ class LOVD_CustomViewListMOD extends LOVD_CustomViewList {
                                 'vog_effect' => array(
                                         'view' => array('Effect', 70),
                                         'db'   => array('eg.name', 'ASC', true),
-                                        'legend' => array('The variant\'s effect on a protein\'s function, in the format Reported/Curator concluded; ranging from \'+\' (variant affects function) to \'-\' (does not affect function).',
-                                                          'The variant\'s affect on a protein\'s function, in the format Reported/Curator concluded; \'+\' indicating the variant affects function, \'+?\' probably affects function, \'-\' does not affect function, \'-?\' probably does not affect function, \'?\' effect unknown.')),
+                                        'legend' => array(
+                                            strip_tags(str_replace(array('<TR>', '</TD> <TD>'), array("\n", '      '), preg_replace('/\s+/', ' ', strip_tags($sEffectLegend, '<tr><td>')))),
+                                            $sEffectLegend)),
                                 'chromosome' => array(
                                         'view' => array('Chr', 40),
                                         'db'   => array('vog.chromosome', 'ASC', true)),
@@ -474,6 +511,15 @@ class LOVD_CustomViewListMOD extends LOVD_CustomViewList {
                                 ),
                             ));
                         }
+                    break;
+
+                case 'GenePanels':
+                    $this->aColumnsViewList = array_merge($this->aColumnsViewList,
+                        array(
+                            'gene_panels' => array(
+                                'view' => array('Gene panels', 150),
+                                'db'   => array('gene_panels', 'DESC', 'TEXT')),
+                        ));
                     break;
             }
         }
