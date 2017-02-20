@@ -904,7 +904,8 @@ if ($sCalcVersionFiles != $sCalcVersionDB) {
             // Firstly split out the filters and loop through them as the order is significant.
             $aFilters = preg_split('/\s+/', $aAnalysis['filters']);
             foreach ($aFilters as $i => $sFilter) { // Each filter is processed and the SQL is generated.
-                $aFiltersSQL[] = 'INSERT IGNORE INTO ' . TABLE_ANALYSIS_FILTERS . ' (id) VALUES ("' . $sFilter . '")'; // Create insert statements each time but we will use only unique insert statements later.
+                // Create insert statements each time but we will use only unique insert statements later.
+                $aFiltersSQL[] = 'INSERT IGNORE INTO ' . TABLE_ANALYSIS_FILTERS . ' (id) VALUES ("' . $sFilter . '")';
                 $aAnalysis2FiltersSQL[] = 'INSERT INTO ' . TABLE_AN2AF . ' (analysisid, filterid, filter_order) VALUES (' . $aAnalysis['id'] . ', "' . $sFilter . '", ' . ($i + 1) . ')';
             }
         }
