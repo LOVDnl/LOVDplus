@@ -4,12 +4,13 @@
  * LEIDEN OPEN VARIATION DATABASE (LOVD)
  *
  * Created     : 2009-10-21
- * Modified    : 2016-05-24
- * For LOVD    : 3.0-15
+ * Modified    : 2016-10-14
+ * For LOVD    : 3.0-18
  *
  * Copyright   : 2004-2016 Leiden University Medical Center; http://www.LUMC.nl/
  * Programmers : Ing. Ivo F.A.C. Fokkema <I.F.A.C.Fokkema@LUMC.nl>
  *               Ing. Ivar C. Lugtenburg <I.C.Lugtenburg@LUMC.nl>
+ *               M. Kroon <m.kroon@lumc.nl>
  *
  *
  * This file is part of LOVD.
@@ -141,7 +142,7 @@ function lovd_checkORCIDChecksum ($sID)
     }
     $nRemainder = $nTotal % 11;
     $nResult = (12 - $nRemainder) % 11;
-    $sResult = ($nResult == 10 ? 'X' : (string) $nResult);
+    $sResult = ($nResult == 10? 'X' : (string) $nResult);
     return ($sResult == substr($sID, -1));
 }
 
@@ -273,7 +274,7 @@ function lovd_errorPrint ()
 {
     // Based on a function provided by Ileos.nl in the interest of Open Source.
     // Prints error variable.
-    global $_AUTH, $_ERROR;
+    global $_ERROR;
 
     if (count($_ERROR['messages']) > 1) {
         unset($_ERROR['messages'][0]);
@@ -395,7 +396,7 @@ function lovd_fetchDBID ($aData)
                 $aArgs[] = $aData['position_g_start'];
             }
         }
-        if (false && !empty($aTranscriptVariants)) {
+        if (!LOVD_plus && !empty($aTranscriptVariants)) {
             if (!empty($sGenomeVariant)) {
                 $sSQL .= ' UNION ';
             }
@@ -429,15 +430,13 @@ function lovd_fetchDBID ($aData)
                 // Check this option, if it doesn't pass we'll skip it now.
                 $aDataCopy = $aData;
                 $aDataCopy['VariantOnGenome/DBID'] = $sDBIDoption;
-                /* Diagnostics: Assuming all suggestions are correct.
-                if (!lovd_checkDBID($aDataCopy)) {
+                if (!LOVD_plus && !lovd_checkDBID($aDataCopy)) {
                     continue;
                 }
-                */
                 if ($sDBIDoptionSymbol == $sDBIDnewSymbol && $sDBIDoptionNumber < $sDBIDnewNumber && $sDBIDoptionNumber != '000000') {
-                    // If the symbol of the option is the same, but the number is lower(not including 000000), take it.
+                    // If the symbol of the option is the same, but the number is lower (not including 000000), take it.
                     $sDBID = $sDBIDoption;
-                } elseif ($sDBIDoptionSymbol != $sDBIDnewSymbol && isset($aGenes) && in_array($sDBIDnewSymbol, $aGenes)) {
+                } elseif ($sDBIDoptionSymbol != $sDBIDnewSymbol && isset($aGenes) && in_array($sDBIDoptionSymbol, $aGenes)) {
                     // If the symbol of the option is different and is one of the genes of the variant you are editing/creating, take it.
                     $sDBID = $sDBIDoption;
                 } elseif (substr($sDBIDnewSymbol, 0, 3) == 'chr' && substr($sDBIDoptionSymbol, 0, 3) != 'chr') {
@@ -457,8 +456,9 @@ function lovd_fetchDBID ($aData)
             // no entries found with these combinations and a DBID, so we are going to use the gene symbol
             // (or chromosome if there is no gene) and take the first number available to make a DBID.
             // Query for getting the first available number for the new DBID.
-            if (empty($aGenes)) {
+            if (LOVD_plus || empty($aGenes)) {
                 // No genes, simple query only on TABLE_VARIANTS.
+                // Also, LOVD_plus doesn't like it when chr DBIDs get changed on edits, so stick to chr DBIDs.
                 // 2013-02-28; 3.0-03; By querying the chromosome also we sped up this query from 0.43s to 0.09s when having 1M variants.
                 // NOTE: By adding an index on `VariantOnGenome/DBID` this query time can be reduced to 0.00s because of the LIKE on the DBID field.
                 $sSymbol = 'chr' . $aData['chromosome'];
@@ -586,7 +586,7 @@ function lovd_matchURL ($s, $bAllowCustomHosts = false)
     // Matches a string to the standard URL pattern (including those using IP addresses).
     // If $bAllowCustomHosts is true, hosts like "localhost" (hosts without dots) are allowed.
 
-    return (preg_match('/^(ht|f)tps?:\/\/([0-9]{1,3}(\.[0-9]{1,3}){3}|(([0-9a-z][-0-9a-z]*[0-9a-z]|[0-9a-z])\.' . ($bAllowCustomHosts? '?' : '') . ')+[a-z]{2,6})(\/[%&=#0-9a-z\/._+-]*\??.*)?$/i', $s));
+    return (preg_match('/^(ht|f)tps?:\/\/([0-9]{1,3}(\.[0-9]{1,3}){3}|(([0-9a-z][-0-9a-z]*[0-9a-z]|[0-9a-z])\.' . ($bAllowCustomHosts? '?' : '') . ')+[a-z]{2,})(\/[%&=#0-9a-z\/._+-]*\??.*)?$/i', $s));
 }
 
 
@@ -605,7 +605,7 @@ function lovd_matchUsername ($s)
 
 
 
-function lovd_sendMail ($aTo, $sSubject, $sBody, $sHeaders, $bFwdAdmin = true, $aCc = array(), $aBcc = array())
+function lovd_sendMail ($aTo, $sSubject, $sBody, $sHeaders, $bHalt = true, $bFwdAdmin = true, $aCc = array(), $aBcc = array())
 {
     // Format:
     // $aTo, $aCc, $aBcc = array(
@@ -664,10 +664,10 @@ function lovd_sendMail ($aTo, $sSubject, $sBody, $sHeaders, $bFwdAdmin = true, $
         $sSubject = 'FW: ' . $sSubject;
         // 2013-08-26; 3.0-08; Encode the subject as well. Prefixing with "Subject: " to make sure the first line including the SMTP header does not exceed the 76 chars.
         $sSubjectEncoded = substr(mb_encode_mimeheader('Subject: ' . $sSubject, 'UTF-8'), 9);
-        return lovd_sendMail(array($_SETT['admin']), $sSubjectEncoded, $sBody, $_SETT['email_headers'] . ($sAdditionalHeaders? PHP_EOL . $sAdditionalHeaders : ''), false);
+        return lovd_sendMail(array($_SETT['admin']), $sSubjectEncoded, $sBody, $_SETT['email_headers'] . ($sAdditionalHeaders? PHP_EOL . $sAdditionalHeaders : ''), $bHalt, false);
     } elseif (!$bMail) {
         // $sSubject is used here as it can always be used to describe the email type. This function also logs the email error.
-        lovd_emailError(LOG_EVENT, $sSubject, $sTo, true);
+        lovd_emailError(LOG_EVENT, $sSubject, $sTo, $bHalt);
     }
 
     return $bMail;
@@ -728,9 +728,12 @@ function lovd_sendMailFormatAddresses ($aRecipients, & $aEmailsUsed)
 function lovd_setUpdatedDate ($aGenes)
 {
     // Updates the updated_date field of the indicated gene.
-    return count($aGenes);
-
     global $_AUTH, $_DB;
+
+    if (LOVD_plus) {
+        // LOVD+ does not use these timestamps.
+        return count($aGenes);
+    }
 
     if (!$aGenes) {
         return false;
@@ -759,11 +762,11 @@ function lovd_setUpdatedDate ($aGenes)
 
 
 function lovd_viewForm ($a,
-                        $sHeaderPrefix = "\n          <TR valign=\"top\">\n            <TD class=\"{{ CLASS }}\" width=\"{{ WIDTH }}\">",
+                        $sHeaderPrefix = "\n          <TR valign=\"top\">\n            <TD class=\"{{ CLASS }}\">",
                         $sHeaderSuffix = '</TD>',
-                        $sHelpPrefix   = "\n            <TD class=\"{{ CLASS }}\" width=\"{{ WIDTH }}\">",
+                        $sHelpPrefix   = "\n            <TD class=\"{{ CLASS }}\">",
                         $sHelpSuffix   = '</TD>',
-                        $sDataPrefix   = "\n            <TD class=\"{{ CLASS }}\" width=\"{{ WIDTH }}\">",
+                        $sDataPrefix   = "\n            <TD class=\"{{ CLASS }}\">",
                         $sDataSuffix   = '</TD></TR>',
                         $sNewLine      = '              ')
 {
@@ -797,24 +800,26 @@ function lovd_viewForm ($a,
     if (!in_array($sMethod, array('GET', 'POST'))) {
         $sMethod = 'POST';
     }
-    // Class names and widths.
+
+    // Class names, widths are taken care of in the COLGROUP element (that doesn't support class name).
     $aCats = array('Header', 'Help', 'Data');
     foreach ($aCats as $sCat) {
         $sClass  = 's' . $sCat . 'Class';
         $sPrefix = 's' . $sCat . 'Prefix';
-        $sWidth  = 's' . $sCat . 'Width';
         if ($$sClass) {
             $$sPrefix = str_replace('{{ CLASS }}', $$sClass, $$sPrefix);
         } else {
             $$sPrefix = str_replace(' class="{{ CLASS }}"', '', $$sPrefix);
         }
-
-        if ($$sWidth) {
-            $$sPrefix = str_replace('{{ WIDTH }}', $$sWidth, $$sPrefix);
-        } else {
-            $$sPrefix = str_replace(' width="{{ WIDTH }}"', '', $$sPrefix);
-        }
     }
+    // Table structure, use COLGROUP for the width to ensure table-layout:fixed gets the width correctly.
+    $nFormWidth = 760;
+    $sTable = '        <TABLE border="0" cellpadding="0" cellspacing="1" width="' . $nFormWidth . '" class="dataform">
+          <COLGROUP>
+            <COL width="' . $sHeaderWidth . '"></COL>
+            <COL width="' . $sHelpWidth . '"></COL>
+            <COL width="' . $sDataWidth . '"></COL>
+          </COLGROUP>';
 
 
 
@@ -822,10 +827,9 @@ function lovd_viewForm ($a,
 
     // First: print the table.
     $bInFieldset = false;
-    $nFormWidth = 760;
     if (!(!empty($a[1][0]) && $a[1][0] == 'fieldset')) {
         // Table should only be printed when the first field is not a fieldset definition, that definition will close and open a new table.
-        print('        <TABLE border="0" cellpadding="0" cellspacing="1" width="' . $nFormWidth . '">');
+        print($sTable);
     }
 
     // Now loop the array with fields, to print them on the screen.
@@ -844,14 +848,14 @@ function lovd_viewForm ($a,
             } elseif ($aField == 'hr') {
                 // Horizontal line (ruler).
                 // This construction may not entirely be correct when this function is called with different prefixes & suffixes than the default ones.
-                echo str_replace(' width="' . $sHeaderWidth . '"', '', str_replace('<TD', '<TD colspan="3"', $sHeaderPrefix)) . '<IMG src="gfx/trans.png" alt="" width="100%" height="1" class="form_hr">' . $sDataSuffix;
+                echo str_replace('<TD', '<TD colspan="3"', $sHeaderPrefix) . '<IMG src="gfx/trans.png" alt="" width="100%" height="1" class="form_hr">' . $sDataSuffix;
                 continue;
             } elseif ($aField == 'end_fieldset' && $bInFieldset) {
                 // End of fieldset. Only given when fieldset is open and no new fieldset should be opened.
                 print('</TABLE>' . "\n" .
                       '        </FIELDSET>' . "\n" .
-                      '        <TABLE border="0" cellpadding="0" cellspacing="1" width="' . $nFormWidth . '">');
-                $nInFieldset = false;
+                      $sTable);
+                $bInFieldset = false;
                 continue;
             }
 
@@ -871,7 +875,7 @@ function lovd_viewForm ($a,
                     print('        </FIELDSET>' . "\n");
                 }
                 print('        <FIELDSET style="width : ' . ($nFormWidth + 4) . 'px;"><LEGEND style="margin-left : ' . $sHeaderWidth . ';"><B>' . $aField[2] . '</B> <SPAN class="S11">[<A href="#" id="' . $aField[1] . '_link" onClick="lovd_toggleVisibility(\'' . $aField[1] . '\'); return false;">' . ($bShow? 'Hide' : 'Show') . '</A>]</SPAN></LEGEND>' . "\n" .
-                      '        <TABLE border="0" cellpadding="0" cellspacing="1" width="' . $nFormWidth . '" id="' . $aField[1] . '"' . ($bShow? '' : ' style="display : none"') . '>');
+                      preg_replace('/>/', ' id="' . $aField[1] . '"' . ($bShow? '' : ' style="display : none"') . '>', $sTable, 1));
                 $bInFieldset = true;
                 continue;
             }
@@ -900,11 +904,41 @@ function lovd_viewForm ($a,
 
 
 
-            } elseif (in_array($aField[2], array('text', 'password', 'file'))) {
+            } elseif (in_array($aField[2], array('text', 'file'))) {
                 list($sHeader, $sHelp, $sType, $sName, $nSize) = $aField;
-                if (!isset($GLOBALS['_' . $sMethod][$sName])) { $GLOBALS['_' . $sMethod][$sName] = ''; }
+                if (!isset($GLOBALS['_' . $sMethod][$sName])) {
+                    $GLOBALS['_' . $sMethod][$sName] = '';
+                }
 
                 print('<INPUT type="' . $sType . '" name="' . $sName . '" size="' . $nSize . '" value="' . htmlspecialchars($GLOBALS['_' . $sMethod][$sName]) . '"' . (!lovd_errorFindField($sName)? '' : ' class="err"') . '>' . $sDataSuffix);
+                continue;
+
+
+            } elseif ($aField[2] == 'password') {
+                // Add default values to any missing entries at the end of the field array.
+                $aFieldComplete = array_pad($aField, 6, false);
+                list( , , $sType, $sName, $nSize, $bBlockAutofillPass) = $aFieldComplete;
+
+                if (!isset($GLOBALS['_' . $sMethod][$sName])) {
+                    $GLOBALS['_' . $sMethod][$sName] = '';
+                }
+
+                // Setup password field attributes.
+                $sFieldAtts = ' type="' . $sType . '" name="' . $sName . '" size="' . $nSize . '"';
+                if ($bBlockAutofillPass) {
+                    // Block editing of the actual password field until JS onFocus event.
+                    $sFieldAtts .= ' readonly onfocus="this.removeAttribute(\'readonly\');"';
+                }
+
+                // Output a hidden text field before password field, to catch a possible
+                // mistaken automatic fill of a username.
+                print('<INPUT type="text" style="display:none" />' . PHP_EOL);
+                // Print indentation for new line.
+                print($sNewLine);
+
+                print('<INPUT' . $sFieldAtts . ' value="' . htmlspecialchars(
+                        $GLOBALS['_' . $sMethod][$sName]) . '"' . (!lovd_errorFindField($sName)?
+                        '' : ' class="err"') . '>' . $sDataSuffix);
                 continue;
 
 
@@ -945,8 +979,8 @@ function lovd_viewForm ($a,
                             $bInOptGroup = true;
                         } else {
                             // We have to cast the $key to string because PHP made integers of them, if they were integer strings.
-                            $bSelected = ((!$bMultiple && (string)$GLOBALS['_' . $sMethod][$sName] === (string)$key) || ($bMultiple && is_array($GLOBALS['_' . $sMethod][$sName]) && in_array((string)$key, $GLOBALS['_' . $sMethod][$sName], true)));
-                            print("\n" . $sNewLine . '  <OPTION value="' . htmlspecialchars($key) . '"' . ($bSelected ? ' selected' : '') . '>' . htmlspecialchars($val) . '</OPTION>');
+                            $bSelected = ((!$bMultiple && (string) $GLOBALS['_' . $sMethod][$sName] === (string) $key) || ($bMultiple && is_array($GLOBALS['_' . $sMethod][$sName]) && in_array((string) $key, $GLOBALS['_' . $sMethod][$sName], true)));
+                            print("\n" . $sNewLine . '  <OPTION value="' . htmlspecialchars($key) . '"' . ($bSelected? ' selected' : '') . '>' . htmlspecialchars($val) . '</OPTION>');
                         }
                     }
                     // If we are still in an option group then lets close it.

@@ -4,8 +4,8 @@
  * LEIDEN OPEN VARIATION DATABASE (LOVD)
  *
  * Created     : 2009-10-22
- * Modified    : 2016-04-05
- * For LOVD    : 3.0-14
+ * Modified    : 2016-09-14
+ * For LOVD    : 3.0-17
  *
  * Copyright   : 2004-2016 Leiden University Medical Center; http://www.LUMC.nl/
  * Programmers : Ing. Ivo F.A.C. Fokkema <I.F.A.C.Fokkema@LUMC.nl>
@@ -29,10 +29,10 @@
  *
  *************/
 
-// DMD_SPECIFIC
 if (!defined('ROOT_PATH')) {
     define('ROOT_PATH', '../');
     require ROOT_PATH . 'inc-init.php';
+    lovd_requireAUTH(LEVEL_MANAGER);
 }
 
 $aColSQL =
@@ -67,7 +67,7 @@ $aColSQL =
                 'INSERT INTO ' . TABLE_COLS . ' VALUES ("VariantOnGenome/dbSNP",                        8, 120, 0, 1, 0, "dbSNP ID",             "", "The dbSNP ID.", "The dbSNP ID.", "VARCHAR(15)", "dbSNP ID|If available, please fill in the dbSNP ID, such as rs12345678.|text|10", "", "/^[rs]s\\\\d+$/", 0, 0, 1, 0, NOW(), NULL, NULL)',
                 'INSERT INTO ' . TABLE_COLS . ' VALUES ("VariantOnGenome/DNA",                          2, 200, 1, 1, 1, "DNA change (genomic)", "", "Description of variant at DNA level, based on the genomic DNA reference sequence (following HGVS recommendations).", "Description of variant at DNA level, based on the genomic DNA reference sequence (following HGVS recommendations).<BR>\r\n<UL style=\"margin-top : 0px;\">\r\n  <LI>g.12345678C>T</LI>\r\n  <LI>g.12345678_12345890del</LI>\r\n  <LI>g.12345678_12345890dup</LI>\r\n</UL>", "VARCHAR(150)", "Genomic DNA change (HGVS format)|Description of variant at DNA level, based on the genomic DNA reference sequence (following HGVS recommendations); e.g. g.12345678C>T, g.12345678_12345890del, g.12345678_12345890dup.|text|30", "", "", 1, 1, 1, 0, NOW(), NULL, NULL)',
                 'INSERT INTO ' . TABLE_COLS . ' VALUES ("VariantOnGenome/Frequency",                    9,  90, 0, 0, 0, "Frequency",            "", "Frequency in which the variant was found; e.g 5/760 chromosomes (in 5 of 760 chromosomes tested), 1/33 patients (in 1 of 33 patients analysed in study), 0.05 controls (in 5% of control cases tested).", "Frequency in which the variant was found; e.g 5/760 chromosomes (in 5 of 760 chromosomes tested), 1/33 patients (in 1 of 33 patients analysed in study), 0.05 controls (in 5% of control cases tested).", "VARCHAR(15)", "Frequency|Frequency in which the variant was found; e.g 5/760 chromosomes (in 5 of 760 chromosomes tested), 1/33 patients (in 1 of 33 patients analysed in study), 0.05 controls (in 5% of control cases tested). Preferred format is 3/75, not 0.04.|text|10", "", "", 1, 1, 1, 0, NOW(), NULL, NULL)',
-                'INSERT INTO ' . TABLE_COLS . ' VALUES ("VariantOnGenome/Genetic_origin",              11, 200, 0, 0, 1, "Genetic origin",       "", "Origin of variant; unknown, germline (inherited), somatic, de novo, from parental disomy (maternal or paternal) or in vitro (cloned) when tested for functional consequences.", "Origin of variant; unknown, germline (inherited), somatic, de novo, from parental disomy (maternal or paternal) or in vitro (cloned) when tested for functional consequences.", "VARCHAR(100)", "Genetic origin||select|1|--Not specified--|false|false", "Unknown\r\nGermline (inherited)\r\nSomatic\r\nDe novo\r\nUniparental disomy\r\nUniparental disomy, maternal allele\r\nUniparental disomy, paternal allele\r\nIn vitro (cloned)", "", 1, 1, 1, 0, NOW(), NULL, NULL)',
+                'INSERT INTO ' . TABLE_COLS . ' VALUES ("VariantOnGenome/Genetic_origin",              11, 200, 0, 0, 1, "Genetic origin",       "", "Origin of variant; unknown, germline, somatic, de novo, from parental disomy (maternal or paternal) or in vitro (cloned) when tested for functional consequences.", "Origin of variant; unknown, germline, somatic, de novo, from parental disomy (maternal or paternal) or in vitro (cloned) when tested for functional consequences.", "VARCHAR(100)", "Genetic origin||select|1|--Not specified--|false|false", "Unknown\r\nGermline\r\nSomatic\r\nDe novo\r\nUniparental disomy\r\nUniparental disomy, maternal allele\r\nUniparental disomy, paternal allele\r\nIn vitro (cloned)", "", 1, 1, 1, 0, NOW(), NULL, NULL)',
                 'INSERT INTO ' . TABLE_COLS . ' VALUES ("VariantOnGenome/Published_as",                 3, 200, 0, 0, 0, "Published as",         "Variant as originally reported (e.g. 521delT); provide only when different from \"DNA change\".", "Variant as originally reported (e.g. 521delT); listed only when different from \"DNA change\". Variants seen in animal models, tested in vitro, predicted from RNA analysis, etc. are described between brackets like c.(456C>G).", "Variant as originally reported (e.g. 521delT); listed only when different from \"DNA change\". Variants seen in animal models, tested in vitro, predicted from RNA analysis, etc. are described between brackets like c.(456C>G).", "VARCHAR(100)", "Published as|Variants seen in animal models, tested in vitro, predicted from RNA analysis, etc. are described between brackets like c.(456C>G).|text|30", "", "", 1, 1, 1, 0, NOW(), NULL, NULL)',
                 'INSERT INTO ' . TABLE_COLS . ' VALUES ("VariantOnGenome/Reference",                    6, 200, 1, 1, 0, "Reference",            "", "Reference to publication describing the variant.", "Reference to publication describing the variant, including links to OMIM (when available), PubMed or or other source, e.g. \"den Dunnen ASHG2003 P2346\".", "VARCHAR(255)", "Reference||text|50", "", "", 1, 1, 1, 0, NOW(), NULL, NULL)',
                 // Add remarks non public? Add remarks column(s) to VariantOnTranscript???
@@ -143,12 +143,16 @@ if (LOVD_plus) {
             'INSERT INTO ' . TABLE_COLS . ' VALUES ("VariantOnTranscript/Prediction/MutationTaster/Score",  255, 100, 0, 1, 0, "MutationTaster score", "", "MutationTaster score.", "The MutationTaster score, predicting the effect of the DNA variant on the function of the protein.", "FLOAT", "MutationTaster score||text|6", "", "", 0, 0, 1, 0, NOW(), NULL, NULL)',
             'INSERT INTO ' . TABLE_COLS . ' VALUES ("VariantOnTranscript/Prediction/SIFT",                  255, 100, 0, 1, 0, "SIFT score", "", "SIFT score.", "The SIFT score, predicting the effect of the DNA variant on the function of the protein.", "VARCHAR(50)", "SIFT score||text|6", "", "", 0, 0, 1, 0, NOW(), NULL, NULL)',
             'INSERT INTO ' . TABLE_COLS . ' VALUES ("VariantOnTranscript/Prediction/Grantham",              255, 100, 0, 1, 0, "Grantham score", "", "Grantham score.", "The Grantham score, predicting the effect of the DNA variant on the function of the protein.", "TINYINT UNSIGNED", "Grantham score||text|6", "", "", 0, 0, 1, 0, NOW(), NULL, NULL)',
+            'INSERT INTO ' . TABLE_COLS . ' VALUES ("SummaryAnnotation/Remarks",                             10, 200, 0, 1, 0, "Variant remarks", "", "Remarks regarding the variant described, independent of a specific observation.", "Remarks regarding the variant described, independent of a specific observation, e.g. 345 kb deletion, association with disease from other studies, etc.", "TEXT", "Remarks||textarea|50|3", "", "", 0, 0, 1, 0, NOW(), NULL, NULL)',
+            'INSERT INTO ' . TABLE_COLS . ' VALUES ("SummaryAnnotation/Curation/Interpretation",            255, 200, 0, 1, 0, "Interpretation", "", "Interpretation of variant for reporting.", "Interpretation of variant for reporting.", "TEXT", "Interpretation||textarea|40|4", "", "", 0, 0, 1, 0, NOW(), NULL, NULL)',
+
         ));
 
     if ($_INI['instance']['name'] == 'leiden') {
         // Columns specific for Leiden.
         $aColSQL = array_merge($aColSQL,
             array(
+                'INSERT INTO ' . TABLE_COLS . ' VALUES ("VariantOnGenome/Frequency/GoNL_old",                               255, 100, 0, 1, 0, "GoNL AF (old)", "", "Allele frequency from the GoNL project, not properly calculated based on the converage.", "Allele frequency from the GoNL project, not properly calculated based on the converage.", "FLOAT UNSIGNED", "GoNL allele frequency (old)||text|6", "", "", 0, 0, 1, 0, NOW(), NULL, NULL)',
                 'INSERT INTO ' . TABLE_COLS . ' VALUES ("VariantOnGenome/InhouseDB/Count/Global/Heterozygotes",             255, 100, 0, 1, 0, "INDB Count Global Het", "", "The number of samples in the Inhouse Database that have this variant in a heterozygous state.", "The number of samples in the Inhouse Database that have this variant in a heterozygous state.", "MEDIUMINT UNSIGNED", "INDB Count Global Het||text|6", "", "", 0, 0, 1, 0, NOW(), NULL, NULL)',
                 'INSERT INTO ' . TABLE_COLS . ' VALUES ("VariantOnGenome/InhouseDB/Count/Global/Homozygotes",               255, 100, 0, 1, 0, "INDB Count Global Hom", "", "The number of samples in the Inhouse Database that have this variant in a homozygous state.", "The number of samples in the Inhouse Database that have this variant in a homozygous state.", "MEDIUMINT UNSIGNED", "INDB Count Global Hom||text|6", "", "", 0, 0, 1, 0, NOW(), NULL, NULL)',
                 'INSERT INTO ' . TABLE_COLS . ' VALUES ("VariantOnGenome/InhouseDB/Count/InPanel/Heterozygotes",            255, 100, 0, 1, 0, "INDB Count In Panel Het", "", "The number of samples in the Inhouse Database, having the same indication as the individual that is analyzed, that have this variant in a heterozygous state.", "The number of samples in the Inhouse Database, having the same indication as the individual that is analyzed, that have this variant in a heterozygous state.", "MEDIUMINT UNSIGNED", "INDB Count In Panel Het||text|6", "", "", 0, 0, 1, 0, NOW(), NULL, NULL)',
@@ -729,7 +733,6 @@ if ($_INI['instance']['name'] == 'mgha_seq') {
     );
 }
 
-// DMD_SPECIFIC;
 if (lovd_getProjectFile() == '/install/inc-sql-columns.php') {
     header('Content-type: text/plain; charset=UTF-8');
     var_dump($aColSQL);

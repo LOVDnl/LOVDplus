@@ -106,6 +106,7 @@ class LOVD_DefaultDataConverter {
         // Returns an array that map VEP columns to LOVD columns.
 
         $aColumnMappings = array(
+
             'chromosome' => 'chromosome',
             'position' => 'position', // lovd_getVariantDescription() needs this.
             'QUAL' => 'VariantOnGenome/Sequencing/Quality',
@@ -132,7 +133,8 @@ class LOVD_DefaultDataConverter {
             'AF1000G' => 'VariantOnGenome/Frequency/1000G',
             'rsID' => 'VariantOnGenome/dbSNP',
             'AFESP5400' => 'VariantOnGenome/Frequency/EVS', // Will be divided by 100 later.
-            'AFGONL' => 'VariantOnGenome/Frequency/GoNL',
+            'CALC_GONL_AF' => 'VariantOnGenome/Frequency/GoNL',
+            'AFGONL' => 'VariantOnGenome/Frequency/GoNL_old',
             'EXAC_AF' => 'VariantOnGenome/Frequency/ExAC',
             'MutationTaster_pred' => 'VariantOnTranscript/Prediction/MutationTaster',
             'MutationTaster_score' => 'VariantOnTranscript/Prediction/MutationTaster/Score',
@@ -202,6 +204,7 @@ class LOVD_DefaultDataConverter {
         // Prepare the $aGeneAliases array with a site specific gene alias list.
         // The convert and merge script will provide suggested gene alias key value pairs to add to this array.
         $aGeneAliases = array(
+            /*
             // Sort? Keep forever?
             'C1orf63' => 'RSRP1',
             'C1orf170' => 'PERM1',
@@ -409,6 +412,7 @@ class LOVD_DefaultDataConverter {
             'ZNF259' => 'ZPR1',
             'ZNF812' => 'ZNF812P',
             // 2016-03-04; New aliases.
+            */
         );
 
         return $aGeneAliases;

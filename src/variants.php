@@ -4,14 +4,17 @@
  * LEIDEN OPEN VARIATION DATABASE (LOVD)
  *
  * Created     : 2010-12-21
- * Modified    : 2016-04-07
- * For LOVD    : 3.0-15
+ * Modified    : 2016-10-28
+ * For LOVD    : 3.0-18
  *
  * Copyright   : 2004-2016 Leiden University Medical Center; http://www.LUMC.nl/
  * Programmers : Ing. Ivar C. Lugtenburg <I.C.Lugtenburg@LUMC.nl>
  *               Ing. Ivo F.A.C. Fokkema <I.F.A.C.Fokkema@LUMC.nl>
  *               Jerry Hoogenboom <J.Hoogenboom@LUMC.nl>
  *               Zuotian Tatum <Z.Tatum@LUMC.nl>
+ *               Anthony Marty <anthony.marty@unimelb.edu.au>
+ *               Msc. Daan Asscheman <D.Asscheman@LUMC.nl>
+ *               M. Kroon <m.kroon@lumc.nl>
  *
  *
  * This file is part of LOVD.
@@ -232,7 +235,7 @@ if (!ACTION && (empty($_PE[1]) || preg_match('/^chr[0-9A-Z]{1,2}$/', $_PE[1]))) 
         $sChr = '';
     }
 
-    define('PAGE_TITLE', 'View genomic variants' . (!$sChr? '' : ' on chromosome ' . substr($sChr, 3)));
+    define('PAGE_TITLE', 'View all genomic variants' . (!$sChr? '' : ' on chromosome ' . substr($sChr, 3)));
     $_T->printHeader();
     $_T->printTitle();
 
@@ -243,7 +246,8 @@ if (!ACTION && (empty($_PE[1]) || preg_match('/^chr[0-9A-Z]{1,2}$/', $_PE[1]))) 
         $_GET['search_chromosome'] = '="' . substr($sChr, 3) . '"';
         $aColsToHide[] = 'chromosome';
     }
-    $_DATA->viewList('VOG', $aColsToHide, false, false, (bool) ($_AUTH['level'] >= LEVEL_MANAGER));
+    $_DATA->viewList('VOG', $aColsToHide, false, false, (bool) ($_AUTH['level'] >= LEVEL_MANAGER),
+                     false, true);
 
     $_T->printFooter();
     exit;
@@ -262,7 +266,7 @@ if (PATH_COUNT == 2 && $_PE[1] == 'in_gene' && !ACTION) {
         define('FORMAT_ALLOW_TEXTPLAIN', true);
     }
 
-    define('PAGE_TITLE', 'View transcript variants');
+    define('PAGE_TITLE', 'View all variants affecting transcripts');
     $_T->printHeader();
     $_T->printTitle();
 
@@ -293,7 +297,8 @@ if (PATH_COUNT == 3 && $_PE[1] == 'upload' && ctype_digit($_PE[2]) && !ACTION) {
     $_DATA = new LOVD_GenomeVariant();
     $_GET['search_created_by'] = substr($nID, 0, 5);
     $_GET['search_created_date'] = date('Y-m-d H:i:s', substr($nID, 5, 10));
-    $_DATA->viewList('VOG_uploads', array('allele_'), false, false, (bool) ($_AUTH['level'] >= LEVEL_MANAGER));
+    $_DATA->viewList('VOG_uploads', array('allele_'), false, false,
+                     (bool) ($_AUTH['level'] >= LEVEL_MANAGER), false, true);
 
     $_T->printFooter();
     exit;
@@ -305,9 +310,15 @@ if (PATH_COUNT == 3 && $_PE[1] == 'upload' && ctype_digit($_PE[2]) && !ACTION) {
 
 if (!ACTION && !empty($_PE[1]) && !ctype_digit($_PE[1])) {
     // URL: /variants/DMD
+    // URL: /variants/DMD/unique
     // URL: /variants/DMD/NM_004006.2
+    // URL: /variants/DMD/NM_004006.2/unique
     // View all entries in a specific gene, affecting a specific transcript.
 
+    $bUnique = false;
+    if ((isset($_PE[2]) && $_PE[2] == 'unique') || (isset($_PE[3]) && $_PE[3] == 'unique')) {
+        $bUnique = true;
+    }
     $sGene = $_DB->query('SELECT id FROM ' . TABLE_GENES . ' WHERE id = ?', array(rawurldecode($_PE[1])))->fetchColumn();
     if ($sGene) {
         lovd_isAuthorized('gene', $sGene); // To show non public entries.
@@ -322,11 +333,11 @@ if (!ACTION && !empty($_PE[1]) && !ctype_digit($_PE[1])) {
         $nTranscripts = count($aTranscripts);
 
         // If NM is mentioned, check if exists for this gene. If not, reload page without NM. Otherwise, restrict $aTranscripts.
-        if (!empty($_PE[2])) {
+        if (!empty($_PE[2]) && $_PE[2] != 'unique') {
             $nTranscript = array_search($_PE[2], $aTranscripts);
             if ($nTranscript === false) {
                 // NM does not exist. Throw error or just simply redirect?
-                header('Location: ' . lovd_getInstallURL() . $_PE[0] . '/' . $_PE[1]);
+                header('Location: ' . lovd_getInstallURL() . $_PE[0] . '/' . $_PE[1] . (!$bUnique? '' : '/unique'));
                 exit;
             } else {
                 $aTranscripts = array($nTranscript => $aTranscripts[$nTranscript]);
@@ -341,12 +352,17 @@ if (!ACTION && !empty($_PE[1]) && !ctype_digit($_PE[1])) {
         exit;
     }
 
-    define('PAGE_TITLE', 'View transcript variants in ' . $sGene);
+    if ($bUnique) {
+        define('PAGE_TITLE', 'View unique variants in gene ' . $sGene);
+        $sViewListID = 'CustomVL_VOTunique_VOG_' . $sGene;
+    } else {
+        define('PAGE_TITLE', 'View all transcript variants in gene ' . $sGene);
+        $sViewListID = 'CustomVL_VOT_VOG_' . $sGene;
+    }
     $_T->printHeader();
     $_T->printTitle();
     lovd_printGeneHeader();
 
-    $sViewListID = 'CustomVL_VOT_VOG_' . $sGene;
 
     // If this gene has only one NM, show that one. Otherwise have people pick one.
     list($nTranscriptID, $sTranscript) = each($aTranscripts);
@@ -373,9 +389,16 @@ if (!ACTION && !empty($_PE[1]) && !ctype_digit($_PE[1])) {
 
     if ($nTranscripts > 0) {
         require ROOT_PATH . 'class/object_custom_viewlists.php';
-        $_DATA = new LOVD_CustomViewList(array('VariantOnTranscript', 'VariantOnGenome'), $sGene); // Restrict view to gene (correct custom column set, correct order).
+        if ($bUnique) {
+            // When this ViewListID is changed, also change the prepareData in object_custom_viewluists.php
+            $_DATA = new LOVD_CustomViewList(array('VariantOnTranscriptUnique', 'VariantOnGenome'), $sGene); // Restrict view to gene (correct custom column set, correct order).
+            $_DATA->setRowLink($sViewListID, 'variants/' . $sGene . '?search_position_c_start={{position_c_start}}&search_position_c_start_intron={{position_c_start_intron}}&search_position_c_end={{position_c_end}}&search_position_c_end_intron={{position_c_end_intron}}&search_vot_clean_dna_change=%3D%22{{vot_clean_dna_change}}%22&search_transcriptid={{transcriptid}}');
+        } else {
+            $_DATA = new LOVD_CustomViewList(array('VariantOnTranscript', 'VariantOnGenome'), $sGene); // Restrict view to gene (correct custom column set, correct order).
+        }
+
         $_DATA->sSortDefault = 'VariantOnTranscript/DNA';
-        $_DATA->viewList($sViewListID, array('chromosome', 'allele_'), false, false, (bool) ($_AUTH['level'] >= LEVEL_CURATOR));
+        $_DATA->viewList($sViewListID, array('chromosome', 'allele_'), false, false, (bool) ($_AUTH['level'] >= LEVEL_CURATOR), false, !$bUnique);
 
         // Notes for the variant listings...
         if (!empty($_SETT['currdb']['note_listing'])) {
@@ -444,14 +467,18 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && !ACTION) {
 
     require ROOT_PATH . 'class/object_genome_variants.php';
     lovd_isAuthorized('variant', $nID);
+    print('      <TABLE cellpadding="0" cellspacing="0" border="0">
+        <TR>
+          <TD valign="top">' . "\n");
     $_DATA = new LOVD_GenomeVariant();
     $zData = $_DATA->viewEntry($nID);
 
     $bAuthorized = ($_AUTH && $_AUTH['level'] >= LEVEL_OWNER);
-    // However, for LOVD_plus, depending on the status of the screening, we might not have the rights to edit the variant.
+    // However, for LOVD+, depending on the status of the screening, we might not have the rights to edit the variant.
     if (LOVD_plus && $bAuthorized) {
         $zScreenings = $_DB->query('SELECT s.* FROM ' . TABLE_SCREENINGS . ' AS s INNER JOIN ' . TABLE_SCR2VAR . ' AS s2v ON (s.id = s2v.screeningid) WHERE s2v.variantid = ? GROUP BY s.id', array($nID))->fetchAllAssoc();
-        if (!($_AUTH['level'] >= LEVEL_OWNER && $zScreenings[0]['analysis_statusid'] < ANALYSIS_STATUS_CLOSED) &&
+        if ($zScreenings &&
+            !($_AUTH['level'] >= LEVEL_OWNER && $zScreenings[0]['analysis_statusid'] < ANALYSIS_STATUS_CLOSED) &&
             !($_AUTH['level'] >= LEVEL_MANAGER && $zScreenings[0]['analysis_statusid'] < ANALYSIS_STATUS_WAIT_CONFIRMATION) &&
             !($_AUTH['level'] >= LEVEL_ADMIN && $zScreenings[0]['analysis_statusid'] < ANALYSIS_STATUS_CONFIRMED)) {
             $bAuthorized = false;
@@ -463,21 +490,22 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && !ACTION) {
         // Authorized user is logged in. Provide tools.
         if (!LOVD_plus) {
             $aNavigation[CURRENT_PATH . '?edit']       = array('menu_edit.png', 'Edit variant entry', 1);
+        } else {
+            // Menu items for setting the curation status.
+            foreach ($_SETT['curation_status'] as $nCurationStatusID => $sCurationStatus) {
+                $aCurationStatusMenu['javascript:$.get(\'ajax/set_curation_status.php?' . $nCurationStatusID . '&id=' . $nID . '\', function(sResponse){if(sResponse.substring(0,1) == \'1\'){alert(\'Successfully set curation status of this variant to \\\'' . $sCurationStatus . '\\\'.\');window.location.reload();' . (!isset($_GET['in_window'])? '' : 'window.opener.lovd_AJAX_viewListSubmit(\'CustomVL_AnalysisRunResults_for_I_VE\');window.opener.lovd_AJAX_viewEntryLoad();') . '}else if(sResponse.substring(0,1) == \'9\'){alert(\'Error: \' + sResponse.substring(2));}}).error(function(){alert(\'Error while setting curation status.\');});'] = array('menu_edit.png', $sCurationStatus);
+            }
+            $aCurationStatusMenu['javascript:if(window.confirm(\'Are you sure you want to clear this variants curation status?\')){$.get(\'ajax/set_curation_status.php?clear&id=' . $nID . '\', function(sResponse){if(sResponse.substring(0,1) == \'1\'){alert(\'Successfully cleared the curation status of this variant.\');window.location.reload();' . (!isset($_GET['in_window'])? '' : 'window.opener.lovd_AJAX_viewListSubmit(\'CustomVL_AnalysisRunResults_for_I_VE\');window.opener.lovd_AJAX_viewEntryLoad();') . '}else if(sResponse.substring(0,1) == \'9\'){alert(\'Error: \' + sResponse.substring(2));}}).error(function(){alert(\'Error while setting curation status.\');});}else{alert(\'This variants curation status has not been changed.\');}'] = array('cross.png', 'Clear curation status');
+            $aNavigation['curation_status'] = array('menu_edit.png', 'Set curation status', 1, 'sub_menu' => $aCurationStatusMenu);
+            // Menu items for setting the confirmation status.
+            foreach ($_SETT['confirmation_status'] as $nConfirmationStatusID => $sConfirmationStatus) {
+                $aConfirmationStatusMenu['javascript:$.get(\'ajax/set_confirmation_status.php?' . $nConfirmationStatusID . '&id=' . $nID . '\', function(sResponse){if(sResponse.substring(0,1) == \'1\'){alert(\'Successfully set confirmation status of this variant to \\\'' . $sConfirmationStatus . '\\\'.\');window.location.reload();' . (!isset($_GET['in_window'])? '' : 'window.opener.lovd_AJAX_viewListSubmit(\'CustomVL_AnalysisRunResults_for_I_VE\');window.opener.lovd_AJAX_viewEntryLoad();') . '}else if(sResponse.substring(0,1) == \'9\'){alert(\'Error: \' + sResponse.substring(2));}}).error(function(){alert(\'Error while setting confirmation status.\');});'] = array('menu_edit.png', $sConfirmationStatus);
+            }
+            $aNavigation['confirmation_status'] = array('menu_edit.png', 'Set confirmation status', 1, 'sub_menu' => $aConfirmationStatusMenu);
+            $aNavigation[CURRENT_PATH . '?edit_remarks' . (isset($_GET['in_window'])? '&amp;in_window' : '')] = array('menu_edit.png', 'Edit remarks', 1);
         }
-        // Menu items for setting the curation status.
-        foreach ($_SETT['curation_status'] as $nCurationStatusID => $sCurationStatus) {
-            $aCurationStatusMenu['javascript:$.get(\'ajax/set_curation_status.php?' . $nCurationStatusID . '&id=' . $nID . '\', function(sResponse){if(sResponse.substring(0,1) == \'1\'){alert(\'Successfully set curation status of this variant to \\\'' . $sCurationStatus . '\\\'.\');window.location.reload();' . (!isset($_GET['in_window'])? '' : 'window.opener.lovd_AJAX_viewListSubmit(\'CustomVL_AnalysisRunResults_for_I_VE\');window.opener.lovd_AJAX_viewEntryLoad();') . '}else if(sResponse.substring(0,1) == \'9\'){alert(\'Error: \' + sResponse.substring(2));}}).error(function(){alert(\'Error while setting curation status.\');});'] = array('menu_edit.png', $sCurationStatus);
-        }
-        $aCurationStatusMenu['javascript:if(window.confirm(\'Are you sure you want to clear this variants curation status?\')){$.get(\'ajax/set_curation_status.php?clear&id=' . $nID . '\', function(sResponse){if(sResponse.substring(0,1) == \'1\'){alert(\'Successfully cleared the curation status of this variant.\');window.location.reload();' . (!isset($_GET['in_window'])? '' : 'window.opener.lovd_AJAX_viewListSubmit(\'CustomVL_AnalysisRunResults_for_I_VE\');window.opener.lovd_AJAX_viewEntryLoad();') . '}else if(sResponse.substring(0,1) == \'9\'){alert(\'Error: \' + sResponse.substring(2));}}).error(function(){alert(\'Error while setting curation status.\');});}else{alert(\'This variants curation status has not been changed.\');}'] = array('cross.png', 'Clear curation status');
-        $aNavigation['curation_status'] = array('menu_edit.png', 'Set curation status', 1, 'sub_menu' => $aCurationStatusMenu);
-        // Menu items for setting the confirmation status.
-        foreach ($_SETT['confirmation_status'] as $nConfirmationStatusID => $sConfirmationStatus) {
-            $aConfirmationStatusMenu['javascript:$.get(\'ajax/set_confirmation_status.php?' . $nConfirmationStatusID . '&id=' . $nID . '\', function(sResponse){if(sResponse.substring(0,1) == \'1\'){alert(\'Successfully set confirmation status of this variant to \\\'' . $sConfirmationStatus . '\\\'.\');window.location.reload();' . (!isset($_GET['in_window'])? '' : 'window.opener.lovd_AJAX_viewListSubmit(\'CustomVL_AnalysisRunResults_for_I_VE\');window.opener.lovd_AJAX_viewEntryLoad();') . '}else if(sResponse.substring(0,1) == \'9\'){alert(\'Error: \' + sResponse.substring(2));}}).error(function(){alert(\'Error while setting confirmation status.\');});'] = array('menu_edit.png', $sConfirmationStatus);
-        }
-        $aNavigation['confirmation_status'] = array('menu_edit.png', 'Set confirmation status', 1, 'sub_menu' => $aConfirmationStatusMenu);
-        $aNavigation[CURRENT_PATH . '?edit_remarks' . (isset($_GET['in_window'])? '&amp;in_window' : '')] = array('menu_edit.png', 'Edit remarks', 1);
         if ($zData['statusid'] < STATUS_OK && $_AUTH['level'] >= LEVEL_CURATOR) {
-            $aNavigation[CURRENT_PATH . '?publish'] = array('check.png', ($zData['statusid'] == STATUS_MARKED ? 'Remove mark from' : 'Publish (curate)') . ' variant entry', 1);
+            $aNavigation[CURRENT_PATH . '?publish'] = array('check.png', ($zData['statusid'] == STATUS_MARKED? 'Remove mark from' : 'Publish (curate)') . ' variant entry', 1);
         }
         $aNavigation[CURRENT_PATH . '?map']        = array('menu_transcripts.png', 'Manage transcripts for this variant', 1);
         if ($_AUTH['level'] >= LEVEL_CURATOR) {
@@ -489,9 +517,8 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && !ACTION) {
             $aNavigation['javascript:lovd_openWindow(\'' . lovd_getInstallURL() . CURRENT_PATH . '?search_global\', \'global_search\', 900, 450);'] = array('menu_magnifying_glass.png', 'Search public LOVDs', 1);
             // FIXME; Once this navigation menu supports multi-level menu's, add this in a sub level.
             $aNavigation['javascript:lovd_openWindow(\'http://genome.ucsc.edu/cgi-bin/hgTracks?clade=mammal&amp;org=Human&amp;db=' . $_CONF['refseq_build'] . '&amp;position=chr' . $zData['chromosome'] . ':' . ($zData['position_g_start'] - $lMargin) . '-' . ($zData['position_g_end'] + $lMargin) . '&amp;width=800&amp;ruler=full&amp;ccdsGene=full\', \'variant_UCSC\', 1000, 500);'] = array('menu_magnifying_glass.png', 'Visualize in UCSC genome browser', 1);
-            $aNavigation['javascript:lovd_openWindow(\'' . ($_CONF['refseq_build'] == 'hg18'?
-                 'http://may2009.archive.ensembl.org/Homo_sapiens/Location/View?r=' . $zData['chromosome'] . ':' . ($zData['position_g_start'] - $lMargin) . '-' . ($zData['position_g_end'] + $lMargin) :
-                 'http://www.ensembl.org/Homo_sapiens/Location/View?r=' . $zData['chromosome'] . ':' . ($zData['position_g_start'] - $lMargin) . '-' . ($zData['position_g_end'] + $lMargin)) . '\', \'variant_Ensembl\', 1000, 500);'] = array('menu_magnifying_glass.png', 'Visualize in Ensembl genome browser', 1);
+            $sURLEnsembl = 'http://' . ($_CONF['refseq_build'] == 'hg18'? 'may2009.archive' : ($_CONF['refseq_build'] == 'hg19'? 'grch37' : 'www')) . '.ensembl.org/Homo_sapiens/Location/View?r=' . $zData['chromosome'] . ':' . ($zData['position_g_start'] - $lMargin) . '-' . ($zData['position_g_end'] + $lMargin);
+            $aNavigation['javascript:lovd_openWindow(\'' . $sURLEnsembl . '\', \'variant_Ensembl\', 1000, 500);'] = array('menu_magnifying_glass.png', 'Visualize in Ensembl genome browser', 1);
             // FIXME; For loading the BED file, we'll need a gene symbol!
 //            $sURLBedFile = rawurlencode(str_replace('https://', 'http://', ($_CONF['location_url']? $_CONF['location_url'] : lovd_getInstallURL())) . 'api/rest/variants/' . $zData['id'] . '?format=text/bed');
 //            $sURLUCSC = 'http://genome.ucsc.edu/cgi-bin/hgTracks?clade=mammal&amp;org=Human&amp;db=' . $_CONF['refseq_build'] . '&amp;position=chr' . $zData['chromosome'] . ':' . ($zData['position_g_mrna_start'] - 50) . '-' . ($zData['position_g_mrna_end'] + 50) . ($zData['sense']? '' : '&amp;complement_hg19=1') . '&amp;hgt.customText=' . $sURLBedFile;
@@ -509,9 +536,45 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && !ACTION) {
     }
     lovd_showJGNavigation($aNavigation, 'Variants');
 
-    print('      <BR><BR>' . "\n\n" .
-          '      <DIV id="viewentryDiv">' . "\n" .
-          '      </DIV>' . "\n\n");
+    print('
+          </TD>
+          <TD valign="top" id="summary_annotation_view_entry" style="padding-left: 10px;">' . "\n\n\n");
+
+    // Load the variant data so as we can search by the DBID.
+    if ($zData['summaryannotationid']) {
+        $sSummaryAnnotationsID = $zData['summaryannotationid'];
+        // Checks if there is an existing summary annotation record.
+        require ROOT_PATH . 'class/object_summary_annotations.php';
+        $_DATA = new LOVD_SummaryAnnotation();
+        $zData = $_DATA->viewEntry($sSummaryAnnotationsID);
+
+        $aNavigation = array();
+        if ($_AUTH && $_AUTH['level'] >= (LOVD_plus? LEVEL_ANALYZER : LEVEL_CURATOR)) {
+            $aNavigation['summary_annotations/' . $sSummaryAnnotationsID . '?edit&redirect_to=' . $nID . (isset($_GET['in_window'])? '&amp;in_window' : '')] = array('menu_edit.png', 'Edit summary annotation record', 1);
+            $aNavigation['summary_annotations/' . $sSummaryAnnotationsID . '?history' . (isset($_GET['in_window'])? '&amp;in_window' : '')]                  = array('menu_clock.png', 'View history of this record', 1);
+        }
+        lovd_showJGNavigation($aNavigation, 'SummaryAnnotations');
+
+    } else {
+        // Otherwise show a button that can be used to create a new summary annotation record.
+        print('            <TABLE border="0" cellpadding="2" cellspacing="0" class="setup" width="400px">' . "\n" .
+              '              <TR>' . "\n" .
+              '                <TH colspan="2">Summary annotations</TH>' . "\n" .
+              '              </TR>' . "\n" .
+              '              <TR class="pointer" onclick="window.location.href=\'' . lovd_getInstallURL() . 'summary_annotations/' . $zData['DBID'] . '?create&redirect_to=' . $nID . (isset($_GET['in_window'])? '&in_window' : '') . '\';">' . "\n" .
+              '                <TD align="center" width="40"><IMG src="gfx/lovd_variants_create.png" alt="Summary annotations" width="32" height="32"></TD>' . "\n" .
+              '                <TD>Annotations that may be applicable to any instance of a particular variant can be stored in a summary annotation record. Click here to create a summary annotation record for this variant.</TD>' . "\n" .
+              '              </TR>' . "\n" .
+              '            </TABLE><BR>' . "\n\n");
+    }
+
+    print('          </TD>
+        </TR>
+      </TABLE><BR><BR>
+  
+  
+      <DIV id="viewentryDiv">
+      </DIV>' . "\n\n");
 
     $_GET['search_id_'] = $nID;
     print('      <BR><BR>' . "\n\n");
@@ -544,14 +607,14 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && !ACTION) {
                     $( '#VOT_' + prevHash ).attr('class', 'data');
                     $( '#VOT_' + hash ).attr('class', 'data bold');
 
-                    if (!($.browser.msie && $.browser.version < 9.0)) {
+                    if (!navigator.userAgent.match(/msie/i)) {
                         $( '#viewentryDiv' ).stop().css('opacity','0'); // Stop execution of actions, set opacity = 0 (hidden, but not taken out of the flow).
                     }
                     $.get('ajax/viewentry.php', { object: 'Transcript_Variant', id: '<?php echo $nID; ?>,' + hash },
                         function(sData) {
                             if (sData.length > 2) {
                                 $( '#viewentryDiv' ).html('\n' + sData);
-                                if (!($.browser.msie && $.browser.version < 9.0)) {
+                                if (!navigator.userAgent.match(/msie/i)) {
                                     $( '#viewentryDiv' ).fadeTo(1000, 1);
                                 }
                             }
@@ -566,7 +629,7 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && !ACTION) {
       </SCRIPT>
 <?php
 
-    if (false && !empty($zData['screeningids'])) {
+    if (!LOVD_plus && !empty($zData['screeningids'])) {
         $_GET['search_screeningid'] = $zData['screeningids'];
         print('<BR><BR>' . "\n\n");
         $_T->printTitle('Screenings', 'H4');
@@ -592,7 +655,7 @@ if ((empty($_PE[1]) || $_PE[1] == 'upload') && ACTION == 'create') {
     // We don't want to show an error message about the screening if the user isn't allowed to come here.
     // 2012-07-10; 3.0-beta-07; Submitters are no longer allowed to add variants without individual data.
     if (!isset($_GET['target']) && !lovd_isAuthorized('gene', $_AUTH['curates'], false)) {
-        lovd_requireAUTH(LEVEL_OWNER);
+        lovd_requireAUTH(LEVEL_CURATOR);
     }
     lovd_requireAUTH(empty($_PE[1])? $_SETT['user_level_settings']['submit_new_data'] : LEVEL_MANAGER);
 
@@ -704,7 +767,7 @@ if (PATH_COUNT == 1 && ACTION == 'create') {
         $_DATA->setRowLink($sViewListID, 'variants?create&reference=Transcript&geneid=' . $_DATA->sRowID . ($_GET['target']? '&target=' . $_GET['target'] : ''));
         $_GET['search_transcripts'] = '>0';
         print('      <DIV id="container" style="display : none;">' . "\n"); // Extra div is to prevent "No entries in the database yet!" error to show up if there are no genes in the database yet.
-        lovd_showInfoTable('Please find the gene for which you wish to submit this variant below, using the search fields if needed. <B>Click on the gene to proceed to the variant entry form</B>.', 'information', 600);
+        lovd_showInfoTable('Please find the gene for which you wish to submit this variant below, using the search fields if needed. <B>Click on the gene to proceed to the variant entry form</B>.<BR>If a gene is not shown in this display, but it does exist in this LOVD, then it does not have a transcript configured yet.', 'information', 600);
         $_DATA->viewList($sViewListID, array('transcripts', 'variants', 'diseases_', 'updated_date_'));
         print('      </DIV>' . "\n" .
               (!$bSubmit? '' : '      <INPUT type="submit" value="Cancel" onclick="window.location.href=\'' . lovd_getInstallURL() . 'submit/screening/' . $_POST['screeningid'] . '\'; return false;" style="border : 1px solid #FF4422;">' . "\n"));
@@ -956,7 +1019,7 @@ if (PATH_COUNT == 1 && ACTION == 'create') {
     foreach ($_POST as $key => $val) {
         if (substr($key, 0, 7) == 'ignore_') {
             // First check the checkbox. Then the event first triggers the click and THEN changes the checked state. Recheck the checkbox.
-            echo '$( \'input[name="ignore_' . substr($key, 7, 5) . '"]\' ).attr(\'checked\', true).trigger(\'click\').attr(\'checked\', true);' . "\n";
+            echo '$( \'input[name="ignore_' . substr($key, 7, $_SETT['objectid_length']['transcripts']) . '"]\' ).attr(\'checked\', true).trigger(\'click\').attr(\'checked\', true);' . "\n";
         }
     }
 
@@ -1967,7 +2030,7 @@ if (PATH_COUNT == 2 && $_PE[1] == 'upload' && ACTION == 'create') {
                                     // Get UDID from Mutalyzer.
                                     $sRefseqUD = '';
                                     try {
-                                        $sRefseqUD = $_Mutalyzer->sliceChromosomeByGene(array('geneSymbol' => $sSymbol, 'organism' => 'Man', 'upStream' => '5000', 'downStream' => '2000'))->sliceChromosomeByGeneResult;
+                                        $sRefseqUD = lovd_getUDForGene($_CONF['refseq_build'], $sSymbol);
                                     } catch (SoapFault $e) {} // Sometimes we don't have mapping information for the gene, and thus no slice.
 
                                     // Not adding the gene just yet, but we remember its data...
@@ -2369,7 +2432,7 @@ if (PATH_COUNT == 2 && $_PE[1] == 'upload' && ACTION == 'create') {
                     $_BAR->redirectTo(lovd_getInstallURL() . 'submit/finish/upload/' . $nUploadID);
                 }
             } else {
-                $_BAR->setMessage($aUploadData['num_variants'] . ' variant' . ($aUploadData['num_variants'] == 1? '' : 's') . ' where imported' . (!$aUploadData['num_variants_unsupported']? '.' : ', ' . $aUploadData['num_variants_unsupported'] . ' variant' . ($aUploadData['num_variants_unsupported'] == 1? '' : 's') . ' could not be imported.') .
+                $_BAR->setMessage($aUploadData['num_variants'] . ' variant' . ($aUploadData['num_variants'] == 1? '' : 's') . ' were imported' . (!$aUploadData['num_variants_unsupported']? '.' : ', ' . $aUploadData['num_variants_unsupported'] . ' variant' . ($aUploadData['num_variants_unsupported'] == 1? '' : 's') . ' could not be imported.') .
                 // If we're in a submission and some variants couldn't be imported, show them the list and replace it with the continuation questions when they click the Continue button.
                        ($bSubmit? '<P>' .
                                   '  <INPUT type="button" value="Continue &raquo;" onclick="window.location.href=\'' . lovd_getInstallURL() . 'submit/screening/' . $_POST['screeningid'] . '\';">' .
@@ -2534,10 +2597,11 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && in_array(ACTION, array('edit', 'p
     }
 
     $bAuthorized = ($_AUTH && $_AUTH['level'] >= LEVEL_OWNER);
-    // However, for LOVD_plus, depending on the status of the screening, we might not have the rights to edit the variant.
+    // However, for LOVD+, depending on the status of the screening, we might not have the rights to edit the variant.
     if (LOVD_plus && $bAuthorized) {
         $zScreenings = $_DB->query('SELECT s.* FROM ' . TABLE_SCREENINGS . ' AS s INNER JOIN ' . TABLE_SCR2VAR . ' AS s2v ON (s.id = s2v.screeningid) WHERE s2v.variantid = ? GROUP BY s.id', array($nID))->fetchAllAssoc();
-        if (!($_AUTH['level'] >= LEVEL_OWNER && $zScreenings[0]['analysis_statusid'] < ANALYSIS_STATUS_CLOSED) &&
+        if ($zScreenings &&
+            !($_AUTH['level'] >= LEVEL_OWNER && $zScreenings[0]['analysis_statusid'] < ANALYSIS_STATUS_CLOSED) &&
             !($_AUTH['level'] >= LEVEL_MANAGER && $zScreenings[0]['analysis_statusid'] < ANALYSIS_STATUS_WAIT_CONFIRMATION) &&
             !($_AUTH['level'] >= LEVEL_ADMIN && $zScreenings[0]['analysis_statusid'] < ANALYSIS_STATUS_CONFIRMED)) {
             $_T->printHeader();
@@ -2891,7 +2955,8 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && ACTION == 'edit_remarks') {
 
     // However, depending on the status of the screening, we might not have the rights to edit the variant.
     $zScreenings = $_DB->query('SELECT s.* FROM ' . TABLE_SCREENINGS . ' AS s INNER JOIN ' . TABLE_SCR2VAR . ' AS s2v ON (s.id = s2v.screeningid) WHERE s2v.variantid = ? GROUP BY s.id', array($nID))->fetchAllAssoc();
-    if (!($_AUTH['level'] >= LEVEL_OWNER && $zScreenings[0]['analysis_statusid'] < ANALYSIS_STATUS_CLOSED) &&
+    if ($zScreenings &&
+        !($_AUTH['level'] >= LEVEL_OWNER && $zScreenings[0]['analysis_statusid'] < ANALYSIS_STATUS_CLOSED) &&
         !($_AUTH['level'] >= LEVEL_MANAGER && $zScreenings[0]['analysis_statusid'] < ANALYSIS_STATUS_WAIT_CONFIRMATION) &&
         !($_AUTH['level'] >= LEVEL_ADMIN && $zScreenings[0]['analysis_statusid'] < ANALYSIS_STATUS_CONFIRMED)) {
         $_T->printHeader();
@@ -3151,15 +3216,18 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && ACTION == 'map') {
     lovd_isAuthorized('variant', $nID);
     lovd_requireAUTH(LEVEL_OWNER);
 
-    // However, depending on the status of the screening, we might not have the rights to edit the variant.
-    $zScreenings = $_DB->query('SELECT s.* FROM ' . TABLE_SCREENINGS . ' AS s INNER JOIN ' . TABLE_SCR2VAR . ' AS s2v ON (s.id = s2v.screeningid) WHERE s2v.variantid = ? GROUP BY s.id', array($nID))->fetchAllAssoc();
-    if (!($_AUTH['level'] >= LEVEL_OWNER && $zScreenings[0]['analysis_statusid'] < ANALYSIS_STATUS_CLOSED) &&
-        !($_AUTH['level'] >= LEVEL_MANAGER && $zScreenings[0]['analysis_statusid'] < ANALYSIS_STATUS_WAIT_CONFIRMATION)) {
-        $_T->printHeader();
-        $_T->printTitle();
-        lovd_showInfoTable('This analysis has been closed. It\'s not possible to edit this variant.', 'stop');
-        $_T->printFooter();
-        exit;
+    if (LOVD_plus) {
+        // However, depending on the status of the screening, we might not have the rights to edit the variant.
+        $zScreenings = $_DB->query('SELECT s.* FROM ' . TABLE_SCREENINGS . ' AS s INNER JOIN ' . TABLE_SCR2VAR . ' AS s2v ON (s.id = s2v.screeningid) WHERE s2v.variantid = ? GROUP BY s.id', array($nID))->fetchAllAssoc();
+        if ($zScreenings &&
+            !($_AUTH['level'] >= LEVEL_OWNER && $zScreenings[0]['analysis_statusid'] < ANALYSIS_STATUS_CLOSED) &&
+            !($_AUTH['level'] >= LEVEL_MANAGER && $zScreenings[0]['analysis_statusid'] < ANALYSIS_STATUS_WAIT_CONFIRMATION)) {
+            $_T->printHeader();
+            $_T->printTitle();
+            lovd_showInfoTable('This analysis has been closed. It\'s not possible to edit this variant.', 'stop');
+            $_T->printFooter();
+            exit;
+        }
     }
 
     require ROOT_PATH . 'class/object_genome_variants.php';

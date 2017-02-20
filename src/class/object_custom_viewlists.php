@@ -4,12 +4,14 @@
  * LEIDEN OPEN VARIATION DATABASE (LOVD)
  *
  * Created     : 2011-08-15
- * Modified    : 2014-08-15
- * For LOVD    : 3.0-12
+ * Modified    : 2016-10-14
+ * For LOVD    : 3.0-18
  *
- * Copyright   : 2004-2014 Leiden University Medical Center; http://www.LUMC.nl/
+ * Copyright   : 2004-2016 Leiden University Medical Center; http://www.LUMC.nl/
  * Programmers : Ing. Ivo F.A.C. Fokkema <I.F.A.C.Fokkema@LUMC.nl>
  *               Ing. Ivar C. Lugtenburg <I.C.Lugtenburg@LUMC.nl>
+ *               Msc. Daan Asscheman <D.Asscheman@LUMC.nl>
+ *               M. Kroon <m.kroon@lumc.nl>
  *
  *
  * This file is part of LOVD.
@@ -55,7 +57,7 @@ class LOVD_CustomViewList extends LOVD_Object {
     function __construct ($aObjects = array(), $sOtherID = '')
     {
         // Default constructor.
-        global $_DB, $_AUTH, $_SETT;
+        global $_AUTH, $_CONF, $_DB, $_SETT;
 
         if (!is_array($aObjects)) {
             $aObjects = explode(',', $aObjects);
@@ -74,6 +76,8 @@ class LOVD_CustomViewList extends LOVD_Object {
         // Collect custom column information, all active columns (possibly restricted per gene).
         // FIXME; This join is not always needed (it's done for VOT columns, but sometimes they are excluded, or the join is not necessary because of the user level), exclude when not needed to speed up the query?
         //   Also, the select of public_view makes no sense of VOTs are restricted by gene.
+        // Note: objects inheriting LOVD_custom implement selection of
+        //  viewable columns in buildViewList().
         $sSQL = 'SELECT c.id, c.width, c.head_column, c.description_legend_short, c.description_legend_full, c.mysql_type, c.form_type, c.select_options, c.col_order, GROUP_CONCAT(sc.geneid, ":", sc.public_view SEPARATOR ";") AS public_view FROM ' . TABLE_ACTIVE_COLS . ' AS ac INNER JOIN ' . TABLE_COLS . ' AS c ON (c.id = ac.colid) LEFT OUTER JOIN ' . TABLE_SHARED_COLS . ' AS sc ON (sc.colid = ac.colid) ' .
                     'WHERE ' . (LOVD_plus || $_AUTH['level'] >= ($sGene? LEVEL_COLLABORATOR : LEVEL_MANAGER)? '' : '((c.id NOT LIKE "VariantOnTranscript/%" AND c.public_view = 1) OR sc.public_view = 1) AND ') . '(c.id LIKE ?' . str_repeat(' OR c.id LIKE ?', count($aObjects)-1) . ') ' .
                     (!$sGene? 'GROUP BY c.id ' :
@@ -94,7 +98,7 @@ class LOVD_CustomViewList extends LOVD_Object {
             $this->nID = $sOtherID; // We need the AJAX script to have the same restrictions!!!
         }
 
-        // Increase the max group_concat() length, so that lists of many many genes still have all genes mentioned here (22.000 genes take 193.940 bytes here).
+        // Increase the max GROUP_CONCAT() length, so that lists of many many genes still have all genes mentioned here (22.000 genes take 193.940 bytes here).
         $_DB->query('SET group_concat_max_len = 200000');
         $q = $_DB->query($sSQL, $aSQL);
         while ($z = $q->fetchAssoc()) {
@@ -113,14 +117,40 @@ class LOVD_CustomViewList extends LOVD_Object {
             $_AUTH['allowed_to_view'] = array_merge($_AUTH['curates'], $_AUTH['collaborates']);
         }
 
-
-
+        // Boolean indicating whether row_id is already in SELECT statement somewhere.
+        $bSetRowID = false;
         $aSQL = $this->aSQLViewList;
+
+        // If possible, determine row_id SQL from combination of object types.
+        $sRowIDSQL = null;
+        if (in_array('VariantOnGenome', $aObjects) && (in_array('VariantOnTranscript', $aObjects) ||
+                in_array('VariantOnTranscriptUnique', $aObjects))) {
+            // Use "vog.id:vot.transcriptid" as row_id, fall back to "vog.id" if there is no VOT entry.
+            $aSQL['SELECT'] = 'CONCAT(vog.id, IFNULL(CONCAT(":", vot.transcriptid), "")) AS row_id';
+            $bSetRowID = true;
+        } elseif (in_array('Transcript', $aObjects)) {
+            $aSQL['SELECT'] = 't.id AS row_id';
+            $bSetRowID = true;
+        }
+
         // Loop requested data types, and keep columns in order indicated by request.
         foreach ($aObjects as $nKey => $sObject) {
+            // Generate custom column listing to be appended to SELECT SQL statement.
+            // We're not using SELECT * anymore because then we can't use the query as a subquery
+            //  (which needs to have unique columns, and * can select `id` more than once).
+            // So, we need to select all columns that we need.
+            $sCustomCols = '';
+            $aCustomColNames = array_keys($this->getCustomColsForCategory($sObject));
+            if (count($aCustomColNames) > 0) {
+                $sCustomCols = ', `' . implode('`, `', $aCustomColNames) . '`';
+            }
+
             switch ($sObject) {
                 case 'Gene':
-                    // $aSQL['SELECT'] .= (!$aSQL['SELECT']? '' : ', ') . 'g.';
+                    if (!$bSetRowID) {
+                        $aSQL['SELECT'] .= (!$aSQL['SELECT']? '' : ', ') . 'g.id AS row_id';
+                        $bSetRowID = true;
+                    }
                     if (!$aSQL['FROM']) {
                         // First data table in query.
                         $aSQL['FROM'] = TABLE_GENES . ' AS g';
@@ -129,7 +159,12 @@ class LOVD_CustomViewList extends LOVD_Object {
                     break;
 
                 case 'Transcript':
-                    $aSQL['SELECT'] .= (!$aSQL['SELECT']? '' : ', ') . 't.*';
+                    $aSQL['SELECT'] .= (!$aSQL['SELECT']? '' : ', ') . 't.id AS tid, ' .
+                        't.geneid, t.name, t.id_ncbi, t.id_protein_ncbi';
+                    if (!$bSetRowID) {
+                        $aSQL['SELECT'] .= ', t.id AS row_id';
+                        $bSetRowID = true;
+                    }
                     if (!$aSQL['FROM']) {
                         // First data table in query.
                         $aSQL['FROM'] = TABLE_TRANSCRIPTS . ' AS t';
@@ -166,16 +201,33 @@ class LOVD_CustomViewList extends LOVD_Object {
                     break;
 
                 case 'VariantOnGenome':
-                    $aSQL['SELECT'] .= (!$aSQL['SELECT']? '' : ', ') . 'vog.*, a.name AS allele_' . (!in_array('VariantOnTranscript', $aObjects)? ', eg.name AS vog_effect' : '') . (in_array('Individual', $aObjects)? '' : ', uo.name AS owned_by_, CONCAT_WS(";", uo.id, uo.name, uo.email, uo.institute, uo.department, IFNULL(uo.countryid, "")) AS _owner') . ', dsg.id AS var_statusid, dsg.name AS var_status';
+                    $aSQL['SELECT'] .= (!$aSQL['SELECT']? '' : ', ') . 'vog.id AS vogid, vog.chromosome, a.name AS allele_' . (!in_array('VariantOnTranscript', $aObjects)? ', eg.name AS vog_effect' : '') .
+                                       (in_array('Individual', $aObjects) || in_array('VariantOnTranscriptUnique', $aObjects)? '' : ', uo.name AS owned_by_, CONCAT_WS(";", uo.id, uo.name, uo.email, uo.institute, uo.department, IFNULL(uo.countryid, "")) AS _owner') . (in_array('VariantOnTranscriptUnique', $aObjects)? '' : ', dsg.id AS var_statusid, dsg.name AS var_status') . $sCustomCols;
+                    $nKeyVOTUnique = array_search('VariantOnTranscriptUnique', $aObjects);
+                    if (!$bSetRowID) {
+                        $aSQL['SELECT'] .= ', vog.id AS row_id';
+                        $bSetRowID = true;
+                    }
                     if (!$aSQL['FROM']) {
                         // First data table in query.
-                        $aSQL['SELECT'] .= ', vog.id AS row_id'; // To ensure other table's id columns don't interfere.
                         $aSQL['FROM'] = TABLE_VARIANTS . ' AS vog';
                         $this->nCount = $_DB->query('SELECT COUNT(*) FROM ' . TABLE_VARIANTS)->fetchColumn();
                         $aSQL['GROUP_BY'] = 'vog.id'; // Necessary for GROUP_CONCAT(), such as in Screening.
                         $aSQL['ORDER_BY'] = 'vog.chromosome ASC, vog.position_g_start';
+                    } elseif ($nKeyVOTUnique !== false && $nKeyVOTUnique < $nKey) {
+                        // For the unique variant view a GROUP_CONCAT must be done for the variantOnGenome fields.
+                        foreach ($this->getCustomColsForCategory('VariantOnGenome') as $sCol => $aCol) {
+                            // Here all VariantOnGenome columns are grouped with GROUP_CONCAT. In prepareData(),
+                            // these fields are exploded and the elements are counted, limiting the grouped values
+                            // to a certain length. To recognize the separate items, ;; is used as a separator.
+                            // The NULLIF() is used to not show empty values. GROUP_CONCAT handles NULL values well (ignores them), but not empty values (includes them).
+                            $aSQL['SELECT'] .= ', GROUP_CONCAT(DISTINCT NULLIF(`' . $sCol . '`, "") SEPARATOR ";;") AS `' . $sCol . '`';
+                        }
+                        $aSQL['FROM'] .= ' LEFT JOIN ' . TABLE_VARIANTS . ' AS vog ON (vot.id = vog.id)';
                     } else {
-                        $aSQL['FROM'] .= ' LEFT JOIN ' . TABLE_VARIANTS . ' AS vog ON (';
+                        // 2016-07-20; 3.0-17; Added FORCE INDEX because MySQL optimized the Full data view
+                        // differently, resulting in immense temporary tables filling up the disk.
+                        $aSQL['FROM'] .= ' LEFT JOIN ' . TABLE_VARIANTS . ' AS vog FORCE INDEX FOR JOIN (PRIMARY) ON (';
                         $nKeyVOT = array_search('VariantOnTranscript', $aObjects);
                         if ($nKeyVOT !== false && $nKeyVOT < $nKey) {
                             // Earlier, VOT was used, join to that.
@@ -193,16 +245,23 @@ class LOVD_CustomViewList extends LOVD_Object {
                     $aSQL['FROM'] .= ' LEFT OUTER JOIN ' . TABLE_DATA_STATUS . ' AS dsg ON (vog.statusid = dsg.id)';
                     // If user level not high enough, hide lines with hidden variants!
                     if ($_AUTH['level'] < $_SETT['user_level_settings']['see_nonpublic_data']) {
-                        $aSQL['WHERE'] .= (!$aSQL['WHERE']? '' : ' AND ') . '(vog.statusid >= ' . STATUS_MARKED . (!$_AUTH? '' : ' OR vog.created_by = "' . $_AUTH['id'] . '" OR vog.owned_by = "' . $_AUTH['id'] . '"') . ')';
+                        // Construct list of user IDs for current user and users who share access with him.
+                        $aOwnerIDs = array_merge(array($_AUTH['id']), lovd_getColleagues(COLLEAGUE_ALL));
+                        $sOwnerIDsSQL = join(', ', $aOwnerIDs);
+
+                        $aSQL['WHERE'] .= (!$aSQL['WHERE']? '' : ' AND ') . '(vog.statusid >= ' . STATUS_MARKED . (!$_AUTH? '' : ' OR vog.created_by = "' . $_AUTH['id'] . '" OR vog.owned_by IN (' . $sOwnerIDsSQL . ')') . ')';
                     }
                     break;
 
                 case 'VariantOnTranscript':
-                    $aSQL['SELECT'] .= (!$aSQL['SELECT']? '' : ', ') . 'vot.*, et.name as vot_effect';
+                    $aSQL['SELECT'] .= (!$aSQL['SELECT']? '' : ', ') . 'vot.id AS votid, vot.transcriptid, vot.position_c_start, vot.position_c_start_intron, vot.position_c_end, vot.position_c_end_intron, et.name as vot_effect' . $sCustomCols;
                     $nKeyVOG = array_search('VariantOnGenome', $aObjects);
+                    if (!$bSetRowID) {
+                        $aSQL['SELECT'] .= ', vot.id AS row_id';
+                        $bSetRowID = true;
+                    }
                     if (!$aSQL['FROM']) {
                         // First data table in query.
-                        $aSQL['SELECT'] .= ', vot.id AS row_id'; // To ensure other table's id columns don't interfere.
                         $aSQL['FROM'] = TABLE_VARIANTS_ON_TRANSCRIPTS . ' AS vot';
                         $this->nCount = $_DB->query('SELECT COUNT(*) FROM ' . TABLE_VARIANTS_ON_TRANSCRIPTS)->fetchColumn();
                         $aSQL['GROUP_BY'] = 'vot.id'; // Necessary for GROUP_CONCAT(), such as in Screening.
@@ -211,14 +270,17 @@ class LOVD_CustomViewList extends LOVD_Object {
                         // SELECT will be different: we will GROUP_CONCAT the whole lot, per column.
                         // Sort GROUP_CONCAT() based on transcript name. We'll have to join Transcripts for that.
                         //   That will break if somebody wants to join transcripts themselves, but why would somebody want that?
-                        $sGCOrderBy = 't.id_ncbi';
-                        foreach ($this->aColumns as $sCol => $aCol) {
-                            if (substr($sCol, 0, 19) == 'VariantOnTranscript') {
-                                $aSQL['SELECT'] .= (!$aSQL['SELECT']? '' : ', ') . 'GROUP_CONCAT(DISTINCT ' . ($sCol != 'VariantOnTranscript/DNA'? '`' . $sCol . '`' : 'CONCAT(t.id_ncbi, ":", `' . $sCol . '`)') . ' ORDER BY ' . $sGCOrderBy . ' SEPARATOR ", ") AS `' . $sCol . '`';
-                            }
+                        $sGCOrderBy = 't.geneid, t.id_ncbi';
+                        foreach ($this->getCustomColsForCategory('VariantOnTranscript') as $sCol => $aCol) {
+                            $aSQL['SELECT'] .= ', GROUP_CONCAT(DISTINCT ' . ($sCol != 'VariantOnTranscript/DNA'? '`' . $sCol . '`' : 'CONCAT(t.id_ncbi, ":", `' . $sCol . '`)') . ' ORDER BY ' . $sGCOrderBy . ' SEPARATOR ", ") AS `' . $sCol . '`';
+                        }
+                        // If we're joining to Scr2Var, we're showing the Individual- and Screening-specific views, and we want to show a gene as well.
+                        //   We can't use _geneid below, because LOVD will explode that into an array.
+                        if (array_search('Scr2Var', $aObjects) !== false) {
+                            $aSQL['SELECT'] .= ', GROUP_CONCAT(DISTINCT t.geneid ORDER BY ' . $sGCOrderBy . ' SEPARATOR ", ") AS genes';
                         }
                         // Security checks in this file's prepareData() need geneid to see if the column in question is set to non-public for one of the genes.
-                        $aSQL['SELECT'] .= (!$aSQL['SELECT']? '' : ', ') . 'GROUP_CONCAT(DISTINCT t.geneid SEPARATOR ";") AS _geneid';
+                        $aSQL['SELECT'] .= ', GROUP_CONCAT(DISTINCT t.geneid SEPARATOR ";") AS _geneid';
                         $aSQL['FROM'] .= ' LEFT JOIN ' . TABLE_VARIANTS_ON_TRANSCRIPTS . ' AS vot ON (';
                         // Earlier, VOG was used, join to that.
                         $aSQL['FROM'] .= 'vog.id = vot.id)';
@@ -237,20 +299,57 @@ class LOVD_CustomViewList extends LOVD_Object {
                     $aSQL['FROM'] .= ' LEFT OUTER JOIN ' . TABLE_EFFECT . ' AS et ON (vot.effectid = et.id)';
                     break;
 
+                case 'VariantOnTranscriptUnique':
+                    $aSQL['SELECT'] .= (!$aSQL['SELECT']? '' : ', ') . 'vot.id AS votid, vot.transcriptid, ' . // To ensure other table's id columns don't interfere.
+                                      'vot.position_c_start, vot.position_c_start_intron, ' .
+                                      'vot.position_c_end, vot.position_c_end_intron';
+                    // To group variants together that belong together (regardless of minor textual differences, we replace parentheses, remove the "c.", and trim for question marks.
+                    // This notation will be used to group on, and search on when navigating from the unique variant view to the full variant view.
+                    $aSQL['SELECT'] .= ', TRIM(BOTH "?" FROM TRIM(LEADING "c." FROM REPLACE(REPLACE(`VariantOnTranscript/DNA`, ")", ""), "(", ""))) AS vot_clean_dna_change' .
+                                       ', GROUP_CONCAT(DISTINCT et.name SEPARATOR ", ") AS vot_effect' .
+                                       ', GROUP_CONCAT(DISTINCT NULLIF(uo.name, "") SEPARATOR ", ") AS owned_by_' .
+                                       ', GROUP_CONCAT(DISTINCT CONCAT_WS(";", uo.id, uo.name, uo.email, uo.institute, uo.department, IFNULL(uo.countryid, "")) SEPARATOR ";;") AS __owner';
+                    // dsg.id GROUP_CONCAT is ascendingly ordered. This is done for the color marking.
+                    // In prepareData() the lowest var_statusid is used to determine the coloring.
+                    $aSQL['SELECT'] .= ', GROUP_CONCAT(DISTINCT NULLIF(dsg.id, "") ORDER BY dsg.id ASC SEPARATOR ", ") AS var_statusid, GROUP_CONCAT(DISTINCT NULLIF(dsg.name, "") SEPARATOR ", ") AS var_status' .
+                                       ', COUNT(`VariantOnTranscript/DNA`) AS vot_reported';
+                    if (!$bSetRowID) {
+                        $aSQL['SELECT'] .= ', vot.id AS row_id';
+                        $bSetRowID = true;
+                    }
+                    $aSQL['FROM'] = TABLE_VARIANTS_ON_TRANSCRIPTS . ' AS vot';
+
+                    // FIXME: On large databases, we might want to skip this, since a COUNT(*) on InnoDB tables isn't fast at all, and nCount doesn't need to be specific at all.
+                    $this->nCount = $_DB->query('SELECT COUNT(DISTINCT `VariantOnTranscript/DNA`) FROM ' . TABLE_VARIANTS_ON_TRANSCRIPTS)->fetchColumn();
+
+                    $aSQL['GROUP_BY'] = '`position_c_start`, `position_c_start_intron`, `position_c_end`, `position_c_end_intron`, vot_clean_dna_change'; // Necessary for GROUP_CONCAT(), such as in Screening.
+
+                    foreach ($this->getCustomColsForCategory('VariantOnTranscript') as $sCol => $aCol) {
+                        // Here all VariantOnTranscript columns are grouped with GROUP_CONCAT. In prepareData(),
+                        // these fields are exploded and the elements are counted, limiting the grouped values
+                        // to a certain length. To recognize the separate items, ;; is used as a separator.
+                        // The NULLIF() is used to not show empty values. GROUP_CONCAT handles NULL values well (ignores them), but not empty values (includes them).
+                        $aSQL['SELECT'] .= ', GROUP_CONCAT(DISTINCT NULLIF(`' . $sCol . '`, "") SEPARATOR ";;") AS `' . $sCol . '`';
+                    }
+                    $aSQL['FROM'] .= ' LEFT OUTER JOIN ' . TABLE_EFFECT . ' AS et ON (vot.effectid = et.id)';
+                    break;
+
                 case 'Screening':
+                    if (!$bSetRowID) {
+                        $aSQL['SELECT'] .= (!$aSQL['SELECT']? '' : ', ') . 's.id AS row_id';
+                        $bSetRowID = true;
+                    }
                     if (!$aSQL['FROM']) {
                         // First data table in query.
-                        $aSQL['SELECT'] .= (!$aSQL['SELECT']? '' : ', ') . 's.*';
+                        $aSQL['SELECT'] .= (!$aSQL['SELECT']? '' : ', ') . 's.id as sid' . $sCustomCols;
                         $aSQL['FROM'] = TABLE_SCREENINGS . ' AS s';
                         $this->nCount = $_DB->query('SELECT COUNT(*) FROM ' . TABLE_SCREENINGS)->fetchColumn();
                         $aSQL['ORDER_BY'] = 's.id';
                     } else {
                         // SELECT will be different: we will GROUP_CONCAT the whole lot, per column.
                         $sGCOrderBy = (isset($this->aColumns['Screening/Date'])? '`Screening/Date`' : 'id');
-                        foreach ($this->aColumns as $sCol => $aCol) {
-                            if (substr($sCol, 0, 9) == 'Screening') {
-                                $aSQL['SELECT'] .= (!$aSQL['SELECT']? '' : ', ') . 'GROUP_CONCAT(DISTINCT `' . $sCol . '` ORDER BY s.' . $sGCOrderBy . ' SEPARATOR ";") AS `' . $sCol . '`';
-                            }
+                        foreach ($this->getCustomColsForCategory('Screening') as $sCol => $aCol) {
+                            $aSQL['SELECT'] .= (!$aSQL['SELECT']? '' : ', ') . 'GROUP_CONCAT(DISTINCT `' . $sCol . '` ORDER BY s.' . $sGCOrderBy . ' SEPARATOR ";") AS `' . $sCol . '`';
                         }
                         $nKeyVOG = array_search('VariantOnGenome', $aObjects);
                         $nKeyVOT = array_search('VariantOnTranscript', $aObjects);
@@ -270,6 +369,10 @@ class LOVD_CustomViewList extends LOVD_Object {
                     break;
 
                 case 'Scr2Var':
+                    if (!$bSetRowID) {
+                        $aSQL['SELECT'] .= (!$aSQL['SELECT']? '' : ', ') . 's2v.id AS row_id';
+                        $bSetRowID = true;
+                    }
                     if ($aSQL['FROM']) {
                         // Not allowed to be the first data table in query, because entries are usually grouped by the first table.
                         $nKeyVOG = array_search('VariantOnGenome', $aObjects);
@@ -290,7 +393,11 @@ class LOVD_CustomViewList extends LOVD_Object {
                     break;
 
                 case 'Individual':
-                    $aSQL['SELECT'] .= (!$aSQL['SELECT']? '' : ', ') . 'i.*, GROUP_CONCAT(DISTINCT IF(CASE d.symbol WHEN "-" THEN "" ELSE d.symbol END = "", d.name, d.symbol) ORDER BY (d.symbol != "" AND d.symbol != "-") DESC, d.symbol, d.name SEPARATOR ", ") AS diseases_, uo.name AS owned_by_, CONCAT_WS(";", uo.id, uo.name, uo.email, uo.institute, uo.department, IFNULL(uo.countryid, "")) AS _owner, dsi.id AS ind_statusid, dsi.name AS ind_status';
+                    $aSQL['SELECT'] .= (!$aSQL['SELECT']? '' : ', ') . 'i.id AS iid, i.panel_size, i.owned_by, GROUP_CONCAT(DISTINCT IF(CASE d.symbol WHEN "-" THEN "" ELSE d.symbol END = "", d.name, d.symbol) ORDER BY (d.symbol != "" AND d.symbol != "-") DESC, d.symbol, d.name SEPARATOR ", ") AS diseases_, uo.name AS owned_by_, CONCAT_WS(";", uo.id, uo.name, uo.email, uo.institute, uo.department, IFNULL(uo.countryid, "")) AS _owner, dsi.id AS ind_statusid, dsi.name AS ind_status' . $sCustomCols;
+                    if (!$bSetRowID) {
+                        $aSQL['SELECT'] .= ', i.id AS row_id';
+                        $bSetRowID = true;
+                    }
                     if (!$aSQL['FROM']) {
                         // First data table in query.
                         $aSQL['FROM'] = TABLE_INDIVIDUALS . ' AS i';
@@ -318,7 +425,11 @@ class LOVD_CustomViewList extends LOVD_Object {
                         $aSQL['FROM'] .= ' LEFT JOIN ' . TABLE_INDIVIDUALS . ' AS i ON (s.individualid = i.id';
                         // If user level not high enough, hide hidden individuals (from the join, don't hide the line)!
                         if ($_AUTH['level'] < $_SETT['user_level_settings']['see_nonpublic_data']) {
-                            $aSQL['FROM'] .= ' AND (i.statusid >= ' . STATUS_MARKED . (!$_AUTH? '' : ' OR i.created_by = "' . $_AUTH['id'] . '" OR i.owned_by = "' . $_AUTH['id'] . '"') . ')';
+                            // Construct list of user IDs for current user and users who share access with him.
+                            $aOwnerIDs = array_merge(array($_AUTH['id']), lovd_getColleagues(COLLEAGUE_ALL));
+                            $sOwnerIDsSQL = join(', ', $aOwnerIDs);
+
+                            $aSQL['FROM'] .= ' AND (i.statusid >= ' . STATUS_MARKED . (!$_AUTH? '' : ' OR i.created_by = "' . $_AUTH['id'] . '" OR i.owned_by IN (' . $sOwnerIDsSQL . ')') . ')';
                         }
                         $aSQL['FROM'] .= ')';
                     }
@@ -365,7 +476,7 @@ class LOVD_CustomViewList extends LOVD_Object {
                     // The fixed columns.
                     $this->aColumnsViewList = array_merge($this->aColumnsViewList,
                          array(
-                             'id' => array(
+                             'tid' => array(
                                  'view' => false,
                                  'db'   => array('t.id', 'ASC', true)),
                              'geneid' => array(
@@ -397,7 +508,7 @@ class LOVD_CustomViewList extends LOVD_Object {
                     $this->aColumnsViewList = array_merge($this->aColumnsViewList,
                          array(
                              'distance_to_var' => array(
-                                 'view' => array('Distance (bp)', 90),
+                                 'view' => array('Distance (bp)', 90, 'style="text-align : right;"'),
                                  'db'   => array('distance_to_var', 'ASC', false)),
                               ));
                     // Always force default sorting...
@@ -422,19 +533,62 @@ class LOVD_CustomViewList extends LOVD_Object {
                                         'view' => array('Effect', 70),
                                         'db'   => array('eg.name', 'ASC', true),
                                         'legend' => array('The variant\'s effect on a protein\'s function, in the format Reported/Curator concluded; ranging from \'+\' (variant affects function) to \'-\' (does not affect function).',
-                                                          'The variant\'s affect on a protein\'s function, in the format Reported/Curator concluded; \'+\' indicating the variant affects function, \'+?\' probably affects function, \'-\' does not affect function, \'-?\' probably does not affect function, \'?\' effect unknown, \'.\' effect not classified.')),
+                                                          'The variant\'s effect on a protein\'s function, in the format Reported/Curator concluded; \'+\' indicating the variant affects function, \'+?\' probably affects function, \'-\' does not affect function, \'-?\' probably does not affect function, \'?\' effect unknown, \'.\' effect not classified.')),
                               ));
-                    if (in_array('VariantOnTranscript', $aObjects)) {
+                    if (in_array('VariantOnTranscript', $aObjects) || in_array('VariantOnTranscriptUnique', $aObjects)) {
                         unset($this->aColumnsViewList['vog_effect']);
                     }
                     if (!$this->sSortDefault) {
                         // First data table in view.
                         $this->sSortDefault = 'VariantOnGenome/DNA';
                     }
-                    $this->sRowLink = 'variants/{{zData_row_id}}#{{zData_transcriptid}}';
+                    $this->sRowLink = 'variants/{{zData_vogid}}#{{zData_transcriptid}}';
                     break;
 
                 case 'VariantOnTranscript':
+                    $sPrefix = 'vot.';
+                    // The fixed columns.
+                    $this->aColumnsViewList = array_merge($this->aColumnsViewList,
+                         array(
+                                'transcriptid' => array(
+                                        'view' => false,
+                                        'db'   => array('vot.transcriptid', 'ASC', true)),
+                                'position_c_start' => array(
+                                        'view' => false,
+                                        'db'   => array('vot.position_c_start', 'ASC', true)),
+                                'position_c_start_intron' => array(
+                                        'view' => false,
+                                        'db'   => array('vot.position_c_start_intron', 'ASC', true)),
+                                'position_c_end' => array(
+                                        'view' => false,
+                                        'db'   => array('vot.position_c_end', 'ASC', true)),
+                                'position_c_end_intron' => array(
+                                        'view' => false,
+                                        'db'   => array('vot.position_c_end_intron', 'ASC', true)),
+                                'vot_clean_dna_change' => array(
+                                        'view' => false,
+                                        'db'   => array('TRIM(BOTH "?" FROM TRIM(LEADING "c." FROM REPLACE(REPLACE(`VariantOnTranscript/DNA`, ")", ""), "(", "")))', 'ASC', 'TEXT')),
+                                'genes' => array(
+                                        'view' => array('Gene', 100),
+                                        'db'   => array('t.geneid', 'ASC', true)),
+                                'vot_effect' => array(
+                                        'view' => array('Effect', 70),
+                                        'db'   => array('et.name', 'ASC', true),
+                                        'legend' => array('The variant\'s effect on the protein\'s function, in the format Reported/Curator concluded; ranging from \'+\' (variant affects function) to \'-\' (does not affect function).',
+                                                          'The variant\'s effect on the protein\'s function, in the format Reported/Curator concluded; \'+\' indicating the variant affects function, \'+?\' probably affects function, \'-\' does not affect function, \'-?\' probably does not affect function, \'?\' effect unknown, \'.\' effect not classified.')),
+                              ));
+                    // Only show the gene symbol when we have Scr2Var included, because these are the Individual- and Screening-specific views.
+                    // FIXME: Perhaps it would be better to always show this column with VOT, but then hide it in all views that don't need it.
+                    if (array_search('Scr2Var', $aObjects) === false) {
+                        unset($this->aColumnsViewList['genes']);
+                    }
+                    if (!$this->sSortDefault) {
+                        // First data table in view.
+                        $this->sSortDefault = 'VariantOnTranscript/DNA';
+                    }
+                    break;
+
+                case 'VariantOnTranscriptUnique':
                     $sPrefix = 'vot.';
                     // The fixed columns.
                     $this->aColumnsViewList = array_merge($this->aColumnsViewList,
@@ -446,8 +600,13 @@ class LOVD_CustomViewList extends LOVD_Object {
                                         'view' => array('Effect', 70),
                                         'db'   => array('et.name', 'ASC', true),
                                         'legend' => array('The variant\'s effect on the protein\'s function, in the format Reported/Curator concluded; ranging from \'+\' (variant affects function) to \'-\' (does not affect function).',
-                                                          'The variant\'s affect on the protein\'s function, in the format Reported/Curator concluded; \'+\' indicating the variant affects function, \'+?\' probably affects function, \'-\' does not affect function, \'-?\' probably does not affect function, \'?\' effect unknown, \'.\' effect not classified.')),
-                              ));
+                                                          'The variant\'s effect on the protein\'s function, in the format Reported/Curator concluded; \'+\' indicating the variant affects function, \'+?\' probably affects function, \'-\' does not affect function, \'-?\' probably does not affect function, \'?\' effect unknown, \'.\' effect not classified.')),
+                                'vot_reported' => array(
+                                        'view' => array('Reported', 70, 'style="text-align : right;"'),
+                                        'db'   => array('vot_reported', 'ASC', 'INT_UNSIGNED'),
+                                        'legend' => array('The number of times this variant has been reported.',
+                                                          'The number of times this variant has been reported in the database.')),
+                                ));
                     if (!$this->sSortDefault) {
                         // First data table in view.
                         $this->sSortDefault = 'VariantOnTranscript/DNA';
@@ -462,8 +621,8 @@ class LOVD_CustomViewList extends LOVD_Object {
                         // The fixed columns, only when first table.
                         $this->aColumnsViewList = array_merge($this->aColumnsViewList,
                              array(
-                                    'id' => array(
-                                            'view' => array('Screening ID', 110),
+                                    'sid' => array(
+                                            'view' => array('Screening ID', 110, 'style="text-align : right;"'),
                                             'db'   => array('s.id', 'ASC', true)),
                                   ));
                         $this->sSortDefault = 'id';
@@ -501,7 +660,7 @@ class LOVD_CustomViewList extends LOVD_Object {
 
             // The custom columns.
             foreach ($this->aColumns as $sColID => $aCol) {
-                if (strpos($sColID, $sObject . '/') === 0) {
+                if (strpos($sColID, str_replace('Unique', '', $sObject) . '/') === 0) {
                     $bAlignRight = preg_match('/^(DEC|FLOAT|(TINY|SMALL|MEDIUM|BIG)?INT)/', $aCol['mysql_type']);
 
                     $this->aColumnsViewList[$sColID] =
@@ -509,6 +668,7 @@ class LOVD_CustomViewList extends LOVD_Object {
                                 'view' => array($aCol['head_column'], $aCol['width'], ($bAlignRight? ' align="right"' : '')),
                                 'db'   => array($sPrefix . '`' . $aCol['id'] . '`', 'ASC', lovd_getColumnType('', $aCol['mysql_type'])),
                                 'legend' => array($aCol['description_legend_short'], $aCol['description_legend_full']),
+                                'allowfnr' => true,
                               );
                 }
             }
@@ -525,6 +685,9 @@ class LOVD_CustomViewList extends LOVD_Object {
                             'owned_by_' => array(
                                 'view' => array('Owner', 160),
                                 'db'   => array('uo.name', 'ASC', true)),
+                            'owner_countryid' => array(
+                                'view' => false,
+                                'db'   => array('uo.countryid', 'ASC', true)),
                             'var_status' => array(
                                 'view' => array('Var. status', 70),
                                 'db'   => array('dsg.name', false, true)),
@@ -536,6 +699,8 @@ class LOVD_CustomViewList extends LOVD_Object {
                         // Unset status column for non-collaborators. We're assuming here, that lovd_isAuthorized() only gets called for gene-specific overviews.
                         unset($this->aColumnsViewList['var_status']);
                     }
+                    // 2015-10-09; 3.0-14; Add genome build name to the VOG/DNA field.
+                    $this->aColumnsViewList['VariantOnGenome/DNA']['view'][0] .= ' (' . $_CONF['refseq_build'] . ')';
                     break;
 
                 case 'Individual':
@@ -544,7 +709,7 @@ class LOVD_CustomViewList extends LOVD_Object {
                         array(
                             // NOTE: there are more columns defined a little further up.
                             'panel_size' => array(
-                                'view' => array('Panel size', 70),
+                                'view' => array('Panel size', 70, 'style="text-align : right;"'),
                                 'db'   => array('i.panel_size', 'DESC', true)),
                             'owned_by_' => array(
                                 'view' => array('Owner', 160),
@@ -563,7 +728,7 @@ class LOVD_CustomViewList extends LOVD_Object {
 
 
 
-        // Gather the custom link information. It's just easier to load all custom links, instead of writing code that checks for the appropiate objects.
+        // Gather the custom link information. It's just easier to load all custom links, instead of writing code that checks for the appropriate objects.
         $aLinks = $_DB->query('SELECT l.*, GROUP_CONCAT(c2l.colid SEPARATOR ";") AS colids FROM ' . TABLE_LINKS . ' AS l INNER JOIN ' . TABLE_COLS2LINKS . ' AS c2l ON (l.id = c2l.linkid) GROUP BY l.id')->fetchAllAssoc();
         foreach ($aLinks as $aLink) {
             $aLink['regexp_pattern'] = '/' . str_replace(array('{', '}'), array('\{', '\}'), preg_replace('/\[\d\]/', '(.*)', $aLink['pattern_text'])) . '/';
@@ -586,36 +751,47 @@ class LOVD_CustomViewList extends LOVD_Object {
 
 
 
-    function prepareData ($zData = '', $sView = 'list')
+    private function getCustomColsForCategory ($sCategory)
+    {
+        $nCatLength = strlen($sCategory);
+        $aOut = array();
+        foreach ($this->aColumns as $sCol => $aCol) {
+            if (substr($sCol, 0, $nCatLength) == $sCategory) {
+                $aOut[$sCol] = $aCol;
+            }
+        }
+        return $aOut;
+    }
+
+
+
+
+
+    function prepareData ($zData = '', $sView = 'list', $sViewListID = '')
     {
         // Prepares the data by "enriching" the variable received with links, pictures, etc.
-        global $_AUTH;
+        global $_AUTH, $_SETT;
 
         // Makes sure it's an array and htmlspecialchars() all the values.
         $zData = parent::prepareData($zData, $sView);
 
-        // Mark all statuses from Marked and lower; Marked will be red, all others gray.
-        // Diagnostics: We disable this feature in LOVD+.
-        $bVarStatus = (!LOVD_plus && !empty($zData['var_statusid']) && $zData['var_statusid'] <= STATUS_MARKED);
+        // Mark all statusses from Marked and lower; Marked will be red, all others gray.
+        // In the VariantOnTranscriptUnique view the var_statusid can contain multiple IDs, these IDs are separated by a ",".
+        // PHP always takes the first integer-like part of a string when a string and an integer are compared.
+        // But to avoid problems in the future, only the first character is compared.
+        // We disable this feature in LOVD+.
+        $bVarStatus = (!LOVD_plus && !empty($zData['var_statusid']) && substr($zData['var_statusid'], 0, 1) <= STATUS_MARKED);
         $bIndStatus = (!LOVD_plus && !empty($zData['ind_statusid']) && $zData['ind_statusid'] <= STATUS_MARKED);
 
         if ($bVarStatus && $bIndStatus) {
-            $nStatus = min($zData['var_statusid'], $zData['ind_statusid']);
+            $nStatus = min(substr($zData['var_statusid'], 0, 1), $zData['ind_statusid']);
             $zData['class_name'] = ($nStatus == STATUS_MARKED? 'marked' : 'del');
         } elseif ($bVarStatus) {
-            $zData['class_name'] = ($zData['var_statusid'] == STATUS_MARKED? 'marked' : 'del');
+            $zData['class_name'] = (substr($zData['var_statusid'], 0, 1) == STATUS_MARKED? 'marked' : 'del');
         } elseif ($bIndStatus) {
             $zData['class_name'] = ($zData['ind_statusid'] == STATUS_MARKED? 'marked' : 'del');
         }
 
-        if ($sView == 'list') {
-            // "Clean" the GROUP_CONCAT columns for double values.
-            foreach ($zData as $sCol => $sVal) {
-                if (strpos($sCol, 'Screening/') === 0) {
-                    $zData[$sCol] = implode(', ', array_unique(explode(';', $sVal)));
-                }
-            }
-        }
         // Replace rs numbers with dbSNP links.
         if (!empty($zData['VariantOnGenome/dbSNP'])) {
             $zData['VariantOnGenome/dbSNP'] = preg_replace('/(rs\d+)/', '<SPAN' . ($sView != 'list'? '' : ' onclick="cancelParentEvent(event);"') . '><A href="http://www.ncbi.nlm.nih.gov/SNP/snp_ref.cgi?rs=' . "$1" . '" target="_blank">' . "$1" . '</A></SPAN>', $zData['VariantOnGenome/dbSNP']);
@@ -637,6 +813,36 @@ class LOVD_CustomViewList extends LOVD_Object {
                         $sReplaceText = '<SPAN class="custom_link" onmouseover="lovd_showToolTip(\'' . str_replace('"', '\\\'', $sReplaceText) . '\', this);">' . strip_tags($sReplaceText) . '</SPAN>';
                     }
                     $zData[$aCol['id']] = preg_replace($sRegexpPattern . 'U', $sReplaceText, $zData[$aCol['id']]);
+                }
+            }
+        }
+
+        if ($sView == 'list') {
+            // "Clean" the GROUP_CONCAT columns for double values.
+            foreach ($zData as $sCol => $sVal) {
+                if (strpos($sCol, 'Screening/') === 0) {
+                    $zData[$sCol] = implode(', ', array_unique(explode(';', $sVal)));
+                }
+                if (strpos($sViewListID, 'CustomVL_VOTunique') === 0 && (strpos($sCol, 'VariantOnGenome/') === 0 || strpos($sCol, 'VariantOnTranscript/') === 0)) {
+                    // In the GROUP_CONCAT query a double semicolon (;;) is used as a separator, so it can be recognized here.
+                    $aElements = explode(';;', $sVal);
+                    $nElements = count($aElements);
+                    $sNewElement = '';
+                    $nCount = 0;
+
+                    // VariantOnGenome and VariantOnTranscript columns with more then 200 characters are cut off.
+                    // A string is added which states how many more unique items are available.
+                    foreach ($aElements as $nKey => $sElement) {
+                        if ((strlen(strip_tags($sNewElement)) + strlen(strip_tags($sElement))) <= $_SETT['unique_view_max_string_length']) {
+                            $sNewElement .= ($sNewElement === ''? '' : ', ') . $sElement;
+                            $nCount ++;
+                        }
+                    }
+                    $nNotPrinted = $nElements - $nCount;
+                    if ($nNotPrinted > 0) {
+                        $sNewElement .= ($sNewElement === ''? '' : ', ') . '<I>' . $nNotPrinted . ' more item' . ($nNotPrinted == 1? '' : 's') . '</I>';
+                    }
+                    $zData[$sCol] = $sNewElement;
                 }
             }
         }
