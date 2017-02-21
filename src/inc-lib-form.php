@@ -1087,19 +1087,4 @@ function lovd_wrapText ($s, $l = 70, $sCut = ' ')
 
     return $s;
 }
-
-
-
-
-
-function lovd_authorizeByPassword() {
-    global $_AUTH, $_POST;
-    
-    $sInvalidPasswordErrorMsg = 'Please enter your correct password for authorization.';
-
-    // User had to enter his/her password for authorization.
-    if (!empty($_POST['password']) && !lovd_verifyPassword($_POST['password'], $_AUTH['password'])) {
-        lovd_errorAdd('password', $sInvalidPasswordErrorMsg);
-    }
-}
 ?>
