@@ -228,7 +228,7 @@ class LOVD_Phenotype extends LOVD_Custom {
      'authorization' => array('Enter your password for authorization', '', 'password', 'password', 20),
                       ));
 
-        if (ACTION == 'create' || (ACTION == 'publish' && GET) || isset($_FILES['import'])) {
+        if (ACTION == 'create' || (ACTION == 'publish' && GET)) {
             // When creating, or when publishing without any changes, unset the authorization.
             unset($this->aFormData['authorization']);
         }

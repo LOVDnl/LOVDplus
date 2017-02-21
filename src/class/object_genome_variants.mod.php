@@ -101,7 +101,10 @@ class LOVD_GenomeVariant extends LOVD_Custom {
                         array('Classification proposed', '', 'select', 'effect_reported', 1, $_SETT['var_effect'], false, false, false),
                         array('Classification final', '', 'select', 'effect_concluded', 1, $_SETT['var_effect'], false, false, false)
                       ),
-                 $this->buildForm());
+                 $this->buildForm(),
+                 array(
+     'authorization' => array('Enter your password for authorization', '', 'password', 'password', 20),
+                      ));
 
         return parent::getForm();
     }
