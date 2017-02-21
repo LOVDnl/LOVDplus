@@ -265,7 +265,18 @@ class LOVD_CustomViewListMOD extends LOVD_CustomViewList {
                         }
                         // Security checks in this file's prepareData() need geneid to see if the column in question is set to non-public for one of the genes.
                         $aSQL['SELECT'] .= (!$aSQL['SELECT']? '' : ', ') . 'GROUP_CONCAT(DISTINCT t.geneid SEPARATOR ";") AS _geneid, GROUP_CONCAT(DISTINCT IF(IFNULL(g.id_omim, 0) = 0, "", CONCAT(g.id, ";", g.id_omim)) SEPARATOR ";;") AS __gene_OMIM';
-                        $aSQL['SELECT'] .= ', (SELECT GROUP_CONCAT(DISTINCT IF(CASE d.symbol WHEN "-" THEN "" ELSE d.symbol END = "", CONCAT(d.name, IF(d.inheritance = "", "", ": " ), d.inheritance), d.symbol) ORDER BY (d.symbol != "" AND d.symbol != "-") DESC, d.symbol, d.name SEPARATOR "; ") FROM ' . TABLE_GEN2DIS . ' g2d INNER JOIN ' . TABLE_DISEASES . ' d ON (g2d.diseaseid = d.id) WHERE g2d.geneid = g.id) AS gene_disease_names';
+                        // Disease are to be displayed separated by semocolon.
+                        // Each disease is displayed as [SYMBOL: INHERITANCE] or if symbol does not exist [NAME: INHERITANCE]
+                        $aSQL['SELECT'] .= ', (SELECT GROUP_CONCAT(
+                                                        DISTINCT 
+                                                            IF(CASE d.symbol WHEN "-" THEN "" ELSE d.symbol END = "", 
+                                                                IF(d.inheritance IS NULL, d.name, CONCAT(d.name, IF(d.inheritance = "", "", ": " ), d.inheritance)), 
+                                                                IF(d.inheritance IS NULL, d.symbol, CONCAT(d.symbol, IF(d.inheritance = "", "", ": " ), d.inheritance))
+                                                            ) 
+                                                        ORDER BY (d.symbol != "" AND d.symbol != "-") DESC, d.symbol, d.name SEPARATOR "; ") 
+                                               FROM ' . TABLE_GEN2DIS . ' g2d INNER JOIN ' . TABLE_DISEASES . ' d ON (g2d.diseaseid = d.id) 
+                                               WHERE g2d.geneid = g.id) 
+                                               AS gene_disease_names';
                         $aSQL['FROM'] .= ' LEFT JOIN ' . TABLE_VARIANTS_ON_TRANSCRIPTS . ' AS vot ON (';
                         // Earlier, VOG was used, join to that.
                         $aSQL['FROM'] .= 'vog.id = vot.id)';

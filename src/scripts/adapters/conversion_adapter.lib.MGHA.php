@@ -82,7 +82,7 @@ $_INSTANCE_CONFIG['custom_object'] = array(
                 'zygosity_', // 'VariantOnGenome/Sequencing/Allele/Frequency'
                 'var_frac_', // 'VariantOnGenome/Sequencing/Depth/Alt/Fraction'
                 'gene_OMIM_',
-                'gene_disease_name',
+                'gene_disease_names',
                 'VariantOnTranscript/Clinical_Significance',
                 'allele_',
                 'VariantOnTranscript/Consequence_Impact',
