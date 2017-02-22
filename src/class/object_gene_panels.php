@@ -58,7 +58,7 @@ class LOVD_GenePanel extends LOVD_Object {
                                'GROUP_CONCAT(DISTINCT gp2an.analysisid ORDER BY gp2an.analysisid SEPARATOR ";") AS _active_analyses ' .
                                'FROM ' . TABLE_GENE_PANELS . ' AS gp ' .
                                'LEFT OUTER JOIN ' . TABLE_GP2DIS . ' AS gp2d ON (gp.id = gp2d. genepanelid) ' .
-                               'LEFT OUTER JOIN ' . TABLE_GP2AN . ' AS gp2an ON (gp.id = gp2an.genepanelid) ' .
+                               'LEFT OUTER JOIN ' . TABLE_GP2A . ' AS gp2an ON (gp.id = gp2an.genepanelid) ' .
                                'LEFT OUTER JOIN ' . TABLE_IND2GP . ' i2gp ON (gp.id = i2gp.genepanelid) ' .
                                'WHERE gp.id = ? ' .
                                'GROUP BY gp.id';
@@ -75,7 +75,7 @@ class LOVD_GenePanel extends LOVD_Object {
             'LEFT OUTER JOIN ' . TABLE_IND2GP . ' i2gp ON (gp.id = i2gp.genepanelid) ' .
             'LEFT OUTER JOIN ' . TABLE_USERS . ' AS uc ON (gp.created_by = uc.id) ' .
             'LEFT OUTER JOIN ' . TABLE_USERS . ' AS ue ON (gp.edited_by = ue.id) ' .
-            'LEFT OUTER JOIN ' . TABLE_GP2AN . ' AS gp2an ON (gp.id = gp2an.genepanelid) ' .
+            'LEFT OUTER JOIN ' . TABLE_GP2A . ' AS gp2an ON (gp.id = gp2an.genepanelid) ' .
             'LEFT OUTER JOIN ' . TABLE_ANALYSES . ' AS a ON (gp2an.analysisid = a.id) ';
         $this->aSQLViewEntry['GROUP_BY'] = 'gp.id';
 
@@ -91,7 +91,7 @@ class LOVD_GenePanel extends LOVD_Object {
                                           'LEFT OUTER JOIN ' . TABLE_IND2GP . ' i2gp ON gp.id = i2gp.genepanelid ' .
                                           'LEFT OUTER JOIN ' . TABLE_USERS . ' AS uc ON (gp.created_by = uc.id) ' .
                                           'LEFT OUTER JOIN ' . TABLE_DISEASES . ' AS d ON (gp2d.diseaseid = d.id)' .
-                                          'LEFT OUTER JOIN ' . TABLE_GP2AN . ' AS gp2an ON (gp.id = gp2an.genepanelid) ' .
+                                          'LEFT OUTER JOIN ' . TABLE_GP2A . ' AS gp2an ON (gp.id = gp2an.genepanelid) ' .
                                           'LEFT OUTER JOIN ' . TABLE_ANALYSES . ' AS a ON (gp2an.analysisid = a.id) ';
         $this->aSQLViewList['GROUP_BY'] = 'gp.id';
 

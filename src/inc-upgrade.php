@@ -906,7 +906,7 @@ if ($sCalcVersionFiles != $sCalcVersionDB) {
             foreach ($aFilters as $i => $sFilter) { // Each filter is processed and the SQL is generated.
                 // Create insert statements each time but we will use only unique insert statements later.
                 $aFiltersSQL[] = 'INSERT IGNORE INTO ' . TABLE_ANALYSIS_FILTERS . ' (id) VALUES ("' . $sFilter . '")';
-                $aAnalysis2FiltersSQL[] = 'INSERT INTO ' . TABLE_AN2AF . ' (analysisid, filterid, filter_order) VALUES (' . $aAnalysis['id'] . ', "' . $sFilter . '", ' . ($i + 1) . ')';
+                $aAnalysis2FiltersSQL[] = 'INSERT IGNORE INTO ' . TABLE_A2AF . ' (analysisid, filterid, filter_order) VALUES (' . $aAnalysis['id'] . ', "' . $sFilter . '", ' . ($i + 1) . ')';
             }
         }
 
@@ -921,25 +921,25 @@ if ($sCalcVersionFiles != $sCalcVersionDB) {
                                 PRIMARY KEY (id))
                                 ENGINE=InnoDB,
                                 DEFAULT CHARACTER SET utf8',
-                'CREATE TABLE ' . TABLE_AN2AF . ' (
+                'CREATE TABLE ' . TABLE_A2AF . ' (
                                 analysisid TINYINT(3) UNSIGNED ZEROFILL,
                                 filterid VARCHAR(50) NOT NULL,
                                 filter_order TINYINT(3) UNSIGNED DEFAULT 1,
                                 PRIMARY KEY (analysisid, filterid),
                                 INDEX (analysisid),
                                 INDEX (filterid),
-                                CONSTRAINT ' . TABLE_AN2AF . '_fk_analysisid FOREIGN KEY (analysisid) REFERENCES ' . TABLE_ANALYSES . ' (id) ON DELETE CASCADE ON UPDATE CASCADE,
-                                CONSTRAINT ' . TABLE_AN2AF . '_fk_filterid FOREIGN KEY (filterid) REFERENCES ' . TABLE_ANALYSIS_FILTERS . ' (id) ON DELETE CASCADE ON UPDATE CASCADE)
+                                CONSTRAINT ' . TABLE_A2AF . '_fk_analysisid FOREIGN KEY (analysisid) REFERENCES ' . TABLE_ANALYSES . ' (id) ON DELETE CASCADE ON UPDATE CASCADE,
+                                CONSTRAINT ' . TABLE_A2AF . '_fk_filterid FOREIGN KEY (filterid) REFERENCES ' . TABLE_ANALYSIS_FILTERS . ' (id) ON DELETE CASCADE ON UPDATE CASCADE)
                                 ENGINE=InnoDB,
                                 DEFAULT CHARACTER SET utf8',
-                'CREATE TABLE ' . TABLE_GP2AN . ' (
+                'CREATE TABLE ' . TABLE_GP2A . ' (
                                 genepanelid SMALLINT(5) UNSIGNED ZEROFILL NOT NULL,
                                 analysisid TINYINT(3) UNSIGNED ZEROFILL,
                                 PRIMARY KEY (genepanelid, analysisid),
                                 INDEX (genepanelid),
                                 INDEX (analysisid),
-                                CONSTRAINT ' . TABLE_GP2AN . '_fk_genepanelid FOREIGN KEY (genepanelid) REFERENCES ' . TABLE_GENE_PANELS . ' (id) ON DELETE CASCADE ON UPDATE CASCADE,
-                                CONSTRAINT ' . TABLE_GP2AN . '_fk_analysisid FOREIGN KEY (analysisid) REFERENCES ' . TABLE_ANALYSES . ' (id) ON DELETE CASCADE ON UPDATE CASCADE)
+                                CONSTRAINT ' . TABLE_GP2A . '_fk_genepanelid FOREIGN KEY (genepanelid) REFERENCES ' . TABLE_GENE_PANELS . ' (id) ON DELETE CASCADE ON UPDATE CASCADE,
+                                CONSTRAINT ' . TABLE_GP2A . '_fk_analysisid FOREIGN KEY (analysisid) REFERENCES ' . TABLE_ANALYSES . ' (id) ON DELETE CASCADE ON UPDATE CASCADE)
                                 ENGINE=InnoDB,
                                 DEFAULT CHARACTER SET utf8',
                 'ALTER TABLE ' . TABLE_ANALYSES . ' ADD COLUMN version TINYINT(3) UNSIGNED DEFAULT 1, ADD UNIQUE name_version (name, version)',

@@ -303,10 +303,10 @@ if (PATH_COUNT == 1 && ACTION == 'create') {
                 foreach ($_POST['active_analyses'] as $nAnalyses) {
                     // Add analyses to gene.
                     if ($nAnalyses) {
-                        $q = $_DB->query('INSERT INTO ' . TABLE_GP2AN . ' VALUES (?, ?)', array($nID, $nAnalyses), false);
+                        $q = $_DB->query('INSERT INTO ' . TABLE_GP2A . ' VALUES (?, ?)', array($nID, $nAnalyses), false);
                         if (!$q) {
                             // Silent error.
-                            lovd_writeLog('Error', LOG_EVENT, 'Analyses information entry ' . $nAnalyses . ' - could not be added to gene panel ' . $nID);
+                            lovd_writeLog('Error', LOG_EVENT, 'Analysis information entry ' . $nAnalyses . ' - could not be added to gene panel ' . $nID);
                         } else {
                             $aSuccessAnalyses[] = $nAnalyses;
                         }
@@ -315,7 +315,7 @@ if (PATH_COUNT == 1 && ACTION == 'create') {
             }
 
             if (count($aSuccessAnalyses)) {
-                lovd_writeLog('Event', LOG_EVENT, 'Analyses entr' . (count($aSuccessAnalyses) > 1 ? 'ies' : 'y') . ' successfully added to gene panel ' . $nID . ' - ' . $_POST['name']);
+                lovd_writeLog('Event', LOG_EVENT, 'Analysis entr' . (count($aSuccessAnalyses) > 1 ? 'ies' : 'y') . ' successfully added to gene panel ' . $nID . ' - ' . $_POST['name']);
             }
 
             // Thank the user...
@@ -460,7 +460,7 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && ACTION == 'edit') {
             }
 
             if ($aToRemove) {
-                $q = $_DB->query('DELETE FROM ' . TABLE_GP2AN . ' WHERE genepanelid = ? AND analysisid IN (?' . str_repeat(', ?', count($aToRemove) - 1) . ')', array_merge(array($zData['id']), $aToRemove), false);
+                $q = $_DB->query('DELETE FROM ' . TABLE_GP2A . ' WHERE genepanelid = ? AND analysisid IN (?' . str_repeat(', ?', count($aToRemove) - 1) . ')', array_merge(array($zData['id']), $aToRemove), false);
                 if (!$q) {
                     // Silent error.
                     lovd_writeLog('Error', LOG_EVENT, 'Analysis information entr' . (count($aToRemove) == 1 ? 'y' : 'ies') . ' ' . implode(', ', $aToRemove) . ' could not be removed from gene panel ' . $nID);
@@ -475,7 +475,7 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && ACTION == 'edit') {
             foreach ($_POST['active_analyses'] as $nAnalyses) {
                 if ($nAnalyses && !in_array($nAnalyses, $zData['active_analyses'])) {
                     // Add analyses to gene.
-                    $q = $_DB->query('INSERT IGNORE INTO ' . TABLE_GP2AN . ' VALUES (?, ?)', array($nID, $nAnalyses), false);
+                    $q = $_DB->query('INSERT IGNORE INTO ' . TABLE_GP2A . ' VALUES (?, ?)', array($nID, $nAnalyses), false);
                     if (!$q) {
                         $aFailed[] = $nAnalyses;
                     } else {

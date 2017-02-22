@@ -81,7 +81,7 @@ switch ($_INI['instance']['name']) {
                   ("select_gatkcaller_ug_hc", "", ""), 
                   ("remove_missense_with_phylop_lte_2.5", "", ""), 
                   ("remove_not_imprinted", "", "")',
-                'INSERT INTO ' . TABLE_AN2AF . ' (`analysisid`, `filterid`, `filter_order`) VALUES 
+                'INSERT INTO ' . TABLE_A2AF . ' (`analysisid`, `filterid`, `filter_order`) VALUES 
                   (1, "apply_selected_gene_panels", 1), 
                   (1, "remove_by_quality_lte_100", 2), 
                   (1, "remove_by_indb_count_hc_gte_2", 3), 
@@ -202,7 +202,7 @@ switch ($_INI['instance']['name']) {
                   ("select_homozygous_or_confirmed_compound_het", "Select homozygous or confirmed compound het", ""), 
                   ("select_variants_on_chr_x", "Select variants on chr x", ""), 
                   ("remove_variants_hom_in_mother", "Remove variants hom in mother", "")',
-                'INSERT INTO ' . TABLE_AN2AF . ' (`analysisid`, `filterid`, `filter_order`) VALUES 
+                'INSERT INTO ' . TABLE_A2AF . ' (`analysisid`, `filterid`, `filter_order`) VALUES 
                   (1, "apply_selected_gene_panels", 1), 
                   (1, "remove_by_quality_lte_100", 2), 
                   (1, "remove_with_any_gmaf_exac_gt_0.1", 3), 
@@ -290,7 +290,7 @@ switch ($_INI['instance']['name']) {
                 'INSERT INTO ' . TABLE_ANALYSIS_FILTERS . ' (`id`, `name`, `description`) VALUES 
                   ("apply_selected_gene_panels", "Apply selected gene panels", ""), 
                   ("remove_by_quality_lte_100", "Remove by quality lte 100", "")',
-                'INSERT INTO ' . TABLE_AN2AF . ' (`analysisid`, `filterid`, `filter_order`) VALUES 
+                'INSERT INTO ' . TABLE_A2AF . ' (`analysisid`, `filterid`, `filter_order`) VALUES 
                   (1, "apply_selected_gene_panels", 1), 
                   (1, "remove_by_quality_lte_100", 2)',
             );

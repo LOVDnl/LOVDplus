@@ -947,27 +947,27 @@ $aTableSQL =
     PRIMARY KEY (id))
     ' . $sSettings
 
-        , 'TABLE_AN2AF' =>
-    'CREATE TABLE ' . TABLE_AN2AF . ' (
+        , 'TABLE_A2AF' =>
+    'CREATE TABLE ' . TABLE_A2AF . ' (
     analysisid TINYINT(3) UNSIGNED ZEROFILL,
     filterid VARCHAR(50) NOT NULL,
     filter_order TINYINT(3) UNSIGNED DEFAULT 1,
     PRIMARY KEY (analysisid, filterid),
     INDEX (analysisid),
     INDEX (filterid),
-    CONSTRAINT ' . TABLE_AN2AF . '_fk_analysisid FOREIGN KEY (analysisid) REFERENCES ' . TABLE_ANALYSES . ' (id) ON DELETE CASCADE ON UPDATE CASCADE,
-    CONSTRAINT ' . TABLE_AN2AF . '_fk_filterid FOREIGN KEY (filterid) REFERENCES ' . TABLE_ANALYSIS_FILTERS . ' (id) ON DELETE CASCADE ON UPDATE CASCADE)
+    CONSTRAINT ' . TABLE_A2AF . '_fk_analysisid FOREIGN KEY (analysisid) REFERENCES ' . TABLE_ANALYSES . ' (id) ON DELETE CASCADE ON UPDATE CASCADE,
+    CONSTRAINT ' . TABLE_A2AF . '_fk_filterid FOREIGN KEY (filterid) REFERENCES ' . TABLE_ANALYSIS_FILTERS . ' (id) ON DELETE CASCADE ON UPDATE CASCADE)
     ' . $sSettings
 
-        , 'TABLE_GP2AN' =>
-    'CREATE TABLE ' . TABLE_GP2AN . ' (
+        , 'TABLE_GP2A' =>
+    'CREATE TABLE ' . TABLE_GP2A . ' (
     genepanelid SMALLINT(5) UNSIGNED ZEROFILL NOT NULL,
     analysisid TINYINT(3) UNSIGNED ZEROFILL,
     PRIMARY KEY (genepanelid, analysisid),
     INDEX (genepanelid),
     INDEX (analysisid),
-    CONSTRAINT ' . TABLE_GP2AN . '_fk_genepanelid FOREIGN KEY (genepanelid) REFERENCES ' . TABLE_GENE_PANELS . ' (id) ON DELETE CASCADE ON UPDATE CASCADE,
-    CONSTRAINT ' . TABLE_GP2AN . '_fk_analysisid FOREIGN KEY (analysisid) REFERENCES ' . TABLE_ANALYSES . ' (id) ON DELETE CASCADE ON UPDATE CASCADE)
+    CONSTRAINT ' . TABLE_GP2A . '_fk_genepanelid FOREIGN KEY (genepanelid) REFERENCES ' . TABLE_GENE_PANELS . ' (id) ON DELETE CASCADE ON UPDATE CASCADE,
+    CONSTRAINT ' . TABLE_GP2A . '_fk_analysisid FOREIGN KEY (analysisid) REFERENCES ' . TABLE_ANALYSES . ' (id) ON DELETE CASCADE ON UPDATE CASCADE)
     ' . $sSettings
 
         , 'TABLE_ANALYSES_RUN' =>

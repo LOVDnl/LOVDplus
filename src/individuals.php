@@ -246,7 +246,7 @@ if (PATH_COUNT >= 2 && ctype_digit($_PE[1]) && !ACTION && (PATH_COUNT == 2 || PA
           <INPUT type="hidden" name="nScreeningID" value="">
           <INPUT type="hidden" name="nAnalysisID" value="">
           <INPUT type="hidden" name="nRunID" value="">
-          <INPUT type="hidden" name="sClassName" value="">
+          <INPUT type="hidden" name="sElementID" value="">
           <TABLE border="0" cellpadding="0" cellspacing="0" width="80%" align="center">');
 
         $sLastType = '';
@@ -302,18 +302,18 @@ if (PATH_COUNT >= 2 && ctype_digit($_PE[1]) && !ACTION && (PATH_COUNT == 2 || PA
         $zAnalysesRun    = $_DB->query('SELECT a.id, a.name, a.version, a.description, GROUP_CONCAT(DISTINCT a2af.filterid ORDER BY a2af.filter_order ASC SEPARATOR ";") AS _filters, IFNULL(MAX(arf.run_time)>-1, 0) AS analysis_run, ar.id AS runid,   ar.modified, GROUP_CONCAT(DISTINCT arf.filterid, ";", IFNULL(arf.filtered_out, "-"), ";", IFNULL(arf.run_time, "-") ORDER BY arf.filter_order SEPARATOR ";;") AS __run_filters
                                         FROM ' . TABLE_ANALYSES . ' AS a INNER JOIN ' . TABLE_ANALYSES_RUN . ' AS ar ON (a.id = ar.analysisid)
                                         INNER JOIN ' . TABLE_ANALYSES_RUN_FILTERS . ' AS arf ON (ar.id = arf.runid)
-                                        INNER JOIN ' . TABLE_AN2AF . ' AS a2af ON (ar.analysisid = a2af.analysisid)
+                                        INNER JOIN ' . TABLE_A2AF . ' AS a2af ON (ar.analysisid = a2af.analysisid)
                                         WHERE ar.screeningid = ? GROUP BY ar.id ORDER BY ar.modified, ar.id', array($nScreeningToAnalyze))->fetchAllAssoc();
         $zAnalysesGenePanel = $_DB->query('SELECT DISTINCT a.id, a.name, a.version, a.description, GROUP_CONCAT(DISTINCT a2af.filterid ORDER BY a2af.filter_order ASC SEPARATOR ";") AS _filters, 0                               AS analysis_run, 0     AS runid, 0 AS modified
                                         FROM ' . TABLE_ANALYSES . ' AS a
-                                        INNER JOIN ' . TABLE_AN2AF . ' AS a2af ON (a.id = a2af.analysisid)
-                                        INNER JOIN ' . TABLE_GP2AN . ' AS gp2a ON (a.id = gp2a.analysisid) 
+                                        INNER JOIN ' . TABLE_A2AF . ' AS a2af ON (a.id = a2af.analysisid)
+                                        INNER JOIN ' . TABLE_GP2A . ' AS gp2a ON (a.id = gp2a.analysisid) 
                                         INNER JOIN ' . TABLE_IND2GP . ' AS i2gp ON (gp2a.genepanelid = i2gp.genepanelid)
                                         WHERE i2gp.individualid = ? 
                                         GROUP BY a.id ORDER BY a.sortid, a.id', array($nID))->fetchAllAssoc();
         $zAnalysesAll = $_DB->query('SELECT a.id, a.name, a.version, a.description, GROUP_CONCAT(a2af.filterid ORDER BY a2af.filter_order ASC SEPARATOR ";") AS _filters, 0                               AS analysis_run, 0     AS runid, 0 AS modified
                                         FROM ' . TABLE_ANALYSES . ' AS a
-                                        INNER JOIN ' . TABLE_AN2AF . ' AS a2af ON (a.id = a2af.analysisid) 
+                                        INNER JOIN ' . TABLE_A2AF . ' AS a2af ON (a.id = a2af.analysisid) 
                                         GROUP BY a.id ORDER BY a.sortid, a.id')->fetchAllAssoc();
         $aFilterInfo = $_DB->query('SELECT id, name, description FROM ' . TABLE_ANALYSIS_FILTERS)->fetchAllGroupAssoc();
         // Fetch all (numeric) variant IDs of all variants that have a curation status. They will be shown by default, when no analysis has been selected yet.
@@ -416,7 +416,7 @@ if (PATH_COUNT >= 2 && ctype_digit($_PE[1]) && !ACTION && (PATH_COUNT == 2 || PA
                     // Can probably check for the call of lovd_popoverGenePanelSelectionForm from within lovd_runAnalysis.
                     $sFunctionName = ($bHasGenePanelFilter? 'lovd_popoverGenePanelSelectionForm' : 'lovd_runAnalysis');
                     $sRunID = (!$zAnalysis['runid']? '' : $zAnalysis['runid']);
-                    $sJSAction = $sFunctionName . '(\''. $nScreeningToAnalyze  .'\', \''. $zAnalysis['id'] .'\', \'' . $sRunID . '\', ' . ($bHasGenePanelFilter? '' : 'undefined, ') . 'this.id)';
+                    $sJSAction = $sFunctionName . '(\''. $nScreeningToAnalyze  .'\', \''. $zAnalysis['id'] .'\', \'' . $sRunID . '\', this.id' . ($bHasGenePanelFilter? '' : ', undefined') . ')';
                 }
 
                 print('
