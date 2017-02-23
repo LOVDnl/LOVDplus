@@ -70,7 +70,7 @@ class LOVD_TranscriptVariant extends LOVD_Custom {
 
         // SQL code for viewing an entry.
         $this->aSQLViewEntry['SELECT']   = 'vot.*, ' .
-                                           't.geneid, t.id_ncbi' . (lovd_verifyInstance('mgha', false) ? ', vog.chromosome' : ''); // MGHA will have to add a few custom columns here to get the Genomizer link to work properly.
+                                           't.geneid, t.id_ncbi' . (lovd_verifyInstance('mgha', false)? ', vog.chromosome' : ''); // MGHA will have to add a few custom columns here to get the Genomizer link to work properly.
         $this->aSQLViewEntry['FROM']     = TABLE_VARIANTS_ON_TRANSCRIPTS . ' AS vot ' .
                                           'INNER JOIN ' . TABLE_VARIANTS . ' AS vog ON (vot.id = vog.id) ' . // Only done so that the vog.statusid can be checked.
                                            'LEFT OUTER JOIN ' . TABLE_TRANSCRIPTS . ' AS t ON (vot.transcriptid = t.id)';
@@ -108,7 +108,7 @@ class LOVD_TranscriptVariant extends LOVD_Custom {
                         'effect_reported' => 'Affects function (reported)',
                         'effect_concluded' => 'Affects function (concluded)',
                       ),
-                 (lovd_verifyInstance('mgha', false) ? array('genomizer_url_' => 'Genomizer', 'clinvar_' => "ClinVar Description (dbNSFP)") : array()), // MGHA entry for the Genomizer link in the VOT ViewEntry.
+                 (lovd_verifyInstance('mgha', false)? array('genomizer_url_' => 'Genomizer', 'clinvar_' => "ClinVar Description (dbNSFP)") : array()), // MGHA entry for the Genomizer link in the VOT ViewEntry.
                  $this->buildViewEntry());
         if (LOVD_plus) {
             unset($this->aColumnsViewEntry['effect_reported']);

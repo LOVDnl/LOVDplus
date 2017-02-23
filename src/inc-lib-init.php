@@ -1664,12 +1664,23 @@ function lovd_convertSecondsToTime ($sValue, $nDecimals = 0)
     return round($nValue, $nDecimals) . $sLast;
 }
 
-function lovd_verifyInstance ($sName, $bExact=true) {
+
+
+
+
+
+function lovd_verifyInstance ($sName, $bExact = true)
+{
+    // Check if this instance belongs to $sName instance group.
+    // If $bExact is set to true, it will match the exact instance name instead of prefix.
 
     global $_INI;
 
-    // Check if this instance belongs to $sName instance group.
-    // If $bExact is set to true, it will match the exact instance name instead of prefix.
+    // Only LOVD+ has instance name in the config file
+    if (!LOVD_plus) {
+        return false;
+    }
+
     if ($_INI['instance']['name'] == $sName) {
         return true;
     }
