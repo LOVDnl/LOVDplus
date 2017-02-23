@@ -179,6 +179,15 @@ $_SETT = array(
                             1 => 'Benign',
                           ),
                 'var_effect_default' => '00',
+                'clinvar' =>
+                    array(
+                        '2' => 'Benign',
+                        '3' => 'Likely benign',
+                        '4' => 'Likely pathogenic',
+                        '5' => 'Pathogenic',
+                        '6' => 'Drug response',
+                        '7' => 'histocompatibility'
+                ),
                 'data_status' =>
                      array(
                             STATUS_IN_PROGRESS => 'In progress',

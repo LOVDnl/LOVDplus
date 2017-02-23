@@ -508,6 +508,8 @@ class LOVD_CustomViewListMOD extends LOVD_CustomViewList {
 
     function prepareData ($zData = '', $sView = 'list', $sViewListID = '')
     {
+        global $_SETT;
+
         // Prepares the data by "enriching" the variable received with links, pictures, etc.
 
         // Needs to be done before the custom links are rendered.
@@ -569,7 +571,7 @@ class LOVD_CustomViewListMOD extends LOVD_CustomViewList {
         }
 
         if (isset($zData['VariantOnTranscript/dbNSFP/ClinVar/Clinical_Significance'])) {
-            $zData['clinvar_'] = LOVD_TranscriptVariant::getClinvarDesc($zData['VariantOnTranscript/dbNSFP/ClinVar/Clinical_Significance']);
+            $zData['clinvar_'] = lovd_mapCodeToDescription($zData['VariantOnTranscript/dbNSFP/ClinVar/Clinical_Significance'], $_SETT['clinvar'], array('srcDelimiter' => ','));
         }
 
         return $zData;

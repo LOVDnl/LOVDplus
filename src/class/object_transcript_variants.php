@@ -386,7 +386,7 @@ class LOVD_TranscriptVariant extends LOVD_Custom {
             if (lovd_verifyInstance('mgha', false)) { // Display the Genomizer URL in the VOT ViewEntry. TODO Once the ref and alt are separated we need to add it into this URL. Should we add this to the links table so as it can be used elsewhere?
                 $zData['genomizer_url_'] = '<A href="http://genomizer.com/?chr=' . $zData['chromosome'] . '&gene=' . $zData['geneid'] . '&ref_seq=' . $zData['id_ncbi'] . '&variant=' . $zData['VariantOnTranscript/DNA'] . '" target="_blank">Genomizer Link</A>';
                 if (isset($zData['VariantOnTranscript/dbNSFP/ClinVar/Clinical_Significance'])) {
-                    $zData['clinvar_'] = static::getClinvarDesc($zData['VariantOnTranscript/dbNSFP/ClinVar/Clinical_Significance']);
+                    $zData['clinvar_'] = lovd_mapCodeToDescription($zData['VariantOnTranscript/dbNSFP/ClinVar/Clinical_Significance'], $_SETT['clinvar'], array('srcDelimiter' => ','));
                 }
             }
         }
@@ -408,38 +408,6 @@ class LOVD_TranscriptVariant extends LOVD_Custom {
                 $_POST[$sCol] = $this->getDefaultValue($sColClean);
             }
         }
-    }
-
-
-
-
-
-    static function getClinvarDesc($sCodes) {
-        $aClinvarDesc = array(
-            '2' => 'Benign',
-            '3' => 'Likely benign',
-            '4' => 'Likely pathogenic',
-            '5' => 'Pathogenic',
-            '6' => 'Drug response',
-            '7' => 'histocompatibility'
-        );
-
-        $sDescription = '';
-        $aDescriptions = array();
-
-        if (!empty($sCodes)) {
-            $aCodes = explode(',', $sCodes);
-            foreach ($aCodes as $sCode) {
-                $sCode = trim($sCode);
-                if (!empty($aClinvarDesc[$sCode])) {
-                    $aDescriptions[] = $aClinvarDesc[$sCode];
-                }
-            }
-
-            $sDescription = implode(", ", $aDescriptions);
-        }
-
-        return $sDescription;
     }
 
 

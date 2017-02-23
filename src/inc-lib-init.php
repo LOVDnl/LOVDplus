@@ -896,6 +896,36 @@ function lovd_magicUnquoteAll ()
 
 
 
+function lovd_mapCodeToDescription($sCodes, $aMaps, $aOptions)
+{
+    // Takes a string separated by $aOptions['srcDelimiter']
+    // Returns another string based on the mapping values in $aMaps
+
+    $aDefault = array('srcDelimiter' => ';', 'destDelimiter' => ', ');
+    $aOptions = $aOptions + $aDefault;
+
+    $sDescription = '';
+    $aDescriptions = array();
+
+    if (!empty($sCodes)) {
+        $aCodes = explode($aOptions['srcDelimiter'], $sCodes);
+        foreach ($aCodes as $sCode) {
+            $sCode = trim($sCode);
+            if (isset($aMaps[$sCode])) {
+                $aDescriptions[] = $aMaps[$sCode];
+            }
+        }
+
+        $sDescription = implode($aOptions['destDelimiter'], $aDescriptions);
+    }
+
+    return $sDescription;
+}
+
+
+
+
+
 function lovd_parseConfigFile($sConfigFile)
 {
     // Parses the given config file, checks all values, and returns array with parsed settings.
