@@ -85,6 +85,7 @@ class LOVD_GenomeVariant extends LOVD_Custom {
 
     function getForm ()
     {
+        global $_INI;
         // Build the form.
 
         // If we've built the form before, simply return it. Especially imports will repeatedly call checkFields(), which calls getForm().
@@ -105,6 +106,10 @@ class LOVD_GenomeVariant extends LOVD_Custom {
                  array(
      'authorization' => array('Enter your password for authorization', '', 'password', 'password', 20),
                       ));
+
+        if (strtolower($_INI['instance']['name']) == 'leiden') {
+            unset($this->aFormData['authorization']);
+        }
 
         return parent::getForm();
     }
