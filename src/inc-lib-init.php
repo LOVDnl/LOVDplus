@@ -142,6 +142,67 @@ function lovd_cleanDirName ($s)
 
 
 
+function lovd_convertIniValueToBytes ($sValue)
+{
+    // This function takes output from PHP's ini_get() function like "128M" or
+    // "256k" and converts it to an integer, measured in bytes.
+    // Implementation taken from the example on php.net.
+    // FIXME; Implement proper checks here? Regexp?
+
+    $nValue = (int) $sValue;
+    $sLast = strtolower(substr($sValue, -1));
+    switch ($sLast) {
+        case 'g':
+            $nValue *= 1024;
+        case 'm':
+            $nValue *= 1024;
+        case 'k':
+            $nValue *= 1024;
+    }
+
+    return $nValue;
+}
+
+
+
+
+
+function lovd_convertSecondsToTime ($sValue, $nDecimals = 0)
+{
+    // This function takes a number of seconds and converts it into whole
+    // minutes, hours, days, months or years.
+    // FIXME; Implement proper checks here? Regexp?
+
+    $nValue = (int) $sValue;
+    if (ctype_digit((string) $sValue)) {
+        $sValue .= 's';
+    }
+    $sLast = strtolower(substr($sValue, -1));
+    $nDecimals = (int) $nDecimals;
+
+    $aConversion =
+        array(
+            's' => array(60, 'm'),
+            'm' => array(60, 'h'),
+            'h' => array(24, 'd'),
+            'd' => array(265, 'y'),
+        );
+
+    foreach ($aConversion as $sUnit => $aConvert) {
+        list($nFactor, $sNextUnit) = $aConvert;
+        if ($sLast == $sUnit && $nValue > $nFactor) {
+            $nValue /= $nFactor;
+            $sLast = $sNextUnit;
+        }
+    }
+
+    return round($nValue, $nDecimals) . $sLast;
+}
+
+
+
+
+
 function lovd_createPasswordHash ($sPassword, $sSalt = '')
 {
     // Creates a password hash like how it's stored in the database. If no salt
@@ -1560,6 +1621,35 @@ function lovd_variantToPosition ($sVariant)
 
 
 
+function lovd_verifyInstance ($sName, $bExact = true)
+{
+    // Check if this instance belongs to $sName instance group.
+    // If $bExact is set to true, it will match the exact instance name instead of prefix.
+
+    global $_INI;
+
+    // Only LOVD+ has instance name in the config file
+    if (!LOVD_plus) {
+        return false;
+    }
+
+    if ($_INI['instance']['name'] == $sName) {
+        return true;
+    }
+
+    if (!$bExact) {
+        if (strpos($_INI['instance']['name'], $sName) === 0) {
+            return true;
+        }
+    }
+
+    return false;
+}
+
+
+
+
+
 function lovd_verifyPassword ($sPassword, $sOriHash)
 {
     // Verifies a password given a certain hash. This hash is usually taken from
@@ -1601,96 +1691,5 @@ function lovd_writeLog ($sLog, $sEvent, $sMessage)
     // Insert new line in logs table.
     $q = $_DB->query('INSERT INTO ' . TABLE_LOGS . ' VALUES (?, NOW(), ?, ?, ?, ?)', array($sLog, $sTime, ($_AUTH['id']? $_AUTH['id'] : NULL), $sEvent, $sMessage), false);
     return (bool) $q;
-}
-
-
-
-
-
-function lovd_convertIniValueToBytes ($sValue)
-{
-    // This function takes output from PHP's ini_get() function like "128M" or
-    // "256k" and converts it to an integer, measured in bytes.
-    // Implementation taken from the example on php.net.
-    // FIXME; Implement proper checks here? Regexp?
-
-    $nValue = (int) $sValue;
-    $sLast = strtolower(substr($sValue, -1));
-    switch ($sLast) {
-        case 'g':
-            $nValue *= 1024;
-        case 'm':
-            $nValue *= 1024;
-        case 'k':
-            $nValue *= 1024;
-    }
-
-    return $nValue;
-}
-
-
-
-
-
-function lovd_convertSecondsToTime ($sValue, $nDecimals = 0)
-{
-    // This function takes a number of seconds and converts it into whole
-    // minutes, hours, days, months or years.
-    // FIXME; Implement proper checks here? Regexp?
-
-    $nValue = (int) $sValue;
-    if (ctype_digit((string) $sValue)) {
-        $sValue .= 's';
-    }
-    $sLast = strtolower(substr($sValue, -1));
-    $nDecimals = (int) $nDecimals;
-
-    $aConversion =
-        array(
-            's' => array(60, 'm'),
-            'm' => array(60, 'h'),
-            'h' => array(24, 'd'),
-            'd' => array(265, 'y'),
-        );
-
-    foreach ($aConversion as $sUnit => $aConvert) {
-        list($nFactor, $sNextUnit) = $aConvert;
-        if ($sLast == $sUnit && $nValue > $nFactor) {
-            $nValue /= $nFactor;
-            $sLast = $sNextUnit;
-        }
-    }
-
-    return round($nValue, $nDecimals) . $sLast;
-}
-
-
-
-
-
-
-function lovd_verifyInstance ($sName, $bExact = true)
-{
-    // Check if this instance belongs to $sName instance group.
-    // If $bExact is set to true, it will match the exact instance name instead of prefix.
-
-    global $_INI;
-
-    // Only LOVD+ has instance name in the config file
-    if (!LOVD_plus) {
-        return false;
-    }
-
-    if ($_INI['instance']['name'] == $sName) {
-        return true;
-    }
-
-    if (!$bExact) {
-        if (strpos($_INI['instance']['name'], $sName) === 0) {
-            return true;
-        }
-    }
-
-    return false;
 }
 ?>
