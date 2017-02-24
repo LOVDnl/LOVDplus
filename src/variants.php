@@ -258,26 +258,25 @@ if (!ACTION && (empty($_PE[1]) || preg_match('/^chr[0-9A-Z]{1,2}$/', $_PE[1]))) 
 
 
 if (PATH_COUNT == 3 && $_PE[1] == 'DBID' && preg_match('/^chr/', $_PE[2]) && !ACTION) {
-    // URL: /variants/DBID/chr_00001
+    // URL: /variants/DBID/chr_00001
     // View all genomic variant entries with the same DBID
-
     $sDbId = $_PE[2];
-
     define('PAGE_TITLE', 'View genomic variants');
     $_T->printHeader();
     $_T->printTitle();
-
-    require ROOT_PATH . 'class/object_genome_variants.php';
-    $_DATA = new LOVD_GenomeVariant();
+    
+    lovd_requireAUTH(LEVEL_MANAGER);
+    require ROOT_PATH . 'class/object_custom_viewlists.mod.php';
+    $_DATA = new LOVD_CustomViewListMOD(array('VariantOnGenome', 'VariantOnTranscript', 'Screening', 'Individual', 'Diseases'));
+    $_GET['search_VariantOnGenome/DBID'] = '="' . $sDbId . '"';
     $aColsToShow = array (
-        'id_', 'effect', 'allele_', 'Individual/Sample_ID', 'Individual/Clinical_indication',
+        'id_', 'vog_effect', 'allele_', 'Individual/Sample_ID', 'Individual/Clinical_indication',
         'Screening/Library_preparation', 'Screening/Sequencing_chemistry', 'Screening/Pipeline/Run_ID',
         'VariantOnGenome/Curation/Classification','VariantOnGenome/Sequencing/IGV', 'VariantOnGenome/Reference',
-        'VariantOnTranscript/DNA', 'VariantOnTranscript/Protein', 'geneid', 'diseases'
+        'VariantOnTranscript/DNA', 'VariantOnTranscript/Protein', 'gene_OMIM_', 'gene_disease_names'
         );
     $aColsToHide = array_diff(array_keys($_DATA->aColumnsViewList), $aColsToShow);
-    $_GET['search_VariantOnGenome/DBID'] = '="' . $sDbId . '"';
-    $_DATA->viewList('', $aColsToHide, false, false, false);
+    $_DATA->viewList('CustomVL_DBID', $aColsToHide, false, false, false);
 
     $_T->printFooter();
     exit;

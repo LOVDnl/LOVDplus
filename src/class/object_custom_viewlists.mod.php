@@ -53,7 +53,7 @@ class LOVD_CustomViewListMOD extends LOVD_CustomViewList {
     function __construct ($aObjects = array(), $sOtherID = '')
     {
         // Default constructor.
-        global $_DB, $_AUTH;
+        global $_DB, $_AUTH, $_INI;
 
         if (!is_array($aObjects)) {
             $aObjects = explode(',', $aObjects);
@@ -140,6 +140,16 @@ class LOVD_CustomViewListMOD extends LOVD_CustomViewList {
                             'VariantOnGenome/Sequencing/Quality',
                             'VariantOnGenome/Sequencing/GATKcaller',
                         );
+
+                    if (lovd_verifyInstance('mgha', false)) {
+                        $aColumnsToShow['VariantOnGenome'] = array_merge($aColumnsToShow['VariantOnGenome'],
+                            array(
+                                'VariantOnGenome/DBID',
+                                'VariantOnGenome/Curation/Classification',
+                                'VariantOnGenome/Sequencing/IGV',
+                                'VariantOnGenome/Reference',
+                            ));
+                    }
                     $aSQL['SELECT'] .= (!$aSQL['SELECT']? '' : ', ') . 'vog.*, a.name AS allele_, eg.name AS vog_effect, CONCAT(cs.id, cs.name) AS curation_status_';
                     // Observation count columns.
                     // Find the diseases that this individual has assigned using the analysis run ID in $_GET.
@@ -247,6 +257,42 @@ class LOVD_CustomViewListMOD extends LOVD_CustomViewList {
 
                     }
                     break;
+                case 'Individual':
+                    $aColumnsToShow['Individual'] = array(
+                        'Individual/Sample_ID',
+                        'Individual/Clinical_indication'
+                    );
+                    $nKeyScreening = array_search('Screening', $aObjects);
+                    $sSelect = 'i.*';
+                    if (!$aSQL['FROM']) {
+                        $aSQL['SELECT'] .= (!$aSQL['SELECT']? '' : ', ') . $sSelect;
+                        $aSQL['FROM'] = TABLE_INDIVIDUALS . ' AS i';
+                    } elseif ($nKeyScreening !== false && $nKeyScreening < $nKey) {
+                        $aSQL['SELECT'] .= (!$aSQL['SELECT']? '' : ', ') . $sSelect;
+                        $aSQL['FROM'] .= ' LEFT JOIN ' . TABLE_INDIVIDUALS . ' AS i ON (s.individualid = i.id)';
+                    }
+                    break;
+
+                case 'Screening':
+                    $aColumnsToShow['Screening'] = array(
+                        'Screening/Library_preparation',
+                        'Screening/Sequencing_chemistry',
+                        'Screening/Pipeline/Run_ID'
+                    );
+
+                    $nKeyVOG = array_search('VariantOnGenome', $aObjects);
+                    $sSelect = 's.*';
+                    if (!$aSQL['FROM']) {
+                        $aSQL['SELECT'] .= (!$aSQL['SELECT']? '' : ', ') . $sSelect;
+                        $aSQL['FROM'] = TABLE_SCR2VAR . ' AS s2v
+                                         LEFT JOIN ' . TABLE_SCREENINGS . ' AS s ON (vog.id = s2v.screeningid)';
+                    } elseif ($nKeyVOG !== false && $nKeyVOG < $nKey) {
+                        $aSQL['SELECT'] .= (!$aSQL['SELECT']? '' : ', ') . $sSelect;
+                        $aSQL['FROM'] .= ' LEFT JOIN ' . TABLE_SCR2VAR . ' AS s2v ON (vog.id = s2v.variantid)
+                                            LEFT JOIN ' . TABLE_SCREENINGS . ' AS s ON (s.id = s2v.screeningid)';
+                    }
+                    break;
+
 
                 case 'GenePanels':
                     $aSQL['SELECT'] .= (!$aSQL['SELECT']? '' : ', ') . 'GROUP_CONCAT(DISTINCT gp.name SEPARATOR ", ") AS gene_panels,
@@ -352,6 +398,9 @@ class LOVD_CustomViewListMOD extends LOVD_CustomViewList {
                                 'chromosome' => array(
                                         'view' => array('Chr', 50),
                                         'db'   => array('vog.chromosome', 'ASC', true)),
+                                'allele_' => array(
+                                     'view' => array('Allele', 'ASC', true),
+                                     'db'   => array('allele_', 'ASC', true)),
                               ));
 
                     if (!$this->sSortDefault) {
@@ -379,6 +428,12 @@ class LOVD_CustomViewListMOD extends LOVD_CustomViewList {
                         // First data table in view.
                         $this->sSortDefault = 'VariantOnTranscript/DNA';
                     }
+                    break;
+                case 'Screening':
+                    $sPrefix = 's.';
+                    break;
+                case 'Individual':
+                    $sPrefix = 'i.';
                     break;
             }
 
@@ -408,6 +463,10 @@ class LOVD_CustomViewListMOD extends LOVD_CustomViewList {
                 $this->aColumnsViewList['VariantOnTranscript/DNA']['db'][0] = 'CONCAT(t.geneid, ":", `VariantOnTranscript/DNA`)';
             }
 
+            // Hide DBID column
+            if (lovd_verifyInstance('mgha', false)) {
+                $this->aColumnsViewList['VariantOnGenome/DBID']['view'] = false;
+            }
 
 
             // Some fixed columns are supposed to be shown AFTER this objects's custom columns, so we'll need to go through the objects again.
