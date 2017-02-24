@@ -50,7 +50,7 @@ class LOVD_CustomViewListMOD extends LOVD_CustomViewList {
     function __construct ($aObjects = array(), $sOtherID = '')
     {
         // Default constructor.
-        global $_DB, $_AUTH, $_INI, $_INSTANCE_CONFIG;
+        global $_DB, $_AUTH, $_INI, $_INSTANCE_CONFIG, $_SETT;
 
         if (!is_array($aObjects)) {
             $aObjects = explode(',', $aObjects);
@@ -277,6 +277,8 @@ class LOVD_CustomViewListMOD extends LOVD_CustomViewList {
                         }
                         // Security checks in this file's prepareData() need geneid to see if the column in question is set to non-public for one of the genes.
                         $aSQL['SELECT'] .= (!$aSQL['SELECT']? '' : ', ') . 'GROUP_CONCAT(DISTINCT t.geneid SEPARATOR ";") AS symbol, GROUP_CONCAT(DISTINCT t.geneid SEPARATOR ";") AS _geneid, GROUP_CONCAT(DISTINCT IF(IFNULL(g.id_omim, 0) = 0, "", CONCAT(g.id, ";", g.id_omim)) SEPARATOR ";;") AS __gene_OMIM';
+                        $aSQL['SELECT'] .= (!$aSQL['SELECT']? '' : ', ') . '(SELECT GROUP_CONCAT(CONCAT(d.name, IF(d.inheritance = "", "", ": " ), d.inheritance) SEPARATOR \'; \') FROM ' . TABLE_GEN2DIS . ' g2d INNER JOIN ' . TABLE_DISEASES . ' d ON (g2d.diseaseid = d.id) WHERE g2d.geneid = g.id) AS gene_disease_name';
+
                         $aSQL['FROM'] .= ' LEFT JOIN ' . TABLE_VARIANTS_ON_TRANSCRIPTS . ' AS vot ON (';
                         // Earlier, VOG was used, join to that.
                         $aSQL['FROM'] .= 'vog.id = vot.id)';
@@ -411,6 +413,12 @@ class LOVD_CustomViewListMOD extends LOVD_CustomViewList {
                     break;
 
                 case 'VariantOnTranscript':
+                    $sInheritance_legend = '<BR/>Inheritance<BR/><TABLE>';
+                    foreach ($_SETT['diseases_inheritance'] as $sKey => $sDescription) {
+                        $sInheritance_legend .= '<TR><TD>' . $sKey . '</TD><TD>: ' . $sDescription . '</TD></TR>';
+                    }
+                    $sInheritance_legend .= '</TABLE>';
+
                     $sPrefix = 'vot.';
                     // The fixed columns.
                     $this->aColumnsViewList = array_merge($this->aColumnsViewList,
@@ -427,7 +435,13 @@ class LOVD_CustomViewListMOD extends LOVD_CustomViewList {
                                 'preferred_transcripts' => array(
                                      'view' => array('Transcript', 20),
                                      'db'   => array('preferred_transcripts', 'ASC', true)),
+                                'gene_disease_name' => array(
+                                     'view' => array('Diseases', 200),
+                                     'db'   => array('gene_disease_name', 'ASC', 'TEXT'),
+                                     'legend' => array('The diseases associated with this gene.' . str_replace(array("\r", "\n"), '', $sInheritance_legend),
+                                         'The diseases associated with this gene.' . str_replace(array("\r", "\n"), '', $sInheritance_legend))),
                                   ));
+
                     if (!$this->sSortDefault) {
                         // First data table in view.
                         $this->sSortDefault = 'VariantOnTranscript/DNA';
