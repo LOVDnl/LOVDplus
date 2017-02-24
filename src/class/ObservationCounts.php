@@ -35,7 +35,7 @@ if (!defined('ROOT_PATH')) {
 
 class LOVD_ObservationCounts
 {
-    // Wrap all the logic related to generating observation counts here
+    // Wrap all the logic related to generating observation counts here.
     // It includes:
     // - How the SQL query is constructed to get the data for each cateogory.
     // - Whether observation counts data can be updated depending on status of the screening and role of the user.
@@ -78,7 +78,7 @@ class LOVD_ObservationCounts
         global $_DB;
 
         if ($this->nCurrentPopulationSize === null) {
-            // Generate from database
+            // Generate from database.
             $sSQL = static::getQueryFor('population_size');
             $this->nCurrentPopulationSize = $_DB->query($sSQL)->rowCount();
         }
@@ -171,7 +171,7 @@ class LOVD_ObservationCounts
             }
         }
 
-        // Save the built data into the database so that we can reuse next time as well as keeping history
+        // Save the built data into the database so that we can reuse next time as well as keeping history.
         $sObscountJson = json_encode($aData);
         $sSQL = "UPDATE " . TABLE_VARIANTS . " SET obscount_json = '$sObscountJson', obscount_updated = NOW() WHERE id = ?";
         $_DB->query($sSQL, array($this->nVariantId));
@@ -193,7 +193,7 @@ class LOVD_ObservationCounts
 
         $sSQL = 'SELECT s.analysis_statusid
                  FROM ' . TABLE_SCREENINGS . ' AS s
-                 JOIN ' . TABLE_SCR2VAR . ' AS s2v 
+                 INNER JOIN ' . TABLE_SCR2VAR . ' AS s2v 
                  ON (s.id = s2v.screeningid AND s2v.variantid = ' . $this->nVariantId . ')';
 
         $aResult = $_DB->query($sSQL)->fetchAssoc();
@@ -230,7 +230,7 @@ class LOVD_ObservationCounts
         $aData['percentage'] = static::$EMPTY_DATA_DISPLAY;
         $aData['threshold'] = static::$EMPTY_DATA_DISPLAY;
 
-        // Only run query if this individual/screening has sufficient data
+        // Only run query if this individual/screening has sufficient data.
         if (empty($aRules['incomplete'])) {
             $aData['values'] = array();
             foreach ($aRules['fields'] as $sField) {
@@ -281,7 +281,7 @@ class LOVD_ObservationCounts
     protected function validateCategories ($sType, $aSettings)
     {
         // Check if the categories specified in $aSettings is a valid category.
-        // We then  load the configuration for all the valid categories into $this->aCategories.
+        // We then load the configuration for all the valid categories into $this->aCategories.
 
         switch ($sType) {
             case static::$TYPE_GENERAL:
@@ -378,7 +378,7 @@ class LOVD_ObservationCounts
 
             case static::$TYPE_GENEPANEL:
 
-                // Build existing configuration options
+                // Build existing configuration options.
                 $aGenepanelIds = array();
                 $aGenepanelNames = array();
                 if (!empty($this->aIndividual['genepanel_ids']) && !empty($this->aIndividual['genepanel_names'])) {
@@ -494,14 +494,14 @@ class LOVD_ObservationCounts
 
         global $_DB;
 
-        // Query data related to this individual
+        // Query data related to this individual.
         $sSQL = 'SELECT i.*, s.*, vog.*, 
                  GROUP_CONCAT(DISTINCT i2gp.genepanelid ORDER BY i2gp.genepanelid SEPARATOR ",") AS genepanel_ids, 
                  GROUP_CONCAT(DISTINCT gp.name ORDER BY i2gp.genepanelid SEPARATOR ",") AS genepanel_names 
                  FROM ' . TABLE_VARIANTS . ' AS vog 
-                 JOIN ' . TABLE_SCR2VAR . ' AS s2v ON (vog.id = s2v.variantid AND vog.id = "' . $this->nVariantId . '") 
-                 JOIN ' . TABLE_SCREENINGS . ' AS s ON (s.id = s2v.screeningid) 
-                 JOIN ' . TABLE_INDIVIDUALS . ' AS i ON (s.individualid = i.id) 
+                 INNER JOIN ' . TABLE_SCR2VAR . ' AS s2v ON (vog.id = s2v.variantid AND vog.id = "' . $this->nVariantId . '") 
+                 INNER JOIN ' . TABLE_SCREENINGS . ' AS s ON (s.id = s2v.screeningid) 
+                 INNER JOIN ' . TABLE_INDIVIDUALS . ' AS i ON (s.individualid = i.id) 
                  LEFT JOIN ' . TABLE_IND2GP . ' AS i2gp ON (i.id = i2gp.individualid) 
                  LEFT JOIN ' . TABLE_GENE_PANELS . ' AS gp ON (i2gp.genepanelid = gp.id)
                  WHERE gp.type IS NULL OR gp.type != "blacklist"
@@ -521,7 +521,7 @@ class LOVD_ObservationCounts
             case 'total_individuals':
                 return 'SELECT COUNT(s.individualid) AS total
                         FROM ' . TABLE_INDIVIDUALS . ' i 
-                        JOIN ' . TABLE_SCREENINGS . ' s ON (s.individualid = i.id)
+                        INNER JOIN ' . TABLE_SCREENINGS . ' s ON (s.individualid = i.id)
                         LEFT JOIN ' . TABLE_IND2GP . ' i2gp ON (i2gp.individualid = i.id) 
                         WHERE ' . $sCondition . ' 
                         GROUP BY s.individualid';
@@ -529,7 +529,7 @@ class LOVD_ObservationCounts
             case 'num_affected':
                 return 'SELECT COUNT(s.individualid) AS total_affected
                         FROM ' . TABLE_INDIVIDUALS . ' i 
-                        JOIN ' . TABLE_SCREENINGS . ' s ON (s.individualid = i.id AND i.`Individual/Affected` = "affected")
+                        INNER JOIN ' . TABLE_SCREENINGS . ' s ON (s.individualid = i.id AND i.`Individual/Affected` = "affected")
                         LEFT JOIN ' . TABLE_IND2GP . ' i2gp ON (i2gp.individualid = i.id) 
                         WHERE ' . $sCondition . ' 
                         GROUP BY s.individualid';
@@ -537,7 +537,7 @@ class LOVD_ObservationCounts
             case 'num_not_affected':
                 return 'SELECT COUNT(s.individualid) AS total_not_affected
                         FROM ' . TABLE_INDIVIDUALS . ' i 
-                        JOIN ' . TABLE_SCREENINGS . ' s ON (s.individualid = i.id AND i.`Individual/Affected` = "not affected")
+                        INNER JOIN ' . TABLE_SCREENINGS . ' s ON (s.individualid = i.id AND i.`Individual/Affected` = "not affected")
                         LEFT JOIN ' . TABLE_IND2GP . ' i2gp ON (i2gp.individualid = i.id) 
                         WHERE ' . $sCondition . ' 
                         GROUP BY s.individualid';
@@ -545,9 +545,9 @@ class LOVD_ObservationCounts
             case 'num_ind_with_variant' :
                 return 'SELECT COUNT(s.individualid) AS count_dbid, GROUP_CONCAT(DISTINCT TRIM(LEADING "0" FROM vog.id) SEPARATOR ";") as variant_ids
                         FROM ' . TABLE_VARIANTS . ' AS vog 
-                        JOIN ' . TABLE_SCR2VAR . ' AS s2v ON (vog.id = s2v.variantid AND vog.`VariantOnGenome/DBID` = "' . $aParams['dbid'] . '") 
-                        JOIN ' . TABLE_SCREENINGS . ' AS s ON (s.id = s2v.screeningid) 
-                        JOIN ' . TABLE_INDIVIDUALS . ' AS i ON (s.individualid = i.id) 
+                        INNER JOIN ' . TABLE_SCR2VAR . ' AS s2v ON (vog.id = s2v.variantid AND vog.`VariantOnGenome/DBID` = "' . $aParams['dbid'] . '") 
+                        INNER JOIN ' . TABLE_SCREENINGS . ' AS s ON (s.id = s2v.screeningid) 
+                        INNER JOIN ' . TABLE_INDIVIDUALS . ' AS i ON (s.individualid = i.id) 
                         LEFT JOIN ' . TABLE_IND2GP . ' i2gp ON (i2gp.individualid = i.id) 
                         WHERE ' . $sCondition . ' 
                         GROUP BY s.individualid';
@@ -555,7 +555,7 @@ class LOVD_ObservationCounts
             case 'population_size':
                 return 'SELECT COUNT(s.individualid) AS population_size
                         FROM ' . TABLE_SCREENINGS . ' AS s 
-                        JOIN ' . TABLE_INDIVIDUALS . ' AS i ON (s.individualid = i.id)
+                        INNER JOIN ' . TABLE_INDIVIDUALS . ' AS i ON (s.individualid = i.id)
                         GROUP BY s.individualid';
 
 
