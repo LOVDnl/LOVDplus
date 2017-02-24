@@ -35,6 +35,11 @@ if (!defined('ROOT_PATH')) {
 
 class LOVD_ObservationCounts
 {
+    // Wrap all the logic related to generating observation counts here
+    // It includes:
+    // - How the SQL query is constructed to get the data for each cateogory.
+    // - Whether observation counts data can be updated depending on status of the screening and role of the user.
+
     protected $aData = array();
     protected $aIndividual = array();
     protected $nVariantId = null;
@@ -46,25 +51,28 @@ class LOVD_ObservationCounts
 
     public static $TYPE_GENEPANEL = 'genepanel';
     public static $TYPE_GENERAL = 'general';
-    public static $EMPTY_DATA_DISPLAY = '-';
+    public static $EMPTY_DATA_DISPLAY = '-'; // How we want to show that a category does not have sufficient data to generate observation counts.
     protected static $DEFAULT_MIN_POP_SIZE = 100;
 
-    function __construct ($nVariantId) {
-
+    function __construct ($nVariantId)
+    {
         $this->nVariantId = $nVariantId;
         $this->aIndividual = $this->initIndividualData();
         $this->loadExistingData();
     }
 
-    public function getData () {
+    public function getData ()
+    {
         return $this->aData;
     }
 
-    public function getTimeGenerated () {
+    public function getTimeGenerated ()
+    {
         return $this->nTimeGenerated;
     }
 
-    public function getCurrentPopulationSize() {
+    public function getCurrentPopulationSize ()
+    {
         // Retrieve the total number of individuals in the database NOW.
 
         global $_DB;
@@ -78,7 +86,8 @@ class LOVD_ObservationCounts
         return $this->nCurrentPopulationSize;
     }
 
-    public function getDataPopulationSize() {
+    public function getDataPopulationSize ()
+    {
         // Retrieve the total number of individuals at the time the loaded data was generated.
 
         if (isset($this->aData['population_size'])) {
@@ -88,11 +97,15 @@ class LOVD_ObservationCounts
         return null;
     }
 
-    public function getVogDBID() {
+    public function getVogDBID ()
+    {
+        // Returns the DBID of the variant we are generating the observation counts for.
+
         return (empty($this->aIndividual['VariantOnGenome/DBID'])? '' : $this->aIndividual['VariantOnGenome/DBID']);
     }
 
-    protected function loadExistingData () {
+    protected function loadExistingData ()
+    {
         // Retrieve data that was previously stored in the database as json.
         
         global $_DB;
@@ -111,7 +124,8 @@ class LOVD_ObservationCounts
         return $this->aData;
     }
 
-    public function buildData ($aSettings = array()) {
+    public function buildData ($aSettings = array())
+    {
         // Generate observation counts data and store it in the database in json format.
 
         global $_DB;
@@ -169,7 +183,8 @@ class LOVD_ObservationCounts
 
     }
 
-    public function canUpdateData() {
+    public function canUpdateData ()
+    {
         // Check if this user can update/generate new observation counts data depending on:
         // - Their roles.
         // - The current status of the analysis.
@@ -197,7 +212,8 @@ class LOVD_ObservationCounts
         return false;
     }
 
-    protected function generateData ($aRules, $sType) {
+    protected function generateData ($aRules, $sType)
+    {
         // Given the configuration of a category, construct an array of data for that category.
         // No data is saved into the database here.
 
@@ -262,7 +278,8 @@ class LOVD_ObservationCounts
         return $aData;
     }
 
-    protected function validateCategories ($sType, $aSettings) {
+    protected function validateCategories ($sType, $aSettings)
+    {
         // Check if the categories specified in $aSettings is a valid category.
         // We then  load the configuration for all the valid categories into $this->aCategories.
 
@@ -419,7 +436,8 @@ class LOVD_ObservationCounts
         return $this->aCategories;
     }
 
-    protected function validateColumns ($sType, $aSettings = array()) {
+    protected function validateColumns ($sType, $aSettings = array())
+    {
         // Validate if the columns in $aSettings are valid.
         // We then populate the valid columns into $this->aColumns.
 
@@ -470,7 +488,8 @@ class LOVD_ObservationCounts
         return $this->aColumns;
     }
 
-    protected function initIndividualData () {
+    protected function initIndividualData ()
+    {
         // Retrieve information about this individual who has this variant ID $this->nVariantId.
 
         global $_DB;
@@ -493,7 +512,8 @@ class LOVD_ObservationCounts
         return $this->aIndividual;
     }
 
-    protected static function getQueryFor ($sColumn, $sCondition = '', $aParams = array()) {
+    protected static function getQueryFor ($sColumn, $sCondition = '', $aParams = array())
+    {
         // Generate a string of SQL query for different columns of a category.
         // Each observation count category requires a different SQL WHERE query which is passed by $sCondition.
 
