@@ -255,7 +255,7 @@ if (!ACTION && (empty($_PE[1]) || preg_match('/^chr[0-9A-Z]{1,2}$/', $_PE[1]))) 
 
 if (PATH_COUNT == 3 && $_PE[1] == 'DBID' && preg_match('/^chr/', $_PE[2]) && !ACTION) {
     // URL: /variants/DBID/chr_00001
-    // View all genomic variant entries with the same DBID
+    // View all genomic variant entries with the same DBID.
     $sDbId = $_PE[2];
     define('PAGE_TITLE', 'View genomic variants');
     $_T->printHeader();
@@ -542,7 +542,7 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && !ACTION) {
     lovd_showJGNavigation($aNavigation, 'Variants');
 
     if (!empty($_INSTANCE_CONFIG['observation_counts'])) {
-        // RIGHT COLUMN on the curation page
+        // RIGHT COLUMN on the variant view entry.
         print('
             </TD>
               <TD valign="top" id="obscount_viewlist" style="padding-left: 10px;">' . "\n");
