@@ -57,7 +57,7 @@ class LOVD_ObservationCounts
     function __construct ($nVariantId)
     {
         $this->nVariantId = $nVariantId;
-        $this->aIndividual = $this->initIndividualData();
+        $this->initIndividualData();
         $this->loadExistingData();
     }
 
@@ -110,18 +110,17 @@ class LOVD_ObservationCounts
         
         global $_DB;
 
-        $sSQL = 'SELECT obscount_json, obscount_updated FROM ' . TABLE_VARIANTS . ' WHERE id = "' . $this->nVariantId . '"';
+        $sSQL = 'SELECT obscount_json FROM ' . TABLE_VARIANTS . ' WHERE id = "' . $this->nVariantId . '"';
         $zResult = $_DB->query($sSQL)->fetchAssoc();
-
-        if (!empty($zResult['obscount_json'])) {
-            $this->aData = json_decode($zResult['obscount_json'], true);
-        }
-
-        if (!empty($zResult['obscount_updated'])) {
-            $this->nTimeGenerated = strtotime($zResult['obscount_updated']);
-        }
+        $this->refreshObject(json_decode($zResult['obscount_json'], true));
 
         return $this->aData;
+    }
+
+    protected function refreshObject($aData)
+    {
+        $this->aData = $aData;
+        $this->nTimeGenerated = $aData['updated'];
     }
 
     public function buildData ($aSettings = array())
@@ -172,13 +171,15 @@ class LOVD_ObservationCounts
         }
 
         // Save the built data into the database so that we can reuse next time as well as keeping history
+        $aData['updated'] = time();
         $sObscountJson = json_encode($aData);
-        $sSQL = "UPDATE " . TABLE_VARIANTS . " SET obscount_json = ?, obscount_updated = NOW() WHERE id = ?";
+
+        $sSQL = "UPDATE " . TABLE_VARIANTS . " SET obscount_json = ? WHERE id = ?";
         $_DB->query($sSQL, array($sObscountJson, $this->nVariantId));
 
         lovd_writeLog('Event', LOG_EVENT, 'Created Observation Counts for variant #' . $this->nVariantId . '. JSON DATA: ' . $sObscountJson);
 
-        $this->aData = $this->loadExistingData();
+        $this->refreshObject($aData);
         return $this->aData;
 
     }

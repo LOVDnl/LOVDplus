@@ -356,7 +356,6 @@ $aTableSQL =
     curation_statusid TINYINT(2) UNSIGNED NULL,
     confirmation_statusid TINYINT(1) UNSIGNED NULL,
     obscount_json TEXT NULL,
-    obscount_updated DATETIME NULL DEFAULT NULL,
     created_by SMALLINT(5) UNSIGNED ZEROFILL,
     created_date DATETIME NOT NULL,
     edited_by SMALLINT(5) UNSIGNED ZEROFILL,
