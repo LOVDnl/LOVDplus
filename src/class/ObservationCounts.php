@@ -173,8 +173,8 @@ class LOVD_ObservationCounts
 
         // Save the built data into the database so that we can reuse next time as well as keeping history
         $sObscountJson = json_encode($aData);
-        $sSQL = "UPDATE " . TABLE_VARIANTS . " SET obscount_json = '$sObscountJson', obscount_updated = NOW() WHERE id = ?";
-        $_DB->query($sSQL, array($this->nVariantId));
+        $sSQL = "UPDATE " . TABLE_VARIANTS . " SET obscount_json = ?, obscount_updated = NOW() WHERE id = ?";
+        $_DB->query($sSQL, array($sObscountJson, $this->nVariantId));
 
         lovd_writeLog('Event', LOG_EVENT, 'Created Observation Counts for variant #' . $this->nVariantId . '. JSON DATA: ' . $sObscountJson);
 
