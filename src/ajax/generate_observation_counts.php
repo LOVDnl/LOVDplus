@@ -45,7 +45,7 @@ if (!lovd_isAuthorized('variant', $nID)) {
     exit;
 }
 
-require_once ROOT_PATH . 'class/ObservationCounts.php';
+require_once ROOT_PATH . 'class/observation_counts.php';
 $aSettings = (!empty($_INSTANCE_CONFIG['observation_counts'])? $_INSTANCE_CONFIG['observation_counts'] : array());
 $zObsCount = new LOVD_ObservationCounts($nID);
 $aData = $zObsCount->buildData($aSettings);

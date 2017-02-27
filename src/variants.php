@@ -546,7 +546,7 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && !ACTION) {
         print('
             </TD>
               <TD valign="top" id="obscount_viewlist" style="padding-left: 10px;">' . "\n");
-        require_once ROOT_PATH . 'class/ObservationCounts.php';
+        require_once ROOT_PATH . 'class/observation_counts.php';
         $aSettings = (!empty($_INSTANCE_CONFIG['observation_counts'])? $_INSTANCE_CONFIG['observation_counts'] : array());
         $zObsCount = new LOVD_ObservationCounts($nID);
         $aData = $zObsCount->getData();
