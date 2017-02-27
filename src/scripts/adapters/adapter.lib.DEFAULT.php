@@ -24,7 +24,7 @@ class LOVD_DefaultDataConverter {
         $this->aScriptVars = array();
 
         print("> Running " . static::$sAdapterName . " adapter\n");
-        $cmd = 'php '. $this->sAdapterPath .'/conversion_adapter.' . static::$sAdapterName .'.php';
+        $cmd = 'php '. $this->sAdapterPath .'/adapter.' . static::$sAdapterName .'.php';
         passthru($cmd, $adapterResult);
         if ($adapterResult !== 0){
             die('Adapter Failed');

@@ -1,6 +1,6 @@
 <?php
 
-require_once dirname(__FILE__) . '/conversion_adapter.lib.DEFAULT.php';
+require_once dirname(__FILE__) . '/adapter.lib.DEFAULT.php';
 
 $_INSTANCE_CONFIG = array();
 

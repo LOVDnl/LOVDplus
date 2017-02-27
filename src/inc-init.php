@@ -472,8 +472,8 @@ $sInstanceName = 'DEFAULT';
 if (!empty($_INI['instance']['name'])) {
     $sInstanceName = strtoupper($_INI['instance']['name']);
 }
-if (file_exists(ROOT_PATH . 'scripts/adapters/conversion_adapter.lib.' . $sInstanceName . '.php')) {
-    require_once ROOT_PATH . 'scripts/adapters/conversion_adapter.lib.' . $sInstanceName . '.php';
+if (file_exists(ROOT_PATH . 'scripts/adapters/adapter.lib.' . $sInstanceName . '.php')) {
+    require_once ROOT_PATH . 'scripts/adapters/adapter.lib.' . $sInstanceName . '.php';
 }
 $_ADAPTER = lovd_initAdapter();
 

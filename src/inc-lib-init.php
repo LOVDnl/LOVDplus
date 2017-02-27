@@ -517,11 +517,11 @@ function lovd_initAdapter()
 
     // Even if instance name exists, still check if the actual adapter library file exists.
     // If adapter library file does not exist, we still use default adapter.
-    if (!empty($_INI['instance']['name']) && file_exists($sAdaptersDir . 'conversion_adapter.lib.'. strtoupper($_INI['instance']['name']) .'.php')) {
+    if (!empty($_INI['instance']['name']) && file_exists($sAdaptersDir . 'adapter.lib.'. strtoupper($_INI['instance']['name']) .'.php')) {
         $sAdapterName = strtoupper($_INI['instance']['name']);
     }
 
-    require_once $sAdaptersDir . 'conversion_adapter.lib.'. $sAdapterName .'.php';
+    require_once $sAdaptersDir . 'adapter.lib.'. $sAdapterName .'.php';
 
     // Camelcase the adapter name.
     $sClassPrefix = ucwords(strtolower(str_replace('_', ' ', $sAdapterName)));
