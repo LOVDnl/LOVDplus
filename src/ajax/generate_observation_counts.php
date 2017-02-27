@@ -31,8 +31,8 @@
 define('ROOT_PATH', '../');
 require ROOT_PATH . 'inc-init.php';
 
-if (!empty($_POST['nVariantId'])) {
-    $nID = $_POST['nVariantId'];
+if (!empty($_POST['nVariantID'])) {
+    $nID = $_POST['nVariantID'];
 } else {
     $aResults = array('error' => 'Failed to upload Observation Counts data');
     print(json_encode($aResults));

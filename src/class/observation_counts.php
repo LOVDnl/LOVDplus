@@ -42,7 +42,7 @@ class LOVD_ObservationCounts
 
     protected $aData = array();
     protected $aIndividual = array();
-    protected $nVariantId = null;
+    protected $nVariantID = null;
     protected $nTimeGenerated = null;
     protected $nCurrentPopulationSize = null;
 
@@ -54,9 +54,9 @@ class LOVD_ObservationCounts
     public static $EMPTY_DATA_DISPLAY = '-'; // How we want to show that a category does not have sufficient data to generate observation counts.
     protected static $DEFAULT_MIN_POP_SIZE = 100;
 
-    function __construct ($nVariantId)
+    function __construct ($nVariantID)
     {
-        $this->nVariantId = $nVariantId;
+        $this->nVariantID = $nVariantID;
         $this->initIndividualData();
         $this->loadExistingData();
     }
@@ -118,9 +118,9 @@ class LOVD_ObservationCounts
         $sObscountJson = json_encode($aData);
 
         $sSQL = "UPDATE " . TABLE_VARIANTS . " SET obscount_json = ? WHERE id = ?";
-        $_DB->query($sSQL, array($sObscountJson, $this->nVariantId));
+        $_DB->query($sSQL, array($sObscountJson, $this->nVariantID));
 
-        lovd_writeLog('Event', LOG_EVENT, 'Created Observation Counts for variant #' . $this->nVariantId . '. JSON DATA: ' . $sObscountJson);
+        lovd_writeLog('Event', LOG_EVENT, 'Created Observation Counts for variant #' . $this->nVariantID . '. JSON DATA: ' . $sObscountJson);
 
         $this->refreshObject($aData);
         return $this->aData;
@@ -143,7 +143,7 @@ class LOVD_ObservationCounts
         $sSQL = 'SELECT s.analysis_statusid
                  FROM ' . TABLE_SCREENINGS . ' AS s
                  INNER JOIN ' . TABLE_SCR2VAR . ' AS s2v 
-                 ON (s.id = s2v.screeningid AND s2v.variantid = ' . $this->nVariantId . ')';
+                 ON (s.id = s2v.screeningid AND s2v.variantid = ' . $this->nVariantID . ')';
 
         $aResult = $_DB->query($sSQL)->fetchAssoc();
 
@@ -361,7 +361,7 @@ class LOVD_ObservationCounts
 
     protected function initIndividualData ()
     {
-        // Retrieve information about this individual who has this variant ID $this->nVariantId.
+        // Retrieve information about this individual who has this variant ID $this->nVariantID.
 
         global $_DB;
 
@@ -370,7 +370,7 @@ class LOVD_ObservationCounts
                  GROUP_CONCAT(DISTINCT i2gp.genepanelid ORDER BY i2gp.genepanelid SEPARATOR ",") AS genepanel_ids, 
                  GROUP_CONCAT(DISTINCT gp.name ORDER BY i2gp.genepanelid SEPARATOR ",") AS genepanel_names 
                  FROM ' . TABLE_VARIANTS . ' AS vog 
-                 INNER JOIN ' . TABLE_SCR2VAR . ' AS s2v ON (vog.id = s2v.variantid AND vog.id = "' . $this->nVariantId . '") 
+                 INNER JOIN ' . TABLE_SCR2VAR . ' AS s2v ON (vog.id = s2v.variantid AND vog.id = "' . $this->nVariantID . '") 
                  INNER JOIN ' . TABLE_SCREENINGS . ' AS s ON (s.id = s2v.screeningid) 
                  INNER JOIN ' . TABLE_INDIVIDUALS . ' AS i ON (s.individualid = i.id) 
                  LEFT JOIN ' . TABLE_IND2GP . ' AS i2gp ON (i.id = i2gp.individualid) 
@@ -394,7 +394,7 @@ class LOVD_ObservationCounts
 
         global $_DB;
 
-        $sSQL = 'SELECT obscount_json FROM ' . TABLE_VARIANTS . ' WHERE id = "' . $this->nVariantId . '"';
+        $sSQL = 'SELECT obscount_json FROM ' . TABLE_VARIANTS . ' WHERE id = "' . $this->nVariantID . '"';
         $zResult = $_DB->query($sSQL)->fetchAssoc();
         $this->refreshObject(json_decode($zResult['obscount_json'], true));
 

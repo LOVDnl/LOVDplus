@@ -587,7 +587,7 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && !ACTION) {
             lovd_load_obscount_table(<?php echo json_encode($aData)?>);
         });
 
-        function lovd_generate_obscount(nVariantId) {
+        function lovd_generate_obscount(nVariantID) {
             $('#obscount-header-genepanel').hide();
             $('#obscount-data-genepanel').hide();
             $('#obscount-header-general').hide();
@@ -596,7 +596,7 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && !ACTION) {
             $('#obscount-refresh').hide();
             $('#obscount-feedback').show();
             var url = 'ajax/generate_observation_counts.php';
-            var data = { "nVariantId" : nVariantId };
+            var data = { "nVariantID" : nVariantID };
 
             $.post(url, data, function(data) {
                 $('#obscount-loading').hide();
