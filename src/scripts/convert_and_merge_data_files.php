@@ -112,9 +112,6 @@ if (empty($_INI['import']['max_annotation_error_allowed'])) {
 
 // This script will be called from localhost by a cron job.
 
-// Call adapter script to apply any instance specific re-formatting.
-$zAdapter = lovd_initAdapter();
-
 
 // Define the array of suffixes for the files names expected.
 $aSuffixes = array(
@@ -127,17 +124,17 @@ $aSuffixes = array(
 
 // Define list of genes to ignore, because they can't be found by the HGNC.
 // LOC* genes are always ignored, because they never work (HGNC doesn't know them).
-$aGenesToIgnore = $zAdapter->prepareGenesToIgnore();
+$aGenesToIgnore = $_ADAPTER->prepareGenesToIgnore();
 
 
 // Define list of gene aliases. Genes not mentioned in here, are searched for in the database. If not found,
 // HGNC will be queried and gene will be added. If the symbols don't match, we'll get a duplicate key error.
 // Insert those genes here.
-$aGeneAliases = $zAdapter->prepareGeneAliases();
+$aGeneAliases = $_ADAPTER->prepareGeneAliases();
 
 
 // Define list of columns that we are recognizing.
-$aColumnMappings = $zAdapter->prepareMappings();
+$aColumnMappings = $_ADAPTER->prepareMappings();
 
 
 // These columns will be taken out of $aVariant and stored as the VOG data.
@@ -194,38 +191,6 @@ $nMutalyzerRetries = 5; // The number of times we retry the Mutalyzer API call i
 $nFilesBeingMerged = 0; // We're counting how many files are being merged at the time, because we don't want to stress the system too much.
 $nMaxFilesBeingMerged = 5; // We're allowing only five processes working concurrently on merging files (or so many failed attempts that have not been cleaned up).
 $aFiles = array(); // array(ID => array(files), ...);
-
-
-
-
-
-function lovd_initAdapter()
-{
-
-    // Run adapter script to convert input file formats.
-
-    global $_INI;
-
-    $sAdaptersDir = ROOT_PATH . 'scripts/adapters/';
-    $sAdapterName = 'DEFAULT';
-
-    // Even if instance name exists, still check if the actual adapter library file exists.
-    // If adapter library file does not exist, we still use default adapter.
-    if (!empty($_INI['instance']['name']) && file_exists($sAdaptersDir . 'conversion_adapter.lib.'. strtoupper($_INI['instance']['name']) .'.php')) {
-        $sAdapterName = strtoupper($_INI['instance']['name']);
-    }
-
-    require_once $sAdaptersDir . 'conversion_adapter.lib.'. $sAdapterName .'.php';
-
-    // Camelcase the adapter name.
-    $sClassPrefix = ucwords(strtolower(str_replace('_', ' ', $sAdapterName)));
-    $sClassPrefix = str_replace(' ', '', $sClassPrefix);
-    $sClassName = 'LOVD_' . $sClassPrefix . 'DataConverter';
-
-    $zAdapter = new $sClassName($sAdaptersDir);
-
-    return $zAdapter;
-}
 
 
 
@@ -402,7 +367,7 @@ function lovd_getVariantPosition ($sVariant, $aTranscript = array())
 
 
 
-$zAdapter->convertInputFiles();
+$_ADAPTER->convertInputFiles();
 
 // Loop through the files in the dir and try and find a meta and data file, that match but have no total data file.
 $h = opendir($_INI['paths']['data_files']);
@@ -416,7 +381,7 @@ while (($sFile = readdir($h)) !== false) {
     }
 
 
-    if (preg_match('/^'. $zAdapter->getInputFilePrefixPattern() .'\.(' . implode('|', array_map('preg_quote', array_values($aSuffixes))) . ')$/', $sFile, $aRegs)) {
+    if (preg_match('/^'. $_ADAPTER->getInputFilePrefixPattern() .'\.(' . implode('|', array_map('preg_quote', array_values($aSuffixes))) . ')$/', $sFile, $aRegs)) {
         // Files we need to merge.
         list(, $sID, $sFileType) = $aRegs;
         if (!isset($aFiles[$sID])) {
@@ -508,7 +473,7 @@ foreach ($aFiles as $sID) {
 
     $sHeaders = fgets($fInput);
     $aHeaders = explode("\t", rtrim($sHeaders, "\r\n"));
-    foreach ($zAdapter->getRequiredHeaderColumns() as $sColumn) {
+    foreach ($_ADAPTER->getRequiredHeaderColumns() as $sColumn) {
         if (!in_array($sColumn, $aHeaders, true)) {
             print('Ignoring file, does not conform to format: ' . $sFileToConvert . ".\n");
             continue 2; // Continue the $aFiles loop.
@@ -551,8 +516,8 @@ foreach ($aFiles as $sID) {
     $nMiracleID = 0;
 
 
-    $zAdapter->readMetadata($aMetaData);
-    $nScreeningID = $zAdapter->prepareScreeningID($aMetaData);
+    $_ADAPTER->readMetadata($aMetaData);
+    $nScreeningID = $_ADAPTER->prepareScreeningID($aMetaData);
     if (empty($nScreeningID)) {
         foreach ($aMetaData as $nLine => $sLine) {
             if (!trim($sLine)) {
@@ -617,7 +582,7 @@ foreach ($aFiles as $sID) {
         }
     }
 
-    $zAdapter->setScriptVars(compact('nScreeningID', 'nMiracleID'));
+    $_ADAPTER->setScriptVars(compact('nScreeningID', 'nMiracleID'));
     $nScreeningID = sprintf('%010d', $nScreeningID);
     print('Isolated Screening ID: ' . $nScreeningID . "...\n");
     flush();
@@ -630,7 +595,7 @@ foreach ($aFiles as $sID) {
     // It's usually a big file, and we don't want to use too much memory... so using fgets().
     // First line should be headers, we already read it out somewhere above here.
     // $aHeaders = array_map('trim', $aHeaders, array_fill(0, count($aHeaders), '"')); // In case we ever need to trim off quotes.
-    $aHeaders = $zAdapter->prepareHeaders($aHeaders);
+    $aHeaders = $_ADAPTER->prepareHeaders($aHeaders);
     $nHeaders = count($aHeaders);
 
 
@@ -670,7 +635,7 @@ foreach ($aFiles as $sID) {
         }
     }
 
-    $zAdapter->setScriptVars(compact('aGenes', 'aTranscripts'));
+    $_ADAPTER->setScriptVars(compact('aGenes', 'aTranscripts'));
     while ($sLine = fgets($fInput)) {
         $nLine ++;
         $bDropTranscriptData = false;
@@ -698,7 +663,7 @@ foreach ($aFiles as $sID) {
         }
 
         // Reformat variant data if extra modification required by different instance of LOVD.
-        $aLine = $zAdapter->prepareVariantData($aLine);
+        $aLine = $_ADAPTER->prepareVariantData($aLine);
 
         // Map VEP columns to LOVD columns.
         foreach ($aColumnMappings as $sVEPColumn => $sLOVDColumn) {
@@ -710,7 +675,7 @@ foreach ($aFiles as $sID) {
             }
             
             if (empty($aLine[$sVEPColumn]) || $aLine[$sVEPColumn] == 'unknown' || $aLine[$sVEPColumn] == '.') {
-                $aVariant = $zAdapter->formatEmptyColumn($aLine, $sVEPColumn, $sLOVDColumn, $aVariant);
+                $aVariant = $_ADAPTER->formatEmptyColumn($aLine, $sVEPColumn, $sLOVDColumn, $aVariant);
             } else {
                 $aVariant[$sLOVDColumn] = $aLine[$sVEPColumn];
             }
@@ -958,7 +923,7 @@ print('No available transcripts for gene ' . $aGenes[$aVariant['symbol']]['id'] 
         }
 
         // Now check, if we managed to get the transcript ID. If not, then we'll have to continue without it.
-        if ($zAdapter->ignoreTranscript($aVariant['transcriptid']) || !isset($aTranscripts[$aVariant['transcriptid']]) || !$aTranscripts[$aVariant['transcriptid']]) {
+        if ($_ADAPTER->ignoreTranscript($aVariant['transcriptid']) || !isset($aTranscripts[$aVariant['transcriptid']]) || !$aTranscripts[$aVariant['transcriptid']]) {
             // When the transcript still doesn't exist, or it evaluates to false (we don't have it, we can't get it), then skip it.
             $aVariant['transcriptid'] = '';
         } else {
@@ -1266,7 +1231,7 @@ print('Mutalyzer returned EREF error, hg19/hg38 error?' . "\n");
             $aData[$sKey] = array($aVOG);
         }
 
-        $zAdapter->postValueAssignmentUpdate($sKey, $aVariant, $aData);
+        $_ADAPTER->postValueAssignmentUpdate($sKey, $aVariant, $aData);
 
         // Now, store VOT data. Because I had received test files with repeated lines, and allowing repeated lines will break import, also here we will check for the key.
         // Also check for a set transcriptid, because it can be empty (transcript could not be created).
