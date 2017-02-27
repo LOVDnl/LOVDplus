@@ -61,67 +61,9 @@ class LOVD_ObservationCounts
         $this->loadExistingData();
     }
 
-    public function getData ()
-    {
-        return $this->aData;
-    }
 
-    public function getTimeGenerated ()
-    {
-        return $this->nTimeGenerated;
-    }
 
-    public function getCurrentPopulationSize ()
-    {
-        // Retrieve the total number of individuals in the database NOW.
 
-        global $_DB;
-
-        if ($this->nCurrentPopulationSize === null) {
-            // Generate from database.
-            $sSQL = static::getQueryFor('population_size');
-            $this->nCurrentPopulationSize = $_DB->query($sSQL)->rowCount();
-        }
-
-        return $this->nCurrentPopulationSize;
-    }
-
-    public function getDataPopulationSize ()
-    {
-        // Retrieve the total number of individuals at the time the loaded data was generated.
-
-        if (isset($this->aData['population_size'])) {
-            return $this->aData['population_size'];
-        }
-
-        return null;
-    }
-
-    public function getVogDBID ()
-    {
-        // Returns the DBID of the variant we are generating the observation counts for.
-
-        return (empty($this->aIndividual['VariantOnGenome/DBID'])? '' : $this->aIndividual['VariantOnGenome/DBID']);
-    }
-
-    protected function loadExistingData ()
-    {
-        // Retrieve data that was previously stored in the database as json.
-        
-        global $_DB;
-
-        $sSQL = 'SELECT obscount_json FROM ' . TABLE_VARIANTS . ' WHERE id = "' . $this->nVariantId . '"';
-        $zResult = $_DB->query($sSQL)->fetchAssoc();
-        $this->refreshObject(json_decode($zResult['obscount_json'], true));
-
-        return $this->aData;
-    }
-
-    protected function refreshObject($aData)
-    {
-        $this->aData = $aData;
-        $this->nTimeGenerated = $aData['updated'];
-    }
 
     public function buildData ($aSettings = array())
     {
@@ -185,6 +127,11 @@ class LOVD_ObservationCounts
 
     }
 
+
+
+
+
+
     public function canUpdateData ()
     {
         // Check if this user can update/generate new observation counts data depending on:
@@ -213,6 +160,11 @@ class LOVD_ObservationCounts
         // Every other analysis status (including CLOSED) cannot update observation count data.
         return false;
     }
+
+
+
+
+
 
     protected function generateData ($aRules, $sType)
     {
@@ -279,6 +231,186 @@ class LOVD_ObservationCounts
 
         return $aData;
     }
+
+
+
+
+
+
+    public function getCurrentPopulationSize ()
+    {
+        // Retrieve the total number of individuals in the database NOW.
+
+        global $_DB;
+
+        if ($this->nCurrentPopulationSize === null) {
+            // Generate from database.
+            $sSQL = static::getQueryFor('population_size');
+            $this->nCurrentPopulationSize = $_DB->query($sSQL)->rowCount();
+        }
+
+        return $this->nCurrentPopulationSize;
+    }
+
+
+
+
+
+
+    public function getData ()
+    {
+        return $this->aData;
+    }
+
+
+
+
+
+
+    public function getDataPopulationSize ()
+    {
+        // Retrieve the total number of individuals at the time the loaded data was generated.
+
+        if (isset($this->aData['population_size'])) {
+            return $this->aData['population_size'];
+        }
+
+        return null;
+    }
+
+
+
+
+
+
+    public function getTimeGenerated ()
+    {
+        return $this->nTimeGenerated;
+    }
+
+
+
+
+
+    protected static function getQueryFor ($sColumn, $sCondition = '', $aParams = array())
+    {
+        // Generate a string of SQL query for different columns of a category.
+        // Each observation count category requires a different SQL WHERE query which is passed by $sCondition.
+
+        switch ($sColumn) {
+            case 'total_individuals':
+                return 'SELECT COUNT(s.individualid) AS total
+                        FROM ' . TABLE_INDIVIDUALS . ' i 
+                        INNER JOIN ' . TABLE_SCREENINGS . ' s ON (s.individualid = i.id)
+                        LEFT JOIN ' . TABLE_IND2GP . ' i2gp ON (i2gp.individualid = i.id) 
+                        WHERE ' . $sCondition . ' 
+                        GROUP BY s.individualid';
+
+            case 'num_affected':
+                return 'SELECT COUNT(s.individualid) AS total_affected
+                        FROM ' . TABLE_INDIVIDUALS . ' i 
+                        INNER JOIN ' . TABLE_SCREENINGS . ' s ON (s.individualid = i.id AND i.`Individual/Affected` = "Affected")
+                        LEFT JOIN ' . TABLE_IND2GP . ' i2gp ON (i2gp.individualid = i.id) 
+                        WHERE ' . $sCondition . ' 
+                        GROUP BY s.individualid';
+
+            case 'num_not_affected':
+                return 'SELECT COUNT(s.individualid) AS total_not_affected
+                        FROM ' . TABLE_INDIVIDUALS . ' i 
+                        INNER JOIN ' . TABLE_SCREENINGS . ' s ON (s.individualid = i.id AND i.`Individual/Affected` = "Not Affected")
+                        LEFT JOIN ' . TABLE_IND2GP . ' i2gp ON (i2gp.individualid = i.id) 
+                        WHERE ' . $sCondition . ' 
+                        GROUP BY s.individualid';
+
+            case 'num_ind_with_variant' :
+                return 'SELECT COUNT(s.individualid) AS count_dbid, GROUP_CONCAT(DISTINCT TRIM(LEADING "0" FROM vog.id) SEPARATOR ";") as variant_ids
+                        FROM ' . TABLE_VARIANTS . ' AS vog 
+                        INNER JOIN ' . TABLE_SCR2VAR . ' AS s2v ON (vog.id = s2v.variantid AND vog.`VariantOnGenome/DBID` = "' . $aParams['dbid'] . '") 
+                        INNER JOIN ' . TABLE_SCREENINGS . ' AS s ON (s.id = s2v.screeningid) 
+                        INNER JOIN ' . TABLE_INDIVIDUALS . ' AS i ON (s.individualid = i.id) 
+                        LEFT JOIN ' . TABLE_IND2GP . ' i2gp ON (i2gp.individualid = i.id) 
+                        WHERE ' . $sCondition . ' 
+                        GROUP BY s.individualid';
+
+            case 'population_size':
+                return 'SELECT COUNT(s.individualid) AS population_size
+                        FROM ' . TABLE_SCREENINGS . ' AS s 
+                        INNER JOIN ' . TABLE_INDIVIDUALS . ' AS i ON (s.individualid = i.id)
+                        GROUP BY s.individualid';
+
+
+        }
+    }
+
+
+
+
+
+
+    public function getVogDBID ()
+    {
+        // Returns the DBID of the variant we are generating the observation counts for.
+
+        return (empty($this->aIndividual['VariantOnGenome/DBID'])? '' : $this->aIndividual['VariantOnGenome/DBID']);
+    }
+
+
+
+
+
+
+    protected function initIndividualData ()
+    {
+        // Retrieve information about this individual who has this variant ID $this->nVariantId.
+
+        global $_DB;
+
+        // Query data related to this individual.
+        $sSQL = 'SELECT i.*, s.*, vog.*, 
+                 GROUP_CONCAT(DISTINCT i2gp.genepanelid ORDER BY i2gp.genepanelid SEPARATOR ",") AS genepanel_ids, 
+                 GROUP_CONCAT(DISTINCT gp.name ORDER BY i2gp.genepanelid SEPARATOR ",") AS genepanel_names 
+                 FROM ' . TABLE_VARIANTS . ' AS vog 
+                 INNER JOIN ' . TABLE_SCR2VAR . ' AS s2v ON (vog.id = s2v.variantid AND vog.id = "' . $this->nVariantId . '") 
+                 INNER JOIN ' . TABLE_SCREENINGS . ' AS s ON (s.id = s2v.screeningid) 
+                 INNER JOIN ' . TABLE_INDIVIDUALS . ' AS i ON (s.individualid = i.id) 
+                 LEFT JOIN ' . TABLE_IND2GP . ' AS i2gp ON (i.id = i2gp.individualid) 
+                 LEFT JOIN ' . TABLE_GENE_PANELS . ' AS gp ON (i2gp.genepanelid = gp.id)
+                 WHERE gp.type IS NULL OR gp.type != "blacklist"
+                 GROUP BY i.id';
+
+        $this->aIndividual = $_DB->query($sSQL)->fetchAssoc();
+
+        return $this->aIndividual;
+    }
+
+
+
+
+
+
+    protected function loadExistingData ()
+    {
+        // Retrieve data that was previously stored in the database as json.
+
+        global $_DB;
+
+        $sSQL = 'SELECT obscount_json FROM ' . TABLE_VARIANTS . ' WHERE id = "' . $this->nVariantId . '"';
+        $zResult = $_DB->query($sSQL)->fetchAssoc();
+        $this->refreshObject(json_decode($zResult['obscount_json'], true));
+
+        return $this->aData;
+    }
+
+    protected function refreshObject($aData)
+    {
+        $this->aData = $aData;
+        $this->nTimeGenerated = $aData['updated'];
+    }
+
+
+
+
+
 
     protected function validateCategories ($sType, $aSettings)
     {
@@ -438,6 +570,11 @@ class LOVD_ObservationCounts
         return $this->aCategories;
     }
 
+
+
+
+
+
     protected function validateColumns ($sType, $aSettings = array())
     {
         // Validate if the columns in $aSettings are valid.
@@ -488,79 +625,5 @@ class LOVD_ObservationCounts
         }
 
         return $this->aColumns;
-    }
-
-    protected function initIndividualData ()
-    {
-        // Retrieve information about this individual who has this variant ID $this->nVariantId.
-
-        global $_DB;
-
-        // Query data related to this individual.
-        $sSQL = 'SELECT i.*, s.*, vog.*, 
-                 GROUP_CONCAT(DISTINCT i2gp.genepanelid ORDER BY i2gp.genepanelid SEPARATOR ",") AS genepanel_ids, 
-                 GROUP_CONCAT(DISTINCT gp.name ORDER BY i2gp.genepanelid SEPARATOR ",") AS genepanel_names 
-                 FROM ' . TABLE_VARIANTS . ' AS vog 
-                 INNER JOIN ' . TABLE_SCR2VAR . ' AS s2v ON (vog.id = s2v.variantid AND vog.id = "' . $this->nVariantId . '") 
-                 INNER JOIN ' . TABLE_SCREENINGS . ' AS s ON (s.id = s2v.screeningid) 
-                 INNER JOIN ' . TABLE_INDIVIDUALS . ' AS i ON (s.individualid = i.id) 
-                 LEFT JOIN ' . TABLE_IND2GP . ' AS i2gp ON (i.id = i2gp.individualid) 
-                 LEFT JOIN ' . TABLE_GENE_PANELS . ' AS gp ON (i2gp.genepanelid = gp.id)
-                 WHERE gp.type IS NULL OR gp.type != "blacklist"
-                 GROUP BY i.id';
-
-        $this->aIndividual = $_DB->query($sSQL)->fetchAssoc();
-
-        return $this->aIndividual;
-    }
-
-    protected static function getQueryFor ($sColumn, $sCondition = '', $aParams = array())
-    {
-        // Generate a string of SQL query for different columns of a category.
-        // Each observation count category requires a different SQL WHERE query which is passed by $sCondition.
-
-        switch ($sColumn) {
-            case 'total_individuals':
-                return 'SELECT COUNT(s.individualid) AS total
-                        FROM ' . TABLE_INDIVIDUALS . ' i 
-                        INNER JOIN ' . TABLE_SCREENINGS . ' s ON (s.individualid = i.id)
-                        LEFT JOIN ' . TABLE_IND2GP . ' i2gp ON (i2gp.individualid = i.id) 
-                        WHERE ' . $sCondition . ' 
-                        GROUP BY s.individualid';
-
-            case 'num_affected':
-                return 'SELECT COUNT(s.individualid) AS total_affected
-                        FROM ' . TABLE_INDIVIDUALS . ' i 
-                        INNER JOIN ' . TABLE_SCREENINGS . ' s ON (s.individualid = i.id AND i.`Individual/Affected` = "Affected")
-                        LEFT JOIN ' . TABLE_IND2GP . ' i2gp ON (i2gp.individualid = i.id) 
-                        WHERE ' . $sCondition . ' 
-                        GROUP BY s.individualid';
-
-            case 'num_not_affected':
-                return 'SELECT COUNT(s.individualid) AS total_not_affected
-                        FROM ' . TABLE_INDIVIDUALS . ' i 
-                        INNER JOIN ' . TABLE_SCREENINGS . ' s ON (s.individualid = i.id AND i.`Individual/Affected` = "Not Affected")
-                        LEFT JOIN ' . TABLE_IND2GP . ' i2gp ON (i2gp.individualid = i.id) 
-                        WHERE ' . $sCondition . ' 
-                        GROUP BY s.individualid';
-
-            case 'num_ind_with_variant' :
-                return 'SELECT COUNT(s.individualid) AS count_dbid, GROUP_CONCAT(DISTINCT TRIM(LEADING "0" FROM vog.id) SEPARATOR ";") as variant_ids
-                        FROM ' . TABLE_VARIANTS . ' AS vog 
-                        INNER JOIN ' . TABLE_SCR2VAR . ' AS s2v ON (vog.id = s2v.variantid AND vog.`VariantOnGenome/DBID` = "' . $aParams['dbid'] . '") 
-                        INNER JOIN ' . TABLE_SCREENINGS . ' AS s ON (s.id = s2v.screeningid) 
-                        INNER JOIN ' . TABLE_INDIVIDUALS . ' AS i ON (s.individualid = i.id) 
-                        LEFT JOIN ' . TABLE_IND2GP . ' i2gp ON (i2gp.individualid = i.id) 
-                        WHERE ' . $sCondition . ' 
-                        GROUP BY s.individualid';
-
-            case 'population_size':
-                return 'SELECT COUNT(s.individualid) AS population_size
-                        FROM ' . TABLE_SCREENINGS . ' AS s 
-                        INNER JOIN ' . TABLE_INDIVIDUALS . ' AS i ON (s.individualid = i.id)
-                        GROUP BY s.individualid';
-
-
-        }
     }
 }
