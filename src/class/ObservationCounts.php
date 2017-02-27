@@ -298,51 +298,51 @@ class LOVD_ObservationCounts
                     'Individual/Gender' => array(
                         'label' => 'Gender',
                         'fields' => array('Individual/Gender'),
-                        'condition' => '`Individual/Gender` = "' . $this->aIndividual['Individual/Gender'] . '"',
+                        'condition' => 'i.`Individual/Gender` = "' . $this->aIndividual['Individual/Gender'] . '"',
                         'incomplete' => ($this->aIndividual['Individual/Gender'] === ''? true : false),
                         'threshold' => 2 // 2%
                     ),
                     'Individual/Origin/Ethnic' => array(
                         'label' => 'Ethnicity',
                         'fields' => array('Individual/Origin/Ethnic'),
-                        'condition' => '`Individual/Origin/Ethnic` = "' . $this->aIndividual['Individual/Origin/Ethnic'] . '"',
+                        'condition' => 'i.`Individual/Origin/Ethnic` = "' . $this->aIndividual['Individual/Origin/Ethnic'] . '"',
                         'incomplete' => ($this->aIndividual['Individual/Origin/Ethnic'] === ''? true : false),
                         'threshold' => 2 // 2%
                     ),
                     'Screening/Sample/Type' => array(
                         'label' => 'Sample Type',
                         'fields' => array('Screening/Sample/Type'),
-                        'condition' => '`Screening/Sample/Type` = "' . $this->aIndividual['Screening/Sample/Type'] . '"',
+                        'condition' => 's.`Screening/Sample/Type` = "' . $this->aIndividual['Screening/Sample/Type'] . '"',
                         'incomplete' => ($this->aIndividual['Screening/Sample/Type'] === ''? true : false),
                         'threshold' => 2 // 2%
                     ),
                     'Screening/Library_preparation' => array(
                         'label' => 'Capture Method',
                         'fields' => array('Screening/Library_preparation'),
-                        'condition' => '`Screening/Library_preparation` = "' . $this->aIndividual['Screening/Library_preparation'] . '"',
+                        'condition' => 's.`Screening/Library_preparation` = "' . $this->aIndividual['Screening/Library_preparation'] . '"',
                         'incomplete' => ($this->aIndividual['Screening/Library_preparation'] === ''? true : false),
                         'threshold' => 2 // 2%
                     ),
                     'Screening/Sequencing_software' => array(
                         'label' => 'Sequencing Technology',
                         'fields' => array('Screening/Sequencing_software'),
-                        'condition' => '`Screening/Sequencing_Software` = "' . $this->aIndividual['Screening/Sequencing_software'] . '"',
+                        'condition' => 's.`Screening/Sequencing_Software` = "' . $this->aIndividual['Screening/Sequencing_software'] . '"',
                         'incomplete' => ($this->aIndividual['Screening/Sequencing_software'] === ''? true : false),
                         'threshold' => 2 // 2%
                     ),
                     'Screening/Analysis_type' => array(
                         'label' => 'Analysis Pipeline',
                         'fields' => array('Screening/Analysis_type'),
-                        'condition' => '`Screening/Analysis_type` = "' . $this->aIndividual['Screening/Analysis_type'] . '"',
+                        'condition' => 's.`Screening/Analysis_type` = "' . $this->aIndividual['Screening/Analysis_type'] . '"',
                         'incomplete' => ($this->aIndividual['Screening/Analysis_type'] === ''? true : false),
                         'threshold' => 2 // 2%
                     ),
                     'Screening/Library_preparation&Screening/Sequencing_software' => array(
                         'label' => 'Same Capture Method and Sequencing Technology',
                         'fields' => array('Screening/Library_preparation', 'Screening/Sequencing_software'),
-                        'condition' => '`Screening/Library_preparation` = "' . $this->aIndividual['Screening/Library_preparation'] . '"'
+                        'condition' => 's.`Screening/Library_preparation` = "' . $this->aIndividual['Screening/Library_preparation'] . '"'
                             . ' AND '
-                            . '`Screening/Sequencing_Software` = "' . $this->aIndividual['Screening/Sequencing_software'] . '"',
+                            . 's.`Screening/Sequencing_Software` = "' . $this->aIndividual['Screening/Sequencing_software'] . '"',
                         'incomplete' => ($this->aIndividual['Screening/Library_preparation'] === ''
                                         || $this->aIndividual['Screening/Sequencing_software'] === ''? true : false),
                         'threshold' => 2 // 2%
@@ -350,11 +350,11 @@ class LOVD_ObservationCounts
                     'Screening/Library_preparation&Screening/Sequencing_software&Screening/Analysis_type' => array(
                         'label' => 'Same Capture Method, Sequencing Technology, and Analysis Pipeline',
                         'fields' => array('Screening/Library_preparation', 'Screening/Sequencing_software', 'Screening/Analysis_type'),
-                        'condition' => '`Screening/Library_preparation` = "' . $this->aIndividual['Screening/Library_preparation'] . '"'
+                        'condition' => 's.`Screening/Library_preparation` = "' . $this->aIndividual['Screening/Library_preparation'] . '"'
                             . ' AND '
-                            . '`Screening/Sequencing_Software` = "' . $this->aIndividual['Screening/Sequencing_software'] . '"'
+                            . 's.`Screening/Sequencing_Software` = "' . $this->aIndividual['Screening/Sequencing_software'] . '"'
                             . ' AND '
-                            . '`Screening/Analysis_type` = "' . $this->aIndividual['Screening/Analysis_type'] . '"',
+                            . 's.`Screening/Analysis_type` = "' . $this->aIndividual['Screening/Analysis_type'] . '"',
                         'incomplete' => ($this->aIndividual['Screening/Library_preparation'] === ''
                                         || $this->aIndividual['Screening/Sequencing_software'] === ''
                                         || $this->aIndividual['Screening/Analysis_type'] === ''? true : false),
@@ -531,7 +531,7 @@ class LOVD_ObservationCounts
             case 'num_affected':
                 return 'SELECT COUNT(s.individualid) AS total_affected
                         FROM ' . TABLE_INDIVIDUALS . ' i 
-                        INNER JOIN ' . TABLE_SCREENINGS . ' s ON (s.individualid = i.id AND i.`Individual/Affected` = "affected")
+                        INNER JOIN ' . TABLE_SCREENINGS . ' s ON (s.individualid = i.id AND i.`Individual/Affected` = "Affected")
                         LEFT JOIN ' . TABLE_IND2GP . ' i2gp ON (i2gp.individualid = i.id) 
                         WHERE ' . $sCondition . ' 
                         GROUP BY s.individualid';
@@ -539,7 +539,7 @@ class LOVD_ObservationCounts
             case 'num_not_affected':
                 return 'SELECT COUNT(s.individualid) AS total_not_affected
                         FROM ' . TABLE_INDIVIDUALS . ' i 
-                        INNER JOIN ' . TABLE_SCREENINGS . ' s ON (s.individualid = i.id AND i.`Individual/Affected` = "not affected")
+                        INNER JOIN ' . TABLE_SCREENINGS . ' s ON (s.individualid = i.id AND i.`Individual/Affected` = "Not Affected")
                         LEFT JOIN ' . TABLE_IND2GP . ' i2gp ON (i2gp.individualid = i.id) 
                         WHERE ' . $sCondition . ' 
                         GROUP BY s.individualid';
