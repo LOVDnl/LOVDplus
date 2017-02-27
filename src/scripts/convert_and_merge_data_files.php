@@ -54,12 +54,20 @@ ignore_user_abort(true);
 
 // Initialize curl connection.
 $ch = curl_init();
+curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+
+// Set proxy
+if ($_CONF['proxy_host']) {
+    curl_setopt($ch, CURLOPT_PROXY, 'https://' . $_CONF['proxy_host'] . ':' . $_CONF['proxy_port']);
+}
+if (!empty($_CONF['proxy_username']) && !empty($_CONF['proxy_password'])) {
+    curl_setopt($ch, CURLOPT_PROXYUSERPWD, $_CONF['proxy_username'] . ':' . $_CONF['proxy_password']);
+}
 
 function mutalyzer_getTranscriptsAndInfo($ref, $gene) {
     global $ch;
 
     $sUrl = 'https://mutalyzer.nl/json/getTranscriptsAndInfo?genomicReference=' . $ref . '&geneName=' . $gene;
-    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
     curl_setopt($ch, CURLOPT_URL, $sUrl);
 
     return curl_exec($ch);
@@ -69,7 +77,6 @@ function mutalyzer_numberConversion($build, $variant) {
     global $ch;
 
     $sUrl = 'https://mutalyzer.nl/json/numberConversion?build=' . $build . '&variant=' . $variant;
-    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
     curl_setopt($ch, CURLOPT_URL, $sUrl);
 
     return curl_exec($ch);
@@ -79,7 +86,6 @@ function mutalyzer_runMutalyzer($variant) {
     global $ch;
 
     $sUrl = 'https://mutalyzer.nl/json/runMutalyzer?variant=' . $variant;
-    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
     curl_setopt($ch, CURLOPT_URL, $sUrl);
 
     return curl_exec($ch);
