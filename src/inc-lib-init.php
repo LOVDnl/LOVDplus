@@ -505,6 +505,37 @@ function lovd_getProjectFile ()
 
 
 
+function lovd_initAdapter()
+{
+    // Select adapter class to instantiate based on instance name.
+
+    global $_INI;
+
+    $sAdaptersDir = ROOT_PATH . 'scripts/adapters/';
+    $sAdapterName = 'DEFAULT';
+
+    // Even if instance name exists, still check if the actual adapter library file exists.
+    // If adapter library file does not exist, we still use default adapter.
+    if (!empty($_INI['instance']['name']) && file_exists($sAdaptersDir . 'adapter.lib.'. strtoupper($_INI['instance']['name']) .'.php')) {
+        $sAdapterName = strtoupper($_INI['instance']['name']);
+    }
+
+    require_once $sAdaptersDir . 'adapter.lib.'. $sAdapterName .'.php';
+
+    // Camelcase the adapter name.
+    $sClassPrefix = ucwords(strtolower(str_replace('_', ' ', $sAdapterName)));
+    $sClassPrefix = str_replace(' ', '', $sClassPrefix);
+    $sClassName = 'LOVD_' . $sClassPrefix . 'DataConverter';
+
+    $zAdapter = new $sClassName($sAdaptersDir);
+
+    return $zAdapter;
+}
+
+
+
+
+
 function lovd_includeJS ($sFile, $nPrefix = 3)
 {
     // Searches for and includes a .js include file.

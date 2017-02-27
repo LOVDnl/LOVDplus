@@ -451,6 +451,18 @@ $_INI = lovd_parseConfigFile(CONFIG_URI);
 
 
 
+// Load any instance specific functions and variables.
+$sInstanceName = 'DEFAULT';
+if (!empty($_INI['instance']['name'])) {
+    $sInstanceName = strtoupper($_INI['instance']['name']);
+}
+if (file_exists(ROOT_PATH . 'scripts/adapters/adapter.lib.' . $sInstanceName . '.php')) {
+    require_once ROOT_PATH . 'scripts/adapters/adapter.lib.' . $sInstanceName . '.php';
+}
+$_ADAPTER = lovd_initAdapter();
+
+
+
 // Define table names (system-wide).
 // WARNING: The order of tables *MUST* be the same as the order in which the
 // tables are defined in the installer (meaning, respecting foreign keys),
