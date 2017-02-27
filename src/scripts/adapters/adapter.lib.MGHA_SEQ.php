@@ -181,7 +181,6 @@ class LOVD_MghaSeqDataConverter extends LOVD_DefaultDataConverter {
             'vcf_ExcessHet' => 'VariantOnGenome/Sequencing/Excess_Heterozygosity',
             'vcf_SOR' => 'VariantOnGenome/Sequencing/Symmetric_Odds_Ratio',
 
-//            'DB' => 'VariantOnGenome/Sequencing/dbSNP_Membership',
             'vcf_DP' => 'VariantOnGenome/Sequencing/Depth/Unfiltered_All',
             'vcf_FS' => 'VariantOnGenome/Sequencing/Fisher_Strand_Bias',
             'vcf_MLEAC' => 'VariantOnGenome/Sequencing/Max_Likelihood_Exp_Allele_Count',
@@ -213,18 +212,9 @@ class LOVD_MghaSeqDataConverter extends LOVD_DefaultDataConverter {
             'STRAND' => 'VariantOnTranscript/DNA_Strand',
             'Feature_type' => 'VariantOnTranscript/Feature_Type',
 
-//            'VT' => 'VariantOnGenome/Sequencing/Variant_Type',
 
             // Normal
-//            'Dels' => 'VariantOnGenome/Sequencing/Dels',
-//            'HaplotypeScore' => 'VariantOnGenome/Sequencing/Haplotype_Score',
-//            'MQ0' => 'VariantOnGenome/Sequencing/Total_Mapping_Quality_0_Reads',
-//            'RPA' => 'VariantOnGenome/Sequencing/Tandem/Repeat_Num',
-//            'RU' => 'VariantOnGenome/Sequencing/Tandem/Repeat_Unit',
-//            'STR' => 'VariantOnGenome/Sequencing/Tandem/Repeat_Short',
-//            'normal:AD' => 'VariantOnGenome/Sequencing/Normal/Depth',
             'normal:DP' => 'VariantOnGenome/Sequencing/Normal/Depth/Total',
-//            'normal:GQ' => 'VariantOnGenome/Sequencing/Normal/Genotype/Quality',
             'normal:GT' => 'VariantOnGenome/Sequencing/Normal/GenoType',
             'normal:PL' => 'VariantOnGenome/Sequencing/Normal/Phredscaled_Likelihoods',
             'normal:PMCAD' => 'VariantOnGenome/Sequencing/Normal/BI/Depth/Alt',
@@ -244,15 +234,10 @@ class LOVD_MghaSeqDataConverter extends LOVD_DefaultDataConverter {
             'PolyPhen' => 'VariantOnTranscript/PolyPhen',
             'SIFT' => 'VariantOnTranscript/SIFT',
             'ASN_MAF' => 'VariantOnGenome/Frequency/1000G/VEP/Asian',
-//            'HIGH_INF_POS' => 'VariantOnGenome/Sequencing/High_Information_Position',
-//            'MOTIF_NAME' => 'VariantOnTranscript/TFBP/Name',
-//            'MOTIF_POS' => 'VariantOnTranscript/TFBP/Position',
             'MOTIF_SCORE_CHANGE' => 'VariantOnTranscript/TFBP/Motif_Score_Change',
 
             // Tumour
-//            'tumour:AD' => 'VariantOnGenome/Sequencing/Tumour/Depth',
             'tumour:DP' => 'VariantOnGenome/Sequencing/Tumour/Depth/Total',
-//            'tumour:GQ' => 'VariantOnGenome/Sequencing/Tumour/Genotype/Quality',
             'tumour:GT' => 'VariantOnGenome/Sequencing/Tumour/GenoType',
             'tumour:PL' => 'VariantOnGenome/Sequencing/Tumour/Phredscaled_Likelihoods',
             'tumour:PMCAD' => 'VariantOnGenome/Sequencing/Tumour/BI/Depth/Alt',
@@ -319,48 +304,15 @@ class LOVD_MghaSeqDataConverter extends LOVD_DefaultDataConverter {
             'tumour:SN' => 'VariantOnGenome/Sequencing/Tumour/Signal_To_Noise',
             'tumour:VD' => 'VariantOnGenome/Sequencing/Tumour/Variant_Depth',
 
-
-//            'N_AC' => 'VariantOnGenome/Sequencing/Normal/Indel/Reads',
-//            'N_DP' => 'VariantOnGenome/Sequencing/Normal/Total_Coverage',
-//            'N_MM' => 'VariantOnGenome/Sequencing/Normal/Indel/Mismatches/Average',
-//            'N_MQ' => 'VariantOnGenome/Sequencing/Normal/Indel/Mapping_Quality',
-//            'N_NQSBQ' => 'VariantOnGenome/Sequencing/Normal/Indel/Average_Quality',
-//            'N_NQSMM' => 'VariantOnGenome/Sequencing/Normal/Indel/Mismatches/Fraction',
-//            'N_SC' => 'VariantOnGenome/Sequencing/Normal/Indel/Strandness',
-            //'SL_N_AD_INDELOCATOR' => 'VariantOnGenome/Sequencing/Normal/Seqliner/Allele/Indel',
-            //'SL_N_AD_MUTECT' => 'VariantOnGenome/Sequencing/Normal/Seqliner/Allele/Mutect',
-            //'SL_N_AD_VARSCAN' => 'VariantOnGenome/Sequencing/Normal/Seqliner/Allele/Varscan',
-//            'SL_N_DP_INDELOCATOR' => 'VariantOnGenome/Sequencing/Normal/Seqliner/Coverage/Indelocator',
-//            'SL_N_DP_MUTECT' => 'VariantOnGenome/Sequencing/Normal/Seqliner/Coverage/Mutect',
-            //'SL_N_DP_VARSCAN' => 'VariantOnGenome/Sequencing/Normal/Seqliner/Coverage/Varscan',
-            //'SL_T_AD_INDELOCATOR' => 'VariantOnGenome/Sequencing/Tumour/Seqliner/Allele/Indel',
-            //'SL_T_AD_MUTECT' => 'VariantOnGenome/Sequencing/Tumour/Seqliner/Allele/Mutect',
-            //'SL_T_AD_VARSCAN' => 'VariantOnGenome/Sequencing/Tumour/Seqliner/Allele/Varscan',
-//            'SL_T_DP_INDELOCATOR' => 'VariantOnGenome/Sequencing/Tumour/Seqliner/Coverage/Indelocator',
-//            'SL_T_DP_MUTECT' => 'VariantOnGenome/Sequencing/Tumour/Seqliner/Coverage/Mutect',
-            //'SL_T_DP_VARSCAN' => 'VariantOnGenome/Sequencing/Tumour/Seqliner/Coverage/Varscan',
             'vcf_SPV' => 'VariantOnGenome/Sequencing/Fisher/Somatic',
             'vcf_SS' => 'VariantOnGenome/Sequencing/Somatic/Status',
             'vcf_SSC' => 'VariantOnGenome/Sequencing/Somatic/Score',
-//            'T_AC' => 'VariantOnGenome/Sequencing/Tumour/Indel/Reads',
-//            'T_DP' => 'VariantOnGenome/Sequencing/Tumour/Total_Coverage',
-//            'T_MM' => 'VariantOnGenome/Sequencing/Tumour/Indel/Mismatches/Average',
-//            'T_MQ' => 'VariantOnGenome/Sequencing/Tumour/Indel/Mapping_Quality',
-//            'T_NQSBQ' => 'VariantOnGenome/Sequencing/Tumour/Indel/Average_Quality',
-//            'T_NQSMM' => 'VariantOnGenome/Sequencing/Tumour/Indel/Mismatches/Fraction',
-//            'T_SC' => 'VariantOnGenome/Sequencing/Tumour/Indel/Strandness',
-//            'normal:BQ' => 'VariantOnGenome/Sequencing/Normal/Allele/Average_Quality',
             'normal:DP4' => 'VariantOnGenome/Sequencing/Normal/Strand/Count',
-//            'normal:FA' => 'VariantOnGenome/Sequencing/Normal/Allele/Fraction',
             'normal:FREQ' => 'VariantOnGenome/Sequencing/Normal/Allele/Frequency',
             'normal:RD' => 'VariantOnGenome/Sequencing/Normal/Depth/Ref',
-//            'normal:SS' => 'VariantOnGenome/Sequencing/Normal/Somatic_Status',
-//            'tumour:BQ' => 'VariantOnGenome/Sequencing/Tumour/Allele/Average_Quality',
             'tumour:DP4' => 'VariantOnGenome/Sequencing/Tumour/Strand/Count',
-//            'tumour:FA' => 'VariantOnGenome/Sequencing/Tumour/Allele/Fraction',
             'tumour:FREQ' => 'VariantOnGenome/Sequencing/Tumour/Allele/Frequency',
             'tumour:RD' => 'VariantOnGenome/Sequencing/Tumour/Depth/Ref',
-//            'tumour:SS' => 'VariantOnGenome/Sequencing/Tumour/Somatic_Status',
 
             // Columns we add.
             'allele' => 'allele',
@@ -371,23 +323,11 @@ class LOVD_MghaSeqDataConverter extends LOVD_DefaultDataConverter {
             'Tumour_Depth_Ref' => 'VariantOnGenome/Sequencing/Tumour/Allele/Depth/Ref', // Derived from Tumour:AD.
             'Tumour_Depth_Alt' => 'VariantOnGenome/Sequencing/Tumour/Allele/Depth/Alt', // Derived from Tumour:AD.
 
-//            'Normal_Seqliner_Indel_Depth_Ref' => 'VariantOnGenome/Sequencing/Normal/Seqliner/Indel/Depth/Ref', // Derived from SL_N_AD_INDELOCATOR.
-//            'Normal_Seqliner_Indel_Depth_Alt' => 'VariantOnGenome/Sequencing/Normal/Seqliner/Indel/Depth/Alt', // Derived from SL_N_AD_INDELOCATOR.
-
-//            'Normal_Seqliner_Mutect_Depth_Ref' => 'VariantOnGenome/Sequencing/Normal/Seqliner/Mutect/Depth/Ref', // Derived from SL_N_AD_MUTECT.
-//            'Normal_Seqliner_Mutect_Depth_Alt' => 'VariantOnGenome/Sequencing/Normal/Seqliner/Mutect/Depth/Alt', // Derived from SL_N_AD_MUTECT.
-
             'Normal_Seqliner_Varscan_Depth_Ref' => 'VariantOnGenome/Sequencing/Normal/Seqliner/Varscan/Depth/Ref', // Derived from vcf_SL_N_AD_VARSCAN.
             'Normal_Seqliner_Varscan_Depth_Alt' => 'VariantOnGenome/Sequencing/Normal/Seqliner/Varscan/Depth/Alt', // Derived from vcf_SL_N_AD_VARSCAN.
 
             'Normal_Seqliner_Vardict_Depth_Ref' => 'VariantOnGenome/Sequencing/Normal/Seqliner/Vardict/Depth/Ref', // Derived from vcf_SL_N_AD_VARDICT.
             'Normal_Seqliner_Vardict_Depth_Alt' => 'VariantOnGenome/Sequencing/Normal/Seqliner/Vardict/Depth/Alt', // Derived from vcf_SL_N_AD_VARDICT.
-
-//            'Tumour_Seqliner_Indel_Depth_Ref' => 'VariantOnGenome/Sequencing/Tumour/Seqliner/Indel/Depth/Ref', // Derived from SL_T_AD_INDELOCATOR.
-//            'Tumour_Seqliner_Indel_Depth_Alt' => 'VariantOnGenome/Sequencing/Tumour/Seqliner/Indel/Depth/Alt', // Derived from SL_T_AD_INDELOCATOR.
-
-//            'Tumour_Seqliner_Mutect_Depth_Ref' => 'VariantOnGenome/Sequencing/Tumour/Seqliner/Mutect/Depth/Ref', // Derived from SL_T_AD_MUTECT.
-//            'Tumour_Seqliner_Mutect_Depth_Alt' => 'VariantOnGenome/Sequencing/Tumour/Seqliner/Mutect/Depth/Alt', // Derived from SL_T_AD_MUTECT.
 
             'Tumour_Seqliner_Varscan_Depth_Ref' => 'VariantOnGenome/Sequencing/Tumour/Seqliner/Varscan/Depth/Ref', // Derived from vcf_SL_T_AD_VARSCAN.
             'Tumour_Seqliner_Varscan_Depth_Alt' => 'VariantOnGenome/Sequencing/Tumour/Seqliner/Varscan/Depth/Alt', // Derived from vcf_SL_T_AD_VARSCAN.
@@ -399,7 +339,6 @@ class LOVD_MghaSeqDataConverter extends LOVD_DefaultDataConverter {
 
         return $aColumnMappings;
     }
-
 
 
 
@@ -417,7 +356,6 @@ class LOVD_MghaSeqDataConverter extends LOVD_DefaultDataConverter {
 
         return $aLine;
     }
-
 
 
 
@@ -531,13 +469,9 @@ class LOVD_MghaSeqDataConverter extends LOVD_DefaultDataConverter {
             'normal:AD' => 'Normal_Depth_',
             'tumour:AD' => 'Tumour_Depth_',
 
-            //'SL_N_AD_INDELOCATOR' => 'Normal_Seqliner_Indel_Depth_',
-            //'SL_N_AD_MUTECT' => 'Normal_Seqliner_Mutect_Depth_',
             'vcf_SL_N_AD_VARSCAN' => 'Normal_Seqliner_Varscan_Depth_',
             'vcf_SL_N_AD_VARDICT' => 'Normal_Seqliner_Vardict_Depth_',
 
-            //'SL_T_AD_INDELOCATOR' => 'Tumour_Seqliner_Indel_Depth_',
-            //'SL_T_AD_MUTECT' => 'Tumour_Seqliner_Mutect_Depth_',
             'vcf_SL_T_AD_VARSCAN' => 'Tumour_Seqliner_Varscan_Depth_',
             'vcf_SL_T_AD_VARDICT' => 'Tumour_Seqliner_Vardict_Depth_',
         );
@@ -571,7 +505,6 @@ class LOVD_MghaSeqDataConverter extends LOVD_DefaultDataConverter {
         $aGeneAliases = array();
         return $aGeneAliases;
     }
-
 
 
 
@@ -632,7 +565,6 @@ class LOVD_MghaSeqDataConverter extends LOVD_DefaultDataConverter {
 
         return '(.+)';
     }
-
 
 
 

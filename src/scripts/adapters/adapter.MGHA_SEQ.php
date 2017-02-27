@@ -2,7 +2,7 @@
 <?php
 
 /*******************************************************************************
- * CREATE META DATA FILES FOR MGHA
+ * CREATE META DATA FILES FOR MGHA SEQLINER
  * Created: 2016-08-29
  * Programmer: Juny Kesumadewi
  *************/

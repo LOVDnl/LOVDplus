@@ -18,7 +18,8 @@ class LOVD_DefaultDataConverter {
 
 
 
-    function convertInputFiles() {
+    function convertInputFiles()
+    {
         // Run the adapter script for this instance.
 
         $this->aScriptVars = array();
@@ -35,7 +36,8 @@ class LOVD_DefaultDataConverter {
 
 
 
-    function readMetadata($aMetaDataLines) {
+    function readMetadata($aMetaDataLines)
+    {
         // Read array of lines from .meta.lovd file of each .directvep.lovd file.
         // Return an array of metadata keyed by column names.
 
@@ -186,14 +188,12 @@ class LOVD_DefaultDataConverter {
 
 
 
-
     function prepareVariantData(&$aLine)
     {
         // Reformat a line of raw variant data into the format that works for this instance.
 
         return $aLine;
     }
-
 
 
 
