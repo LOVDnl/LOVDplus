@@ -3016,13 +3016,18 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && in_array(ACTION, array('edit', 'p
 
 
 
-if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && ACTION == 'curate') {
+if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && in_array(ACTION, array('curate', 'edit_remarks'))) {
     // URL: /variants/0000000001?curate
     // Edit the curation data for an entry, hide all other fields.
 
     $nID = sprintf('%010d', $_PE[1]);
-    define('PAGE_TITLE', 'Curate variant entry #' . $nID);
-    define('LOG_EVENT', 'VariantCuration');
+    if (ACTION == 'curate') {
+        define('PAGE_TITLE', 'Curate variant entry #' . $nID);
+        define('LOG_EVENT', 'VariantCuration');
+    } else {
+        define('PAGE_TITLE', 'Edit remarks for variant entry #' . $nID);
+        define('LOG_EVENT', 'VariantRemarksEdit');
+    }
 
     lovd_isAuthorized('variant', $nID);
     lovd_requireAUTH(LEVEL_OWNER);
@@ -3085,9 +3090,13 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && ACTION == 'curate') {
             $aSQL[] = $nID;
             $_DB->query($sSQL, array_values($aSQL), true, true);
 
-            if ($sCurationLog) {
-                // Write to log if any changes were detected.
-                lovd_writeLog('Event', LOG_EVENT, 'Curated variant #' . $nID . "\n" . $sCurationLog);
+            if (ACTION == 'curate') {
+                if ($sCurationLog) {
+                    // Write to log if any changes were detected.
+                    lovd_writeLog('Event', LOG_EVENT, 'Curated variant #' . $nID . "\n" . $sCurationLog);
+                }
+            } else {
+                lovd_writeLog('Event', LOG_EVENT, 'Edited remarks for variant entry ' . $nID . ' - ' . (!trim($_POST['VariantOnGenome/Remarks'])? '<empty>' : str_replace(array("\r", "\n", "\t"), array('\r', '\n', '\t'), $_POST['VariantOnGenome/Remarks'])));
             }
 
             // Thank the user...
