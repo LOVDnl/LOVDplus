@@ -129,15 +129,19 @@ class LOVD_GenomeVariant extends LOVD_Custom {
         parent::__construct();
 
         // List of columns and (default?) order for viewing an entry.
-        $sEffect_reported = ($_INI['instance']['name'] == 'mgha' ? 'Classification proposed' : 'Affects function (reported)');
-        $sEffect_concluded = ($_INI['instance']['name'] == 'mgha' ? 'Classification final' : 'Affects function (concluded)');
+        $sEffectReported = 'Affects function (reported)';
+        $sEffectConcluded = 'Affects function (concluded)';
+        if (lovd_verifyInstance('mgha')) {
+            $sEffectReported = 'Classification proposed';
+            $sEffectConcluded = 'Classification final';
+        }
         $this->aColumnsViewEntry = array_merge(
                  array(
                         'individualid_' => 'Individual ID',
                         'chromosome' => 'Chromosome',
                         'allele_' => 'Allele',
-                        'effect_reported' => $sEffect_reported,
-                        'effect_concluded' => $sEffect_concluded,
+                        'effect_reported' => $sEffectReported,
+                        'effect_concluded' => $sEffectConcluded,
                         'curation_status_' => 'Curation status',
                         'confirmation_status_' => 'Confirmation status',
                       ),
@@ -157,34 +161,6 @@ class LOVD_GenomeVariant extends LOVD_Custom {
             unset($this->aColumnsViewEntry['confirmation_status_']);
         }
 
-        $sEffect_legend = '<P>The variant&#39;s affect on a protein&#39;s function, in the format <STRONG>[Reported]/[Curator concluded]</STRONG> indicating:</P>
-                             <TABLE border="0" cellpadding="3" cellspacing="2">
-                                <TR>
-                                    <TD>+</TD>
-                                    <TD>The variant affects function</TD>
-                                </TR>
-                                <TR>
-                                    <TD>+?</TD>
-                                    <TD>The variant probably affects function</TD>
-                                </TR>
-                                <TR>
-                                    <TD>-</TD>
-                                    <TD>The variant does not affect function</TD>
-                                </TR>
-                                <TR>
-                                    <TD>-?</TD>
-                                    <TD>The variant probably does not affect function</TD>
-                                </TR>
-                                <TR>
-                                    <TD>?</TD>
-                                    <TD>Effect unknown</TD>
-                                </TR>
-                                <TR>
-                                    <TD>.</TD>
-                                    <TD>Effect not classified</TD>
-                                </TR>
-                            </TABLE>';
-
         // List of columns and (default?) order for viewing a list of entries.
         $this->aColumnsViewList = array_merge(
                  array(
@@ -197,10 +173,8 @@ class LOVD_GenomeVariant extends LOVD_Custom {
                         'effect' => array(
                                     'view' => array('Effect', 70),
                                     'db'   => array('e.name', 'ASC', true),
-                                    'legend' => array(
-                                        str_replace(array("\r", "\n"), '', $sEffect_legend),
-                                        $sEffect_legend
-                        )),
+                                    'legend' => array('The variant\'s effect on a protein\'s function, in the format Reported/Curator concluded; ranging from \'+\' (variant affects function) to \'-\' (does not affect function).',
+                                        'The variant\'s effect on a protein\'s function, in the format Reported/Curator concluded; \'+\' indicating the variant affects function, \'+?\' probably affects function, \'-\' does not affect function, \'-?\' probably does not affect function, \'?\' effect unknown, \'.\' effect not classified.')),
                         'allele_' => array(
                                     'view' => array('Allele', 120),
                                     'db'   => array('a.name', 'ASC', true),
@@ -417,7 +391,7 @@ class LOVD_GenomeVariant extends LOVD_Custom {
     {
         // Prepares the data by "enriching" the variable received with links, pictures, etc.
 
-        global $_AUTH, $_DB, $_SETT, $_INI;
+        global $_AUTH, $_DB, $_SETT;
 
         if (!in_array($sView, array('list', 'entry'))) {
             $sView = 'list';
@@ -456,7 +430,7 @@ class LOVD_GenomeVariant extends LOVD_Custom {
                 if ($n > 1) {
                     list($sPrefix,) = explode('_', $zData['VariantOnGenome/DBID'], 2);
                     $sLink = '<A href="' . (substr($sPrefix, 0, 3) == 'chr'? 'variants' : 'view/' . $sPrefix) . '?search_VariantOnGenome%2FDBID=%3D%22' . $zData['VariantOnGenome/DBID'] . '%22">See all ' . $n . ' reported entries</A>';
-                    if ($_INI['instance']['name'] == 'mgha') {
+                    if (lovd_verifyInstance('mgha')) {
                         $sLink = '<A href="' . (substr($sPrefix, 0, 3) == 'chr'? 'variants/DBID/' . $zData['VariantOnGenome/DBID']  : 'view/' . $sPrefix . '?search_VariantOnGenome%2FDBID=%3D%22' . $zData['VariantOnGenome/DBID'] . '%22') .'">See all ' . $n . ' reported entries</A>';
                     }
                     // This is against our coding policy of never modifying actual contents of values (we always create a copy with _ appended), but now I simply can't without
