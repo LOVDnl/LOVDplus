@@ -1220,7 +1220,7 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && ACTION == 'edit_panels') {
                     } else {
                         // This gene symbol was not found in the database.
                         // It got uppercased by us, but we assume that will be OK.
-                        lovd_errorAdd('custom_panel', 'The gene symbol ' . htmlspecialchars($sGeneSymbol) . ' can not be found within the database.');
+                        lovd_errorAdd('custom_panel', 'The gene symbol ' . htmlspecialchars($sGeneSymbol) . ' can not be found within the database. Please try an alternative symbol.');
                     }
                 }
                 // Write the cleaned up custom gene panel back to POST so as to ensure the genes in the custom panel are stored with correct casing.
