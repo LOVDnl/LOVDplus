@@ -179,15 +179,6 @@ $_SETT = array(
                             1 => 'Benign',
                           ),
                 'var_effect_default' => '00',
-                'clinvar' =>
-                    array(
-                        '2' => 'Benign',
-                        '3' => 'Likely benign',
-                        '4' => 'Likely pathogenic',
-                        '5' => 'Pathogenic',
-                        '6' => 'Drug response',
-                        '7' => 'histocompatibility'
-                ),
                 'data_status' =>
                      array(
                             STATUS_IN_PROGRESS => 'In progress',
@@ -442,6 +433,16 @@ if (LOVD_plus) {
             CUR_STATUS_CURATED_REPORTABLE => 'Curated & Reportable',
             CUR_STATUS_CURATED_NOT_REPORTABLE => 'Curated & Not Reportable',
         );
+    $_SETT['clinvar_var_effect'] =
+        array(
+            '2' => 'Benign',
+            '3' => 'Likely benign',
+            '4' => 'Likely pathogenic',
+            '5' => 'Pathogenic',
+            '6' => 'Drug response',
+            '7' => 'histocompatibility'
+        );
+
     // Diagnostics: Added one level, and changed the submitter level's name.
     unset($_SETT['user_levels'][LEVEL_SUBMITTER]); // To make space, we need to rename it anyway.
     $_SETT['user_levels'][LEVEL_ANALYZER]  = 'Analyzer';

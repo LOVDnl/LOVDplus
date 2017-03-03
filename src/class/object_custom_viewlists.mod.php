@@ -4,7 +4,7 @@
  * LEIDEN OPEN VARIATION DATABASE (LOVD)
  *
  * Created     : 2013-11-07
- * Modified    : 2017-02-14
+ * Modified    : 2017-03-03
  * For LOVD    : 3.0-18
  *
  * Copyright   : 2004-2017 Leiden University Medical Center; http://www.LUMC.nl/
@@ -36,7 +36,6 @@ if (!defined('ROOT_PATH')) {
 }
 // Require parent class definition.
 require_once ROOT_PATH . 'class/object_custom_viewlists.php';
-require_once ROOT_PATH . 'class/object_transcript_variants.php';
 
 
 
@@ -53,7 +52,7 @@ class LOVD_CustomViewListMOD extends LOVD_CustomViewList {
     function __construct ($aObjects = array(), $sOtherID = '')
     {
         // Default constructor.
-        global $_DB, $_AUTH, $_INI;
+        global $_DB, $_AUTH;
 
         if (!is_array($aObjects)) {
             $aObjects = explode(',', $aObjects);
@@ -257,42 +256,30 @@ class LOVD_CustomViewListMOD extends LOVD_CustomViewList {
 
                     }
                     break;
+
                 case 'Individual':
-                    $aColumnsToShow['Individual'] = array(
-                        'Individual/Sample_ID',
-                        'Individual/Clinical_indication'
-                    );
                     $nKeyScreening = array_search('Screening', $aObjects);
-                    $sSelect = 'i.*';
+                    $aSQL['SELECT'] .= (!$aSQL['SELECT']? '' : ', ') . 'i.*';
                     if (!$aSQL['FROM']) {
-                        $aSQL['SELECT'] .= (!$aSQL['SELECT']? '' : ', ') . $sSelect;
+                        // First data table in query.
                         $aSQL['FROM'] = TABLE_INDIVIDUALS . ' AS i';
                     } elseif ($nKeyScreening !== false && $nKeyScreening < $nKey) {
-                        $aSQL['SELECT'] .= (!$aSQL['SELECT']? '' : ', ') . $sSelect;
                         $aSQL['FROM'] .= ' LEFT JOIN ' . TABLE_INDIVIDUALS . ' AS i ON (s.individualid = i.id)';
                     }
                     break;
 
                 case 'Screening':
-                    $aColumnsToShow['Screening'] = array(
-                        'Screening/Library_preparation',
-                        'Screening/Sequencing_chemistry',
-                        'Screening/Pipeline/Run_ID'
-                    );
-
                     $nKeyVOG = array_search('VariantOnGenome', $aObjects);
-                    $sSelect = 's.*';
+                    $aSQL['SELECT'] .= (!$aSQL['SELECT']? '' : ', ') . 's.*';
                     if (!$aSQL['FROM']) {
-                        $aSQL['SELECT'] .= (!$aSQL['SELECT']? '' : ', ') . $sSelect;
+                        // First data table in query.
                         $aSQL['FROM'] = TABLE_SCR2VAR . ' AS s2v
-                                         LEFT JOIN ' . TABLE_SCREENINGS . ' AS s ON (vog.id = s2v.screeningid)';
+                                        LEFT JOIN ' . TABLE_SCREENINGS . ' AS s ON (vog.id = s2v.screeningid)';
                     } elseif ($nKeyVOG !== false && $nKeyVOG < $nKey) {
-                        $aSQL['SELECT'] .= (!$aSQL['SELECT']? '' : ', ') . $sSelect;
                         $aSQL['FROM'] .= ' LEFT JOIN ' . TABLE_SCR2VAR . ' AS s2v ON (vog.id = s2v.variantid)
-                                            LEFT JOIN ' . TABLE_SCREENINGS . ' AS s ON (s.id = s2v.screeningid)';
+                                           LEFT JOIN ' . TABLE_SCREENINGS . ' AS s ON (s.id = s2v.screeningid)';
                     }
                     break;
-
 
                 case 'GenePanels':
                     $aSQL['SELECT'] .= (!$aSQL['SELECT']? '' : ', ') . 'GROUP_CONCAT(DISTINCT gp.name SEPARATOR ", ") AS gene_panels,
@@ -463,7 +450,7 @@ class LOVD_CustomViewListMOD extends LOVD_CustomViewList {
                 $this->aColumnsViewList['VariantOnTranscript/DNA']['db'][0] = 'CONCAT(t.geneid, ":", `VariantOnTranscript/DNA`)';
             }
 
-            // Hide DBID column
+            // Hide the DBID column, just for the MGHA.
             if (lovd_verifyInstance('mgha', false)) {
                 $this->aColumnsViewList['VariantOnGenome/DBID']['view'] = false;
             }
@@ -630,7 +617,7 @@ class LOVD_CustomViewListMOD extends LOVD_CustomViewList {
         }
 
         if (isset($zData['VariantOnTranscript/dbNSFP/ClinVar/Clinical_Significance'])) {
-            $zData['clinvar_'] = lovd_mapCodeToDescription($zData['VariantOnTranscript/dbNSFP/ClinVar/Clinical_Significance'], $_SETT['clinvar'], array('srcDelimiter' => ','));
+            $zData['clinvar_'] = lovd_mapCodeToDescription($zData['VariantOnTranscript/dbNSFP/ClinVar/Clinical_Significance'], $_SETT['clinvar_var_effect'], array('srcDelimiter' => ','));
         }
 
         return $zData;
