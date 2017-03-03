@@ -258,24 +258,27 @@ if (!ACTION && (empty($_PE[1]) || preg_match('/^chr[0-9A-Z]{1,2}$/', $_PE[1]))) 
 
 
 if (PATH_COUNT == 3 && $_PE[1] == 'DBID' && preg_match('/^chr/', $_PE[2]) && !ACTION) {
-    // URL: /variants/DBID/chr_00001
-    // View all genomic variant entries with the same DBID
-    $sDbId = $_PE[2];
+    // URL: /variants/DBID/chr1_00001
+    // View all genomic variant entries with the same DBID.
+
+    $sID = $_PE[2];
     define('PAGE_TITLE', 'View genomic variants');
     $_T->printHeader();
     $_T->printTitle();
     
     lovd_requireAUTH(LEVEL_MANAGER);
+
     require ROOT_PATH . 'class/object_custom_viewlists.mod.php';
     $_DATA = new LOVD_CustomViewListMOD(array('VariantOnGenome', 'VariantOnTranscript', 'Screening', 'Individual', 'Diseases'));
-    $_GET['search_VariantOnGenome/DBID'] = '="' . $sDbId . '"';
-    $aColsToShow = array (
+    $_GET['search_VariantOnGenome/DBID'] = '="' . $sID . '"';
+    $aColsToShow = array(
         'id_', 'vog_effect', 'allele_', 'Individual/Sample_ID', 'Individual/Clinical_indication',
         'Screening/Library_preparation', 'Screening/Sequencing_chemistry', 'Screening/Pipeline/Run_ID',
         'VariantOnGenome/Curation/Classification','VariantOnGenome/Sequencing/IGV', 'VariantOnGenome/Reference',
         'VariantOnTranscript/DNA', 'VariantOnTranscript/Protein', 'gene_OMIM_', 'gene_disease_names'
         );
     $aColsToHide = array_diff(array_keys($_DATA->aColumnsViewList), $aColsToShow);
+
     $_DATA->viewList('CustomVL_DBID', $aColsToHide, false, false, false);
 
     $_T->printFooter();
@@ -520,7 +523,7 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && !ACTION) {
         if (!LOVD_plus) {
             $aNavigation[CURRENT_PATH . '?edit']       = array('menu_edit.png', 'Edit variant entry', 1);
         } else {
-            if (strtolower($_INI['instance']['name']) != 'leiden') {
+            if (!lovd_verifyInstance('leiden')) {
                 $aNavigation[CURRENT_PATH . '?curate' . (isset($_GET['in_window'])? '&amp;in_window' : '')] = array('menu_edit.png', 'Curate this variant', 1);
             }
             $aNavigation['javascript:lovd_openWindow(\'' . lovd_getInstallURL() . CURRENT_PATH . '?curation_log&in_window\', \'curation_log\', 1050, 450);'] = array('menu_clock.png', 'Show curation history', 1);
@@ -535,7 +538,7 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && !ACTION) {
                 $aConfirmationStatusMenu['javascript:$.get(\'ajax/set_confirmation_status.php?' . $nConfirmationStatusID . '&id=' . $nID . '\', function(sResponse){if(sResponse.substring(0,1) == \'1\'){alert(\'Successfully set confirmation status of this variant to \\\'' . $sConfirmationStatus . '\\\'.\');window.location.reload();' . (!isset($_GET['in_window'])? '' : 'window.opener.lovd_AJAX_viewListSubmit(\'CustomVL_AnalysisRunResults_for_I_VE\');window.opener.lovd_AJAX_viewEntryLoad();') . '}else if(sResponse.substring(0,1) == \'9\'){alert(\'Error: \' + sResponse.substring(2));}}).error(function(){alert(\'Error while setting confirmation status.\');});'] = array('menu_edit.png', $sConfirmationStatus);
             }
             $aNavigation['confirmation_status'] = array('menu_edit.png', 'Set confirmation status', 1, 'sub_menu' => $aConfirmationStatusMenu);
-            if (strtolower($_INI['instance']['name']) == 'leiden') {
+            if (lovd_verifyInstance('leiden')) {
                 $aNavigation[CURRENT_PATH . '?edit_remarks' . (isset($_GET['in_window'])? '&amp;in_window' : '')] = array('menu_edit.png', 'Edit remarks', 1);
             }
         }
@@ -573,15 +576,11 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && !ACTION) {
     lovd_showJGNavigation($aNavigation, 'Variants');
 
     // Table to display the number of variant instances with the same DB-ID for each final classification.
-    $sSQLCount = 'SELECT SUBSTRING(effectid, -1, 1) as classification_final, COUNT(effectid) as count 
+    $sSQLCount = 'SELECT SUBSTRING(effectid, -1, 1) AS classification_final, COUNT(effectid) AS count 
                   FROM ' . TABLE_VARIANTS .
                 ' WHERE `VariantOnGenome/DBID` = ?
                   GROUP BY SUBSTRING(effectid, -1, 1)';
-    $zResult = $_DB->query($sSQLCount, array($zData['VariantOnGenome/DBID_raw']))->fetchAllAssoc();
-    $aClassificationsCount = array();
-    foreach ($zResult as $aClassification) {
-        $aClassificationsCount[$aClassification['classification_final']] = $aClassification['count'];
-    }
+    $aClassificationsCount = $_DB->query($sSQLCount, array($zData['VariantOnGenome/DBID_raw']))->fetchAllCombine();
 
     print('
           </TD>
@@ -615,23 +614,23 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && !ACTION) {
               '            </TABLE><BR>' . "\n\n");
     }
 
-      print('<BR><TABLE width="600px" class="data">');
-      print('    <TR>
-                   <TH>Final Classification</TH>
-                   <TH>Occurrences</TH>
-                 </TR>'
-           );
-      // We want to always print the classification rows in the same order as stored in $_SETT.
-      foreach ($_SETT['var_effect'] as $sClassificationId => $sClassification) {
-          print('<TR>
-                   <TD>'. $sClassification . '</TD>
-                   <TD>'. (isset($aClassificationsCount[$sClassificationId])? $aClassificationsCount[$sClassificationId] : 0) . '</TD>
-                 </TR>'
-          );
-      }
-      print('</TABLE>' . "\n");
+    print('            <BR>
+            <TABLE width="600px" class="data">
+              <TR>
+                <TH>Final Classification</TH>
+                <TH>Occurrences</TH>
+              </TR>');
+    // We want to always print the classification rows in the same order as stored in $_SETT.
+    foreach ($_SETT['var_effect'] as $sClassificationID => $sClassification) {
+        print('
+              <TR>
+                <TD>'. $sClassification . '</TD>
+                <TD>'. (isset($aClassificationsCount[$sClassificationID])? $aClassificationsCount[$sClassificationID] : 0) . '</TD>
+              </TR>');
+    }
+    print('</TABLE>
 
-    print('          </TD>
+          </TD>
         </TR>
       </TABLE><BR><BR>
   
@@ -3147,12 +3146,17 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && in_array(ACTION, array('curate', 
     lovd_viewForm($aForm);
 
     print("\n" .
-          '      </FORM>' . "\n\n");
+          '      </FORM><BR>' . "\n\n");
+
+
+
+    // Show all VOT entries belonging to this variant, which might help in filling in the form.
+    $_T->printTitle('Variant on transcripts', 'H4');
 
     require ROOT_PATH . 'class/object_transcript_variants.php';
-    $_T->printTitle('Variant on transcripts', 'H4');
     $zData = new LOVD_TranscriptVariant('VOT_for_curation', $nID);
     $_GET['search_id_'] = $nID;
+
     $zData->disableVLSearch(array('id_')); // We have to keep id_ as searchable so that we can generate viewList for $nID.
     $zData->setRowLink('VOT_for_curation', 'javascript:return false;');
     $aColsToShow = array('id_ncbi', 'geneid', 'VariantOnTranscript/DNA', 'VariantOnTranscript/Protein');
@@ -3687,67 +3691,41 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && in_array(ACTION, array('delete_pr
 
 
 
-if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && ACTION == 'curation_log') {
-    // URL: /variants/0000000001?curation_log
-    // Show the logs for the changes of curation data for this variant.
-
-    $nID = sprintf('%010d', $_PE[1]);
-    define('PAGE_TITLE', 'Curation history for variant #' . $nID);
-    $_T->printHeader();
-    $_T->printTitle();
-    $_GET['page_size'] = 10;
-    $_GET['search_event'] = 'VariantCuration';
-    $_GET['search_entry_'] = '"variant #' . $nID . '"';
-    require_once ROOT_PATH . 'class/object_logs.php';
-    $_DATA = new LOVD_Log();
-    $_DATA->viewList('Logs_for_curation_data', array('name', 'event', 'del'), true);
-    unset($_GET['page_size'], $_GET['search_event'], $_GET['search_entry_']);
-    $_T->printFooter();
-    exit;
-}
-
-
-
-
-
-if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && ACTION == 'curation_status_log') {
-    // URL: /variants/0000000001?curation_status_log
-    // Show the logs for the changes of curation status for this variant.
-
-    $nID = sprintf('%010d', $_PE[1]);
-    define('PAGE_TITLE', 'Curation status history for variant #' . $nID);
-    $_T->printHeader();
-    $_T->printTitle();
-    $_GET['page_size'] = 10;
-    $_GET['search_event'] = 'CurationStatus';
-    $_GET['search_entry_'] = '"variant #' . $nID . '"';
-    require_once ROOT_PATH . 'class/object_logs.php';
-    $_DATA = new LOVD_Log();
-    $_DATA->viewList('Logs_for_curation_status', array('name', 'event', 'del'), true);
-    unset($_GET['page_size'], $_GET['search_event'], $_GET['search_entry_']);
-    $_T->printFooter();
-    exit;
-}
-
-
-
-
-
-if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && ACTION == 'confirmation_status_log') {
+if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && in_array(ACTION, array('confirmation_status_log', 'curation_status_log', 'curation_log'))) {
     // URL: /variants/0000000001?confirmation_status_log
-    // Show the logs for the changes of confirmation status for this variant.
+    // URL: /variants/0000000001?curation_log
+    // URL: /variants/0000000001?curation_status_log
+    // Show logs for the changes of confirmation or curation data/status for this variant.
 
     $nID = sprintf('%010d', $_PE[1]);
-    define('PAGE_TITLE', 'Confirmation status history for variant #' . $nID);
+
+    switch (ACTION) {
+        case 'confirmation_status_log':
+            define('PAGE_TITLE', 'Confirmation status history for variant #' . $nID);
+            $_GET['search_event'] = 'ConfirmationStatus';
+            break;
+        case 'curation_status_log':
+            define('PAGE_TITLE', 'Curation status history for variant #' . $nID);
+            $_GET['search_event'] = 'CurationStatus';
+            break;
+        case 'curation_log':
+            define('PAGE_TITLE', 'Curation history for variant #' . $nID);
+            $_GET['search_event'] = 'VariantCuration';
+            break;
+    }
+
     $_T->printHeader();
     $_T->printTitle();
+
     $_GET['page_size'] = 10;
-    $_GET['search_event'] = 'ConfirmationStatus';
     $_GET['search_entry_'] = '"variant #' . $nID . '"';
+
     require_once ROOT_PATH . 'class/object_logs.php';
     $_DATA = new LOVD_Log();
-    $_DATA->viewList('Logs_for_confirmation_status', array('name', 'event', 'del'), true);
+    $_DATA->viewList('Logs_for_VariantConfirmation_or_VariantCuration', array('name', 'event', 'del'), true);
+
     unset($_GET['page_size'], $_GET['search_event'], $_GET['search_entry_']);
+
     $_T->printFooter();
     exit;
 }
