@@ -56,7 +56,7 @@ class LOVD_GenomeVariant extends LOVD_Custom {
     function __construct ()
     {
         // Default constructor.
-        global $_AUTH, $_CONF, $_INI, $_SETT;
+        global $_AUTH, $_CONF, $_SETT;
 
         // SQL code for loading an entry for an edit form.
         // FIXME; change owner to owned_by_ in the load entry query below.
@@ -174,7 +174,7 @@ class LOVD_GenomeVariant extends LOVD_Custom {
                                     'view' => array('Effect', 70),
                                     'db'   => array('e.name', 'ASC', true),
                                     'legend' => array('The variant\'s effect on a protein\'s function, in the format Reported/Curator concluded; ranging from \'+\' (variant affects function) to \'-\' (does not affect function).',
-                                        'The variant\'s effect on a protein\'s function, in the format Reported/Curator concluded; \'+\' indicating the variant affects function, \'+?\' probably affects function, \'-\' does not affect function, \'-?\' probably does not affect function, \'?\' effect unknown, \'.\' effect not classified.')),
+                                                      'The variant\'s effect on a protein\'s function, in the format Reported/Curator concluded; \'+\' indicating the variant affects function, \'+?\' probably affects function, \'-\' does not affect function, \'-?\' probably does not affect function, \'?\' effect unknown, \'.\' effect not classified.')),
                         'allele_' => array(
                                     'view' => array('Allele', 120),
                                     'db'   => array('a.name', 'ASC', true),

@@ -57,7 +57,7 @@ class LOVD_TranscriptVariant extends LOVD_Custom {
     function __construct ($sObjectID = '', $nID = '')
     {
         // Default constructor.
-        global $_DB, $_INI;
+        global $_DB;
 
         $this->bShared = (LOVD_plus? false : true);
 
@@ -70,7 +70,8 @@ class LOVD_TranscriptVariant extends LOVD_Custom {
 
         // SQL code for viewing an entry.
         $this->aSQLViewEntry['SELECT']   = 'vot.*, ' .
-                                           't.geneid, t.id_ncbi' . (lovd_verifyInstance('mgha', false)? ', vog.chromosome' : ''); // MGHA will have to add a few custom columns here to get the Genomizer link to work properly.
+                                           't.geneid, t.id_ncbi' .
+                                           (lovd_verifyInstance('mgha', false)? ', vog.chromosome' : ''); // MGHA will have to add a few custom columns here to get the Genomizer link to work properly.
         $this->aSQLViewEntry['FROM']     = TABLE_VARIANTS_ON_TRANSCRIPTS . ' AS vot ' .
                                           'INNER JOIN ' . TABLE_VARIANTS . ' AS vog ON (vot.id = vog.id) ' . // Only done so that the vog.statusid can be checked.
                                            'LEFT OUTER JOIN ' . TABLE_TRANSCRIPTS . ' AS t ON (vot.transcriptid = t.id)';
@@ -369,7 +370,7 @@ class LOVD_TranscriptVariant extends LOVD_Custom {
     function prepareData ($zData = '', $sView = 'list')
     {
         // Prepares the data by "enriching" the variable received with links, pictures, etc.
-        global $_SETT, $_INI;
+        global $_SETT;
 
         if (!in_array($sView, array('list', 'entry'))) {
             $sView = 'list';
@@ -386,7 +387,7 @@ class LOVD_TranscriptVariant extends LOVD_Custom {
             if (lovd_verifyInstance('mgha', false)) { // Display the Genomizer URL in the VOT ViewEntry. TODO Once the ref and alt are separated we need to add it into this URL. Should we add this to the links table so as it can be used elsewhere?
                 $zData['genomizer_url_'] = '<A href="http://genomizer.com/?chr=' . $zData['chromosome'] . '&gene=' . $zData['geneid'] . '&ref_seq=' . $zData['id_ncbi'] . '&variant=' . $zData['VariantOnTranscript/DNA'] . '" target="_blank">Genomizer Link</A>';
                 if (isset($zData['VariantOnTranscript/dbNSFP/ClinVar/Clinical_Significance'])) {
-                    $zData['clinvar_'] = lovd_mapCodeToDescription($zData['VariantOnTranscript/dbNSFP/ClinVar/Clinical_Significance'], $_SETT['clinvar'], array('srcDelimiter' => ','));
+                    $zData['clinvar_'] = implode(', ', lovd_mapCodeToDescription(explode(',', $zData['VariantOnTranscript/dbNSFP/ClinVar/Clinical_Significance'], $_SETT['clinvar_var_effect'])));
                 }
             }
         }

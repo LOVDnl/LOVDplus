@@ -896,30 +896,20 @@ function lovd_magicUnquoteAll ()
 
 
 
-function lovd_mapCodeToDescription($sCodes, $aMaps, $aOptions)
+function lovd_mapCodeToDescription ($aCodes, $aMaps)
 {
-    // Takes a string separated by $aOptions['srcDelimiter']
-    // Returns another string based on the mapping values in $aMaps
+    // Takes an array $aCodes and maps all values using the $aMaps array.
+    // Values not found in $aMaps are not changed in $aCodes.
 
-    $aDefault = array('srcDelimiter' => ';', 'destDelimiter' => ', ');
-    $aOptions = $aOptions + $aDefault;
-
-    $sDescription = '';
-    $aDescriptions = array();
-
-    if (!empty($sCodes)) {
-        $aCodes = explode($aOptions['srcDelimiter'], $sCodes);
-        foreach ($aCodes as $sCode) {
-            $sCode = trim($sCode);
+    if (is_array($aCodes) && !empty($aCodes)) {
+        foreach ($aCodes as $nKey => $sCode) {
             if (isset($aMaps[$sCode])) {
-                $aDescriptions[] = $aMaps[$sCode];
+                $aCodes[$nKey] = $aMaps[$sCode];
             }
         }
-
-        $sDescription = implode($aOptions['destDelimiter'], $aDescriptions);
     }
 
-    return $sDescription;
+    return $aCodes;
 }
 
 
@@ -1653,22 +1643,23 @@ function lovd_variantToPosition ($sVariant)
 
 function lovd_verifyInstance ($sName, $bExact = true)
 {
-    // Check if this instance belongs to $sName instance group.
-    // If $bExact is set to true, it will match the exact instance name instead of prefix.
+    // Check if this instance belongs to $sName instance group (LOVD+ feature).
+    // If $bExact is set to true, it will match the exact instance name instead
+    //  of matching just the prefix.
 
     global $_INI;
 
-    // Only LOVD+ has instance name in the config file
-    if (!LOVD_plus) {
+    // Only LOVD+ can have the instance name in the config file.
+    if (!LOVD_plus || empty($_INI['instance']['name'])) {
         return false;
     }
 
-    if ($_INI['instance']['name'] == $sName) {
+    if (strtolower($_INI['instance']['name']) == strtolower($sName)) {
         return true;
     }
 
     if (!$bExact) {
-        if (strpos($_INI['instance']['name'], $sName) === 0) {
+        if (strpos(strtolower($_INI['instance']['name']), strtolower($sName)) === 0) {
             return true;
         }
     }

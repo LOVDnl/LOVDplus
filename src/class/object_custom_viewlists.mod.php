@@ -617,7 +617,7 @@ class LOVD_CustomViewListMOD extends LOVD_CustomViewList {
         }
 
         if (isset($zData['VariantOnTranscript/dbNSFP/ClinVar/Clinical_Significance'])) {
-            $zData['clinvar_'] = lovd_mapCodeToDescription($zData['VariantOnTranscript/dbNSFP/ClinVar/Clinical_Significance'], $_SETT['clinvar_var_effect'], array('srcDelimiter' => ','));
+            $zData['clinvar_'] = implode(', ', lovd_mapCodeToDescription(explode(',', $zData['VariantOnTranscript/dbNSFP/ClinVar/Clinical_Significance'], $_SETT['clinvar_var_effect'])));
         }
 
         return $zData;
