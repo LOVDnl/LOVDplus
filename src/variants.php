@@ -3068,7 +3068,7 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && in_array(ACTION, array('curate', 
             if ($zData['effectid']{0} != $_POST['effect_reported']) {
                 $sCurationLog .= 'Effect reported: "' . $_SETT['var_effect'][$zData['effectid']{0}] . '" => "' . $_SETT['var_effect'][$_POST['effect_reported']] . '"' . "\n";
             }
-            if ($_AUTH['level'] >= LEVEL_MANAGER && $zData['effectid']{1} != $_POST['effect_concluded']) {
+            if ($zData['effectid']{1} != $_POST['effect_concluded']) {
                 $sCurationLog .= 'Effect concluded: "' . $_SETT['var_effect'][$zData['effectid']{1}] . '" => "' . $_SETT['var_effect'][$_POST['effect_concluded']] . '"' . "\n";
             }
             if (trim($zData['VariantOnGenome/Remarks']) != trim($_POST['VariantOnGenome/Remarks'])) {
@@ -3077,7 +3077,7 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && in_array(ACTION, array('curate', 
 
             // Manual query, because updateEntry() empties the whole VOG.
             $sSQL = 'UPDATE ' . TABLE_VARIANTS . ' SET `VariantOnGenome/Remarks` = ?, `effectid` = ?';
-            $aSQL = array($_POST['VariantOnGenome/Remarks'], $_POST['effect_reported'] . ($_AUTH['level'] >= LEVEL_MANAGER? $_POST['effect_concluded'] : substr($zData['effectid'], -1)));
+            $aSQL = array($_POST['VariantOnGenome/Remarks'], $_POST['effect_reported'] . $_POST['effect_concluded']);
 
             foreach($_POST as $sCol => $val) {
                 // Process any of the curation custom columns.
