@@ -363,7 +363,7 @@ if (PATH_COUNT >= 2 && ctype_digit($_PE[1]) && !ACTION && (PATH_COUNT == 2 || PA
             ');
 
             print('
-          <TABLE id="analysesTable" border="0" cellpadding="0" cellspacing="0">
+          <TABLE class="analysesTable" border="0" cellpadding="0" cellspacing="0">
             <TR>');
 
             if (!$aTabData['data']) { // Check if there are any analyses available, if not then display the appropriate message.
@@ -397,6 +397,8 @@ if (PATH_COUNT >= 2 && ctype_digit($_PE[1]) && !ACTION && (PATH_COUNT == 2 || PA
                 } else {
                     $sAnalysisClassName = 'analysis_not_run';
                 }
+                // ElementID for the table and prefix for the filter's element IDs.
+                $sElementID = $aTabData['prefix'] . ($zAnalysis['runid']? $zAnalysis['runid'] : 'analysis_' . $zAnalysis['id']);
 
                 // Select a js function to be executed when an analysis table is clicked.
                 $sJSAction = '';
@@ -421,7 +423,7 @@ if (PATH_COUNT >= 2 && ctype_digit($_PE[1]) && !ACTION && (PATH_COUNT == 2 || PA
 
                 print('
               <TD class="analysis" valign="top">
-                <TABLE border="0" cellpadding="0" cellspacing="1" id="' . ($zAnalysis['runid']? $aTabData['prefix'] . $zAnalysis['runid'] : $aTabData['prefix'] . 'analysis_' . $zAnalysis['id']) . '" class="analysis ' . $sAnalysisClassName . '" onclick="' . $sJSAction . ';">
+                <TABLE border="0" cellpadding="0" cellspacing="1" id="' . $sElementID . '" class="analysis ' . $sAnalysisClassName . '" onclick="' . $sJSAction . ';">
                   <TR>
                     <TH colspan="3">
                       <DIV style="position : relative" class="analysis-tools">' . $zAnalysis['name'] . ' (v' . $zAnalysis['version'] . (!$zAnalysis['modified']? '' : ' modified') . ')' .
@@ -462,22 +464,24 @@ if (PATH_COUNT >= 2 && ctype_digit($_PE[1]) && !ACTION && (PATH_COUNT == 2 || PA
                     }
 
                     // Format the display of the filters.
-                    if (array_key_exists($sFilter, $aFilterInfo) && !empty($aFilterInfo[$sFilter]['name'])) {
-                        $sToolTip = '<TABLE border="0" cellpadding="0" cellspacing="3" class="filterinfo"><TR><TH>Filter name: </TH><TD>' . str_replace("\r\n", ' ', htmlspecialchars($aFilterInfo[$sFilter]['name'])) . '</TD></TR><TR><TH>Description: </TH><TD>' . $aFilterInfo[$sFilter]['description'] . '</TD></TR><TR><TH>Key: </TH><TD>' . $sFilter . '</TD></TR></TABLE>';
-                        $sFormattedFilter = '<SPAN class="filtername" onmouseover="lovd_showToolTip(\'' . htmlspecialchars($sToolTip) . '\', this, [30, 6]);">' . str_replace(' ', '&nbsp;', str_replace("\r\n", '<BR>', htmlspecialchars($aFilterInfo[$sFilter]['name']))) . '</SPAN>';
+                    if (isset($aFilterInfo[$sFilter]) && (!empty($aFilterInfo[$sFilter]['name']) || !empty($aFilterInfo[$sFilter]['description']))) {
+                        // We'll show details of the filter if the name or the description is filled in.
+                        $sFilterName = (!$aFilterInfo[$sFilter]['name']? $sFilter : $aFilterInfo[$sFilter]['name']);
+                        $sToolTip = '<TABLE border="0" cellpadding="0" cellspacing="3" class="filterinfo"><TR><TH>Key:</TH><TD>' . $sFilter . '</TD></TR><TR><TH>Filter name:</TH><TD>' . str_replace("\r\n", ' ', htmlspecialchars($sFilterName)) . '</TD></TR><TR><TH>Description:</TH><TD>' . $aFilterInfo[$sFilter]['description'] . '</TD></TR></TABLE>';
+                        $sFormattedFilter = '<SPAN class="filtername" onmouseover="lovd_showToolTip(\'' . htmlspecialchars($sToolTip) . '\', this, [30, 6]);">' . str_replace(' ', '&nbsp;', str_replace("\r\n", '<BR>', htmlspecialchars($sFilterName))) . '</SPAN>';
                     } else {
                         $sFormattedFilter = $sFilter;
                     }
 
                     print('
-                  <TR id="' . ($zAnalysis['runid']? $aTabData['prefix'] . $zAnalysis['runid'] : $aTabData['prefix'] . 'analysis_' . $zAnalysis['id']) . '_filter_' . preg_replace('/[^a-z0-9_]/i', '_', $sFilter) . '"' . (!$sFilterClassName ? '' : ' class="' . $sFilterClassName . '"') . ' valign="top">
+                  <TR id="' . $sElementID . '_filter_' . preg_replace('/[^a-z0-9_]/i', '_', $sFilter) . '"' . (!$sFilterClassName ? '' : ' class="' . $sFilterClassName . '"') . ' valign="top">
                     <TD class="filter_description">' . $sFormattedFilter . $sGenePanelsInfo . '</TD>
                     <TD class="filter_time">' . ($nTime == '-'? '-' : lovd_convertSecondsToTime($nTime, 1)) . '</TD>
                     <TD class="filter_var_left">' . ($nTime == '-'? '-' : $nVariantsLeft) . '</TD>
                   </TR>');
                 }
                 print('
-                  <TR id="' . ($zAnalysis['runid']? $aTabData['prefix'] . $zAnalysis['runid'] : $aTabData['prefix'] . 'analysis_' . $zAnalysis['id']) . '_message" class="message">
+                  <TR id="' . $sElementID . '_message" class="message">
                     <TD colspan="3">' . ($sAnalysisClassName == 'analysis_running analysis_half_run'? 'Analysis seems to have been interrupted' : ($sAnalysisClassName == 'analysis_run'? 'Click to see results' : 'Click to run this analysis')) . '</TD>
                   </TR>
                 </TABLE>
@@ -511,7 +515,7 @@ if (PATH_COUNT >= 2 && ctype_digit($_PE[1]) && !ACTION && (PATH_COUNT == 2 || PA
               }
             });
         }
-        $("#analyses").tabs(' . ($sDefaultTabID !== false? '{active: ' . $sDefaultTabID . '}' : '') . ');
+        $("#analyses").tabs(' . ($sDefaultTabID === false? '' : '{active: ' . $sDefaultTabID . '}') . ');
       </SCRIPT>
 
 

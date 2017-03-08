@@ -4,10 +4,10 @@
  * LEIDEN OPEN VARIATION DATABASE (LOVD)
  *
  * Created     : 2016-03-01
- * Modified    : 2016-11-29
+ * Modified    : 2017-03-08
  * For LOVD    : 3.0-18
  *
- * Copyright   : 2004-2016 Leiden University Medical Center; http://www.LUMC.nl/
+ * Copyright   : 2004-2017 Leiden University Medical Center; http://www.LUMC.nl/
  * Programmers : Anthony Marty <anthony.marty@unimelb.edu.au>
  *               Ivo F.A.C. Fokkema <I.F.A.C.Fokkema@LUMC.nl>
  *               John-Paul Plazzer <johnpaul.plazzer@gmail.com>
@@ -300,15 +300,15 @@ if (PATH_COUNT == 1 && ACTION == 'create') {
             // Add analyses.
             $aSuccessAnalyses = array();
             if (!empty($_POST['active_analyses']) && is_array($_POST['active_analyses'])) {
-                foreach ($_POST['active_analyses'] as $nAnalyses) {
+                foreach ($_POST['active_analyses'] as $nAnalysisID) {
                     // Add analyses to gene.
-                    if ($nAnalyses) {
-                        $q = $_DB->query('INSERT INTO ' . TABLE_GP2A . ' VALUES (?, ?)', array($nID, $nAnalyses), false);
+                    if ($nAnalysisID) {
+                        $q = $_DB->query('INSERT INTO ' . TABLE_GP2A . ' VALUES (?, ?)', array($nID, $nAnalysisID), false);
                         if (!$q) {
                             // Silent error.
-                            lovd_writeLog('Error', LOG_EVENT, 'Analysis information entry ' . $nAnalyses . ' - could not be added to gene panel ' . $nID);
+                            lovd_writeLog('Error', LOG_EVENT, 'Analysis information entry ' . $nAnalysisID . ' - could not be added to gene panel ' . $nID);
                         } else {
-                            $aSuccessAnalyses[] = $nAnalyses;
+                            $aSuccessAnalyses[] = $nAnalysisID;
                         }
                     }
                 }
@@ -452,10 +452,10 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && ACTION == 'edit') {
 
             // Remove analyses.
             $aToRemove = array();
-            foreach ($zData['active_analyses'] as $nAnalyses) {
-                if ($nAnalyses && !in_array($nAnalyses, $_POST['active_analyses'])) {
+            foreach ($zData['active_analyses'] as $nAnalysisID) {
+                if ($nAnalysisID && !in_array($nAnalysisID, $_POST['active_analyses'])) {
                     // User has requested removal...
-                    $aToRemove[] = $nAnalyses;
+                    $aToRemove[] = $nAnalysisID;
                 }
             }
 
@@ -472,14 +472,14 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && ACTION == 'edit') {
             // Add analyses.
             $aSuccess = array();
             $aFailed = array();
-            foreach ($_POST['active_analyses'] as $nAnalyses) {
-                if ($nAnalyses && !in_array($nAnalyses, $zData['active_analyses'])) {
+            foreach ($_POST['active_analyses'] as $nAnalysisID) {
+                if ($nAnalysisID && !in_array($nAnalysisID, $zData['active_analyses'])) {
                     // Add analyses to gene.
-                    $q = $_DB->query('INSERT IGNORE INTO ' . TABLE_GP2A . ' VALUES (?, ?)', array($nID, $nAnalyses), false);
+                    $q = $_DB->query('INSERT IGNORE INTO ' . TABLE_GP2A . ' VALUES (?, ?)', array($nID, $nAnalysisID), false);
                     if (!$q) {
-                        $aFailed[] = $nAnalyses;
+                        $aFailed[] = $nAnalysisID;
                     } else {
-                        $aSuccess[] = $nAnalyses;
+                        $aSuccess[] = $nAnalysisID;
                     }
                 }
             }

@@ -4,10 +4,10 @@
  * LEIDEN OPEN VARIATION DATABASE (LOVD)
  *
  * Created     : 2016-03-01
- * Modified    : 2016-05-13
- * For LOVD    : 3.0-13
+ * Modified    : 2017-03-08
+ * For LOVD    : 3.0-18
  *
- * Copyright   : 2004-2016 Leiden University Medical Center; http://www.LUMC.nl/
+ * Copyright   : 2004-2017 Leiden University Medical Center; http://www.LUMC.nl/
  * Programmers : Anthony Marty <anthony.marty@unimelb.edu.au>
  *               Ing. Ivo F.A.C. Fokkema <I.F.A.C.Fokkema@LUMC.nl>
  *
@@ -55,10 +55,10 @@ class LOVD_GenePanel extends LOVD_Object {
         // SQL code for loading an entry for an edit form.
         $this->sSQLLoadEntry = 'SELECT gp.*, COUNT(DISTINCT i2gp.individualid) AS individuals, ' .
                                'GROUP_CONCAT(DISTINCT gp2d.diseaseid ORDER BY gp2d.diseaseid SEPARATOR ";") AS _active_diseases, ' .
-                               'GROUP_CONCAT(DISTINCT gp2an.analysisid ORDER BY gp2an.analysisid SEPARATOR ";") AS _active_analyses ' .
+                               'GROUP_CONCAT(DISTINCT gp2a.analysisid ORDER BY gp2a.analysisid SEPARATOR ";") AS _active_analyses ' .
                                'FROM ' . TABLE_GENE_PANELS . ' AS gp ' .
                                'LEFT OUTER JOIN ' . TABLE_GP2DIS . ' AS gp2d ON (gp.id = gp2d. genepanelid) ' .
-                               'LEFT OUTER JOIN ' . TABLE_GP2A . ' AS gp2an ON (gp.id = gp2an.genepanelid) ' .
+                               'LEFT OUTER JOIN ' . TABLE_GP2A . ' AS gp2a ON (gp.id = gp2a.genepanelid) ' .
                                'LEFT OUTER JOIN ' . TABLE_IND2GP . ' i2gp ON (gp.id = i2gp.genepanelid) ' .
                                'WHERE gp.id = ? ' .
                                'GROUP BY gp.id';
@@ -75,8 +75,8 @@ class LOVD_GenePanel extends LOVD_Object {
             'LEFT OUTER JOIN ' . TABLE_IND2GP . ' i2gp ON (gp.id = i2gp.genepanelid) ' .
             'LEFT OUTER JOIN ' . TABLE_USERS . ' AS uc ON (gp.created_by = uc.id) ' .
             'LEFT OUTER JOIN ' . TABLE_USERS . ' AS ue ON (gp.edited_by = ue.id) ' .
-            'LEFT OUTER JOIN ' . TABLE_GP2A . ' AS gp2an ON (gp.id = gp2an.genepanelid) ' .
-            'LEFT OUTER JOIN ' . TABLE_ANALYSES . ' AS a ON (gp2an.analysisid = a.id) ';
+            'LEFT OUTER JOIN ' . TABLE_GP2A . ' AS gp2a ON (gp.id = gp2a.genepanelid) ' .
+            'LEFT OUTER JOIN ' . TABLE_ANALYSES . ' AS a ON (gp2a.analysisid = a.id) ';
         $this->aSQLViewEntry['GROUP_BY'] = 'gp.id';
 
         // SQL code for viewing the list of gene panels
@@ -91,8 +91,8 @@ class LOVD_GenePanel extends LOVD_Object {
                                           'LEFT OUTER JOIN ' . TABLE_IND2GP . ' i2gp ON gp.id = i2gp.genepanelid ' .
                                           'LEFT OUTER JOIN ' . TABLE_USERS . ' AS uc ON (gp.created_by = uc.id) ' .
                                           'LEFT OUTER JOIN ' . TABLE_DISEASES . ' AS d ON (gp2d.diseaseid = d.id)' .
-                                          'LEFT OUTER JOIN ' . TABLE_GP2A . ' AS gp2an ON (gp.id = gp2an.genepanelid) ' .
-                                          'LEFT OUTER JOIN ' . TABLE_ANALYSES . ' AS a ON (gp2an.analysisid = a.id) ';
+                                          'LEFT OUTER JOIN ' . TABLE_GP2A . ' AS gp2a ON (gp.id = gp2a.genepanelid) ' .
+                                          'LEFT OUTER JOIN ' . TABLE_ANALYSES . ' AS a ON (gp2a.analysisid = a.id) ';
         $this->aSQLViewList['GROUP_BY'] = 'gp.id';
 
         // List of columns and (default?) order for viewing an entry.
