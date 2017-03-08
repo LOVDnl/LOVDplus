@@ -38,10 +38,11 @@ if (!$_AUTH || $_AUTH['level'] < LEVEL_ANALYZER) {
 }
 
 // Check if the data sent is correct or not.
-if (!isset($_GET['runid'])) {
-    $_GET['runid'] = 0;
+if (!isset($_REQUEST['runid'])) {
+    $_REQUEST['runid'] = 0;
 }
-if (empty($_GET['screeningid']) || empty($_GET['analysisid']) || !ctype_digit($_GET['screeningid']) || !ctype_digit($_GET['analysisid']) || !ctype_digit($_GET['runid'])) {
+
+if (empty($_REQUEST['screeningid']) || empty($_REQUEST['analysisid']) || !ctype_digit($_REQUEST['screeningid']) || !ctype_digit($_REQUEST['analysisid']) || !ctype_digit($_REQUEST['runid'])) {
     die(AJAX_DATA_ERROR);
 }
 
@@ -49,20 +50,32 @@ if (empty($_GET['screeningid']) || empty($_GET['analysisid']) || !ctype_digit($_
 
 // Find screening data, make sure we have the right to analyze this patient.
 // MANAGER can always start an analysis, even when the individual's analysis hasn't been started by him.
-$sSQL = 'SELECT i.id, i.custom_panel FROM ' . TABLE_INDIVIDUALS . ' AS i INNER JOIN ' . TABLE_SCREENINGS . ' AS s ON (i.id = s.individualid) WHERE s.id = ? AND s.analysis_statusid < ? AND (s.analysis_statusid = ? OR s.analysis_by ' . ($_AUTH['level'] >= LEVEL_MANAGER? 'IS NOT NULL' : '= ?') . ')';
-$aSQL = array($_GET['screeningid'], ANALYSIS_STATUS_CLOSED, ANALYSIS_STATUS_READY);
+$sSQL = 'SELECT i.id, i.custom_panel, 
+         GROUP_CONCAT(DISTINCT gp.id, ";", gp.name, ";", gp.type ORDER BY gp.type DESC, gp.name ASC SEPARATOR ";;") AS __gene_panels
+         FROM ' . TABLE_INDIVIDUALS . ' AS i 
+         INNER JOIN ' . TABLE_SCREENINGS . ' AS s ON (i.id = s.individualid) 
+         LEFT OUTER JOIN ' . TABLE_IND2GP . ' AS i2gp ON (i.id = i2gp.individualid)
+         LEFT OUTER JOIN ' . TABLE_GENE_PANELS . ' AS gp ON (i2gp.genepanelid = gp.id) 
+         WHERE s.id = ? AND s.analysis_statusid < ? AND (s.analysis_statusid = ? OR s.analysis_by ' . ($_AUTH['level'] >= LEVEL_MANAGER? 'IS NOT NULL' : '= ?') . ')';
+$aSQL = array($_REQUEST['screeningid'], ANALYSIS_STATUS_CLOSED, ANALYSIS_STATUS_READY);
 if ($_AUTH['level'] < LEVEL_MANAGER) {
     $aSQL[] = $_AUTH['id'];
 }
 $zIndividual = $_DB->query($sSQL, $aSQL)->fetchAssoc();
+$zIndividual['gene_panels'] = array();
+//$zIndividual['gene_panels'] = explode(";;", $zIndividual['__gene_panels']);
+foreach (explode(";;", $zIndividual['__gene_panels']) as $sGenePanel) {
+    $aGenePanel = explode(";", $sGenePanel);
+    $zIndividual['gene_panels'][$aGenePanel[0]] = $aGenePanel;
+}
 if (!$zIndividual) {
     die(AJAX_FALSE);
 }
 
 $zAnalysis = $zAnalysisRun = false;
-if ($_GET['runid']) {
+if ($_REQUEST['runid']) {
     // Check if the run exists.
-    $zAnalysisRun = $_DB->query('SELECT ar.id, ar.analysisid, a.name, GROUP_CONCAT(arf.filterid ORDER BY arf.filter_order SEPARATOR ";") AS _filters FROM ' . TABLE_ANALYSES_RUN . ' AS ar INNER JOIN ' . TABLE_ANALYSES . ' AS a ON (ar.analysisid = a.id) INNER JOIN ' . TABLE_ANALYSES_RUN_FILTERS . ' AS arf ON (ar.id = arf.runid) WHERE ar.id = ?', array($_GET['runid']))->fetchAssoc();
+    $zAnalysisRun = $_DB->query('SELECT ar.id, ar.analysisid, a.name, GROUP_CONCAT(arf.filterid ORDER BY arf.filter_order SEPARATOR ";") AS _filters FROM ' . TABLE_ANALYSES_RUN . ' AS ar INNER JOIN ' . TABLE_ANALYSES . ' AS a ON (ar.analysisid = a.id) INNER JOIN ' . TABLE_ANALYSES_RUN_FILTERS . ' AS arf ON (ar.id = arf.runid) WHERE ar.id = ?', array($_REQUEST['runid']))->fetchAssoc();
     if (!$zAnalysisRun) {
         die('Analysis run not recognized. If the analysis run is defined properly, this is an error in the software.');
     }
@@ -74,96 +87,217 @@ if ($_GET['runid']) {
 
 } else {
     // Check if analysis exists.
-    $zAnalysis = $_DB->query('SELECT a.id, a.name, GROUP_CONCAT(a2af.filterid ORDER BY a2af.filter_order SEPARATOR ";") AS _filters FROM ' . TABLE_ANALYSES . ' AS a INNER JOIN ' . TABLE_A2AF . ' AS a2af ON (a.id = a2af.analysisid) WHERE id = ? GROUP BY a.id', array($_GET['analysisid']))->fetchAssoc();
+    $zAnalysis = $_DB->query('SELECT a.id, a.name, GROUP_CONCAT(a2af.filterid ORDER BY a2af.filter_order SEPARATOR ";") AS _filters FROM ' . TABLE_ANALYSES . ' AS a INNER JOIN ' . TABLE_A2AF . ' AS a2af ON (a.id = a2af.analysisid) WHERE id = ? GROUP BY a.id', array($_REQUEST['analysisid']))->fetchAssoc();
     if (!$zAnalysis || !$zAnalysis['_filters']) {
         die('Analysis not recognized or no filters defined. If the analysis is defined properly, this is an error in the software.');
     }
 }
 
-$sCustomPanel = '';
-$aGenePanels = array();
-// Process any gene panels that may have been passed.
-if (!empty($_GET['gene_panels'])) {
-    $aGenePanels = array_values($_GET['gene_panels']);
-    if(($nKey = array_search('custom_panel', $aGenePanels)) !== false) {
-        // If the custom panel has been selected then record this and remove from array.
-        $sCustomPanel = $zIndividual['custom_panel'];
-        unset($aGenePanels[$nKey]);
-    }
-}
 
 
 
 
+if (ACTION == 'configure' && GET) {
+    header('Content-type: text/javascript; charset=UTF-8');
+    $aFilters = explode(';', (isset($zAnalysisRun['_filters'])? $zAnalysisRun['_filters']: $zAnalysis['_filters']));
+    $sFiltersFormItems = '';
+    foreach ($aFilters as $sFilter) {
+        switch($sFilter) {
+            case 'apply_selected_gene_panels':
+                if (count($zIndividual['gene_panels'] > 0)) {
+                    $sFiltersFormItems .= '<DIV><TABLE>';
+                }
+                $sLastType = '';
+                foreach ($zIndividual['gene_panels'] as $nKey => $aGenePanel) {
+                    // Create the gene panel type header.
+                    if ($sLastType == '' || $sLastType != $aGenePanel[2]) {
+                        $sFiltersFormItems .= '<TR><TD class=\'gpheader\' colspan=\'2\' ' . ($sLastType? '' : 'style=\'border-top: 0px\'') . '>' . ucfirst(str_replace('_', ' ', $aGenePanel[2])) . '</TD></TR>';
+                    }
+                    $sLastType = $aGenePanel[2];
 
-// All checked. Update individual. We already have checked that we're allowed to analyze this one. So just update the settings, if not already done before.
-define('LOG_EVENT', 'AnalysisRun');
-$_DB->beginTransaction();
-$_DB->query('UPDATE ' . TABLE_SCREENINGS . ' SET analysis_statusid = ?, analysis_by = ?, analysis_date = NOW() WHERE id = ? AND (analysis_statusid = ? OR analysis_by IS NULL OR analysis_date IS NULL)', array(ANALYSIS_STATUS_IN_PROGRESS, $_AUTH['id'], $_GET['screeningid'], ANALYSIS_STATUS_READY));
+                    // Add the gene panel to the form.
+                    $sFiltersFormItems .= '<TR><TD><INPUT type=\'checkbox\' name=\'config[' . $sFilter . '][gene_panel][]\' id=\'gene_panel_' . $nKey . '\' value=\'' . $aGenePanel[0] . '\'' . ($aGenePanel[2] == 'mendeliome'? '' : ' checked') . ' /></TD><TD><LABEL for=\'gene_panel_'. $nKey .'\'>' . $aGenePanel[1] . '</LABEL></TD></TR>';
+                }
 
-if (!$_GET['runid']) {
-    // Create analysis in database.
-    $q = $_DB->query('INSERT INTO ' . TABLE_ANALYSES_RUN . ' VALUES (NULL, ?, ?, 0, ?, ?, NOW())', array($zAnalysis['id'], $_GET['screeningid'], $sCustomPanel, $_AUTH['id']));
-    if (!$q) {
-        $_DB->rollBack();
-        die('Failed to create analysis run in the database. If the analysis is defined properly, this is an error in the software.');
-    }
-    $nRunID = (int) $_DB->lastInsertId(); // (int) is to prevent zerofill from messing things up.
+                // Add in the custom gene panel option.
+                if ($zIndividual['custom_panel']) {
+                    $sFiltersFormItems .= '<TR><TD class=\'gpheader\' colspan=\'2\'>Custom panel</TD></TR>';
+                    $sFiltersFormItems .= '<TR><TD><INPUT type=\'checkbox\' name=\'config[' . $sFilter . '][gene_panel][]\' value=\'custom_panel\' id=\'custom_panel\' checked></TD>';
+                    $sFiltersFormItems .= '<TD><LABEL for=\'custom_panel\'>' . $zIndividual['custom_panel'] . '</LABEL></TD></TR>';
+                }
 
-    // Insert filters...
-    $aFilters = explode(';', $zAnalysis['_filters']);
-    foreach ($aFilters as $i => $sFilter) {
-        $q = $_DB->query('INSERT INTO ' . TABLE_ANALYSES_RUN_FILTERS . ' (runid, filterid, filter_order) VALUES (?, ?, ?)', array($nRunID, $sFilter, ($i+1)));
-        if (!$q) {
-            $_DB->rollBack();
-            die('Failed to create analysis run filter in the database. If the analysis is defined properly, this is an error in the software.');
+                // Display a notice that 'apply_selected_gene_panels' is selected for this analysis,
+                //  but no gene panel has been added to this individual.
+                if (empty($zIndividual['gene_panels']) && empty($zIndividual['custom_panel'] )) {
+                    $sFiltersFormItems .= '<P>There is no Gene Panel assigned to this individual. To continue running this analysis, please try one of the following options: </P>';
+                    $sFiltersFormItems .= '<UL>';
+                    $sFiltersFormItems .= '<LI>Add a gene panel to this individual, OR</LI>';
+                    $sFiltersFormItems .= '<LI>Remove the apply_selected_gene_panels filter from this analysis, OR</LI>';
+                    $sFiltersFormItems .= '<LI>Continue running this analysis without any gene panel selected.</LI>';
+                    $sFiltersFormItems .= '</UL>';
+                }
+
+                $sFiltersFormItems .= '</TABLE></DIV>';
+                break;
+            default:
         }
     }
-} else {
-    $nRunID = (int) $_GET['runid']; // (int) is to prevent zerofill from messing things up.
-    $aFilters = explode(';', $zAnalysisRun['_filters']);
-    // Update the existing analyses run record to store the custom panel genes.
-    $_DB->query('UPDATE ' . TABLE_ANALYSES_RUN . ' SET custom_panel = ? WHERE id = ?', array($sCustomPanel, $nRunID));
-}
 
-// Process the selected gene panels.
-// FIXME: This will fail if we already have the run ID in the database. That can
-// happen, when somehow the analysis run was created, but didn't start (JS error?).
-foreach ($aGenePanels as $nKey => $nGenePanelID) {
-    // Write the gene panels selected to the analyses_run2gene_panel table.
-    $q = $_DB->query('INSERT INTO ' . TABLE_AR2GP . ' VALUES (?, ?)', array($nRunID, $nGenePanelID));
-    if (!$q) {
-        $_DB->rollBack();
-        die('Failed to store the gene panels for this analysis. This may be a temporary error, or an error in the software.');
+    if (empty($sFiltersFormItems)) {
+        exit;
     }
+
+    // If we get here, we want to show the dialog for sure.
+    print('// Make sure we have and show the dialog.
+    if (!$("#configure_analysis_dialog").length) {
+        $("body").append("<DIV id=\'configure_analysis_dialog\'></DIV>");
+    }
+    if (!$("#configure_analysis_dialog").hasClass("ui-dialog-content") || !$("#configure_analysis_dialog").dialog("isOpen")) {
+        $("#configure_analysis_dialog").dialog({draggable:false,resizable:false,minWidth:600,show:"fade",closeOnEscape:true,hide:"fade",modal:true});
+    }
+    ');
+
+    // Implement an CSRF protection by working with tokens.
+    $sFormClone  = '<FORM id=\'configure_analysis_form\'><INPUT type=\'hidden\' name=\'csrf_token\' value=\'{{CSRF_TOKEN}}\'>Configure analysis<BR>';
+    $sFormClone .= $sFiltersFormItems;
+    $sFormClone .= '<INPUT type=\'hidden\' name=\'analysisid\' value=\''. $_REQUEST['analysisid'] .'\' />';
+    $sFormClone .= '<INPUT type=\'hidden\' name=\'screeningid\' value=\''. $_REQUEST['screeningid'] .'\' />';
+    $sFormClone .= '<INPUT type=\'hidden\' name=\'runid\' value=\''. $_REQUEST['runid'] .'\' />';
+    $sFormClone .= '<INPUT type=\'hidden\' name=\'elementid\' value=\''. $_REQUEST['elementid'] .'\' />';
+    $sFormClone .= '</FORM>';
+
+    // Set JS variables and objects.
+    print('
+    var oButtonFormSubmit  = {"Submit":function () { $.post("' . CURRENT_PATH . '?' . ACTION . '", $("#configure_analysis_form").serialize()); }};
+    var oButtonCancel = {"Cancel":function () { $(this).dialog("close"); }};
+    var oButtonClose  = {"Close":function () { $(this).dialog("close"); }};
+    ');
+
+    // Display the form, and put the right buttons in place.
+    print('
+    $("#configure_analysis_dialog").html("' . $sFormClone . '<BR>");
+
+    // Select the right buttons.
+    $("#configure_analysis_dialog").dialog({title: "Configure Analysis" ,buttons: $.extend({}, oButtonFormSubmit, oButtonCancel)});
+    ');
+    exit;
 }
 
-$_DB->commit();
-
-// Write to log...
-lovd_writeLog('Event', LOG_EVENT, 'Started analysis run ' . str_pad($nRunID, 5, '0', STR_PAD_LEFT) . ($zAnalysis? ' (' . $zAnalysis['name'] : ' based on ' . $zAnalysisRun['analysisid'] . ' (' . $zAnalysisRun['name']) . ') on individual ' . $zIndividual['id'] . ':' . str_pad($_GET['screeningid'], 10, '0', STR_PAD_LEFT) . ' with filter(s) \'' . implode('\', \'', $aFilters) . '\'');
 
 
 
 
+if (ACTION == 'configure' && POST) {
+    header('Content-type: text/javascript; charset=UTF-8');
+    // TODO: also save into database for the config per filter?
 
-// Get info for analysis and store in session.
-if (empty($_SESSION['analyses'])) {
-    $_SESSION['analyses'] = array();
+
+    $aSelectedGenePanels = $_REQUEST['config']['apply_selected_gene_panels']['gene_panel'];
+
+    print('
+    $("#configure_analysis_dialog").dialog("close");
+    lovd_runAnalysis (\'' . $_REQUEST['screeningid'] . '\', \'' . $_REQUEST['analysisid'] . '\', \'' . $_REQUEST['runid'] . '\', \'' . $_REQUEST['elementid'] . '\', ' . json_encode($aSelectedGenePanels) . ');
+    ');
 }
-// Store analysis information in the session.
-$_SESSION['analyses'][$nRunID] =
-    array(
-        'screeningid' => (int) $_GET['screeningid'], // (int) is to prevent zerofill from messing things up.
-        'filters' => $aFilters,
-        'IDsLeft' => array(),
-        'custom_panel' => $sCustomPanel,
-        'gene_panels' => $aGenePanels,
-    );
 
-// Collect variant IDs and store in session.
-$_SESSION['analyses'][$nRunID]['IDsLeft'] = $_DB->query('SELECT DISTINCT CAST(s2v.variantid AS UNSIGNED) FROM ' . TABLE_SCR2VAR . ' AS s2v WHERE s2v.screeningid = ?', array($_GET['screeningid']))->fetchAllColumn();
 
-// Instruct page to start running filters in sequence.
-die(AJAX_TRUE . ' ' . str_pad($nRunID, 5, '0', STR_PAD_LEFT));
+
+
+
+if (ACTION == 'run') {
+    $sCustomPanel = '';
+    $aGenePanels = array();
+    // Process any gene panels that may have been passed.
+    if (!empty($_REQUEST['gene_panels'])) {
+        $aGenePanels = array_values($_REQUEST['gene_panels']);
+        if(($nKey = array_search('custom_panel', $aGenePanels)) !== false) {
+            // If the custom panel has been selected then record this and remove from array.
+            $sCustomPanel = $zIndividual['custom_panel'];
+            unset($aGenePanels[$nKey]);
+        }
+    }
+
+
+
+
+
+    // TODO: move this into 'configure' POST
+    // All checked. Update individual. We already have checked that we're allowed to analyze this one. So just update the settings, if not already done before.
+    define('LOG_EVENT', 'AnalysisRun');
+    $_DB->beginTransaction();
+    $_DB->query('UPDATE ' . TABLE_SCREENINGS . ' SET analysis_statusid = ?, analysis_by = ?, analysis_date = NOW() WHERE id = ? AND (analysis_statusid = ? OR analysis_by IS NULL OR analysis_date IS NULL)', array(ANALYSIS_STATUS_IN_PROGRESS, $_AUTH['id'], $_REQUEST['screeningid'], ANALYSIS_STATUS_READY));
+
+    if (!$_REQUEST['runid']) {
+        // Create analysis in database.
+        $q = $_DB->query('INSERT INTO ' . TABLE_ANALYSES_RUN . ' VALUES (NULL, ?, ?, 0, ?, ?, NOW())', array($zAnalysis['id'], $_REQUEST['screeningid'], $sCustomPanel, $_AUTH['id']));
+        if (!$q) {
+            $_DB->rollBack();
+            die('Failed to create analysis run in the database. If the analysis is defined properly, this is an error in the software.');
+        }
+        $nRunID = (int) $_DB->lastInsertId(); // (int) is to prevent zerofill from messing things up.
+
+        // Insert filters...
+        $aFilters = explode(';', $zAnalysis['_filters']);
+        foreach ($aFilters as $i => $sFilter) {
+            $q = $_DB->query('INSERT INTO ' . TABLE_ANALYSES_RUN_FILTERS . ' (runid, filterid, filter_order) VALUES (?, ?, ?)', array($nRunID, $sFilter, ($i+1)));
+            if (!$q) {
+                $_DB->rollBack();
+                die('Failed to create analysis run filter in the database. If the analysis is defined properly, this is an error in the software.');
+            }
+        }
+    } else {
+        $nRunID = (int) $_REQUEST['runid']; // (int) is to prevent zerofill from messing things up.
+        $aFilters = explode(';', $zAnalysisRun['_filters']);
+        // Update the existing analyses run record to store the custom panel genes.
+        $_DB->query('UPDATE ' . TABLE_ANALYSES_RUN . ' SET custom_panel = ? WHERE id = ?', array($sCustomPanel, $nRunID));
+    }
+
+
+    // TODO: move this into 'configure' POST
+
+    // Process the selected gene panels.
+    // FIXME: This will fail if we already have the run ID in the database. That can
+    // happen, when somehow the analysis run was created, but didn't start (JS error?).
+    foreach ($aGenePanels as $nKey => $nGenePanelID) {
+        // Write the gene panels selected to the analyses_run2gene_panel table.
+        $q = $_DB->query('INSERT INTO ' . TABLE_AR2GP . ' VALUES (?, ?)', array($nRunID, $nGenePanelID));
+        if (!$q) {
+            $_DB->rollBack();
+            die('Failed to store the gene panels for this analysis. This may be a temporary error, or an error in the software.');
+        }
+    }
+
+    $_DB->commit();
+
+    // Write to log...
+    lovd_writeLog('Event', LOG_EVENT, 'Started analysis run ' . str_pad($nRunID, 5, '0', STR_PAD_LEFT) . ($zAnalysis? ' (' . $zAnalysis['name'] : ' based on ' . $zAnalysisRun['analysisid'] . ' (' . $zAnalysisRun['name']) . ') on individual ' . $zIndividual['id'] . ':' . str_pad($_REQUEST['screeningid'], 10, '0', STR_PAD_LEFT) . ' with filter(s) \'' . implode('\', \'', $aFilters) . '\'');
+
+
+
+
+
+    // Get info for analysis and store in session.
+    if (empty($_SESSION['analyses'])) {
+        $_SESSION['analyses'] = array();
+    }
+
+    // TODO: move this into 'configure' POST
+    // Store analysis information in the session.
+    $_SESSION['analyses'][$nRunID] =
+        array(
+            'screeningid' => (int) $_REQUEST['screeningid'], // (int) is to prevent zerofill from messing things up.
+            'filters' => $aFilters,
+            'IDsLeft' => array(),
+            'custom_panel' => $sCustomPanel,
+            'gene_panels' => $aGenePanels,
+        );
+
+    // Collect variant IDs and store in session.
+    $_SESSION['analyses'][$nRunID]['IDsLeft'] = $_DB->query('SELECT DISTINCT CAST(s2v.variantid AS UNSIGNED) FROM ' . TABLE_SCR2VAR . ' AS s2v WHERE s2v.screeningid = ?', array($_REQUEST['screeningid']))->fetchAllColumn();
+
+    // Instruct page to start running filters in sequence.
+    die(AJAX_TRUE . ' ' . str_pad($nRunID, 5, '0', STR_PAD_LEFT));
+}
+
+
 ?>

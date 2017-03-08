@@ -65,6 +65,18 @@ function lovd_resetAfterFailedRun (sElementID)
 
 
 
+function lovd_configureAnalysis (nScreeningID, nAnalysisID, nRunID, sElementID)
+{
+    // Display the modal to enter configurations for different filters.
+    $.get('<?php echo lovd_getInstallURL(); ?>ajax/run_analysis.php?configure&elementid=' + escape(sElementID) + '&screeningid=' + escape(nScreeningID) + '&analysisid=' + escape(nAnalysisID) + '&runid=' + escape(nRunID),
+    function() {console.log("Running... "); }).fail(function(data) { console.log("ERROR"); });
+
+}
+
+
+
+
+
 function lovd_runAnalysis (nScreeningID, nAnalysisID, nRunID, sElementID, aSelectedGenePanels)
 {
     // When 'apply_selected_gene_panels' filter is NOT selected, aSelectedGenePanels is undefined.
@@ -86,7 +98,7 @@ function lovd_runAnalysis (nScreeningID, nAnalysisID, nRunID, sElementID, aSelec
         sGenePanels = '';
     }
 
-    $.get('<?php echo lovd_getInstallURL(); ?>ajax/run_analysis.php?screeningid=' + escape(nScreeningID) + '&analysisid=' + escape(nAnalysisID) + '&runid=' + escape(nRunID) + sGenePanels,
+    $.get('<?php echo lovd_getInstallURL(); ?>ajax/run_analysis.php?run&screeningid=' + escape(nScreeningID) + '&analysisid=' + escape(nAnalysisID) + '&runid=' + escape(nRunID) + sGenePanels,
         function () {
             // Remove onClick handler and change class of table, to visually show that it's running.
             $('#' + sElementID)
