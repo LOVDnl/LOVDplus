@@ -144,7 +144,7 @@ $aRequired =
 $_SETT = array(
                 'system' =>
                      array(
-                            'version' => '3.0-17g',
+                            'version' => '3.0-17h',
                           ),
                 'user_levels' =>
                      array(
@@ -516,6 +516,9 @@ $_TABLES =
                 'TABLE_IND2GP' => TABLEPREFIX . '_individuals2gene_panels',
                 'TABLE_GP2DIS' => TABLEPREFIX . '_gene_panels2diseases',
                 'TABLE_ANALYSES' => TABLEPREFIX . '_analyses',
+                'TABLE_ANALYSIS_FILTERS' => TABLEPREFIX . '_analysis_filters',
+                'TABLE_A2AF' => TABLEPREFIX . '_analyses2analysis_filters',
+                'TABLE_GP2A' => TABLEPREFIX . '_gene_panels2analyses',
                 'TABLE_ANALYSES_RUN' => TABLEPREFIX . '_analyses_run',
                 'TABLE_AR2GP' => TABLEPREFIX . '_analyses_run2gene_panels',
                 'TABLE_ANALYSES_RUN_FILTERS' => TABLEPREFIX . '_analyses_run_filters',

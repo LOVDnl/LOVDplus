@@ -225,7 +225,7 @@ $aTableSQL =
     edited_by SMALLINT(5) UNSIGNED ZEROFILL,
     edited_date DATETIME,
     PRIMARY KEY (id),
-    UNIQUE(id_omim),
+    UNIQUE (id_omim),
     INDEX (created_by),
     INDEX (edited_by),
     CONSTRAINT ' . TABLE_DISEASES . '_fk_created_by FOREIGN KEY (created_by) REFERENCES ' . TABLE_USERS . ' (id) ON DELETE SET NULL ON UPDATE CASCADE,
@@ -927,16 +927,48 @@ $aTableSQL =
     sortid TINYINT(3) UNSIGNED NOT NULL,
     name VARCHAR(50) NOT NULL,
     description TEXT NOT NULL,
-    filters TEXT NOT NULL,
+    version TINYINT(3) UNSIGNED DEFAULT 1,
     created_by SMALLINT(5) UNSIGNED ZEROFILL,
     created_date DATETIME NOT NULL,
     edited_by SMALLINT(5) UNSIGNED ZEROFILL,
     edited_date DATETIME,
     PRIMARY KEY (id),
+    UNIQUE (name, version),
     INDEX (created_by),
     INDEX (edited_by),
     CONSTRAINT ' . TABLE_ANALYSES . '_fk_created_by FOREIGN KEY (created_by) REFERENCES ' . TABLE_USERS . ' (id) ON DELETE SET NULL ON UPDATE CASCADE,
     CONSTRAINT ' . TABLE_ANALYSES . '_fk_edited_by FOREIGN KEY (edited_by) REFERENCES ' . TABLE_USERS . ' (id) ON DELETE SET NULL ON UPDATE CASCADE)
+    ' . $sSettings
+
+        , 'TABLE_ANALYSIS_FILTERS' =>
+    'CREATE TABLE ' . TABLE_ANALYSIS_FILTERS . ' (
+    id VARCHAR(50) NOT NULL,
+    name VARCHAR(100) NOT NULL DEFAULT "",
+    description TEXT,
+    PRIMARY KEY (id))
+    ' . $sSettings
+
+        , 'TABLE_A2AF' =>
+    'CREATE TABLE ' . TABLE_A2AF . ' (
+    analysisid TINYINT(3) UNSIGNED ZEROFILL,
+    filterid VARCHAR(50) NOT NULL,
+    filter_order TINYINT(3) UNSIGNED DEFAULT 1,
+    PRIMARY KEY (analysisid, filterid),
+    INDEX (analysisid),
+    INDEX (filterid),
+    CONSTRAINT ' . TABLE_A2AF . '_fk_analysisid FOREIGN KEY (analysisid) REFERENCES ' . TABLE_ANALYSES . ' (id) ON DELETE CASCADE ON UPDATE CASCADE,
+    CONSTRAINT ' . TABLE_A2AF . '_fk_filterid FOREIGN KEY (filterid) REFERENCES ' . TABLE_ANALYSIS_FILTERS . ' (id) ON DELETE CASCADE ON UPDATE CASCADE)
+    ' . $sSettings
+
+        , 'TABLE_GP2A' =>
+    'CREATE TABLE ' . TABLE_GP2A . ' (
+    genepanelid SMALLINT(5) UNSIGNED ZEROFILL NOT NULL,
+    analysisid TINYINT(3) UNSIGNED ZEROFILL,
+    PRIMARY KEY (genepanelid, analysisid),
+    INDEX (genepanelid),
+    INDEX (analysisid),
+    CONSTRAINT ' . TABLE_GP2A . '_fk_genepanelid FOREIGN KEY (genepanelid) REFERENCES ' . TABLE_GENE_PANELS . ' (id) ON DELETE CASCADE ON UPDATE CASCADE,
+    CONSTRAINT ' . TABLE_GP2A . '_fk_analysisid FOREIGN KEY (analysisid) REFERENCES ' . TABLE_ANALYSES . ' (id) ON DELETE CASCADE ON UPDATE CASCADE)
     ' . $sSettings
 
         , 'TABLE_ANALYSES_RUN' =>

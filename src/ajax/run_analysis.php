@@ -74,15 +74,9 @@ if ($_GET['runid']) {
 
 } else {
     // Check if analysis exists.
-    $zAnalysis = $_DB->query('SELECT id, name, filters FROM ' . TABLE_ANALYSES . ' WHERE id = ?', array($_GET['analysisid']))->fetchAssoc();
-    if (!$zAnalysis || !$zAnalysis['filters']) {
+    $zAnalysis = $_DB->query('SELECT a.id, a.name, GROUP_CONCAT(a2af.filterid ORDER BY a2af.filter_order SEPARATOR ";") AS _filters FROM ' . TABLE_ANALYSES . ' AS a INNER JOIN ' . TABLE_A2AF . ' AS a2af ON (a.id = a2af.analysisid) WHERE id = ? GROUP BY a.id', array($_GET['analysisid']))->fetchAssoc();
+    if (!$zAnalysis || !$zAnalysis['_filters']) {
         die('Analysis not recognized or no filters defined. If the analysis is defined properly, this is an error in the software.');
-    }
-
-    // Check if this analysis has not been run before. If so, return a specific error. If somehow things don't complete, we should maybe just delete them and run again.
-    //   Otherwise, this check needs to be modified.
-    if ($_DB->query('SELECT COUNT(*) FROM ' . TABLE_ANALYSES_RUN . ' AS ar WHERE ar.analysisid = ? AND ar.screeningid = ? AND modified = 0', array($zAnalysis['id'], $_GET['screeningid']))->fetchColumn()) {
-        die('This analysis has already been performed on this screening.');
     }
 }
 
@@ -117,7 +111,7 @@ if (!$_GET['runid']) {
     $nRunID = (int) $_DB->lastInsertId(); // (int) is to prevent zerofill from messing things up.
 
     // Insert filters...
-    $aFilters = preg_split('/\s+/', $zAnalysis['filters']);
+    $aFilters = explode(';', $zAnalysis['_filters']);
     foreach ($aFilters as $i => $sFilter) {
         $q = $_DB->query('INSERT INTO ' . TABLE_ANALYSES_RUN_FILTERS . ' (runid, filterid, filter_order) VALUES (?, ?, ?)', array($nRunID, $sFilter, ($i+1)));
         if (!$q) {

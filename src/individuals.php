@@ -246,6 +246,7 @@ if (PATH_COUNT >= 2 && ctype_digit($_PE[1]) && !ACTION && (PATH_COUNT == 2 || PA
           <INPUT type="hidden" name="nScreeningID" value="">
           <INPUT type="hidden" name="nAnalysisID" value="">
           <INPUT type="hidden" name="nRunID" value="">
+          <INPUT type="hidden" name="sElementID" value="">
           <TABLE border="0" cellpadding="0" cellspacing="0" width="80%" align="center">');
 
         $sLastType = '';
@@ -297,138 +298,201 @@ if (PATH_COUNT >= 2 && ctype_digit($_PE[1]) && !ACTION && (PATH_COUNT == 2 || PA
       </DIV>' . "\n");
 
         // If we're ready to analyze, or if we are analyzing already, show analysis options.
-        // Both already run analyses and analyses not yet run will be shown. Analyses already run are fetched differently, though.
-        $zAnalysesRun    = $_DB->query('SELECT a.id, a.name, a.description, a.filters, IFNULL(MAX(arf.run_time)>-1, 0) AS analysis_run, ar.id AS runid,   ar.modified, GROUP_CONCAT(arf.filterid, ";", IFNULL(arf.filtered_out, "-"), ";", IFNULL(arf.run_time, "-") ORDER BY arf.filter_order SEPARATOR ";;") AS __run_filters
-                                        FROM ' . TABLE_ANALYSES . ' AS a INNER JOIN ' . TABLE_ANALYSES_RUN . ' AS ar ON (a.id = ar.analysisid) INNER JOIN ' . TABLE_ANALYSES_RUN_FILTERS . ' AS arf ON (ar.id = arf.runid)
+        // Analyses will be shown in separate tabs determined by the queries below.
+        $zAnalysesRun    = $_DB->query('SELECT a.id, a.name, a.version, a.description, GROUP_CONCAT(DISTINCT a2af.filterid ORDER BY a2af.filter_order ASC SEPARATOR ";") AS _filters, IFNULL(MAX(arf.run_time)>-1, 0) AS analysis_run, ar.id AS runid,   ar.modified, GROUP_CONCAT(DISTINCT arf.filterid, ";", IFNULL(arf.filtered_out, "-"), ";", IFNULL(arf.run_time, "-") ORDER BY arf.filter_order SEPARATOR ";;") AS __run_filters
+                                        FROM ' . TABLE_ANALYSES . ' AS a INNER JOIN ' . TABLE_ANALYSES_RUN . ' AS ar ON (a.id = ar.analysisid)
+                                        INNER JOIN ' . TABLE_ANALYSES_RUN_FILTERS . ' AS arf ON (ar.id = arf.runid)
+                                        INNER JOIN ' . TABLE_A2AF . ' AS a2af ON (ar.analysisid = a2af.analysisid)
                                         WHERE ar.screeningid = ? GROUP BY ar.id ORDER BY ar.modified, ar.id', array($nScreeningToAnalyze))->fetchAllAssoc();
-        $zAnalysesNotRun = $_DB->query('SELECT a.id, a.name, a.description, a.filters, 0                               AS analysis_run, 0     AS runid, 0 AS modified
+        $zAnalysesGenePanel = $_DB->query('SELECT DISTINCT a.id, a.name, a.version, a.description, GROUP_CONCAT(DISTINCT a2af.filterid ORDER BY a2af.filter_order ASC SEPARATOR ";") AS _filters, 0                               AS analysis_run, 0     AS runid, 0 AS modified
                                         FROM ' . TABLE_ANALYSES . ' AS a
-                                        WHERE a.id NOT IN (SELECT ar.analysisid
-                                                           FROM ' . TABLE_ANALYSES_RUN . ' AS ar
-                                                           WHERE ar.screeningid = ? AND ar.modified = 0) ORDER BY a.sortid, a.id', array($nScreeningToAnalyze))->fetchAllAssoc();
-        $zAnalyses = array_merge($zAnalysesRun, array(''), $zAnalysesNotRun);
+                                        INNER JOIN ' . TABLE_A2AF . ' AS a2af ON (a.id = a2af.analysisid)
+                                        INNER JOIN ' . TABLE_GP2A . ' AS gp2a ON (a.id = gp2a.analysisid) 
+                                        INNER JOIN ' . TABLE_IND2GP . ' AS i2gp ON (gp2a.genepanelid = i2gp.genepanelid)
+                                        WHERE i2gp.individualid = ? 
+                                        GROUP BY a.id ORDER BY a.sortid, a.id', array($nID))->fetchAllAssoc();
+        $zAnalysesAll = $_DB->query('SELECT a.id, a.name, a.version, a.description, GROUP_CONCAT(a2af.filterid ORDER BY a2af.filter_order ASC SEPARATOR ";") AS _filters, 0                               AS analysis_run, 0     AS runid, 0 AS modified
+                                        FROM ' . TABLE_ANALYSES . ' AS a
+                                        INNER JOIN ' . TABLE_A2AF . ' AS a2af ON (a.id = a2af.analysisid) 
+                                        GROUP BY a.id ORDER BY a.sortid, a.id')->fetchAllAssoc();
+        $aFilterInfo = $_DB->query('SELECT id, name, description FROM ' . TABLE_ANALYSIS_FILTERS)->fetchAllGroupAssoc();
         // Fetch all (numeric) variant IDs of all variants that have a curation status. They will be shown by default, when no analysis has been selected yet.
         $aScreeningVariantIDs = $_DB->query('SELECT CAST(s2v.variantid AS UNSIGNED) FROM ' . TABLE_SCR2VAR . ' s2v INNER JOIN ' . TABLE_VARIANTS . ' AS vog ON (s2v.variantid = vog.id) WHERE s2v.screeningid = ? AND vog.curation_statusid IS NOT NULL', array($nScreeningToAnalyze))->fetchAllColumn();
         require ROOT_PATH . 'inc-lib-analyses.php';
+
+        // Array storing all the possible tabs and info that goes with them. This should be in the order in which they need to be displayed.
+        $aTabsInfo = array(
+            'analyses_run' => array(
+                'id' => 0, // Zero base tab id used by jQuery UI tabs.
+                'prefix' => 'run_', // The prefix that is attached to the analysis id. DO NOT CHANGE THIS PREFIX FOR RUN ANALYSES AS IT IS HARD CODED IN AJAX.
+                'name' => 'Run analyses', // The text that will appear within the tab navigation.
+                'no_analyses_message' => 'No analyses have been run yet, click on a tab above to see the available analyses.', // The text that will appear if no analyses are found for this tab.
+                'no_analyses_message_type' => 'information', // The type of message that will be displayed, see lovd_showInfoTable() for available types.
+                'data' => $zAnalysesRun, // The analyses data used to display the analyses.
+            ),
+            'analyses_gene_panel' => array(
+                'id' => 1,
+                'prefix' => 'gp_',
+                'name' => 'Gene panel analyses',
+                'no_analyses_message' => 'There are no available analyses, please assign gene panels to this individual and be sure that the required analyses are assigned to those gene panels.',
+                'no_analyses_message_type' => 'information',
+                'data' => $zAnalysesGenePanel,
+            ),
+            'analyses_all' => array(
+                'id' => 2,
+                'prefix' => 'all_',
+                'name' => 'All analyses',
+                'no_analyses_message' => 'There are no analyses in the database! Analyses will need to be installed by an administrator before they can be used.',
+                'no_analyses_message_type' => 'warning',
+                'data' => $zAnalysesAll,
+            ),
+        );
+        $sDefaultTabID = false; // The default tab to show when the page has loaded.
+        $sTabMenu = '<UL>' . "\n";
+        foreach ($aTabsInfo as $sTabKey => $aTabData) { // Create the tab menus using the tabs info array.
+            $sTabMenu .= '          <LI><A href="' . CURRENT_PATH . '#' . $sTabKey . '">' . $aTabData['name'] . '</A></LI>' . "\n";
+        }
+        $sTabMenu .= '        </UL>' . "\n";
+
         print('
       <DIV id="analyses">
-        <TABLE id="analysesTable" border="0" cellpadding="0" cellspacing="0">
-          <TR>');
-        foreach ($zAnalyses as $key => $zAnalysis) {
-            if (!$zAnalysis) {
-                // This is the separation between run and non-run filters.
-                if ($key) {
-                    // We've got run filters on the left, and non-run filters on the right.
-                    // Create division.
-                    print('
-            <TD class="divider">&nbsp;</TD>');
-                }
-                continue;
-            }
-            $aFilters = preg_split('/\s+/', $zAnalysis['filters']);
-            $aFiltersRun = array();
-            $aFiltersRunRaw = array();
-            if (!empty($zAnalysis['__run_filters'])) {
-                list($aFiltersRunRaw) = $_DATA->autoExplode(array('__0' => $zAnalysis['__run_filters']));
-                foreach ($aFiltersRunRaw as $aFilter) {
-                    $aFiltersRun[$aFilter[0]] = array($aFilter[1], $aFilter[2]);
-                }
-                $sFilterLastRun = $aFilter[0]; // For checking if this analysis is done or not ($aFilter came from the loop).
-            }
+        ' . $sTabMenu);
 
-            if ($zAnalysis['analysis_run']) {
-                // Was run complete?
-                if ($aFiltersRun[$sFilterLastRun][0] == '-') {
-                    // It's not done... this is strange... half an analysis should normally not happen.
-                    $sAnalysisClassName = 'analysis_running analysis_half_run';
-                } else {
-                    $sAnalysisClassName = 'analysis_run';
-                }
-            } else {
-                $sAnalysisClassName = 'analysis_not_run';
-            }
-
-            // Select a js function to be executed when an analysis table is clicked.
-            $sJSAction = '';
-
-            // $aFilters contains ALL the filters this analysis has before it was modified.
-            // $aFiltersRun contains all the filters that have been run or prepared to be run.
-            // $aFiltersRun is always empty before a non-modified analysis is run, but it is pre-populated before a modified analysis is run.
-            // Check for the gene panel filter; this will define if we'll ask for the gene panel when running the analysis.
-            $bHasGenePanelFilter = (empty($aFiltersRun) && in_array('apply_selected_gene_panels', $aFilters)) || // Original analysis, gene panel filter is present.
-                                    isset($aFiltersRun['apply_selected_gene_panels']); // Gene panel has been run or modified, and gene panel filter is present.
-            $bHasAuthorization = ($_AUTH['level'] >= LEVEL_OWNER && $zScreening['analysis_statusid'] < ANALYSIS_STATUS_CLOSED);
-            $bCanRemoveAnalysis = ($bHasAuthorization && ($zAnalysis['runid'] || $zAnalysis['modified']));
-            if ($zAnalysis['analysis_run']) {
-                $sJSAction = 'lovd_showAnalysisResults(\''. $zAnalysis['runid'] .'\')';
-            } elseif ($bHasAuthorization) {
-                // FIXME: code duplicated from analysis_runs.php when we first render analyses tables.
-                // Can probably check for the call of lovd_popoverGenePanelSelectionForm from within lovd_runAnalysis.
-                $sFunctionName = ($bHasGenePanelFilter? 'lovd_popoverGenePanelSelectionForm' : 'lovd_runAnalysis');
-                $sRunID = (!$zAnalysis['runid']? '' : $zAnalysis['runid']);
-                $sJSAction = $sFunctionName . '(\''. $nScreeningToAnalyze  .'\', \''. $zAnalysis['id'] .'\', \'' . $sRunID . '\')';
-            }
+        foreach ($aTabsInfo as $sTabKey => $aTabData) {
+            print('        <DIV id="' . $sTabKey . '" style="overflow: auto;">
+            ');
 
             print('
-            <TD class="analysis" valign="top">
-              <TABLE border="0" cellpadding="0" cellspacing="1" id="' . ($zAnalysis['runid']? 'run_' . $zAnalysis['runid'] : 'analysis_' . $zAnalysis['id']) . '" class="analysis ' . $sAnalysisClassName . '" onclick="' . $sJSAction . ';">
-                <TR>
-                  <TH colspan="3">
-                    <DIV style="position : relative" class="analysis-tools">
-                      ' . $zAnalysis['name'] . (!$zAnalysis['modified']? '' : ' (modified)') .
-                (!$bHasAuthorization? '' : '
-                      <IMG ' . ($bCanRemoveAnalysis? '' : 'style="display:none;"') . ' src="gfx/cross.png" alt="Remove" onclick="$.get(\'ajax/analysis_runs.php/' . $zAnalysis['runid'] . '?delete\').fail(function(){alert(\'Error deleting analysis run, please try again later.\');}); cancelParentEvent(event);" width="16" height="16" class="remove">
-                      <IMG src="gfx/menu_clone.png" alt="Duplicate" onclick="$.get(\'ajax/analysis_runs.php/' . $zAnalysis['runid'] . '?clone\').fail(function(){alert(\'Error duplicating analysis run, please try again later.\');}); cancelParentEvent(event);" width="16" height="16" class="clone">
-                      <IMG src="gfx/menu_edit.png" alt="Modify" onclick="lovd_openWindow(\'' . lovd_getInstallURL() . 'analyses/' . ($zAnalysis['runid']? 'run/' . $zAnalysis['runid'] : $zAnalysis['id']) . '?modify&amp;in_window\', \'ModifyAnalysisRun\', 780, 400); cancelParentEvent(event);" width="16" height="16" class="modify">') . '
-                      <IMG src="gfx/lovd_form_question.png" alt="" onmouseover="lovd_showToolTip(\'' . $zAnalysis['description'] . '\');" onmouseout="lovd_hideToolTip();" width="14" height="14" class="help" style="position: absolute; top: -4px; right: 0px;">
-                    </DIV>
-                  </TH>
-                </TR>
-                <TR>
-                  <TD><B>Filter</B></TD>
-                  <TD><B>Time</B></TD>
-                  <TD><B>Var left</B></TD>
-                </TR>');
-            $nVariantsLeft = $zScreening['variants_found_'];
-            foreach ($aFilters as $sFilter) {
-                $sFilterClassName = '';
-                $nTime = '-';
-                if ($aFiltersRun && !isset($aFiltersRun[$sFilter])) {
-                    // We are an analysis that has been run, or a modified analysis, and we didn't use this filter.
-                    $sFilterClassName = 'filter_skipped';
-                } elseif ($zAnalysis['analysis_run']) {
-                    // This analysis has been run.
-                    list($nVariantsFiltered, $nTime) = $aFiltersRun[$sFilter];
-                    if ($nVariantsFiltered != '-' && $nTime != '-') {
-                        $nVariantsLeft -= $nVariantsFiltered;
-                        $sFilterClassName = 'filter_completed';
+          <TABLE class="analysesTable" border="0" cellpadding="0" cellspacing="0">
+            <TR>');
+
+            if (!$aTabData['data']) { // Check if there are any analyses available, if not then display the appropriate message.
+                print('<TD>');
+                lovd_showInfoTable($aTabData['no_analyses_message'], $aTabData['no_analyses_message_type']);
+                print('</TD>');
+            } elseif ($sDefaultTabID === false) { // If this is the first tab with data then lets display that one when the page loads.
+                $sDefaultTabID = $aTabData['id'];
+            }
+
+            foreach ($aTabData['data'] as $key => $zAnalysis) {
+                $aFilters = explode(';', $zAnalysis['_filters']); // $_DATA->autoExplode was considered to be used here but there are existing examples of this implementation (run_analysis.php).
+                $aFiltersRun = array();
+                $aFiltersRunRaw = array();
+                if (!empty($zAnalysis['__run_filters'])) {
+                    list($aFiltersRunRaw) = $_DATA->autoExplode(array('__0' => $zAnalysis['__run_filters']));
+                    foreach ($aFiltersRunRaw as $aFilter) {
+                        $aFiltersRun[$aFilter[0]] = array($aFilter[1], $aFilter[2]);
                     }
+                    $sFilterLastRun = $aFilter[0]; // For checking if this analysis is done or not ($aFilter came from the loop).
                 }
 
-                // Check if we need to display the information for the gene panels used in this analysis.
-                $sGenePanelsInfo = '';
-                if ($sFilter == 'apply_selected_gene_panels' && $bHasGenePanelFilter && $zAnalysis['analysis_run']) {
-                    // We're currently showing the gene panel filter, AND the gene panel filter was active AND this analysis has been run.
-                    $sGenePanelsInfo = getSelectedGenePanelsByRunID($zAnalysis['runid']);
+                if ($zAnalysis['analysis_run']) {
+                    // Was run complete?
+                    if ($aFiltersRun[$sFilterLastRun][0] == '-') {
+                        // It's not done... this is strange... half an analysis should normally not happen.
+                        $sAnalysisClassName = 'analysis_running analysis_half_run';
+                    } else {
+                        $sAnalysisClassName = 'analysis_run';
+                    }
+                } else {
+                    $sAnalysisClassName = 'analysis_not_run';
+                }
+                // ElementID for the table and prefix for the filter's element IDs.
+                $sElementID = $aTabData['prefix'] . ($zAnalysis['runid']? $zAnalysis['runid'] : 'analysis_' . $zAnalysis['id']);
+
+                // Select a js function to be executed when an analysis table is clicked.
+                $sJSAction = '';
+
+                // $aFilters contains ALL the filters this analysis has before it was modified.
+                // $aFiltersRun contains all the filters that have been run or prepared to be run.
+                // $aFiltersRun is always empty before a non-modified analysis is run, but it is pre-populated before a modified analysis is run.
+                // Check for the gene panel filter; this will define if we'll ask for the gene panel when running the analysis.
+                $bHasGenePanelFilter = (empty($aFiltersRun) && in_array('apply_selected_gene_panels', $aFilters)) || // Original analysis, gene panel filter is present.
+                                        isset($aFiltersRun['apply_selected_gene_panels']); // Gene panel has been run or modified, and gene panel filter is present.
+                $bHasAuthorization = ($_AUTH['level'] >= LEVEL_OWNER && $zScreening['analysis_statusid'] < ANALYSIS_STATUS_CLOSED);
+                $bCanRemoveAnalysis = ($bHasAuthorization && ($zAnalysis['runid'] || $zAnalysis['modified']));
+                if ($zAnalysis['analysis_run']) {
+                    $sJSAction = 'lovd_showAnalysisResults(\''. $zAnalysis['runid'] .'\')';
+                } elseif ($bHasAuthorization) {
+                    // FIXME: code duplicated from analysis_runs.php when we first render analyses tables.
+                    // Can probably check for the call of lovd_popoverGenePanelSelectionForm from within lovd_runAnalysis.
+                    $sFunctionName = ($bHasGenePanelFilter? 'lovd_popoverGenePanelSelectionForm' : 'lovd_runAnalysis');
+                    $sRunID = (!$zAnalysis['runid']? '' : $zAnalysis['runid']);
+                    $sJSAction = $sFunctionName . '(\''. $nScreeningToAnalyze  .'\', \''. $zAnalysis['id'] .'\', \'' . $sRunID . '\', this.id' . ($bHasGenePanelFilter? '' : ', undefined') . ')';
                 }
 
                 print('
-                <TR id="' . ($zAnalysis['runid']? 'run_' . $zAnalysis['runid'] : 'analysis_' . $zAnalysis['id']) . '_filter_' . preg_replace('/[^a-z0-9_]/i', '_', $sFilter) . '"' . (!$sFilterClassName? '' : ' class="' . $sFilterClassName . '"') . ' valign="top">
-                  <TD class="filter_description">' . $sFilter . $sGenePanelsInfo . '</TD>
-                  <TD class="filter_time">' . ($nTime == '-'? '-' : lovd_convertSecondsToTime($nTime, 1)) . '</TD>
-                  <TD class="filter_var_left">' . ($nTime == '-'? '-' : $nVariantsLeft) . '</TD>
-                </TR>');
+              <TD class="analysis" valign="top">
+                <TABLE border="0" cellpadding="0" cellspacing="1" id="' . $sElementID . '" class="analysis ' . $sAnalysisClassName . '" onclick="' . $sJSAction . ';">
+                  <TR>
+                    <TH colspan="3">
+                      <DIV style="position : relative" class="analysis-tools">' . $zAnalysis['name'] . ' (v' . $zAnalysis['version'] . (!$zAnalysis['modified']? '' : ' modified') . ')' .
+                  (!$bHasAuthorization? '' : '
+                        <IMG ' . ($bCanRemoveAnalysis? '' : 'style="display:none;" ') . 'src="gfx/cross.png" alt="Remove" onclick="$.get(\'ajax/analysis_runs.php/' . $zAnalysis['runid'] . '?delete\').fail(function(){alert(\'Error deleting analysis run, please try again later.\');}); cancelParentEvent(event);" width="16" height="16" class="remove">
+                        <IMG src="gfx/menu_clone.png" alt="Duplicate" onclick="$.get(\'ajax/analysis_runs.php/' . $zAnalysis['runid'] . '?clone\').fail(function(){alert(\'Error duplicating analysis run, please try again later.\');}); cancelParentEvent(event);" width="16" height="16" class="clone">
+                        <IMG src="gfx/menu_edit.png" alt="Modify" onclick="lovd_openWindow(\'' . lovd_getInstallURL() . 'analyses/' . ($zAnalysis['runid']? 'run/' . $zAnalysis['runid'] : $zAnalysis['id']) . '?modify&amp;in_window\', \'ModifyAnalysisRun\', 780, 400); cancelParentEvent(event);" width="16" height="16" class="modify">') . '
+                        <IMG src="gfx/lovd_form_question.png" alt="" onmouseover="lovd_showToolTip(\'' . $zAnalysis['description'] . '\');" onmouseout="lovd_hideToolTip();" width="14" height="14" class="help" style="position: absolute; top: -4px; right: 0px;">
+                      </DIV>
+                    </TH>
+                  </TR>
+                  <TR>
+                    <TD><B>Filter</B></TD>
+                    <TD><B>Time</B></TD>
+                    <TD><B>Var left</B></TD>
+                  </TR>');
+                $nVariantsLeft = $zScreening['variants_found_'];
+                foreach ($aFilters as $sFilter) {
+                    $sFilterClassName = '';
+                    $nTime = '-';
+                    if ($aFiltersRun && !isset($aFiltersRun[$sFilter])) {
+                        // We are an analysis that has been run, or a modified analysis, and we didn't use this filter.
+                        $sFilterClassName = 'filter_skipped';
+                    } elseif ($zAnalysis['analysis_run']) {
+                        // This analysis has been run.
+                        list($nVariantsFiltered, $nTime) = $aFiltersRun[$sFilter];
+                        if ($nVariantsFiltered != '-' && $nTime != '-') {
+                            $nVariantsLeft -= $nVariantsFiltered;
+                            $sFilterClassName = 'filter_completed';
+                        }
+                    }
+
+                    // Check if we need to display the information for the gene panels used in this analysis.
+                    $sGenePanelsInfo = '';
+                    if ($sFilter == 'apply_selected_gene_panels' && $bHasGenePanelFilter && $zAnalysis['analysis_run']) {
+                        // We're currently showing the gene panel filter, AND the gene panel filter was active AND this analysis has been run.
+                        $sGenePanelsInfo = getSelectedGenePanelsByRunID($zAnalysis['runid']);
+                    }
+
+                    // Format the display of the filters.
+                    if (isset($aFilterInfo[$sFilter]) && (!empty($aFilterInfo[$sFilter]['name']) || !empty($aFilterInfo[$sFilter]['description']))) {
+                        // We'll show details of the filter if the name or the description is filled in.
+                        $sFilterName = (!$aFilterInfo[$sFilter]['name']? $sFilter : $aFilterInfo[$sFilter]['name']);
+                        $sToolTip = '<TABLE border="0" cellpadding="0" cellspacing="3" class="filterinfo"><TR><TH>Key:</TH><TD>' . $sFilter . '</TD></TR><TR><TH>Filter name:</TH><TD>' . str_replace("\r\n", ' ', htmlspecialchars($sFilterName)) . '</TD></TR><TR><TH>Description:</TH><TD>' . $aFilterInfo[$sFilter]['description'] . '</TD></TR></TABLE>';
+                        $sFormattedFilter = '<SPAN class="filtername" onmouseover="lovd_showToolTip(\'' . htmlspecialchars($sToolTip) . '\', this, [30, 6]);">' . str_replace(' ', '&nbsp;', str_replace("\r\n", '<BR>', htmlspecialchars($sFilterName))) . '</SPAN>';
+                    } else {
+                        $sFormattedFilter = $sFilter;
+                    }
+
+                    print('
+                  <TR id="' . $sElementID . '_filter_' . preg_replace('/[^a-z0-9_]/i', '_', $sFilter) . '"' . (!$sFilterClassName ? '' : ' class="' . $sFilterClassName . '"') . ' valign="top">
+                    <TD class="filter_description">' . $sFormattedFilter . $sGenePanelsInfo . '</TD>
+                    <TD class="filter_time">' . ($nTime == '-'? '-' : lovd_convertSecondsToTime($nTime, 1)) . '</TD>
+                    <TD class="filter_var_left">' . ($nTime == '-'? '-' : $nVariantsLeft) . '</TD>
+                  </TR>');
+                }
+                print('
+                  <TR id="' . $sElementID . '_message" class="message">
+                    <TD colspan="3">' . ($sAnalysisClassName == 'analysis_running analysis_half_run'? 'Analysis seems to have been interrupted' : ($sAnalysisClassName == 'analysis_run'? 'Click to see results' : 'Click to run this analysis')) . '</TD>
+                  </TR>
+                </TABLE>
+              </TD>');
             }
             print('
-                <TR id="' . ($zAnalysis['runid']? 'run_' . $zAnalysis['runid'] : 'analysis_' . $zAnalysis['id']) . '_message" class="message">
-                  <TD colspan="3">' . ($sAnalysisClassName == 'analysis_running analysis_half_run'? 'Analysis seems to have been interrupted' : ($sAnalysisClassName == 'analysis_run'? 'Click to see results' : 'Click to run this analysis')) . '</TD>
-                </TR>
-              </TABLE>
-            </TD>');
+            </TR>
+          </TABLE>
+        </DIV>');
         }
         print('
-          </TR>
-        </TABLE>
       </DIV>' . "\n\n");
 
 
@@ -451,6 +515,7 @@ if (PATH_COUNT >= 2 && ctype_digit($_PE[1]) && !ACTION && (PATH_COUNT == 2 || PA
               }
             });
         }
+        $("#analyses").tabs(' . ($sDefaultTabID === false? '' : '{active: ' . $sDefaultTabID . '}') . ');
       </SCRIPT>
 
 
