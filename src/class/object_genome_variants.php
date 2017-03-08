@@ -112,6 +112,7 @@ class LOVD_GenomeVariant extends LOVD_Custom {
                                           'CASE vog.statusid WHEN ' . STATUS_MARKED . ' THEN "marked" WHEN ' . STATUS_HIDDEN .' THEN "del" WHEN ' . STATUS_PENDING .' THEN "del" END AS class_name,'
                                         : '') .
                                           'ds.name AS status';
+
         $this->aSQLViewList['FROM']     = TABLE_VARIANTS . ' AS vog ' .
                                 // Added so that Curators and Collaborators can view the variants for which they have viewing rights in the genomic variant viewlist.
                                 ($_AUTH['level'] == LEVEL_SUBMITTER && (count($_AUTH['curates']) || count($_AUTH['collaborates']))?
@@ -128,13 +129,19 @@ class LOVD_GenomeVariant extends LOVD_Custom {
         parent::__construct();
 
         // List of columns and (default?) order for viewing an entry.
+        $sEffectReported = 'Affects function (reported)';
+        $sEffectConcluded = 'Affects function (concluded)';
+        if (lovd_verifyInstance('mgha')) {
+            $sEffectReported = 'Classification proposed';
+            $sEffectConcluded = 'Classification final';
+        }
         $this->aColumnsViewEntry = array_merge(
                  array(
                         'individualid_' => 'Individual ID',
                         'chromosome' => 'Chromosome',
                         'allele_' => 'Allele',
-                        'effect_reported' => 'Affects function (reported)',
-                        'effect_concluded' => 'Affects function (concluded)',
+                        'effect_reported' => $sEffectReported,
+                        'effect_concluded' => $sEffectConcluded,
                         'curation_status_' => 'Curation status',
                         'confirmation_status_' => 'Confirmation status',
                       ),
@@ -410,6 +417,8 @@ class LOVD_GenomeVariant extends LOVD_Custom {
             $zData['effect_concluded'] = $_SETT['var_effect'][$zData['effectid']{1}];
 
             if (!empty($zData['VariantOnGenome/DBID'])) {
+                // We need a copy of the DBID as it gets modified later.
+                $zData['VariantOnGenome/DBID_raw'] = $zData['VariantOnGenome/DBID'];
                 // Allow linking to view of all these variants.
                 $sQ = 'SELECT COUNT(*) FROM ' . TABLE_VARIANTS . ' WHERE chromosome = ? AND `VariantOnGenome/DBID` = ?';
                 $aArgs = array($zData['chromosome'], $zData['VariantOnGenome/DBID']);
@@ -421,6 +430,9 @@ class LOVD_GenomeVariant extends LOVD_Custom {
                 if ($n > 1) {
                     list($sPrefix,) = explode('_', $zData['VariantOnGenome/DBID'], 2);
                     $sLink = '<A href="' . (substr($sPrefix, 0, 3) == 'chr'? 'variants' : 'view/' . $sPrefix) . '?search_VariantOnGenome%2FDBID=%3D%22' . $zData['VariantOnGenome/DBID'] . '%22">See all ' . $n . ' reported entries</A>';
+                    if (lovd_verifyInstance('mgha')) {
+                        $sLink = '<A href="' . (substr($sPrefix, 0, 3) == 'chr'? 'variants/DBID/' . $zData['VariantOnGenome/DBID']  : 'view/' . $sPrefix . '?search_VariantOnGenome%2FDBID=%3D%22' . $zData['VariantOnGenome/DBID'] . '%22') .'">See all ' . $n . ' reported entries</A>';
+                    }
                     // This is against our coding policy of never modifying actual contents of values (we always create a copy with _ appended), but now I simply can't without
                     // modifying the column list manually. If only array_splice() would work on associative arrays... I'm not going to create a workaround here.
                     $zData['VariantOnGenome/DBID'] .= ' <SPAN style="float:right">' . $sLink . '</SPAN>';

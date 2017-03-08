@@ -894,19 +894,19 @@ if ($sCalcVersionFiles != $sCalcVersionDB) {
     if (LOVD_plus && $sCalcVersionDB < lovd_calculateVersion('3.0-17h')) { // Improvements to the way analyses are stored and displayed.
 
         // Return the existing analyses records as we need these to populate the new tables.
-        $aAnalyses = $_DB->query('SELECT * FROM ' . TABLE_ANALYSES)->fetchAllAssoc();
+        $zAnalyses = $_DB->query('SELECT * FROM ' . TABLE_ANALYSES)->fetchAllAssoc();
 
         $aFiltersSQL = array(); // Used to store the SQL for inserting the filter records.
         $aAnalysis2FiltersSQL = array(); // Used to store the SQL for linking the filters to an analysis.
 
         // Loop through each analyses and build up the required SQL for the filters.
-        foreach ($aAnalyses as $key => $aAnalysis) {
+        foreach ($zAnalyses as $zAnalysis) {
             // Firstly split out the filters and loop through them as the order is significant.
-            $aFilters = preg_split('/\s+/', $aAnalysis['filters']);
+            $aFilters = preg_split('/\s+/', $zAnalysis['filters']);
             foreach ($aFilters as $i => $sFilter) { // Each filter is processed and the SQL is generated.
                 // Create insert statements each time but we will use only unique insert statements later.
                 $aFiltersSQL[] = 'INSERT IGNORE INTO ' . TABLE_ANALYSIS_FILTERS . ' (id) VALUES ("' . $sFilter . '")';
-                $aAnalysis2FiltersSQL[] = 'INSERT IGNORE INTO ' . TABLE_A2AF . ' (analysisid, filterid, filter_order) VALUES (' . $aAnalysis['id'] . ', "' . $sFilter . '", ' . ($i + 1) . ')';
+                $aAnalysis2FiltersSQL[] = 'INSERT IGNORE INTO ' . TABLE_A2AF . ' (analysisid, filterid, filter_order) VALUES (' . $zAnalysis['id'] . ', "' . $sFilter . '", ' . ($i + 1) . ')';
             }
         }
 
@@ -942,7 +942,7 @@ if ($sCalcVersionFiles != $sCalcVersionDB) {
                                 CONSTRAINT ' . TABLE_GP2A . '_fk_analysisid FOREIGN KEY (analysisid) REFERENCES ' . TABLE_ANALYSES . ' (id) ON DELETE CASCADE ON UPDATE CASCADE)
                                 ENGINE=InnoDB,
                                 DEFAULT CHARACTER SET utf8',
-                'ALTER TABLE ' . TABLE_ANALYSES . ' ADD COLUMN version TINYINT(3) UNSIGNED DEFAULT 1, ADD UNIQUE name_version (name, version)',
+                'ALTER TABLE ' . TABLE_ANALYSES . ' ADD COLUMN version TINYINT(3) UNSIGNED DEFAULT 1 AFTER description, ADD UNIQUE (name, version)',
             ),
             $aFiltersSQL,
             $aAnalysis2FiltersSQL,

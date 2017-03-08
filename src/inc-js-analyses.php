@@ -4,7 +4,7 @@
  * LEIDEN OPEN VARIATION DATABASE (LOVD)
  *
  * Created     : 2013-11-05
- * Modified    : 2017-02-17
+ * Modified    : 2017-03-08
  * For LOVD    : 3.0-18
  *
  * Copyright   : 2004-2017 Leiden University Medical Center; http://www.LUMC.nl/
@@ -322,7 +322,7 @@ function lovd_showAnalysisResults (nRunID)
     $('#viewlistForm_CustomVL_AnalysisRunResults_for_I_VE').children('input[name="search_variantid"]').remove();
 
     // Mark the currently selected filter.
-    $('#analysesTable td').css('background', '');
+    $('table.analysesTable td').css('background', '');
     $('#run_' + nRunID).parent().css('background', '#DDD');
 
     lovd_AJAX_viewListSubmit('CustomVL_AnalysisRunResults_for_I_VE');
