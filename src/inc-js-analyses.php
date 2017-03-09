@@ -77,11 +77,11 @@ function lovd_configureAnalysis (nScreeningID, nAnalysisID, nRunID, sElementID)
 
 
 
-function lovd_runAnalysis (nScreeningID, nAnalysisID, nRunID, sElementID, aSelectedGenePanels)
+function lovd_runAnalysis (nScreeningID, nAnalysisID, nRunID, sElementID, aConfig)
 {
-    // When 'apply_selected_gene_panels' filter is NOT selected, aSelectedGenePanels is undefined.
-    if (typeof(aSelectedGenePanels) == 'undefined') {
-        aSelectedGenePanels = [];
+    // When 'apply_selected_gene_panels' filter is NOT selected, sConfig is undefined.
+    if (typeof(aConfig) == 'undefined') {
+        aConfig = '';
     }
 
     // Starts the analysis of the given screening.
@@ -92,13 +92,12 @@ function lovd_runAnalysis (nScreeningID, nAnalysisID, nRunID, sElementID, aSelec
     if (nRunID == '') {
         nRunID = 0;
     }
-    if (aSelectedGenePanels.length > 0) {
-        sGenePanels = encodeURI('&gene_panels[]=' + aSelectedGenePanels.join('&gene_panels[]='));
+    if (aConfig) {
+        sConfig = encodeURI('&config=' + JSON.stringify(aConfig));
     } else {
-        sGenePanels = '';
+        sConfig = '';
     }
-
-    $.get('<?php echo lovd_getInstallURL(); ?>ajax/run_analysis.php?run&screeningid=' + escape(nScreeningID) + '&analysisid=' + escape(nAnalysisID) + '&runid=' + escape(nRunID) + sGenePanels,
+    $.get('<?php echo lovd_getInstallURL(); ?>ajax/run_analysis.php?run&screeningid=' + escape(nScreeningID) + '&analysisid=' + escape(nAnalysisID) + '&runid=' + escape(nRunID) + sConfig,
         function () {
             // Remove onClick handler and change class of table, to visually show that it's running.
             $('#' + sElementID)

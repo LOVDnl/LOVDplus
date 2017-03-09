@@ -202,12 +202,10 @@ if (ACTION == 'configure' && GET) {
 
 if (ACTION == 'configure' && POST) {
     header('Content-type: text/javascript; charset=UTF-8');
-    // TODO: also save into database for the config per filter?
-    $aSelectedGenePanels = (empty($_REQUEST['config']['apply_selected_gene_panels']['gene_panel']))? array() : $_REQUEST['config']['apply_selected_gene_panels']['gene_panel'];
-
+    $aConfig = (empty($_REQUEST['config'])? array() : $_REQUEST['config']);
     print('
     $("#configure_analysis_dialog").dialog("close");
-    lovd_runAnalysis (\'' . $_REQUEST['screeningid'] . '\', \'' . $_REQUEST['analysisid'] . '\', \'' . $_REQUEST['runid'] . '\', \'' . $_REQUEST['elementid'] . '\', ' . json_encode($aSelectedGenePanels) . ');
+    lovd_runAnalysis (\'' . $_REQUEST['screeningid'] . '\', \'' . $_REQUEST['analysisid'] . '\', \'' . $_REQUEST['runid'] . '\', \'' . $_REQUEST['elementid'] . '\', ' . json_encode($aConfig) . ');
     ');
 }
 
@@ -216,11 +214,13 @@ if (ACTION == 'configure' && POST) {
 
 
 if (ACTION == 'run') {
+    $aConfig = json_decode($_REQUEST['config'], true);
+
     $sCustomPanel = '';
     $aGenePanels = array();
     // Process any gene panels that may have been passed.
-    if (!empty($_REQUEST['gene_panels'])) {
-        $aGenePanels = array_values($_REQUEST['gene_panels']);
+    if (!empty($aConfig['apply_selected_gene_panels']['gene_panel'])) {
+        $aGenePanels = array_values($aConfig['apply_selected_gene_panels']['gene_panel']);
         if(($nKey = array_search('custom_panel', $aGenePanels)) !== false) {
             // If the custom panel has been selected then record this and remove from array.
             $sCustomPanel = $zIndividual['custom_panel'];
@@ -228,11 +228,6 @@ if (ACTION == 'run') {
         }
     }
 
-
-
-
-
-    // TODO: move this into 'configure' POST
     // All checked. Update individual. We already have checked that we're allowed to analyze this one. So just update the settings, if not already done before.
     define('LOG_EVENT', 'AnalysisRun');
     $_DB->beginTransaction();
@@ -263,9 +258,6 @@ if (ACTION == 'run') {
         $_DB->query('UPDATE ' . TABLE_ANALYSES_RUN . ' SET custom_panel = ? WHERE id = ?', array($sCustomPanel, $nRunID));
     }
 
-
-    // TODO: move this into 'configure' POST
-
     // Process the selected gene panels.
     // FIXME: This will fail if we already have the run ID in the database. That can
     // happen, when somehow the analysis run was created, but didn't start (JS error?).
@@ -292,7 +284,6 @@ if (ACTION == 'run') {
         $_SESSION['analyses'] = array();
     }
 
-    // TODO: move this into 'configure' POST
     // Store analysis information in the session.
     $_SESSION['analyses'][$nRunID] =
         array(
