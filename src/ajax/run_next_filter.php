@@ -366,6 +366,10 @@ if ($aVariantIDs) {
 
             $aVariantIDsFiltered = $_DB->query($sSQL, $aSQL, false)->fetchAllColumn();
             break;
+        case 'cross_screenings':
+            // TODO: apply SQL query
+            $aVariantIDsFiltered = $aVariantIDs;
+            break;
         case 'remove_with_any_frequency':
             $aVariantIDsFiltered = $_DB->query('SELECT CAST(id AS UNSIGNED) FROM ' . TABLE_VARIANTS . ' WHERE (`VariantOnGenome/dbSNP` IS NULL OR `VariantOnGenome/dbSNP` = "") AND (`VariantOnGenome/Frequency/1000G` IS NULL OR `VariantOnGenome/Frequency/1000G` = 0) AND (`VariantOnGenome/Frequency/GoNL` IS NULL OR `VariantOnGenome/Frequency/GoNL` = 0) AND (`VariantOnGenome/Frequency/EVS` IS NULL OR `VariantOnGenome/Frequency/EVS` = 0) AND id IN (?' . str_repeat(', ?', count($aVariantIDs) - 1) . ')', $aVariantIDs, false)->fetchAllColumn();
             break;

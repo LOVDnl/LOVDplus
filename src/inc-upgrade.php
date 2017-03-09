@@ -707,6 +707,9 @@ if ($sCalcVersionFiles != $sCalcVersionDB) {
                      'EXECUTE Statement',
                  ),
                  '3.0-17h' => array(), // Placeholder for LOVD+ queries, defined below.
+                 '3.0-17i' => array(
+                         'ALTER TABLE ' . TABLE_ANALYSES_RUN_FILTERS . ' ADD COLUMN config_json TEXT NULL AFTER filterid'
+                 ),
                  '3.0-18' =>
                      array(
                          // These two will be ignored by LOVD+.

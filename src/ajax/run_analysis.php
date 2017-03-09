@@ -62,15 +62,19 @@ if ($_AUTH['level'] < LEVEL_MANAGER) {
     $aSQL[] = $_AUTH['id'];
 }
 $zIndividual = $_DB->query($sSQL, $aSQL)->fetchAssoc();
-$zIndividual['gene_panels'] = array();
-//$zIndividual['gene_panels'] = explode(";;", $zIndividual['__gene_panels']);
-foreach (explode(";;", $zIndividual['__gene_panels']) as $sGenePanel) {
-    $aGenePanel = explode(";", $sGenePanel);
-    $zIndividual['gene_panels'][$aGenePanel[0]] = $aGenePanel;
-}
 if (!$zIndividual) {
     die(AJAX_FALSE);
 }
+
+$zIndividual['gene_panels'] = array();
+if (!empty($zIndividual['__gene_panels'])) {
+    foreach (explode(";;", $zIndividual['__gene_panels']) as $sGenePanel) {
+        $aGenePanel = explode(";", $sGenePanel);
+        $zIndividual['gene_panels'][$aGenePanel[0]] = $aGenePanel;
+    }
+}
+
+
 
 $zAnalysis = $zAnalysisRun = false;
 if ($_REQUEST['runid']) {
@@ -104,30 +108,10 @@ if (ACTION == 'configure' && GET) {
     foreach ($aFilters as $sFilter) {
         switch($sFilter) {
             case 'apply_selected_gene_panels':
-                if (count($zIndividual['gene_panels'] > 0)) {
-                    $sFiltersFormItems .= '<DIV><TABLE>';
-                }
-                $sLastType = '';
-                foreach ($zIndividual['gene_panels'] as $nKey => $aGenePanel) {
-                    // Create the gene panel type header.
-                    if ($sLastType == '' || $sLastType != $aGenePanel[2]) {
-                        $sFiltersFormItems .= '<TR><TD class=\'gpheader\' colspan=\'2\' ' . ($sLastType? '' : 'style=\'border-top: 0px\'') . '>' . ucfirst(str_replace('_', ' ', $aGenePanel[2])) . '</TD></TR>';
-                    }
-                    $sLastType = $aGenePanel[2];
+                // Display a notice that 'apply_selected_gene_panels' is selected for this analysis
+                $sFiltersFormItems .= '<H4>' . $sFilter . '</H4><BR>';
 
-                    // Add the gene panel to the form.
-                    $sFiltersFormItems .= '<TR><TD><INPUT type=\'checkbox\' name=\'config[' . $sFilter . '][gene_panel][]\' id=\'gene_panel_' . $nKey . '\' value=\'' . $aGenePanel[0] . '\'' . ($aGenePanel[2] == 'mendeliome'? '' : ' checked') . ' /></TD><TD><LABEL for=\'gene_panel_'. $nKey .'\'>' . $aGenePanel[1] . '</LABEL></TD></TR>';
-                }
-
-                // Add in the custom gene panel option.
-                if ($zIndividual['custom_panel']) {
-                    $sFiltersFormItems .= '<TR><TD class=\'gpheader\' colspan=\'2\'>Custom panel</TD></TR>';
-                    $sFiltersFormItems .= '<TR><TD><INPUT type=\'checkbox\' name=\'config[' . $sFilter . '][gene_panel][]\' value=\'custom_panel\' id=\'custom_panel\' checked></TD>';
-                    $sFiltersFormItems .= '<TD><LABEL for=\'custom_panel\'>' . $zIndividual['custom_panel'] . '</LABEL></TD></TR>';
-                }
-
-                // Display a notice that 'apply_selected_gene_panels' is selected for this analysis,
-                //  but no gene panel has been added to this individual.
+                //  No gene panel has been added to this individual.
                 if (empty($zIndividual['gene_panels']) && empty($zIndividual['custom_panel'] )) {
                     $sFiltersFormItems .= '<P>There is no Gene Panel assigned to this individual. To continue running this analysis, please try one of the following options: </P>';
                     $sFiltersFormItems .= '<UL>';
@@ -135,7 +119,67 @@ if (ACTION == 'configure' && GET) {
                     $sFiltersFormItems .= '<LI>Remove the apply_selected_gene_panels filter from this analysis, OR</LI>';
                     $sFiltersFormItems .= '<LI>Continue running this analysis without any gene panel selected.</LI>';
                     $sFiltersFormItems .= '</UL>';
+                } else {
+                    // This individual has at least one gene panel or custom panel.
+
+                    $sFiltersFormItems .= '<DIV><TABLE>';
+                    $sLastType = '';
+                    foreach ($zIndividual['gene_panels'] as $nKey => $aGenePanel) {
+                        // Create the gene panel type header.
+                        if ($sLastType == '' || $sLastType != $aGenePanel[2]) {
+                            $sFiltersFormItems .= '<TR><TD class=\'gpheader\' colspan=\'2\' ' . ($sLastType? '' : 'style=\'border-top: 0px\'') . '>' . ucfirst(str_replace('_', ' ', $aGenePanel[2])) . '</TD></TR>';
+                        }
+                        $sLastType = $aGenePanel[2];
+
+                        // Add the gene panel to the form.
+                        $sFiltersFormItems .= '<TR><TD><INPUT type=\'checkbox\' name=\'config[' . $sFilter . '][gene_panel][]\' id=\'gene_panel_' . $nKey . '\' value=\'' . $aGenePanel[0] . '\'' . ($aGenePanel[2] == 'mendeliome'? '' : ' checked') . ' /></TD><TD><LABEL for=\'gene_panel_'. $nKey .'\'>' . $aGenePanel[1] . '</LABEL></TD></TR>';
+                    }
+
+                    // Add in the custom gene panel option.
+                    if ($zIndividual['custom_panel']) {
+                        $sFiltersFormItems .= '<TR><TD class=\'gpheader\' colspan=\'2\'>Custom panel</TD></TR>';
+                        $sFiltersFormItems .= '<TR><TD><INPUT type=\'checkbox\' name=\'config[' . $sFilter . '][gene_panel][]\' value=\'custom_panel\' id=\'custom_panel\' checked></TD>';
+                        $sFiltersFormItems .= '<TD><LABEL for=\'custom_panel\'>' . $zIndividual['custom_panel'] . '</LABEL></TD></TR>';
+                    }
+
+                    $sFiltersFormItems .= '</TABLE></DIV><BR>';
                 }
+
+                break;
+            case 'cross_screenings':
+                $aConditions = array(
+                    'NOT IN',
+                    'NOT Homozygous IN',
+                    'IN',
+                    'Homozygous IN',
+                    'Heterozygous IN'
+                );
+
+                $aGrouping = array(
+                    'AND',
+                    'OR'
+                );
+
+                $sFiltersFormItems .= '<H4>' . $sFilter . '</H4><BR>';
+
+                $sFiltersFormItems .= '<DIV><TABLE>';
+                $sFiltersFormItems .= '<TR><TD><LABEL>Description</LABEL></TD><TD><INPUT name=\'config[' . $sFilter . '][description]\' /></TD></TR>';
+
+                // Conditions variants of this screening against the selected group
+                $sFiltersFormItems .= '<TR><TD><LABEL>Condition</LABEL></TD><TD><SELECT name=\'config[' . $sFilter . '][groups][0][condition]\'>';
+                foreach ($aConditions as $sCondition) {
+                    $sFiltersFormItems .= '<OPTION value=\'' . $sCondition . '\'>' . $sCondition . '</OPTION>';
+                }
+                $sFiltersFormItems .= '</SELECT></TD></TR>';
+
+                // How to group among selected screenings within a group
+                $sFiltersFormItems .= '<TR><TD><LABEL>Grouping</LABEL></TD><TD><SELECT name=\'config[' . $sFilter . '][groups][0][grouping]\'>';
+                foreach ($aGrouping as $sCondition) {
+                    $sFiltersFormItems .= '<OPTION value=\'' . $sCondition . '\'>' . $sCondition . '</OPTION>';
+                }
+                $sFiltersFormItems .= '</SELECT></TD></TR>';
+
+                // TODO: how to display screenings to be selected
 
                 $sFiltersFormItems .= '</TABLE></DIV>';
                 break;
@@ -164,7 +208,7 @@ if (ACTION == 'configure' && GET) {
 
     // If further configurationi required, build modal to take the configuration inputs.
     // Implement an CSRF protection by working with tokens.
-    $sForm  = '<FORM id=\'configure_analysis_form\'><INPUT type=\'hidden\' name=\'csrf_token\' value=\'{{CSRF_TOKEN}}\'>Configure analysis<BR>';
+    $sForm  = '<FORM id=\'configure_analysis_form\'><INPUT type=\'hidden\' name=\'csrf_token\' value=\'{{CSRF_TOKEN}}\'><BR>';
     $sForm .= $sFiltersFormItems;
     $sForm .= $sFormRequiredInputs;
     $sForm .= '</FORM>';
@@ -215,7 +259,6 @@ if (ACTION == 'configure' && POST) {
 
 if (ACTION == 'run') {
     $aConfig = json_decode($_REQUEST['config'], true);
-
     $sCustomPanel = '';
     $aGenePanels = array();
     // Process any gene panels that may have been passed.
@@ -226,6 +269,7 @@ if (ACTION == 'run') {
             $sCustomPanel = $zIndividual['custom_panel'];
             unset($aGenePanels[$nKey]);
         }
+        unset($aConfig['apply_selected_gene_panels']);
     }
 
     // All checked. Update individual. We already have checked that we're allowed to analyze this one. So just update the settings, if not already done before.
@@ -245,7 +289,8 @@ if (ACTION == 'run') {
         // Insert filters...
         $aFilters = explode(';', $zAnalysis['_filters']);
         foreach ($aFilters as $i => $sFilter) {
-            $q = $_DB->query('INSERT INTO ' . TABLE_ANALYSES_RUN_FILTERS . ' (runid, filterid, filter_order) VALUES (?, ?, ?)', array($nRunID, $sFilter, ($i+1)));
+            $sFilterConfig = (empty($aConfig[$sFilter]) ? NULL : json_encode($aConfig[$sFilter]));
+            $q = $_DB->query('INSERT INTO ' . TABLE_ANALYSES_RUN_FILTERS . ' (runid, filterid, config_json,filter_order) VALUES (?, ?, ?, ?)', array($nRunID, $sFilter, $sFilterConfig, ($i+1)));
             if (!$q) {
                 $_DB->rollBack();
                 die('Failed to create analysis run filter in the database. If the analysis is defined properly, this is an error in the software.');
