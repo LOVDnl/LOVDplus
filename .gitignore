@@ -6,8 +6,6 @@ doc/tex/manual.toc
 src/_sett
 src/refseq
 src/config.ini.php
-src/scripts/adapter.php
-src/scripts/adapter.lib.php
 tests/test_results/error_screenshots
 tests/test_results/reports
 vendor

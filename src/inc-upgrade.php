@@ -714,7 +714,6 @@ if ($sCalcVersionFiles != $sCalcVersionDB) {
                             ALTER TABLE ' . TABLE_DISEASES . ' ADD COLUMN inheritance VARCHAR(45) NULL AFTER name")',
                          'PREPARE Statement FROM @sSQL',
                          'EXECUTE Statement',
-
                      ),
                  '3.0-18' =>
                      array(

@@ -397,7 +397,7 @@ class LOVD_Custom extends LOVD_Object {
                     // Disabled for LOVD+, to speed up the import.
                     $this->checkInputRegExp($sCol, $aData[$sCol]);
                 }
-                if (!LOVD_plus || lovd_getProjectFile() != '/import.php' ) {
+                if (!(LOVD_plus && lovd_getProjectFile() == '/import.php')) {
                     $this->checkSelectedInput($sCol, $aData[$sCol]);
                 }
             }
