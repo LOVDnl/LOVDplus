@@ -156,7 +156,7 @@ if (PATH_COUNT == 3 && $_PE[1] == 'run' && ctype_digit($_PE[2]) && ACTION == 'mo
 
     // See above, I had to split the queries.
     // $zData['filters'] = explode(';', $zData['_filters']);
-    $zData['filters'] = $_DB->query('SELECT filterid FROM ' . TABLE_ANALYSES_RUN_FILTERS . ' WHERE runid = ? ORDER BY filter_order', array($nID))->fetchAllColumn();
+    $zData['filters'] = $_DB->query('SELECT arf.filterid, CASE af.name WHEN "" THEN af.id ELSE af.name END AS name FROM ' . TABLE_ANALYSES_RUN_FILTERS . ' AS arf INNER JOIN ' . TABLE_ANALYSIS_FILTERS . ' AS af ON (arf.filterid = af.id) WHERE arf.runid = ? ORDER BY arf.filter_order', array($nID))->fetchAllCombine();
     $nFilters = count($zData['filters']);
 
     if (count($zData['filters']) <= 1) {
@@ -186,7 +186,7 @@ if (PATH_COUNT == 3 && $_PE[1] == 'run' && ctype_digit($_PE[2]) && ACTION == 'mo
             $_DB->query('INSERT INTO ' . TABLE_ANALYSES_RUN . ' (analysisid, screeningid, modified, created_by, created_date) VALUES (?, ?, 1, ?, NOW())', array($zData['analysisid'], $zData['screeningid'], $_AUTH['id']));
             $nNewRunID = $_DB->lastInsertId();
             // Now insert filters.
-            foreach ($zData['filters'] as $nOrder => $sFilter) {
+            foreach (array_keys($zData['filters']) as $nOrder => $sFilter) {
                 if (in_array($sFilter, $_POST['remove_filters'])) {
                     continue; // Column selected to be removed.
                 }
@@ -235,7 +235,7 @@ if (PATH_COUNT == 3 && $_PE[1] == 'run' && ctype_digit($_PE[2]) && ACTION == 'mo
     print('      Please select the filters that you would like to <B>remove</B> from the analysis.<BR><BR>' . "\n");
 
     $nOptions = ($nFilters > 15? 15 : $nFilters);
-    $aForm[] = array('Remove the following filters', '', 'select', 'remove_filters', $nOptions, array_combine(array_values($zData['filters']), $zData['filters']), false, true, false);
+    $aForm[] = array('Remove the following filters', '', 'select', 'remove_filters', $nOptions, $zData['filters'], false, true, false);
     $aForm[] = 'skip';
 
     $aForm = array_merge(

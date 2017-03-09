@@ -4,7 +4,7 @@
  * LEIDEN OPEN VARIATION DATABASE (LOVD)
  *
  * Created     : 2013-11-05
- * Modified    : 2017-02-17
+ * Modified    : 2017-03-08
  * For LOVD    : 3.0-18
  *
  * Copyright   : 2004-2017 Leiden University Medical Center; http://www.LUMC.nl/
@@ -43,20 +43,20 @@ if (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] == 'on' && !empty($_SERVER['S
     define('PROTOCOL', 'http://');
 }
 ?>
-function lovd_resetAfterFailedRun (sClassName)
+function lovd_resetAfterFailedRun (sElementID)
 {
     // Resets the table after a failed run attempt.
 
-    if (typeof(sClassName) == 'undefined') {
+    if (typeof(sElementID) == 'undefined') {
         return false;
     }
 
-    $('#' + sClassName).attr('class', 'analysis analysis_not_run');
-    $('#' + sClassName + '_message td')
-        .html($('#' + sClassName + '_message td').attr('htmlold'))
+    $('#' + sElementID).attr('class', 'analysis analysis_not_run');
+    $('#' + sElementID + '_message td')
+        .html($('#' + sElementID + '_message td').attr('htmlold'))
         .attr('htmlold', '');
-    $('#' + sClassName)
-        .attr('onclick', $('#' + sClassName).attr('onclickold'))
+    $('#' + sElementID)
+        .attr('onclick', $('#' + sElementID).attr('onclickold'))
         .attr('onclickold', '');
     return true;
 }
@@ -65,7 +65,7 @@ function lovd_resetAfterFailedRun (sClassName)
 
 
 
-function lovd_runAnalysis (nScreeningID, nAnalysisID, nRunID, aSelectedGenePanels)
+function lovd_runAnalysis (nScreeningID, nAnalysisID, nRunID, sElementID, aSelectedGenePanels)
 {
     // When 'apply_selected_gene_panels' filter is NOT selected, aSelectedGenePanels is undefined.
     if (typeof(aSelectedGenePanels) == 'undefined') {
@@ -89,28 +89,19 @@ function lovd_runAnalysis (nScreeningID, nAnalysisID, nRunID, aSelectedGenePanel
     $.get('<?php echo lovd_getInstallURL(); ?>ajax/run_analysis.php?screeningid=' + escape(nScreeningID) + '&analysisid=' + escape(nAnalysisID) + '&runid=' + escape(nRunID) + sGenePanels,
         function () {
             // Remove onClick handler and change class of table, to visually show that it's running.
-            // But first check if we're dealing with a modified run or an unmodified analysis.
-            if ($('#run_' + nRunID).length > 0) {
-                // Run was already started (usually a modified run).
-                sClassName = 'run_' + nRunID;
-            } else {
-                // Analysis started from page.
-                sClassName = 'analysis_' + nAnalysisID;
-            }
-
-            $('#' + sClassName)
-                .attr('onclickold', $('#' + sClassName).attr('onclick'))
+            $('#' + sElementID)
+                .attr('onclickold', $('#' + sElementID).attr('onclick'))
                 .attr('onclick', '');
-            $('#' + sClassName).attr('class', 'analysis analysis_running');
-            $('#' + sClassName + '_message td')
-                .attr('htmlold', $('#' + sClassName + '_message td').html())
+            $('#' + sElementID).attr('class', 'analysis analysis_running');
+            $('#' + sElementID + '_message td')
+                .attr('htmlold', $('#' + sElementID + '_message td').html())
                 .html('Running analysis... <IMG src="gfx/ajax_analysis_running.gif" alt="Running analysis..." width="16" height="11" style="position: relative; top: 2px; right: -10px;">');
         })
         .done(
             function (data) {
                 if (data == '0') {
                     // Failure, reset table.
-                    lovd_resetAfterFailedRun(sClassName);
+                    lovd_resetAfterFailedRun(sElementID);
                     alert('Screening not valid or no authorization to start a new analysis. Refreshing the page...');
                     location.reload();
                     return false;
@@ -118,24 +109,24 @@ function lovd_runAnalysis (nScreeningID, nAnalysisID, nRunID, aSelectedGenePanel
                     // Success! We're running...
                     // Now call the script that will start filtering.
                     var nRunID = oRegExp[1];
-                    return lovd_runNextFilter(nAnalysisID, nRunID);
+                    return lovd_runNextFilter(nAnalysisID, nRunID, sElementID);
                 } else if (data == '8') {
                     // Failure, reset table.
-                    lovd_resetAfterFailedRun(sClassName);
+                    lovd_resetAfterFailedRun(sElementID);
                     alert('Lost your session. Please log in again.');
                 } else if (data == '9') {
                     // Failure, reset table.
-                    lovd_resetAfterFailedRun(sClassName);
+                    lovd_resetAfterFailedRun(sElementID);
                     alert('Error while sending data. Please try again.\nIf this error persists, please contact support.');
                 } else {
                     // Some other error.
-                    lovd_resetAfterFailedRun(sClassName);
+                    lovd_resetAfterFailedRun(sElementID);
                     alert(data);
                 }})
         .fail(
             function (data) {
                 // Failure, reset table.
-                lovd_resetAfterFailedRun(sClassName);
+                lovd_resetAfterFailedRun(sElementID);
                 alert('Failed to start analysis. Please try again.\nIf this error persists, please contact support.');
                 return false;
             });
@@ -146,21 +137,13 @@ function lovd_runAnalysis (nScreeningID, nAnalysisID, nRunID, aSelectedGenePanel
 
 
 
-function lovd_runNextFilter (nAnalysisID, nRunID)
+function lovd_runNextFilter (nAnalysisID, nRunID, sElementID)
 {
     // Calls the script to run the next filter.
 
     if (typeof(nAnalysisID) == 'undefined' || typeof(nRunID) == 'undefined') {
         alert('Incorrect argument(s) passed to runNextFilter function.');
         return false;
-    }
-
-    if ($('#run_' + nRunID).length > 0) {
-        // Run was already started (usually a modified run).
-        sClassName = 'run_' + nRunID;
-    } else {
-        // Analysis started from page.
-        sClassName = 'analysis_' + nAnalysisID;
     }
 
     $.get('<?php echo lovd_getInstallURL(); ?>ajax/run_next_filter.php?runid=' + escape(nRunID))
@@ -178,7 +161,7 @@ function lovd_runNextFilter (nAnalysisID, nRunID)
                     location.reload();
                 } else if (dataObj.result) {
                     // Success! Mark line and continue to the next, or stop if we're done...
-                    oTR = $('#' + sClassName + '_filter_' + dataObj.sFilterID.replace(/[^a-z0-9_]/i, '_'));
+                    oTR = $('#' + sElementID + '_filter_' + dataObj.sFilterID.replace(/[^a-z0-9_]/i, '_'));
                     oTR.attr('class', 'filter_completed');
                     oTR.children('td:eq(1)').html(dataObj.nTime);
                     oTR.children('td:eq(2)').html(dataObj.nVariantsLeft);
@@ -189,15 +172,18 @@ function lovd_runNextFilter (nAnalysisID, nRunID)
                     }
 
                     if (!dataObj.bDone) {
-                        return lovd_runNextFilter(nAnalysisID, nRunID);
+                        return lovd_runNextFilter(nAnalysisID, nRunID, sElementID);
                     }
 
                     // And also, we're done...
-                    $('#' + sClassName).attr('class', 'analysis analysis_run');
-                    $('#' + sClassName + '_message td').html('Click to see results');
+                    $('#' + sElementID).attr('class', 'analysis analysis_run');
+                    $('#' + sElementID + '_message td').html('Click to see results');
 
-                    // Table should get a new ID, maybe also the filter lines (although those IDs are not used anymore).
-                    $('#' + sClassName).attr('id', 'run_' + nRunID);
+                    // Table should get a new ID.
+                    $('#' + sElementID).attr('id', 'run_' + nRunID);
+                    // Replace all the filter IDs with the new run ID.
+                    var sNewFilterIDs = $('#run_' + nRunID).html().split(sElementID).join('run_' + nRunID);
+                    $('#run_' + nRunID).html(sNewFilterIDs);
                     // Also fix onclick.
                     $('#run_' + nRunID).attr('onclick', 'lovd_showAnalysisResults(\'' + nRunID + '\');');
                     $('#run_' + nRunID).attr('onclickold', '');
@@ -244,7 +230,7 @@ function lovd_runNextFilter (nAnalysisID, nRunID)
 
 
 
-function lovd_popoverGenePanelSelectionForm (nScreeningID, nAnalysisID, nRunID)
+function lovd_popoverGenePanelSelectionForm (nScreeningID, nAnalysisID, nRunID, clicked_id)
 {
     // Makes the gene panel selection form dialog visible and prepares it for the user.
 
@@ -278,6 +264,7 @@ function lovd_popoverGenePanelSelectionForm (nScreeningID, nAnalysisID, nRunID)
     $("#gene_panel_selection_form input[name=nScreeningID]").val(nScreeningID);
     $("#gene_panel_selection_form input[name=nAnalysisID]").val(nAnalysisID);
     $("#gene_panel_selection_form input[name=nRunID]").val(nRunID);
+    $("#gene_panel_selection_form input[name=sElementID]").val(clicked_id);
 }
 
 
@@ -297,9 +284,10 @@ function lovd_processGenePanelSelectionForm ()
     nScreeningID = $("#gene_panel_selection_form input[name=nScreeningID]").val();
     nAnalysisID = $("#gene_panel_selection_form input[name=nAnalysisID]").val();
     nRunID = $("#gene_panel_selection_form input[name=nRunID]").val();
+    sElementID = $("#gene_panel_selection_form input[name=sElementID]").val();
 
     // Call lovd_runAnalysis and pass all the extra values.
-    lovd_runAnalysis(nScreeningID, nAnalysisID, nRunID, aSelectedGenePanels);
+    lovd_runAnalysis(nScreeningID, nAnalysisID, nRunID, sElementID, aSelectedGenePanels);
 }
 
 
@@ -322,7 +310,7 @@ function lovd_showAnalysisResults (nRunID)
     $('#viewlistForm_CustomVL_AnalysisRunResults_for_I_VE').children('input[name="search_variantid"]').remove();
 
     // Mark the currently selected filter.
-    $('#analysesTable td').css('background', '');
+    $('table.analysesTable td').css('background', '');
     $('#run_' + nRunID).parent().css('background', '#DDD');
 
     lovd_AJAX_viewListSubmit('CustomVL_AnalysisRunResults_for_I_VE');

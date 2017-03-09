@@ -451,6 +451,16 @@ if (LOVD_plus) {
             CUR_STATUS_CURATED_REPORTABLE => 'Curated & Reportable',
             CUR_STATUS_CURATED_NOT_REPORTABLE => 'Curated & Not Reportable',
         );
+    $_SETT['clinvar_var_effect'] =
+        array(
+            '2' => 'Benign',
+            '3' => 'Likely benign',
+            '4' => 'Likely pathogenic',
+            '5' => 'Pathogenic',
+            '6' => 'Drug response',
+            '7' => 'histocompatibility'
+        );
+
     // Diagnostics: Added one level, and changed the submitter level's name.
     unset($_SETT['user_levels'][LEVEL_SUBMITTER]); // To make space, we need to rename it anyway.
     $_SETT['user_levels'][LEVEL_ANALYZER]  = 'Analyzer';
@@ -476,6 +486,18 @@ if (file_exists(ROOT_PATH . 'scripts/adapters/adapter.lib.' . $sInstanceName . '
     require_once ROOT_PATH . 'scripts/adapters/adapter.lib.' . $sInstanceName . '.php';
 }
 $_ADAPTER = lovd_initAdapter();
+
+// Load any instance specific functions and variables.
+$sInstanceName = 'DEFAULT';
+if (!empty($_INI['instance']['name'])) {
+    $sInstanceName = strtoupper($_INI['instance']['name']);
+}
+if (file_exists(ROOT_PATH . 'scripts/adapters/adapter.lib.' . $sInstanceName . '.php')) {
+    require_once ROOT_PATH . 'scripts/adapters/adapter.lib.' . $sInstanceName . '.php';
+}
+$_ADAPTER = lovd_initAdapter();
+
+
 
 // Define table names (system-wide).
 // WARNING: The order of tables *MUST* be the same as the order in which the
@@ -532,6 +554,9 @@ $_TABLES =
                 'TABLE_IND2GP' => TABLEPREFIX . '_individuals2gene_panels',
                 'TABLE_GP2DIS' => TABLEPREFIX . '_gene_panels2diseases',
                 'TABLE_ANALYSES' => TABLEPREFIX . '_analyses',
+                'TABLE_ANALYSIS_FILTERS' => TABLEPREFIX . '_analysis_filters',
+                'TABLE_A2AF' => TABLEPREFIX . '_analyses2analysis_filters',
+                'TABLE_GP2A' => TABLEPREFIX . '_gene_panels2analyses',
                 'TABLE_ANALYSES_RUN' => TABLEPREFIX . '_analyses_run',
                 'TABLE_AR2GP' => TABLEPREFIX . '_analyses_run2gene_panels',
                 'TABLE_ANALYSES_RUN_FILTERS' => TABLEPREFIX . '_analyses_run_filters',

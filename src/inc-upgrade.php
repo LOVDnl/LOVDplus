@@ -706,15 +706,16 @@ if ($sCalcVersionFiles != $sCalcVersionDB) {
                      'PREPARE Statement FROM @sSQL',
                      'EXECUTE Statement',
                  ),
-                 '3.0-17h' => 
+                 '3.0-17h' => array(), // Placeholder for LOVD+ queries, defined below.
+                 '3.0-17i' =>
                      array(
                          'SET @bExists := (SELECT COUNT(*) FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = "' . TABLE_DISEASES . '" AND COLUMN_NAME = "inheritance")',
                          'SET @sSQL := IF(@bExists > 0, \'SELECT "INFO: Column already exists."\', "
                             ALTER TABLE ' . TABLE_DISEASES . ' ADD COLUMN inheritance VARCHAR(45) NULL AFTER name")',
                          'PREPARE Statement FROM @sSQL',
                          'EXECUTE Statement',
-                         
-                 ),
+
+                     ),
                  '3.0-18' =>
                      array(
                          // These two will be ignored by LOVD+.
@@ -899,6 +900,64 @@ if ($sCalcVersionFiles != $sCalcVersionDB) {
         );
     }
 
+    if (LOVD_plus && $sCalcVersionDB < lovd_calculateVersion('3.0-17h')) { // Improvements to the way analyses are stored and displayed.
+
+        // Return the existing analyses records as we need these to populate the new tables.
+        $zAnalyses = $_DB->query('SELECT * FROM ' . TABLE_ANALYSES)->fetchAllAssoc();
+
+        $aFiltersSQL = array(); // Used to store the SQL for inserting the filter records.
+        $aAnalysis2FiltersSQL = array(); // Used to store the SQL for linking the filters to an analysis.
+
+        // Loop through each analyses and build up the required SQL for the filters.
+        foreach ($zAnalyses as $zAnalysis) {
+            // Firstly split out the filters and loop through them as the order is significant.
+            $aFilters = preg_split('/\s+/', $zAnalysis['filters']);
+            foreach ($aFilters as $i => $sFilter) { // Each filter is processed and the SQL is generated.
+                // Create insert statements each time but we will use only unique insert statements later.
+                $aFiltersSQL[] = 'INSERT IGNORE INTO ' . TABLE_ANALYSIS_FILTERS . ' (id) VALUES ("' . $sFilter . '")';
+                $aAnalysis2FiltersSQL[] = 'INSERT IGNORE INTO ' . TABLE_A2AF . ' (analysisid, filterid, filter_order) VALUES (' . $zAnalysis['id'] . ', "' . $sFilter . '", ' . ($i + 1) . ')';
+            }
+        }
+
+        $aFiltersSQL = array_unique($aFiltersSQL); // Duplicates were added when this array was created so return the unique SQL.
+
+        $aUpdates['3.0-17h'] = array_merge($aUpdates['3.0-17h'],
+            array(
+                'CREATE TABLE ' . TABLE_ANALYSIS_FILTERS . ' (
+                                id VARCHAR(50) NOT NULL,
+                                name VARCHAR(100) NOT NULL DEFAULT "",
+                                description TEXT,
+                                PRIMARY KEY (id))
+                                ENGINE=InnoDB,
+                                DEFAULT CHARACTER SET utf8',
+                'CREATE TABLE ' . TABLE_A2AF . ' (
+                                analysisid TINYINT(3) UNSIGNED ZEROFILL,
+                                filterid VARCHAR(50) NOT NULL,
+                                filter_order TINYINT(3) UNSIGNED DEFAULT 1,
+                                PRIMARY KEY (analysisid, filterid),
+                                INDEX (analysisid),
+                                INDEX (filterid),
+                                CONSTRAINT ' . TABLE_A2AF . '_fk_analysisid FOREIGN KEY (analysisid) REFERENCES ' . TABLE_ANALYSES . ' (id) ON DELETE CASCADE ON UPDATE CASCADE,
+                                CONSTRAINT ' . TABLE_A2AF . '_fk_filterid FOREIGN KEY (filterid) REFERENCES ' . TABLE_ANALYSIS_FILTERS . ' (id) ON DELETE CASCADE ON UPDATE CASCADE)
+                                ENGINE=InnoDB,
+                                DEFAULT CHARACTER SET utf8',
+                'CREATE TABLE ' . TABLE_GP2A . ' (
+                                genepanelid SMALLINT(5) UNSIGNED ZEROFILL NOT NULL,
+                                analysisid TINYINT(3) UNSIGNED ZEROFILL,
+                                PRIMARY KEY (genepanelid, analysisid),
+                                INDEX (genepanelid),
+                                INDEX (analysisid),
+                                CONSTRAINT ' . TABLE_GP2A . '_fk_genepanelid FOREIGN KEY (genepanelid) REFERENCES ' . TABLE_GENE_PANELS . ' (id) ON DELETE CASCADE ON UPDATE CASCADE,
+                                CONSTRAINT ' . TABLE_GP2A . '_fk_analysisid FOREIGN KEY (analysisid) REFERENCES ' . TABLE_ANALYSES . ' (id) ON DELETE CASCADE ON UPDATE CASCADE)
+                                ENGINE=InnoDB,
+                                DEFAULT CHARACTER SET utf8',
+                'ALTER TABLE ' . TABLE_ANALYSES . ' ADD COLUMN version TINYINT(3) UNSIGNED DEFAULT 1 AFTER description, ADD UNIQUE (name, version)',
+            ),
+            $aFiltersSQL,
+            $aAnalysis2FiltersSQL,
+            array('ALTER TABLE ' . TABLE_ANALYSES . ' DROP filters') // Now that the filters have been moved to their own records we can drop this column from the analyses table.
+        );
+    }
 
 
 

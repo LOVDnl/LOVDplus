@@ -55,6 +55,13 @@ class LOVD_GenomeVariant extends LOVD_Custom {
         $aForm = parent::buildForm($sPrefix);
         // Remove all except the remarks.
         $aFormFiltered = array();
+
+        foreach($aForm as $sCol => $val) {
+            if (strpos($sCol, 'VariantOnGenome/Curation/') !== false) {
+                $aFormFiltered[$sCol] = $aForm[$sCol];
+            }
+        }
+
         if (isset($aForm['VariantOnGenome/Remarks'])) {
             $aFormFiltered['VariantOnGenome/Remarks'] = $aForm['VariantOnGenome/Remarks'];
         }
@@ -78,6 +85,7 @@ class LOVD_GenomeVariant extends LOVD_Custom {
 
     function getForm ()
     {
+        global $_SETT;
         // Build the form.
 
         // If we've built the form before, simply return it. Especially imports will repeatedly call checkFields(), which calls getForm().
@@ -85,12 +93,28 @@ class LOVD_GenomeVariant extends LOVD_Custom {
             return parent::getForm();
         }
 
+        $sEffectReported = 'Affects function (reported)';
+        $sEffectConcluded = 'Affects function (concluded)';
+        if (lovd_verifyInstance('mgha')) {
+            $sEffectReported = 'Classification proposed';
+            $sEffectConcluded = 'Classification final';
+        }
+
         // Array which will make up the form table.
         $this->aFormData = array_merge(
                  array(
                         array('POST', '', '', '', '50%', '14', '50%'),
+                        array($sEffectReported, '', 'select', 'effect_reported', 1, $_SETT['var_effect'], false, false, false),
+                        array($sEffectConcluded, '', 'select', 'effect_concluded', 1, $_SETT['var_effect'], false, false, false)
                       ),
-                 $this->buildForm());
+                 $this->buildForm(),
+                 array(
+     'authorization' => array('Enter your password for authorization', '', 'password', 'password', 20),
+                      ));
+
+        if (lovd_verifyInstance('leiden')) {
+            unset($this->aFormData['authorization']);
+        }
 
         return parent::getForm();
     }

@@ -4,7 +4,7 @@
  * LEIDEN OPEN VARIATION DATABASE (LOVD)
  *
  * Created     : 2013-11-07
- * Modified    : 2017-02-14
+ * Modified    : 2017-03-03
  * For LOVD    : 3.0-18
  *
  * Copyright   : 2004-2017 Leiden University Medical Center; http://www.LUMC.nl/
@@ -154,7 +154,7 @@ class LOVD_CustomViewListMOD extends LOVD_CustomViewList {
                     }
 
                     $aSQL['SELECT'] .= (!$aSQL['SELECT']? '' : ', ') . 'vog.*, a.name AS allele_, eg.name AS vog_effect, CONCAT(cs.id, cs.name) AS curation_status_' .
-                        ($_INI['instance']['name'] == 'mgha'?', IF(vog.`VariantOnGenome/Sequencing/Allele/Frequency` < 1, "Het", "Hom") as zygosity_, ROUND(vog.`VariantOnGenome/Sequencing/Depth/Alt/Fraction`, 2) as var_frac_ ' : '');
+                        (lovd_verifyInstance('mgha')?', IF(vog.`VariantOnGenome/Sequencing/Allele/Frequency` < 1, "Het", "Hom") as zygosity_, ROUND(vog.`VariantOnGenome/Sequencing/Depth/Alt/Fraction`, 2) as var_frac_ ' : '');
                     // Observation count columns.
                     // Find the diseases that this individual has assigned using the analysis run ID in $_GET.
                     if (!empty($_GET['search_runid'])) {
@@ -287,6 +287,29 @@ class LOVD_CustomViewListMOD extends LOVD_CustomViewList {
                     }
                     break;
 
+                case 'Individual':
+                    $nKeyScreening = array_search('Screening', $aObjects);
+                    $aSQL['SELECT'] .= (!$aSQL['SELECT']? '' : ', ') . 'i.*';
+                    if (!$aSQL['FROM']) {
+                        // First data table in query.
+                        $aSQL['FROM'] = TABLE_INDIVIDUALS . ' AS i';
+                    } elseif ($nKeyScreening !== false && $nKeyScreening < $nKey) {
+                        $aSQL['FROM'] .= ' LEFT JOIN ' . TABLE_INDIVIDUALS . ' AS i ON (s.individualid = i.id)';
+                    }
+                    break;
+
+                case 'Screening':
+                    $nKeyVOG = array_search('VariantOnGenome', $aObjects);
+                    $aSQL['SELECT'] .= (!$aSQL['SELECT']? '' : ', ') . 's.*';
+                    if (!$aSQL['FROM']) {
+                        // First data table in query.
+                        $aSQL['FROM'] = TABLE_SCR2VAR . ' AS s2v
+                                        LEFT JOIN ' . TABLE_SCREENINGS . ' AS s ON (vog.id = s2v.screeningid)';
+                    } elseif ($nKeyVOG !== false && $nKeyVOG < $nKey) {
+                        $aSQL['FROM'] .= ' LEFT JOIN ' . TABLE_SCR2VAR . ' AS s2v ON (vog.id = s2v.variantid)
+                                           LEFT JOIN ' . TABLE_SCREENINGS . ' AS s ON (s.id = s2v.screeningid)';
+                    }
+                    break;
 
                 case 'GenePanels':
                     $aSQL['SELECT'] .= (!$aSQL['SELECT']? '' : ', ') . 'GROUP_CONCAT(DISTINCT gp.name SEPARATOR ", ") AS gene_panels,
@@ -394,6 +417,9 @@ class LOVD_CustomViewListMOD extends LOVD_CustomViewList {
                                 'chromosome' => array(
                                         'view' => array('Chr', 40),
                                         'db'   => array('vog.chromosome', 'ASC', true)),
+                                'allele_' => array(
+                                     'view' => array('Allele', 'ASC', true),
+                                     'db'   => array('allele_', 'ASC', true)),
                               ));
 
                     if (!$this->sSortDefault) {
@@ -437,6 +463,12 @@ class LOVD_CustomViewListMOD extends LOVD_CustomViewList {
                         $this->sSortDefault = 'VariantOnTranscript/DNA';
                     }
                     break;
+                case 'Screening':
+                    $sPrefix = 's.';
+                    break;
+                case 'Individual':
+                    $sPrefix = 'i.';
+                    break;
             }
 
 
@@ -463,6 +495,11 @@ class LOVD_CustomViewListMOD extends LOVD_CustomViewList {
             // The VariantOnTranscript/DNA column here has the gene name there, too, which should be usable for filtering.
             if (isset($this->aColumnsViewList['VariantOnTranscript/DNA']['db'])) {
                 $this->aColumnsViewList['VariantOnTranscript/DNA']['db'][0] = 'CONCAT(t.geneid, ":", `VariantOnTranscript/DNA`)';
+            }
+
+            // Hide the DBID column, just for the MGHA.
+            if (lovd_verifyInstance('mgha', false)) {
+                $this->aColumnsViewList['VariantOnGenome/DBID']['view'] = false;
             }
 
             // Variant Priority is to be sorted in DESC order.
@@ -586,6 +623,8 @@ class LOVD_CustomViewListMOD extends LOVD_CustomViewList {
 
     function prepareData ($zData = '', $sView = 'list', $sViewListID = '')
     {
+        global $_SETT;
+
         // Prepares the data by "enriching" the variable received with links, pictures, etc.
 
         // Needs to be done before the custom links are rendered.
@@ -644,6 +683,10 @@ class LOVD_CustomViewListMOD extends LOVD_CustomViewList {
         }
         if (!empty($zData['curation_status_'])) {
             $zData['curation_status_'] = substr($zData['curation_status_'], 2);
+        }
+
+        if (isset($zData['VariantOnTranscript/dbNSFP/ClinVar/Clinical_Significance'])) {
+            $zData['clinvar_'] = implode(', ', lovd_mapCodeToDescription(explode(',', $zData['VariantOnTranscript/dbNSFP/ClinVar/Clinical_Significance'], $_SETT['clinvar_var_effect'])));
         }
 
         return $zData;
