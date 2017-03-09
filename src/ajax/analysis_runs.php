@@ -171,7 +171,7 @@ if (ACTION == 'clone' && POST) {
     if ($("#run_' . $nPaddedNewRunID . '_filter_apply_selected_gene_panels").length == 0 
         || $("#run_' . $nPaddedNewRunID . '_filter_apply_selected_gene_panels").hasClass("filter_skipped")) {
         // If there gene panel filter is not active or is not included in this analysis.
-        var sAction = "lovd_runAnalysis";
+        var sAction = "lovd_configureAnalysis";
         var sGenePanel = ", undefined";
     } else {
         var sAction = "lovd_popoverGenePanelSelectionForm";

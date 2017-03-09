@@ -143,9 +143,31 @@ if (ACTION == 'configure' && GET) {
         }
     }
 
+    // Non filter specific inputs.
+    $aInputs = array(
+        'analysisid' => $_REQUEST['analysisid'],
+        'screeningid' => $_REQUEST['screeningid'],
+        'runid' => $_REQUEST['runid'],
+        'elementid' => $_REQUEST['elementid']
+    );
+
+    $sFormRequiredInputs = '';
+    foreach ($aInputs as $sName => $sValue) {
+        $sFormRequiredInputs .= '<INPUT type=\'hidden\' name=\''. $sName .'\' value=\''. $sValue .'\' />';
+    }
+
     if (empty($sFiltersFormItems)) {
+        // If no further configuration required, simply pass the minimum required inputs
+        print('$.post("' . CURRENT_PATH . '?' . ACTION . '", '. json_encode($aInputs) .' );');
         exit;
     }
+
+    // If further configurationi required, build modal to take the configuration inputs.
+    // Implement an CSRF protection by working with tokens.
+    $sForm  = '<FORM id=\'configure_analysis_form\'><INPUT type=\'hidden\' name=\'csrf_token\' value=\'{{CSRF_TOKEN}}\'>Configure analysis<BR>';
+    $sForm .= $sFiltersFormItems;
+    $sForm .= $sFormRequiredInputs;
+    $sForm .= '</FORM>';
 
     // If we get here, we want to show the dialog for sure.
     print('// Make sure we have and show the dialog.
@@ -157,15 +179,6 @@ if (ACTION == 'configure' && GET) {
     }
     ');
 
-    // Implement an CSRF protection by working with tokens.
-    $sFormClone  = '<FORM id=\'configure_analysis_form\'><INPUT type=\'hidden\' name=\'csrf_token\' value=\'{{CSRF_TOKEN}}\'>Configure analysis<BR>';
-    $sFormClone .= $sFiltersFormItems;
-    $sFormClone .= '<INPUT type=\'hidden\' name=\'analysisid\' value=\''. $_REQUEST['analysisid'] .'\' />';
-    $sFormClone .= '<INPUT type=\'hidden\' name=\'screeningid\' value=\''. $_REQUEST['screeningid'] .'\' />';
-    $sFormClone .= '<INPUT type=\'hidden\' name=\'runid\' value=\''. $_REQUEST['runid'] .'\' />';
-    $sFormClone .= '<INPUT type=\'hidden\' name=\'elementid\' value=\''. $_REQUEST['elementid'] .'\' />';
-    $sFormClone .= '</FORM>';
-
     // Set JS variables and objects.
     print('
     var oButtonFormSubmit  = {"Submit":function () { $.post("' . CURRENT_PATH . '?' . ACTION . '", $("#configure_analysis_form").serialize()); }};
@@ -175,7 +188,7 @@ if (ACTION == 'configure' && GET) {
 
     // Display the form, and put the right buttons in place.
     print('
-    $("#configure_analysis_dialog").html("' . $sFormClone . '<BR>");
+    $("#configure_analysis_dialog").html("' . $sForm . '<BR>");
 
     // Select the right buttons.
     $("#configure_analysis_dialog").dialog({title: "Configure Analysis" ,buttons: $.extend({}, oButtonFormSubmit, oButtonCancel)});
@@ -190,9 +203,7 @@ if (ACTION == 'configure' && GET) {
 if (ACTION == 'configure' && POST) {
     header('Content-type: text/javascript; charset=UTF-8');
     // TODO: also save into database for the config per filter?
-
-
-    $aSelectedGenePanels = $_REQUEST['config']['apply_selected_gene_panels']['gene_panel'];
+    $aSelectedGenePanels = (empty($_REQUEST['config']['apply_selected_gene_panels']['gene_panel']))? array() : $_REQUEST['config']['apply_selected_gene_panels']['gene_panel'];
 
     print('
     $("#configure_analysis_dialog").dialog("close");

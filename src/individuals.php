@@ -357,8 +357,6 @@ if (PATH_COUNT >= 2 && ctype_digit($_PE[1]) && !ACTION && (PATH_COUNT == 2 || PA
                     $sJSAction = 'lovd_showAnalysisResults(\''. $zAnalysis['runid'] .'\')';
                 } elseif ($bHasAuthorization) {
                     // FIXME: code duplicated from analysis_runs.php when we first render analyses tables.
-                    // Can probably check for the call of lovd_popoverGenePanelSelectionForm from within lovd_runAnalysis.
-                    $sFunctionName = ($bHasGenePanelFilter? 'lovd_popoverGenePanelSelectionForm' : 'lovd_runAnalysis');
                     $sRunID = (!$zAnalysis['runid']? 0 : $zAnalysis['runid']);
                     $sJSAction = 'lovd_configureAnalysis(\''. $nScreeningToAnalyze  .'\', \''. $zAnalysis['id'] .'\', \'' . $sRunID . '\', this.id)';
 
