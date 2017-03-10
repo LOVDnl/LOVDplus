@@ -1,7 +1,4 @@
 <?php
-
-require_once dirname(__FILE__) . '/adapter.lib.DEFAULT.php';
-
 $_INSTANCE_CONFIG = array();
 
 $_INSTANCE_CONFIG['screenings'] = array(

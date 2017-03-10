@@ -1,7 +1,4 @@
 <?php
-
-require_once dirname(__FILE__) . '/adapter.lib.DEFAULT.php';
-
 /*******************************************************************************
  * CREATE MAPPINGS AND PROCESS VARIANT FILE FOR MGHA
  * Created: 2016-06-01

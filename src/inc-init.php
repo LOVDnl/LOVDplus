@@ -478,16 +478,9 @@ define('CONFIG_URI', ROOT_PATH . 'config.ini.php');
 $_INI = lovd_parseConfigFile(CONFIG_URI);
 
 // Load any instance specific functions and variables.
-// FIXME+: The adapter should work in such a way, that when you create your own lib, you only need to define those options, that you wish to override.
-// Currently, you need to copy the entire default adapter, and modify what you want different.
-$sInstanceName = 'DEFAULT';
-if (!empty($_INI['instance']['name'])) {
-    $sInstanceName = strtoupper($_INI['instance']['name']);
+if (LOVD_plus) {
+    $_ADAPTER = lovd_initAdapter();
 }
-if (file_exists(ROOT_PATH . 'scripts/adapters/adapter.lib.' . $sInstanceName . '.php')) {
-    require_once ROOT_PATH . 'scripts/adapters/adapter.lib.' . $sInstanceName . '.php';
-}
-$_ADAPTER = lovd_initAdapter();
 
 
 

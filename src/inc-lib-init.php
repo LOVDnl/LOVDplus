@@ -572,23 +572,36 @@ function lovd_initAdapter()
 
     global $_INI;
 
-    $sAdaptersDir = ROOT_PATH . 'scripts/adapters/';
-    $sAdapterName = 'DEFAULT';
-
-    // Even if instance name exists, still check if the actual adapter library file exists.
-    // If adapter library file does not exist, we still use default adapter.
-    if (!empty($_INI['instance']['name']) && file_exists($sAdaptersDir . 'adapter.lib.'. strtoupper($_INI['instance']['name']) .'.php')) {
-        $sAdapterName = strtoupper($_INI['instance']['name']);
+    if (!LOVD_plus) {
+        return false;
     }
 
-    require_once $sAdaptersDir . 'adapter.lib.'. $sAdapterName .'.php';
+    $sAdaptersDir = ROOT_PATH . 'scripts/adapters/';
 
+    // We'll always include the default adapter. The default adapter contains
+    // settings which can be overridden, and the converter class that can be
+    // extended by a instance-specific class.
+    require_once $sAdaptersDir . 'adapter.lib.DEFAULT.php';
+
+    // Include the instance's adapter, if present.
+    $sInstanceName = strtoupper($_INI['instance']['name']);
+    if (file_exists($sAdaptersDir . 'adapter.lib.' . $sInstanceName . '.php')) {
+        require_once $sAdaptersDir . 'adapter.lib.' . $sInstanceName . '.php';
+    }
+
+    // Try and instantiate the instance's class, if present.
     // Camelcase the adapter name.
-    $sClassPrefix = ucwords(strtolower(str_replace('_', ' ', $sAdapterName)));
+    $sClassPrefix = ucwords(strtolower(str_replace('_', ' ', $_INI['instance']['name'])));
     $sClassPrefix = str_replace(' ', '', $sClassPrefix);
     $sClassName = 'LOVD_' . $sClassPrefix . 'DataConverter';
 
-    $zAdapter = new $sClassName($sAdaptersDir);
+    // We don't require the instance's adapter to define any class, though.
+    if (class_exists($sClassName)) {
+        $zAdapter = new $sClassName($sAdaptersDir);
+    } else {
+        // If it's not available, we just use the default adapter.
+        $zAdapter = new LOVD_DefaultDataConverter($sAdaptersDir);
+    }
 
     return $zAdapter;
 }
