@@ -1,4 +1,55 @@
 <?php
+// These are the default instance-specific settings.
+// Create a new file, change the "DEFAULT" in the name to your uppercased
+//  instance name, and add the settings you'd like to override.
+// Optionally, copy this file completely and change the settings in your copy.
+// Change the settings to your liking in your own instance-specific adapter file.
+
+// Default settings.
+$_INSTANCE_CONFIG = array();
+$_INSTANCE_CONFIG['custom_object'] = array(
+    'viewList' => array(
+        'colsToShow' => array(
+            'CustomVL_AnalysisRunResults_for_I_VE' => array(
+                // Select these columns for the analysis results table.
+                // Note, that you also need to define the hidden columns that
+                //  are to be active, since LOVD+ might be filtering on them.
+                // By default, these columns are sorted by object type, but you can change the order to any order you like.
+                'curation_status_',
+                'curation_statusid',
+                'variantid',
+                'vog_effect',
+                'chromosome',
+                'allele_',
+                'VariantOnGenome/DNA',
+                'VariantOnGenome/Alamut',
+                'VariantOnGenome/Conservation_score/PhyloP',
+                'VariantOnGenome/HGMD/Association',
+                'VariantOnGenome/Sequencing/Depth/Alt/Fraction',
+                'VariantOnGenome/Sequencing/Quality',
+                'VariantOnGenome/Sequencing/GATKcaller',
+                'obs_variant',
+                'obs_var_ind_ratio',
+                'obs_disease',
+                'obs_var_dis_ind_ratio',
+
+                'gene_disease_names',
+                'VariantOnTranscript/DNA',
+                'VariantOnTranscript/Protein',
+                'VariantOnTranscript/GVS/Function',
+                'gene_OMIM_',
+
+                'runid',
+
+                'gene_panels',
+            )
+        )
+    )
+);
+
+
+
+
 
 class LOVD_DefaultDataConverter {
 

@@ -569,8 +569,9 @@ function lovd_getProjectFile ()
 function lovd_initAdapter()
 {
     // Select adapter class to instantiate based on instance name.
-
-    global $_INI;
+    // globaling $_INSTANCE_CONFIG is necessary to let it exist outside of this
+    //  function.
+    global $_INI, $_INSTANCE_CONFIG;
 
     if (!LOVD_plus) {
         return false;
@@ -578,6 +579,8 @@ function lovd_initAdapter()
 
     $sAdaptersDir = ROOT_PATH . 'scripts/adapters/';
 
+    // FIXME+: This adapter.lib file provides both settings and a class that is only used for data conversion.
+    //  This should be split; the data conversion class should only be included when needed, as a class file.
     // We'll always include the default adapter. The default adapter contains
     // settings which can be overridden, and the converter class that can be
     // extended by a instance-specific class.

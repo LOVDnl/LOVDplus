@@ -107,7 +107,6 @@ class LOVD_CustomViewListMOD extends LOVD_CustomViewList {
 
 
         $aSQL = $this->aSQLViewList;
-        $aColumnsToShow = array(); // Custom: Instead of telling LOVD what NOT to show, for the diagnostic software we tell LOVD what he SHOULD show (VOG and VOT VLs).
         // Loop requested data types, and keep columns in order indicated by request.
         foreach ($aObjects as $nKey => $sObject) {
             switch ($sObject) {
@@ -129,30 +128,6 @@ class LOVD_CustomViewListMOD extends LOVD_CustomViewList {
                     break;
 
                 case 'VariantOnGenome':
-                    $aColumnsToShow['VariantOnGenome'] =
-                        array(
-                            'VariantOnGenome/DNA',
-                            'VariantOnGenome/Alamut',
-                            'VariantOnGenome/Conservation_score/PhyloP',
-                            'VariantOnGenome/HGMD/Association',
-                            'VariantOnGenome/Sequencing/Depth/Alt/Fraction',
-                            'VariantOnGenome/Sequencing/Quality',
-                            'VariantOnGenome/Sequencing/GATKcaller',
-                        );
-
-                    // Read from adapter config if it exists.
-                    if (isset($_INSTANCE_CONFIG['custom_object']['viewList']['colsToShow'][0])) {
-                        $aColsNames = $_INSTANCE_CONFIG['custom_object']['viewList']['colsToShow'][0];
-                        $aVOGCols = array();
-
-                        foreach ($aColsNames as $sCol) {
-                            if (strpos($sCol, 'VariantOnGenome/') === 0) {
-                                $aVOGCols[] = $sCol;
-                            }
-                        }
-                        $aColumnsToShow['VariantOnGenome'] = $aVOGCols;
-                    }
-
                     $aSQL['SELECT'] .= (!$aSQL['SELECT']? '' : ', ') . 'vog.*, a.name AS allele_, eg.name AS vog_effect, CONCAT(cs.id, cs.name) AS curation_status_';
                     if (lovd_verifyInstance('mgha')) {
                         $aSQL['SELECT'] .= ', IF(vog.`VariantOnGenome/Sequencing/Allele/Frequency` < 1, "Het", "Hom") as zygosity_, ROUND(vog.`VariantOnGenome/Sequencing/Depth/Alt/Fraction`, 2) as var_frac_';
@@ -225,28 +200,6 @@ class LOVD_CustomViewListMOD extends LOVD_CustomViewList {
                     break;
 
                 case 'VariantOnTranscript':
-                    // FIXME: In a later stadium, this will be replaced by instance-specific code. The public_view flag
-                    //  now controls the selection of custom columns for custom viewlists.
-                    $aColumnsToShow['VariantOnTranscript'] =
-                        array(
-                            'VariantOnTranscript/DNA',
-                            'VariantOnTranscript/Protein',
-                            'VariantOnTranscript/GVS/Function',
-                        );
-
-                    // Read from adapter config if it exists.
-                    if (isset($_INSTANCE_CONFIG['custom_object']['viewList']['colsToShow'][0])) {
-                        $aColsNames = $_INSTANCE_CONFIG['custom_object']['viewList']['colsToShow'][0];
-                        $aVOTCols = array();
-
-                        foreach ($aColsNames as $sCol) {
-                            if (strpos($sCol, 'VariantOnTranscript/') === 0) {
-                                $aVOTCols[] = $sCol;
-                            }
-                        }
-                        $aColumnsToShow['VariantOnTranscript'] = $aVOTCols;
-                    }
-
                     $nKeyVOG = array_search('VariantOnGenome', $aObjects);
                     if (!$aSQL['FROM']) {
                         // First data table in query.
@@ -484,16 +437,14 @@ class LOVD_CustomViewListMOD extends LOVD_CustomViewList {
             // The custom columns.
             foreach ($this->aColumns as $sColID => $aCol) {
                 if (strpos($sColID, $sObject . '/') === 0) {
-                    if (!isset($aColumnsToShow[$sObject]) || in_array($sColID, $aColumnsToShow[$sObject])) {
-                        $bAlignRight = preg_match('/^(DEC|FLOAT|(TINY|SMALL|MEDIUM|BIG)?INT)/', $aCol['mysql_type']);
+                    $bAlignRight = preg_match('/^(DEC|FLOAT|(TINY|SMALL|MEDIUM|BIG)?INT)/', $aCol['mysql_type']);
 
-                        $this->aColumnsViewList[$sColID] =
-                             array(
-                                    'view' => array($aCol['head_column'], $aCol['width'], ($bAlignRight? ' align="right"' : '')),
-                                    'db'   => array($sPrefix . '`' . $aCol['id'] . '`', 'ASC', lovd_getColumnType('', $aCol['mysql_type'])),
-                                    'legend' => array($aCol['description_legend_short'], $aCol['description_legend_full']),
-                                  );
-                    }
+                    $this->aColumnsViewList[$sColID] =
+                         array(
+                                'view' => array($aCol['head_column'], $aCol['width'], ($bAlignRight? ' align="right"' : '')),
+                                'db'   => array($sPrefix . '`' . $aCol['id'] . '`', 'ASC', lovd_getColumnType('', $aCol['mysql_type'])),
+                                'legend' => array($aCol['description_legend_short'], $aCol['description_legend_full']),
+                              );
                 }
             }
             // Alamut link should not be searchable, because we have nothing in those columns.
@@ -719,7 +670,9 @@ class LOVD_CustomViewListMOD extends LOVD_CustomViewList {
 
             $aReorderedViewList = array();
             foreach ($aColsToShow as $sColName) {
-                $aReorderedViewList[$sColName] = $this->aColumnsViewList[$sColName];
+                if (isset($this->aColumnsViewList[$sColName])) {
+                    $aReorderedViewList[$sColName] = $this->aColumnsViewList[$sColName];
+                }
             }
 
             $this->aColumnsViewList = $aReorderedViewList;

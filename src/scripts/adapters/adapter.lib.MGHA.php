@@ -5,8 +5,6 @@
  * Programmer: Candice McGregor
  *************/
 
-$_INSTANCE_CONFIG = array();
-
 $_INSTANCE_CONFIG['screenings'] = array(
     'viewList' => array(
         'colsToShow' => array(
@@ -38,27 +36,6 @@ $_INSTANCE_CONFIG['custom_object'] = array(
         ),
         'colsToShow' => array(
             // We can have view list id as key here if needed.
-            // 0 here means the viewList columns seen by the constructor (at the point where we don't know VL id yet.
-            '0' => array(
-                // VOG
-                'VariantOnGenome/DNA',
-                'VariantOnGenome/Sequencing/Quality',
-                'VariantOnGenome/Variant_priority',
-                'VariantOnGenome/1000Gp3/Frequency',
-                'VariantOnGenome/ExAC/Frequency/Adjusted',
-                'VariantOnGenome/Sequencing/Depth/Total',
-                'VariantOnGenome/Sequencing/Allele/Frequency',
-                'VariantOnGenome/Sequencing/Depth/Alt/Fraction',
-
-                // VOT
-                'VariantOnTranscript/DNA',
-                'VariantOnTranscript/Protein',
-                'VariantOnTranscript/Consequence_Type',
-                'VariantOnTranscript/Consequence_Impact',
-                'VariantOnTranscript/Clinical_Significance',
-                'VariantOnGenome/Frequency/EVS/VEP/European_American'
-            ),
-
             'CustomVL_AnalysisRunResults_for_I_VE' => array(
                 // Invisible.
                 'runid',
