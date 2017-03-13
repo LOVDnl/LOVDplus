@@ -49,7 +49,7 @@ class LOVD_ScreeningMOD extends LOVD_Screening {
     function __construct ()
     {
         // Default constructor.
-        global $_AUTH, $_SETT, $_INI;
+        global $_AUTH, $_SETT, $_INSTANCE_CONFIG;
 
         // Run parent constructor to find out about the custom columns.
         parent::__construct();
@@ -155,68 +155,104 @@ class LOVD_ScreeningMOD extends LOVD_Screening {
                       ));
         $this->sSortDefault = 'id';
 
-        $aColsToShow = array(
-            // Invisible.
-            'individualid',
+        // This modified Screenings object is used on the analysis page.
+        // Some instances like to exclude columns from view, others like a
+        // positive selection instead.
+        $aColsToShow = array(); // Columns to show, if using positive selection.
+        $aColsToHide = array();
+        if (lovd_verifyInstance('leiden')) {
+            // Hide some custom columns from view.
+            // FIXME: Better would be perhaps a positive selection instead?
+            $aColsToHide = array(
+                'Screening/Template',
+                'Screening/Technique',
+                'Screening/SNP_overlap',
+                'Screening/Derived_gender',
+                'Screening/Covered_exome/Fraction',
+                'Screening/Father/Covered_exome/Fraction',
+                'Screening/Mother/Covered_exome/Fraction',
+                'Screening/Reads_on_target/Fraction',
+                'Screening/Father/Reads_on_target/Fraction',
+                'Screening/Mother/Reads_on_target/Fraction',
+                'Screening/Analysis_restricted',
+                'Screening/Trio_check/De_novo',
+                'Screening/Trio_check/Mendelian',
+                'analysis_by_',
+                'analysis_date_',
+                'analysis_approved_by_',
+                'analysis_approved_date_',
+            );
 
-            // Visible.
-            'id',
-            'Screening/Father/Sample_ID',
-            'Screening/Mother/Sample_ID',
-            'Screening/DNA/Tube_ID',
-            'Screening/Father/DNA/Tube_ID',
-            'Screening/Mother/DNA/Tube_ID',
-            'Screening/DNA/Date',
-            'Screening/Read_type',
-            'Screening/DNA/Volume',
-            'Screening/Machine_ID',
-            'Screening/DNA/Quality',
-            'Screening/FastQ_files',
-            'Screening/Sample/Type',
-            'Screening/Capture_date',
-            'Screening/DNA/Quantity',
-            'Screening/Machine_type',
-            'Screening/Analysis_type',
-            'Screening/Exome_capture',
-            'Screening/Mean_coverage',
-            'Screening/Pedigree_file',
-            'Screening/Variants_file',
-            'Screening/Pipeline_files',
-            'Screening/Sequencing_lab',
-            'Screening/Sequencing_date',
-            'Screening/Pipeline_contact',
-            'Screening/Barcode_pool_size',
-            'Screening/DNA/Concentration',
-            'Screening/Prioritised_genes',
-            'Screening/DNA_extraction_lab',
-            'Screening/Sequencing_contact',
-            'Screening/Variant_call_group',
-            'Screening/Library_preparation',
-            'Screening/Sequencing_software',
-            'Screening/Demultiplex_software',
-            'Screening/Duplicate_percentage',
-            'Screening/Sequencing_chemistry',
-            'Screening/Father/Origin/Ethnic',
-            'Screening/Mother/Origin/Ethnic',
-            'Screening/Notes',
-            'Screening/Father/Notes',
-            'Screening/Mother/Notes',
-            'Screening/Pipeline/Notes',
-            'Screening/Batch',
-            'Screening/Pipeline/Run_ID',
-            'variants_found_',
-            'analysis_status'
-        );
+        } elseif (lovd_verifyInstance('mgha', false)) {
+            $aColsToShow = array(
+                // Invisible.
+                'individualid',
+
+                // Visible.
+                'id',
+                'Screening/Father/Sample_ID',
+                'Screening/Mother/Sample_ID',
+                'Screening/DNA/Tube_ID',
+                'Screening/Father/DNA/Tube_ID',
+                'Screening/Mother/DNA/Tube_ID',
+                'Screening/DNA/Date',
+                'Screening/Read_type',
+                'Screening/DNA/Volume',
+                'Screening/Machine_ID',
+                'Screening/DNA/Quality',
+                'Screening/FastQ_files',
+                'Screening/Sample/Type',
+                'Screening/Capture_date',
+                'Screening/DNA/Quantity',
+                'Screening/Machine_type',
+                'Screening/Analysis_type',
+                'Screening/Exome_capture',
+                'Screening/Mean_coverage',
+                'Screening/Pedigree_file',
+                'Screening/Variants_file',
+                'Screening/Pipeline_files',
+                'Screening/Sequencing_lab',
+                'Screening/Sequencing_date',
+                'Screening/Pipeline_contact',
+                'Screening/Barcode_pool_size',
+                'Screening/DNA/Concentration',
+                'Screening/Prioritised_genes',
+                'Screening/DNA_extraction_lab',
+                'Screening/Sequencing_contact',
+                'Screening/Variant_call_group',
+                'Screening/Library_preparation',
+                'Screening/Sequencing_software',
+                'Screening/Demultiplex_software',
+                'Screening/Duplicate_percentage',
+                'Screening/Sequencing_chemistry',
+                'Screening/Father/Origin/Ethnic',
+                'Screening/Mother/Origin/Ethnic',
+                'Screening/Notes',
+                'Screening/Father/Notes',
+                'Screening/Mother/Notes',
+                'Screening/Pipeline/Notes',
+                'Screening/Batch',
+                'Screening/Pipeline/Run_ID',
+                'variants_found_',
+                'analysis_status'
+            );
+        }
 
         // If there is any instance specific configurations, we will load them here.
-        global $_INSTANCE_CONFIG;
-        if (!empty($_INSTANCE_CONFIG['screenings']['viewList'] ['colsToShow'][0])) {
+        if (!empty($_INSTANCE_CONFIG['screenings']['viewList']['colsToShow'][0])) {
             $aColsToShow = $_INSTANCE_CONFIG['screenings']['viewList'] ['colsToShow'][0];
         }
 
-        $aColsToHide = array_diff(array_keys($this->aColumnsViewList), $aColsToShow);
-        foreach ($aColsToHide as $sColName) {
-            unset($this->aColumnsViewList[$sColName]);
+        // Cols To Show overrides Cols To Hide.
+        if ($aColsToShow) {
+            $aColsToHide = array_diff(array_keys($this->aColumnsViewList), $aColsToShow);
+        }
+
+        // Hide the columns selected to hide.
+        if ($aColsToHide) {
+            foreach ($aColsToHide as $sColName) {
+                unset($this->aColumnsViewList[$sColName]);
+            }
         }
 
         // Also make sure the custom cols are not searchable, if they're visible.

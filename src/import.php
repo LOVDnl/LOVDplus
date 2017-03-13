@@ -36,10 +36,8 @@ require ROOT_PATH . 'inc-init.php';
 ini_set('auto_detect_line_endings', true); // So we can work with Mac files also...
 set_time_limit(0); // Disable time limit, parsing may take a long time.
 session_write_close(); // Also don't care about the session (in fact, it locks the whole LOVD while this page is running).
-if ($_INI['instance']['name'] == 'mgha') {
+if (LOVD_plus) {
     ini_set('memory_limit', '4294967296'); // 4GB.
-} else {
-    ini_set('memory_limit', '4096M'); // 4GB.
 }
 
 
@@ -544,6 +542,10 @@ if (POST || $_FILES) { // || $_FILES is in use for the automatic loading of file
         }
     }
 
+
+
+
+
     if (!lovd_error()) {
         // Prepare, find LOVD version and format type.
         // Index 'update_columns_not_allowed' is already filled with fields that are never allowed to be updated and always should generate a warning.
@@ -874,13 +876,20 @@ if (POST || $_FILES) { // || $_FILES is in use for the automatic loading of file
                         if (strpos($sTableName, '2') !== false) {
                             // Linking tables (such as GEN2DIS) require all available columns to be present.
                             $aSection['required_columns'] = $aSection['allowed_columns'];
+                        } elseif (LOVD_plus) {
+                            // LOVD+ selects the IDs less often than LOVD does, to save memory.
+                            // Imports into LOVD+ are always new data, and therefore certain IDs are simply not needed.
+                            // The following sections don't need their IDs fetched, as all data is always present in the files.
+                            if (!in_array($sCurrentSection, array('Phenotypes', 'Screenings', 'Variants_On_Genome', 'Variants_On_Transcripts'))) {
+                                $aSection['ids'] = $_DB->query('SELECT ' . (in_array($sCurrentSection, array('Columns', 'Genes'))? 'id' : 'CAST(id AS UNSIGNED)') . ', 1 FROM ' . $sTableName)->fetchAllCombine();
+                            }
                         } else {
                             // Normal data table, no data links.
-                            if (!LOVD_plus && $sCurrentSection == 'Variants_On_Transcripts' && $aParsed['Variants_On_Genome']['ids']) {
+                            if ($sCurrentSection == 'Variants_On_Transcripts' && $aParsed['Variants_On_Genome']['ids']) {
                                 // IDs are not unique, and anyways are already parsed in the VOG section.
                                 // Note: Making this a reference (=& instead of =) slows down the parsing of a VOT line 3x. Don't understand why.
                                 $aSection['ids'] = $aParsed['Variants_On_Genome']['ids'];
-                            } elseif (!LOVD_plus || !in_array($sCurrentSection, array('Variants_On_Genome', 'Variants_On_Transcripts', 'Screenings', 'Screenings_To_Variants', 'Screenings_To_Genes', 'Genes_To_Diseases'))) {
+                            } else {
                                 $aSection['ids'] = $_DB->query('SELECT ' . (in_array($sCurrentSection, array('Columns', 'Genes'))? 'id' : 'CAST(id AS UNSIGNED)') . ', 1 FROM ' . $sTableName)->fetchAllCombine();
                             }
                         }
@@ -1911,7 +1920,6 @@ if (POST || $_FILES) { // || $_FILES is in use for the automatic loading of file
                 // Too many errors.
                 break;
             }
-
         }
 
         // Clean up old section, if available.
@@ -2014,6 +2022,7 @@ if (POST || $_FILES) { // || $_FILES is in use for the automatic loading of file
             $nDone = 0;
             $_DB->beginTransaction();
 
+            // Taking $aSection as a reference saves memory.
             foreach ($aParsed as $sSection => &$aSection) {
                 $aFields = $aSection['allowed_columns'];
                 // We will unset the IDs, and generate new ones. All, but the Column and VOT sections, which don't have an PK AUTO_INCREMENT.
@@ -2022,6 +2031,7 @@ if (POST || $_FILES) { // || $_FILES is in use for the automatic loading of file
                 }
                 $aDone[$sSection] = 0;
 
+                // Taking $aData as a reference saves memory.
                 foreach ($aSection['data'] as $nID => &$aData) {
                     if (!$aData['todo'] || !in_array($aData['todo'], array('insert', 'update'))) {
                         continue;

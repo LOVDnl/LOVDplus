@@ -217,11 +217,9 @@ class LOVD_TranscriptVariant extends LOVD_Custom {
                     $this->aCheckMandatory[] = $sCol;
                 }
 
-                if (lovd_getProjectFile() != '/import.php') {
-                    if (isset($aData[$sCol])) {
-                        $this->checkInputRegExp($sCol, $aData[$sCol]);
-                        $this->checkSelectedInput($sCol, $aData[$sCol]);
-                    }
+                if (!(LOVD_plus && lovd_getProjectFile() == '/import.php') && isset($aData[$sCol])) {
+                    $this->checkInputRegExp($sCol, $aData[$sCol]);
+                    $this->checkSelectedInput($sCol, $aData[$sCol]);
                 }
             }
             $this->aCheckMandatory[] = $sPrefix . 'effect_reported';
