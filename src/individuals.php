@@ -149,13 +149,13 @@ if (PATH_COUNT >= 2 && ctype_digit($_PE[1]) && !ACTION && (PATH_COUNT == 2 || PA
           <TD valign="top" id="screeningViewEntry">' . "\n");
 
     // If we're here, analyzing a screening, show the screening VE on the right.
+    require_once ROOT_PATH . 'class/object_screenings.mod.php';
     if ($nScreeningToAnalyze) {
         // Authorize the user for this screening, but specifically meant for the analysis.
         // For LEVEL_ANALYZER, this should activate LEVEL_OWNER for
         //   free screenings or screenings under analysis by this user.
         lovd_isAuthorized('screening_analysis', $nScreeningToAnalyze);
 
-        require_once ROOT_PATH . 'class/object_screenings.mod.php';
         $_DATA = new LOVD_ScreeningMOD();
         $zScreening = $_DATA->viewEntry($nScreeningToAnalyze);
     }
@@ -186,7 +186,6 @@ if (PATH_COUNT >= 2 && ctype_digit($_PE[1]) && !ACTION && (PATH_COUNT == 2 || PA
     // Analysis is done per screening; show list of screenings, select one to actually start/view analyses.
     $_GET['search_individualid'] = $nID;
     $_T->printTitle('Screenings', 'H4');
-    require_once ROOT_PATH . 'class/object_screenings.mod.php';
     $_DATA = new LOVD_ScreeningMOD();
     $_DATA->setSortDefault('id');
     $_DATA->setRowID('Screenings_for_I_VE', 'Screening_{{screeningid}}');
@@ -565,6 +564,10 @@ if (PATH_COUNT >= 2 && ctype_digit($_PE[1]) && !ACTION && (PATH_COUNT == 2 || PA
         print('      </UL>' . "\n\n");
         if (isset($_INSTANCE_CONFIG['custom_object']['viewList']['defaultSort']['CustomVL_AnalysisRunResults_for_I_VE'])) {
             $_DATA->setSortDefault($_INSTANCE_CONFIG['custom_object']['viewList']['defaultSort']['CustomVL_AnalysisRunResults_for_I_VE']);
+        }
+        // Restrict the columns of this VL, if given.
+        if (isset($_INSTANCE_CONFIG['custom_object']['viewList']['colsToShow']['CustomVL_AnalysisRunResults_for_I_VE'])) {
+            $_DATA->setViewListCols($_INSTANCE_CONFIG['custom_object']['viewList']['colsToShow']['CustomVL_AnalysisRunResults_for_I_VE']);
         }
         $_DATA->viewList('CustomVL_AnalysisRunResults_for_I_VE', array(), false, false, $bMenu);
         print('

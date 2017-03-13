@@ -4,7 +4,7 @@
  * LEIDEN OPEN VARIATION DATABASE (LOVD)
  *
  * Created     : 2013-11-07
- * Modified    : 2017-03-03
+ * Modified    : 2017-03-13
  * For LOVD    : 3.0-18
  *
  * Copyright   : 2004-2017 Leiden University Medical Center; http://www.LUMC.nl/
@@ -52,7 +52,7 @@ class LOVD_CustomViewListMOD extends LOVD_CustomViewList {
     function __construct ($aObjects = array(), $sOtherID = '')
     {
         // Default constructor.
-        global $_DB, $_AUTH, $_INI, $_INSTANCE_CONFIG, $_SETT;
+        global $_AUTH, $_DB, $_SETT;
 
         if (!is_array($aObjects)) {
             $aObjects = explode(',', $aObjects);
@@ -220,17 +220,18 @@ class LOVD_CustomViewListMOD extends LOVD_CustomViewList {
                         }
                         // Security checks in this file's prepareData() need geneid to see if the column in question is set to non-public for one of the genes.
                         $aSQL['SELECT'] .= (!$aSQL['SELECT']? '' : ', ') . 'GROUP_CONCAT(DISTINCT t.geneid SEPARATOR ";") AS _geneid, GROUP_CONCAT(DISTINCT IF(IFNULL(g.id_omim, 0) = 0, "", CONCAT(g.id, ";", g.id_omim)) SEPARATOR ";;") AS __gene_OMIM';
-                        // Disease are to be displayed separated by semocolon.
+                        // FIXME: This pulls so much data out of the Diseases table, that we should perhaps consider making it a separate data object?
+                        // Diseases are to be displayed separated by semicolons.
                         // Each disease is displayed as [SYMBOL: INHERITANCE] or if symbol does not exist [NAME: INHERITANCE]
                         $aSQL['SELECT'] .= ', (SELECT GROUP_CONCAT(
-                                                        DISTINCT 
-                                                            IF(CASE d.symbol WHEN "-" THEN "" ELSE d.symbol END = "", 
-                                                                IF(d.inheritance IS NULL, d.name, CONCAT(d.name, IF(d.inheritance = "", "", ": " ), d.inheritance)), 
-                                                                IF(d.inheritance IS NULL, d.symbol, CONCAT(d.symbol, IF(d.inheritance = "", "", ": " ), d.inheritance))
-                                                            ) 
-                                                        ORDER BY (d.symbol != "" AND d.symbol != "-") DESC, d.symbol, d.name SEPARATOR "; ") 
-                                               FROM ' . TABLE_GEN2DIS . ' g2d INNER JOIN ' . TABLE_DISEASES . ' d ON (g2d.diseaseid = d.id) 
-                                               WHERE g2d.geneid = g.id) 
+                                                        DISTINCT
+                                                            IF(CASE d.symbol WHEN "-" THEN "" ELSE d.symbol END = "",
+                                                                CONCAT(d.name, IF(IFNULL(d.inheritance, "") = "", "", CONCAT(": ", d.inheritance))),
+                                                                CONCAT(d.symbol, IF(IFNULL(d.inheritance, "") = "", "", CONCAT(": ", d.inheritance)))
+                                                            )
+                                                        ORDER BY (d.symbol != "" AND d.symbol != "-") DESC, d.symbol, d.name SEPARATOR "; ")
+                                               FROM ' . TABLE_GEN2DIS . ' g2d INNER JOIN ' . TABLE_DISEASES . ' d ON (g2d.diseaseid = d.id)
+                                               WHERE g2d.geneid = g.id)
                                                AS gene_disease_names';
                         $aSQL['FROM'] .= ' LEFT JOIN ' . TABLE_VARIANTS_ON_TRANSCRIPTS . ' AS vot ON (';
                         // Earlier, VOG was used, join to that.
@@ -268,10 +269,9 @@ class LOVD_CustomViewListMOD extends LOVD_CustomViewList {
 
                 case 'GenePanels':
                     $aSQL['SELECT'] .= (!$aSQL['SELECT']? '' : ', ') . 'GROUP_CONCAT(DISTINCT gp.name SEPARATOR ", ") AS gene_panels,
-                        IFNULL(GROUP_CONCAT(DISTINCT t_preferred.id_ncbi SEPARATOR ";"),  GROUP_CONCAT(DISTINCT t.id_ncbi SEPARATOR ";") ) AS preferred_transcripts,
+                        IFNULL(GROUP_CONCAT(DISTINCT t_preferred.id_ncbi SEPARATOR ";"), GROUP_CONCAT(DISTINCT t.id_ncbi SEPARATOR ";")) AS preferred_transcripts,
                         MIN(t_preferred.id) AS preferred_transcriptid';
                     $nKeyVOT = array_search('VariantOnTranscript', $aObjects);
-
                     if (!$aSQL['FROM']) {
                         // First data table in query.
                         $aSQL['FROM'] = TABLE_GP2GENE . ' AS gp2g  
@@ -385,11 +385,11 @@ class LOVD_CustomViewListMOD extends LOVD_CustomViewList {
                     break;
 
                 case 'VariantOnTranscript':
-                    $sInheritance_legend = '<BR/>Inheritance<BR/><TABLE>';
+                    $sInheritanceLegend = '<BR>Inheritance codes<BR><TABLE>';
                     foreach ($_SETT['diseases_inheritance'] as $sKey => $sDescription) {
-                        $sInheritance_legend .= '<TR><TD>' . $sKey . '</TD><TD>: ' . $sDescription . '</TD></TR>';
+                        $sInheritanceLegend .= '<TR><TD>' . $sKey . '</TD><TD>: ' . $sDescription . '</TD></TR>';
                     }
-                    $sInheritance_legend .= '</TABLE>';
+                    $sInheritanceLegend .= '</TABLE>';
 
                     $sPrefix = 'vot.';
                     // The fixed columns.
@@ -401,8 +401,8 @@ class LOVD_CustomViewListMOD extends LOVD_CustomViewList {
                                 'gene_disease_names' => array(
                                      'view' => array('Associated diseases', 200),
                                      'db'   => array('gene_disease_names', 'ASC', 'TEXT'),
-                                     'legend' => array('The diseases associated with this variant\'s gene(s).' . strip_tags(str_replace(array('<TR>', '</TD> <TD>'), array("\n", '      '), preg_replace('/\s+/', ' ', strip_tags($sInheritance_legend, '<tr><td>')))),
-                                         'The diseases associated with this variant\'s gene(s).' . $sInheritance_legend)),
+                                     'legend' => array('The diseases associated with this variant\'s gene(s).' . "\n" . strip_tags(str_replace(array('<TR>', '</TD> <TD>'), array("\n", '      '), preg_replace('/\s+/', ' ', strip_tags($sInheritanceLegend, '<tr><td>')))),
+                                         'The diseases associated with this variant\'s gene(s).' . $sInheritanceLegend)),
                               ));
 
                     if (lovd_verifyInstance('mgha', false)) {
@@ -511,7 +511,7 @@ class LOVD_CustomViewListMOD extends LOVD_CustomViewList {
                                     'The ratio of the number of individuals with this variant and this disease divided by the total number of individuals with this disease within this database.')),
                         ));
 
-                        if ($_INI['instance']['name'] == 'mgha') {
+                        if (lovd_verifyInstance('mgha')) {
                             $this->aColumnsViewList = array_merge($this->aColumnsViewList, array(
                                 'zygosity_' => array(
                                     'view' => array('Zygosity', 70),
@@ -653,32 +653,6 @@ class LOVD_CustomViewListMOD extends LOVD_CustomViewList {
         }
 
         return $zData;
-    }
-
-
-
-
-
-    function viewList ($sViewListID = false, $aColsToSkip = array(), $bNoHistory = false, $bHideNav = false, $bOptions = false, $bOnlyRows = false)
-    {
-        global $_INSTANCE_CONFIG;
-
-        // Re-order columns order in viewlist before we call the parent's constructor
-        $sViewListID = (empty($sViewListID)? 0 : $sViewListID);
-        if (isset($_INSTANCE_CONFIG['custom_object']['viewList']['colsToShow'][$sViewListID])) {
-            $aColsToShow = $_INSTANCE_CONFIG['custom_object']['viewList'] ['colsToShow'][$sViewListID];
-
-            $aReorderedViewList = array();
-            foreach ($aColsToShow as $sColName) {
-                if (isset($this->aColumnsViewList[$sColName])) {
-                    $aReorderedViewList[$sColName] = $this->aColumnsViewList[$sColName];
-                }
-            }
-
-            $this->aColumnsViewList = $aReorderedViewList;
-        }
-
-        return parent::viewList($sViewListID, $aColsToSkip, $bNoHistory, $bHideNav, $bOptions, $bOnlyRows);
     }
 }
 ?>
