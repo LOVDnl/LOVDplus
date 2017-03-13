@@ -4,14 +4,15 @@
  * LEIDEN OPEN VARIATION DATABASE (LOVD)
  *
  * Created     : 2010-07-28
- * Modified    : 2016-09-09
- * For LOVD    : 3.0-17
+ * Modified    : 2017-03-13
+ * For LOVD    : 3.0-19
  *
- * Copyright   : 2004-2016 Leiden University Medical Center; http://www.LUMC.nl/
- * Programmers : Ing. Ivo F.A.C. Fokkema <I.F.A.C.Fokkema@LUMC.nl>
- *               Ing. Ivar C. Lugtenburg <I.C.Lugtenburg@LUMC.nl>
- *               Msc. Daan Asscheman <D.Asscheman@LUMC.nl>
+ * Copyright   : 2004-2017 Leiden University Medical Center; http://www.LUMC.nl/
+ * Programmers : Ivo F.A.C. Fokkema <I.F.A.C.Fokkema@LUMC.nl>
+ *               Ivar C. Lugtenburg <I.C.Lugtenburg@LUMC.nl>
+ *               Daan Asscheman <D.Asscheman@LUMC.nl>
  *               M. Kroon <m.kroon@lumc.nl>
+ *               Juny Kesumadewi <juny.kesumadewi@unimelb.edu.au>
  *
  *
  * This file is part of LOVD.
@@ -134,7 +135,6 @@ class LOVD_Disease extends LOVD_Object {
 
 
 
-
     function __construct ()
     {
         // Default constructor.
@@ -181,12 +181,11 @@ class LOVD_Disease extends LOVD_Object {
         $this->aSQLViewList['WHERE']    = 'd.id > 0';
         $this->aSQLViewList['GROUP_BY'] = 'd.id';
 
-        $sInheritance_legend = '<TABLE>';
+        $sInheritanceLegend = '<TABLE>';
         foreach ($_SETT['diseases_inheritance'] as $sKey => $sDescription) {
-            $sInheritance_legend .= '<TR><TD>' . $sKey . '</TD><TD>: ' . $sDescription . '</TD></TR>';
+            $sInheritanceLegend .= '<TR><TD>' . $sKey . '</TD><TD>: ' . $sDescription . '</TD></TR>';
         }
-
-        $sInheritance_legend .= '</TABLE>';
+        $sInheritanceLegend .= '</TABLE>';
 
         // List of columns and (default?) order for viewing an entry.
         $this->aColumnsViewEntry =
@@ -225,8 +224,8 @@ class LOVD_Disease extends LOVD_Object {
                         'inheritance' => array(
                                     'view' => array('Inheritance', 75),
                                     'db'   => array('inheritance', 'ASC', true),
-                                    'legend' => array(str_replace(array("\r", "\n"), '', $sInheritance_legend),
-                                        str_replace(array("\r", "\n"), '', $sInheritance_legend)
+                                    'legend' => array('Abbreviations:' . strip_tags(str_replace(array('<TR>', '</TD> <TD>'), array("\n", '      '), preg_replace('/\s+/', ' ', strip_tags($sInheritanceLegend, '<tr><td>')))),
+                                        str_replace(array("\r", "\n"), '', $sInheritanceLegend),
                                     )),
                         'individuals' => array(
                                     'view' => array('Individuals', 80, 'style="text-align : right;"'),
@@ -327,16 +326,13 @@ class LOVD_Disease extends LOVD_Object {
 
     function getForm ()
     {
-        global $_SETT;
-
         // Build the form.
+        global $_AUTH, $_DB, $_SETT;
 
         // If we've built the form before, simply return it. Especially imports will repeatedly call checkFields(), which calls getForm().
         if (!empty($this->aFormData)) {
             return parent::getForm();
         }
-
-        global $_DB, $_AUTH, $_SETT;
 
         // Get list of genes, to connect disease to gene.
         if ($_AUTH['level'] == LEVEL_CURATOR) {

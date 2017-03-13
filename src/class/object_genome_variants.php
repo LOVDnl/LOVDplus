@@ -83,7 +83,8 @@ class LOVD_GenomeVariant extends LOVD_Custom {
                                            'cons.name AS confirmation_status_';
         }
 
-        if ($_INI['instance']['name'] == 'mgha') {
+        // FIXME: Can we have this elsewhere, in LOVD+ specific code?
+        if (LOVD_plus && lovd_verifyInstance('mgha')) {
             $this->aSQLViewEntry['SELECT'] .= ', ROUND(vog.`VariantOnGenome/Sequencing/Depth/Alt/Fraction`, 2) as var_frac_ ' .
                 ', ROUND(vog.`VariantOnGenome/Sequencing/Father/Depth/Alt/Fraction`, 2) as var_frac_father_ ' .
                 ', ROUND(vog.`VariantOnGenome/Sequencing/Mother/Depth/Alt/Fraction`, 2) as var_frac_mother_ ';
@@ -138,7 +139,7 @@ class LOVD_GenomeVariant extends LOVD_Custom {
         // List of columns and (default?) order for viewing an entry.
         $sEffectReported = 'Affects function (reported)';
         $sEffectConcluded = 'Affects function (concluded)';
-        if (lovd_verifyInstance('mgha')) {
+        if (LOVD_plus && lovd_verifyInstance('mgha')) {
             $sEffectReported = 'Classification proposed';
             $sEffectConcluded = 'Classification final';
         }
@@ -437,7 +438,7 @@ class LOVD_GenomeVariant extends LOVD_Custom {
                 if ($n > 1) {
                     list($sPrefix,) = explode('_', $zData['VariantOnGenome/DBID'], 2);
                     $sLink = '<A href="' . (substr($sPrefix, 0, 3) == 'chr'? 'variants' : 'view/' . $sPrefix) . '?search_VariantOnGenome%2FDBID=%3D%22' . $zData['VariantOnGenome/DBID'] . '%22">See all ' . $n . ' reported entries</A>';
-                    if (lovd_verifyInstance('mgha')) {
+                    if (LOVD_plus && lovd_verifyInstance('mgha')) {
                         $sLink = '<A href="' . (substr($sPrefix, 0, 3) == 'chr'? 'variants/DBID/' . $zData['VariantOnGenome/DBID']  : 'view/' . $sPrefix . '?search_VariantOnGenome%2FDBID=%3D%22' . $zData['VariantOnGenome/DBID'] . '%22') .'">See all ' . $n . ' reported entries</A>';
                     }
                     // This is against our coding policy of never modifying actual contents of values (we always create a copy with _ appended), but now I simply can't without
@@ -503,7 +504,8 @@ class LOVD_GenomeVariant extends LOVD_Custom {
             $zData['VariantOnGenome/dbSNP'] = preg_replace('/(rs\d+)/', '<SPAN' . ($sView != 'list'? '' : ' onclick="cancelParentEvent(event);"') . '><A href="http://www.ncbi.nlm.nih.gov/SNP/snp_ref.cgi?rs=' . "$1" . '" target="_blank">' . "$1" . '</A></SPAN>', $zData['VariantOnGenome/dbSNP']);
         }
 
-        if ($_INI['instance']['name'] == 'mgha') {
+        // FIXME: Can we have this elsewhere, in LOVD+ specific code?
+        if (LOVD_plus && lovd_verifyInstance('mgha')) {
             if (!empty($zData['var_frac_'])) {
                 $zData['VariantOnGenome/Sequencing/Depth/Alt/Fraction'] = $zData['var_frac_'];
             }
