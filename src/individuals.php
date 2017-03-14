@@ -191,8 +191,8 @@ if (PATH_COUNT >= 2 && ctype_digit($_PE[1]) && !ACTION && (PATH_COUNT == 2 || PA
     $_DATA->setRowID('Screenings_for_I_VE', 'Screening_{{screeningid}}');
     $_DATA->setRowLink('Screenings_for_I_VE', 'javascript:window.location.href=\'' . lovd_getInstallURL() . $_PE[0] . '/' . $nID . '/analyze/{{screeningid}}\'; return false');
     // Restrict the columns of this VL, if given.
-    if (isset($_INSTANCE_CONFIG['screenings']['viewList']['colsToShow']['Screenings_for_I_VE'])) {
-        $_DATA->setViewListCols($_INSTANCE_CONFIG['screenings']['viewList']['colsToShow']['Screenings_for_I_VE']);
+    if (isset($_INSTANCE_CONFIG['viewlists']['Screenings_for_I_VE']['cols_to_show'])) {
+        $_DATA->setViewListCols($_INSTANCE_CONFIG['viewlists']['Screenings_for_I_VE']['cols_to_show']);
     }
     $_DATA->viewList('Screenings_for_I_VE', array(), true, true);
     unset($_GET['search_individualid']);
@@ -544,7 +544,7 @@ if (PATH_COUNT >= 2 && ctype_digit($_PE[1]) && !ACTION && (PATH_COUNT == 2 || PA
             }
         }
         print('      <UL id="viewlistMenu_CustomVL_AnalysisRunResults_for_I_VE" class="jeegoocontext jeegooviewlist">' . "\n");
-        if ($_INI['instance']['name'] != 'mgha') {
+        if (!lovd_verifyInstance('mgha')) {
             // Show the options to set variant effect from the viewlist.
             foreach ($_SETT['var_effect'] as $nEffectID => $sEffect) {
                 print('        <LI class="icon"><A click="lovd_AJAX_viewListSubmit(\'CustomVL_AnalysisRunResults_for_I_VE\', function(){$.get(\'ajax/set_variant_effect.php?' . $nEffectID . '&id=selected\', function(sResponse){if(sResponse.substring(0,1) == \'1\'){alert(\'Successfully set reported variant effect of \' + sResponse.substring(2) + \' variants to \\\'' . $sEffect . '\\\'.\');lovd_AJAX_viewListSubmit(\'CustomVL_AnalysisRunResults_for_I_VE\');}else if(sResponse.substring(0,1) == \'9\'){alert(\'Error: \' + sResponse.substring(2));}}).error(function(){alert(\'Error while setting variant effect.\');});});"><SPAN class="icon" style="background-image: url(gfx/menu_edit.png);"></SPAN>Set variant effect to "' . $sEffect . '"</A></LI>' . "\n");
@@ -566,12 +566,12 @@ if (PATH_COUNT >= 2 && ctype_digit($_PE[1]) && !ACTION && (PATH_COUNT == 2 || PA
             print('          </UL>' . "\n" . '        </LI>' . "\n");
         }
         print('      </UL>' . "\n\n");
-        if (isset($_INSTANCE_CONFIG['custom_object']['viewList']['defaultSort']['CustomVL_AnalysisRunResults_for_I_VE'])) {
-            $_DATA->setSortDefault($_INSTANCE_CONFIG['custom_object']['viewList']['defaultSort']['CustomVL_AnalysisRunResults_for_I_VE']);
+        if (isset($_INSTANCE_CONFIG['viewlists']['CustomVL_AnalysisRunResults_for_I_VE']['default_sort'])) {
+            $_DATA->setSortDefault($_INSTANCE_CONFIG['viewlists']['CustomVL_AnalysisRunResults_for_I_VE']['default_sort']);
         }
         // Restrict the columns of this VL, if given.
-        if (isset($_INSTANCE_CONFIG['custom_object']['viewList']['colsToShow']['CustomVL_AnalysisRunResults_for_I_VE'])) {
-            $_DATA->setViewListCols($_INSTANCE_CONFIG['custom_object']['viewList']['colsToShow']['CustomVL_AnalysisRunResults_for_I_VE']);
+        if (isset($_INSTANCE_CONFIG['viewlists']['CustomVL_AnalysisRunResults_for_I_VE']['cols_to_show'])) {
+            $_DATA->setViewListCols($_INSTANCE_CONFIG['viewlists']['CustomVL_AnalysisRunResults_for_I_VE']['cols_to_show']);
         }
         $_DATA->viewList('CustomVL_AnalysisRunResults_for_I_VE', array(), false, false, $bMenu);
         print('
