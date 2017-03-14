@@ -4,12 +4,13 @@
  * LEIDEN OPEN VARIATION DATABASE (LOVD)
  *
  * Created     : 2010-03-04
- * Modified    : 2012-02-06
- * For LOVD    : 3.0-beta-02
+ * Modified    : 2016-08-31
+ * For LOVD    : 3.0-17
  *
- * Copyright   : 2004-2012 Leiden University Medical Center; http://www.LUMC.nl/
+ * Copyright   : 2004-2016 Leiden University Medical Center; http://www.LUMC.nl/
  * Programmers : Ing. Ivo F.A.C. Fokkema <I.F.A.C.Fokkema@LUMC.nl>
  *               Ing. Ivar C. Lugtenburg <I.C.Lugtenburg@LUMC.nl>
+ *               M. Kroon <m.kroon@lumc.nl>
  *
  *
  * This file is part of LOVD.
@@ -61,6 +62,106 @@ function lovd_describeFormType ($zData) {
 
 
 
+function lovd_getActivateCustomColumnQuery ($aColumns = array(), $bActivate = true)
+{
+    // Create custom columns based on the columns listed in inc-sql-columns.php file.
+    global $_INI; // $_INI is needed for inc-sql-columns.php.
+
+    // This defines $aColSQL.
+    require_once ROOT_PATH . 'install/inc-sql-columns.php';
+
+    // Make sure the first argument, defining which columns to create, is an array.
+    // When empty, all columns are created.
+    if (!is_array($aColumns)) {
+        $aColumns = array($aColumns);
+    }
+
+    // Define how many columns we need to create.
+    $nColsLeft = (empty($aColumns)? count($aColSQL) : count($aColumns));
+
+    $aSQL = array();
+    foreach ($aColSQL as $sInsertSQL) {
+        // Find the beginning of field values of an SQL INSERT query
+        // INSERT INTO table_name VALUES(...)
+        $nIndex = strpos($sInsertSQL, '(');
+        if ($nIndex !== false) {
+            // Get the string inside brackets VALUES(...)
+            $sInsertFields = rtrim(substr($sInsertSQL, $nIndex+1), ')');
+
+            // Split the string into an array.
+            $aValues = str_getcsv($sInsertFields);
+
+            // If column is requested, process it. When no columns are specified, process all columns.
+            if (empty($aColumns) || in_array($aValues[0], $aColumns)) {
+                $aSQL[] = str_replace('INSERT INTO', 'INSERT IGNORE INTO', $sInsertSQL);
+
+                // Only activate column if they are an HGVS or standard column.
+                if ($bActivate && ($aValues[3] == '1' || $aValues[4] == '1')) {
+                    $sColID = $aValues[0];
+                    $sColType = $aValues[10];
+
+                    list($sCategory) = explode('/', $sColID);
+                    $aTableInfo = lovd_getTableInfoByCategory($sCategory);
+
+                    $sAlterTable = 'ALTER TABLE ' . $aTableInfo['table_sql'] . ' ADD COLUMN `' . $sColID . '` ' . $sColType;
+                    $aSQL = array_merge($aSQL, array(
+                        'INSERT IGNORE INTO ' . TABLE_ACTIVE_COLS . ' VALUES ("' . $sColID . '", "00000", NOW())',
+                        'SET @bExists := (SELECT COUNT(*) FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = "' . $aTableInfo['table_sql'] . '" AND COLUMN_NAME = "' . $sColID . '")',
+                        'SET @sSQL := IF(@bExists > 0, \'SELECT "INFO: Column already exists."\', "' . $sAlterTable . '")',
+                        'PREPARE Statement FROM @sSQL',
+                        'EXECUTE Statement',
+                    ));
+
+                    if (!empty($aTableInfo['table_sql_rev'])) {
+                        $sAlterRevTable = 'ALTER TABLE ' . $aTableInfo['table_sql_rev'] . ' ADD COLUMN `' . $sColID . '` ' . $sColType;
+                        $aSQL = array_merge($aSQL, array(
+                            'SET @bExists := (SELECT COUNT(*) FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = "' . $aTableInfo['table_sql_rev'] . '" AND COLUMN_NAME = "' . $sColID . '")',
+                            'SET @sSQL := IF(@bExists > 0, \'SELECT "INFO: Column already exists."\', "' . $sAlterRevTable . '")',
+                            'PREPARE Statement FROM @sSQL',
+                            'EXECUTE Statement',
+                        ));
+                    }
+                }
+
+                $nColsLeft--;
+                // Make sure we stop looping once we have processed all columns listed in $aColumns.
+                if ($nColsLeft === 0) {
+                    break;
+                }
+            }
+        }
+    }
+
+    return $aSQL;
+}
+
+
+
+
+
+function lovd_getCategoryCustomColFromName ($sName)
+{
+    // Returns category (object type) for custom column fieldname. Fieldname
+    // may be anything used in code or SQL to refer to that column.
+    // Examples:
+    //      "Phenotype/Age" => "Phenotype"
+    //      "vot.`VariantOnTranscript/DNA`" => "VariantOnTranscript"
+    //      "`VariantOnTranscript/Enzyme/Kinase_activity`" =>
+    //          "VariantOnTranscript"
+
+    preg_match('/^(\w+\.)?`?(\w+)\/.+$/', $sName, $aMatches);
+    if ($aMatches) {
+        return $aMatches[2];
+    }
+
+    // Unable to parse name.
+    return false;
+}
+
+
+
+
+
 function lovd_getTableInfoByCategory ($sCategory)
 {
     // Returns information on the LOVD table that holds the data for this given
@@ -72,6 +173,7 @@ function lovd_getTableInfoByCategory ($sCategory)
                      array(
                             'table_sql' => TABLE_INDIVIDUALS,
                             'table_name' => 'Individual',
+                            'table_alias' => 'i',
                             'shared' => false,
                             'unit' => '',
                           ),
@@ -79,13 +181,15 @@ function lovd_getTableInfoByCategory ($sCategory)
                      array(
                             'table_sql' => TABLE_PHENOTYPES,
                             'table_name' => 'Phenotype',
-                            'shared' => true,
+                            'table_alias' => 'p',
+                            'shared' => (LOVD_plus? false : true),
                             'unit' => 'disease', // Is also used to determine the key (diseaseid).
                           ),
                 'Screening' =>
                      array(
                             'table_sql' => TABLE_SCREENINGS,
                             'table_name' => 'Screening',
+                            'table_alias' => 's',
                             'shared' => false,
                             'unit' => '',
                           ),
@@ -93,6 +197,7 @@ function lovd_getTableInfoByCategory ($sCategory)
                      array(
                             'table_sql' => TABLE_VARIANTS,
                             'table_name' => 'Genomic Variant',
+                            'table_alias' => 'vog',
                             'shared' => false,
                             'unit' => '',
                           ),
@@ -100,8 +205,17 @@ function lovd_getTableInfoByCategory ($sCategory)
                      array(
                             'table_sql' => TABLE_VARIANTS_ON_TRANSCRIPTS,
                             'table_name' => 'Transcript Variant',
-                            'shared' => true,
+                            'table_alias' => 'vot',
+                            'shared' => (LOVD_plus? false : true),
                             'unit' => 'gene', // Is also used to determine the key (geneid).
+                          ),
+                'SummaryAnnotation' =>
+                     array(
+                            'table_sql' => TABLE_SUMMARY_ANNOTATIONS,
+                            'table_sql_rev' => TABLE_SUMMARY_ANNOTATIONS_REV,
+                            'table_name' => 'Summary Annotations',
+                            'shared' => false,
+                            'unit' => '',
                           ),
               );
     if (!array_key_exists($sCategory, $aTables)) {

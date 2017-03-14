@@ -4,12 +4,13 @@
  * LEIDEN OPEN VARIATION DATABASE (LOVD)
  *
  * Created     : 2010-01-28
- * Modified    : 2016-05-09
- * For LOVD    : 3.0-16
+ * Modified    : 2016-10-14
+ * For LOVD    : 3.0-18
  *
  * Copyright   : 2004-2016 Leiden University Medical Center; http://www.LUMC.nl/
  * Programmers : Ing. Ivo F.A.C. Fokkema <I.F.A.C.Fokkema@LUMC.nl>
  *               Ing. Ivar C. Lugtenburg <I.C.Lugtenburg@LUMC.nl>
+ *               M. Kroon <m.kroon@lumc.nl>
  *
  *
  * This file is part of LOVD.
@@ -114,6 +115,7 @@ class LOVD_Log extends LOVD_Object {
             case 'AnalysisClose':
             case 'AnalysisOpen':
             case 'AnalysisRun':
+            case 'AnalysisRunClone':
             case 'AnalysisRunModify':
             case 'AnalysisRunDelete':
                 $zData['entry'] = preg_replace('/(individual) ([0-9]+):([0-9]+)( |$)/', '$1 <A href="individuals/$2/analyze/$3">$2</A> (analysis $3)$4', $zData['entry']);
@@ -123,7 +125,7 @@ class LOVD_Log extends LOVD_Object {
             case 'ColAdd':
             case 'ColEdit':
             case 'ColRemove':
-                $zData['entry'] = preg_replace('/olumn ([A-Z][A-Za-z\/_]+) /', 'olumn <A href="columns/$1">$1</A> ', $zData['entry']);
+                $zData['entry'] = preg_replace('/olumn ([A-Z][A-Za-z0-9\/_]+) /', 'olumn <A href="columns/$1">$1</A> ', $zData['entry']);
                 break;
             case 'DiseaseCreate':
             case 'DiseaseEdit':
@@ -131,6 +133,9 @@ class LOVD_Log extends LOVD_Object {
                 break;
             case 'CuratorAuthorize':
             case 'CuratorSort':
+                $zData['entry'] = preg_replace('/the ([A-Z][A-Za-z0-9-]+) gene/', 'the <A href="genes/$1">$1</A> gene', $zData['entry']);
+                $zData['entry'] = preg_replace('/#([0-9]+)\s/', '#<A href="users/$1">$1</A> ', $zData['entry']);
+                break;
             case 'GeneCreate':
             case 'GeneEdit':
             case 'GeneEmpty':
@@ -161,6 +166,9 @@ class LOVD_Log extends LOVD_Object {
                 break;
             case 'TranscriptEdit':
                 $zData['entry'] = preg_replace('/(entry) (#)?([0-9]+) /', '$1 $2<A href="transcripts/$3">$3</A> ', $zData['entry']);
+                break;
+            case 'ShareAccess':
+                $zData['entry'] = preg_replace('/(user) (#)?([0-9]+)/', '$1 $2<A href="users/$3">$3</A>', $zData['entry']);
                 break;
             case 'UserBoot':
             case 'UserCreate':

@@ -4,8 +4,8 @@
  * LEIDEN OPEN VARIATION DATABASE (LOVD)
  *
  * Created     : 2014-01-31
- * Modified    : 2016-03-02
- * For LOVD    : 3.0-15
+ * Modified    : 2017-02-15
+ * For LOVD    : 3.0-18
  *
  * Copyright   : 2004-2016 Leiden University Medical Center; http://www.LUMC.nl/
  * Programmer  : Ing. Ivo F.A.C. Fokkema <I.F.A.C.Fokkema@LUMC.nl>
@@ -156,7 +156,7 @@ if (PATH_COUNT == 3 && $_PE[1] == 'run' && ctype_digit($_PE[2]) && ACTION == 'mo
 
     // See above, I had to split the queries.
     // $zData['filters'] = explode(';', $zData['_filters']);
-    $zData['filters'] = $_DB->query('SELECT filterid FROM ' . TABLE_ANALYSES_RUN_FILTERS . ' WHERE runid = ? ORDER BY filter_order', array($nID))->fetchAllColumn();
+    $zData['filters'] = $_DB->query('SELECT arf.filterid, CASE af.name WHEN "" THEN af.id ELSE af.name END AS name FROM ' . TABLE_ANALYSES_RUN_FILTERS . ' AS arf INNER JOIN ' . TABLE_ANALYSIS_FILTERS . ' AS af ON (arf.filterid = af.id) WHERE arf.runid = ? ORDER BY arf.filter_order', array($nID))->fetchAllCombine();
     $nFilters = count($zData['filters']);
 
     if (count($zData['filters']) <= 1) {
@@ -186,7 +186,7 @@ if (PATH_COUNT == 3 && $_PE[1] == 'run' && ctype_digit($_PE[2]) && ACTION == 'mo
             $_DB->query('INSERT INTO ' . TABLE_ANALYSES_RUN . ' (analysisid, screeningid, modified, created_by, created_date) VALUES (?, ?, 1, ?, NOW())', array($zData['analysisid'], $zData['screeningid'], $_AUTH['id']));
             $nNewRunID = $_DB->lastInsertId();
             // Now insert filters.
-            foreach ($zData['filters'] as $nOrder => $sFilter) {
+            foreach (array_keys($zData['filters']) as $nOrder => $sFilter) {
                 if (in_array($sFilter, $_POST['remove_filters'])) {
                     continue; // Column selected to be removed.
                 }
@@ -235,74 +235,18 @@ if (PATH_COUNT == 3 && $_PE[1] == 'run' && ctype_digit($_PE[2]) && ACTION == 'mo
     print('      Please select the filters that you would like to <B>remove</B> from the analysis.<BR><BR>' . "\n");
 
     $nOptions = ($nFilters > 15? 15 : $nFilters);
-    $aForm[] = array('Remove the following filters', '', 'select', 'remove_filters', $nOptions, array_combine(array_values($zData['filters']), $zData['filters']), false, true, false);
+    $aForm[] = array('Remove the following filters', '', 'select', 'remove_filters', $nOptions, $zData['filters'], false, true, false);
     $aForm[] = 'skip';
 
-    $aForm = array_merge($aForm,
-             array(
-                    array('', '', 'submit', 'Remove filters'),
-                  )
-                       );
+    $aForm = array_merge(
+        $aForm,
+        array(
+            array('', '', 'submit', 'Remove filters'),
+        )
+    );
     lovd_viewForm($aForm);
 
     print('</FORM>' . "\n\n");
-
-    $_T->printFooter();
-    exit;
-}
-
-
-
-
-
-if (PATH_COUNT == 3 && $_PE[1] == 'run' && ctype_digit($_PE[2]) && ACTION == 'delete') {
-    // URL: /analyses/run/00001?delete
-    // Drop specific entry.
-
-    $nID = sprintf('%05d', $_PE[2]);
-    define('PAGE_TITLE', 'Delete analysis run ' . $nID);
-    define('LOG_EVENT', 'AnalysisRunDelete');
-
-    // Load appropriate user level for this analysis run.
-    lovd_isAuthorized('analysisrun', $nID);
-    lovd_requireAUTH(LEVEL_OWNER);
-
-    // A Manager can always delete an analysis run, even when it hasn't been started by him.
-    $sSQL = 'SELECT ar.*, s.individualid
-             FROM ' . TABLE_ANALYSES_RUN . ' AS ar
-              INNER JOIN ' . TABLE_SCREENINGS . ' AS s ON (ar.screeningid = s.id)
-             WHERE ar.id = ? AND s.analysis_statusid < ?' . ($_AUTH['level'] >= LEVEL_MANAGER? '' : ' AND ar.created_by = ?');
-    $aSQL = array($nID, ANALYSIS_STATUS_CLOSED);
-    if ($_AUTH['level'] < LEVEL_MANAGER) {
-        $aSQL[] = $_AUTH['id'];
-    }
-    $zData = $_DB->query($sSQL, $aSQL)->fetchAssoc();
-    if (!$zData) {
-        $_T->printHeader();
-        $_T->printTitle();
-        lovd_showInfoTable('No such ID or not allowed!', 'stop');
-        $_T->printFooter();
-        exit;
-    }
-
-    // This also deletes the entries in TABLE_ANALYSES_RUN_FILTERS && TABLE_ANALYSES_RUN_RESULTS.
-    $_DB->query('DELETE FROM ' . TABLE_ANALYSES_RUN . ' WHERE id = ?', array($nID));
-
-    // Write to log...
-    lovd_writeLog('Event', LOG_EVENT, 'Deleted analysis run ' . $nID . ' on individual ' . $zData['individualid'] . ':' . $zData['screeningid']);
-
-    $_T->printHeader();
-    $_T->printTitle();
-
-    // Thank the user...
-    lovd_showInfoTable('Successfully deleted the analysis run!', 'success');
-
-    if (isset($_GET['in_window'])) {
-        // We're in a new window, refresh opener en close window.
-        print('      <SCRIPT type="text/javascript">setTimeout(\'opener.location.reload();self.close();\', 1000);</SCRIPT>' . "\n\n");
-    } else {
-        print('      <SCRIPT type="text/javascript">setTimeout(\'window.location.href=\\\'' . lovd_getInstallURL() . 'individuals\\\';\', 1000);</SCRIPT>' . "\n\n");
-    }
 
     $_T->printFooter();
     exit;
