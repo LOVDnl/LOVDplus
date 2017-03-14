@@ -158,7 +158,7 @@ $aTableSQL =
     updated_date DATETIME,
     PRIMARY KEY (id),
     INDEX (chromosome),
-    '. (!empty($_INI['database']['enforce_hgnc_gene'])? 'UNIQUE' : 'INDEX') .' (id_hgnc),
+    '. (!empty($_INSTANCE_CONFIG['conversion']['enforce_hgnc_gene'])? 'UNIQUE' : 'INDEX') .' (id_hgnc),
     INDEX (created_by),
     INDEX (edited_by),
     INDEX (updated_by),

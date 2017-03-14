@@ -85,6 +85,14 @@ $_INSTANCE_CONFIG['variants'] = array(
 );
 
 
+$_INSTANCE_CONFIG['conversion'] = array(
+    'max_annotation_error_allowed' => 20,
+    'exit_on_annotation_error' => false,
+    'enforce_hgnc_gene' => false,
+    'check_indel_description' => false
+);
+
+
 class LOVD_MghaSeqDataConverter extends LOVD_DefaultDataConverter {
 
     static $sAdapterName = 'MGHA_SEQ';

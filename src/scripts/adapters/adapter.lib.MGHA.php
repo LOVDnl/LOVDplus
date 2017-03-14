@@ -58,9 +58,12 @@ $_INSTANCE_CONFIG['viewlists']['CustomVL_AnalysisRunResults_for_I_VE'] = array(
 );
 
 
-
-
-
+$_INSTANCE_CONFIG['conversion'] = array(
+    'max_annotation_error_allowed' => 20,
+    'exit_on_annotation_error' => false,
+    'enforce_hgnc_gene' => false,
+    'check_indel_description' => false
+);
 
 
 class LOVD_MghaDataConverter extends LOVD_DefaultDataConverter {
