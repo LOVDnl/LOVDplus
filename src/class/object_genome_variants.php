@@ -85,9 +85,9 @@ class LOVD_GenomeVariant extends LOVD_Custom {
 
         // FIXME: Can we have this elsewhere, in LOVD+ specific code?
         if (LOVD_plus && lovd_verifyInstance('mgha')) {
-            $this->aSQLViewEntry['SELECT'] .= ', ROUND(vog.`VariantOnGenome/Sequencing/Depth/Alt/Fraction`, 2) as var_frac_ ' .
-                ', ROUND(vog.`VariantOnGenome/Sequencing/Father/Depth/Alt/Fraction`, 2) as var_frac_father_ ' .
-                ', ROUND(vog.`VariantOnGenome/Sequencing/Mother/Depth/Alt/Fraction`, 2) as var_frac_mother_ ';
+            $this->aSQLViewEntry['SELECT'] .= ', ROUND(vog.`VariantOnGenome/Sequencing/Depth/Alt/Fraction`, 2) as `VariantOnGenome/Sequencing/Depth/Alt/Fraction` ' .
+                ', ROUND(vog.`VariantOnGenome/Sequencing/Father/Depth/Alt/Fraction`, 2) as `VariantOnGenome/Sequencing/Father/Depth/Alt/Fraction` ' .
+                ', ROUND(vog.`VariantOnGenome/Sequencing/Mother/Depth/Alt/Fraction`, 2) as `VariantOnGenome/Sequencing/Mother/Depth/Alt/Fraction` ';
         }
 
         $this->aSQLViewEntry['FROM']     = TABLE_VARIANTS . ' AS vog ' .
@@ -502,21 +502,6 @@ class LOVD_GenomeVariant extends LOVD_Custom {
         // Replace rs numbers with dbSNP links.
         if (!empty($zData['VariantOnGenome/dbSNP'])) {
             $zData['VariantOnGenome/dbSNP'] = preg_replace('/(rs\d+)/', '<SPAN' . ($sView != 'list'? '' : ' onclick="cancelParentEvent(event);"') . '><A href="http://www.ncbi.nlm.nih.gov/SNP/snp_ref.cgi?rs=' . "$1" . '" target="_blank">' . "$1" . '</A></SPAN>', $zData['VariantOnGenome/dbSNP']);
-        }
-
-        // FIXME: Can we have this elsewhere, in LOVD+ specific code?
-        if (LOVD_plus && lovd_verifyInstance('mgha')) {
-            if (!empty($zData['var_frac_'])) {
-                $zData['VariantOnGenome/Sequencing/Depth/Alt/Fraction'] = $zData['var_frac_'];
-            }
-
-            if (!empty($zData['var_frac_father_'])) {
-                $zData['VariantOnGenome/Sequencing/Father/Depth/Alt/Fraction'] = $zData['var_frac_father_'];
-            }
-
-            if (!empty($zData['var_frac_mother_'])) {
-                $zData['VariantOnGenome/Sequencing/Mother/Depth/Alt/Fraction'] = $zData['var_frac_mother_'];
-            }
         }
 
         return $zData;
