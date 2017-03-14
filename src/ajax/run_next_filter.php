@@ -70,6 +70,11 @@ $aVariantIDs = &$_SESSION['analyses'][$nRunID]['IDsLeft'];
 //sleep(2);
 // Information about the selected gene panels for the apply_selected_gene_panels filter.
 $sGenePanelsInfo = '';
+
+// Read filter configurations.
+$sConfig = $_DB->query('SELECT config_json FROM ' . TABLE_ANALYSES_RUN_FILTERS . ' WHERE runid = ? AND filterid = ?', array($nRunID, $sFilter))->fetchColumn();
+$aConfig = (empty($sConfig) ? array() : json_decode($sConfig, true));
+
 $tStart = microtime(true);
 if ($aVariantIDs) {
     $aVariantIDsFiltered = false;
@@ -368,6 +373,7 @@ if ($aVariantIDs) {
             break;
         case 'cross_screenings':
             // TODO: apply SQL query
+
             $aVariantIDsFiltered = $aVariantIDs;
             break;
         case 'remove_with_any_frequency':
