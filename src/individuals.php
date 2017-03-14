@@ -190,6 +190,10 @@ if (PATH_COUNT >= 2 && ctype_digit($_PE[1]) && !ACTION && (PATH_COUNT == 2 || PA
     $_DATA->setSortDefault('id');
     $_DATA->setRowID('Screenings_for_I_VE', 'Screening_{{screeningid}}');
     $_DATA->setRowLink('Screenings_for_I_VE', 'javascript:window.location.href=\'' . lovd_getInstallURL() . $_PE[0] . '/' . $nID . '/analyze/{{screeningid}}\'; return false');
+    // Restrict the columns of this VL, if given.
+    if (isset($_INSTANCE_CONFIG['screenings']['viewList']['colsToShow']['Screenings_for_I_VE'])) {
+        $_DATA->setViewListCols($_INSTANCE_CONFIG['screenings']['viewList']['colsToShow']['Screenings_for_I_VE']);
+    }
     $_DATA->viewList('Screenings_for_I_VE', array(), true, true);
     unset($_GET['search_individualid']);
 

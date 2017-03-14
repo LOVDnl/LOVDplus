@@ -7,6 +7,27 @@
 
 // Default settings.
 $_INSTANCE_CONFIG = array();
+$_INSTANCE_CONFIG['screenings'] = array(
+    'viewList' => array(
+        'colsToShow' => array(
+            'Screenings_for_I_VE' => array(
+                // Select these columns for the screenings listing on the individual's page.
+                // Note, that you also need to define the hidden columns that
+                //  are to be active, since LOVD+ might be filtering on them.
+                // You can change the order of columns to any order you like.
+                'id',
+                'individualid',
+                'curation_progress_',
+                'variants_found_',
+                'analysis_status',
+                'analysis_by_',
+                'analysis_date_',
+                'analysis_approved_by_',
+                'analysis_approved_date_',
+            )
+        )
+    )
+);
 $_INSTANCE_CONFIG['custom_object'] = array(
     'viewList' => array(
         'colsToShow' => array(

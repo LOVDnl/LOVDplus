@@ -9,8 +9,7 @@ $_INSTANCE_CONFIG['screenings'] = array(
     'viewList' => array(
         'colsToShow' => array(
             // We can have view list id as key here if needed.
-            // 0 here means the viewList columns seen by the constructor (at the point where we don't know VL id yet.
-            0 => array(
+            'Screenings_for_I_VE' => array(
                 // Invisible.
                 'individualid',
 
