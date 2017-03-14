@@ -50,8 +50,9 @@ if (empty($_REQUEST['screeningid']) || empty($_REQUEST['analysisid']) || !ctype_
 
 // Find screening data, make sure we have the right to analyze this patient.
 // MANAGER can always start an analysis, even when the individual's analysis hasn't been started by him.
-$sSQL = 'SELECT i.id, i.custom_panel, 
-         GROUP_CONCAT(DISTINCT gp.id, ";", gp.name, ";", gp.type ORDER BY gp.type DESC, gp.name ASC SEPARATOR ";;") AS __gene_panels
+$sSQL = 'SELECT i.id, i.custom_panel';
+$sSQL .= (!lovd_verifyInstance('mgha', false)? '' : ', s.`Screening/Mother/Sample_ID`, s.`Screening/Father/Sample_ID`');
+$sSQL .= ', GROUP_CONCAT(DISTINCT gp.id, ";", gp.name, ";", gp.type ORDER BY gp.type DESC, gp.name ASC SEPARATOR ";;") AS __gene_panels
          FROM ' . TABLE_INDIVIDUALS . ' AS i 
          INNER JOIN ' . TABLE_SCREENINGS . ' AS s ON (i.id = s.individualid) 
          LEFT OUTER JOIN ' . TABLE_IND2GP . ' AS i2gp ON (i.id = i2gp.individualid)
@@ -122,7 +123,7 @@ if (ACTION == 'configure' && GET) {
                 } else {
                     // This individual has at least one gene panel or custom panel.
 
-                    $sFiltersFormItems .= '<DIV><TABLE>';
+                    $sFiltersFormItems .= '<DIV id=\'filter-config-'. $sFilter . '\'><TABLE>';
                     $sLastType = '';
                     foreach ($zIndividual['gene_panels'] as $nKey => $aGenePanel) {
                         // Create the gene panel type header.
@@ -156,19 +157,55 @@ if (ACTION == 'configure' && GET) {
                 );
 
                 $aGrouping = array(
+                    '',
                     'AND',
                     'OR'
                 );
 
+                // Find available screenings.
+                $sSQL = 'SELECT s.*, i.`Individual/Sample_ID`
+                         FROM ' . TABLE_SCREENINGS . ' AS s 
+                         JOIN ' . TABLE_INDIVIDUALS . ' AS i ON (s.individualid = i.id) 
+                         WHERE s.id != ?';
+                $aSQL = array($_REQUEST['screeningid']);
+
+                $zScreenings = $_DB->query($sSQL, $aSQL)->fetchAllAssoc();
+                $aScreenings = array();
+                $aRelatives = array();
+                foreach ($zScreenings as $zScreening) {
+                    $sText = $zScreening['Individual/Sample_ID'];
+                    if (lovd_verifyInstance('mgha', false)) {
+                        $sText .= ' ' . $zScreening['Screening/Batch'] . ' ' . $zScreening['Screening/Pipeline/Run_ID'];
+
+                        if ($zScreening['Individual/Sample_ID'] == $zIndividual['Screening/Mother/Sample_ID']) {
+                            $sText = 'Mother: ' . $sText;
+                            $aRelatives[$zScreening['id']] = $sText;
+                        }
+                    }
+
+                    $aScreenings[$zScreening['id']] = $sText;
+                }
+
+                // We want screenings of the relatives of this patient to be sorted on top.
+                $aScreenings = $aRelatives + $aScreenings;
+
+                // Print form.
                 $sFiltersFormItems .= '<H4>' . $sFilter . '</H4><BR>';
 
-                $sFiltersFormItems .= '<DIV><TABLE>';
+                $sFiltersFormItems .= '<DIV id=\'filter-config-'. $sFilter .'-0\'><TABLE>';
                 $sFiltersFormItems .= '<TR><TD><LABEL>Description</LABEL></TD><TD><INPUT name=\'config[' . $sFilter . '][description]\' /></TD></TR>';
 
                 // Conditions variants of this screening against the selected group
                 $sFiltersFormItems .= '<TR><TD><LABEL>Condition</LABEL></TD><TD><SELECT name=\'config[' . $sFilter . '][groups][0][condition]\'>';
                 foreach ($aConditions as $sCondition) {
                     $sFiltersFormItems .= '<OPTION value=\'' . $sCondition . '\'>' . $sCondition . '</OPTION>';
+                }
+                $sFiltersFormItems .= '</SELECT></TD></TR>';
+
+                // The list of available screenings
+                $sFiltersFormItems .= '<TR><TD><LABEL>Screenings</LABEL></TD><TD><SELECT name=\'config[' . $sFilter . '][groups][0][screenings][]\' multiple=\'true\'>';
+                foreach ($aScreenings as $sScreeningID => $sText) {
+                    $sFiltersFormItems .= '<OPTION value=\'' . $sScreeningID . '\'>' . $sText . '</OPTION>';
                 }
                 $sFiltersFormItems .= '</SELECT></TD></TR>';
 
