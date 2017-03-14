@@ -49,7 +49,7 @@ class LOVD_ScreeningMOD extends LOVD_Screening {
     function __construct ()
     {
         // Default constructor.
-        global $_AUTH, $_SETT, $_INSTANCE_CONFIG;
+        global $_AUTH, $_SETT;
 
         // Run parent constructor to find out about the custom columns.
         parent::__construct();
