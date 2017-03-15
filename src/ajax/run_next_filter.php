@@ -49,10 +49,12 @@ if (empty($_GET['runid']) || !ctype_digit($_GET['runid'])) {
 
 
 // Check if run exists.
-$nRunID = $_DB->query('SELECT CAST(id AS UNSIGNED) FROM ' . TABLE_ANALYSES_RUN . ' WHERE id = ?', array($_GET['runid']))->fetchColumn();
-if (!$nRunID) {
+$zResult = $_DB->query('SELECT CAST(id AS UNSIGNED) AS id, screeningid FROM ' . TABLE_ANALYSES_RUN . ' WHERE id = ?', array($_GET['runid']))->fetchAssoc();
+if (!$zResult) {
     die(json_encode(array('result' => false, 'message' => 'Analysis run not recognized. If the analysis is defined properly, this is an error in the software.')));
 }
+$nRunID = $zResult['id'];
+$nScreeningID = $zResult['screeningid'];
 
 // Check if session var exists.
 if (empty($_SESSION['analyses'][$nRunID]) || empty($_SESSION['analyses'][$nRunID]['filters']) || !isset($_SESSION['analyses'][$nRunID]['IDsLeft'])) {
@@ -373,8 +375,25 @@ if ($aVariantIDs) {
             break;
         case 'cross_screenings':
             // TODO: apply SQL query
-
             $aVariantIDsFiltered = $aVariantIDs;
+
+            // A <> (B OR C)
+            foreach ($aConfig['groups'] as $aGroup) {
+                $sSQL = 'SELECT DISTINCT CAST(vog.id AS UNSIGNED)
+                         FROM ' . TABLE_SCR2VAR . ' s2v
+                         JOIN ' . TABLE_VARIANTS . ' vog ON (s2v.variantid = vog.id AND s2v.screeningid IN (?))
+
+                 WHERE vog.`VariantOnGenome/DBID` NOT IN (
+                    SELECT vog2.`VariantOnGenome/DBID`
+                    FROM ' . TABLE_SCR2VAR . ' s2v2
+                    JOIN ' . TABLE_VARIANTS . ' vog2 ON (s2v2.variantid = vog2.id AND s2v2.screeningid IN (?,?))
+                 ) AND vog.id IN (?' . str_repeat(', ?', count($aVariantIDs) - 1) . ')';
+
+                $aSQL = array($nScreeningID, $aGroup['screenings'][0], $aGroup['screenings'][1]);
+                $aSQL = array_merge($aSQL, $aVariantIDsFiltered);
+                $aVariantIDsFiltered = $_DB->query($sSQL, $aSQL, false)->fetchAllColumn();
+            }
+
             break;
         case 'remove_with_any_frequency':
             $aVariantIDsFiltered = $_DB->query('SELECT CAST(id AS UNSIGNED) FROM ' . TABLE_VARIANTS . ' WHERE (`VariantOnGenome/dbSNP` IS NULL OR `VariantOnGenome/dbSNP` = "") AND (`VariantOnGenome/Frequency/1000G` IS NULL OR `VariantOnGenome/Frequency/1000G` = 0) AND (`VariantOnGenome/Frequency/GoNL` IS NULL OR `VariantOnGenome/Frequency/GoNL` = 0) AND (`VariantOnGenome/Frequency/EVS` IS NULL OR `VariantOnGenome/Frequency/EVS` = 0) AND id IN (?' . str_repeat(', ?', count($aVariantIDs) - 1) . ')', $aVariantIDs, false)->fetchAllColumn();
