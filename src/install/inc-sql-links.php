@@ -47,9 +47,25 @@ $aLinkSQL =
 
 if (LOVD_plus) {
     // Extra links just for LOVD+.
-    $aLinkSQL = array_merge($aLinkSQL,
-        array(
+    if (lovd_verifyInstance('leiden')) {
+        $aLinkSQL = array_merge($aLinkSQL,
+            array(
                 'INSERT INTO ' . TABLE_COLS2LINKS . ' VALUES ("VariantOnGenome/Alamut", 006)',
-        ));
+            ));
+    }
+
+    if ($_INI['instance']['name'] == 'mgha') {
+        $aLinkSQL = array_merge($aLinkSQL,
+            array(
+                'Provenance' => 'INSERT INTO ' . TABLE_LINKS . ' VALUES (008,"Provenance","{prov:[1]}","<A href=\"' . lovd_getInstallURL() . 'uploads/[1]\" target=\"_blank\">prov</A>","Links to the provenance file for this sample.",0, NOW(), NULL, NULL)',
+                'INSERT INTO ' . TABLE_COLS2LINKS . ' VALUES ("Screening/Pipeline_files", 008)',
+                'Gap' => 'INSERT INTO ' . TABLE_LINKS . ' VALUES (009,"Gap","{gap:[1]}","<A href=\"' . lovd_getInstallURL() . 'uploads/[1]\" target=\"_blank\">gap</A>","Link to download the gap coverage plot file for the selected screen.",0, NOW(), NULL, NULL)',
+                'INSERT INTO ' . TABLE_COLS2LINKS . ' VALUES ("Screening/Pipeline_files", 009)',
+                'Summary' => 'INSERT INTO ' . TABLE_LINKS . ' VALUES (010,"Summary","{summary:[1]}","<A href=\"' . lovd_getInstallURL() . 'uploads/[1]\" target=\"_blank\">qc</A>","Links to the quality summary file for this sample produced for the pipeline.",0, NOW(), NULL, NULL)',
+                'INSERT INTO ' . TABLE_COLS2LINKS . ' VALUES ("Screening/Pipeline_files", 010)',
+                'IGV' => 'INSERT INTO ' . TABLE_LINKS . ' VALUES (011,"IGVscreenshot","{[1]-NM_[2]-[3]-[4]-IGV}","<A href=\"localhost:60151/load?file=' . lovd_getInstallURL() . 'uploads/variant_bams/[1]-NM_[2]-chr[3]-[4]-IGV.bam&locus=chr[3]:[4]&genome=hg19\" target=\"_blank\">IGV","Link to create a track for the given variant, in a running instance of IGV on the localhost.",0, NOW(), NULL, NULL)',
+                'INSERT INTO ' . TABLE_COLS2LINKS . ' VALUES ("VariantOnGenome/Sequencing/IGV", 011)',
+            ));
+    }
 }
 ?>

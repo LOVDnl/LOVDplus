@@ -1,109 +1,69 @@
 <?php
-
-require_once dirname(__FILE__) . '/adapter.lib.DEFAULT.php';
-
 /*******************************************************************************
  * CREATE MAPPINGS AND PROCESS VARIANT FILE FOR MGHA
  * Created: 2016-06-01
  * Programmer: Candice McGregor
  *************/
 
-$_INSTANCE_CONFIG = array();
+$_INSTANCE_CONFIG['viewlists']['Screenings_for_I_VE']['cols_to_show'] = array(
+    // Invisible.
+    'individualid',
 
-$_INSTANCE_CONFIG['screenings'] = array(
-    'viewList' => array(
-        'colsToShow' => array(
-            // We can have view list id as key here if needed.
-            // 0 here means the viewList columns seen by the constructor (at the point where we don't know VL id yet.
-            0 => array(
-                // Invisible.
-                'individualid',
-
-                // Visible.
-                'id',
-                'Screening/Father/Sample_ID',
-                'Screening/Mother/Sample_ID',
-                'Screening/Mean_coverage',
-                'Screening/Library_preparation',
-                'Screening/Pipeline/Run_ID',
-                'variants_found_',
-                'analysis_status'
-
-            )
-        )
-    )
+    // Visible.
+    'id',
+    'Screening/Father/Sample_ID',
+    'Screening/Mother/Sample_ID',
+    'Screening/Mean_coverage',
+    'Screening/Library_preparation',
+    'Screening/Pipeline/Run_ID',
+    'variants_found_',
+    'analysis_status'
 );
-
-$_INSTANCE_CONFIG['custom_object'] = array(
-    'viewList' => array(
-        'defaultSort' => array(
-            'CustomVL_AnalysisRunResults_for_I_VE' => 'VariantOnGenome/Variant_priority'
-        ),
-        'colsToShow' => array(
-            // We can have view list id as key here if needed.
-            // 0 here means the viewList columns seen by the constructor (at the point where we don't know VL id yet.
-            '0' => array(
-                // VOG
-                'VariantOnGenome/DNA',
-                'VariantOnGenome/Sequencing/Quality',
-                'VariantOnGenome/Variant_priority',
-                'VariantOnGenome/1000Gp3/Frequency',
-                'VariantOnGenome/ExAC/Frequency/Adjusted',
-                'VariantOnGenome/Sequencing/Depth/Total',
-                'VariantOnGenome/Sequencing/Allele/Frequency',
-                'VariantOnGenome/Sequencing/Depth/Alt/Fraction',
-
-                // VOT
-                'VariantOnTranscript/DNA',
-                'VariantOnTranscript/Protein',
-                'VariantOnTranscript/Consequence_Type',
-                'VariantOnTranscript/Consequence_Impact',
-                'VariantOnTranscript/Clinical_Significance',
-                'VariantOnGenome/Frequency/EVS/VEP/European_American'
-            ),
-
-            'CustomVL_AnalysisRunResults_for_I_VE' => array(
-                // Invisible.
-                'runid',
-                'curation_statusid',
-                'variantid',
+$_INSTANCE_CONFIG['viewlists']['CustomVL_AnalysisRunResults_for_I_VE'] = array(
+    'default_sort' => 'VariantOnGenome/Variant_priority',
+    'cols_to_show' => array(
+        // Invisible.
+        'runid',
+        'curation_statusid',
+        'variantid',
 
 
-                // Visible.
-                'curation_status_',
-                'vog_effect',
-                'VariantOnGenome/Variant_priority',
-                'chromosome',
-                'VariantOnGenome/DNA',
-                'VariantOnTranscript/DNA',
-                'VariantOnTranscript/Protein',
-                'VariantOnGenome/Sequencing/Depth/Total',
-                'VariantOnGenome/Sequencing/Quality',
-                'zygosity_', // 'VariantOnGenome/Sequencing/Allele/Frequency'
-                'var_frac_', // 'VariantOnGenome/Sequencing/Depth/Alt/Fraction'
-                'gene_OMIM_',
-                'gene_disease_names',
-                'VariantOnTranscript/Clinical_Significance',
-                'allele_',
-                'VariantOnTranscript/Consequence_Impact',
-                'VariantOnTranscript/Consequence_Type',
-                'VariantOnGenome/ExAC/Frequency/Adjusted',
-                'VariantOnGenome/1000Gp3/Frequency',
-                'obs_disease',
-                'obs_var_dis_ind_ratio',
-                'obs_variant',
-                'obs_var_ind_ratio',
-                'gene_panels',
-                'VariantOnGenome/Frequency/EVS/VEP/European_American'
-            )
-        )
+        // Visible.
+        'curation_status_',
+        'vog_effect',
+        'VariantOnGenome/Variant_priority',
+        'chromosome',
+        'VariantOnGenome/DNA',
+        'VariantOnTranscript/DNA',
+        'VariantOnTranscript/Protein',
+        'VariantOnGenome/Sequencing/Depth/Total',
+        'VariantOnGenome/Sequencing/Quality',
+        'zygosity_', // 'VariantOnGenome/Sequencing/Allele/Frequency'
+        'var_frac_', // 'VariantOnGenome/Sequencing/Depth/Alt/Fraction'
+        'gene_OMIM_',
+        'gene_disease_names',
+        'VariantOnTranscript/Clinical_Significance',
+        'allele_',
+        'VariantOnTranscript/Consequence_Impact',
+        'VariantOnTranscript/Consequence_Type',
+        'VariantOnGenome/ExAC/Frequency/Adjusted',
+        'VariantOnGenome/1000Gp3/Frequency',
+        'obs_disease',
+        'obs_var_dis_ind_ratio',
+        'obs_variant',
+        'obs_var_ind_ratio',
+        'gene_panels',
+        'VariantOnGenome/Frequency/EVS/VEP/European_American'
     )
 );
 
 
-
-
-
+$_INSTANCE_CONFIG['conversion'] = array(
+    'max_annotation_error_allowed' => 20,
+    'exit_on_annotation_error' => false,
+    'enforce_hgnc_gene' => false,
+    'check_indel_description' => false
+);
 
 
 class LOVD_MghaDataConverter extends LOVD_DefaultDataConverter {

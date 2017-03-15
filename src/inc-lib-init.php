@@ -336,12 +336,12 @@ function lovd_getColumnData ($sTable)
     global $_DB, $_TABLES;
     static $aTableCols = array();
 
-    // Only for tables that actually exist.
-    if (!in_array($sTable, $_TABLES)) {
-        return false;
-    }
-
     if (empty($aTableCols[$sTable])) {
+        // Only for tables that actually exist.
+        if (!in_array($sTable, $_TABLES)) {
+            return false;
+        }
+
         $q = $_DB->query('SHOW COLUMNS FROM ' . $sTable, false, false); // Safe, since $sTable is already checked with $_TABLES.
         if (!$q) {
             // Can happen when table does not exist yet (i.e. during install).
@@ -569,26 +569,42 @@ function lovd_getProjectFile ()
 function lovd_initAdapter()
 {
     // Select adapter class to instantiate based on instance name.
+    // globaling $_INSTANCE_CONFIG is necessary to let it exist outside of this
+    //  function.
+    global $_INI, $_INSTANCE_CONFIG;
 
-    global $_INI;
-
-    $sAdaptersDir = ROOT_PATH . 'scripts/adapters/';
-    $sAdapterName = 'DEFAULT';
-
-    // Even if instance name exists, still check if the actual adapter library file exists.
-    // If adapter library file does not exist, we still use default adapter.
-    if (!empty($_INI['instance']['name']) && file_exists($sAdaptersDir . 'adapter.lib.'. strtoupper($_INI['instance']['name']) .'.php')) {
-        $sAdapterName = strtoupper($_INI['instance']['name']);
+    if (!LOVD_plus) {
+        return false;
     }
 
-    require_once $sAdaptersDir . 'adapter.lib.'. $sAdapterName .'.php';
+    $sAdaptersDir = ROOT_PATH . 'scripts/adapters/';
 
+    // FIXME+: This adapter.lib file provides both settings and a class that is only used for data conversion.
+    //  This should be split; the data conversion class should only be included when needed, as a class file.
+    // We'll always include the default adapter. The default adapter contains
+    // settings which can be overridden, and the converter class that can be
+    // extended by a instance-specific class.
+    require_once $sAdaptersDir . 'adapter.lib.DEFAULT.php';
+
+    // Include the instance's adapter, if present.
+    $sInstanceName = strtoupper($_INI['instance']['name']);
+    if (file_exists($sAdaptersDir . 'adapter.lib.' . $sInstanceName . '.php')) {
+        require_once $sAdaptersDir . 'adapter.lib.' . $sInstanceName . '.php';
+    }
+
+    // Try and instantiate the instance's class, if present.
     // Camelcase the adapter name.
-    $sClassPrefix = ucwords(strtolower(str_replace('_', ' ', $sAdapterName)));
+    $sClassPrefix = ucwords(strtolower(str_replace('_', ' ', $_INI['instance']['name'])));
     $sClassPrefix = str_replace(' ', '', $sClassPrefix);
     $sClassName = 'LOVD_' . $sClassPrefix . 'DataConverter';
 
-    $zAdapter = new $sClassName($sAdaptersDir);
+    // We don't require the instance's adapter to define any class, though.
+    if (class_exists($sClassName)) {
+        $zAdapter = new $sClassName($sAdaptersDir);
+    } else {
+        // If it's not available, we just use the default adapter.
+        $zAdapter = new LOVD_DefaultDataConverter($sAdaptersDir);
+    }
 
     return $zAdapter;
 }

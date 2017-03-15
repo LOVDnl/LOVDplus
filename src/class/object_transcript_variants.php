@@ -216,7 +216,8 @@ class LOVD_TranscriptVariant extends LOVD_Custom {
                 if ($aCol['mandatory']) {
                     $this->aCheckMandatory[] = $sCol;
                 }
-                if (isset($aData[$sCol])) {
+
+                if (!(LOVD_plus && lovd_getProjectFile() == '/import.php') && isset($aData[$sCol])) {
                     $this->checkInputRegExp($sCol, $aData[$sCol]);
                     $this->checkSelectedInput($sCol, $aData[$sCol]);
                 }

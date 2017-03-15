@@ -1,130 +1,66 @@
 <?php
+$_INSTANCE_CONFIG['viewlists']['Screenings_for_I_VE']['cols_to_show'] = array(
+    // Invisible.
+    'individualid',
 
-require_once dirname(__FILE__) . '/adapter.lib.DEFAULT.php';
-
-$_INSTANCE_CONFIG = array();
-
-$_INSTANCE_CONFIG['screenings'] = array(
-    'viewList' => array(
-        'colsToShow' => array(
-            // We can have view list id as key here if needed.
-            // 0 here means the viewList columns seen by the constructor (at the point where we don't know VL id yet.
-            0 => array(
-                // Invisible.
-                'individualid',
-
-                // Visible.
-                'id',
-                'Screening/Tumor/Sample_ID',
-                'Screening/Normal/Sample_ID',
-                'Screening/Pipeline/Path',
-                'variants_found_',
-                'analysis_status'
-            )
-        )
-    )
+    // Visible.
+    'id',
+    'Screening/Tumor/Sample_ID',
+    'Screening/Normal/Sample_ID',
+    'Screening/Pipeline/Path',
+    'variants_found_',
+    'analysis_status'
 );
 
-$_INSTANCE_CONFIG['custom_object'] = array(
-    'viewList' => array(
-        'colsToShow' => array(
-            // We can have view list id as key here if needed.
-            // 0 here means the viewList columns seen by the constructor (at the point where we don't know VL id yet.
-            0 => array(
-                // VOG
-                'VariantOnGenome/DNA',
-                'VariantOnGenome/Sequencing/Quality',
-                'VariantOnGenome/Variant_priority',
-                'VariantOnGenome/Frequency/1000G/VEP',
-                'VariantOnGenome/Frequency/EVS/VEP/European_American',
-                'VariantOnGenome/Frequency/ExAC',
-                'VariantOnGenome/COSMIC_IDs',
-                'VariantOnGenome/Sequencing/Normal/Genotype/Quality',
-                'VariantOnGenome/Sequencing/Tumour/Genotype/Quality',
-                'VariantOnGenome/Sequencing/Normal/BI/Depth/Total',
-                'VariantOnGenome/Sequencing/Tumour/BI/Depth/Total',
-                'VariantOnGenome/Sequencing/Normal/BI/Allele/Frequency',
-                'VariantOnGenome/Sequencing/Tumour/BI/Allele/Frequency',
-                'VariantOnGenome/Sequencing/Normal/BI/Depth/Ref',
-                'VariantOnGenome/Sequencing/Tumour/BI/Depth/Ref',
-                'VariantOnGenome/Sequencing/Normal/BI/Depth/Alt',
-                'VariantOnGenome/Sequencing/Tumour/BI/Depth/Alt',
-                'VariantOnGenome/Sequencing/Somatic/Score',
-                'VariantOnGenome/Sequencing/Fisher/Germline',
-                'VariantOnGenome/Sequencing/Fisher/Somatic',
-                'VariantOnGenome/Sequencing/Normal/Indel/Reads',
-                'VariantOnGenome/Sequencing/Normal/Total_Coverage',
-                'VariantOnGenome/Sequencing/Normal/Indel/Mismatches/Average',
-                'VariantOnGenome/Sequencing/Normal/Indel/Mapping_Quality',
-                'VariantOnGenome/Sequencing/Tumour/Indel/Reads',
-                'VariantOnGenome/Sequencing/Tumour/Total_Coverage',
-                'VariantOnGenome/Sequencing/Tumour/Indel/Mismatches/Average',
-                'VariantOnGenome/Sequencing/Tumour/Indel/Mapping_Quality',
-                'VariantOnTranscript/SIFT',
-                'VariantOnTranscript/PolyPhen',
-                'VariantOnGenome/Sequencing/Somatic/Status',
-
-                // VOT
-                'VariantOnTranscript/DNA',
-                'VariantOnTranscript/Protein',
-                'VariantOnGenome/Consequence',
-                'VariantOnGenome/DbSNP_IDs',
+$_INSTANCE_CONFIG['viewlists']['CustomVL_AnalysisRunResults_for_I_VE']['cols_to_show'] = array(
+    // Invisible.
+    'runid',
+    'curation_statusid',
+    'variantid',
 
 
-            ),
-
-            'CustomVL_AnalysisRunResults_for_I_VE' => array(
-                // Invisible.
-                'runid',
-                'curation_statusid',
-                'variantid',
-
-
-                // Visible.
-                'curation_status_',
-                'VariantOnGenome/Sequencing/Somatic/Status',
-                'chromosome',
-                'symbol',
-                'preferred_transcripts',
-                'VariantOnGenome/DNA',
-                'VariantOnTranscript/DNA',
-                'VariantOnTranscript/Protein',
-                'VariantOnGenome/Consequence',
-                'VariantOnGenome/DbSNP_IDs',
-                'obs_variant',
-                'obs_var_ind_ratio',
-                'obs_disease',
-                'VariantOnGenome/Frequency/1000G/VEP',
-                'VariantOnGenome/Frequency/EVS/VEP/European_American',
-                'VariantOnGenome/COSMIC_IDs',
-                'VariantOnGenome/Sequencing/Tumour/Genotype/Quality',
-                'VariantOnGenome/Sequencing/Normal/BI/Depth/Total',
-                'VariantOnGenome/Sequencing/Tumour/BI/Depth/Total',
-                'VariantOnGenome/Sequencing/Normal/BI/Allele/Frequency',
-                'VariantOnGenome/Sequencing/Tumour/BI/Allele/Frequency',
-                'VariantOnGenome/Sequencing/Normal/BI/Depth/Ref',
-                'VariantOnGenome/Sequencing/Tumour/BI/Depth/Ref',
-                'VariantOnGenome/Sequencing/Normal/BI/Depth/Alt',
-                'VariantOnGenome/Sequencing/Tumour/BI/Depth/Alt',
-                'VariantOnGenome/Sequencing/Somatic/Score',
-                'VariantOnGenome/Sequencing/Fisher/Germline',
-                'VariantOnGenome/Sequencing/Fisher/Somatic',
-                'VariantOnGenome/Sequencing/Quality',
-                'VariantOnGenome/Sequencing/Normal/Indel/Reads',
-                'VariantOnGenome/Sequencing/Normal/Total_Coverage',
-                'VariantOnGenome/Sequencing/Normal/Indel/Mismatches/Average',
-                'VariantOnGenome/Sequencing/Normal/Indel/Mapping_Quality',
-                'VariantOnGenome/Sequencing/Tumour/Indel/Reads',
-                'VariantOnGenome/Sequencing/Tumour/Total_Coverage',
-                'VariantOnGenome/Sequencing/Tumour/Indel/Mismatches/Average',
-                'VariantOnGenome/Sequencing/Tumour/Indel/Mapping_Quality',
-                'VariantOnTranscript/SIFT',
-                'VariantOnTranscript/PolyPhen',
-                'VariantOnGenome/Sequencing/Normal/Genotype/Quality',
-                'vog_effect',
-            )
-        )
-    )
+    // Visible.
+    'curation_status_',
+    'VariantOnGenome/Sequencing/Somatic/Status',
+    'chromosome',
+    'symbol',
+    'preferred_transcripts',
+    'VariantOnGenome/DNA',
+    'VariantOnTranscript/DNA',
+    'VariantOnTranscript/Protein',
+    'VariantOnGenome/Consequence',
+    'VariantOnGenome/DbSNP_IDs',
+    'obs_variant',
+    'obs_var_ind_ratio',
+    'obs_disease',
+    'VariantOnGenome/Frequency/1000G/VEP',
+    'VariantOnGenome/Frequency/EVS/VEP/European_American',
+    'VariantOnGenome/COSMIC_IDs',
+    'VariantOnGenome/Sequencing/Tumour/Genotype/Quality',
+    'VariantOnGenome/Sequencing/Normal/BI/Depth/Total',
+    'VariantOnGenome/Sequencing/Tumour/BI/Depth/Total',
+    'VariantOnGenome/Sequencing/Normal/BI/Allele/Frequency',
+    'VariantOnGenome/Sequencing/Tumour/BI/Allele/Frequency',
+    'VariantOnGenome/Sequencing/Normal/BI/Depth/Ref',
+    'VariantOnGenome/Sequencing/Tumour/BI/Depth/Ref',
+    'VariantOnGenome/Sequencing/Normal/BI/Depth/Alt',
+    'VariantOnGenome/Sequencing/Tumour/BI/Depth/Alt',
+    'VariantOnGenome/Sequencing/Somatic/Score',
+    'VariantOnGenome/Sequencing/Fisher/Germline',
+    'VariantOnGenome/Sequencing/Fisher/Somatic',
+    'VariantOnGenome/Sequencing/Quality',
+    'VariantOnGenome/Sequencing/Normal/Indel/Reads',
+    'VariantOnGenome/Sequencing/Normal/Total_Coverage',
+    'VariantOnGenome/Sequencing/Normal/Indel/Mismatches/Average',
+    'VariantOnGenome/Sequencing/Normal/Indel/Mapping_Quality',
+    'VariantOnGenome/Sequencing/Tumour/Indel/Reads',
+    'VariantOnGenome/Sequencing/Tumour/Total_Coverage',
+    'VariantOnGenome/Sequencing/Tumour/Indel/Mismatches/Average',
+    'VariantOnGenome/Sequencing/Tumour/Indel/Mapping_Quality',
+    'VariantOnTranscript/SIFT',
+    'VariantOnTranscript/PolyPhen',
+    'VariantOnGenome/Sequencing/Normal/Genotype/Quality',
+    'vog_effect',
 );
 
 $_INSTANCE_CONFIG['variants'] = array(
@@ -146,6 +82,14 @@ $_INSTANCE_CONFIG['variants'] = array(
             'id' => 'nid',
             'label' => 'Excel file')
     )
+);
+
+
+$_INSTANCE_CONFIG['conversion'] = array(
+    'max_annotation_error_allowed' => 20,
+    'exit_on_annotation_error' => false,
+    'enforce_hgnc_gene' => false,
+    'check_indel_description' => false
 );
 
 

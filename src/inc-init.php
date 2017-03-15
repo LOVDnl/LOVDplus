@@ -132,6 +132,7 @@ $aRequired =
                             'mb_detect_encoding',
                             'xml_parser_create', // We could also look for libxml constants?
                             'openssl_seal',      // We could also look for openssl constants?
+                            'curl_init',
                           ),
                 'PHP_classes' =>
                      array(
@@ -144,7 +145,7 @@ $aRequired =
 $_SETT = array(
                 'system' =>
                      array(
-                            'version' => '3.0-17h',
+                            'version' => '3.0-17j',
                           ),
                 'user_levels' =>
                      array(
@@ -179,6 +180,23 @@ $_SETT = array(
                             1 => 'Benign',
                           ),
                 'var_effect_default' => '00',
+                'diseases_inheritance' =>
+                    array(
+                        'AD' => 'Autosomal dominant',
+                        'AR' => 'Autosomal recessive',
+                        'DD' => 'Digenic dominant',
+                        'DR' => 'Digenic recessive',
+                        'IC' => 'Isolated cases',
+                        'ICB' => 'Inherited chromosomal imbalance',
+                        'Mi' => 'Mitochondrial',
+                        'Mu' => 'Multifactorial',
+                        'SMo' => 'Somatic mosaicism',
+                        'SMu' => 'Somatic mutation',
+                        'XLD' => 'X-linked dominant' ,
+                        'XLR' => 'X-linked recessive',
+                        'XL' => 'X-linked' ,
+                        'YL' => 'Y-linked'
+                ),
                 'data_status' =>
                      array(
                             STATUS_IN_PROGRESS => 'In progress',
@@ -459,17 +477,10 @@ $_T = new LOVD_Template();
 define('CONFIG_URI', ROOT_PATH . 'config.ini.php');
 $_INI = lovd_parseConfigFile(CONFIG_URI);
 
-
-
 // Load any instance specific functions and variables.
-$sInstanceName = 'DEFAULT';
-if (!empty($_INI['instance']['name'])) {
-    $sInstanceName = strtoupper($_INI['instance']['name']);
+if (LOVD_plus) {
+    $_ADAPTER = lovd_initAdapter();
 }
-if (file_exists(ROOT_PATH . 'scripts/adapters/adapter.lib.' . $sInstanceName . '.php')) {
-    require_once ROOT_PATH . 'scripts/adapters/adapter.lib.' . $sInstanceName . '.php';
-}
-$_ADAPTER = lovd_initAdapter();
 
 
 

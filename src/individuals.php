@@ -149,13 +149,13 @@ if (PATH_COUNT >= 2 && ctype_digit($_PE[1]) && !ACTION && (PATH_COUNT == 2 || PA
           <TD valign="top" id="screeningViewEntry">' . "\n");
 
     // If we're here, analyzing a screening, show the screening VE on the right.
+    require_once ROOT_PATH . 'class/object_screenings.mod.php';
     if ($nScreeningToAnalyze) {
         // Authorize the user for this screening, but specifically meant for the analysis.
         // For LEVEL_ANALYZER, this should activate LEVEL_OWNER for
         //   free screenings or screenings under analysis by this user.
         lovd_isAuthorized('screening_analysis', $nScreeningToAnalyze);
 
-        require_once ROOT_PATH . 'class/object_screenings.mod.php';
         $_DATA = new LOVD_ScreeningMOD();
         $zScreening = $_DATA->viewEntry($nScreeningToAnalyze);
     }
@@ -186,11 +186,14 @@ if (PATH_COUNT >= 2 && ctype_digit($_PE[1]) && !ACTION && (PATH_COUNT == 2 || PA
     // Analysis is done per screening; show list of screenings, select one to actually start/view analyses.
     $_GET['search_individualid'] = $nID;
     $_T->printTitle('Screenings', 'H4');
-    require_once ROOT_PATH . 'class/object_screenings.mod.php';
     $_DATA = new LOVD_ScreeningMOD();
     $_DATA->setSortDefault('id');
     $_DATA->setRowID('Screenings_for_I_VE', 'Screening_{{screeningid}}');
     $_DATA->setRowLink('Screenings_for_I_VE', 'javascript:window.location.href=\'' . lovd_getInstallURL() . $_PE[0] . '/' . $nID . '/analyze/{{screeningid}}\'; return false');
+    // Restrict the columns of this VL, if given.
+    if (isset($_INSTANCE_CONFIG['viewlists']['Screenings_for_I_VE']['cols_to_show'])) {
+        $_DATA->setViewListCols($_INSTANCE_CONFIG['viewlists']['Screenings_for_I_VE']['cols_to_show']);
+    }
     $_DATA->viewList('Screenings_for_I_VE', array(), true, true);
     unset($_GET['search_individualid']);
 
@@ -541,7 +544,7 @@ if (PATH_COUNT >= 2 && ctype_digit($_PE[1]) && !ACTION && (PATH_COUNT == 2 || PA
             }
         }
         print('      <UL id="viewlistMenu_CustomVL_AnalysisRunResults_for_I_VE" class="jeegoocontext jeegooviewlist">' . "\n");
-        if ($_INI['instance']['name'] != 'mgha') {
+        if (!lovd_verifyInstance('mgha')) {
             // Show the options to set variant effect from the viewlist.
             foreach ($_SETT['var_effect'] as $nEffectID => $sEffect) {
                 print('        <LI class="icon"><A click="lovd_AJAX_viewListSubmit(\'CustomVL_AnalysisRunResults_for_I_VE\', function(){$.get(\'ajax/set_variant_effect.php?' . $nEffectID . '&id=selected\', function(sResponse){if(sResponse.substring(0,1) == \'1\'){alert(\'Successfully set reported variant effect of \' + sResponse.substring(2) + \' variants to \\\'' . $sEffect . '\\\'.\');lovd_AJAX_viewListSubmit(\'CustomVL_AnalysisRunResults_for_I_VE\');}else if(sResponse.substring(0,1) == \'9\'){alert(\'Error: \' + sResponse.substring(2));}}).error(function(){alert(\'Error while setting variant effect.\');});});"><SPAN class="icon" style="background-image: url(gfx/menu_edit.png);"></SPAN>Set variant effect to "' . $sEffect . '"</A></LI>' . "\n");
@@ -563,6 +566,13 @@ if (PATH_COUNT >= 2 && ctype_digit($_PE[1]) && !ACTION && (PATH_COUNT == 2 || PA
             print('          </UL>' . "\n" . '        </LI>' . "\n");
         }
         print('      </UL>' . "\n\n");
+        if (isset($_INSTANCE_CONFIG['viewlists']['CustomVL_AnalysisRunResults_for_I_VE']['default_sort'])) {
+            $_DATA->setSortDefault($_INSTANCE_CONFIG['viewlists']['CustomVL_AnalysisRunResults_for_I_VE']['default_sort']);
+        }
+        // Restrict the columns of this VL, if given.
+        if (isset($_INSTANCE_CONFIG['viewlists']['CustomVL_AnalysisRunResults_for_I_VE']['cols_to_show'])) {
+            $_DATA->setViewListCols($_INSTANCE_CONFIG['viewlists']['CustomVL_AnalysisRunResults_for_I_VE']['cols_to_show']);
+        }
         $_DATA->viewList('CustomVL_AnalysisRunResults_for_I_VE', array(), false, false, $bMenu);
         print('
           </DIV>');

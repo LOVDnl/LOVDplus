@@ -36,7 +36,9 @@ require ROOT_PATH . 'inc-init.php';
 ini_set('auto_detect_line_endings', true); // So we can work with Mac files also...
 set_time_limit(0); // Disable time limit, parsing may take a long time.
 session_write_close(); // Also don't care about the session (in fact, it locks the whole LOVD while this page is running).
-ini_set('memory_limit', '4096M'); // 4GB.
+if (LOVD_plus) {
+    ini_set('memory_limit', '4294967296'); // 4GB.
+}
 
 
 
@@ -646,8 +648,6 @@ if (POST || $_FILES) { // || $_FILES is in use for the automatic loading of file
                 continue;
             }
 
-
-
             if (substr(ltrim($sLine, '"'), 0, 1) == '#') {
                 if (preg_match('/^#\s*([a-z_]+)\s*=\s*(.+)$/', ltrim($sLine, '"'), $aRegs)) {
                     // Import flag (setting).
@@ -876,6 +876,13 @@ if (POST || $_FILES) { // || $_FILES is in use for the automatic loading of file
                         if (strpos($sTableName, '2') !== false) {
                             // Linking tables (such as GEN2DIS) require all available columns to be present.
                             $aSection['required_columns'] = $aSection['allowed_columns'];
+                        } elseif (LOVD_plus) {
+                            // LOVD+ selects the IDs less often than LOVD does, to save memory.
+                            // Imports into LOVD+ are always new data, and therefore certain IDs are simply not needed.
+                            // The following sections don't need their IDs fetched, as all data is always present in the files.
+                            if (!in_array($sCurrentSection, array('Phenotypes', 'Screenings', 'Variants_On_Genome', 'Variants_On_Transcripts'))) {
+                                $aSection['ids'] = $_DB->query('SELECT ' . (in_array($sCurrentSection, array('Columns', 'Genes'))? 'id' : 'CAST(id AS UNSIGNED)') . ', 1 FROM ' . $sTableName)->fetchAllCombine();
+                            }
                         } else {
                             // Normal data table, no data links.
                             if ($sCurrentSection == 'Variants_On_Transcripts' && $aParsed['Variants_On_Genome']['ids']) {
@@ -2015,7 +2022,8 @@ if (POST || $_FILES) { // || $_FILES is in use for the automatic loading of file
             $nDone = 0;
             $_DB->beginTransaction();
 
-            foreach ($aParsed as $sSection => $aSection) {
+            // Taking $aSection as a reference saves memory.
+            foreach ($aParsed as $sSection => &$aSection) {
                 $aFields = $aSection['allowed_columns'];
                 // We will unset the IDs, and generate new ones. All, but the Column and VOT sections, which don't have an PK AUTO_INCREMENT.
                 if (in_array('id', $aFields) && !in_array($sSection, array('Columns', 'Variants_On_Transcripts'))) {
@@ -2023,7 +2031,8 @@ if (POST || $_FILES) { // || $_FILES is in use for the automatic loading of file
                 }
                 $aDone[$sSection] = 0;
 
-                foreach ($aSection['data'] as $nID => $aData) {
+                // Taking $aData as a reference saves memory.
+                foreach ($aSection['data'] as $nID => &$aData) {
                     if (!$aData['todo'] || !in_array($aData['todo'], array('insert', 'update'))) {
                         continue;
                     }
@@ -2250,6 +2259,8 @@ if (!lovd_isCurator($_SESSION['currdb'])) {
                     $_BAR[1]->setProgress(($nEntry/$nDataTotal)*100);
                 }
 
+                unset($aData); // break the reference with the last element.
+
                 // Done with all this section!
                 unset($aParsed[$sSection]['allowed_columns']);
                 unset($aParsed[$sSection]['object']);
@@ -2262,6 +2273,8 @@ if (!lovd_isCurator($_SESSION['currdb'])) {
                     unset($aDone[$sSection]);
                 }
             }
+            unset($aSection); // break the reference with the last element.
+
             if (!$bError) {
                 $_DB->commit();
 

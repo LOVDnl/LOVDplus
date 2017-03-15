@@ -1,4 +1,108 @@
 <?php
+/*******************************************************************************
+ *
+ * LEIDEN OPEN VARIATION DATABASE (LOVD)
+ *
+ * Created     : 2016-09-02
+ * Modified    : 2017-03-14
+ * For LOVD    : 3.0-19
+ *
+ * Copyright   : 2004-2017 Leiden University Medical Center; http://www.LUMC.nl/
+ * Programmers : Juny Kesumadewi <juny.kesumadewi@unimelb.edu.au>
+ *               Ivo F.A.C. Fokkema <I.F.A.C.Fokkema@LUMC.nl>
+ *
+ *
+ * This file is part of LOVD.
+ *
+ * LOVD is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * LOVD is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with LOVD.  If not, see <http://www.gnu.org/licenses/>.
+ *
+ *************/
+
+// These are the default instance-specific settings.
+// Create a new file, change the "DEFAULT" in the name to your uppercased
+//  instance name, and add the settings you'd like to override.
+// Optionally, copy this file completely and change the settings in your copy.
+// Change the settings to your liking in your own instance-specific adapter file.
+
+// Default settings.
+$_INSTANCE_CONFIG = array();
+$_INSTANCE_CONFIG['viewlists'] = array(
+    // The screenings data listing on the individual's detailed view.
+    'Screenings_for_I_VE' => array(
+        'cols_to_show' => array(
+            // Select these columns for the screenings listing on the individual's page.
+            // Note, that you also need to define the hidden columns that
+            //  are to be active, since LOVD+ might be filtering on them.
+            // You can change the order of columns to any order you like.
+            'id',
+            'individualid',
+            'curation_progress_',
+            'variants_found_',
+            'analysis_status',
+            'analysis_by_',
+            'analysis_date_',
+            'analysis_approved_by_',
+            'analysis_approved_date_',
+        )
+    ),
+    // The data analysis results data listing.
+    'CustomVL_AnalysisRunResults_for_I_VE' => array(
+        'cols_to_show' => array(
+            // Select these columns for the analysis results table.
+            // Note, that you also need to define the hidden columns that
+            //  are to be active, since LOVD+ might be filtering on them.
+            // By default, these columns are sorted by object type, but you can change the order to any order you like.
+            'curation_status_',
+            'curation_statusid',
+            'variantid',
+            'vog_effect',
+            'chromosome',
+            'allele_',
+            'VariantOnGenome/DNA',
+            'VariantOnGenome/Alamut',
+            'VariantOnGenome/Conservation_score/PhyloP',
+            'VariantOnGenome/HGMD/Association',
+            'VariantOnGenome/Sequencing/Depth/Alt/Fraction',
+            'VariantOnGenome/Sequencing/Quality',
+            'VariantOnGenome/Sequencing/GATKcaller',
+            'obs_variant',
+            'obs_var_ind_ratio',
+            'obs_disease',
+            'obs_var_dis_ind_ratio',
+
+            'gene_disease_names',
+            'VariantOnTranscript/DNA',
+            'VariantOnTranscript/Protein',
+            'VariantOnTranscript/GVS/Function',
+            'gene_OMIM_',
+
+            'runid',
+
+            'gene_panels',
+        )
+    )
+);
+
+
+$_INSTANCE_CONFIG['conversion'] = array(
+    'max_annotation_error_allowed' => 20,
+    'exit_on_annotation_error' => true,
+    'enforce_hgnc_gene' => true,
+    'check_indel_description' => true
+);
+
+
 
 class LOVD_DefaultDataConverter {
 
