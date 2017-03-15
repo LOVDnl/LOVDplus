@@ -250,43 +250,6 @@ class LOVD_CustomViewListMOD extends LOVD_CustomViewList {
 
                     }
                     break;
-                case 'Screening':
-                    // Read from adapter config if it exists.
-                    if (isset($_INSTANCE_CONFIG['custom_object']['viewList']['colsToShow'][0])) {
-                        $aColsNames = $_INSTANCE_CONFIG['custom_object']['viewList']['colsToShow'][0];
-                        $aScreeningCols = array();
-
-                        foreach ($aColsNames as $sCol) {
-                            if (strpos($sCol, 'Screening/') === 0) {
-                                $aScreeningCols[] = $sCol;
-                            }
-                        }
-                        $aColumnsToShow['Screening'] = $aScreeningCols;
-                    }
-
-                    $nKeyVOG = array_search('VariantOnGenome', $aObjects);
-                    $sSelect = 's.*';
-                    if (!$aSQL['FROM']) {
-                        $aSQL['SELECT'] .= (!$aSQL['SELECT']? '' : ', ') . $sSelect;
-                        $aSQL['FROM'] = TABLE_SCR2VAR . ' AS s2v
-                                        LEFT JOIN ' . TABLE_SCREENINGS . ' AS s ON (vog.id = s2v.screeningid)';
-                    } elseif ($nKeyVOG !== false && $nKeyVOG < $nKey) {
-                        $aSQL['SELECT'] .= (!$aSQL['SELECT']? '' : ', ') . $sSelect;
-                        $aSQL['FROM'] .= ' LEFT JOIN ' . TABLE_SCR2VAR . ' AS s2v ON (vog.id = s2v.variantid)
-                                           LEFT JOIN ' . TABLE_SCREENINGS . ' AS s ON (s.id = s2v.screeningid)';
-                    }
-                    break;
-                case 'Individual':
-                    $nKeyScreening = array_search('Screening', $aObjects);
-                    $sSelect = 'i.*';
-                    if (!$aSQL['FROM']) {
-                        $aSQL['SELECT'] .= (!$aSQL['SELECT']? '' : ', ') . $sSelect;
-                        $aSQL['FROM'] = TABLE_INDIVIDUALS . ' AS i';
-                    } elseif ($nKeyScreening !== false && $nKeyScreening < $nKey) {
-                        $aSQL['SELECT'] .= (!$aSQL['SELECT']? '' : ', ') . $sSelect;
-                        $aSQL['FROM'] .= ' LEFT JOIN ' . TABLE_INDIVIDUALS . ' AS i ON (s.individualid = i.id)';
-                    }
-                    break;
 
                 case 'Individual':
                     $nKeyScreening = array_search('Screening', $aObjects);
@@ -533,6 +496,7 @@ class LOVD_CustomViewListMOD extends LOVD_CustomViewList {
                         ));
                     }
                     break;
+
                 case 'VariantOnGenome':
                     if (lovd_verifyInstance('mgha')) {
                         $this->aColumnsViewList = array_merge($this->aColumnsViewList, array(
@@ -547,6 +511,7 @@ class LOVD_CustomViewListMOD extends LOVD_CustomViewList {
                         ));
                     }
                     break;
+
                 case 'ObservationCounts':
                     // The fixed columns.
                     $this->aColumnsViewList = array_merge($this->aColumnsViewList,

@@ -665,9 +665,7 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && !ACTION) {
 
     if (!empty($_INSTANCE_CONFIG['observation_counts'])) {
         // RIGHT COLUMN on the variant view entry.
-        print('
-            </TD>
-              <TD valign="top" id="obscount_viewlist" style="padding-left: 10px;">' . "\n");
+        print('            <BR><BR>' . "\n\n");
         require_once ROOT_PATH . 'class/observation_counts.php';
         $aSettings = (!empty($_INSTANCE_CONFIG['observation_counts'])? $_INSTANCE_CONFIG['observation_counts'] : array());
         $zObsCount = new LOVD_ObservationCounts($nID);

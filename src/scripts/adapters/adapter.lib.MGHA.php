@@ -117,8 +117,6 @@ $_INSTANCE_CONFIG['observation_counts'] = array(
         'categories' => array(),
         'min_population_size' => 100
     ),
-
-
 );
 
 

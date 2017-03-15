@@ -94,7 +94,6 @@ $_INSTANCE_CONFIG['viewlists'] = array(
     )
 );
 
-
 $_INSTANCE_CONFIG['conversion'] = array(
     'max_annotation_error_allowed' => 20,
     'exit_on_annotation_error' => true,
@@ -102,7 +101,42 @@ $_INSTANCE_CONFIG['conversion'] = array(
     'check_indel_description' => true
 );
 
+$_INSTANCE_CONFIG['observation_counts'] = array(
+    'genepanel' => array(),
+    'general' => array(),
+);
 
+// FIXME: This is copied from the MGHA adapter, still need to figure this out.
+$_INSTANCE_CONFIG['observation_counts'] = array(
+    // If we want to display genepanel observation counts using default config,
+    // then simply add 'genepanel' => array()
+    'genepanel' => array(
+        // if columns is empty, use default columns list
+        'columns' => array(
+            'values' => 'Gene Panel',
+            'total_individuals' => 'Total # Individuals',
+            'num_affected' => '# of Affected Individuals',
+            'num_not_affected' => '# of Unaffected Individuals',
+            'percentage' => 'Percentage (%)'
+        ),
+        // if categories is empty, use default categories listhahh
+        'categories' => array()
+    ),
+
+    // If we want to display general categories observation counts using default config,
+    // then simply add 'general' => array()
+    'general' => array(
+        // if columns is empty, use default columns list
+        'columns' => array(
+            'label' => 'Category',
+            'values' => 'Value',
+            'threshold' => 'Percentage'
+        ),
+        // if categories is empty, use default categories list
+        'categories' => array(),
+        'min_population_size' => 100
+    ),
+);
 
 class LOVD_DefaultDataConverter {
 

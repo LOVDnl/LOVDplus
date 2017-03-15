@@ -719,8 +719,7 @@ if ($sCalcVersionFiles != $sCalcVersionDB) {
                  '3.0-17k' =>
                      array(
                          'ALTER TABLE ' . TABLE_VARIANTS . ' ADD COLUMN `obscount_json` TEXT NULL AFTER `confirmation_statusid`',
-                         'ALTER TABLE ' . TABLE_DISEASES . ' ADD COLUMN inheritance VARCHAR(45) NULL AFTER name',
-                         'INSERT INTO ' . TABLE_COLS . ' VALUES ("Individual/Affected", 255, 70, 0, 0, 0, "Affected",            "", "Whether individual is affected by disease","Whether individual is affected by disease","VARCHAR(100)","Affected|Whether individual is affected by disease|select|1|true|false|false","Affected\r\nNot Affected\r\nUnknown", "", 0, 1, 1, 0, NOW(), NULL, NULL)'
+//                         'INSERT INTO ' . TABLE_COLS . ' VALUES ("Individual/Affected", 255, 70, 0, 0, 0, "Affected",            "", "Whether individual is affected by disease","Whether individual is affected by disease","VARCHAR(100)","Affected|Whether individual is affected by disease|select|1|true|false|false","Affected\r\nNot Affected\r\nUnknown", "", 0, 1, 1, 0, NOW(), NULL, NULL)'
                      ),
                  '3.0-18' =>
                      array(
