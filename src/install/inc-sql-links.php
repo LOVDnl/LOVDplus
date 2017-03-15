@@ -57,14 +57,13 @@ if (LOVD_plus) {
     if ($_INI['instance']['name'] == 'mgha') {
         $aLinkSQL = array_merge($aLinkSQL,
             array(
-                // TODO MGHA Can we change this install to be smarter to use the servers URL instead of hard coding the URL and then having to change it after installation?
-                'Provenance' => 'INSERT INTO ' . TABLE_LINKS . ' VALUES (008,"Provenance","{prov:[1]}","<A href=\"https:/variantdatabase.melbournegenomics.org.au/upload/[1]\" target=\"_blank\">prov</A>","Links to the provenance file for this sample.",0, NOW(), NULL, NULL)',
+                'Provenance' => 'INSERT INTO ' . TABLE_LINKS . ' VALUES (008,"Provenance","{prov:[1]}","<A href=\"' . lovd_getInstallURL() . 'uploads/[1]\" target=\"_blank\">prov</A>","Links to the provenance file for this sample.",0, NOW(), NULL, NULL)',
                 'INSERT INTO ' . TABLE_COLS2LINKS . ' VALUES ("Screening/Pipeline_files", 008)',
-                'Gap' => 'INSERT INTO ' . TABLE_LINKS . ' VALUES (009,"Gap","{gap:[1]}","<A href=\"https://variantdatabase.melbournegenomics.org.au/upload/[1]\" target=\"_blank\">gap</A>","Link to download the gap coverage plot file for the selected screen.",0, NOW(), NULL, NULL)',
+                'Gap' => 'INSERT INTO ' . TABLE_LINKS . ' VALUES (009,"Gap","{gap:[1]}","<A href=\"' . lovd_getInstallURL() . 'uploads/[1]\" target=\"_blank\">gap</A>","Link to download the gap coverage plot file for the selected screen.",0, NOW(), NULL, NULL)',
                 'INSERT INTO ' . TABLE_COLS2LINKS . ' VALUES ("Screening/Pipeline_files", 009)',
-                'Summary' => 'INSERT INTO ' . TABLE_LINKS . ' VALUES (010,"Summary","{summary:[1]}","<A href=\"https://variantdatabase.melbournegenomics.org.au/upload/[1]\" target=\"_blank\">qc</A>","Links to the quality summary file for this sample produced for the pipeline.",0, NOW(), NULL, NULL)',
+                'Summary' => 'INSERT INTO ' . TABLE_LINKS . ' VALUES (010,"Summary","{summary:[1]}","<A href=\"' . lovd_getInstallURL() . 'uploads/[1]\" target=\"_blank\">qc</A>","Links to the quality summary file for this sample produced for the pipeline.",0, NOW(), NULL, NULL)',
                 'INSERT INTO ' . TABLE_COLS2LINKS . ' VALUES ("Screening/Pipeline_files", 010)',
-                'IGV' => 'INSERT INTO ' . TABLE_LINKS . ' VALUES (011,"IGVscreenshot","{[1]-NM_[2]-[3]-[4]-IGV}","<A href=\"localhost:60151/load?file=https://variantdatabase.melbournegenomics.org.au/upload/variant_bams/[1]-NM_[2]-chr[3]-[4]-IGV.bam&locus=chr[3]:[4]&genome=hg19\" target=\"_blank\">IGV","Link to create a track for the given variant, in a running instance of IGV on the localhost.",0, NOW(), NULL, NULL)',
+                'IGV' => 'INSERT INTO ' . TABLE_LINKS . ' VALUES (011,"IGVscreenshot","{[1]-NM_[2]-[3]-[4]-IGV}","<A href=\"localhost:60151/load?file=' . lovd_getInstallURL() . 'uploads/variant_bams/[1]-NM_[2]-chr[3]-[4]-IGV.bam&locus=chr[3]:[4]&genome=hg19\" target=\"_blank\">IGV","Link to create a track for the given variant, in a running instance of IGV on the localhost.",0, NOW(), NULL, NULL)',
                 'INSERT INTO ' . TABLE_COLS2LINKS . ' VALUES ("VariantOnGenome/Sequencing/IGV", 011)',
             ));
     }

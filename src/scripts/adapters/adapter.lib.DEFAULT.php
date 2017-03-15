@@ -95,6 +95,12 @@ $_INSTANCE_CONFIG['viewlists'] = array(
 );
 
 
+$_INSTANCE_CONFIG['conversion'] = array(
+    'max_annotation_error_allowed' => 20,
+    'exit_on_annotation_error' => true,
+    'enforce_hgnc_gene' => true,
+    'check_indel_description' => true
+);
 
 
 

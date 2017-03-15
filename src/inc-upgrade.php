@@ -715,7 +715,8 @@ if ($sCalcVersionFiles != $sCalcVersionDB) {
                          'PREPARE Statement FROM @sSQL',
                          'EXECUTE Statement',
                      ),
-                 '3.0-17j' =>
+                 '3.0-17j' => array(), // Placeholder for LOVD+ queries, defined below.
+                 '3.0-17k' =>
                      array(
                          'ALTER TABLE ' . TABLE_VARIANTS . ' ADD COLUMN `obscount_json` TEXT NULL AFTER `confirmation_statusid`',
                          'ALTER TABLE ' . TABLE_DISEASES . ' ADD COLUMN inheritance VARCHAR(45) NULL AFTER name',
@@ -961,6 +962,19 @@ if ($sCalcVersionFiles != $sCalcVersionDB) {
             $aFiltersSQL,
             $aAnalysis2FiltersSQL,
             array('ALTER TABLE ' . TABLE_ANALYSES . ' DROP filters') // Now that the filters have been moved to their own records we can drop this column from the analyses table.
+        );
+    }
+
+    if (LOVD_plus && $sCalcVersionDB < lovd_calculateVersion('3.0-17j')) {
+        // Run LOVD+ specific queries.
+        $aUpdates['3.0-17j'] = array_merge(
+            $aUpdates['3.0-17j'],
+            array(
+                // Prepare for genes not having HGNC IDs. This feature may not
+                //  be used by this LOVD+ instance, but the interface has the
+                //  power to decide now.
+                'ALTER TABLE ' . TABLE_GENES . ' MODIFY COLUMN id_hgnc INT(10) UNSIGNED',
+            )
         );
     }
 

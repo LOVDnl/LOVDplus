@@ -81,6 +81,13 @@ $_INSTANCE_CONFIG['viewlists']['CustomVL_ObsCounts']['cols_to_show'] = array(
 
 
 
+$_INSTANCE_CONFIG['conversion'] = array(
+    'max_annotation_error_allowed' => 20,
+    'exit_on_annotation_error' => false,
+    'enforce_hgnc_gene' => false,
+    'check_indel_description' => false
+);
+
 $_INSTANCE_CONFIG['observation_counts'] = array(
     // If we want to display genepanel observation counts using default config,
     // then simply add 'genepanel' => array()
@@ -113,7 +120,6 @@ $_INSTANCE_CONFIG['observation_counts'] = array(
 
 
 );
-
 
 
 class LOVD_MghaDataConverter extends LOVD_DefaultDataConverter {

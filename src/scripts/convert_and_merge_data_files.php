@@ -96,20 +96,6 @@ function mutalyzer_runMutalyzer($variant) {
 
 
 
-
-if (empty($_INI['import']['exit_on_annotation_error'])) {
-    $_INI['import']['exit_on_annotation_error'] = 'yes';
-}
-
-if (empty($_INI['import']['max_annotation_error_allowed'])) {
-    $_INI['import']['max_annotation_error_allowed'] = 50;
-}
-
-
-
-
-
-
 // This script will be called from localhost by a cron job.
 
 
@@ -198,7 +184,7 @@ $aFiles = array(); // array(ID => array(files), ...);
 
 
 function lovd_handleAnnotationError(&$aVariant, $sErrorMsg) {
-    global $_INI, $fError, $nAnnotationErrors, $nLine, $sFileError;
+    global $fError, $nAnnotationErrors, $nLine, $sFileError, $_INSTANCE_CONFIG;
     $nAnnotationErrors++;
 
     $sLineErrorMsg = "LINE " . $nLine . " - VariantOnTranscript data dropped: " . $sErrorMsg . "\n";
@@ -207,14 +193,14 @@ function lovd_handleAnnotationError(&$aVariant, $sErrorMsg) {
     }
     print($sLineErrorMsg);
 
-    $bExitOnError = (substr(strtolower($_INI['import']['exit_on_annotation_error']), 0, 1) === 'y'? true : false);
+    $bExitOnError = $_INSTANCE_CONFIG['conversion']['exit_on_annotation_error'];
     if ($bExitOnError) {
         die("ERROR: Please update your data and re-run this script.\n");
     }
 
     // We want to stop the script if there are too many lines of data with annotations issues.
     // We want users to check their data before they continue.
-    if ($nAnnotationErrors > $_INI['import']['max_annotation_error_allowed']) {
+    if ($nAnnotationErrors > $_INSTANCE_CONFIG['conversion']['max_annotation_error_allowed']) {
         $sFileMessage = (filesize($sFileError) === 0?'' : "Please check details of dropped annotation data in " . $sFileError . "\n");
         die("ERROR: Script cannot continue because this file has too many lines of annotation data that this script cannot handle.\n"
             . $nAnnotationErrors . " lines of transcripts data was dropped.\nPlease update your data and re-run this script.\n"
@@ -747,7 +733,7 @@ foreach ($aFiles as $sID) {
         // Now, VOT fields.
         // Find gene && transcript in database. When not found, try to create it. Otherwise, throw a fatal error.
         // Trusting the gene symbol information from VEP is by far the easiest method, and the fastest. This can fail, therefore we also created an alias list.
-        if (!empty($_INI['database']['enforce_hgnc_gene']) && isset($aGeneAliases[$aVariant['symbol']])) {
+        if (!empty($_INSTANCE_CONFIG['conversion']['enforce_hgnc_gene']) && isset($aGeneAliases[$aVariant['symbol']])) {
             $aVariant['symbol'] = $aGeneAliases[$aVariant['symbol']];
         }
         // Get gene information. LOC* genes always fail here, so those we don't try.
@@ -768,7 +754,7 @@ foreach ($aFiles as $sID) {
 
                 // Getting all gene information from the HGNC takes a few seconds.
                 $aGeneInfo = false;
-                if (!empty($_INI['database']['enforce_hgnc_gene'])) {
+                if (!empty($_INSTANCE_CONFIG['conversion']['enforce_hgnc_gene'])) {
 print('Loading gene information for ' . $aVariant['symbol'] . '...' . "\n");
                     $aGeneInfo = lovd_getGeneInfoFromHGNC($aVariant['symbol'], true);
                     $nHGNC++;
@@ -846,7 +832,7 @@ print('Can\'t load UD for gene ' . $aGeneInfo['symbol'] . '.' . "\n");
                 } else {
                     $aTranscriptInfo = array();
                     $sJSONResponse = false;
-                    if (!empty($_INI['database']['enforce_hgnc_gene'])) {
+                    if (!empty($_INSTANCE_CONFIG['conversion']['enforce_hgnc_gene'])) {
 print('Loading transcript information for ' . $aGenes[$aVariant['symbol']]['id'] . '...' . "\n");
                         $nSleepTime = 2;
                         for ($i = 0; $i <= $nMutalyzerRetries; $i++) { // Retry Mutalyzer call several times until successful.
@@ -931,7 +917,7 @@ print('No available transcripts for gene ' . $aGenes[$aVariant['symbol']]['id'] 
             // First, take off the transcript name, so we can easily check for a del/ins checking for an underscore.
             $aVariant['VariantOnTranscript/DNA'] = substr($aVariant['VariantOnTranscript/DNA'], strpos($aVariant['VariantOnTranscript/DNA'], ':')+1); // NM_000000.1:c.1del -> c.1del
             $bCallMutalyzer = !$aVariant['VariantOnTranscript/DNA'];
-            if (empty($_INI['import']['skip_check_indel_description'])) {
+            if ($_INSTANCE_CONFIG['conversion']['check_indel_description']) {
                 $bCallMutalyzer = $bCallMutalyzer || (strpos($aVariant['VariantOnTranscript/DNA'], '_') !== false);
             }
 
@@ -1053,7 +1039,7 @@ print('No available transcripts for gene ' . $aGenes[$aVariant['symbol']]['id'] 
                     // Normally, we would implement a cache here, but we rarely run Mutalyzer, and if we do, we will not likely run it on a variant on the same transcript.
                     // So, first just check if we still don't have a Mutalyzer ID.
                     $sJSONResponse = false;
-                    if (!empty($_INI['database']['enforce_hgnc_gene'])) {
+                    if (!empty($_INSTANCE_CONFIG['conversion']['enforce_hgnc_gene'])) {
                         print('Reloading Mutalyzer ID for ' . $aTranscripts[$aVariant['transcriptid']]['id_ncbi'] . ' in ' . $aVariant[$aVariant['symbol']]['refseq_UD'] . ' (' . $aGenes[$aVariant['symbol']]['id'] . ')' . "\n");
                         $nSleepTime = 2;
                         for ($i = 0; $i <= $nMutalyzerRetries; $i++) { // Retry Mutalyzer call several times until successful.
