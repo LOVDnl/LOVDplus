@@ -707,9 +707,17 @@ if ($sCalcVersionFiles != $sCalcVersionDB) {
                      'EXECUTE Statement',
                  ),
                  '3.0-17h' => array(), // Placeholder for LOVD+ queries, defined below.
-                 '3.0-17i' => array(
-                         'ALTER TABLE ' . TABLE_ANALYSES_RUN_FILTERS . ' ADD COLUMN config_json TEXT NULL AFTER filterid'
-                 ),
+                 '3.0-17i' =>
+                     array(
+                         'SET @bExists := (SELECT COUNT(*) FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = "' . TABLE_DISEASES . '" AND COLUMN_NAME = "inheritance")',
+                         'SET @sSQL := IF(@bExists > 0, \'SELECT "INFO: Column already exists."\', "
+                            ALTER TABLE ' . TABLE_DISEASES . ' ADD COLUMN inheritance VARCHAR(45) NULL AFTER name")',
+                         'PREPARE Statement FROM @sSQL',
+                         'EXECUTE Statement',
+                     ),
+                 '3.0-17j' => array(
+                     'ALTER TABLE ' . TABLE_ANALYSES_RUN_FILTERS . ' ADD COLUMN config_json TEXT NULL AFTER filterid',
+                 ), // Placeholder for LOVD+ queries, defined below.
                  '3.0-18' =>
                      array(
                          // These two will be ignored by LOVD+.
@@ -950,6 +958,19 @@ if ($sCalcVersionFiles != $sCalcVersionDB) {
             $aFiltersSQL,
             $aAnalysis2FiltersSQL,
             array('ALTER TABLE ' . TABLE_ANALYSES . ' DROP filters') // Now that the filters have been moved to their own records we can drop this column from the analyses table.
+        );
+    }
+
+    if (LOVD_plus && $sCalcVersionDB < lovd_calculateVersion('3.0-17j')) {
+        // Run LOVD+ specific queries.
+        $aUpdates['3.0-17j'] = array_merge(
+            $aUpdates['3.0-17j'],
+            array(
+                // Prepare for genes not having HGNC IDs. This feature may not
+                //  be used by this LOVD+ instance, but the interface has the
+                //  power to decide now.
+                'ALTER TABLE ' . TABLE_GENES . ' MODIFY COLUMN id_hgnc INT(10) UNSIGNED',
+            )
         );
     }
 

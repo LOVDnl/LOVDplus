@@ -4,13 +4,13 @@
  * LEIDEN OPEN VARIATION DATABASE (LOVD)
  *
  * Created     : 2009-10-21
- * Modified    : 2016-10-28
- * For LOVD    : 3.0-18
+ * Modified    : 2017-03-14
+ * For LOVD    : 3.0-19
  *
- * Copyright   : 2004-2016 Leiden University Medical Center; http://www.LUMC.nl/
- * Programmers : Ing. Ivo F.A.C. Fokkema <I.F.A.C.Fokkema@LUMC.nl>
- *               Ing. Ivar C. Lugtenburg <I.C.Lugtenburg@LUMC.nl>
- *               Msc. Daan Asscheman <D.Asscheman@LUMC.nl>
+ * Copyright   : 2004-2017 Leiden University Medical Center; http://www.LUMC.nl/
+ * Programmers : Ivo F.A.C. Fokkema <I.F.A.C.Fokkema@LUMC.nl>
+ *               Ivar C. Lugtenburg <I.C.Lugtenburg@LUMC.nl>
+ *               Daan Asscheman <D.Asscheman@LUMC.nl>
  *               M. Kroon <m.kroon@lumc.nl>
  *               Anthony Marty <anthony.marty@unimelb.edu.au>
  *
@@ -1581,6 +1581,31 @@ class LOVD_Object {
         } else {
             return false;
         }
+    }
+
+
+
+
+
+    function setViewListCols ($aColsToShow = array())
+    {
+        // This function overwrites the aColumnsViewList variable with a new
+        // list, containing only the columns given, in the order given.
+        // FIXME: Make the sorting optional?
+
+        if (!$aColsToShow || !is_array($aColsToShow)) {
+            // You must specify at least one column.
+            return false;
+        }
+
+        $aReorderedViewList = array();
+        foreach ($aColsToShow as $sCol) {
+            if (isset($this->aColumnsViewList[$sCol])) {
+                $aReorderedViewList[$sCol] = $this->aColumnsViewList[$sCol];
+            }
+        }
+
+        $this->aColumnsViewList = $aReorderedViewList;
     }
 
 

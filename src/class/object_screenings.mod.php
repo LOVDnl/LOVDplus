@@ -4,10 +4,10 @@
  * LEIDEN OPEN VARIATION DATABASE (LOVD)
  *
  * Created     : 2014-01-03
- * Modified    : 2016-09-28
- * For LOVD    : 3.0-13
+ * Modified    : 2017-03-14
+ * For LOVD    : 3.0-18
  *
- * Copyright   : 2004-2016 Leiden University Medical Center; http://www.LUMC.nl/
+ * Copyright   : 2004-2017 Leiden University Medical Center; http://www.LUMC.nl/
  * Programmer  : Ivo F.A.C. Fokkema <I.F.A.C.Fokkema@LUMC.nl>
  *
  *
@@ -155,27 +155,7 @@ class LOVD_ScreeningMOD extends LOVD_Screening {
                       ));
         $this->sSortDefault = 'id';
 
-        // Hide some custom columns from view.
-        // FIXME: Better would be perhaps a positive selection instead?
-        unset($this->aColumnsViewList['Screening/Template']);
-        unset($this->aColumnsViewList['Screening/Technique']);
-        unset($this->aColumnsViewList['Screening/SNP_overlap']);
-        unset($this->aColumnsViewList['Screening/Derived_gender']);
-        unset($this->aColumnsViewList['Screening/Covered_exome/Fraction']);
-        unset($this->aColumnsViewList['Screening/Father/Covered_exome/Fraction']);
-        unset($this->aColumnsViewList['Screening/Mother/Covered_exome/Fraction']);
-        unset($this->aColumnsViewList['Screening/Reads_on_target/Fraction']);
-        unset($this->aColumnsViewList['Screening/Father/Reads_on_target/Fraction']);
-        unset($this->aColumnsViewList['Screening/Mother/Reads_on_target/Fraction']);
-        unset($this->aColumnsViewList['Screening/Analysis_restricted']);
-        unset($this->aColumnsViewList['Screening/Trio_check/De_novo']);
-        unset($this->aColumnsViewList['Screening/Trio_check/Mendelian']);
-        unset($this->aColumnsViewList['analysis_by_']);
-        unset($this->aColumnsViewList['analysis_date_']);
-        unset($this->aColumnsViewList['analysis_approved_by_']);
-        unset($this->aColumnsViewList['analysis_approved_date_']);
-
-        // Also make sure the custom cols are not searchable, if they're visible.
+        // Make sure the custom cols are not searchable, if they're visible.
         // (we need the invisible individualid column to be searchable)
         foreach ($this->aColumnsViewList as $sCol => $aCol) {
             if (isset($aCol['db'][2]) && $aCol['view']) {

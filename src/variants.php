@@ -497,12 +497,17 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && !ACTION) {
       </SCRIPT>
 <?php
 
-    require ROOT_PATH . 'class/object_genome_variants.php';
     lovd_isAuthorized('variant', $nID);
     print('      <TABLE cellpadding="0" cellspacing="0" border="0">
         <TR>
           <TD valign="top">' . "\n");
-    $_DATA = new LOVD_GenomeVariant();
+    if (LOVD_plus) {
+        require ROOT_PATH . 'class/object_genome_variants.mod.php';
+        $_DATA = new LOVD_GenomeVariantMOD();
+    } else {
+        require ROOT_PATH . 'class/object_genome_variants.php';
+        $_DATA = new LOVD_GenomeVariant();
+    }
     $zData = $_DATA->viewEntry($nID);
 
     $bAuthorized = ($_AUTH && $_AUTH['level'] >= LEVEL_OWNER);
@@ -580,7 +585,7 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && !ACTION) {
                   FROM ' . TABLE_VARIANTS .
                 ' WHERE `VariantOnGenome/DBID` = ?
                   GROUP BY SUBSTRING(effectid, -1, 1)';
-    $aClassificationsCount = $_DB->query($sSQLCount, array($zData['VariantOnGenome/DBID_raw']))->fetchAllCombine();
+    $aClassificationsCount = $_DB->query($sSQLCount, array($zData['DBID']))->fetchAllCombine();
 
     print('
           </TD>
@@ -3051,7 +3056,7 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && in_array(ACTION, array('curate', 
 
     require ROOT_PATH . 'class/object_genome_variants.mod.php';
     $_DATA = array();
-    $_DATA['Genome'] = new LOVD_GenomeVariant();
+    $_DATA['Genome'] = new LOVD_GenomeVariantMOD();
     $zData = $_DATA['Genome']->loadEntry($nID);
 
     require ROOT_PATH . 'inc-lib-form.php';

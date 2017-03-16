@@ -4,14 +4,15 @@
  * LEIDEN OPEN VARIATION DATABASE (LOVD)
  *
  * Created     : 2010-07-28
- * Modified    : 2016-09-09
- * For LOVD    : 3.0-17
+ * Modified    : 2017-03-13
+ * For LOVD    : 3.0-19
  *
- * Copyright   : 2004-2016 Leiden University Medical Center; http://www.LUMC.nl/
- * Programmers : Ing. Ivo F.A.C. Fokkema <I.F.A.C.Fokkema@LUMC.nl>
- *               Ing. Ivar C. Lugtenburg <I.C.Lugtenburg@LUMC.nl>
- *               Msc. Daan Asscheman <D.Asscheman@LUMC.nl>
+ * Copyright   : 2004-2017 Leiden University Medical Center; http://www.LUMC.nl/
+ * Programmers : Ivo F.A.C. Fokkema <I.F.A.C.Fokkema@LUMC.nl>
+ *               Ivar C. Lugtenburg <I.C.Lugtenburg@LUMC.nl>
+ *               Daan Asscheman <D.Asscheman@LUMC.nl>
  *               M. Kroon <m.kroon@lumc.nl>
+ *               Juny Kesumadewi <juny.kesumadewi@unimelb.edu.au>
  *
  *
  * This file is part of LOVD.
@@ -137,14 +138,14 @@ class LOVD_Disease extends LOVD_Object {
     function __construct ()
     {
         // Default constructor.
-        global $_AUTH;
+        global $_AUTH, $_SETT;
 
         // SQL code for preparing load entry query.
         // Increase DB limits to allow concatenation of large number of gene IDs.
         $this->sSQLPreLoadEntry = 'SET group_concat_max_len = 200000';
 
         // SQL code for loading an entry for an edit form.
-        $this->sSQLLoadEntry = 'SELECT d.*, ' .
+        $this->sSQLLoadEntry = 'SELECT d.*, d.inheritance as _inheritance, ' .
                                'd.tissues AS _tissues, ' .
                                'GROUP_CONCAT(g2d.geneid ORDER BY g2d.geneid SEPARATOR ";") AS _genes ' .
                                'FROM ' . TABLE_DISEASES . ' AS d ' .
@@ -180,12 +181,19 @@ class LOVD_Disease extends LOVD_Object {
         $this->aSQLViewList['WHERE']    = 'd.id > 0';
         $this->aSQLViewList['GROUP_BY'] = 'd.id';
 
+        $sInheritanceLegend = '<TABLE>';
+        foreach ($_SETT['diseases_inheritance'] as $sKey => $sDescription) {
+            $sInheritanceLegend .= '<TR><TD>' . $sKey . '</TD><TD>: ' . $sDescription . '</TD></TR>';
+        }
+        $sInheritanceLegend .= '</TABLE>';
+
         // List of columns and (default?) order for viewing an entry.
         $this->aColumnsViewEntry =
                  array(
                         'symbol' => 'Official abbreviation',
                         'name' => 'Name',
                         'id_omim' => 'OMIM ID',
+                        'inheritance' => 'Inheritance',
                         'individuals' => 'Individuals reported having this disease',
                         'phenotypes_' => 'Phenotype entries for this disease',
                         'genes_' => 'Associated with',
@@ -213,6 +221,12 @@ class LOVD_Disease extends LOVD_Object {
                         'id_omim' => array(
                                     'view' => array('OMIM ID', 75, 'style="text-align : right;"'),
                                     'db'   => array('d.id_omim', 'ASC', true)),
+                        'inheritance' => array(
+                                    'view' => array('Inheritance', 75),
+                                    'db'   => array('inheritance', 'ASC', true),
+                                    'legend' => array('Abbreviations:' . strip_tags(str_replace(array('<TR>', '</TD> <TD>'), array("\n", '      '), preg_replace('/\s+/', ' ', strip_tags($sInheritanceLegend, '<tr><td>')))),
+                                        str_replace(array("\r", "\n"), '', $sInheritanceLegend),
+                                    )),
                         'individuals' => array(
                                     'view' => array('Individuals', 80, 'style="text-align : right;"'),
                                     'db'   => array('individuals', 'DESC', 'INT_UNSIGNED')),
@@ -313,13 +327,12 @@ class LOVD_Disease extends LOVD_Object {
     function getForm ()
     {
         // Build the form.
+        global $_AUTH, $_DB, $_SETT;
 
         // If we've built the form before, simply return it. Especially imports will repeatedly call checkFields(), which calls getForm().
         if (!empty($this->aFormData)) {
             return parent::getForm();
         }
-
-        global $_DB, $_AUTH, $_SETT;
 
         // Get list of genes, to connect disease to gene.
         if ($_AUTH['level'] == LEVEL_CURATOR) {
@@ -351,6 +364,7 @@ class LOVD_Disease extends LOVD_Object {
                         array('Disease abbreviation', '', 'text', 'symbol', 15),
                         array('Disease name', '', 'text', 'name', 40),
                         array('OMIM ID (optional)', '', 'text', 'id_omim', 10),
+                        array('Inheritance', '', 'select', 'inheritance', count($_SETT['diseases_inheritance']), $_SETT['diseases_inheritance'], false, true, false),
                         array('Associated tissues', '', 'select', 'tissues', 10, $_SETT['disease_tissues'],
                               false, true, false),
                         array('Disease features', '', 'textarea', 'features', 50, 5),
