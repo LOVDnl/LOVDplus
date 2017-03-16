@@ -4,10 +4,10 @@
  * LEIDEN OPEN VARIATION DATABASE (LOVD)
  *
  * Created     : 2014-01-03
- * Modified    : 2016-09-28
- * For LOVD    : 3.0-13
+ * Modified    : 2017-03-14
+ * For LOVD    : 3.0-18
  *
- * Copyright   : 2004-2016 Leiden University Medical Center; http://www.LUMC.nl/
+ * Copyright   : 2004-2017 Leiden University Medical Center; http://www.LUMC.nl/
  * Programmer  : Ivo F.A.C. Fokkema <I.F.A.C.Fokkema@LUMC.nl>
  *
  *
@@ -49,7 +49,7 @@ class LOVD_ScreeningMOD extends LOVD_Screening {
     function __construct ()
     {
         // Default constructor.
-        global $_AUTH, $_SETT, $_INI;
+        global $_AUTH, $_SETT;
 
         // Run parent constructor to find out about the custom columns.
         parent::__construct();
@@ -155,71 +155,7 @@ class LOVD_ScreeningMOD extends LOVD_Screening {
                       ));
         $this->sSortDefault = 'id';
 
-        $aColsToShow = array(
-            // Invisible.
-            'individualid',
-
-            // Visible.
-            'id',
-            'Screening/Father/Sample_ID',
-            'Screening/Mother/Sample_ID',
-            'Screening/DNA/Tube_ID',
-            'Screening/Father/DNA/Tube_ID',
-            'Screening/Mother/DNA/Tube_ID',
-            'Screening/DNA/Date',
-            'Screening/Read_type',
-            'Screening/DNA/Volume',
-            'Screening/Machine_ID',
-            'Screening/DNA/Quality',
-            'Screening/FastQ_files',
-            'Screening/Sample/Type',
-            'Screening/Capture_date',
-            'Screening/DNA/Quantity',
-            'Screening/Machine_type',
-            'Screening/Analysis_type',
-            'Screening/Exome_capture',
-            'Screening/Mean_coverage',
-            'Screening/Pedigree_file',
-            'Screening/Variants_file',
-            'Screening/Pipeline_files',
-            'Screening/Sequencing_lab',
-            'Screening/Sequencing_date',
-            'Screening/Pipeline_contact',
-            'Screening/Barcode_pool_size',
-            'Screening/DNA/Concentration',
-            'Screening/Prioritised_genes',
-            'Screening/DNA_extraction_lab',
-            'Screening/Sequencing_contact',
-            'Screening/Variant_call_group',
-            'Screening/Library_preparation',
-            'Screening/Sequencing_software',
-            'Screening/Demultiplex_software',
-            'Screening/Duplicate_percentage',
-            'Screening/Sequencing_chemistry',
-            'Screening/Father/Origin/Ethnic',
-            'Screening/Mother/Origin/Ethnic',
-            'Screening/Notes',
-            'Screening/Father/Notes',
-            'Screening/Mother/Notes',
-            'Screening/Pipeline/Notes',
-            'Screening/Batch',
-            'Screening/Pipeline/Run_ID',
-            'variants_found_',
-            'analysis_status'
-        );
-
-        // If there is any instance specific configurations, we will load them here.
-        global $_INSTANCE_CONFIG;
-        if (!empty($_INSTANCE_CONFIG['screenings']['viewList'] ['colsToShow'][0])) {
-            $aColsToShow = $_INSTANCE_CONFIG['screenings']['viewList'] ['colsToShow'][0];
-        }
-
-        $aColsToHide = array_diff(array_keys($this->aColumnsViewList), $aColsToShow);
-        foreach ($aColsToHide as $sColName) {
-            unset($this->aColumnsViewList[$sColName]);
-        }
-
-        // Also make sure the custom cols are not searchable, if they're visible.
+        // Make sure the custom cols are not searchable, if they're visible.
         // (we need the invisible individualid column to be searchable)
         foreach ($this->aColumnsViewList as $sCol => $aCol) {
             if (isset($aCol['db'][2]) && $aCol['view']) {

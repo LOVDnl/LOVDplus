@@ -4,12 +4,12 @@
  * LEIDEN OPEN VARIATION DATABASE (LOVD)
  *
  * Created     : 2011-08-17
- * Modified    : 2016-05-13
- * For LOVD    : 3.0-16
+ * Modified    : 2017-01-25
+ * For LOVD    : 3.0-19
  *
- * Copyright   : 2004-2016 Leiden University Medical Center; http://www.LUMC.nl/
- * Programmers : Ing. Ivo F.A.C. Fokkema <I.F.A.C.Fokkema@LUMC.nl>
- *               Ing. Ivar C. Lugtenburg <I.C.Lugtenburg@LUMC.nl>
+ * Copyright   : 2004-2017 Leiden University Medical Center; http://www.LUMC.nl/
+ * Programmers : Ivo F.A.C. Fokkema <I.F.A.C.Fokkema@LUMC.nl>
+ *               Ivar C. Lugtenburg <I.C.Lugtenburg@LUMC.nl>
  *
  *
  * This file is part of LOVD.
@@ -59,7 +59,7 @@ class LOVD_PDO extends PDO {
                 // Still needs check though, in case two PDO connections are opened.
                 define('MYSQL_ATTR_INIT_COMMAND', 1002);
             }
-            $aOptions = array(MYSQL_ATTR_INIT_COMMAND => 'SET NAMES utf8', PDO::MYSQL_ATTR_USE_BUFFERED_QUERY => TRUE);
+            $aOptions = array(MYSQL_ATTR_INIT_COMMAND => 'SET NAMES utf8, SQL_MODE = REPLACE(@@SQL_MODE, "NO_ZERO_DATE", "")', PDO::MYSQL_ATTR_USE_BUFFERED_QUERY => TRUE);
         }
         try {
             parent::__construct($sDSN, $sUsername, $sPassword, $aOptions);
@@ -194,7 +194,7 @@ class LOVD_PDO extends PDO {
 
     function getServerInfo ()
     {
-        // Command replacing the old mysql_get_server_info().
+        // Command replacing the old mysql_get_server_info function.
         return $this->getAttribute(PDO::ATTR_SERVER_VERSION);
     }
 }
@@ -204,7 +204,7 @@ class LOVD_PDO extends PDO {
 
 
 class LOVD_PDOStatement extends PDOStatement {
-    // This class provides a wrapper around PDOStatement such that database errors are handled automatically by LOVD and LOVD can use fetch() features more easily.
+    // This class provides a wrapper around PDOStatement such that database errors are handled automatically by LOVD and LOVD can use fetch*() features more easily.
     // FIXME; apparently we don't need to call parent::__construct()? I can't get that to work, and this wrapper seems to work without it anyway...
 
     function execute ($aSQL = array(), $bHalt = true, $bTrim = false) // Needs first argument as optional because the original function has it as optional.

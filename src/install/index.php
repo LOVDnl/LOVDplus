@@ -1,16 +1,16 @@
 <?php
-// DMD_SPECIFIC: changes to this file? TEST it!!!
 /*******************************************************************************
  *
  * LEIDEN OPEN VARIATION DATABASE (LOVD)
  *
  * Created     : 2009-10-19
- * Modified    : 2016-06-09
- * For LOVD    : 3.0-13
+ * Modified    : 2017-01-25
+ * For LOVD    : 3.0-19
  *
- * Copyright   : 2004-2015 Leiden University Medical Center; http://www.LUMC.nl/
- * Programmers : Ing. Ivo F.A.C. Fokkema <I.F.A.C.Fokkema@LUMC.nl>
- *               Ing. Ivar C. Lugtenburg <I.C.Lugtenburg@LUMC.nl>
+ * Copyright   : 2004-2017 Leiden University Medical Center; http://www.LUMC.nl/
+ * Programmers : Ivo F.A.C. Fokkema <I.F.A.C.Fokkema@LUMC.nl>
+ *               Ivar C. Lugtenburg <I.C.Lugtenburg@LUMC.nl>
+ *               Daan Asscheman <D.Asscheman@LUMC.nl>
  *
  *
  * This file is part of LOVD.
@@ -337,6 +337,10 @@ if ($_GET['step'] == 2 && defined('NOT_INSTALLED')) {
 // DMD_SPECIFIC
 if ($_SERVER['SERVER_ADMIN'] == 'i.f.a.c.fokkema@lumc.nl' && $_SERVER['HTTP_HOST'] == 'localhost') {
     $sSignature = 'ifokkema_local_3.0';
+} elseif ($_SERVER['SERVER_ADMIN'] == 'd.asscheman@lumc.nl' && $_SERVER['HTTP_HOST'] == 'localhost') {
+    $sSignature = 'dasscheman_local_3.0';
+} elseif (isset($_SERVER['USER']) && $_SERVER['USER'] === 'travis') {
+    $sSignature = 'travis_CI_3.0';
 }
     // Set the session name to something unique, to prevent mixing cookies with other LOVDs on the same server.
     $_SETT['cookie_id'] = md5($sSignature);
@@ -457,28 +461,30 @@ if ($_SERVER['SERVER_ADMIN'] == 'i.f.a.c.fokkema@lumc.nl' && $_SERVER['HTTP_HOST
     $nInstallSQL += $nStatuses;
 
 
-    // (5b) Registering LOVD analysis statuses.
-    $nStatuses = count($_SETT['analysis_status']);
-    foreach ($_SETT['analysis_status'] as $nStatus => $sStatus) {
-        $aInstallSQL['Registering LOVD analysis statuses...'][] = 'INSERT INTO ' . TABLE_ANALYSIS_STATUS . ' VALUES (' . $nStatus . ', "' . $sStatus . '")';
+    if (LOVD_plus) {
+        // (5b) Registering LOVD analysis statuses.
+        $nStatuses = count($_SETT['analysis_status']);
+        foreach ($_SETT['analysis_status'] as $nStatus => $sStatus) {
+            $aInstallSQL['Registering LOVD analysis statuses...'][] = 'INSERT INTO ' . TABLE_ANALYSIS_STATUS . ' VALUES (' . $nStatus . ', "' . $sStatus . '")';
+        }
+        $nInstallSQL += $nStatuses;
+
+
+        // (5c) Registering LOVD curation statuses.
+        $nStatuses = count($_SETT['curation_status']);
+        foreach ($_SETT['curation_status'] as $nStatus => $sStatus) {
+            $aInstallSQL['Registering LOVD curation statuses...'][] = 'INSERT INTO ' . TABLE_CURATION_STATUS . ' VALUES (' . $nStatus . ', "' . $sStatus . '")';
+        }
+        $nInstallSQL += $nStatuses;
+
+
+        // (5d) Registering LOVD confirmation statuses.
+        $nStatuses = count($_SETT['confirmation_status']);
+        foreach ($_SETT['confirmation_status'] as $nStatus => $sStatus) {
+            $aInstallSQL['Registering LOVD confirmation statuses...'][] = 'INSERT INTO ' . TABLE_CONFIRMATION_STATUS . ' VALUES (' . $nStatus . ', "' . $sStatus . '")';
+        }
+        $nInstallSQL += $nStatuses;
     }
-    $nInstallSQL += $nStatuses;
-
-
-    // (5c) Registering LOVD curation statuses.
-    $nStatuses = count($_SETT['curation_status']);
-    foreach ($_SETT['curation_status'] as $nStatus => $sStatus) {
-        $aInstallSQL['Registering LOVD curation statuses...'][] = 'INSERT INTO ' . TABLE_CURATION_STATUS . ' VALUES (' . $nStatus . ', "' . $sStatus . '")';
-    }
-    $nInstallSQL += $nStatuses;
-
-
-    // (5d) Registering LOVD confirmation statuses.
-    $nStatuses = count($_SETT['confirmation_status']);
-    foreach ($_SETT['confirmation_status'] as $nStatus => $sStatus) {
-        $aInstallSQL['Registering LOVD confirmation statuses...'][] = 'INSERT INTO ' . TABLE_CONFIRMATION_STATUS . ' VALUES (' . $nStatus . ', "' . $sStatus . '")';
-    }
-    $nInstallSQL += $nStatuses;
 
 
     // (6) Registering LOVD allele values.
@@ -494,43 +500,20 @@ if ($_SERVER['SERVER_ADMIN'] == 'i.f.a.c.fokkema@lumc.nl' && $_SERVER['HTTP_HOST
 
 
     // (8) Creating standard LOVD custom columns.
-    require 'inc-sql-columns.php';
-    $nCols = count($aColSQL);
-    $aInstallSQL['Creating LOVD custom columns...'] = $aColSQL;
-    $nInstallSQL += $nCols;
-
-
+    // AND
     // (9) Activating standard custom columns.
-    foreach ($aColSQL as $sCol) {
-        $sCol = str_replace('INSERT INTO ' . TABLE_COLS . ' VALUES ', '', $sCol);
-        // FIXME; add some comments here, I can't follow this code.
-        preg_match_all("/(\"(?:.*[^\\\\])?\"|\d+|NULL|NOW\(\)),\s+/U", trim($sCol, '()') . ', ', $aCol);
-        // FIXME; misschien een list() hier?
-        $aCol = array_map('preg_replace', array_fill(0, count($aCol[1]), '/^"(.*)"$/'), array_fill(0, count($aCol[1]), '$1'), $aCol[1]);
-        if ($aCol[3] == '1' || $aCol[4] == '1') {
-            $sCategory = preg_replace('/\/.*$/', '', $aCol[0]);
-            if ($sCategory == 'VariantOnGenome') {
-                $sTable = 'TABLE_VARIANTS';
-            } elseif ($sCategory == 'VariantOnTranscript') {
-                $sTable = 'TABLE_VARIANTS_ON_TRANSCRIPTS';
-            } else {
-                $sTable = 'TABLE_' . strtoupper($sCategory) . 'S';
-            }
+    require_once ROOT_PATH . 'inc-lib-columns.php';
+    $aInstallSQL['Activating LOVD standard custom columns...'] = lovd_getActivateCustomColumnQuery();
 
-            $aInstallSQL['Activating LOVD standard custom columns...'][] = 'ALTER TABLE ' . constant($sTable) . ' ADD COLUMN `' . $aCol[0] . '` ' . stripslashes($aCol[10]);
-            $aInstallSQL['Activating LOVD standard custom columns...'][] = 'INSERT INTO ' . TABLE_ACTIVE_COLS . ' VALUES ("' . $aCol[0] . '", "00000", NOW())';
-            if (LOVD_plus && $aCol[0] == 'VariantOnGenome/DBID') {
-                // Make sure the DBID column is indexed.
-                $aInstallSQL['Activating LOVD standard custom columns...'][] = 'ALTER TABLE ' . constant($sTable) . ' ADD INDEX(`' . $aCol[0] . '`)';
-            }
-        }
+    if (LOVD_plus) {
+        $aInstallSQL['Activating LOVD standard custom columns...'][] = 'ALTER TABLE ' . TABLE_VARIANTS . ' ADD INDEX(`VariantOnGenome/DBID`)';
     }
 
 
     // (10) Creating the "Healthy / Control" disease. Maybe later enable some more default columns? (IQ, ...)
     $aInstallSQL['Registering phenotype columns for healthy controls...'] =
         array(
-            'INSERT INTO ' . TABLE_DISEASES . ' (symbol, name, created_by, created_date) VALUES ("Healty/Control", "Healthy individual / control", 0, NOW())',
+            'INSERT INTO ' . TABLE_DISEASES . ' (symbol, name, tissues, features, remarks, created_by, created_date) VALUES ("Healthy/Control", "Healthy individual / control", "", "", "", 0, NOW())',
             'UPDATE ' . TABLE_DISEASES . ' SET id = 0',
             'ALTER TABLE ' . TABLE_DISEASES . ' auto_increment = 1',
             // FIXME: Rather parse inc-sql-columns then to do this manually.
@@ -538,6 +521,7 @@ if ($_SERVER['SERVER_ADMIN'] == 'i.f.a.c.fokkema@lumc.nl' && $_SERVER['HTTP_HOST
             'INSERT INTO ' . TABLE_ACTIVE_COLS . ' VALUES ("Phenotype/Age", 0, NOW())',
             'INSERT INTO ' . TABLE_SHARED_COLS . ' (diseaseid, colid, col_order, width, mandatory, description_form, description_legend_short, description_legend_full, select_options, public_view, public_add, created_by, created_date) VALUES (0, "Phenotype/Age", 0, 100, 0, "Type 35y for 35 years, 04y08m for 4 years and 8 months, 18y? for around 18 years, >54y for older than 54, ? for unknown.", "The age at which the individual was examined, if known. 04y08m = 4 years and 8 months.", "The age at which the individual was examined, if known.\r\n<UL style=\"margin-top:0px;\">\r\n  <LI>35y = 35 years</LI>\r\n  <LI>04y08m = 4 years and 8 months</LI>\r\n  <LI>18y? = around 18 years</LI>\r\n  <LI>&gt;54y = older than 54</LI>\r\n  <LI>? = unknown</LI>\r\n</UL>", "", 1, 1, 0, NOW())',
         );
+
 
     // (11) Creating standard custom links.
     require 'inc-sql-links.php';
@@ -558,6 +542,16 @@ if ($_SERVER['SERVER_ADMIN'] == 'i.f.a.c.fokkema@lumc.nl' && $_SERVER['HTTP_HOST
     $nSources = count($aSourceSQL);
     $aInstallSQL['Creating external sources...'] = $aSourceSQL;
     $nInstallSQL += $nSources;
+
+
+    if (LOVD_plus) {
+        // (14) Creating the analyses if we are an LOVD+ instance.
+        require 'inc-sql-analyses.php';
+        if ($aAnalysesSQL) {
+            $aInstallSQL['Creating analyses...'] = $aAnalysesSQL;
+            $nInstallSQL += count($aAnalysesSQL);
+        }
+    }
 
 
 
@@ -649,7 +643,7 @@ if ($_GET['step'] == 3 && !($_DB->query('SHOW TABLES LIKE "' . TABLE_CONFIG . '"
                 // Empty port number, insert NULL instead of 0.
                 $_POST['proxy_port'] = NULL;
             }
-            $q = $_DB->query('INSERT INTO ' . TABLE_CONFIG . ' VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)', array($_POST['system_title'], $_POST['institute'], $_POST['location_url'], $_POST['email_address'], $_POST['send_admin_submissions'], $_POST['api_feed_history'], $_POST['refseq_build'], $_POST['proxy_host'], $_POST['proxy_port'], $_POST['proxy_username'], $_POST['proxy_password'], $_POST['logo_uri'], $_POST['mutalyzer_soap_url'], "", $_POST['send_stats'], $_POST['include_in_listing'], $_POST['lock_users'], $_POST['allow_unlock_accounts'], $_POST['allow_submitter_mods'], $_POST['allow_count_hidden_entries'], $_POST['use_ssl'], $_POST['use_versioning'], $_POST['lock_uninstall']), false, true);
+            $q = $_DB->query('INSERT INTO ' . TABLE_CONFIG . ' VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)', array($_POST['system_title'], $_POST['institute'], $_POST['location_url'], $_POST['email_address'], $_POST['send_admin_submissions'], $_POST['api_feed_history'], $_POST['refseq_build'], $_POST['proxy_host'], $_POST['proxy_port'], $_POST['proxy_username'], $_POST['proxy_password'], $_POST['logo_uri'], $_POST['mutalyzer_soap_url'], "", $_POST['send_stats'], $_POST['include_in_listing'], $_POST['allow_submitter_registration'], $_POST['lock_users'], $_POST['allow_unlock_accounts'], $_POST['allow_submitter_mods'], $_POST['allow_count_hidden_entries'], $_POST['use_ssl'], $_POST['use_versioning'], $_POST['lock_uninstall']), false, true);
             if (!$q) {
                 // Error when running query.
                 print('      Error during install while storing the settings.<BR>' . "\n" .
@@ -714,155 +708,6 @@ if ($_GET['step'] == 3 && !($_DB->query('SHOW TABLES LIKE "' . TABLE_CONFIG . '"
 
 
 
-/*if ($_GET['step'] == 4 && !$_DB->query('SELECT COUNT(*) FROM ' . TABLE_MODULES, array(), false)->fetchColumn()) {
-    // Step 4: Configuring LOVD modules.
-    if (@count($_DB->query('SHOW TABLES LIKE ?', array(TABLE_MODULES))->fetchAllRow())) != 1) {
-        // Didn't finish previous step correctly.
-        header('Location: ' . PROTOCOL . $_SERVER['HTTP_HOST'] . $_SERVER['SCRIPT_NAME'] . '?step=' . ($_GET['step'] - 2));
-        exit;
-    }
-    if (!$_DB->query('SELECT COUNT(*) FROM ' . TABLE_CONFIG, array(), false)->fetchColumn()) {
-        // Didn't finish previous step correctly.
-        header('Location: ' . PROTOCOL . $_SERVER['HTTP_HOST'] . $_SERVER['SCRIPT_NAME'] . '?step=' . ($_GET['step'] - 1));
-        exit;
-    }
-
-    $_T->printHeader();
-    lovd_printSideBar();
-
-    print('      <B>Configuring LOVD modules</B><BR>' . "\n" .
-          '      <BR>' . "\n\n" .
-          '      Please wait while the installer is trying to detect the available LOVD modules...<BR>' . "\n" .
-          '      <BR>' . "\n\n" .
-          '      <PRE>' . "\n");
-
-    // Read out modules directory...
-    $hDir = @opendir(MODULE_PATH);
-    if (!$hDir) {
-        print('Failed to open modules directory.' . "\n" .
-              '      </PRE>' . "\n");
-
-        // FIXME; TEMPORARY CODE:
-        // Yes, we know, the module directory currently does not exist!!!
-        // Already advance the install progress bar.
-        print('      <SCRIPT type="text/javascript">' . "\n" .
-              '        var bar = document.getElementById(\'lovd_install_bar\');' . "\n" .
-              '        bar.style.width = \'' . $aInstallSteps[$_GET['step'] + 1][0] . '%\'; bar.title = \'' . $aInstallSteps[$_GET['step'] + 1][0] . '%\';' . "\n" .
-              '      </SCRIPT>' . "\n\n");
-        lovd_printInstallForm(false);
-        // FIXME; TEMPORARY CODE.
-
-        $_T->printFooter();
-        exit;
-    }
-
-    $aFailed = array();
-    $aSuccess = array();
-*//*
-// DMD_SPECIFIC
-    while (($sModuleID = readdir($hDir)) !== false) {
-        if ($_MODULES->isInstalled($sModuleID) || substr($sModuleID, 0, 1) == '.' || !is_dir(MODULE_PATH . $sModuleID) || !is_readable(MODULE_PATH . $sModuleID . '/module.php')) {
-            // Already installed module, ignored file, not a directory, or not a modules directory.
-            continue;
-        }
-
-        // Try and load the module. THIS WILL EXECUTE THE MODULE CODE!!!
-        $sFile = file_get_contents(MODULE_PATH . $sModuleID . '/module.php');
-
-        // 'Cause you never know who tries to mess with us...
-        $sModuleID = mysql_real_escape_string($sModuleID);
-
-        $b = @eval($sFile);
-        if ($b === false) {
-            // Apparently, malformed module code (parse error or such).
-            lovd_writeLog('Error', 'ModuleScan', 'Error while scanning for new modules: ' . $sModuleID . '/module.php returns error');
-            $aFailed[] = $sModuleID;
-            continue;
-        } elseif (!class_exists($sModuleID)) {
-            // Apparently, not defined.
-            lovd_writeLog('Error', 'ModuleScan', 'Error while scanning for new modules: ' . $sModuleID . '/module.php does not define module class');
-            $aFailed[] = $sModuleID;
-            continue;
-        } else {
-            // Load module!
-            $Tmp = new $sModuleID;
-
-            if (!method_exists($Tmp, 'getInfo')) {
-                // Apparently, not defined getInfo() method.
-                lovd_writeLog('Error', 'ModuleScan', 'Error while scanning for new modules: ' . $sModuleID . '/module.php does not have getInfo() method');
-                $aFailed[] = $sModuleID;
-                continue;
-            }
-        }
-
-        $aModule = $Tmp->getInfo();
-        if (!is_array($aModule) || empty($aModule['name']) || empty($aModule['version']) || empty($aModule['description'])) {
-            // Apparently, missing information from getInfo() method.
-            lovd_writeLog('Error', 'ModuleScan', 'Error while scanning for new modules: ' . $sModuleID . '/module.php does not return expected array using getInfo()');
-            $aFailed[] = $sModuleID;
-            continue;
-        }
-
-        // 'Cause you never know who tries to mess with us...
-        $aModule['settings'] = serialize($aModule['settings']);
-        lovd_magicQuote($aModule);
-
-        // All seems to be OK... install module, but do not activate right now.
-        $sQ = 'INSERT INTO ' . TABLE_MODULES . ' VALUES ("' . $sModuleID . '", "' . $aModule['name'] . '", "' . $aModule['version'] . '", "' . $aModule['description'] . '", 0, "' . $aModule['settings'] . '", NOW(), NULL)';
-        $q = $_DB->query($sQ);
-        if (!$q) {
-            lovd_writeLog('Error', 'ModuleScan', 'Error while scanning for new modules: ' . $sModuleID . '/module.php does not install properly:' . "\n" . 'Query : ' . $sQ . "\n" . 'Error : ' . $_DB->formatError());
-            $aFailed[] = $sModuleID;
-            continue;
-        }
-
-        lovd_writeLog('Install', 'Installation', 'New module installed: ' . $sModuleID . '/module.php returns "' . $aModule['name'] . '"');
-        $aSuccess[] = $sModuleID;
-    }
-*//*
-
-    // Print result of module scan to screen!
-    $sFailed = '';
-    $sSuccess = '';
-    $nSuccess = count($aSuccess);
-
-    if (count($aFailed)) {
-        $sFailed = 'Failed installing "' . implode('"' . "\n" . 'Failed installing "', $aFailed) . '"' . "\n";
-    }
-    if ($nSuccess) {
-        $sSuccess = 'Successfully installed "' . implode('"' . "\n" . 'Successfully installed "', $aSuccess) . '"' . "\n";
-    }
-
-    if ($sSuccess) {
-        print('Successfully installed new module' . ($nSuccess == 1? '' : 's') . '!' . "\n" . $sSuccess .
-              ($sFailed? "\n" . 'Not installed due to errors (more info in the logs):' . "\n" . $sFailed : ''));
-    } elseif (!$sFailed) {
-        print('No new modules found.' . "\n");
-    } else {
-        print('Failed installing new modules! More information can be found in the error logs.' . "\n" . $sFailed);
-    }
-
-    print('      </PRE>' . "\n\n" .
-          '      Ready to proceed to the next step.<BR>' . "\n" .
-          '      <BR>' . "\n\n");
-
-    // Already advance the install progress bar.
-    print('      <SCRIPT type="text/javascript">' . "\n" .
-          '        var bar = document.getElementById(\'lovd_install_bar\');' . "\n" .
-          '        bar.style.width = \'' . $aInstallSteps[$_GET['step'] + 1][0] . '%\'; bar.title = \'' . $aInstallSteps[$_GET['step'] + 1][0] . '%\';' . "\n" .
-          '      </SCRIPT>' . "\n\n");
-
-    lovd_printInstallForm(false);
-
-    $_T->printFooter();
-    exit;
-} elseif ($_GET['step'] == 4) { $_GET['step'] ++; }*/
-
-
-
-
-
-//if ($_GET['step'] == 5) {
 if ($_GET['step'] == 4) {
     // Step 5: Done.
     if (!($_DB->query('SHOW TABLES LIKE "' . TABLE_CONFIG . '"')->fetchColumn() && $_DB->query('SELECT COUNT(*) FROM ' . TABLE_CONFIG)->fetchColumn())) {

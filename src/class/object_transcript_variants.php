@@ -4,12 +4,14 @@
  * LEIDEN OPEN VARIATION DATABASE (LOVD)
  *
  * Created     : 2011-05-12
- * Modified    : 2015-06-26
- * For LOVD    : 3.0-14
+ * Modified    : 2016-10-14
+ * For LOVD    : 3.0-18
  *
- * Copyright   : 2004-2015 Leiden University Medical Center; http://www.LUMC.nl/
+ * Copyright   : 2004-2016 Leiden University Medical Center; http://www.LUMC.nl/
  * Programmers : Ing. Ivar C. Lugtenburg <I.C.Lugtenburg@LUMC.nl>
  *               Ing. Ivo F.A.C. Fokkema <I.F.A.C.Fokkema@LUMC.nl>
+ *               Msc. Daan Asscheman <D.Asscheman@LUMC.nl>
+ *               M. Kroon <m.kroon@lumc.nl>
  *
  *
  * This file is part of LOVD.
@@ -57,6 +59,8 @@ class LOVD_TranscriptVariant extends LOVD_Custom {
         // Default constructor.
         global $_DB;
 
+        $this->bShared = (LOVD_plus? false : true);
+
         // SQL code for loading an entry for an edit form.
         $this->sSQLLoadEntry = 'SELECT vot.* ' .
                                'FROM ' . TABLE_VARIANTS_ON_TRANSCRIPTS . ' AS vot ' .
@@ -66,7 +70,8 @@ class LOVD_TranscriptVariant extends LOVD_Custom {
 
         // SQL code for viewing an entry.
         $this->aSQLViewEntry['SELECT']   = 'vot.*, ' .
-                                           't.geneid, t.id_ncbi';
+                                           't.geneid, t.id_ncbi' .
+                                           (lovd_verifyInstance('mgha', false)? ', vog.chromosome' : ''); // MGHA will have to add a few custom columns here to get the Genomizer link to work properly.
         $this->aSQLViewEntry['FROM']     = TABLE_VARIANTS_ON_TRANSCRIPTS . ' AS vot ' .
                                           'INNER JOIN ' . TABLE_VARIANTS . ' AS vog ON (vot.id = vog.id) ' . // Only done so that the vog.statusid can be checked.
                                            'LEFT OUTER JOIN ' . TABLE_TRANSCRIPTS . ' AS t ON (vot.transcriptid = t.id)';
@@ -78,11 +83,19 @@ class LOVD_TranscriptVariant extends LOVD_Custom {
                                           't.geneid, t.id_ncbi, ' .
                                           'e.name AS effect, ' .
                                           'ds.name AS status';
+        // LOVD+ adds the check if this transcript is a preferred transcript.
+        if (LOVD_plus) {
+            $this->aSQLViewList['SELECT'] .= ', gp2g.genepanelid';
+        }
         $this->aSQLViewList['FROM']     = TABLE_VARIANTS_ON_TRANSCRIPTS . ' AS vot ' .
                                           'INNER JOIN ' . TABLE_VARIANTS . ' AS vog ON (vot.id = vog.id) ' .
                                           'LEFT OUTER JOIN ' . TABLE_EFFECT . ' AS e ON (vot.effectid = e.id) ' .
                                           'LEFT OUTER JOIN ' . TABLE_DATA_STATUS . ' AS ds ON (vog.statusid = ds.id) ' .
                                           'LEFT OUTER JOIN ' . TABLE_TRANSCRIPTS . ' AS t ON (t.id = vot.transcriptid)';
+        // LOVD+ adds the check if this transcript is a preferred transcript in any gene panel.
+        if (LOVD_plus) {
+            $this->aSQLViewList['FROM'] .= ' LEFT OUTER JOIN ' . TABLE_GP2GENE . ' AS gp2g ON (vot.transcriptid = gp2g.transcriptid)';
+        }
 
         $this->sObjectID = $sObjectID;
         $this->nID = $nID;
@@ -93,10 +106,18 @@ class LOVD_TranscriptVariant extends LOVD_Custom {
                  array(
                         'geneid_' => 'Gene',
                         'id_ncbi_' => 'Transcript ID',
-//                        'effect_reported' => 'Affects function (reported)',
-//                        'effect_concluded' => 'Affects function (concluded)',
+                        'effect_reported' => 'Affects function (reported)',
+                        'effect_concluded' => 'Affects function (concluded)',
                       ),
+                 (lovd_verifyInstance('mgha', false)? array('genomizer_url_' => 'Genomizer', 'clinvar_' => "ClinVar Description (dbNSFP)") : array()), // MGHA entry for the Genomizer link in the VOT ViewEntry.
                  $this->buildViewEntry());
+        if (LOVD_plus) {
+            unset($this->aColumnsViewEntry['effect_reported']);
+            unset($this->aColumnsViewEntry['effect_concluded']);
+            if (lovd_verifyInstance('mgha', false) && !isset($this->aColumnsViewEntry['VariantOnTranscript/dbNSFP/ClinVar/Clinical_Significance'])) {
+                unset($this->aColumnsViewEntry['clinvar_']);
+            }
+        }
 
         // List of columns and (default?) order for viewing a list of entries.
         $this->aColumnsViewList = array_merge(
@@ -113,11 +134,11 @@ class LOVD_TranscriptVariant extends LOVD_Custom {
                         'id_' => array(
                                     'view' => array('Variant ID', 90),
                                     'db'   => array('vot.id', 'ASC', true)),
-//                        'effect' => array(
-//                                    'view' => array('Affects function', 70),
-//                                    'db'   => array('e.name', 'ASC', true),
-//                                    'legend' => array('The variant\'s effect on the protein\'s function, in the format Reported/Curator concluded; ranging from \'+\' (variant affects function) to \'-\' (does not affect function).',
-//                                                      'The variant\'s affect on the protein\'s function, in the format Reported/Curator concluded; \'+\' indicating the variant affects function, \'+?\' probably affects function, \'-\' does not affect function, \'-?\' probably does not affect function, \'?\' effect unknown.')),
+                        'effect' => array(
+                                    'view' => array('Affects function', 70),
+                                    'db'   => array('e.name', 'ASC', true),
+                                    'legend' => array('The variant\'s effect on the protein\'s function, in the format Reported/Curator concluded; ranging from \'+\' (variant affects function) to \'-\' (does not affect function).',
+                                                      'The variant\'s effect on the protein\'s function, in the format Reported/Curator concluded; \'+\' indicating the variant affects function, \'+?\' probably affects function, \'-\' does not affect function, \'-?\' probably does not affect function, \'?\' effect unknown, \'.\' effect not classified.')),
                       ),
                  $this->buildViewList(),
                  array(
@@ -126,6 +147,9 @@ class LOVD_TranscriptVariant extends LOVD_Custom {
                                     'db'   => array('ds.name', false, true),
                                     'auth' => LEVEL_COLLABORATOR),
                       ));
+        if (LOVD_plus) {
+            unset($this->aColumnsViewList['effect']);
+        }
 
         $this->sSortDefault = 'id_ncbi';
 
@@ -193,11 +217,9 @@ class LOVD_TranscriptVariant extends LOVD_Custom {
                     $this->aCheckMandatory[] = $sCol;
                 }
 
-                if (lovd_getProjectFile() != '/import.php') {
-                    if (isset($aData[$sCol])) {
-                        $this->checkInputRegExp($sCol, $aData[$sCol]);
-                        $this->checkSelectedInput($sCol, $aData[$sCol]);
-                    }
+                if (!(LOVD_plus && lovd_getProjectFile() == '/import.php') && isset($aData[$sCol])) {
+                    $this->checkInputRegExp($sCol, $aData[$sCol]);
+                    $this->checkSelectedInput($sCol, $aData[$sCol]);
                 }
             }
             $this->aCheckMandatory[] = $sPrefix . 'effect_reported';
@@ -363,6 +385,12 @@ class LOVD_TranscriptVariant extends LOVD_Custom {
             $zData['id_ncbi_'] = '<A href="transcripts/' . $zData['transcriptid'] . '">' . $zData['id_ncbi'] . '</A>';
             $zData['effect_reported'] = $_SETT['var_effect'][$zData['effectid']{0}];
             $zData['effect_concluded'] = $_SETT['var_effect'][$zData['effectid']{1}];
+            if (lovd_verifyInstance('mgha', false)) { // Display the Genomizer URL in the VOT ViewEntry. TODO Once the ref and alt are separated we need to add it into this URL. Should we add this to the links table so as it can be used elsewhere?
+                $zData['genomizer_url_'] = '<A href="http://genomizer.com/?chr=' . $zData['chromosome'] . '&gene=' . $zData['geneid'] . '&ref_seq=' . $zData['id_ncbi'] . '&variant=' . $zData['VariantOnTranscript/DNA'] . '" target="_blank">Genomizer Link</A>';
+                if (isset($zData['VariantOnTranscript/dbNSFP/ClinVar/Clinical_Significance'])) {
+                    $zData['clinvar_'] = implode(', ', lovd_mapCodeToDescription(explode(',', $zData['VariantOnTranscript/dbNSFP/ClinVar/Clinical_Significance'], $_SETT['clinvar_var_effect'])));
+                }
+            }
         }
 
         return $zData;
@@ -382,6 +410,50 @@ class LOVD_TranscriptVariant extends LOVD_Custom {
                 $_POST[$sCol] = $this->getDefaultValue($sColClean);
             }
         }
+    }
+
+
+
+
+
+    function updateEntry ($sID, $aData, $aFields = array())
+    {
+        // Updates entry $nID with data from $aData in the database, changing only fields defined in $aFields.
+        global $_DB;
+
+        list($nID, $nTranscriptID) = explode('|', $sID);
+        if (!trim($nID) || !trim($nTranscriptID)) {
+            lovd_displayError('LOVD-Lib', 'Objects::(' . $this->sObject . ')::updateEntry() - Method didn\'t receive ID');
+        } elseif (!is_array($aData) || !count($aData)) {
+            lovd_displayError('LOVD-Lib', 'Objects::(' . $this->sObject . ')::updateEntry() - Method didn\'t receive data array');
+        } elseif (!is_array($aFields) || !count($aFields)) {
+            $aFields = array_keys($aData);
+        }
+
+        // Query text.
+        $sSQL = 'UPDATE ' . constant($this->sTable) . ' SET ';
+        $aSQL = array();
+        foreach ($aFields as $key => $sField) {
+            $sSQL .= (!$key? '' : ', ') . '`' . $sField . '` = ?';
+            if (!isset($aData[$sField])) {
+                // Field may be not set, make sure it is (happens in very rare cases).
+                $aData[$sField] = '';
+            }
+            if ($aData[$sField] === '' && in_array(substr(lovd_getColumnType(constant($this->sTable), $sField), 0, 3), array('INT', 'DAT', 'DEC', 'FLO'))) {
+                $aData[$sField] = NULL;
+            }
+            $aSQL[] = $aData[$sField];
+        }
+        $sSQL .= ' WHERE id = ? AND transcriptid = ?';
+        $aSQL[] = $nID;
+        $aSQL[] = $nTranscriptID;
+
+        if (!defined('LOG_EVENT')) {
+            define('LOG_EVENT', $this->sObject . '::updateEntry()');
+        }
+        $q = $_DB->query($sSQL, $aSQL, true, true);
+
+        return $q->rowCount();
     }
 
 

@@ -4,11 +4,11 @@
  * LEIDEN OPEN VARIATION DATABASE (LOVD)
  *
  * Created     : 2014-11-28
- * Modified    : 2016-11-11
- * For LOVD+   : 3.0-16
+ * Modified    : 2017-02-06
+ * For LOVD+   : 3.0-18
  *
- * Copyright   : 2004-2016 Leiden University Medical Center; http://www.LUMC.nl/
- * Programmer  : Ing. Ivo F.A.C. Fokkema <I.F.A.C.Fokkema@LUMC.nl>
+ * Copyright   : 2004-2017 Leiden University Medical Center; http://www.LUMC.nl/
+ * Programmer  : Ivo F.A.C. Fokkema <I.F.A.C.Fokkema@LUMC.nl>
  *
  *************/
 
@@ -54,12 +54,20 @@ ignore_user_abort(true);
 
 // Initialize curl connection.
 $ch = curl_init();
+curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+
+// Set proxy
+if ($_CONF['proxy_host']) {
+    curl_setopt($ch, CURLOPT_PROXY, 'https://' . $_CONF['proxy_host'] . ':' . $_CONF['proxy_port']);
+}
+if (!empty($_CONF['proxy_username']) && !empty($_CONF['proxy_password'])) {
+    curl_setopt($ch, CURLOPT_PROXYUSERPWD, $_CONF['proxy_username'] . ':' . $_CONF['proxy_password']);
+}
 
 function mutalyzer_getTranscriptsAndInfo($ref, $gene) {
     global $ch;
 
     $sUrl = 'https://mutalyzer.nl/json/getTranscriptsAndInfo?genomicReference=' . $ref . '&geneName=' . $gene;
-    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
     curl_setopt($ch, CURLOPT_URL, $sUrl);
 
     return curl_exec($ch);
@@ -69,7 +77,6 @@ function mutalyzer_numberConversion($build, $variant) {
     global $ch;
 
     $sUrl = 'https://mutalyzer.nl/json/numberConversion?build=' . $build . '&variant=' . $variant;
-    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
     curl_setopt($ch, CURLOPT_URL, $sUrl);
 
     return curl_exec($ch);
@@ -79,7 +86,6 @@ function mutalyzer_runMutalyzer($variant) {
     global $ch;
 
     $sUrl = 'https://mutalyzer.nl/json/runMutalyzer?variant=' . $variant;
-    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
     curl_setopt($ch, CURLOPT_URL, $sUrl);
 
     return curl_exec($ch);
@@ -90,24 +96,7 @@ function mutalyzer_runMutalyzer($variant) {
 
 
 
-
-if (empty($_INI['import']['exit_on_annotation_error'])) {
-    $_INI['import']['exit_on_annotation_error'] = 'yes';
-}
-
-if (empty($_INI['import']['max_annotation_error_allowed'])) {
-    $_INI['import']['max_annotation_error_allowed'] = 50;
-}
-
-
-
-
-
-
 // This script will be called from localhost by a cron job.
-
-// Call adapter script to apply any instance specific re-formatting.
-$zAdapter = lovd_initAdapter();
 
 
 // Define the array of suffixes for the files names expected.
@@ -121,17 +110,17 @@ $aSuffixes = array(
 
 // Define list of genes to ignore, because they can't be found by the HGNC.
 // LOC* genes are always ignored, because they never work (HGNC doesn't know them).
-$aGenesToIgnore = $zAdapter->prepareGenesToIgnore();
+$aGenesToIgnore = $_ADAPTER->prepareGenesToIgnore();
 
 
 // Define list of gene aliases. Genes not mentioned in here, are searched for in the database. If not found,
 // HGNC will be queried and gene will be added. If the symbols don't match, we'll get a duplicate key error.
 // Insert those genes here.
-$aGeneAliases = $zAdapter->prepareGeneAliases();
+$aGeneAliases = $_ADAPTER->prepareGeneAliases();
 
 
 // Define list of columns that we are recognizing.
-$aColumnMappings = $zAdapter->prepareMappings();
+$aColumnMappings = $_ADAPTER->prepareMappings();
 
 
 // These columns will be taken out of $aVariant and stored as the VOG data.
@@ -193,41 +182,9 @@ $aFiles = array(); // array(ID => array(files), ...);
 
 
 
-function lovd_initAdapter()
-{
-
-    // Run adapter script to convert input file formats.
-
-    global $_INI;
-
-    $sAdaptersDir = ROOT_PATH . 'scripts/adapters/';
-    $sAdapterName = 'DEFAULT';
-
-    // Even if instance name exists, still check if the actual adapter library file exists.
-    // If adapter library file does not exist, we still use default adapter.
-    if (!empty($_INI['instance']['name']) && file_exists($sAdaptersDir . 'conversion_adapter.lib.'. strtoupper($_INI['instance']['name']) .'.php')) {
-        $sAdapterName = strtoupper($_INI['instance']['name']);
-    }
-
-    require_once $sAdaptersDir . 'conversion_adapter.lib.'. $sAdapterName .'.php';
-
-    // Camelcase the adapter name.
-    $sClassPrefix = ucwords(strtolower(str_replace('_', ' ', $sAdapterName)));
-    $sClassPrefix = str_replace(' ', '', $sClassPrefix);
-    $sClassName = 'LOVD_' . $sClassPrefix . 'DataConverter';
-
-    $zAdapter = new $sClassName($sAdaptersDir);
-
-    return $zAdapter;
-}
-
-
-
-
-
 
 function lovd_handleAnnotationError(&$aVariant, $sErrorMsg) {
-    global $_INI, $fError, $nAnnotationErrors, $nLine, $sFileError;
+    global $fError, $nAnnotationErrors, $nLine, $sFileError, $_INSTANCE_CONFIG;
     $nAnnotationErrors++;
 
     $sLineErrorMsg = "LINE " . $nLine . " - VariantOnTranscript data dropped: " . $sErrorMsg . "\n";
@@ -236,14 +193,14 @@ function lovd_handleAnnotationError(&$aVariant, $sErrorMsg) {
     }
     print($sLineErrorMsg);
 
-    $bExitOnError = (substr(strtolower($_INI['import']['exit_on_annotation_error']), 0, 1) === 'y'? true : false);
+    $bExitOnError = $_INSTANCE_CONFIG['conversion']['exit_on_annotation_error'];
     if ($bExitOnError) {
         die("ERROR: Please update your data and re-run this script.\n");
     }
 
     // We want to stop the script if there are too many lines of data with annotations issues.
     // We want users to check their data before they continue.
-    if ($nAnnotationErrors > $_INI['import']['max_annotation_error_allowed']) {
+    if ($nAnnotationErrors > $_INSTANCE_CONFIG['conversion']['max_annotation_error_allowed']) {
         $sFileMessage = (filesize($sFileError) === 0?'' : "Please check details of dropped annotation data in " . $sFileError . "\n");
         die("ERROR: Script cannot continue because this file has too many lines of annotation data that this script cannot handle.\n"
             . $nAnnotationErrors . " lines of transcripts data was dropped.\nPlease update your data and re-run this script.\n"
@@ -396,7 +353,7 @@ function lovd_getVariantPosition ($sVariant, $aTranscript = array())
 
 
 
-$zAdapter->convertInputFiles();
+$_ADAPTER->convertInputFiles();
 
 // Loop through the files in the dir and try and find a meta and data file, that match but have no total data file.
 $h = opendir($_INI['paths']['data_files']);
@@ -410,7 +367,7 @@ while (($sFile = readdir($h)) !== false) {
     }
 
 
-    if (preg_match('/^'. $zAdapter->getInputFilePrefixPattern() .'\.(' . implode('|', array_map('preg_quote', array_values($aSuffixes))) . ')$/', $sFile, $aRegs)) {
+    if (preg_match('/^'. $_ADAPTER->getInputFilePrefixPattern() .'\.(' . implode('|', array_map('preg_quote', array_values($aSuffixes))) . ')$/', $sFile, $aRegs)) {
         // Files we need to merge.
         list(, $sID, $sFileType) = $aRegs;
         if (!isset($aFiles[$sID])) {
@@ -502,7 +459,7 @@ foreach ($aFiles as $sID) {
 
     $sHeaders = fgets($fInput);
     $aHeaders = explode("\t", rtrim($sHeaders, "\r\n"));
-    foreach ($zAdapter->getRequiredHeaderColumns() as $sColumn) {
+    foreach ($_ADAPTER->getRequiredHeaderColumns() as $sColumn) {
         if (!in_array($sColumn, $aHeaders, true)) {
             print('Ignoring file, does not conform to format: ' . $sFileToConvert . ".\n");
             continue 2; // Continue the $aFiles loop.
@@ -545,8 +502,8 @@ foreach ($aFiles as $sID) {
     $nMiracleID = 0;
 
 
-    $zAdapter->readMetadata($aMetaData);
-    $nScreeningID = $zAdapter->prepareScreeningID($aMetaData);
+    $_ADAPTER->readMetadata($aMetaData);
+    $nScreeningID = $_ADAPTER->prepareScreeningID($aMetaData);
     if (empty($nScreeningID)) {
         foreach ($aMetaData as $nLine => $sLine) {
             if (!trim($sLine)) {
@@ -611,7 +568,7 @@ foreach ($aFiles as $sID) {
         }
     }
 
-    $zAdapter->setScriptVars(compact('nScreeningID', 'nMiracleID'));
+    $_ADAPTER->setScriptVars(compact('nScreeningID', 'nMiracleID'));
     $nScreeningID = sprintf('%010d', $nScreeningID);
     print('Isolated Screening ID: ' . $nScreeningID . "...\n");
     flush();
@@ -624,7 +581,7 @@ foreach ($aFiles as $sID) {
     // It's usually a big file, and we don't want to use too much memory... so using fgets().
     // First line should be headers, we already read it out somewhere above here.
     // $aHeaders = array_map('trim', $aHeaders, array_fill(0, count($aHeaders), '"')); // In case we ever need to trim off quotes.
-    $aHeaders = $zAdapter->prepareHeaders($aHeaders);
+    $aHeaders = $_ADAPTER->prepareHeaders($aHeaders);
     $nHeaders = count($aHeaders);
 
 
@@ -664,7 +621,7 @@ foreach ($aFiles as $sID) {
         }
     }
 
-    $zAdapter->setScriptVars(compact('aGenes', 'aTranscripts'));
+    $_ADAPTER->setScriptVars(compact('aGenes', 'aTranscripts'));
     while ($sLine = fgets($fInput)) {
         $nLine ++;
         $bDropTranscriptData = false;
@@ -692,7 +649,7 @@ foreach ($aFiles as $sID) {
         }
 
         // Reformat variant data if extra modification required by different instance of LOVD.
-        $aLine = $zAdapter->prepareVariantData($aLine);
+        $aLine = $_ADAPTER->prepareVariantData($aLine);
 
         // Map VEP columns to LOVD columns.
         foreach ($aColumnMappings as $sVEPColumn => $sLOVDColumn) {
@@ -704,7 +661,7 @@ foreach ($aFiles as $sID) {
             }
             
             if (empty($aLine[$sVEPColumn]) || $aLine[$sVEPColumn] == 'unknown' || $aLine[$sVEPColumn] == '.') {
-                $aVariant = $zAdapter->formatEmptyColumn($aLine, $sVEPColumn, $sLOVDColumn, $aVariant);
+                $aVariant = $_ADAPTER->formatEmptyColumn($aLine, $sVEPColumn, $sLOVDColumn, $aVariant);
             } else {
                 $aVariant[$sLOVDColumn] = $aLine[$sVEPColumn];
             }
@@ -776,7 +733,7 @@ foreach ($aFiles as $sID) {
         // Now, VOT fields.
         // Find gene && transcript in database. When not found, try to create it. Otherwise, throw a fatal error.
         // Trusting the gene symbol information from VEP is by far the easiest method, and the fastest. This can fail, therefore we also created an alias list.
-        if (!empty($_INI['database']['enforce_hgnc_gene']) && isset($aGeneAliases[$aVariant['symbol']])) {
+        if (!empty($_INSTANCE_CONFIG['conversion']['enforce_hgnc_gene']) && isset($aGeneAliases[$aVariant['symbol']])) {
             $aVariant['symbol'] = $aGeneAliases[$aVariant['symbol']];
         }
         // Get gene information. LOC* genes always fail here, so those we don't try.
@@ -797,7 +754,7 @@ foreach ($aFiles as $sID) {
 
                 // Getting all gene information from the HGNC takes a few seconds.
                 $aGeneInfo = false;
-                if (!empty($_INI['database']['enforce_hgnc_gene'])) {
+                if (!empty($_INSTANCE_CONFIG['conversion']['enforce_hgnc_gene'])) {
 print('Loading gene information for ' . $aVariant['symbol'] . '...' . "\n");
                     $aGeneInfo = lovd_getGeneInfoFromHGNC($aVariant['symbol'], true);
                     $nHGNC++;
@@ -829,8 +786,10 @@ print('Can\'t load UD for gene ' . $aGeneInfo['symbol'] . '.' . "\n");
 
                     // Not getting an UD no longer kills the script, so...
                     if ($sRefseqUD) {
-                        if (!$_DB->query('INSERT INTO ' . TABLE_GENES . ' (id, name, chromosome, chrom_band, refseq_genomic, refseq_UD, id_hgnc, id_entrez, id_omim, created_by, created_date, updated_by, updated_date) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), ?, NOW())',
-                            array($aGeneInfo['symbol'], $aGeneInfo['name'], $aGeneInfo['chromosome'], $aGeneInfo['chrom_band'], $_SETT['human_builds'][$_CONF['refseq_build']]['ncbi_sequences'][$aGeneInfo['chromosome']], $sRefseqUD, $aGeneInfo['hgnc_id'], $aGeneInfo['entrez_id'], $aGeneInfo['omim_id'], 0, 0))) {
+                        if (!$_DB->query('INSERT INTO ' . TABLE_GENES . '
+                             (id, name, chromosome, chrom_band, refseq_genomic, refseq_UD, reference, url_homepage, url_external, allow_download, allow_index_wiki, id_hgnc, id_entrez, id_omim, show_hgmd, show_genecards, show_genetests, note_index, note_listing, refseq, refseq_url, disclaimer, disclaimer_text, header, header_align, footer, footer_align, created_by, created_date, updated_by, updated_date)
+                            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), ?, NOW())',
+                            array($aGeneInfo['symbol'], $aGeneInfo['name'], $aGeneInfo['chromosome'], $aGeneInfo['chrom_band'], $_SETT['human_builds'][$_CONF['refseq_build']]['ncbi_sequences'][$aGeneInfo['chromosome']], $sRefseqUD, '', '', '', 0, 0, $aGeneInfo['hgnc_id'], $aGeneInfo['entrez_id'], (!$aGeneInfo['omim_id']? NULL : $aGeneInfo['omim_id']), 0, 0, 0, '', '', '', '', 0, '', '', 0, '', 0, 0, 0))) {
                             die('Can\'t create gene ' . $aVariant['symbol'] . '.' . "\n");
                         }
 
@@ -873,7 +832,7 @@ print('Can\'t load UD for gene ' . $aGeneInfo['symbol'] . '.' . "\n");
                 } else {
                     $aTranscriptInfo = array();
                     $sJSONResponse = false;
-                    if (!empty($_INI['database']['enforce_hgnc_gene'])) {
+                    if (!empty($_INSTANCE_CONFIG['conversion']['enforce_hgnc_gene'])) {
 print('Loading transcript information for ' . $aGenes[$aVariant['symbol']]['id'] . '...' . "\n");
                         $nSleepTime = 2;
                         for ($i = 0; $i <= $nMutalyzerRetries; $i++) { // Retry Mutalyzer call several times until successful.
@@ -922,10 +881,15 @@ print('No available transcripts for gene ' . $aGenes[$aVariant['symbol']]['id'] 
                         $aTranscript['position_c_cds_end'] = $aTranscript['cCDSStop']; // To calculate VOT variant position, if in 3'UTR.
 
                         // Add transcript to gene.
-                        if (!$_DB->query('INSERT INTO ' . TABLE_TRANSCRIPTS . ' (id, geneid, name, id_mutalyzer, id_ncbi, id_ensembl, id_protein_ncbi, id_protein_ensembl, id_protein_uniprot, position_c_mrna_start, position_c_mrna_end, position_c_cds_end, position_g_mrna_start, position_g_mrna_end, created_date, created_by) VALUES (NULL, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), ?)',
-                            array($aGenes[$aVariant['symbol']]['id'], $sTranscriptName, $aTranscript['id_mutalyzer'], $aTranscript['id_ncbi'], '', $sTranscriptProtein, '', '', $aTranscript['cTransStart'], $aTranscript['sortableTransEnd'], $aTranscript['cCDSStop'], $aTranscript['chromTransStart'], $aTranscript['chromTransEnd'], 0))) {
+                        if (!$_DB->query('INSERT INTO ' . TABLE_TRANSCRIPTS . '
+                             (id, geneid, name, id_mutalyzer, id_ncbi, id_ensembl, id_protein_ncbi, id_protein_ensembl, id_protein_uniprot, remarks, position_c_mrna_start, position_c_mrna_end, position_c_cds_end, position_g_mrna_start, position_g_mrna_end, created_date, created_by)
+                            VALUES (NULL, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), ?)',
+                            array($aGenes[$aVariant['symbol']]['id'], $sTranscriptName, $aTranscript['id_mutalyzer'], $aTranscript['id_ncbi'], '', $sTranscriptProtein, '', '', '', $aTranscript['cTransStart'], $aTranscript['sortableTransEnd'], $aTranscript['cCDSStop'], $aTranscript['chromTransStart'], $aTranscript['chromTransEnd'], 0))) {
                             die('Can\'t create transcript ' . $aTranscript['id_ncbi'] . ' for gene ' . $aVariant['symbol'] . '.' . "\n");
                         }
+
+                        // Save the ID before the writeLog deletes it...
+                        $nTranscriptID = str_pad($_DB->lastInsertId(), $_SETT['objectid_length']['transcripts'], '0', STR_PAD_LEFT);
 
                         // Write to log...
                         lovd_writeLog('Event', LOG_EVENT, 'Transcript entry successfully added to gene ' . $aGenes[$aVariant['symbol']]['id'] . ' - ' . $sTranscriptName);
@@ -933,7 +897,7 @@ print('No available transcripts for gene ' . $aGenes[$aVariant['symbol']]['id'] 
                         flush();
 
                         // Store in memory.
-                        $aTranscripts[$aVariant['transcriptid']] = array_merge($aTranscript, array('id' => $_DB->lastInsertId())); // Contains a lot more info than needed, but whatever.
+                        $aTranscripts[$aVariant['transcriptid']] = array_merge($aTranscript, array('id' => $nTranscriptID)); // Contains a lot more info than needed, but whatever.
                     }
                 }
 
@@ -945,7 +909,7 @@ print('No available transcripts for gene ' . $aGenes[$aVariant['symbol']]['id'] 
         }
 
         // Now check, if we managed to get the transcript ID. If not, then we'll have to continue without it.
-        if ($zAdapter->ignoreTranscript($aVariant['transcriptid']) || !isset($aTranscripts[$aVariant['transcriptid']]) || !$aTranscripts[$aVariant['transcriptid']]) {
+        if ($_ADAPTER->ignoreTranscript($aVariant['transcriptid']) || !isset($aTranscripts[$aVariant['transcriptid']]) || !$aTranscripts[$aVariant['transcriptid']]) {
             // When the transcript still doesn't exist, or it evaluates to false (we don't have it, we can't get it), then skip it.
             $aVariant['transcriptid'] = '';
         } else {
@@ -953,7 +917,7 @@ print('No available transcripts for gene ' . $aGenes[$aVariant['symbol']]['id'] 
             // First, take off the transcript name, so we can easily check for a del/ins checking for an underscore.
             $aVariant['VariantOnTranscript/DNA'] = substr($aVariant['VariantOnTranscript/DNA'], strpos($aVariant['VariantOnTranscript/DNA'], ':')+1); // NM_000000.1:c.1del -> c.1del
             $bCallMutalyzer = !$aVariant['VariantOnTranscript/DNA'];
-            if (empty($_INI['import']['skip_check_indel_description'])) {
+            if ($_INSTANCE_CONFIG['conversion']['check_indel_description']) {
                 $bCallMutalyzer = $bCallMutalyzer || (strpos($aVariant['VariantOnTranscript/DNA'], '_') !== false);
             }
 
@@ -1075,7 +1039,7 @@ print('No available transcripts for gene ' . $aGenes[$aVariant['symbol']]['id'] 
                     // Normally, we would implement a cache here, but we rarely run Mutalyzer, and if we do, we will not likely run it on a variant on the same transcript.
                     // So, first just check if we still don't have a Mutalyzer ID.
                     $sJSONResponse = false;
-                    if (!empty($_INI['database']['enforce_hgnc_gene'])) {
+                    if (!empty($_INSTANCE_CONFIG['conversion']['enforce_hgnc_gene'])) {
                         print('Reloading Mutalyzer ID for ' . $aTranscripts[$aVariant['transcriptid']]['id_ncbi'] . ' in ' . $aVariant[$aVariant['symbol']]['refseq_UD'] . ' (' . $aGenes[$aVariant['symbol']]['id'] . ')' . "\n");
                         $nSleepTime = 2;
                         for ($i = 0; $i <= $nMutalyzerRetries; $i++) { // Retry Mutalyzer call several times until successful.
@@ -1117,7 +1081,7 @@ print('Running mutalyzer to predict protein change for ' . $aGenes[$aVariant['sy
                 for($i=0; $i <= $nMutalyzerRetries; $i++){ // Retry Mutalyzer call several times until successful.
                     $aMutalyzerCalls['runMutalyzer'] ++;
                     $tMutalyzerStart = microtime(true);
-                    $sJSONResponse = mutalyzer_runMutalyzer(rawurlencode($aGenes[$aVariant['symbol']]['refseq_UD'] . '(' . $aGenes[$aVariant['symbol']]['id'] . '_v' . $aTranscripts[$aVariant['transcriptid']]['id_mutalyzer'] . '):' . $aVariant['VariantOnTranscript/DNA']));
+                    $sJSONResponse = mutalyzer_runMutalyzer(rawurlencode($aGenes[$aLine['SYMBOL']]['refseq_UD'] . '(' . $aTranscripts[$aVariant['transcriptid']]['id_ncbi'] . '):' . $aVariant['VariantOnTranscript/DNA']));
                     $tMutalyzerCalls += (microtime(true) - $tMutalyzerStart);
                     $nMutalyzer++;
                     if ($sJSONResponse === false) { // The Mutalyzer call has failed.
@@ -1253,7 +1217,7 @@ print('Mutalyzer returned EREF error, hg19/hg38 error?' . "\n");
             $aData[$sKey] = array($aVOG);
         }
 
-        $zAdapter->postValueAssignmentUpdate($sKey, $aVariant, $aData);
+        $_ADAPTER->postValueAssignmentUpdate($sKey, $aVariant, $aData);
 
         // Now, store VOT data. Because I had received test files with repeated lines, and allowing repeated lines will break import, also here we will check for the key.
         // Also check for a set transcriptid, because it can be empty (transcript could not be created).
@@ -1309,8 +1273,7 @@ print('Mutalyzer returned EREF error, hg19/hg38 error?' . "\n");
             $aColumnsForVOG[] = $sCol;
         }
     }
-
-    // Assuming here that *all* variants actually have at least one VOT... Take VOT columns.
+    
     foreach ($aVOTKeys as $sCol) {
         if (substr($sCol, 0, 20) == 'VariantOnTranscript/') {
             $aColumnsForVOT[] = $sCol;

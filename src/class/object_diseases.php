@@ -4,12 +4,15 @@
  * LEIDEN OPEN VARIATION DATABASE (LOVD)
  *
  * Created     : 2010-07-28
- * Modified    : 2014-10-18
- * For LOVD    : 3.0-13
+ * Modified    : 2017-03-13
+ * For LOVD    : 3.0-19
  *
- * Copyright   : 2004-2014 Leiden University Medical Center; http://www.LUMC.nl/
- * Programmers : Ing. Ivo F.A.C. Fokkema <I.F.A.C.Fokkema@LUMC.nl>
- *               Ing. Ivar C. Lugtenburg <I.C.Lugtenburg@LUMC.nl>
+ * Copyright   : 2004-2017 Leiden University Medical Center; http://www.LUMC.nl/
+ * Programmers : Ivo F.A.C. Fokkema <I.F.A.C.Fokkema@LUMC.nl>
+ *               Ivar C. Lugtenburg <I.C.Lugtenburg@LUMC.nl>
+ *               Daan Asscheman <D.Asscheman@LUMC.nl>
+ *               M. Kroon <m.kroon@lumc.nl>
+ *               Juny Kesumadewi <juny.kesumadewi@unimelb.edu.au>
  *
  *
  * This file is part of LOVD.
@@ -36,6 +39,90 @@ if (!defined('ROOT_PATH')) {
 // Require parent class definition.
 require_once ROOT_PATH . 'class/objects.php';
 
+// List of tissues selectable for being affected by a disease.
+$_SETT['disease_tissues'] = array(
+    'optgroup_brain' => 'Brain',
+    'brain' => 'brain',
+    'lateral ventricle' => 'lateral ventricle',
+    'cerebral cortex' => 'cerebral cortex',
+    'cerebellum' => 'cerebellum',
+    'hippocampus' => 'hippocampus',
+
+    'optgroup_face' => 'Face',
+    'face' => 'face',
+    'eyes' => 'eyes',
+    'ears' => 'ears',
+    'nose' => 'nose',
+    'mouth' => 'mouth',
+
+    'optgroup_head_internal' => 'Head (internal)',
+    'nasopharynx' => 'nasopharynx',
+    'oral mucosa' => 'oral mucosa',
+    'salivary gland' => 'salivary gland',
+    'tonsil' => 'tonsil',
+    'thyroid gland' => 'thyroid gland',
+    'parathyroid gland' => 'parathyroid gland',
+
+    'optgroup_limbs' => 'Limbs',
+    'shoulders' => 'shoulders',
+    'arms' => 'arms',
+    'elbows' => 'elbows',
+    'wrist' => 'wrist',
+    'hands' => 'hands',
+    'fingers' => 'fingers',
+    'legs' => 'legs',
+    'knees' => 'knees',
+    'ankles' => 'ankles',
+    'feet' => 'feet',
+    'toes' => 'toes',
+
+    'optgroup_trunk_internal' => 'Trunk (internal)',
+    'spine' => 'spine',
+    'hips' => 'hips',
+    'bronchus' => 'bronchus',
+    'lung' => 'lung',
+    'esophagus' => 'esophagus',
+    'heart muscle' => 'heart muscle',
+    'lymph node' => 'lymph node',
+    'stomach' => 'stomach',
+    'liver' => 'liver',
+    'adrenal gland' => 'adrenal gland',
+    'spleen' => 'spleen',
+    'kidney' => 'kidney',
+    'gallbladder' => 'gallbladder',
+    'pancreas' => 'pancreas',
+    'duodenum' => 'duodenum',
+    'small intestine' => 'small intestine',
+    'colon' => 'colon',
+    'appendix' => 'appendix',
+    'urinary bladder' => 'urinary bladder',
+    'rectum' => 'rectum',
+
+    'optgroup_feminine' => 'Feminine tissues',
+    'breast' => 'breast',
+    'placenta' => 'placenta',
+    'fallopian tube' => 'fallopian tube',
+    'ovary' => 'ovary',
+    'uterus' => 'uterus',
+    'cervix, uterine' => 'cervix, uterine',
+    'vagina' => 'vagina',
+
+    'optgroup_masculine' => 'Masculine tissues',
+    'seminal vesicle' => 'seminal vesicle',
+    'prostate' => 'prostate',
+    'epididymis' => 'epididymis',
+    'testis' => 'testis',
+
+    'optgroup_other' => 'Other',
+    'skeletal muscle' => 'skeletal muscle',
+    'smooth muscle' => 'smooth muscle',
+    'hair' => 'hair',
+    'skin' => 'skin',
+    'bone marrow' => 'bone marrow',
+    'bones (skeleton)' => 'bones (skeleton)',
+    'soft tissue' => 'soft tissue',
+);
+
 
 
 
@@ -48,31 +135,36 @@ class LOVD_Disease extends LOVD_Object {
 
 
 
-
     function __construct ()
     {
         // Default constructor.
         global $_AUTH, $_SETT;
 
+        // SQL code for preparing load entry query.
+        // Increase DB limits to allow concatenation of large number of gene IDs.
+        $this->sSQLPreLoadEntry = 'SET group_concat_max_len = 200000';
+
         // SQL code for loading an entry for an edit form.
         $this->sSQLLoadEntry = 'SELECT d.*, d.inheritance as _inheritance, ' .
+                               'd.tissues AS _tissues, ' .
                                'GROUP_CONCAT(g2d.geneid ORDER BY g2d.geneid SEPARATOR ";") AS _genes ' .
                                'FROM ' . TABLE_DISEASES . ' AS d ' .
                                'LEFT OUTER JOIN ' . TABLE_GEN2DIS . ' AS g2d ON (d.id = g2d.diseaseid) ' .
                                'WHERE d.id = ? ' .
                                'GROUP BY d.id';
 
+        // SQL code for preparing view entry query.
+        // Increase DB limits to allow concatenation of large number of gene IDs.
+        $this->sSQLPreViewEntry = 'SET group_concat_max_len = 200000';
+
         // SQL code for viewing an entry.
         $this->aSQLViewEntry['SELECT']   = 'd.*, ' .
-                                           'COUNT(DISTINCT i.id) AS individuals, ' .
-                                           'COUNT(DISTINCT p.id) AS phenotypes, ' .
+                                           '(SELECT COUNT(*) FROM ' . TABLE_INDIVIDUALS . ' AS i INNER JOIN ' . TABLE_IND2DIS . ' AS i2d ON (i.id = i2d.individualid) WHERE i2d.diseaseid = d.id' . ($_AUTH['level'] >= LEVEL_COLLABORATOR? '' : ' AND i.statusid >= ' . STATUS_MARKED) . ') AS individuals, ' .
+                                           '(SELECT COUNT(*) FROM ' . TABLE_PHENOTYPES . ' AS p WHERE p.diseaseid = d.id' . ($_AUTH['level'] >= LEVEL_COLLABORATOR? '' : ' AND p.statusid >= ' . STATUS_MARKED) . ') AS phenotypes, ' .
                                            'GROUP_CONCAT(DISTINCT g2d.geneid ORDER BY g2d.geneid SEPARATOR ";") AS _genes, ' .
                                            'uc.name AS created_by_, ' .
                                            'ue.name AS edited_by_';
         $this->aSQLViewEntry['FROM']     = TABLE_DISEASES . ' AS d ' .
-                                           'LEFT OUTER JOIN ' . TABLE_IND2DIS . ' AS i2d ON (d.id = i2d.diseaseid) ' .
-                                           'LEFT OUTER JOIN ' . TABLE_INDIVIDUALS . ' AS i ON (i2d.individualid = i.id' . ($_AUTH['level'] >= LEVEL_COLLABORATOR? '' : ' AND i.statusid >= ' . STATUS_MARKED) . ') ' .
-                                           'LEFT OUTER JOIN ' . TABLE_PHENOTYPES . ' AS p ON (d.id = p.diseaseid' . ($_AUTH['level'] >= LEVEL_COLLABORATOR? '' : ' AND p.statusid >= ' . STATUS_MARKED) . ') ' .
                                            'LEFT OUTER JOIN ' . TABLE_GEN2DIS . ' AS g2d ON (d.id = g2d.diseaseid) ' .
                                            'LEFT OUTER JOIN ' . TABLE_USERS . ' AS uc ON (d.created_by = uc.id) ' .
                                            'LEFT OUTER JOIN ' . TABLE_USERS . ' AS ue ON (d.edited_by = ue.id)';
@@ -89,12 +181,11 @@ class LOVD_Disease extends LOVD_Object {
         $this->aSQLViewList['WHERE']    = 'd.id > 0';
         $this->aSQLViewList['GROUP_BY'] = 'd.id';
 
-        $sInheritance_legend = '<TABLE>';
+        $sInheritanceLegend = '<TABLE>';
         foreach ($_SETT['diseases_inheritance'] as $sKey => $sDescription) {
-            $sInheritance_legend .= '<TR><TD>' . $sKey . '</TD><TD>: ' . $sDescription . '</TD></TR>';
+            $sInheritanceLegend .= '<TR><TD>' . $sKey . '</TD><TD>: ' . $sDescription . '</TD></TR>';
         }
-
-        $sInheritance_legend .= '</TABLE>';
+        $sInheritanceLegend .= '</TABLE>';
 
         // List of columns and (default?) order for viewing an entry.
         $this->aColumnsViewEntry =
@@ -106,6 +197,9 @@ class LOVD_Disease extends LOVD_Object {
                         'individuals' => 'Individuals reported having this disease',
                         'phenotypes_' => 'Phenotype entries for this disease',
                         'genes_' => 'Associated with',
+                        'tissues' => 'Associated tissues',
+                        'features' => 'Disease features',
+                        'remarks' => 'Remarks',
                         'created_by_' => array('Created by', LEVEL_COLLABORATOR),
                         'created_date_' => array('Date created', LEVEL_COLLABORATOR),
                         'edited_by_' => array('Last edited by', LEVEL_COLLABORATOR),
@@ -116,7 +210,7 @@ class LOVD_Disease extends LOVD_Object {
         $this->aColumnsViewList =
                  array(
                         'diseaseid' => array(
-                                    'view' => array('ID', 45),
+                                    'view' => array('ID', 45, 'style="text-align : right;"'),
                                     'db'   => array('d.id', 'ASC', true)),
                         'symbol' => array(
                                     'view' => array('Abbreviation', 110),
@@ -125,13 +219,13 @@ class LOVD_Disease extends LOVD_Object {
                                     'view' => array('Name', 300),
                                     'db'   => array('d.name', 'ASC', true)),
                         'id_omim' => array(
-                                    'view' => array('OMIM ID', 75),
+                                    'view' => array('OMIM ID', 75, 'style="text-align : right;"'),
                                     'db'   => array('d.id_omim', 'ASC', true)),
                         'inheritance' => array(
                                     'view' => array('Inheritance', 75),
                                     'db'   => array('inheritance', 'ASC', true),
-                                    'legend' => array(str_replace(array("\r", "\n"), '', $sInheritance_legend),
-                                        str_replace(array("\r", "\n"), '', $sInheritance_legend)
+                                    'legend' => array('Abbreviations:' . strip_tags(str_replace(array('<TR>', '</TD> <TD>'), array("\n", '      '), preg_replace('/\s+/', ' ', strip_tags($sInheritanceLegend, '<tr><td>')))),
+                                        str_replace(array("\r", "\n"), '', $sInheritanceLegend),
                                     )),
                         'individuals' => array(
                                     'view' => array('Individuals', 80, 'style="text-align : right;"'),
@@ -142,6 +236,12 @@ class LOVD_Disease extends LOVD_Object {
                         'genes_' => array(
                                     'view' => array('Associated with genes', 200),
                                     'db'   => array('_genes', false, 'TEXT')),
+                        'tissues' => array(
+                                    'view' => array('Associated tissues', 160),
+                                    'db'   => array('d.tissues', false, true)),
+                        'features' => array(
+                                    'view' => array('Disease features', 200),
+                                    'db'   => array('d.features', false, true)),
                       );
         $this->sSortDefault = 'symbol';
 
@@ -185,7 +285,7 @@ class LOVD_Disease extends LOVD_Object {
         // We don't like two diseases with the exact same name, either.
         if (!empty($aData['name']) && ($bCreate || $aData['name'] != $zData['name'])) {
             $bExists = $_DB->query('SELECT id FROM ' . TABLE_DISEASES . ' WHERE name = ?', array($aData['name']))->fetchColumn();
-            if ($bExists) {
+            if ($bExists && ($bCreate || $zData['id'] != $bExists)) {
                 // IMPORTANT: when you change this message, also change the array_search argument in import.php in the Disease section.
                 lovd_errorAdd('name', 'Another disease already exists with the same name!');
             }
@@ -226,23 +326,21 @@ class LOVD_Disease extends LOVD_Object {
 
     function getForm ()
     {
-        global $_SETT;
-
         // Build the form.
+        global $_AUTH, $_DB, $_SETT;
 
         // If we've built the form before, simply return it. Especially imports will repeatedly call checkFields(), which calls getForm().
         if (!empty($this->aFormData)) {
             return parent::getForm();
         }
 
-        global $_DB, $_AUTH;
-
         // Get list of genes, to connect disease to gene.
         if ($_AUTH['level'] == LEVEL_CURATOR) {
             $aGenes = $_AUTH['curates'];
             if (ACTION == 'edit') {
                 global $zData;
-                $aGenes = array_unique(array_merge($aGenes, $zData['genes']));
+                // 2016-09-08; 3.0-17; Don't forget to run array_values() since a missing key results in a query error... :|
+                $aGenes = array_values(array_unique(array_merge($aGenes, $zData['genes'])));
             }
             $aGenesForm = $_DB->query('SELECT id, name FROM ' . TABLE_GENES . ' WHERE id IN (?' . str_repeat(', ?', count($aGenes) - 1) . ') ORDER BY id', $aGenes)->fetchAllCombine();
         } else {
@@ -260,13 +358,17 @@ class LOVD_Disease extends LOVD_Object {
         // Array which will make up the form table.
         $this->aFormData =
                  array(
-                        array('POST', '', '', '', '50%', '14', '50%'),
+                        array('POST', '', '', '', '35%', '14', '65%'),
                         array('', '', 'print', '<B>Disease information</B>'),
                         'hr',
                         array('Disease abbreviation', '', 'text', 'symbol', 15),
                         array('Disease name', '', 'text', 'name', 40),
                         array('OMIM ID (optional)', '', 'text', 'id_omim', 10),
                         array('Inheritance', '', 'select', 'inheritance', count($_SETT['diseases_inheritance']), $_SETT['diseases_inheritance'], false, true, false),
+                        array('Associated tissues', '', 'select', 'tissues', 10, $_SETT['disease_tissues'],
+                              false, true, false),
+                        array('Disease features', '', 'textarea', 'features', 50, 5),
+                        array('Remarks', '', 'textarea', 'remarks', 50, 5),
                         'hr',
                         'skip',
                         array('', '', 'print', '<B>Relation to genes (optional)</B>'),

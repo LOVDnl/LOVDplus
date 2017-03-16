@@ -4,12 +4,13 @@
  * LEIDEN OPEN VARIATION DATABASE (LOVD)
  *
  * Created     : 2009-10-19
- * Modified    : 2016-04-06
- * For LOVD    : 3.0-15
+ * Modified    : 2016-10-14
+ * For LOVD    : 3.0-18
  *
  * Copyright   : 2004-2016 Leiden University Medical Center; http://www.LUMC.nl/
  * Programmers : Ing. Ivo F.A.C. Fokkema <I.F.A.C.Fokkema@LUMC.nl>
  *               Ing. Ivar C. Lugtenburg <I.C.Lugtenburg@LUMC.nl>
+ *               M. Kroon <m.kroon@lumc.nl>
  *
  *
  * This file is part of LOVD.
@@ -28,6 +29,27 @@
  * along with LOVD.  If not, see <http://www.gnu.org/licenses/>.
  *
  *************/
+
+function lovd_arrayInsertAfter ($key, array &$array, $new_key, $new_value)
+{
+    // Insert $new_key, $new_value pair after entry $key in array $array.
+    // Courtesy of http://eosrei.net/
+    if (array_key_exists($key, $array)) {
+        $new = array();
+        foreach ($array as $k => $value) {
+            $new[$k] = $value;
+            if ($k === $key) {
+                $new[$new_key] = $new_value;
+            }
+        }
+        return $new;
+    }
+    return FALSE;
+}
+
+
+
+
 
 function lovd_calculateVersion ($sVersion)
 {
@@ -120,11 +142,72 @@ function lovd_cleanDirName ($s)
 
 
 
+function lovd_convertIniValueToBytes ($sValue)
+{
+    // This function takes output from PHP's ini_get() function like "128M" or
+    // "256k" and converts it to an integer, measured in bytes.
+    // Implementation taken from the example on php.net.
+    // FIXME; Implement proper checks here? Regexp?
+
+    $nValue = (int) $sValue;
+    $sLast = strtolower(substr($sValue, -1));
+    switch ($sLast) {
+        case 'g':
+            $nValue *= 1024;
+        case 'm':
+            $nValue *= 1024;
+        case 'k':
+            $nValue *= 1024;
+    }
+
+    return $nValue;
+}
+
+
+
+
+
+function lovd_convertSecondsToTime ($sValue, $nDecimals = 0)
+{
+    // This function takes a number of seconds and converts it into whole
+    // minutes, hours, days, months or years.
+    // FIXME; Implement proper checks here? Regexp?
+
+    $nValue = (int) $sValue;
+    if (ctype_digit((string) $sValue)) {
+        $sValue .= 's';
+    }
+    $sLast = strtolower(substr($sValue, -1));
+    $nDecimals = (int) $nDecimals;
+
+    $aConversion =
+        array(
+            's' => array(60, 'm'),
+            'm' => array(60, 'h'),
+            'h' => array(24, 'd'),
+            'd' => array(265, 'y'),
+        );
+
+    foreach ($aConversion as $sUnit => $aConvert) {
+        list($nFactor, $sNextUnit) = $aConvert;
+        if ($sLast == $sUnit && $nValue > $nFactor) {
+            $nValue /= $nFactor;
+            $sLast = $sNextUnit;
+        }
+    }
+
+    return round($nValue, $nDecimals) . $sLast;
+}
+
+
+
+
+
 function lovd_createPasswordHash ($sPassword, $sSalt = '')
 {
     // Creates a password hash like how it's stored in the database. If no salt
     // is given, it will generate a new salt. If a salt has been given, it's not
-    // checked if it is an appropiate salt.
+    // checked if it is an appropriate salt.
 
     if (!$sPassword) {
         return false;
@@ -145,7 +228,7 @@ function lovd_displayError ($sError, $sMessage, $sLogFile = 'Error')
     // Function kindly provided by Ileos.nl in the interest of Open Source.
     // Writes an error message to the errorlog and displays the same message on
     // screen for the user. This function halts PHP processing in all cases.
-    global $_AUTH, $_DB, $_SETT, $_CONF, $_STAT, $_T;
+    global $_DB, $_SETT, $_T;
 
     $_T->printHeader(!($sError == 'Init'));
     if (defined('PAGE_TITLE')) {
@@ -153,7 +236,13 @@ function lovd_displayError ($sError, $sMessage, $sLogFile = 'Error')
     }
 
     // Write to log file... if we're not here because we don't have MySQL.
-    if (class_exists('PDO') && in_array('mysql', PDO::getAvailableDrivers())) {
+    if (!empty($_DB) && class_exists('PDO') && in_array('mysql', PDO::getAvailableDrivers())) {
+        // lovd_displayError() always halts LOVD. If we're in a transaction, any log we'll write
+        // to the DB will be gone since PHP will rollBack() any transaction that is still open.
+        // So we'd better rollBack() ourselves first!
+        try {
+            @$_DB->rollBack(); // In case we were in a transaction. // FIXME; we can know from PHP >= 5.3.3.
+        } catch (PDOException $eNoTransaction) {}
         $bLog = lovd_writeLog($sLogFile, $sError, $sMessage);
     } else {
         $bLog = false;
@@ -204,6 +293,38 @@ function lovd_generateRandomID ($l = 10)
     $nStart = mt_rand(0, 32-$l);
     return substr(md5(microtime()), $nStart, $l);
 }
+
+
+
+
+
+function lovd_getColleagues ($nType = COLLEAGUE_ALL)
+{
+    // Return IDs of the users that share their data with the user currently
+    //  logged in.
+    global $_AUTH;
+
+    $aOut = array();
+
+    if (!isset($_AUTH) || !isset($_AUTH['colleagues_from'])) {
+        return $aOut;
+    }
+
+    // If we're looking for the entire list, don't bother looping it.
+    if ($nType == COLLEAGUE_ALL) {
+        return array_keys($_AUTH['colleagues_from']);
+    }
+
+    foreach ($_AUTH['colleagues_from'] as $nID => $bAllowEdit) {
+        if (($nType & COLLEAGUE_CAN_EDIT) && $bAllowEdit) {
+            $aOut[] = $nID;
+        } elseif ($nType & COLLEAGUE_CANNOT_EDIT) {
+            $aOut[] = $nID;
+        }
+    }
+    return $aOut;
+}
+
 
 
 
@@ -445,6 +566,53 @@ function lovd_getProjectFile ()
 
 
 
+function lovd_initAdapter()
+{
+    // Select adapter class to instantiate based on instance name.
+    // globaling $_INSTANCE_CONFIG is necessary to let it exist outside of this
+    //  function.
+    global $_INI, $_INSTANCE_CONFIG;
+
+    if (!LOVD_plus) {
+        return false;
+    }
+
+    $sAdaptersDir = ROOT_PATH . 'scripts/adapters/';
+
+    // FIXME+: This adapter.lib file provides both settings and a class that is only used for data conversion.
+    //  This should be split; the data conversion class should only be included when needed, as a class file.
+    // We'll always include the default adapter. The default adapter contains
+    // settings which can be overridden, and the converter class that can be
+    // extended by a instance-specific class.
+    require_once $sAdaptersDir . 'adapter.lib.DEFAULT.php';
+
+    // Include the instance's adapter, if present.
+    $sInstanceName = strtoupper($_INI['instance']['name']);
+    if (file_exists($sAdaptersDir . 'adapter.lib.' . $sInstanceName . '.php')) {
+        require_once $sAdaptersDir . 'adapter.lib.' . $sInstanceName . '.php';
+    }
+
+    // Try and instantiate the instance's class, if present.
+    // Camelcase the adapter name.
+    $sClassPrefix = ucwords(strtolower(str_replace('_', ' ', $_INI['instance']['name'])));
+    $sClassPrefix = str_replace(' ', '', $sClassPrefix);
+    $sClassName = 'LOVD_' . $sClassPrefix . 'DataConverter';
+
+    // We don't require the instance's adapter to define any class, though.
+    if (class_exists($sClassName)) {
+        $zAdapter = new $sClassName($sAdaptersDir);
+    } else {
+        // If it's not available, we just use the default adapter.
+        $zAdapter = new LOVD_DefaultDataConverter($sAdaptersDir);
+    }
+
+    return $zAdapter;
+}
+
+
+
+
+
 function lovd_includeJS ($sFile, $nPrefix = 3)
 {
     // Searches for and includes a .js include file.
@@ -547,7 +715,7 @@ function lovd_isAuthorized ($sType, $Data, $bSetUserLevel = true)
         }
     }
 
-    if ($sType == 'analysisrun') {
+    if (LOVD_plus && $sType == 'analysisrun') {
         // Authorization based on person who started the analysis run (note, not necessarily the whole analysis).
         if (is_array($Data)) {
             // Not supported on this data type.
@@ -600,26 +768,15 @@ function lovd_isAuthorized ($sType, $Data, $bSetUserLevel = true)
             return lovd_isAuthorized('gene', $aGenes, $bSetUserLevel);
         case 'variant':
             $aGenes = $_DB->query('SELECT DISTINCT t.geneid FROM ' . TABLE_VARIANTS_ON_TRANSCRIPTS . ' AS vot LEFT OUTER JOIN ' . TABLE_TRANSCRIPTS . ' AS t ON (vot.transcriptid = t.id) WHERE vot.id IN (?' . str_repeat(', ?', count($Data)-1) . ')', $Data)->fetchAllColumn();
-            if (LOVD_plus) {
-                // LOVD+ allows LEVEL_OWNER authorization based on ownership of the screening analysis.
-                // We dump in multiple variants, but we should really only get one Screening back.
-                $aScreeningIDs = $_DB->query('SELECT DISTINCT screeningid FROM ' . TABLE_SCR2VAR . ' WHERE variantid IN (?' . str_repeat(', ?', count($Data) - 1) . ')', $Data)->fetchAllColumn();
-                $bOwner = lovd_isAuthorized('screening_analysis', $aScreeningIDs[0], false);
-            } else {
-                $bOwner = $_DB->query('SELECT COUNT(*) FROM ' . TABLE_VARIANTS . ' WHERE id IN (?' . str_repeat(', ?', count($Data) - 1) . ') AND (owned_by = ? OR created_by = ?)', array_merge($Data, array($_AUTH['id'], $_AUTH['id'])))->fetchColumn();
-            }
             break;
         case 'individual':
             $aGenes = $_DB->query('SELECT DISTINCT t.geneid FROM ' . TABLE_TRANSCRIPTS . ' AS t LEFT OUTER JOIN ' . TABLE_VARIANTS_ON_TRANSCRIPTS . ' AS vot ON (vot.transcriptid = t.id) LEFT OUTER JOIN ' . TABLE_SCR2VAR . ' AS s2v ON (vot.id = s2v.variantid) LEFT OUTER JOIN ' . TABLE_SCREENINGS . ' AS s ON (s2v.screeningid = s.id) WHERE s.individualid IN (?' . str_repeat(', ?', count($Data)-1) . ')', $Data)->fetchAllColumn();
-            $bOwner = $_DB->query('SELECT COUNT(*) FROM ' . TABLE_INDIVIDUALS . ' WHERE id IN (?' . str_repeat(', ?', count($Data)-1) . ') AND (owned_by = ? OR created_by = ?)', array_merge($Data, array($_AUTH['id'], $_AUTH['id'])))->fetchColumn();
             break;
         case 'phenotype':
             $aGenes = $_DB->query('SELECT DISTINCT t.geneid FROM ' . TABLE_TRANSCRIPTS . ' AS t LEFT OUTER JOIN ' . TABLE_VARIANTS_ON_TRANSCRIPTS . ' AS vot ON (vot.transcriptid = t.id) LEFT OUTER JOIN ' . TABLE_SCR2VAR . ' AS s2v ON (vot.id = s2v.variantid) LEFT OUTER JOIN ' . TABLE_SCREENINGS . ' AS s ON (s2v.screeningid = s.id) LEFT OUTER JOIN ' . TABLE_PHENOTYPES . ' AS p ON (s.individualid = p.individualid) WHERE p.id IN (?' . str_repeat(', ?', count($Data)-1) . ')', $Data)->fetchAllColumn();
-            $bOwner = $_DB->query('SELECT COUNT(*) FROM ' . TABLE_PHENOTYPES . ' WHERE id IN (?' . str_repeat(', ?', count($Data)-1) . ') AND (owned_by = ? OR created_by = ?)', array_merge($Data, array($_AUTH['id'], $_AUTH['id'])))->fetchColumn();
             break;
         case 'screening':
             $aGenes = $_DB->query('SELECT DISTINCT t.geneid FROM ' . TABLE_TRANSCRIPTS . ' AS t LEFT OUTER JOIN ' . TABLE_VARIANTS_ON_TRANSCRIPTS . ' AS vot ON (vot.transcriptid = t.id) LEFT OUTER JOIN ' . TABLE_SCR2VAR . ' AS s2v ON (vot.id = s2v.variantid) WHERE s2v.screeningid IN (?' . str_repeat(', ?', count($Data)-1) . ')', $Data)->fetchAllColumn();
-            $bOwner = $_DB->query('SELECT COUNT(*) FROM ' . TABLE_SCREENINGS . ' WHERE id IN (?' . str_repeat(', ?', count($Data)-1) . ') AND (owned_by = ? OR created_by = ?)', array_merge($Data, array($_AUTH['id'], $_AUTH['id'])))->fetchColumn();
             break;
         default:
             return false;
@@ -631,15 +788,23 @@ function lovd_isAuthorized ($sType, $Data, $bSetUserLevel = true)
         // Level has already been set by recursive call.
         return 1;
     }
-    // Check for ownership.
-    if ($bOwner && $_CONF['allow_submitter_mods']) {
+
+    if (LOVD_plus && $sType == 'variant') {
+        // LOVD+ allows LEVEL_OWNER authorization based on ownership of the screening analysis.
+        // We dump in multiple variants, but we should really only get one Screening back.
+        $aScreeningIDs = $_DB->query('SELECT DISTINCT screeningid FROM ' . TABLE_SCR2VAR . ' WHERE variantid IN (?' . str_repeat(', ?', count($Data) - 1) . ')', $Data)->fetchAllColumn();
+        $bOwner = lovd_isAuthorized('screening_analysis', $aScreeningIDs[0], false);
+    } else {
+        $bOwner = lovd_isOwner($sType, $Data);
+    }
+    if (($bOwner || lovd_isColleagueOfOwner($sType, $Data, true)) && $_CONF['allow_submitter_mods']) {
         if ($bSetUserLevel) {
             $_AUTH['level'] = LEVEL_OWNER;
         }
         return 1;
     }
     // Collaborator OR Owner, but not allowed to edit own entries.
-    if ($Auth === 0 || $bOwner) {
+    if ($Auth === 0 || $bOwner || lovd_isColleagueOfOwner($sType, $Data, false)) {
         if ($bSetUserLevel) {
             $_AUTH['level'] = LEVEL_COLLABORATOR;
         }
@@ -649,6 +814,94 @@ function lovd_isAuthorized ($sType, $Data, $bSetUserLevel = true)
         $_AUTH['level'] = LEVEL_SUBMITTER;
     }
     return false;
+}
+
+
+
+
+
+function lovd_isColleagueOfOwner ($sType, $Data, $bMustHaveEditPermission = true)
+{
+    // Checks if the current user (specified by global $_AUTH) is owner of the
+    // data objects.
+    // Params:
+    // $sType       Type of the data object to check (string)
+    // $Data        ID of object (string) or array of IDs of multiple objects
+    //              (array of strings). Returns true if user is a colleague of
+    //              some owner for ALL of the objects.
+    // $bMustHaveEditPermission
+    //              Flag, if true this function returns only true if the
+    //              current user is a colleague of the owner of $Data with
+    //              explicit edit permission as defined by field 'allow_edit'
+    //              in TABLE_COLLEAGUES.
+    // Return: True if all of the objects of type $sType with an ID in $Data
+    //         are owned or created by a colleague of the current user.
+
+    global $_DB;
+
+    if (!in_array($sType, array('individual', 'phenotype', 'screening', 'variant'))) {
+        // Unknown data type, return false by default.
+        return false;
+    }
+
+    if (!is_array($Data)) {
+        $Data = array($Data);
+    }
+
+    $colleagueTypeFlag = ($bMustHaveEditPermission? COLLEAGUE_CAN_EDIT : COLLEAGUE_ALL);
+    $aOwnerIDs = lovd_getColleagues($colleagueTypeFlag);
+    if (!$aOwnerIDs) {
+        // No colleagues that give this user the enough permissions.
+        return false;
+    }
+    $sColleaguePlaceholders = '(?' . str_repeat(', ?', count($aOwnerIDs) - 1) . ')';
+    $sDataPlaceholders = '(?' . str_repeat(', ?', count($Data) - 1) . ')';
+
+    $sQ = 'SELECT COUNT(*) FROM ' . constant('TABLE_' . strtoupper($sType) . 'S') . ' WHERE id IN ' .
+        $sDataPlaceholders . ' AND (owned_by IN ' . $sColleaguePlaceholders . ')';
+    $q = $_DB->query($sQ, array_merge($Data, $aOwnerIDs));
+
+    return ($q !== false && intval($q->fetchColumn()) == count($Data));
+}
+
+
+
+
+
+function lovd_isOwner ($sType, $Data)
+{
+    // Checks if the current user (specified by global $_AUTH) is owner of the
+    // data objects.
+    // Params:
+    // $sType       Type of the data object to check (string)
+    // $Data        ID of object (string) or array of IDs of multiple objects
+    //              (array of strings). Returns true if user is owner for ALL
+    //              of the objects.
+    // Return: True if all of the objects of type $sType with an ID in $Data
+    //         are owned or created by current user.
+    global $_AUTH, $_DB;
+
+    if (!isset($_AUTH) || !$_AUTH) {
+        // No authentication -- cannot be owner of anything.
+        return false;
+    }
+
+    if (!in_array($sType, array('individual', 'phenotype', 'screening', 'variant'))) {
+        // Unknown data type, return false by default.
+        return false;
+    }
+
+    if (!is_array($Data)) {
+        $Data = array($Data);
+    }
+
+    $sDataPlaceholders = '(?' . str_repeat(', ?', count($Data) - 1) . ')';
+
+    $sQ = 'SELECT COUNT(*) FROM ' . constant('TABLE_' . strtoupper($sType) . 'S') . ' WHERE id IN ' .
+             $sDataPlaceholders . ' AND (owned_by = ? OR created_by = ?)';
+    $q = $_DB->query($sQ, array_merge($Data, array($_AUTH['id'], $_AUTH['id'])));
+
+    return ($q !== false && intval($q->fetchColumn()) == count($Data));
 }
 
 
@@ -690,24 +943,276 @@ function lovd_magicUnquoteAll ()
 
 
 
+function lovd_mapCodeToDescription ($aCodes, $aMaps)
+{
+    // Takes an array $aCodes and maps all values using the $aMaps array.
+    // Values not found in $aMaps are not changed in $aCodes.
+
+    if (is_array($aCodes) && !empty($aCodes)) {
+        foreach ($aCodes as $nKey => $sCode) {
+            if (isset($aMaps[$sCode])) {
+                $aCodes[$nKey] = $aMaps[$sCode];
+            }
+        }
+    }
+
+    return $aCodes;
+}
+
+
+
+
+
+function lovd_parseConfigFile($sConfigFile)
+{
+    // Parses the given config file, checks all values, and returns array with parsed settings.
+
+    // Config file exists?
+    if (!file_exists($sConfigFile)) {
+        lovd_displayError('Init', 'Can\'t find config.ini.php');
+    }
+
+    // Config file readable?
+    if (!is_readable($sConfigFile)) {
+        lovd_displayError('Init', 'Can\'t read config.ini.php');
+    }
+
+    // Open config file.
+    if (!$aConfig = file($sConfigFile)) {
+        lovd_displayError('Init', 'Can\'t open config.ini.php');
+    }
+
+
+
+    // Parse config file.
+    $_INI = array();
+    unset($aConfig[0]); // The first line is the PHP code with the exit() call.
+
+    $sKey = '';
+    foreach ($aConfig as $nLine => $sLine) {
+        // Go through the file line by line.
+        $sLine = trim($sLine);
+
+        // Empty line or comment.
+        if (!$sLine || substr($sLine, 0, 1) == '#') {
+            continue;
+        }
+
+        // New section.
+        if (preg_match('/^\[([A-Z][A-Z_ ]+[A-Z])\]$/i', $sLine, $aRegs)) {
+            $sKey = $aRegs[1];
+            $_INI[$sKey] = array();
+            continue;
+        }
+
+        // Setting.
+        if (preg_match('/^([A-Z_]+) *=(.*)$/i', $sLine, $aRegs)) {
+            list(, $sVar, $sVal) = $aRegs;
+            $sVal = trim($sVal, ' "\'“”');
+
+            if (!$sVal) {
+                $sVal = false;
+            }
+
+            // Set value in array.
+            if ($sKey) {
+                $_INI[$sKey][$sVar] = $sVal;
+            } else {
+                $_INI[$sVar] = $sVal;
+            }
+
+        } else {
+            // Couldn't parse value.
+            lovd_displayError('Init', 'Error parsing config file at line ' . ($nLine + 1));
+        }
+    }
+
+    // We now have the $_INI variable filled according to the file's contents.
+    // Check the settings' values to see if they are valid.
+    $aConfigValues =
+        array(
+            'database' =>
+                array(
+                    'driver' =>
+                        array(
+                            'required' => true,
+                            'default'  => 'mysql',
+                            'pattern'  => '/^[a-z]+$/',
+                            'values' => array('mysql' => 'MySQL', 'sqlite' => 'SQLite'),
+                        ),
+                    'hostname' =>
+                        array(
+                            'required' => true,
+                            'default'  => 'localhost',
+                            // Also include hostname:port and :/path/to/socket values.
+                            'pattern'  => '/^([0-9a-z][-0-9a-z.]*[0-9a-z](:[0-9]+)?|:[-0-9a-z.\/]+)$/i',
+                        ),
+                    'username' =>
+                        array(
+                            'required' => true,
+                        ),
+                    'password' =>
+                        array(
+                            'required' => false, // XAMPP and other systems have 'root' without password as default!
+                        ),
+                    'database' =>
+                        array(
+                            'required' => true,
+                        ),
+                    'table_prefix' =>
+                        array(
+                            'required' => true,
+                            'default'  => 'lovd',
+                            'pattern'  => '/^[A-Z0-9_]+$/i',
+                        ),
+                ),
+        );
+
+    if (LOVD_plus) {
+        // Configure data file paths.
+        $aConfigValues['paths'] = array(
+            'data_files' =>
+                array(
+                    'required' => true,
+                    'path_is_readable' => true,
+                    'path_is_writable' => true,
+                ),
+            'data_files_archive' =>
+                array(
+                    'required' => false,
+                    'path_is_readable' => true,
+                    'path_is_writable' => true,
+                ),
+            'alternative_ids' =>
+                array(
+                    'required' => false,
+                    'path_is_readable' => true,
+                    'path_is_writable' => false,
+                ),
+            'confirm_variants' =>
+                array(
+                    'required' => false,
+                    'path_is_readable' => true,
+                    'path_is_writable' => true,
+                ),
+        );
+
+        // Configure instance details.
+        $aConfigValues['instance'] = array(
+            'name' =>
+                array(
+                    'required' => false,
+                    'default'  => '',
+                ),
+        );
+    }
+
+    // SQLite doesn't need an username and password...
+    if (isset($_INI['database']['driver']) && $_INI['database']['driver'] == 'sqlite') {
+        unset($aConfigValues['database']['username']);
+        unset($aConfigValues['database']['password']);
+    }
+
+    foreach ($aConfigValues as $sSection => $aVars) {
+        foreach ($aVars as $sVar => $aVar) {
+            if (!isset($_INI[$sSection][$sVar]) || !$_INI[$sSection][$sVar]) {
+                // Nothing filled in...
+
+                if (isset($aVar['default']) && $aVar['default']) {
+                    // Set default value.
+                    $_INI[$sSection][$sVar] = $aVar['default'];
+                } elseif (isset($aVar['required']) && $aVar['required']) {
+                    // No default value, required setting not filled in.
+                    lovd_displayError('Init', 'Error parsing config file: missing required value for setting \'' . $sVar . '\' in section [' . $sSection . ']');
+                } elseif (!isset($_INI[$sSection][$sVar])){
+                    // Add the setting to the $_INI array to avoid notices.
+                    $_INI[$sSection][$sVar] = false;
+                }
+
+            } else {
+                // Value is present in $_INI.
+                if (isset($aVar['pattern']) && !preg_match($aVar['pattern'], $_INI[$sSection][$sVar])) {
+                    // Error: a pattern is available, but it doesn't match the input!
+                    lovd_displayError('Init', 'Error parsing config file: incorrect value for setting \'' . $sVar . '\' in section [' . $sSection . ']');
+
+                } elseif (isset($aVar['values']) && is_array($aVar['values'])) {
+                    // Value must be present in list of possible values.
+                    $_INI[$sSection][$sVar] = strtolower($_INI[$sSection][$sVar]);
+                    if (!array_key_exists($_INI[$sSection][$sVar], $aVar['values'])) {
+                        // Error: a value list is available, but it doesn't match the input!
+                        lovd_displayError('Init', 'Error parsing config file: incorrect value for setting \'' . $sVar . '\' in section [' . $sSection . ']');
+                    }
+                }
+
+                // For paths, check readability or writability.
+                if (!empty($aVar['path_is_readable']) && !is_readable($_INI[$sSection][$sVar])) {
+                    // Error: The path should be readable, but it's not!
+                    lovd_displayError('Init', 'Error parsing config file: path for \'' . $sVar . '\' in section [' . $sSection . '] is not readable.');
+                }
+                if (!empty($aVar['path_is_writable']) && !is_writable($_INI[$sSection][$sVar])) {
+                    // Error: The path should be writable, but it's not!
+                    lovd_displayError('Init', 'Error parsing config file: path for \'' . $sVar . '\' in section [' . $sSection . '] is not writable.');
+                }
+            }
+        }
+    }
+
+    return $_INI;
+}
+
+
+
+
+
+
 function lovd_php_file ($sURL, $bHeaders = false, $sPOST = false, $aAdditionalHeaders = array()) {
-    // LOVD's alternative to file(), not dependent on the fopenwrappers, and can do POST requests.
+    // LOVD's alternative to file(), not dependent on the fopen wrappers, and can do POST requests.
     global $_CONF, $_SETT;
 
-    if (substr($sURL, 0, 4) != 'http' || (ini_get('allow_url_fopen') && !$sPOST && !$aAdditionalHeaders)) {
-        // Normal file() is fine.
-        return @file($sURL, FILE_IGNORE_NEW_LINES);
-    }
+    // Check additional headers.
     if (!is_array($aAdditionalHeaders)) {
         $aAdditionalHeaders = array($aAdditionalHeaders);
     }
+
+    // Prepare proxy authorization header.
+    if (!empty($_CONF['proxy_username']) && !empty($_CONF['proxy_password'])) {
+        $aAdditionalHeaders[] = 'Proxy-Authorization: Basic ' . base64_encode($_CONF['proxy_username'] . ':' . $_CONF['proxy_password']);
+    }
+
     $aAdditionalHeaders[] = ''; // To make sure we end with a \r\n.
+
+    // Use the simple file() method, only if:
+    // - We're working with local files, OR:
+    // - We're using HTTPS (because our fsockopen() currently doesn't support that, let's hope allow_url_fopen is on), OR:
+    // - Fopen wrappers are on AND we're NOT using POST (because POST doesn't work for now).
+    if (substr($sURL, 0, 4) != 'http' || substr($sURL, 0, 5) == 'https' || (ini_get('allow_url_fopen') && !$sPOST)) {
+        // Normal file() is fine.
+        $aOptions = array(
+            'http' => array(
+                'method' => ($sPOST? 'POST' : 'GET'),
+                'header' => $aAdditionalHeaders,
+                'user_agent' => 'LOVDv.' . $_SETT['system']['version'],
+            ),
+        );
+        // If we're connecting through a proxy, we need to set some additional information.
+        if ($_CONF['proxy_host']) {
+            $aOptions['http']['proxy'] = 'tcp://' . $_CONF['proxy_host'] . ':' . $_CONF['proxy_port'];
+            $aOptions['http']['request_fulluri'] = true;
+        }
+        if (substr($sURL, 0, 5) == 'https') {
+            $aOptions['ssl'] = array('allow_self_signed' => 1, 'SNI_enabled' => 1, (PHP_VERSION_ID >= 50600? 'peer_name' : 'SNI_server_name') => parse_url($sURL, PHP_URL_HOST));
+            $aOptions['http']['request_fulluri'] = false; // Somehow this breaks when testing through squid3 and using HTTPS.
+        }
+
+        return @file($sURL, FILE_IGNORE_NEW_LINES, stream_context_create($aOptions));
+    }
 
     $aHeaders = array();
     $aOutput = array();
     $aURL = parse_url($sURL);
     if ($aURL['host']) {
-        $f = @fsockopen((!empty($_CONF['proxy_host'])? $_CONF['proxy_host'] : $aURL['host']), (!empty($_CONF['proxy_port'])? $_CONF['proxy_port'] : 80)); // Doesn't support SSL without OpenSSL.
+        // fsockopen() can only connect to an HTTPS (proxy or host), when using "ssl" as the scheme, and having OpenSSL installed.
+        $f = @fsockopen((!empty($_CONF['proxy_host'])? $_CONF['proxy_host'] : $aURL['host']), (!empty($_CONF['proxy_port'])? $_CONF['proxy_port'] : 80));
         if ($f === false) {
             // No use continuing - it will only cause errors.
             return false;
@@ -718,8 +1223,6 @@ function lovd_php_file ($sURL, $bHeaders = false, $sPOST = false, $aAdditionalHe
                     (!$sPOST? '' :
                     'Content-length: ' . strlen($sPOST) . "\r\n" .
                     'Content-Type: application/x-www-form-urlencoded' . "\r\n") .
-            (empty($_CONF['proxy_username']) || empty($_CONF['proxy_password'])? '' :
-                'Proxy-Authorization: Basic ' . base64_encode($_CONF['proxy_username'] . ':' . $_CONF['proxy_password']) . "\r\n") .
             implode("\r\n", $aAdditionalHeaders) .
                     'Connection: Close' . "\r\n\r\n" .
                     (!$sPOST? '' :
@@ -851,7 +1354,7 @@ function lovd_requireAUTH ($nLevel = 0)
 
         $sMessage = 'To access this area, you need ' . (!$nLevel? 'to <A href="login">log in</A>.' : ($nLevel == max($aKeys)? '' : 'at least ') . $_SETT['user_levels'][$nLevel] . ' clearance.');
         // FIXME; extend this list?
-        if (lovd_getProjectFile() == '/submit.php' && !$_AUTH) {
+        if (lovd_getProjectFile() == '/submit.php') {
             $sMessage .= '<BR>If you are not registered as a submitter, please <A href="users?register">do so here</A>.';
         }
         lovd_showInfoTable($sMessage, 'stop');
@@ -960,7 +1463,7 @@ function lovd_showDialog ($sID, $sTitle, $sMessage, $sType = 'information', $aSe
 
 
 
-function lovd_showInfoTable ($sMessage, $sType = 'information', $sWidth = '100%', $sHref = '')
+function lovd_showInfoTable ($sMessage, $sType = 'information', $sWidth = '100%', $sHref = '', $bBR = true)
 {
     $aTypes =
              array(
@@ -991,13 +1494,13 @@ function lovd_showInfoTable ($sMessage, $sType = 'information', $sWidth = '100%'
                   '| ' . str_pad($aTypes[$sType], $nWidth - 4, ' ') . ' |' . "\n" .
                   $sSeparatorLine . "\n" .
                   '| ' . implode(" |\n| ", $aMessage) . ' |' . "\n" .
-                  $sSeparatorLine . "\n\n");
+                  $sSeparatorLine . (!$bBR? '' : "\n") . "\n");
             break;
         default:
             print('      <TABLE border="0" cellpadding="2" cellspacing="0" width="' . $sWidth . '" class="info"' . (!empty($sHref)? ' style="cursor : pointer;" onclick="' . (preg_match('/[ ;"\'=()]/', $sHref)? $sHref : 'window.location.href=\'' . $sHref . '\';') . '"': '') . '>' . "\n" .
                   '        <TR>' . "\n" .
                   '          <TD valign="top" align="center" width="40"><IMG src="gfx/lovd_' . $sType . '.png" alt="' . $aTypes[$sType] . '" title="' . $aTypes[$sType] . '" width="32" height="32" style="margin : 4px;"></TD>' . "\n" .
-                  '          <TD valign="middle">' . $sMessage . '</TD></TR></TABLE><BR>' . "\n\n");
+                  '          <TD valign="middle">' . $sMessage . '</TD></TR></TABLE>' . (!$bBR? '' : '<BR>') . "\n\n");
     }
 }
 
@@ -1034,7 +1537,7 @@ function lovd_showJGNavigation ($aOptions, $sID, $nPrefix = 3)
         }
         if ($bShown) {
             // IE (who else) refuses to respect the BASE href tag when using JS. So we have no other option than to include the full path here.
-            print($sPrefix . '  <LI' . (!$sIMG? '' : ' class="icon"') . '><A ' . (substr($sURL, 0, 11) == 'javascript:'? 'click="' : 'href="' . ($sSubMenu ? '' : lovd_getInstallURL(false))) . ($sSubMenu ? '' : ltrim($sURL, '/')) . '">' .
+            print($sPrefix . '  <LI' . (!$sIMG? '' : ' class="icon"') . '><A ' . (substr($sURL, 0, 11) == 'javascript:'? 'click="' : 'href="' . ($sSubMenu? '' : lovd_getInstallURL(false))) . ($sSubMenu? '' : ltrim($sURL, '/')) . '">' .
                                 (!$sIMG? '' : '<SPAN class="icon" style="background-image: url(gfx/' . $sIMG . ');"></SPAN>') . $sName .
                                 '</A>' . $sSubMenu . '</LI>' . "\n");
         } else {
@@ -1185,6 +1688,36 @@ function lovd_variantToPosition ($sVariant)
 
 
 
+function lovd_verifyInstance ($sName, $bExact = true)
+{
+    // Check if this instance belongs to $sName instance group (LOVD+ feature).
+    // If $bExact is set to true, it will match the exact instance name instead
+    //  of matching just the prefix.
+
+    global $_INI;
+
+    // Only LOVD+ can have the instance name in the config file.
+    if (!LOVD_plus || empty($_INI['instance']['name'])) {
+        return false;
+    }
+
+    if (strtolower($_INI['instance']['name']) == strtolower($sName)) {
+        return true;
+    }
+
+    if (!$bExact) {
+        if (strpos(strtolower($_INI['instance']['name']), strtolower($sName)) === 0) {
+            return true;
+        }
+    }
+
+    return false;
+}
+
+
+
+
+
 function lovd_verifyPassword ($sPassword, $sOriHash)
 {
     // Verifies a password given a certain hash. This hash is usually taken from
@@ -1226,66 +1759,5 @@ function lovd_writeLog ($sLog, $sEvent, $sMessage)
     // Insert new line in logs table.
     $q = $_DB->query('INSERT INTO ' . TABLE_LOGS . ' VALUES (?, NOW(), ?, ?, ?, ?)', array($sLog, $sTime, ($_AUTH['id']? $_AUTH['id'] : NULL), $sEvent, $sMessage), false);
     return (bool) $q;
-}
-
-
-
-
-
-function lovd_convertIniValueToBytes ($sValue)
-{
-    // This function takes output from PHP's ini_get() function like "128M" or
-    // "256k" and converts it to an integer, measured in bytes.
-    // Implementation taken from the example on php.net.
-    // FIXME; Implement proper checks here? Regexp?
-
-    $nValue = (int) $sValue;
-    $sLast = strtolower(substr($sValue, -1));
-    switch ($sLast) {
-        case 'g':
-            $nValue *= 1024;
-        case 'm':
-            $nValue *= 1024;
-        case 'k':
-            $nValue *= 1024;
-    }
-
-    return $nValue;
-}
-
-
-
-
-
-function lovd_convertSecondsToTime ($sValue, $nDecimals = 0)
-{
-    // This function takes a number of seconds and converts it into whole
-    // minutes, hours, days, months or years.
-    // FIXME; Implement proper checks here? Regexp?
-
-    $nValue = (int) $sValue;
-    if (ctype_digit((string) $sValue)) {
-        $sValue .= 's';
-    }
-    $sLast = strtolower(substr($sValue, -1));
-    $nDecimals = (int) $nDecimals;
-
-    $aConversion =
-        array(
-            's' => array(60, 'm'),
-            'm' => array(60, 'h'),
-            'h' => array(24, 'd'),
-            'd' => array(265, 'y'),
-        );
-
-    foreach ($aConversion as $sUnit => $aConvert) {
-        list($nFactor, $sNextUnit) = $aConvert;
-        if ($sLast == $sUnit && $nValue > $nFactor) {
-            $nValue /= $nFactor;
-            $sLast = $sNextUnit;
-        }
-    }
-
-    return round($nValue, $nDecimals) . $sLast;
 }
 ?>

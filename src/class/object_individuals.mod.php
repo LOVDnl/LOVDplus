@@ -4,11 +4,13 @@
  * LEIDEN OPEN VARIATION DATABASE (LOVD)
  *
  * Created     : 2013-10-28
- * Modified    : 2016-11-11
- * For LOVD    : 3.0-13
+ * Modified    : 2017-03-13
+ * For LOVD    : 3.0-18
  *
- * Copyright   : 2004-2016 Leiden University Medical Center; http://www.LUMC.nl/
- * Programmer  : Ing. Ivo F.A.C. Fokkema <I.F.A.C.Fokkema@LUMC.nl>
+ * Copyright   : 2004-2017 Leiden University Medical Center; http://www.LUMC.nl/
+ * Programmers : Ivo F.A.C. Fokkema <I.F.A.C.Fokkema@LUMC.nl>
+ *               Anthony Marty <anthony.marty@unimelb.edu.au>
+ *               Juny Kesumadewi <juny.kesumadewi@unimelb.edu.au>
  *
  *
  * This file is part of LOVD.
@@ -49,7 +51,6 @@ class LOVD_IndividualMOD extends LOVD_Individual {
     function __construct ()
     {
         // Default constructor.
-        global $_AUTH, $_INI;
 
         // Run parent constructor to find out about the custom columns.
         parent::__construct();
@@ -95,7 +96,7 @@ class LOVD_IndividualMOD extends LOVD_Individual {
                                           's.analysis_by, ' .
                                           's.analysis_date, ' .
                                           's.analysis_approved_date, ' .
-                                          ($_INI['instance']['name'] != 'mgha' ? '' : 's.`Screening/Pipeline/Run_ID`, CASE WHEN s.`Screening/Mother/Sample_ID` IS NOT NULL AND CHAR_LENGTH(s.`Screening/Mother/Sample_ID`) > 0 AND s.`Screening/Father/Sample_ID` IS NOT NULL AND CHAR_LENGTH(s.`Screening/Father/Sample_ID`) > 0 THEN "Trio" ELSE "Individual" END AS family_type, ') . // MGHA specific individual identifiers.
+                                          (!lovd_verifyInstance('mgha')? '' : 's.`Screening/Pipeline/Run_ID`, CASE WHEN s.`Screening/Mother/Sample_ID` IS NOT NULL AND CHAR_LENGTH(s.`Screening/Mother/Sample_ID`) > 0 AND s.`Screening/Father/Sample_ID` IS NOT NULL AND CHAR_LENGTH(s.`Screening/Father/Sample_ID`) > 0 THEN "Trio" ELSE "Individual" END AS family_type, ') . // MGHA specific individual identifiers.
                                         // FIXME; Can we get this order correct, such that diseases without abbreviation nicely mix with those with? Right now, the diseases without symbols are in the back.
                                           'GROUP_CONCAT(DISTINCT IF(CASE d.symbol WHEN "-" THEN "" ELSE d.symbol END = "", d.name, d.symbol) ORDER BY (d.symbol != "" AND d.symbol != "-") DESC, d.symbol, d.name SEPARATOR ", ") AS diseases_, ' .
 //                                          'COUNT(DISTINCT ' . ($_AUTH['level'] >= LEVEL_COLLABORATOR? 's2v.variantid' : 'vog.id') . ') AS variants_, ' . // Counting s2v.variantid will not include the limit opposed to vog in the join's ON() clause.
@@ -121,10 +122,10 @@ class LOVD_IndividualMOD extends LOVD_Individual {
 
         // List of columns and (default?) order for viewing an entry.
         $this->aColumnsViewEntry = array_merge(
-            ($_INI['instance']['name'] == 'leiden'? array(
+            (!lovd_verifyInstance('leiden')? array() : array(
                 'id_miracle' => 'Miracle ID',
                 'id_zis' => 'ZIS ID',
-            ) : array()),
+            )),
                  $this->buildViewEntry(),
                  array(
                         'custom_panel_' => 'Custom gene panel',
@@ -139,8 +140,8 @@ class LOVD_IndividualMOD extends LOVD_Individual {
                       ));
 
         // Set some instance specific individual identifiers.
-        if ($_INI['instance']['name'] == 'mgha') {
-            $aIndIdentifier = array (
+        if (lovd_verifyInstance('mgha')) {
+            $aIndIdentifier = array(
                 'Screening/Pipeline/Run_ID' => array(
                     'view' => array('Pipeline Run ID', 100),
                     'db'   => array('s.`Screening/Pipeline/Run_ID`', 'ASC', true)),
@@ -148,12 +149,14 @@ class LOVD_IndividualMOD extends LOVD_Individual {
                     'view' => array('Family Type', 100),
                     'db'   => array('family_type', 'ASC', 'TEXT')),
             );
-        } else {
-            $aIndIdentifier = array (
+        } elseif (lovd_verifyInstance('leiden')) {
+            $aIndIdentifier = array(
                 'id_zis' => array(
                     'view' => array('ZIS ID', 100),
                     'db'   => array('i.id_zis', 'ASC', true)),
             );
+        } else {
+            $aIndIdentifier = array();
         }
 
         // List of columns and (default?) order for viewing a list of entries.

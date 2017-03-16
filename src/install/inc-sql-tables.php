@@ -4,12 +4,13 @@
  * LEIDEN OPEN VARIATION DATABASE (LOVD)
  *
  * Created     : 2009-10-22
- * Modified    : 2016-04-06
- * For LOVD    : 3.0-15
+ * Modified    : 2016-09-05
+ * For LOVD    : 3.0-17
  *
  * Copyright   : 2004-2016 Leiden University Medical Center; http://www.LUMC.nl/
  * Programmers : Ing. Ivo F.A.C. Fokkema <I.F.A.C.Fokkema@LUMC.nl>
  *               Ing. Ivar C. Lugtenburg <I.C.Lugtenburg@LUMC.nl>
+ *               M. Kroon <m.kroon@lumc.nl>
  *
  *
  * This file is part of LOVD.
@@ -29,10 +30,6 @@
  *
  *************/
 
-// STILL TODO:
-// variant <-> pathogenicity <-> disease? Link pathogenicity specifically to one of the phenotypes or diseases?
-// Functional assays / computer predictions, hoe toevoegen??? Aan variant én aan individual???
-
 // IDs:
 // WARNING: If editing any of these, also edit $_SETT['objectid_length']!
 // userid SMALLINT(5) UNSIGNED (65K)
@@ -46,10 +43,10 @@
 // colid VARCHAR(100) (100 characters)
 // linkid TINYINT(3) UNSIGNED (255)
 
-// DMD_SPECIFIC
 if (!defined('ROOT_PATH')) {
     define('ROOT_PATH', '../');
     require ROOT_PATH . 'inc-init.php';
+    lovd_requireAUTH(LEVEL_MANAGER);
 }
 
 $sSettings = 'ENGINE=InnoDB,
@@ -103,6 +100,17 @@ $aTableSQL =
     CONSTRAINT ' . TABLE_USERS . '_fk_edited_by FOREIGN KEY (edited_by) REFERENCES ' . TABLE_USERS . ' (id) ON DELETE SET NULL ON UPDATE CASCADE)
     ' . $sSettings
 
+         , 'TABLE_COLLEAGUES' =>
+             'CREATE TABLE ' . TABLE_COLLEAGUES . '(
+    userid_from SMALLINT(5) UNSIGNED ZEROFILL NOT NULL,
+    userid_to   SMALLINT(5) UNSIGNED ZEROFILL NOT NULL,
+    allow_edit  BOOLEAN NOT NULL DEFAULT 0,
+    PRIMARY KEY (userid_from, userid_to),
+    INDEX (userid_to),
+    CONSTRAINT ' . TABLE_COLLEAGUES .  '_fk_userid_from FOREIGN KEY (userid_from) REFERENCES ' . TABLE_USERS . ' (id) ON DELETE CASCADE ON UPDATE CASCADE,
+    CONSTRAINT ' . TABLE_COLLEAGUES . '_fk_userid_to FOREIGN KEY (userid_to) REFERENCES ' . TABLE_USERS . ' (id) ON DELETE CASCADE ON UPDATE CASCADE)
+    ' . $sSettings
+
         , 'TABLE_CHROMOSOMES' =>
    'CREATE TABLE ' . TABLE_CHROMOSOMES . ' (
     name VARCHAR(2) NOT NULL,
@@ -126,7 +134,7 @@ $aTableSQL =
     url_external TEXT NOT NULL,
     allow_download BOOLEAN NOT NULL,
     allow_index_wiki BOOLEAN NOT NULL,
-    id_hgnc INT(10) UNSIGNED NOT NULL,
+    id_hgnc INT(10) UNSIGNED' . (LOVD_plus? '' : ' NOT NULL') . ',
     id_entrez INT(10) UNSIGNED,
     id_omim INT(10) UNSIGNED,
     show_hgmd BOOLEAN NOT NULL,
@@ -150,7 +158,7 @@ $aTableSQL =
     updated_date DATETIME,
     PRIMARY KEY (id),
     INDEX (chromosome),
-    '. (!empty($_INI['database']['enforce_hgnc_gene'])? 'UNIQUE' : 'INDEX') .' (id_hgnc),
+    UNIQUE (id_hgnc),
     INDEX (created_by),
     INDEX (edited_by),
     INDEX (updated_by),
@@ -183,6 +191,7 @@ $aTableSQL =
     id_protein_ncbi VARCHAR(255) NOT NULL,
     id_protein_ensembl VARCHAR(255) NOT NULL,
     id_protein_uniprot VARCHAR(8) NOT NULL,
+    remarks TEXT NOT NULL,
     position_c_mrna_start SMALLINT(5) NOT NULL,
     position_c_mrna_end MEDIUMINT(8) UNSIGNED NOT NULL,
     position_c_cds_end MEDIUMINT(8) UNSIGNED NOT NULL,
@@ -205,16 +214,19 @@ $aTableSQL =
          , 'TABLE_DISEASES' =>
    'CREATE TABLE ' . TABLE_DISEASES . ' (
     id SMALLINT(5) UNSIGNED ZEROFILL NOT NULL AUTO_INCREMENT,
-    symbol VARCHAR(15) NOT NULL,
+    symbol VARCHAR(25) NOT NULL,
     name VARCHAR(255) NOT NULL,
     inheritance VARCHAR(45) NULL,
     id_omim INT(10) UNSIGNED,
+    tissues TEXT NOT NULL,
+    features TEXT NOT NULL,
+    remarks TEXT NOT NULL,
     created_by SMALLINT(5) UNSIGNED ZEROFILL,
     created_date DATETIME NOT NULL,
     edited_by SMALLINT(5) UNSIGNED ZEROFILL,
     edited_date DATETIME,
     PRIMARY KEY (id),
-    UNIQUE(id_omim),
+    UNIQUE (id_omim),
     INDEX (created_by),
     INDEX (edited_by),
     CONSTRAINT ' . TABLE_DISEASES . '_fk_created_by FOREIGN KEY (created_by) REFERENCES ' . TABLE_USERS . ' (id) ON DELETE SET NULL ON UPDATE CASCADE,
@@ -704,6 +716,7 @@ $aTableSQL =
     omim_apikey VARCHAR(40) NOT NULL,
     send_stats BOOLEAN NOT NULL,
     include_in_listing BOOLEAN NOT NULL,
+    allow_submitter_registration BOOLEAN NOT NULL DEFAULT ' . (int) (!LOVD_plus) . ',
     lock_users BOOLEAN NOT NULL,
     allow_unlock_accounts BOOLEAN NOT NULL,
     allow_submitter_mods BOOLEAN NOT NULL,
@@ -725,6 +738,25 @@ $aTableSQL =
     update_released_date DATE,
     installed_date DATE NOT NULL,
     updated_date DATE)
+    ' . $sSettings
+
+         , 'TABLE_ANNOUNCEMENTS' =>
+   'CREATE TABLE ' . TABLE_ANNOUNCEMENTS . ' (
+    id SMALLINT(5) UNSIGNED ZEROFILL NOT NULL AUTO_INCREMENT,
+    type VARCHAR(15) NOT NULL DEFAULT "information",
+    announcement TEXT NOT NULL,
+    start_date DATETIME NOT NULL DEFAULT "0000-00-00 00:00:00",
+    end_date DATETIME NOT NULL DEFAULT "9999-12-31 23:59:59",
+    lovd_read_only BOOLEAN NOT NULL DEFAULT 0,
+    created_by SMALLINT(5) UNSIGNED ZEROFILL,
+    created_date DATETIME NOT NULL,
+    edited_by SMALLINT(5) UNSIGNED ZEROFILL,
+    edited_date DATETIME,
+    PRIMARY KEY (id),
+    INDEX (created_by),
+    INDEX (edited_by),
+    CONSTRAINT ' . TABLE_ANNOUNCEMENTS . '_fk_created_by FOREIGN KEY (created_by) REFERENCES ' . TABLE_USERS . ' (id) ON DELETE SET NULL ON UPDATE CASCADE,
+    CONSTRAINT ' . TABLE_ANNOUNCEMENTS . '_fk_edited_by FOREIGN KEY (edited_by) REFERENCES ' . TABLE_USERS . ' (id) ON DELETE SET NULL ON UPDATE CASCADE)
     ' . $sSettings
 
          , 'TABLE_SOURCES' =>
@@ -897,16 +929,48 @@ $aTableSQL =
     sortid TINYINT(3) UNSIGNED NOT NULL,
     name VARCHAR(50) NOT NULL,
     description TEXT NOT NULL,
-    filters TEXT NOT NULL,
+    version TINYINT(3) UNSIGNED DEFAULT 1,
     created_by SMALLINT(5) UNSIGNED ZEROFILL,
     created_date DATETIME NOT NULL,
     edited_by SMALLINT(5) UNSIGNED ZEROFILL,
     edited_date DATETIME,
     PRIMARY KEY (id),
+    UNIQUE (name, version),
     INDEX (created_by),
     INDEX (edited_by),
     CONSTRAINT ' . TABLE_ANALYSES . '_fk_created_by FOREIGN KEY (created_by) REFERENCES ' . TABLE_USERS . ' (id) ON DELETE SET NULL ON UPDATE CASCADE,
     CONSTRAINT ' . TABLE_ANALYSES . '_fk_edited_by FOREIGN KEY (edited_by) REFERENCES ' . TABLE_USERS . ' (id) ON DELETE SET NULL ON UPDATE CASCADE)
+    ' . $sSettings
+
+        , 'TABLE_ANALYSIS_FILTERS' =>
+    'CREATE TABLE ' . TABLE_ANALYSIS_FILTERS . ' (
+    id VARCHAR(50) NOT NULL,
+    name VARCHAR(100) NOT NULL DEFAULT "",
+    description TEXT,
+    PRIMARY KEY (id))
+    ' . $sSettings
+
+        , 'TABLE_A2AF' =>
+    'CREATE TABLE ' . TABLE_A2AF . ' (
+    analysisid TINYINT(3) UNSIGNED ZEROFILL,
+    filterid VARCHAR(50) NOT NULL,
+    filter_order TINYINT(3) UNSIGNED DEFAULT 1,
+    PRIMARY KEY (analysisid, filterid),
+    INDEX (analysisid),
+    INDEX (filterid),
+    CONSTRAINT ' . TABLE_A2AF . '_fk_analysisid FOREIGN KEY (analysisid) REFERENCES ' . TABLE_ANALYSES . ' (id) ON DELETE CASCADE ON UPDATE CASCADE,
+    CONSTRAINT ' . TABLE_A2AF . '_fk_filterid FOREIGN KEY (filterid) REFERENCES ' . TABLE_ANALYSIS_FILTERS . ' (id) ON DELETE CASCADE ON UPDATE CASCADE)
+    ' . $sSettings
+
+        , 'TABLE_GP2A' =>
+    'CREATE TABLE ' . TABLE_GP2A . ' (
+    genepanelid SMALLINT(5) UNSIGNED ZEROFILL NOT NULL,
+    analysisid TINYINT(3) UNSIGNED ZEROFILL,
+    PRIMARY KEY (genepanelid, analysisid),
+    INDEX (genepanelid),
+    INDEX (analysisid),
+    CONSTRAINT ' . TABLE_GP2A . '_fk_genepanelid FOREIGN KEY (genepanelid) REFERENCES ' . TABLE_GENE_PANELS . ' (id) ON DELETE CASCADE ON UPDATE CASCADE,
+    CONSTRAINT ' . TABLE_GP2A . '_fk_analysisid FOREIGN KEY (analysisid) REFERENCES ' . TABLE_ANALYSES . ' (id) ON DELETE CASCADE ON UPDATE CASCADE)
     ' . $sSettings
 
         , 'TABLE_ANALYSES_RUN' =>
@@ -979,30 +1043,84 @@ $aTableSQL =
         , 'TABLE_GENE_STATISTICS' =>
     'CREATE TABLE ' . TABLE_GENE_STATISTICS . ' (
     id VARCHAR(25) NOT NULL,
-    vep_annotation TINYINT(1) DEFAULT NULL,
-    nextera_cds_bases INT(10) unsigned DEFAULT NULL,
-    nextera_exon_bases INT(10) unsigned DEFAULT NULL,
-    refseq_cds_bases INT(10) unsigned DEFAULT NULL,
-    refseq_exon_bases INT(10) unsigned DEFAULT NULL,
-    cds_coverage DECIMAL(5,2) DEFAULT NULL,
-    exon_coverage DECIMAL(5,2) DEFAULT NULL,
-    alternative_names VARCHAR(1000) DEFAULT NULL,
-    exon_mean_of_mean_coverage DECIMAL(6,2) DEFAULT NULL,
-    exon_mean_coverage_sd DECIMAL(6,2) DEFAULT NULL,
-    exon_mean_of_median_coverage DECIMAL(6,2) DEFAULT NULL,
-    exon_mean_of_percent_20x DECIMAL(6,2) DEFAULT NULL,
-    exon_mean_percent_sd DECIMAL(6,2) DEFAULT NULL,
-    cds_mean_of_mean_coverage DECIMAL(6,2) DEFAULT NULL,
-    cds_mean_coverage_sd DECIMAL(6,2) DEFAULT NULL,
-    cds_mean_of_median_coverage DECIMAL(6,2) DEFAULT NULL,
-    cds_mean_of_percent_20x DECIMAL(5,2) DEFAULT NULL,
-    cds_mean_percent_sd DECIMAL(5,2) DEFAULT NULL,
+    hgnc VARCHAR(25),
+    chromosome VARCHAR(10),
+    start_pos INT(10),
+    end_pos INT(10),
+    vep_annotation TINYINT(1),
+    alternative_names VARCHAR(1000),
+    refseq_cds_bases INT(10),
+    refseq_exon_bases INT(10),
+    nextera_cds_bases INT(10) unsigned,
+    nextera_exon_bases INT(10) unsigned,
+    nextera_cds_coverage DECIMAL(5,2),
+    nextera_exon_coverage DECIMAL(5,2),
+    nextera_exon_mean_of_mean_coverage DECIMAL(6,2),
+    nextera_exon_mean_coverage_sd DECIMAL(6,2),
+    nextera_exon_mean_of_median_coverage DECIMAL(6,2),
+    nextera_exon_mean_of_percent_20x DECIMAL(6,2),
+    nextera_exon_mean_percent_sd DECIMAL(6,2),
+    nextera_cds_mean_of_mean_coverage DECIMAL(6,2),
+    nextera_cds_mean_coverage_sd DECIMAL(6,2),
+    nextera_cds_mean_of_median_coverage DECIMAL(6,2),
+    nextera_cds_mean_of_percent_20x DECIMAL(5,2),
+    nextera_cds_mean_percent_sd DECIMAL(5,2),
+    cre_cds_bases INT(10),
+    cre_exon_bases INT(10),
+    cre_cds_coverage DECIMAL(5,2),
+    cre_exon_coverage DECIMAL(5,2),
+    cre_exon_mean_of_mean_coverage DECIMAL(6,2),
+    cre_exon_mean_coverage_sd DECIMAL(6,2),
+    cre_exon_mean_of_median_coverage DECIMAL(6,2),
+    cre_exon_mean_of_percent_20x DECIMAL(6,2),
+    cre_exon_mean_percent_sd DECIMAL(6,2),
+    cre_cds_mean_of_mean_coverage DECIMAL(6,2),
+    cre_cds_mean_coverage_sd DECIMAL(6,2),
+    cre_cds_mean_of_median_coverage DECIMAL(6,2),
+    cre_cds_mean_of_percent_20x DECIMAL(5,2),
+    cre_cds_mean_percent_sd DECIMAL(5,2),
     created_date DATETIME NOT NULL,
     PRIMARY KEY (id))
-' . $sSettings
+    ' . $sSettings
+
+        , 'TABLE_SUMMARY_ANNOTATIONS' =>
+    'CREATE TABLE ' . TABLE_SUMMARY_ANNOTATIONS . ' (
+    id VARCHAR(50) NOT NULL,
+    effectid TINYINT(1) UNSIGNED ZEROFILL,
+    created_by SMALLINT(5) UNSIGNED ZEROFILL,
+    created_date DATETIME NOT NULL,
+    edited_by SMALLINT(5) UNSIGNED ZEROFILL,
+    edited_date DATETIME,
+    PRIMARY KEY (id),
+    INDEX (created_by),
+    INDEX (edited_by),
+    CONSTRAINT ' . TABLE_SUMMARY_ANNOTATIONS . '_fk_created_by FOREIGN KEY (created_by) REFERENCES ' . TABLE_USERS . ' (id) ON DELETE SET NULL ON UPDATE CASCADE,
+    CONSTRAINT ' . TABLE_SUMMARY_ANNOTATIONS . '_fk_edited_by FOREIGN KEY (edited_by) REFERENCES ' . TABLE_USERS . ' (id) ON DELETE SET NULL ON UPDATE CASCADE)
+    ' . $sSettings
+
+        , 'TABLE_SUMMARY_ANNOTATIONS_REV' =>
+    'CREATE TABLE ' . TABLE_SUMMARY_ANNOTATIONS_REV . ' (
+    id VARCHAR(50) NOT NULL,
+    effectid TINYINT(1) UNSIGNED ZEROFILL,
+    created_by SMALLINT(5) UNSIGNED ZEROFILL,
+    created_date DATETIME NOT NULL,
+    edited_by SMALLINT(5) UNSIGNED ZEROFILL,
+    edited_date DATETIME,
+    valid_from DATETIME NOT NULL,
+    valid_to DATETIME NOT NULL DEFAULT "9999-12-31",
+    deleted BOOLEAN NOT NULL,
+    deleted_by SMALLINT(5) UNSIGNED ZEROFILL,
+    reason TEXT,
+    PRIMARY KEY (id, valid_from),
+    INDEX (created_by),
+    INDEX (edited_by),
+    INDEX (deleted_by),
+    CONSTRAINT ' . TABLE_SUMMARY_ANNOTATIONS_REV . '_fk_created_by FOREIGN KEY (created_by) REFERENCES ' . TABLE_USERS . ' (id) ON DELETE SET NULL ON UPDATE CASCADE,
+    CONSTRAINT ' . TABLE_SUMMARY_ANNOTATIONS_REV . '_fk_edited_by FOREIGN KEY (edited_by) REFERENCES ' . TABLE_USERS . ' (id) ON DELETE SET NULL ON UPDATE CASCADE,
+    CONSTRAINT ' . TABLE_SUMMARY_ANNOTATIONS_REV . '_fk_deleted_by FOREIGN KEY (deleted_by) REFERENCES ' . TABLE_USERS . ' (id) ON DELETE SET NULL ON UPDATE CASCADE)
+    ' . $sSettings
           );
 
-// DMD_SPECIFIC;
 if (lovd_getProjectFile() == '/install/inc-sql-tables.php') {
     header('Content-type: text/plain; charset=UTF-8');
     var_dump($aTableSQL);

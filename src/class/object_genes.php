@@ -4,12 +4,14 @@
  * LEIDEN OPEN VARIATION DATABASE (LOVD)
  *
  * Created     : 2010-12-15
- * Modified    : 2015-11-29
+ * Modified    : 2016-10-14
  * For LOVD    : 3.0-18
  *
  * Copyright   : 2004-2016 Leiden University Medical Center; http://www.LUMC.nl/
  * Programmers : Ivar C. Lugtenburg <I.C.Lugtenburg@LUMC.nl>
  *               Ivo F.A.C. Fokkema <I.F.A.C.Fokkema@LUMC.nl>
+ *               Daan Asscheman <D.Asscheman@LUMC.nl>
+ *               M. Kroon <m.kroon@lumc.nl>
  *
  *
  * This file is part of LOVD.
@@ -72,10 +74,10 @@ class LOVD_Gene extends LOVD_Object {
                                            'uc.name AS created_by_, ' .
                                            'ue.name AS edited_by_, ' .
                                            'uu.name AS updated_by_, ' .
-                                           'COUNT(DISTINCT vog.id) AS variants, ' .
-                                           'COUNT(DISTINCT vog.`VariantOnGenome/DBID`) AS uniq_variants, ' .
+                                           '(SELECT COUNT(DISTINCT vog.id) FROM ' . TABLE_VARIANTS . ' AS vog INNER JOIN ' . TABLE_VARIANTS_ON_TRANSCRIPTS . ' AS vot USING (id) INNER JOIN ' . TABLE_TRANSCRIPTS . ' AS t ON (vot.transcriptid = t.id) WHERE t.geneid = g.id AND vog.statusid >= ' . STATUS_MARKED . ') AS variants, ' .
+                                           '(SELECT COUNT(DISTINCT vog.`VariantOnGenome/DBID`) FROM ' . TABLE_VARIANTS . ' AS vog INNER JOIN ' . TABLE_VARIANTS_ON_TRANSCRIPTS . ' AS vot USING (id) INNER JOIN ' . TABLE_TRANSCRIPTS . ' AS t ON (vot.transcriptid = t.id) WHERE t.geneid = g.id AND vog.statusid >= ' . STATUS_MARKED . ') AS uniq_variants, ' .
                                            '"" AS count_individuals, ' . // Temporarely value, prepareData actually runs this query.
-                                           'COUNT(DISTINCT hidden_vog.id) AS hidden_variants';
+                                           '(SELECT COUNT(*) FROM ' . TABLE_VARIANTS . ' AS hidden_vog INNER JOIN ' . TABLE_VARIANTS_ON_TRANSCRIPTS . ' AS hidden_vot ON (hidden_vog.id = hidden_vot.id) INNER JOIN ' . TABLE_TRANSCRIPTS . ' AS t ON (hidden_vot.transcriptid = t.id) WHERE t.geneid = g.id AND hidden_vog.statusid < ' . STATUS_MARKED . ') AS hidden_variants';
         $this->aSQLViewEntry['FROM']     = TABLE_GENES . ' AS g ' .
                                            'LEFT OUTER JOIN ' . TABLE_GEN2DIS . ' AS g2d ON (g.id = g2d.geneid) ' .
                                            'LEFT OUTER JOIN ' . TABLE_DISEASES . ' AS d ON (g2d.diseaseid = d.id) ' .
@@ -84,10 +86,7 @@ class LOVD_Gene extends LOVD_Object {
                                            'LEFT OUTER JOIN ' . TABLE_USERS . ' AS uc ON (g.created_by = uc.id) ' .
                                            'LEFT OUTER JOIN ' . TABLE_USERS . ' AS ue ON (g.edited_by = ue.id) ' .
                                            'LEFT OUTER JOIN ' . TABLE_USERS . ' AS uu ON (g.updated_by = uu.id) ' .
-                                           'LEFT OUTER JOIN ' . TABLE_TRANSCRIPTS . ' AS t ON (g.id = t.geneid) ' .
-                                           'LEFT OUTER JOIN ' . TABLE_VARIANTS_ON_TRANSCRIPTS . ' AS vot ON (t.id = vot.transcriptid) ' .
-                                           'LEFT OUTER JOIN ' . TABLE_VARIANTS . ' AS vog ON (vot.id = vog.id AND vog.statusid >= ' . STATUS_MARKED . ') ' .
-                                           'LEFT OUTER JOIN ' . TABLE_VARIANTS . ' AS hidden_vog ON (vot.id = hidden_vog.id AND hidden_vog.statusid < ' . STATUS_MARKED . ') ';
+                                           'LEFT OUTER JOIN ' . TABLE_TRANSCRIPTS . ' AS t ON (g.id = t.geneid) ';
         $this->aSQLViewEntry['GROUP_BY'] = 'g.id';
 
         // SQL code for viewing the list of genes
@@ -96,15 +95,19 @@ class LOVD_Gene extends LOVD_Object {
                                           // FIXME; Can we get this order correct, such that diseases without abbreviation nicely mix with those with? Right now, the diseases without symbols are in the back.
                                           'GROUP_CONCAT(DISTINCT IF(CASE d.symbol WHEN "-" THEN "" ELSE d.symbol END = "", d.name, d.symbol) ORDER BY (d.symbol != "" AND d.symbol != "-") DESC, d.symbol, d.name SEPARATOR ", ") AS diseases_, ' .
                                           'COUNT(DISTINCT t.id) AS transcripts';
-// Diagnostics: Removed two below, and modified one up.
-//                                          'COUNT(DISTINCT vog.id) AS variants, ' .
-//                                          'COUNT(DISTINCT vog.`VariantOnGenome/DBID`) AS uniq_variants';
+        if (!LOVD_plus) {
+            // Speed optimization by skipping variant counts.
+            $this->aSQLViewList['SELECT'] .= ', ' .
+                                          'COUNT(DISTINCT vog.id) AS variants, ' .
+                                          'COUNT(DISTINCT vog.`VariantOnGenome/DBID`) AS uniq_variants';
+        }
         $this->aSQLViewList['FROM']     = TABLE_GENES . ' AS g ' .
                                           'LEFT OUTER JOIN ' . TABLE_GEN2DIS . ' AS g2d ON (g.id = g2d.geneid) ' .
                                           'LEFT OUTER JOIN ' . TABLE_TRANSCRIPTS . ' AS t ON (g.id = t.geneid) ' .
-// Diagnostics: Removed two below.
-//                                          'LEFT OUTER JOIN ' . TABLE_VARIANTS_ON_TRANSCRIPTS . ' AS vot ON (t.id = vot.transcriptid) ' .
-//                                          'LEFT OUTER JOIN ' . TABLE_VARIANTS . ' AS vog ON (vot.id = vog.id' . ($_AUTH['level'] >= LEVEL_COLLABORATOR? '' : ' AND vog.statusid >= ' . STATUS_MARKED) . ') ' .
+                                          (LOVD_plus? '' :
+                                             // Speed optimization by skipping variant counts.
+                                            'LEFT OUTER JOIN ' . TABLE_VARIANTS_ON_TRANSCRIPTS . ' AS vot ON (t.id = vot.transcriptid) ' .
+                                            'LEFT OUTER JOIN ' . TABLE_VARIANTS . ' AS vog ON (vot.id = vog.id' . ($_AUTH['level'] >= LEVEL_COLLABORATOR? '' : ' AND vog.statusid >= ' . STATUS_MARKED) . ') ') .
                                           'LEFT OUTER JOIN ' . TABLE_DISEASES . ' AS d ON (g2d.diseaseid = d.id)';
         $this->aSQLViewList['GROUP_BY'] = 'g.id';
 
@@ -130,7 +133,7 @@ class LOVD_Gene extends LOVD_Object {
                         'curators_' => 'Curators',
                         'collaborators_' => array('Collaborators', LEVEL_COLLABORATOR),
                         'variants_' => 'Total number of public variants reported',
-                        'uniq_variants' => 'Unique public DNA variants reported',
+                        'uniq_variants_' => 'Unique public DNA variants reported',
                         'count_individuals' => 'Individuals with public variants',
                         'hidden_variants_' => 'Hidden variants',
                         'note_index' => 'Notes',
@@ -138,9 +141,8 @@ class LOVD_Gene extends LOVD_Object {
                         'created_date_' => 'Date created',
                         'edited_by_' => array('Last edited by', LEVEL_COLLABORATOR),
                         'edited_date_' => array('Date last edited', LEVEL_COLLABORATOR),
-// DIAGNOSTICS: Removed the two below.
-//                        'updated_by_' => array('Last updated by', LEVEL_COLLABORATOR),
-//                        'updated_date_' => 'Date last updated',
+                        'updated_by_' => array('Last updated by', LEVEL_COLLABORATOR),
+                        'updated_date_' => 'Date last updated',
                         'version_' => 'Version',
                         'TableEnd_General' => '',
                         'HR_1' => '',
@@ -165,6 +167,10 @@ class LOVD_Gene extends LOVD_Object {
                         'show_genecards_' => 'GeneCards',
                         'show_genetests_' => 'GeneTests',
                       );
+        if (LOVD_plus) {
+            unset($this->aColumnsViewEntry['updated_by_']);
+            unset($this->aColumnsViewEntry['updated_date_']);
+        }
 
         // List of columns and (default?) order for viewing a list of entries.
         $this->aColumnsViewList =
@@ -185,13 +191,13 @@ class LOVD_Gene extends LOVD_Object {
                     'view' => array('Band', 70),
                     'db'   => array('g.chrom_band', false, true)),
                 'transcripts' => array(
-                    'view' => array('Transcripts', 90),
+                    'view' => array('Transcripts', 90, 'style="text-align : right;"'),
                     'db'   => array('transcripts', 'DESC', 'INT_UNSIGNED')),
                 'variants' => array(
-                    'view' => array('Variants', 70),
+                    'view' => array('Variants', 70, 'style="text-align : right;"'),
                     'db'   => array('variants', 'DESC', 'INT_UNSIGNED')),
                 'uniq_variants' => array(
-                    'view' => array('Unique variants', 70),
+                    'view' => array('Unique variants', 70, 'style="text-align : right;"'),
                     'db'   => array('uniq_variants', 'DESC', 'INT_UNSIGNED')),
                 'updated_date_' => array(
                     'view' => array('Last updated', 110),
@@ -200,20 +206,20 @@ class LOVD_Gene extends LOVD_Object {
                     'view' => array('Associated with diseases', 200),
                     'db'   => array('diseases_', false, 'TEXT')),
             );
-        $this->sSortDefault = 'id_';
-
         if (LOVD_plus) {
             // Diagnostics: Remove some columns, and add one.
             unset($this->aColumnsViewList['variants']);
             unset($this->aColumnsViewList['uniq_variants']);
             unset($this->aColumnsViewList['updated_date_']);
-            // Add transcript information for the gene panel viewlist.
+            // Add transcript information for the gene panel's "Manage genes" gene viewlist.
             // Unfortunately, we can't limit this for the genes VL on the gene panel page,
             //  because we also want it to work on the AJAX viewlist, so we can't use lovd_getProjectFile(),
             //  but neither can we use the sViewListID, because we're in the constructor.
             $_DB->query('SET group_concat_max_len = 10240'); // Make sure you can deal with long transcript lists.
             $this->aSQLViewList['SELECT'] .= ', IFNULL(CONCAT("<OPTION value=&quot;&quot;>-- select --</OPTION>", GROUP_CONCAT(CONCAT("<OPTION value=&quot;", t.id, "&quot;>", t.id_ncbi, "</OPTION>") ORDER BY t.id_ncbi SEPARATOR "")), "<OPTION value=&quot;&quot;>-- no transcripts available --</OPTION>") AS transcripts_HTML';
         }
+
+        $this->sSortDefault = 'id_';
 
         // Because the gene information is publicly available, remove some columns for the public.
         $this->unsetColsByAuthLevel();
@@ -246,7 +252,7 @@ class LOVD_Gene extends LOVD_Object {
             }
         }
 
-        if (!in_array($aData['refseq_genomic'], $zData['genomic_references'])) {
+        if (lovd_getProjectFile() != '/import.php' && !in_array($aData['refseq_genomic'], $zData['genomic_references'])) {
             lovd_errorAdd('refseq_genomic' ,'Please select a proper NG, NC, or LRG accession number in the \'NCBI accession number for the genomic reference sequence\' selection box.');
         }
 
@@ -305,6 +311,16 @@ class LOVD_Gene extends LOVD_Object {
 
         // If we've built the form before, simply return it. Especially imports will repeatedly call checkFields(), which calls getForm().
         if (!empty($this->aFormData)) {
+            if (lovd_getProjectFile() == '/import.php') {
+                // During import the refseq_genomic is required, else the import
+                // starts complaining that the selected refseq_genomic is not valid
+                // Therefore we set the refseq_genomic in the aFormData property
+                // before the getForm() is returned.
+                global $zData;
+                $aSelectRefseqGenomic = array_combine(array($zData['refseq_genomic']), array($zData['refseq_genomic']));
+
+                $this->aFormData['refseq_genomic'] = array('Genomic reference sequence', '', 'select', 'refseq_genomic', 1, $aSelectRefseqGenomic, false, false, false);
+            }
             return parent::getForm();
         }
 
@@ -322,13 +338,19 @@ class LOVD_Gene extends LOVD_Object {
         }
 
         // References sequences (genomic and transcripts).
-        $aSelectRefseqGenomic = array_combine($zData['genomic_references'], $zData['genomic_references']);
+        if (lovd_getProjectFile() == '/import.php') {
+            $aSelectRefseqGenomic = array_combine(array($zData['refseq_genomic']), array($zData['refseq_genomic']));
+        } else {
+            $aSelectRefseqGenomic = array_combine($zData['genomic_references'], $zData['genomic_references']);
+        }
         $aTranscriptNames = array();
         $aTranscriptsForm = array();
         if (!empty($zData['transcripts'])) {
             foreach ($zData['transcripts'] as $sTranscript) {
-                if (!isset($aTranscriptNames[preg_replace('/\.\d+$/', '', $sTranscript)])) {
-                    $aTranscriptsForm[$sTranscript] = lovd_shortenString($zData['transcriptNames'][preg_replace('/\.\d+$/', '', $sTranscript)], 50);
+                // Until revision 679 the transcript version was not used in the index and removed with preg_replace.
+                // Can not figure out why version is not included. Therefore, for now we will do without preg_replace.
+                if (!isset($aTranscriptNames[$sTranscript])) {
+                    $aTranscriptsForm[$sTranscript] = lovd_shortenString($zData['transcriptNames'][$sTranscript], 50);
                     $aTranscriptsForm[$sTranscript] .= str_repeat(')', substr_count($aTranscriptsForm[$sTranscript], '(')) . ' (' . $sTranscript . ')';
                 }
             }
@@ -358,7 +380,7 @@ class LOVD_Gene extends LOVD_Object {
         // Array which will make up the form table.
         $this->aFormData =
                  array(
-                        array('POST', '', '', '', '50%', '14', '50%'),
+                        array('POST', '', '', '', '35%', '14', '65%'),
                         array('', '', 'print', '<B>General information</B>'),
                         'hr',
                         array('Full gene name', '', 'print', $zData['name'], 50),
@@ -378,7 +400,7 @@ class LOVD_Gene extends LOVD_Object {
                         array('', '', 'print', '<B>Reference sequences (mandatory)</B>'),
                         array('', '', 'note', 'Collecting variants requires a proper reference sequence. Without a genomic and a transcript reference sequence the variants in this LOVD database cannot be interpreted properly or mapped to the genome.'),
                         'hr',
-                        array('Genomic reference sequence', '', 'select', 'refseq_genomic', 1, $aSelectRefseqGenomic, false, false, false),
+    'refseq_genomic' => array('Genomic reference sequence', '', 'select', 'refseq_genomic', 1, $aSelectRefseqGenomic, false, false, false),
                         array('', '', 'note', 'Select the genomic reference sequence (NG, NC, LRG accession number). Only the references that are available to LOVD are shown.'),
     'transcripts' =>    array('Transcript reference sequence(s)', 'Select transcript references (NM accession numbers).', 'select', 'active_transcripts', $nTranscriptsFormSize, $aTranscriptsForm, false, true, false),
                         'hr',
@@ -495,7 +517,7 @@ class LOVD_Gene extends LOVD_Object {
                 $zData['diseases_'] .= (!$zData['diseases_']? '' : ', ') . '<A href="diseases/' . $nID . '">' . $sSymbol . '</A>';
                 if ($nOMIMID) {
                     // Add link to OMIM for each disease that has an OMIM ID.
-                    $zData['disease_omim_'] .= (!$zData['disease_omim_'] ? '' : '<BR>') . '<A href="' . lovd_getExternalSource('omim', $nOMIMID, true) . '" target="_blank">' . $sSymbol . ($sSymbol == $sName? '' : ' (' . $sName . ')') . '</A>';
+                    $zData['disease_omim_'] .= (!$zData['disease_omim_']? '' : '<BR>') . '<A href="' . lovd_getExternalSource('omim', $nOMIMID, true) . '" target="_blank">' . $sSymbol . ($sSymbol == $sName? '' : ' (' . $sName . ')') . '</A>';
                 }
             }
 
@@ -561,7 +583,10 @@ class LOVD_Gene extends LOVD_Object {
             if ($zData['variants']) {
                 $zData['variants_'] = '<A href="variants/' . $zData['id'] . '?search_var_status=%3D%22Marked%22%7C%3D%22Public%22">' . $zData['variants'] . '</A>';
             }
-            //'uniq_variants' => 'Unique public DNA variants reported',
+            $zData['uniq_variants_'] = 0;
+            if ($zData['uniq_variants']) {
+                $zData['uniq_variants_'] = '<A href="variants/' . $zData['id'] . '/unique?search_var_status=%3D%22Marked%22%7C%3D%22Public%22">' . $zData['uniq_variants'] . '</A>';
+            }
             //'count_individuals' => 'Individuals with public variants',
             $zData['hidden_variants_'] = $zData['hidden_variants'];
             if ($zData['hidden_variants'] && $_AUTH['level'] >= LEVEL_CURATOR) {
@@ -596,13 +621,15 @@ class LOVD_Gene extends LOVD_Object {
                 $sURLBedFile = rawurlencode(str_replace('https://', 'http://', ($_CONF['location_url']? $_CONF['location_url'] : lovd_getInstallURL())) . 'api/rest/variants/' . $zData['id'] . '?format=text/bed');
                 $sURLUCSC = 'http://genome.ucsc.edu/cgi-bin/hgTracks?clade=mammal&amp;org=Human&amp;db=' . $_CONF['refseq_build'] . '&amp;position=chr' . $zData['chromosome'] . ':' . ($zData['position_g_mrna_start'] - 50) . '-' . ($zData['position_g_mrna_end'] + 50) . ($zData['sense']? '' : '&amp;complement_hg19=1') . '&amp;hgt.customText=' . $sURLBedFile;
                 $zData['ucsc'] = 'Show variants in the UCSC Genome Browser (<A href="' . $sURLUCSC . '" target="_blank">full view</A>, <A href="' . $sURLUCSC . rawurlencode('&visibility=4') . '" target="_blank">compact view</A>)';
-                // The weird addition in the end is to fake a proper name in Ensembl.
                 if ($_CONF['refseq_build'] == 'hg18') {
-                    $sURLEnsembl = 'http://may2009.archive.ensembl.org/Homo_sapiens/Location/View?r=' . $zData['chromosome'] . ':' . ($zData['position_g_mrna_start'] - 50) . '-' . ($zData['position_g_mrna_end'] + 50) . ';data_URL=' . $sURLBedFile . rawurlencode('&name=/' . $zData['id'] . ' variants');
-                //} elseif ($_CONF['refseq_build'] == 'hg19') {
+                    $sURLEnsembl = 'http://may2009.archive.ensembl.org/Homo_sapiens/Location/View?r=' . $zData['chromosome'] . ':' . ($zData['position_g_mrna_start'] - 50) . '-' . ($zData['position_g_mrna_end'] + 50) . ';data_URL=';
+                } elseif ($_CONF['refseq_build'] == 'hg19') {
+                    $sURLEnsembl = 'http://grch37.ensembl.org/Homo_sapiens/Location/View?r=' . $zData['chromosome'] . ':' . ($zData['position_g_mrna_start'] - 50) . '-' . ($zData['position_g_mrna_end'] + 50) . ';contigviewbottom=url:';
                 } else {
-                    $sURLEnsembl = 'http://www.ensembl.org/Homo_sapiens/Location/View?r=' . $zData['chromosome'] . ':' . ($zData['position_g_mrna_start'] - 50) . '-' . ($zData['position_g_mrna_end'] + 50) . ';contigviewbottom=url:' . $sURLBedFile . rawurlencode('&name=/' . $zData['id'] . ' variants');
+                    $sURLEnsembl = 'http://www.ensembl.org/Homo_sapiens/Location/View?r=' . $zData['chromosome'] . ':' . ($zData['position_g_mrna_start'] - 50) . '-' . ($zData['position_g_mrna_end'] + 50) . ';contigviewbottom=url:';
                 }
+                // The weird addition in the end is to fake a proper name in Ensembl.
+                $sURLEnsembl .= $sURLBedFile . rawurlencode('&name=/' . $zData['id'] . ' variants');
                 $zData['ensembl'] = 'Show variants in the Ensembl Genome Browser (<A href="' . $sURLEnsembl . '=labels" target="_blank">full view</A>, <A href="' . $sURLEnsembl . '=normal" target="_blank">compact view</A>)';
                 $zData['ncbi'] = 'Show distribution histogram of variants in the <A href="http://www.ncbi.nlm.nih.gov/projects/sviewer/?id=' . $_SETT['human_builds'][$_CONF['refseq_build']]['ncbi_sequences'][$zData['chromosome']] . '&amp;v=' . ($zData['position_g_mrna_start'] - 100) . ':' . ($zData['position_g_mrna_end'] + 100) . '&amp;content=7&amp;url=' . $sURLBedFile . '" target="_blank">NCBI Sequence Viewer</A>';
 

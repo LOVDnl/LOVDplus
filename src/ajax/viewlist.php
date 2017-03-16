@@ -9,7 +9,9 @@
  *
  * Copyright   : 2004-2016 Leiden University Medical Center; http://www.LUMC.nl/
  * Programmers : Ivo F.A.C. Fokkema <I.F.A.C.Fokkema@LUMC.nl>
- *               Ing. Ivar C. Lugtenburg <I.C.Lugtenburg@LUMC.nl>
+ *               Ivar C. Lugtenburg <I.C.Lugtenburg@LUMC.nl>
+ *               Daan Asscheman <D.Asscheman@LUMC.nl>
+ *               M. Kroon <m.kroon@lumc.nl>
  *
  *
  * This file is part of LOVD.
@@ -31,8 +33,15 @@
 
 define('ROOT_PATH', '../');
 require ROOT_PATH . 'inc-init.php';
+require_once ROOT_PATH . 'inc-lib-viewlist.php';
 
-if (empty($_GET['viewlistid']) || empty($_GET['object']) || !preg_match('/^[A-Z_]+$/i', $_GET['object'])) {
+// Get viewlist-identifying arguments from request and check their validity.
+$sViewListID = (isset($_REQUEST['viewlistid'])? $_REQUEST['viewlistid'] : '');
+$sObject = (isset($_REQUEST['object'])? $_REQUEST['object'] : '');
+$sObjectID = (isset($_REQUEST['object_id'])? $_REQUEST['object_id'] : '');
+$nID = (isset($_REQUEST['id'])? $_REQUEST['id'] : '');
+
+if (empty($sViewListID) || empty($sObject) || !preg_match('/^[A-Z_]+$/i', $sObject)) {
     die(AJAX_DATA_ERROR);
 }
 
@@ -42,39 +51,40 @@ $aNeededLevel =
          array(
                 'Column' => LEVEL_CURATOR,
                 'Custom_ViewList' => 0,
-                'Custom_ViewListMOD' => 0,
+                'Custom_ViewListMOD' => 0, // LOVD+
                 'Disease' => 0,
                 'Gene' => 0,
-                'Gene_Panel' => LEVEL_SUBMITTER,
-                'Gene_Panel_Gene' => LEVEL_SUBMITTER,
-                'Gene_Panel_Gene_REV' => LEVEL_SUBMITTER,
-                'Gene_Statistic' => LEVEL_SUBMITTER,
+                'Gene_Panel' => LEVEL_SUBMITTER, // LOVD+
+                'Gene_Panel_Gene' => LEVEL_SUBMITTER, // LOVD+
+                'Gene_Panel_Gene_REV' => LEVEL_SUBMITTER, // LOVD+
+                'Gene_Statistic' => LEVEL_SUBMITTER, // LOVD+
                 'Genome_Variant' => 0,
                 'Individual' => 0,
-                'IndividualMOD' => 0,
+                'IndividualMOD' => 0, // LOVD+
                 'Link' => LEVEL_MANAGER,
                 'Log' => (LOVD_plus? LEVEL_SUBMITTER : LEVEL_MANAGER),
                 'Phenotype' => 0,
                 'Screening' => 0,
-                'ScreeningMOD' => 0,
+                'ScreeningMOD' => 0, // LOVD+
                 'Shared_Column' => LEVEL_CURATOR,
                 'Transcript' => 0,
                 'Transcript_Variant' => 0,
-                'User' => LEVEL_MANAGER,
+                'User' => LEVEL_SUBMITTER, // Certain fields will be forcefully removed, though.
               );
-if (isset($aNeededLevel[$_GET['object']])) {
-    $nNeededLevel = $aNeededLevel[$_GET['object']];
+if (isset($aNeededLevel[$sObject])) {
+    $nNeededLevel = $aNeededLevel[$sObject];
 } else {
     $nNeededLevel = LEVEL_ADMIN;
 }
 
 // 2013-06-28; 3.0-06; We can't allow just any custom viewlist without actually checking the shown objects. Screenings, for instance, does not have a built-in status check (since it doesn't have a status).
 // Building list of allowed combinations of objects for custom viewlists.
-if ($_GET['object'] == 'Custom_ViewList' && (!isset($_GET['object_id']) || !in_array($_GET['object_id'],
+if ($sObject == 'Custom_ViewList' && (!isset($sObjectID) || !in_array($sObjectID,
             array(
                 'VariantOnGenome,Scr2Var,VariantOnTranscript', // Variants on I and S VEs.
                 'Transcript,VariantOnTranscript,VariantOnGenome', // IN_GENE.
                 'VariantOnTranscript,VariantOnGenome', // Gene-specific variant view.
+                'VariantOnTranscriptUnique,VariantOnGenome', // Gene-specific unique variant view.
                 'VariantOnTranscript,VariantOnGenome,Screening,Individual', // Gene-specific full data view.
                 'Gene,Transcript,DistanceToVar')))) { // Map variant to transcript.
     die(AJAX_DATA_ERROR);
@@ -83,13 +93,13 @@ if ($_GET['object'] == 'Custom_ViewList' && (!isset($_GET['object_id']) || !in_a
 // We can't authorize Curators and Collaborators without loading their level!
 // 2014-03-13; 3.0-10; Collaborators should of course also get their level loaded!
 if ($_AUTH['level'] < LEVEL_MANAGER && (!empty($_AUTH['curates']) || !empty($_AUTH['collaborates']))) {
-    if ($_GET['object'] == 'Column') {
+    if ($sObject == 'Column') {
         lovd_isAuthorized('gene', $_AUTH['curates']); // Any gene will do.
-    } elseif ($_GET['object'] == 'Transcript' && isset($_GET['search_geneid']) && preg_match('/^="([^"]+)"$/', $_GET['search_geneid'], $aRegs)) {
+    } elseif ($sObject == 'Transcript' && isset($_REQUEST['search_geneid']) && preg_match('/^="([^"]+)"$/', $_REQUEST['search_geneid'], $aRegs)) {
         lovd_isAuthorized('gene', $aRegs[1]); // Authorize for the gene currently searched (it currently restricts the view).
-    } elseif ($_GET['object'] == 'Shared_Column' && isset($_GET['object_id'])) {
-        lovd_isAuthorized('gene', $_GET['object_id']); // Authorize for the gene currently loaded.
-    } elseif ($_GET['object'] == 'Custom_ViewList' && isset($_GET['id'])) {
+    } elseif ($sObject == 'Shared_Column' && isset($_REQUEST['object_id'])) {
+        lovd_isAuthorized('gene', $sObjectID); // Authorize for the gene currently loaded.
+    } elseif ($sObject == 'Custom_ViewList' && isset($_REQUEST['id'])) {
         // 2013-06-28; 3.0-06; We can't just authorize users based on the given ID without actually checking the shown objects and checking if the search results are actually limited or not.
         // CustomVL_VOT_for_I_VE has no ID and does not require authorization (only public VOGs loaded).
         // CustomVL_VOT_for_S_VE has no ID and does not require authorization (only public VOGs loaded).
@@ -97,12 +107,22 @@ if ($_AUTH['level'] < LEVEL_MANAGER && (!empty($_AUTH['curates']) || !empty($_AU
 
         // CustomVL_VOT_VOG_<<GENE>> is restricted per gene in the object argument, and search_transcriptid should contain a transcript ID that matches.
         // CustomVL_VIEW_<<GENE>> is restricted per gene in the object argument, and search_transcriptid should contain a transcript ID that matches.
-        if (in_array($_GET['object_id'], array('VariantOnTranscript,VariantOnGenome', 'VariantOnTranscript,VariantOnGenome,Screening,Individual')) && (!isset($_GET['search_transcriptid']) || !$_DB->query('SELECT COUNT(*) FROM ' . TABLE_TRANSCRIPTS . ' WHERE id = ? AND geneid = ?', array($_GET['search_transcriptid'], $_GET['id']))->fetchColumn())) {
+        if (in_array($sObjectID, array('VariantOnTranscript,VariantOnGenome', 'VariantOnTranscriptUnique,VariantOnGenome', 'VariantOnTranscript,VariantOnGenome,Screening,Individual')) && (!isset($_GET['search_transcriptid']) || !$_DB->query('SELECT COUNT(*) FROM ' . TABLE_TRANSCRIPTS . ' WHERE id = ? AND geneid = ?', array($_GET['search_transcriptid'], $_GET['id']))->fetchColumn())) {
             die(AJAX_NO_AUTH);
         }
-        lovd_isAuthorized('gene', $_GET['id']); // Authorize for the gene currently loaded.
+        lovd_isAuthorized('gene', $nID); // Authorize for the gene currently loaded.
     }
 }
+
+
+// 2016-07-14; 3.0-17; Submitters should not be allowed to retrieve more
+// information about users than the info the access sharing page gives them.
+$aColsToSkip = (!empty($_REQUEST['skip'])? array_keys($_REQUEST['skip']) : array());
+if ($sObject == 'User' && $_AUTH['level'] == LEVEL_SUBMITTER) {
+    // Force removal of certain columns, regardless of this has been requested or not.
+    $aColsToSkip = array_unique(array_merge($aColsToSkip, array('username', 'status_', 'last_login_', 'created_date_', 'curates', 'level_')));
+}
+
 
 // Require special clearance?
 if ($nNeededLevel && (!$_AUTH || $_AUTH['level'] < $nNeededLevel)) {
@@ -122,16 +142,11 @@ if (FORMAT == 'text/plain' && !defined('FORMAT_ALLOW_TEXTPLAIN')) {
     die(AJAX_NO_AUTH);
 }
 
-$sFile = ROOT_PATH . 'class/object_' . strtolower($_GET['object']) . 's.php';
+$sFile = ROOT_PATH . 'class/object_' . strtolower($sObject) . 's.php';
+// For revision tables.
 $sFile = str_replace('_revs.php', 's.rev.php', $sFile);
-// FOR DIAGNOSIS
-if ($_GET['object'] == 'Custom_ViewListMOD' && $_GET['object_id'] == 'AnalysisRunResults,VariantOnGenome,VariantOnTranscript') {
-    $sFile = '../class/object_custom_viewlists.mod.php';
-    if (empty($_GET['search_runid'])) {
-        // Prevent from all variants to show, just show nothing then.
-        $_GET['search_runid'] = '0';
-    }
-} elseif (substr($_GET['object'], -3) == 'MOD') {
+// Exception for LOVD+.
+if (LOVD_plus && substr($_GET['object'], -3) == 'MOD') {
     $sFile = str_replace('mods.', 's.mod.', $sFile);
 }
 
@@ -141,21 +156,66 @@ if (!file_exists($sFile)) {
 }
 
 
-
-$sObjectID = '';
-$nID = '';
-if (in_array($_GET['object'], array('Custom_ViewList', 'Custom_ViewListMOD', 'Phenotype', 'Shared_Column', 'Transcript_Variant'))) {
-    if (isset($_GET['object_id'])) {
-        $sObjectID = $_GET['object_id'];
-    }
-    if (isset($_GET['id'])) {
-        $nID = $_GET['id'];
-    }
-}
 require $sFile;
-$_GET['object'] = 'LOVD_' . str_replace('_', '', $_GET['object']); // FIXME; test dit op een windows, test case-insensitivity.
-$aColsToSkip = (!empty($_GET['skip'])? $_GET['skip'] : array());
-$_DATA = new $_GET['object']($sObjectID, $nID);
+$sObjectClassname = 'LOVD_' . str_replace('_', '', $sObject);
+$_DATA = new $sObjectClassname($sObjectID, $nID);
+
+
+
+// Check if search forms need to be disabled.
+// FIXME: Implement this later as an argument to viewList().
+if (!empty($_GET['disableVLSearch'])) {
+    // Columns to be excluded from disabling the search
+    //  functionality can be specified in this array.
+    if (!isset($_GET['disableVLSearchExclude']) || !is_array($_GET['disableVLSearchExclude'])) {
+        $_GET['disableVLSearchExclude'] = array();
+    }
+    $_DATA->disableVLSearch($_GET['disableVLSearchExclude']);
+}
+
+if (POST && ACTION == 'applyFR') {
+    // Apply find & replace.
+
+    if ($_AUTH['level'] < LEVEL_CURATOR || !isset($_POST['password']) ||
+        !lovd_verifyPassword($_POST['password'], $_AUTH['password'])) {
+        // Not authorized for find & replace.
+        die(AJAX_NO_AUTH);
+    }
+    $aFROptions['sFRMatchType'] = (isset($_POST['FRMatchType_' . $sViewListID])?
+        $_POST['FRMatchType_' . $sViewListID] : null);
+    $aFROptions['bFRReplaceAll'] = (isset($_POST['FRReplaceAll_' . $sViewListID])?
+        $_POST['FRReplaceAll_' . $sViewListID] : null);
+
+    if (!isset($_POST['FRFieldname_' . $sViewListID]) ||
+        !isset($_POST['FRSearch_' . $sViewListID]) ||
+        !isset($_POST['FRReplace_' . $sViewListID])) {
+        die(AJAX_DATA_ERROR);
+    }
+
+    // Setup search filters before applying find & replace.
+    list($WHERE, $HAVING, $aArguments, $aBadSyntaxColumns, $aColTypes) = $_DATA->processViewListSearchArgs($_POST);
+
+    // Update where/having clauses based on search filters (needed for LOVD_Object->buildSQL()).
+    if ($WHERE) {
+        $_DATA->aSQLViewList['WHERE'] .= ($_DATA->aSQLViewList['WHERE']? ' AND ' : '') . $WHERE;
+    }
+    if ($HAVING) {
+        $_DATA->aSQLViewList['HAVING'] .= ($_DATA->aSQLViewList['HAVING']? ' AND ' : '') . $HAVING;
+    }
+    $aArgs = array_merge($aArguments['WHERE'], $aArguments['HAVING']);
+    $bResult = $_DATA->applyColumnFindAndReplace($_POST['FRFieldname_' . $sViewListID],
+                                                $_POST['FRSearch_' . $sViewListID],
+                                                $_POST['FRReplace_' . $sViewListID],
+                                                $aArgs, $aFROptions);
+    // Return AJAX response.
+    die($bResult? AJAX_TRUE : AJAX_FALSE);
+
+} elseif (POST) {
+    // Post request with no action specified. We do not allow normal viewlist
+    // views via POST.
+    die(AJAX_DATA_ERROR);
+}
+
 // Set $bHideNav to false always, since this ajax request could only have been sent if there were navigation buttons.
 $_DATA->viewList($_GET['viewlistid'], $aColsToSkip, (!empty($_GET['nohistory'])? true : false), (!empty($_GET['hidenav'])? true : false), (!empty($_GET['options'])? true : false), (!empty($_GET['only_rows'])? true : false));
 ?>
