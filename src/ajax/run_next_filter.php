@@ -375,7 +375,7 @@ if ($aVariantIDs) {
             break;
         case 'cross_screenings':
             $aVariantIDsFiltered = $aVariantIDs;
-            
+
             // Loop through each group and narrow down the selected variant ids after SQL of each group is run.
             foreach ($aConfig['groups'] as $aGroup) {
                 // IN or NOT IN the variants in the group

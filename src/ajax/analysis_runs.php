@@ -166,15 +166,14 @@ if (ACTION == 'clone' && POST) {
     // Update gene panel description to un-run state.
     sGenePanelFilterName = $("#run_' . $nPaddedNewRunID . '_filter_apply_selected_gene_panels td:eq(0)").html();
     $("#run_' . $nPaddedNewRunID . '_filter_apply_selected_gene_panels td:eq(0)").html(sGenePanelFilterName.replace(/<table.+/, ""));
+    var sAction = "lovd_configureAnalysis";
 
     // Define which JS function to run when clicking this table.
     if ($("#run_' . $nPaddedNewRunID . '_filter_apply_selected_gene_panels").length == 0 
         || $("#run_' . $nPaddedNewRunID . '_filter_apply_selected_gene_panels").hasClass("filter_skipped")) {
-        // If there gene panel filter is not active or is not included in this analysis.
-        var sAction = "lovd_configureAnalysis";
+        // If there gene panel filter is not active or is not included in this analysis.        
         var sGenePanel = ", undefined";
     } else {
-        var sAction = "lovd_popoverGenePanelSelectionForm";
         var sGenePanel = "";
     }
     

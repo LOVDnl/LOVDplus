@@ -245,7 +245,8 @@ if (ACTION == 'configure' && GET) {
 
     // If further configurationi required, build modal to take the configuration inputs.
     // Implement an CSRF protection by working with tokens.
-    $sForm  = '<FORM id=\'configure_analysis_form\'><INPUT type=\'hidden\' name=\'csrf_token\' value=\'{{CSRF_TOKEN}}\'><BR>';
+    $_SESSION['csrf_tokens']['run_analysis_configure'] = md5(uniqid());
+    $sForm  = '<FORM id=\'configure_analysis_form\'><INPUT type=\'hidden\' name=\'csrf_token\' value=\'' . $_SESSION['csrf_tokens']['run_analysis_configure'] . '\'><BR>';
     $sForm .= $sFiltersFormItems;
     $sForm .= $sFormRequiredInputs;
     $sForm .= '</FORM>';
@@ -284,6 +285,13 @@ if (ACTION == 'configure' && GET) {
 if (ACTION == 'configure' && POST) {
     header('Content-type: text/javascript; charset=UTF-8');
     $aConfig = (empty($_REQUEST['config'])? array() : $_REQUEST['config']);
+
+    // TODO: This is a good place for us to do our form inputs validation
+    if (empty($_POST['csrf_token']) || $_POST['csrf_token'] != $_SESSION['csrf_tokens']['run_analysis_configure']) {
+        die('alert("Error while sending data, possible security risk. Please reload the page, and try again.");');
+    }
+
+    // Now that we know we have all our required inputs for all filters, we can pass it to 'run' to insert/update database entries
     print('
     $("#configure_analysis_dialog").dialog("close");
     lovd_runAnalysis (\'' . $_REQUEST['screeningid'] . '\', \'' . $_REQUEST['analysisid'] . '\', \'' . $_REQUEST['runid'] . '\', \'' . $_REQUEST['elementid'] . '\', ' . json_encode($aConfig) . ');
@@ -327,7 +335,7 @@ if (ACTION == 'run') {
         $aFilters = explode(';', $zAnalysis['_filters']);
         foreach ($aFilters as $i => $sFilter) {
             $sFilterConfig = (empty($aConfig[$sFilter]) ? NULL : json_encode($aConfig[$sFilter]));
-            $q = $_DB->query('INSERT INTO ' . TABLE_ANALYSES_RUN_FILTERS . ' (runid, filterid, config_json,filter_order) VALUES (?, ?, ?, ?)', array($nRunID, $sFilter, $sFilterConfig, ($i+1)));
+            $q = $_DB->query('INSERT INTO ' . TABLE_ANALYSES_RUN_FILTERS . ' (runid, filterid, config_json, filter_order) VALUES (?, ?, ?, ?)', array($nRunID, $sFilter, $sFilterConfig, ($i+1)));
             if (!$q) {
                 $_DB->rollBack();
                 die('Failed to create analysis run filter in the database. If the analysis is defined properly, this is an error in the software.');
@@ -338,6 +346,16 @@ if (ACTION == 'run') {
         $aFilters = explode(';', $zAnalysisRun['_filters']);
         // Update the existing analyses run record to store the custom panel genes.
         $_DB->query('UPDATE ' . TABLE_ANALYSES_RUN . ' SET custom_panel = ? WHERE id = ?', array($sCustomPanel, $nRunID));
+        
+        // Insert into database the new configurations.
+        foreach ($aFilters as $i => $sFilter) {
+            $sFilterConfig = (empty($aConfig[$sFilter]) ? NULL : json_encode($aConfig[$sFilter]));
+            $q = $_DB->query('UPDATE ' . TABLE_ANALYSES_RUN_FILTERS . ' SET config_json = ? WHERE filterid = ?', array($sFilterConfig, $sFilter));
+            if (!$q) {
+                $_DB->rollBack();
+                die('Failed to update analysis run filter in the database. If the analysis is defined properly, this is an error in the software.');
+            }
+        }
     }
 
     // Process the selected gene panels.

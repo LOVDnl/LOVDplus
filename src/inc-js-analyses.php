@@ -69,7 +69,7 @@ function lovd_configureAnalysis (nScreeningID, nAnalysisID, nRunID, sElementID)
 {
     // Display the modal to enter configurations for different filters.
     $.get('<?php echo lovd_getInstallURL(); ?>ajax/run_analysis.php?configure&elementid=' + escape(sElementID) + '&screeningid=' + escape(nScreeningID) + '&analysisid=' + escape(nAnalysisID) + '&runid=' + escape(nRunID),
-    function() {console.log("Running... "); }).fail(function(data) { console.log("ERROR"); });
+    function() {}).fail(function(data) {});
 
 }
 
@@ -120,6 +120,7 @@ function lovd_runAnalysis (nScreeningID, nAnalysisID, nRunID, sElementID, aConfi
                     // Success! We're running...
                     // Now call the script that will start filtering.
                     var nRunID = oRegExp[1];
+console.log('in runAnalysis');
                     return lovd_runNextFilter(nAnalysisID, nRunID, sElementID);
                 } else if (data == '8') {
                     // Failure, reset table.
@@ -200,7 +201,9 @@ function lovd_runNextFilter (nAnalysisID, nRunID, sElementID)
                     $('#run_' + nRunID).attr('onclickold', '');
                     // Fix link to modify analysis run.
                     sOnClickLink = $('#run_' + nRunID + ' img.modify').attr('onclick');
-                    $('#run_' + nRunID + ' img.modify').attr('onclick', sOnClickLink.replace('analyses/' + nAnalysisID, 'analyses/run/' + nRunID));
+                    if (sOnClickLink) {
+                        $('#run_' + nRunID + ' img.modify').attr('onclick', sOnClickLink.replace('analyses/' + nAnalysisID, 'analyses/run/' + nRunID));
+                    }
 
                     // Replace all URLs that still have the run ID '0' to use the new run ID, all in one go.
                     var sNewAnalysis = $('#run_' + nRunID).html().split('/0?').join('/' + nRunID + '?');
@@ -212,7 +215,6 @@ function lovd_runNextFilter (nAnalysisID, nRunID, sElementID)
                     // Now load the VL.
                     lovd_showAnalysisResults(nRunID);
                     return true;
-
                 } else if (data == '8') {
                     // Failure, we're in trouble, reload view.
                     alert('Lost your session. Please log in again.');
