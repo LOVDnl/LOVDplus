@@ -40,17 +40,21 @@ class LOVD_ObservationCounts
     // - How the SQL query is constructed to get the data for each cateogory.
     // - Whether observation counts data can be updated depending on status of the screening and role of the user.
 
-    protected $aData = array();
-    protected $aIndividual = array();
-    protected $nVariantID = null;
-    protected $nTimeGenerated = null;
-    protected $nCurrentPopulationSize = null;
+    protected $aData = array(); // Store the observation counts data fetched from the database or calculated by buildData.
+    protected $aIndividual = array(); // Store details of the individual where this variant is found.
+    protected $nVariantID = null; // The Id of the variant we are looking into.
+    protected $nTimeGenerated = null; // The timestamp of when the observation count data was generated.
+    protected $nCurrentPopulationSize = null; // The number of individuals in the database now.
 
-    protected $aCategories = array();
-    protected $aColumns = array();
+    protected $aCategories = array(); // The configurations of observation counts categories for this instance.
+    protected $aColumns = array(); // The list of observation counts columns to be displayed for this instance.
 
+    // We currently divide the Observation Counts data calculations into these types.
+    // They are essentially different because they have different criteria of
+    // how the data should be calculated
     public static $TYPE_GENEPANEL = 'genepanel';
     public static $TYPE_GENERAL = 'general';
+
     public static $EMPTY_DATA_DISPLAY = '-'; // How we want to show that a category does not have sufficient data to generate observation counts.
     protected static $DEFAULT_MIN_POP_SIZE = 100;
 
@@ -68,6 +72,60 @@ class LOVD_ObservationCounts
     public function buildData ($aSettings = array())
     {
         // Generate observation counts data and store it in the database in json format.
+        //
+        // $aSettings is expected in the following format
+        // array(
+        //    TYPE_ABC => array(
+        //      'columns' => array(
+        //          'col_key_1' => 'Column Label 1',
+        //          'col_key_2' => 'Column Label 2'
+        //       ),
+        //      'categories' => array(
+        //          'category_key_1',
+        //          'category_key_2'
+        //      )
+        //    ),
+        //
+        //    TYPE_XYZ => array(...)
+        // );
+        //
+        // Example:
+        // array(
+        //    // If we want to display gene panel observation counts using default config,
+        //    // then simply add 'genepanel' => array()
+        //
+        //    'genepanel' => array(
+        //
+        //        // If columns is empty, use default columns list
+        //        'columns' => array(
+        //            'values' => 'Gene Panel',
+        //            'total_individuals' => 'Total # Individuals',
+        //            'num_affected' => '# of Affected Individuals',
+        //            'num_not_affected' => '# of Unaffected Individuals',
+        //            'percentage' => 'Percentage (%)'
+        //        ),
+        //
+        //        // if categories is empty, use default categories list
+        //        'categories' => array()
+        //     ),
+        //
+        //    // If we want to display general categories observation counts using default config,
+        //    // then simply add 'general' => array()
+        //
+        //    'general' => array(
+        //
+        //        // if columns is empty, use default columns list
+        //        'columns' => array(
+        //            'label' => 'Category',
+        //            'values' => 'Value',
+        //            'threshold' => 'Percentage'
+        //        ),
+        //
+        //        // if categories is empty, use default categories list
+        //        'categories' => array(),
+        //        'min_population_size' => 100
+        //     )
+        // );
 
         global $_DB;
 
@@ -81,10 +139,15 @@ class LOVD_ObservationCounts
         $aData = array();
         $aData['population_size'] = $this->getCurrentPopulationSize();
         foreach ($aSettings as $sType => $aTypeSettings) {
+            // Initialize and validate if the categories selected by this instance is valid.
             $this->aCategories = $this->validateCategories($sType, $aTypeSettings);
             $this->aColumns = $this->validateColumns($sType, $aTypeSettings);
+
+            // Now, generate observation counts data for each type selected in the settings.
             switch ($sType) {
                 case static::$TYPE_GENERAL:
+                    // Generic categories have the requirement that it can only be calculated if
+                    // there is a minimum number of individuals (with screenings) in the database.
                     $minPopSize = static::$DEFAULT_MIN_POP_SIZE;
                     if (isset($aSettings[static::$TYPE_GENERAL]['min_population_size'])) {
                         $minPopSize = $aSettings[static::$TYPE_GENERAL]['min_population_size'];
@@ -97,6 +160,7 @@ class LOVD_ObservationCounts
 
                     $aData[static::$TYPE_GENERAL] = array();
                     foreach ($this->aCategories[static::$TYPE_GENERAL] as $sCategory => $aRules) {
+                        // Build the observation counts data for each category.
                         $aData[static::$TYPE_GENERAL][$sCategory] = $this->generateData($aRules, static::$TYPE_GENERAL);
                     }
                     break;
@@ -105,6 +169,7 @@ class LOVD_ObservationCounts
                     $aData[static::$TYPE_GENEPANEL] = array();
                     foreach ($this->aCategories[static::$TYPE_GENEPANEL] as $sGenepanelId => $aGenepanelRules) {
                         foreach ($aGenepanelRules as $sCategory => $aRules) {
+                            // Build the observation counts data for each category.
                             $aData[static::$TYPE_GENEPANEL][$sGenepanelId][$sCategory] = $this->generateData($aRules, static::$TYPE_GENEPANEL);
                         }
                     }
@@ -122,9 +187,10 @@ class LOVD_ObservationCounts
 
         lovd_writeLog('Event', LOG_EVENT, 'Created Observation Counts for variant #' . $this->nVariantID . '. JSON DATA: ' . $sObscountJson);
 
+        // Now that we have newly generated observation counts data, we want to make sure all the class variables has the most updated values.
         $this->refreshObject($aData);
-        return $this->aData;
 
+        return $this->aData;
     }
 
 
@@ -170,6 +236,8 @@ class LOVD_ObservationCounts
     {
         // Given the configuration of a category, construct an array of data for that category.
         // No data is saved into the database here.
+        // $aRules : The set of configurations to calculate data for this category
+        // $sType : The observation counts type (check available static variables in this class with TYPE_ prefix).
 
         global $_DB;
 
@@ -296,9 +364,13 @@ class LOVD_ObservationCounts
     {
         // Generate a string of SQL query for different columns of a category.
         // Each observation count category requires a different SQL WHERE query which is passed by $sCondition.
+        // $sColumn: total_individuals|num_affected|num_not_affected|num_ind_with_variant|population_size
+        // $sCondition: SQL query that fits into 'WHERE' clause.
+        // $aParams: Each column might require different params. See comment on each category.
 
         switch ($sColumn) {
             case 'total_individuals':
+                // Required $aParams: NONE
                 return 'SELECT COUNT(s.individualid) AS total
                         FROM ' . TABLE_INDIVIDUALS . ' i 
                         INNER JOIN ' . TABLE_SCREENINGS . ' s ON (s.individualid = i.id)
@@ -307,6 +379,7 @@ class LOVD_ObservationCounts
                         GROUP BY s.individualid';
 
             case 'num_affected':
+                // Required $aParams: NONE
                 return 'SELECT COUNT(s.individualid) AS total_affected
                         FROM ' . TABLE_INDIVIDUALS . ' i 
                         INNER JOIN ' . TABLE_SCREENINGS . ' s ON (s.individualid = i.id AND i.`Individual/Affected` = "Affected")
@@ -315,6 +388,7 @@ class LOVD_ObservationCounts
                         GROUP BY s.individualid';
 
             case 'num_not_affected':
+                // Required $aParams: NONE
                 return 'SELECT COUNT(s.individualid) AS total_not_affected
                         FROM ' . TABLE_INDIVIDUALS . ' i 
                         INNER JOIN ' . TABLE_SCREENINGS . ' s ON (s.individualid = i.id AND i.`Individual/Affected` = "Not Affected")
@@ -323,6 +397,7 @@ class LOVD_ObservationCounts
                         GROUP BY s.individualid';
 
             case 'num_ind_with_variant' :
+                // Required $aParams: 'dbid'
                 return 'SELECT COUNT(s.individualid) AS count_dbid, GROUP_CONCAT(DISTINCT TRIM(LEADING "0" FROM vog.id) SEPARATOR ";") as variant_ids
                         FROM ' . TABLE_VARIANTS . ' AS vog 
                         INNER JOIN ' . TABLE_SCR2VAR . ' AS s2v ON (vog.id = s2v.variantid AND vog.`VariantOnGenome/DBID` = "' . $aParams['dbid'] . '") 
@@ -333,6 +408,7 @@ class LOVD_ObservationCounts
                         GROUP BY s.individualid';
 
             case 'population_size':
+                // Required $aParams: NONE
                 return 'SELECT COUNT(s.individualid) AS population_size
                         FROM ' . TABLE_SCREENINGS . ' AS s 
                         INNER JOIN ' . TABLE_INDIVIDUALS . ' AS i ON (s.individualid = i.id)
@@ -401,8 +477,14 @@ class LOVD_ObservationCounts
         return $this->aData;
     }
 
+
+
+
+
+
     protected function refreshObject($aData)
     {
+        // Refresh class variables after $aData is reloaded.
         $this->aData = $aData;
         $this->nTimeGenerated = $aData['updated'];
     }
@@ -416,10 +498,24 @@ class LOVD_ObservationCounts
     {
         // Check if the categories specified in $aSettings is a valid category.
         // We then load the configuration for all the valid categories into $this->aCategories.
+        // $sType : The observation counts type (check available static variables in this class with TYPE_ prefix).
+        // $aSettings: subarray passed to buildData
+        // array(
+        //  'categories' => array(
+        //      'category_key_1',
+        //      'category_key_2'
+        //  ),
+        //  'columns' => array(
+        //      'col_key_1' => 'Column Label 1',
+        //      'col_key_2' => 'Column Label 2'
+        //  )
+        // )
 
+        // Data structure can be different for different types.
+        // We will build them separately.
         switch ($sType) {
             case static::$TYPE_GENERAL:
-                // Build existing configuration options
+                // Build available configuration options
                 $aConfig = array(
                     'all' => array(
                         'label' => 'All',
@@ -495,7 +591,6 @@ class LOVD_ObservationCounts
                 );
 
                 // Now build categories for this instance of LOVD based on what is specified on the settings array.
-
                 if (empty($aSettings) || empty($aSettings['categories'])) {
                     // If categories is not specified in the settings for this type, then use ALL available categories.
                     $this->aCategories[static::$TYPE_GENERAL] = $aConfig;
@@ -550,6 +645,7 @@ class LOVD_ObservationCounts
                     );
                 }
 
+                // Now build columns for this instance of LOVD based on what is specified on the settings array.
                 if (empty($aSettings) || empty($aSettings['categories'])) {
                     // If categories is not specified in the settings for this type, then use ALL available categories.
                     $this->aCategories[static::$TYPE_GENEPANEL] = $aConfig;
@@ -579,6 +675,18 @@ class LOVD_ObservationCounts
     {
         // Validate if the columns in $aSettings are valid.
         // We then populate the valid columns into $this->aColumns.
+        // $sType : The observation counts type (check available static variables in this class with TYPE_ prefix).
+        // $aSettings: subarray passed to buildData
+        // array(
+        //  'categories' => array(
+        //      'category_key_1',
+        //      'category_key_2'
+        //  ),
+        //  'columns' => array(
+        //      'col_key_1' => 'Column Label 1',
+        //      'col_key_2' => 'Column Label 2'
+        //  )
+        // )
 
         global $_DB;
 
