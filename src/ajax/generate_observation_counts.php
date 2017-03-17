@@ -60,7 +60,7 @@ if (empty($aData) && !$zObsCount->canUpdateData()) {
 }
 
 $aResults = array('success' => array(
-    'data' => json_encode($aData),
+    'data' => $aData,
     'timestamp' => date('d M Y h:ia', $aData['updated'])
 ));
 

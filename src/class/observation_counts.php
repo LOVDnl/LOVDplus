@@ -269,7 +269,7 @@ class LOVD_ObservationCounts
                 $aData['values'][] = $this->aIndividual[$sField];
             }
 
-            // TOTAL population in this database
+            // Total number of individuals with screenings, matching the given conditions.
             $sSQL =  'SELECT COUNT(DISTINCT s.individualid)
                       FROM ' . TABLE_INDIVIDUALS . ' AS i 
                         INNER JOIN ' . TABLE_SCREENINGS . ' AS s ON (s.individualid = i.id)
@@ -278,7 +278,7 @@ class LOVD_ObservationCounts
             $nCount = $_DB->query($sSQL, array())->fetchColumn();
             $aData['total_individuals'] = $nCount;
 
-            // Number of individuals with this variant
+            // Number of individuals with screenings with this variant, matching the given conditions.
             $sSQL = 'SELECT COUNT(s.individualid) AS count_dbid, GROUP_CONCAT(DISTINCT TRIM(LEADING "0" FROM vog.id) SEPARATOR ";") as variant_ids
                      FROM ' . TABLE_VARIANTS . ' AS vog 
                        INNER JOIN ' . TABLE_SCR2VAR . ' AS s2v ON (vog.id = s2v.variantid AND vog.`VariantOnGenome/DBID` = ?) 

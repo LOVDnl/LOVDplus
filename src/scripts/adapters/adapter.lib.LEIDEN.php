@@ -25,7 +25,7 @@ $_INSTANCE_CONFIG['observation_counts'] = array(
         ),
         'categories' => array(
             'all',
-            'Individual/Gender',
+            'gender',
         ),
     ),
     'general' => array(
@@ -37,7 +37,7 @@ $_INSTANCE_CONFIG['observation_counts'] = array(
         ),
         'categories' => array(
             'all',
-            'gender',
+            'Individual/Gender',
         ),
         'min_population_size' => 1,
     ),

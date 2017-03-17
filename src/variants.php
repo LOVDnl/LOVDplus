@@ -716,7 +716,7 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && !ACTION) {
                 jsonData = JSON.parse(data);
 
                 if (jsonData && typeof(jsonData['success']) !== 'undefined') {
-                    var obsCountData = JSON.parse(jsonData['success']['data']);
+                    var obsCountData = jsonData['success']['data'];
                     load_obscount_info(jsonData['success']['timestamp'], obsCountData['population_size']);
                     lovd_load_obscount_table(obsCountData);
                     lovd_reload_obscount_initial_state();
