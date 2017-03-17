@@ -209,17 +209,14 @@ class LOVD_ObservationCounts
         // Check if this user can update/generate new observation counts data depending on:
         // - Their roles.
         // - The current status of the analysis.
-
         global $_DB, $_AUTH;
 
-        // Q: Unsafe query?
-        // A: Make safe.
         $sSQL = 'SELECT s.analysis_statusid
                  FROM ' . TABLE_SCREENINGS . ' AS s
                  INNER JOIN ' . TABLE_SCR2VAR . ' AS s2v 
-                 ON (s.id = s2v.screeningid AND s2v.variantid = ' . $this->nVariantID . ')';
+                 ON (s.id = s2v.screeningid AND s2v.variantid = ?)';
 
-        $aResult = $_DB->query($sSQL)->fetchAssoc();
+        $aResult = $_DB->query($sSQL, array($this->nVariantID))->fetchAssoc();
 
         // Q: This means anyone can update as long as the screening is open. Is that intentional? There's a read-only user.
         // A: Make it require at least LEVEL_ANALYZER. ANALYZER can also load data if THERE IS NO DATA YET, for status IN PROGRESS. Currently done in code below.
@@ -286,11 +283,9 @@ class LOVD_ObservationCounts
             $aData['total_individuals'] = $nCount;
 
             // Number of individuals with this variant
-            // Q: Unsafe query?
-            // A: Fix it.
             $sSQL = 'SELECT COUNT(s.individualid) AS count_dbid, GROUP_CONCAT(DISTINCT TRIM(LEADING "0" FROM vog.id) SEPARATOR ";") as variant_ids
                      FROM ' . TABLE_VARIANTS . ' AS vog 
-                       INNER JOIN ' . TABLE_SCR2VAR . ' AS s2v ON (vog.id = s2v.variantid AND vog.`VariantOnGenome/DBID` = "' . $this->aIndividual['VariantOnGenome/DBID'] . '") 
+                       INNER JOIN ' . TABLE_SCR2VAR . ' AS s2v ON (vog.id = s2v.variantid AND vog.`VariantOnGenome/DBID` = ?) 
                        INNER JOIN ' . TABLE_SCREENINGS . ' AS s ON (s.id = s2v.screeningid) 
                        INNER JOIN ' . TABLE_INDIVIDUALS . ' AS i ON (s.individualid = i.id) 
                        LEFT JOIN ' . TABLE_IND2GP . ' i2gp ON (i2gp.individualid = i.id) 
@@ -298,7 +293,7 @@ class LOVD_ObservationCounts
                      GROUP BY s.individualid';
             $aData['variant_ids'] = array();
             $aData['num_ind_with_variant'] = 0;
-            $zResult = $_DB->query($sSQL);
+            $zResult = $_DB->query($sSQL, array($this->aIndividual['VariantOnGenome/DBID']));
             while ($aRow = $zResult->fetchAssoc()) {
                 $aData['num_ind_with_variant']++;
                 $aData['variant_ids'] = array_merge($aData['variant_ids'], explode(';', $aRow['variant_ids']));
@@ -452,10 +447,8 @@ class LOVD_ObservationCounts
         // Retrieve data that was previously stored in the database as json.
         global $_DB;
 
-        // Q: Unsafe query?
-        // A: Fix it.
-        $sSQL = 'SELECT obscount_json FROM ' . TABLE_VARIANTS . ' WHERE id = "' . $this->nVariantID . '"';
-        $zResult = $_DB->query($sSQL)->fetchAssoc();
+        $sSQL = 'SELECT obscount_json FROM ' . TABLE_VARIANTS . ' WHERE id = ?';
+        $zResult = $_DB->query($sSQL, array($this->nVariantID))->fetchAssoc();
 
         return json_decode($zResult['obscount_json'], true);
     }
