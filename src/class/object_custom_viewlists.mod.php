@@ -4,7 +4,7 @@
  * LEIDEN OPEN VARIATION DATABASE (LOVD)
  *
  * Created     : 2013-11-07
- * Modified    : 2017-03-13
+ * Modified    : 2017-03-17
  * For LOVD    : 3.0-18
  *
  * Copyright   : 2004-2017 Leiden University Medical Center; http://www.LUMC.nl/
@@ -148,15 +148,6 @@ class LOVD_CustomViewListMOD extends LOVD_CustomViewList {
                     // Check if we have found any diseases and set the boolean flag accordingly.
                     $bDiseases = (bool) $sDiseaseIDs;
 
-                    if ($bDiseases) {
-                        // If this individual has diseases then setup the disease specific observation count columns.
-                        $aSQL['SELECT'] .= ', COUNT(DISTINCT odi2d.individualid) AS obs_disease';
-                        $aSQL['SELECT'] .= ', COUNT(DISTINCT odi2d.individualid) / ' . $_DB->query('SELECT COUNT(DISTINCT i2d.individualid) FROM ' . TABLE_IND2DIS . ' AS i2d WHERE i2d.diseaseid IN (' . $sDiseaseIDs . ')')->fetchColumn() . ' AS obs_var_dis_ind_ratio';
-                    } else {
-                        // Otherwise do not do anything for the disease specific observation count columns.
-                        $aSQL['SELECT'] .= ', NULL AS obs_disease, NULL AS obs_var_dis_ind_ratio';
-                    }
-
                     if (!$aSQL['FROM']) {
                         // First data table in query.
                         $aSQL['SELECT'] .= ', vog.id AS row_id'; // To ensure other table's id columns don't interfere.
@@ -181,13 +172,6 @@ class LOVD_CustomViewListMOD extends LOVD_CustomViewList {
                     $aSQL['FROM'] .= ' LEFT OUTER JOIN ' . TABLE_ALLELES . ' AS a ON (vog.allele = a.id)';
                     $aSQL['FROM'] .= ' LEFT OUTER JOIN ' . TABLE_EFFECT . ' AS eg ON (vog.effectid = eg.id)';
                     $aSQL['FROM'] .= ' LEFT OUTER JOIN ' . TABLE_CURATION_STATUS . ' AS cs ON (vog.curation_statusid = cs.id)';
-
-                    // Outer join for the disease specific observation counts.
-                    if ($bDiseases) {
-                        // Join the individuals2diseases table to get the individuals with this variant and this individuals diseases.
-                        $aSQL['FROM'] .= ' LEFT OUTER JOIN ' . TABLE_IND2DIS . ' AS odi2d ON (os.individualid = odi2d.individualid AND odi2d.diseaseid in(' . $sDiseaseIDs . '))';
-                    }
-
                     break;
 
                 case 'ObservationCounts':
@@ -196,6 +180,16 @@ class LOVD_CustomViewListMOD extends LOVD_CustomViewList {
                         $aSQL['SELECT'] .= ', COUNT(DISTINCT os.individualid) AS obs_variant';
                         $aSQL['SELECT'] .= ', COUNT(DISTINCT os.individualid) / ' . $_DB->query('SELECT COUNT(*) FROM ' . TABLE_INDIVIDUALS)->fetchColumn() . ' AS obs_var_ind_ratio';
 
+                        if (!lovd_verifyInstance('mgha', false) && $bDiseases) {
+                            // If this individual has diseases then setup the disease specific observation count columns.
+                            // MGHA doesn't use this, but uses gene-panel specific counts instead.
+                            $aSQL['SELECT'] .= ', COUNT(DISTINCT odi2d.individualid) AS obs_disease';
+                            $aSQL['SELECT'] .= ', COUNT(DISTINCT odi2d.individualid) / ' . $_DB->query('SELECT COUNT(DISTINCT i2d.individualid) FROM ' . TABLE_IND2DIS . ' AS i2d WHERE i2d.diseaseid IN (' . $sDiseaseIDs . ')')->fetchColumn() . ' AS obs_var_dis_ind_ratio';
+                        } else {
+                            // Otherwise do not do anything for the disease specific observation count columns.
+                            $aSQL['SELECT'] .= ', NULL AS obs_disease, NULL AS obs_var_dis_ind_ratio';
+                        }
+
                         // Outer joins for the observation counts.
                         // Join the variants table using the DBID to get all of the variants that are the same as this one.
                         $aSQL['FROM'] .= ' LEFT OUTER JOIN ' . TABLE_VARIANTS . ' AS ovog USING (`VariantOnGenome/DBID`)';
@@ -203,8 +197,13 @@ class LOVD_CustomViewListMOD extends LOVD_CustomViewList {
                         $aSQL['FROM'] .= ' LEFT OUTER JOIN ' . TABLE_SCR2VAR . ' AS os2v ON (ovog.id = os2v.variantid)';
                         // Join the screening table to to get the individual IDs for these variants as we count the DISTINCT individualids.
                         $aSQL['FROM'] .= ' LEFT OUTER JOIN ' . TABLE_SCREENINGS . ' AS os ON (os2v.screeningid = os.id)';
-                    }
 
+                        // Outer join for the disease specific observation counts.
+                        if (!lovd_verifyInstance('mgha', false) && $bDiseases) {
+                            // Join the individuals2diseases table to get the individuals with this variant and this individuals diseases.
+                            $aSQL['FROM'] .= ' LEFT OUTER JOIN ' . TABLE_IND2DIS . ' AS odi2d ON (os.individualid = odi2d.individualid AND odi2d.diseaseid in(' . $sDiseaseIDs . '))';
+                        }
+                    }
                     break;
 
                 case 'VariantOnTranscript':

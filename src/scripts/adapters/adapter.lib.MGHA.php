@@ -48,8 +48,6 @@ $_INSTANCE_CONFIG['viewlists']['CustomVL_AnalysisRunResults_for_I_VE'] = array(
         'VariantOnTranscript/Consequence_Type',
         'VariantOnGenome/ExAC/Frequency/Adjusted',
         'VariantOnGenome/1000Gp3/Frequency',
-        'obs_disease',
-        'obs_var_dis_ind_ratio',
         'obs_variant',
         'obs_var_ind_ratio',
         'gene_panels',
