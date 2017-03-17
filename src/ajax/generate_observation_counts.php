@@ -4,11 +4,12 @@
  * LEIDEN OPEN VARIATION DATABASE (LOVD)
  *
  * Created     : 2017-01-12
- * Modified    : 2017-01-12
- * For LOVD    : 3.0-13
+ * Modified    : 2017-03-17
+ * For LOVD    : 3.0-18
  *
  * Copyright   : 2004-2017 Leiden University Medical Center; http://www.LUMC.nl/
  * Programmers : Juny Kesumadewi <juny.kesumadewi@unimelb.edu.au>
+ *               Ivo F.A.C. Fokkema <I.F.A.C.Fokkema@LUMC.nl>
  *
  *
  * This file is part of LOVD.
@@ -59,8 +60,8 @@ if (empty($aData) && !$zObsCount->canUpdateData()) {
 }
 
 $aResults = array('success' => array(
-    'data' => json_encode($zObsCount->getData()),
-    'timestamp' => date('d M Y h:ia', $zObsCount->getTimeGenerated())
+    'data' => json_encode($aData),
+    'timestamp' => date('d M Y h:ia', $aData['updated'])
 ));
 
 print(json_encode($aResults));

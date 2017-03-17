@@ -5,11 +5,12 @@
  * LEIDEN OPEN VARIATION DATABASE (LOVD)
  *
  * Created     : 2017-01-12
- * Modified    : 2017-01-12
- * For LOVD    : 3.0-13
+ * Modified    : 2017-03-17
+ * For LOVD    : 3.0-18
  *
  * Copyright   : 2004-2017 Leiden University Medical Center; http://www.LUMC.nl/
  * Programmers : Juny Kesumadewi <juny.kesumadewi@unimelb.edu.au>
+ *               Ivo F.A.C. Fokkema <I.F.A.C.Fokkema@LUMC.nl>
  *
  *
  * This file is part of LOVD.
@@ -43,7 +44,6 @@ class LOVD_ObservationCounts
     protected $aData = array(); // Store the observation counts data fetched from the database or calculated by buildData.
     protected $aIndividual = array(); // Store details of the individual where this variant is found.
     protected $nVariantID = null; // The Id of the variant we are looking into.
-    protected $nTimeGenerated = null; // The timestamp of when the observation count data was generated.
     protected $nCurrentPopulationSize = null; // The number of individuals in the database now.
 
     // The configurations of observation counts categories for this instance.
@@ -66,10 +66,8 @@ class LOVD_ObservationCounts
     function __construct ($nVariantID)
     {
         $this->nVariantID = $nVariantID;
-        // Q: Why not assign variables here, and call functions get...()? They seem to return the data anyway.
-        // A: More flexible to let it just return the values, and assign it here.
-        $this->initIndividualData();
-        $this->loadExistingData();
+        $this->aIndividual = $this->initIndividualData();
+        $this->aData = $this->loadExistingData();
     }
 
 
@@ -135,7 +133,6 @@ class LOVD_ObservationCounts
         //        'min_population_size' => 100
         //     )
         // );
-
         global $_DB;
 
         // Check if current analysis status as well as user's permission allow data to be generated.
@@ -149,7 +146,7 @@ class LOVD_ObservationCounts
         $aData['population_size'] = $this->getCurrentPopulationSize();
         foreach ($aSettings as $sType => $aTypeSettings) {
             // Initialize and validate if the categories selected by this instance is valid.
-            $this->aCategories = $this->validateCategories($sType, $aTypeSettings);
+            $this->aCategories[$sType] = $this->validateCategories($sType, $aTypeSettings);
             $this->aColumns = $this->validateColumns($sType, $aTypeSettings);
 
             // Now, generate observation counts data for each type selected in the settings.
@@ -168,7 +165,7 @@ class LOVD_ObservationCounts
                     }
 
                     $aData['general'] = array();
-                    foreach ($this->aCategories['general'] as $sCategory => $aRules) {
+                    foreach ($this->aCategories[$sType] as $sCategory => $aRules) {
                         // Build the observation counts data for each category.
                         $aData['general'][$sCategory] = $this->generateData($aRules, 'general');
                     }
@@ -176,7 +173,7 @@ class LOVD_ObservationCounts
 
                 case 'genepanel':
                     $aData['genepanel'] = array();
-                    foreach ($this->aCategories['genepanel'] as $sGenepanelId => $aGenepanelRules) {
+                    foreach ($this->aCategories[$sType] as $sGenepanelId => $aGenepanelRules) {
                         foreach ($aGenepanelRules as $sCategory => $aRules) {
                             // Build the observation counts data for each category.
                             $aData['genepanel'][$sGenepanelId][$sCategory] = $this->generateData($aRules, 'genepanel');
@@ -197,7 +194,7 @@ class LOVD_ObservationCounts
         lovd_writeLog('Event', LOG_EVENT, 'Created Observation Counts for variant #' . $this->nVariantID . '. JSON DATA: ' . $sObscountJson);
 
         // Now that we have newly generated observation counts data, we want to make sure all the class variables has the most updated values.
-        $this->refreshObject($aData);
+        $this->aData = $aData;
 
         return $this->aData;
     }
@@ -381,7 +378,7 @@ class LOVD_ObservationCounts
 
     public function getTimeGenerated ()
     {
-        return $this->nTimeGenerated;
+        return $this->aData['updated'];
     }
 
 
@@ -470,9 +467,6 @@ class LOVD_ObservationCounts
     protected function initIndividualData ()
     {
         // Retrieve information about this individual who has this variant ID $this->nVariantID.
-        // Q: Better (more flexible) to just return the data?
-        // A: Yes, do so.
-
         global $_DB;
 
         // Query data related to this individual.
@@ -488,11 +482,10 @@ class LOVD_ObservationCounts
                  WHERE gp.type IS NULL OR gp.type != "blacklist"
                  GROUP BY i.id';
 
-        $this->aIndividual = $_DB->query($sSQL)->fetchAssoc();
+        $aIndividual = $_DB->query($sSQL)->fetchAssoc();
 
-        return $this->aIndividual;
+        return $aIndividual;
     }
-
 
 
 
@@ -501,30 +494,15 @@ class LOVD_ObservationCounts
     protected function loadExistingData ()
     {
         // Retrieve data that was previously stored in the database as json.
-
         global $_DB;
 
         // Q: Unsafe query?
         // A: Fix it.
         $sSQL = 'SELECT obscount_json FROM ' . TABLE_VARIANTS . ' WHERE id = "' . $this->nVariantID . '"';
         $zResult = $_DB->query($sSQL)->fetchAssoc();
-        $this->refreshObject(json_decode($zResult['obscount_json'], true));
 
-        return $this->aData;
+        return json_decode($zResult['obscount_json'], true);
     }
-
-
-
-
-
-
-    protected function refreshObject($aData)
-    {
-        // Refresh class variables after $aData is reloaded.
-        $this->aData = $aData;
-        $this->nTimeGenerated = $aData['updated'];
-    }
-
 
 
 
@@ -533,7 +511,7 @@ class LOVD_ObservationCounts
     protected function validateCategories ($sType, $aSettings)
     {
         // Check if the categories specified in $aSettings is a valid category.
-        // We then load the configuration for all the valid categories into $this->aCategories.
+        // We then load the configuration for all the valid categories into $aCategories.
         // $sType : The observation counts type (check available static variables in this class with TYPE_ prefix).
         // $aSettings: subarray passed to buildData
         // array(
@@ -549,6 +527,7 @@ class LOVD_ObservationCounts
 
         // Data structure can be different for different types.
         // We will build them separately.
+        $aCategories = array();
         switch ($sType) {
             case 'general':
                 // Build available configuration options
@@ -636,12 +615,12 @@ class LOVD_ObservationCounts
                 // Now build categories for this instance of LOVD based on what is specified on the settings array.
                 if (empty($aSettings) || empty($aSettings['categories'])) {
                     // If categories is not specified in the settings for this type, then use ALL available categories.
-                    $this->aCategories['general'] = $aConfig;
+                    $aCategories = $aConfig;
                 } else {
                     // Otherwise, only select the category specified in the instance settings.
                     foreach ($aSettings['categories'] as $sCategory) {
                         if (isset($aConfig[$sCategory])) {
-                            $this->aCategories['general'][$sCategory] = $aConfig[$sCategory];
+                            $aCategories[$sCategory] = $aConfig[$sCategory];
                         }
                     }
                 }
@@ -691,13 +670,13 @@ class LOVD_ObservationCounts
                 // Now build columns for this instance of LOVD based on what is specified on the settings array.
                 if (empty($aSettings) || empty($aSettings['categories'])) {
                     // If categories is not specified in the settings for this type, then use ALL available categories.
-                    $this->aCategories['genepanel'] = $aConfig;
+                    $aCategories = $aConfig;
                 } else {
                     // Otherwise, only select the categories specified in the instance settings.
                     foreach ($aSettings['categories'] as $sCategory) {
                         foreach ($aGenepanelIds as $nIndex => $sGenepanelId) {
                             if (isset($aConfig[$sGenepanelId][$sCategory])) {
-                                $this->aCategories['genepanel'][$sGenepanelId][$sCategory] = $aConfig[$sGenepanelId][$sCategory];
+                                $aCategories[$sGenepanelId][$sCategory] = $aConfig[$sGenepanelId][$sCategory];
                             }
                         }
                     }
@@ -705,7 +684,7 @@ class LOVD_ObservationCounts
 
                 break;
         }
-        return $this->aCategories;
+        return $aCategories;
     }
 
 
