@@ -672,27 +672,23 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && !ACTION) {
         $aData = $zObsCount->getData();
         $bHasPermissionToViewVariants = ($_AUTH['level'] >= LEVEL_MANAGER? true: false);
 
-        print('<TABLE width="600px" class="data">');
-        print('<THEAD>');
-        print('<TR><TH style="font-size : 13px;">Observation Counts</TH></TR>');
-        print('<TR id="obscount-info" style="display: none;"><TH></TH></TR>');
-        print('<TR id="obscount-feedback"><TH>Loading data...</TH></TR>');
-        print('</THEAD>');
-        print('</TABLE>');
+        print('
+            <TABLE width="600" class="data">
+              <TR>
+                <TH style="font-size : 13px;">Observation Counts</TH></TR>
+              <TR id="obscount-info" style="display: none;">
+                <TH></TH></TR>
+              <TR id="obscount-feedback">
+                <TH>Loading data...</TH></TR>
+            </TABLE>
 
-        print('<TABLE id="obscount-table-genepanel" style="display: none;" width="600px" class="data">');
-        print('<THEAD>');
-        print('<TR id="obscount-header-genepanel"></TR>');
-        print('</THEAD>');
-        print('<TBODY id="obscount-data-genepanel"></TBODY>');
-        print('</TABLE>');
+            <TABLE id="obscount-table-genepanel" style="display: none;" width="600" class="data">
+              <TR id="obscount-header-genepanel"></TR>
+              <TBODY id="obscount-data-genepanel"></TBODY></TABLE>
 
-        print('<TABLE id="obscount-table-general" style="display: none;" width="600px" class="data">');
-        print('<THEAD>');
-        print('<TR id="obscount-header-general"></TR>');
-        print('</THEAD>');
-        print('<TBODY id="obscount-data-general"></TBODY>');
-        print('</TABLE>');
+            <TABLE id="obscount-table-general" style="display: none;" width="600" class="data">
+              <TR id="obscount-header-general"></TR>
+              <TBODY id="obscount-data-general"></TBODY></TABLE>');
 
 ?>
         <SCRIPT type="text/javascript">

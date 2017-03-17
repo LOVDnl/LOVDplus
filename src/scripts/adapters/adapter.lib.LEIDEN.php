@@ -15,3 +15,30 @@ $_INSTANCE_CONFIG['viewlists']['Screenings_for_I_VE']['cols_to_show'] = array(
     'variants_found_',
     'analysis_status',
 );
+
+$_INSTANCE_CONFIG['observation_counts'] = array(
+    'genepanel' => array(
+        'columns' => array(
+            'values' => 'Gene Panel',
+            'total_individuals' => 'Total # Individuals',
+            'percentage' => 'Percentage (%)'
+        ),
+        'categories' => array(
+            'all',
+            'Individual/Gender',
+        ),
+    ),
+    'general' => array(
+        // if columns is empty, use default columns list
+        'columns' => array(
+            'label' => 'Category',
+            'values' => 'Value',
+            'percentage' => 'Percentage (%)'
+        ),
+        'categories' => array(
+            'all',
+            'gender',
+        ),
+        'min_population_size' => 100,
+    ),
+);

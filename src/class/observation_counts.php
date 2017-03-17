@@ -46,17 +46,18 @@ class LOVD_ObservationCounts
     protected $nTimeGenerated = null; // The timestamp of when the observation count data was generated.
     protected $nCurrentPopulationSize = null; // The number of individuals in the database now.
 
-    protected $aCategories = array(); // The configurations of observation counts categories for this instance.
+    // The configurations of observation counts categories for this instance.
+    protected $aCategories = array(
+        'genepanel' => array(),
+        'general' => array(),
+    );
     protected $aColumns = array(); // The list of observation counts columns to be displayed for this instance.
 
     // We currently divide the Observation Counts data calculations into these types.
     // They are essentially different because they have different criteria of
     // how the data should be calculated
     // Q: Why used and named like a constant, but not defined like one? (usage also not everywhere)
-    // A: Just use the string, just like custom column categories.
-    public static $TYPE_GENEPANEL = 'genepanel';
-    public static $TYPE_GENERAL = 'general';
-
+    // A: Just use a variable.
     public static $EMPTY_DATA_DISPLAY = '-'; // How we want to show that a category does not have sufficient data to generate observation counts.
     // Q: Why this separately from the rest of the config?
     // A: Just pull it into the other defaults.
@@ -153,32 +154,32 @@ class LOVD_ObservationCounts
 
             // Now, generate observation counts data for each type selected in the settings.
             switch ($sType) {
-                case static::$TYPE_GENERAL:
+                case 'general':
                     // Generic categories have the requirement that it can only be calculated if
                     // there is a minimum number of individuals (with screenings) in the database.
                     $minPopSize = static::$DEFAULT_MIN_POP_SIZE;
-                    if (isset($aSettings[static::$TYPE_GENERAL]['min_population_size'])) {
-                        $minPopSize = $aSettings[static::$TYPE_GENERAL]['min_population_size'];
+                    if (isset($aSettings['general']['min_population_size'])) {
+                        $minPopSize = $aSettings['general']['min_population_size'];
                     }
 
                     if ($aData['population_size'] < $minPopSize) {
-                        $aData[static::$TYPE_GENERAL]['error'] = 'Data cannot be generated because population size is too small.';
+                        $aData['general']['error'] = 'Data cannot be generated because population size is too small.';
                         break;
                     }
 
-                    $aData[static::$TYPE_GENERAL] = array();
-                    foreach ($this->aCategories[static::$TYPE_GENERAL] as $sCategory => $aRules) {
+                    $aData['general'] = array();
+                    foreach ($this->aCategories['general'] as $sCategory => $aRules) {
                         // Build the observation counts data for each category.
-                        $aData[static::$TYPE_GENERAL][$sCategory] = $this->generateData($aRules, static::$TYPE_GENERAL);
+                        $aData['general'][$sCategory] = $this->generateData($aRules, 'general');
                     }
                     break;
 
-                case static::$TYPE_GENEPANEL:
-                    $aData[static::$TYPE_GENEPANEL] = array();
-                    foreach ($this->aCategories[static::$TYPE_GENEPANEL] as $sGenepanelId => $aGenepanelRules) {
+                case 'genepanel':
+                    $aData['genepanel'] = array();
+                    foreach ($this->aCategories['genepanel'] as $sGenepanelId => $aGenepanelRules) {
                         foreach ($aGenepanelRules as $sCategory => $aRules) {
                             // Build the observation counts data for each category.
-                            $aData[static::$TYPE_GENEPANEL][$sGenepanelId][$sCategory] = $this->generateData($aRules, static::$TYPE_GENEPANEL);
+                            $aData['genepanel'][$sGenepanelId][$sCategory] = $this->generateData($aRules, 'genepanel');
                         }
                     }
                     break;
@@ -549,7 +550,7 @@ class LOVD_ObservationCounts
         // Data structure can be different for different types.
         // We will build them separately.
         switch ($sType) {
-            case static::$TYPE_GENERAL:
+            case 'general':
                 // Build available configuration options
                 // Q: This is very unsafe. We should not feel that we can trust the data that's passed directly into the SQL. This needs to be implemented differently.
                 // A: Restructure this function. Anyway needs to be done because it's generating lots of notices if you don't have one of these functions, making the whole feature unavailable for everyone else.
@@ -635,19 +636,19 @@ class LOVD_ObservationCounts
                 // Now build categories for this instance of LOVD based on what is specified on the settings array.
                 if (empty($aSettings) || empty($aSettings['categories'])) {
                     // If categories is not specified in the settings for this type, then use ALL available categories.
-                    $this->aCategories[static::$TYPE_GENERAL] = $aConfig;
+                    $this->aCategories['general'] = $aConfig;
                 } else {
                     // Otherwise, only select the category specified in the instance settings.
                     foreach ($aSettings['categories'] as $sCategory) {
                         if (isset($aConfig[$sCategory])) {
-                            $this->aCategories[static::$TYPE_GENERAL][$sCategory] = $aConfig[$sCategory];
+                            $this->aCategories['general'][$sCategory] = $aConfig[$sCategory];
                         }
                     }
                 }
 
                 break;
 
-            case static::$TYPE_GENEPANEL:
+            case 'genepanel':
 
                 // Build existing configuration options.
                 $aGenepanelIds = array();
@@ -690,18 +691,17 @@ class LOVD_ObservationCounts
                 // Now build columns for this instance of LOVD based on what is specified on the settings array.
                 if (empty($aSettings) || empty($aSettings['categories'])) {
                     // If categories is not specified in the settings for this type, then use ALL available categories.
-                    $this->aCategories[static::$TYPE_GENEPANEL] = $aConfig;
+                    $this->aCategories['genepanel'] = $aConfig;
                 } else {
-                    // Otherwise, only select the category specified in the instance settings.
+                    // Otherwise, only select the categories specified in the instance settings.
                     foreach ($aSettings['categories'] as $sCategory) {
                         foreach ($aGenepanelIds as $nIndex => $sGenepanelId) {
                             if (isset($aConfig[$sGenepanelId][$sCategory])) {
-                                $this->aCategories[static::$TYPE_GENEPANEL][$sGenepanelId][$sCategory] = $aConfig[$sGenepanelId][$sCategory];
+                                $this->aCategories['genepanel'][$sGenepanelId][$sCategory] = $aConfig[$sGenepanelId][$sCategory];
                             }
                         }
                     }
                 }
-
 
                 break;
         }
