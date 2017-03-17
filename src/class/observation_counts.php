@@ -34,6 +34,7 @@ if (!defined('ROOT_PATH')) {
     exit;
 }
 
+error_reporting(~E_NOTICE);
 class LOVD_ObservationCounts
 {
     // Wrap all the logic related to generating observation counts here.
@@ -269,15 +270,12 @@ class LOVD_ObservationCounts
             }
 
             // TOTAL population in this database
-            // Q: Doesn't seem to be very efficient to use a rowCount() to determine the number of individuals?
-            // A: if I can change it, do it.
-            $sSQL =  'SELECT COUNT(s.individualid) AS total
-                      FROM ' . TABLE_INDIVIDUALS . ' i 
-                        INNER JOIN ' . TABLE_SCREENINGS . ' s ON (s.individualid = i.id)
-                        LEFT JOIN ' . TABLE_IND2GP . ' i2gp ON (i2gp.individualid = i.id) 
-                      WHERE ' . $aRules['condition'] . ' 
-                      GROUP BY s.individualid';
-            $nCount = $_DB->query($sSQL, array())->rowCount();
+            $sSQL =  'SELECT COUNT(DISTINCT s.individualid)
+                      FROM ' . TABLE_INDIVIDUALS . ' AS i 
+                        INNER JOIN ' . TABLE_SCREENINGS . ' AS s ON (s.individualid = i.id)
+                        LEFT OUTER JOIN ' . TABLE_IND2GP . ' AS i2gp ON (i2gp.individualid = i.id) 
+                      WHERE ' . $aRules['condition'];
+            $nCount = $_DB->query($sSQL, array())->fetchColumn();
             $aData['total_individuals'] = $nCount;
 
             // Number of individuals with this variant
@@ -286,7 +284,7 @@ class LOVD_ObservationCounts
                        INNER JOIN ' . TABLE_SCR2VAR . ' AS s2v ON (vog.id = s2v.variantid AND vog.`VariantOnGenome/DBID` = ?) 
                        INNER JOIN ' . TABLE_SCREENINGS . ' AS s ON (s.id = s2v.screeningid) 
                        INNER JOIN ' . TABLE_INDIVIDUALS . ' AS i ON (s.individualid = i.id) 
-                       LEFT JOIN ' . TABLE_IND2GP . ' i2gp ON (i2gp.individualid = i.id) 
+                       LEFT OUTER JOIN ' . TABLE_IND2GP . ' AS i2gp ON (i2gp.individualid = i.id) 
                      WHERE ' . $aRules['condition'] . ' 
                      GROUP BY s.individualid';
             $aData['variant_ids'] = array();
@@ -307,29 +305,24 @@ class LOVD_ObservationCounts
             // These are the columns that don't always need to be calculated if this instance of LOVD does not need it.
             // TOTAL number of affected individuals in this database
             if (!empty($this->aColumns[$sType]['num_affected'])) {
-                // Q: Doesn't seem to be very efficient to use a rowCount() to determine the number of individuals?
-                // A: if I can change it, do it.
-                $sSQL = 'SELECT COUNT(s.individualid) AS total_affected
-                         FROM ' . TABLE_INDIVIDUALS . ' i 
-                           INNER JOIN ' . TABLE_SCREENINGS . ' s ON (s.individualid = i.id AND i.`Individual/Affected` = "Affected")
-                           LEFT JOIN ' . TABLE_IND2GP . ' i2gp ON (i2gp.individualid = i.id) 
+                $sSQL = 'SELECT COUNT(DISTINCT s.individualid)
+                         FROM ' . TABLE_INDIVIDUALS . ' AS i 
+                           INNER JOIN ' . TABLE_SCREENINGS . ' AS s ON (s.individualid = i.id AND i.`Individual/Affected` = "Affected")
+                           LEFT OUTER JOIN ' . TABLE_IND2GP . ' AS i2gp ON (i2gp.individualid = i.id) 
                          WHERE ' . $aRules['condition'] . ' 
                          GROUP BY s.individualid';
-                $nCount = $_DB->query($sSQL, array())->rowCount();
+                $nCount = $_DB->query($sSQL, array())->fetchColumn();
                 $aData['num_affected'] = $nCount;
             }
 
             // TOTAL number of NOT affected individuals in this database
             if (!empty($this->aColumns[$sType]['num_not_affected'])) {
-                // Q: Doesn't seem to be very efficient to use a rowCount() to determine the number of individuals?
-                // A: if I can change it, do it.
-                $sSQL = 'SELECT COUNT(s.individualid) AS total_not_affected
+                $sSQL = 'SELECT COUNT(DISTINCT s.individualid)
                          FROM ' . TABLE_INDIVIDUALS . ' i 
                            INNER JOIN ' . TABLE_SCREENINGS . ' s ON (s.individualid = i.id AND i.`Individual/Affected` = "Not Affected")
-                           LEFT JOIN ' . TABLE_IND2GP . ' i2gp ON (i2gp.individualid = i.id) 
-                         WHERE ' . $aRules['condition'] . ' 
-                         GROUP BY s.individualid';
-                $nCount = $_DB->query($sSQL, array())->rowCount();
+                           LEFT OUTER JOIN ' . TABLE_IND2GP . ' AS i2gp ON (i2gp.individualid = i.id) 
+                         WHERE ' . $aRules['condition'];
+                $nCount = $_DB->query($sSQL, array())->fetchColumn();
                 $aData['num_not_affected'] = $nCount;
             }
         }

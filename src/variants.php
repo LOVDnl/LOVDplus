@@ -712,7 +712,7 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && !ACTION) {
 
             $.post(url, data, function(data) {
                 $('#obscount-loading').hide();
-                alert(data);
+                //alert(data);
                 jsonData = JSON.parse(data);
 
                 if (jsonData && typeof(jsonData['success']) !== 'undefined') {
