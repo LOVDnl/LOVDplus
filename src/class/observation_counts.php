@@ -44,7 +44,6 @@ class LOVD_ObservationCounts
     protected $aData = array(); // Store the observation counts data fetched from the database or calculated by buildData.
     protected $aIndividual = array(); // Store details of the individual where this variant is found.
     protected $nVariantID = null; // The Id of the variant we are looking into.
-    protected $nCurrentPopulationSize = null; // The number of individuals in the database now.
 
     // The configurations of observation counts categories for this instance.
     protected $aCategories = array(
@@ -143,7 +142,8 @@ class LOVD_ObservationCounts
         define('LOG_EVENT', 'UpdateObsCounts');
 
         $aData = array();
-        $aData['population_size'] = $this->getCurrentPopulationSize();
+        $aData['population_size'] = $_DB->query(
+            'SELECT COUNT(DISTINCT individualid) FROM ' . TABLE_SCREENINGS)->fetchColumn();
         foreach ($aSettings as $sType => $aTypeSettings) {
             // Initialize and validate if the categories selected by this instance is valid.
             $this->aCategories[$sType] = $this->validateCategories($sType, $aTypeSettings);
@@ -215,7 +215,6 @@ class LOVD_ObservationCounts
                  FROM ' . TABLE_SCREENINGS . ' AS s
                  INNER JOIN ' . TABLE_SCR2VAR . ' AS s2v 
                  ON (s.id = s2v.screeningid AND s2v.variantid = ?)';
-
         $aResult = $_DB->query($sSQL, array($this->nVariantID))->fetchAssoc();
 
         // Q: This means anyone can update as long as the screening is open. Is that intentional? There's a read-only user.
@@ -236,7 +235,6 @@ class LOVD_ObservationCounts
         // Every other analysis status (including CLOSED) cannot update observation count data.
         return false;
     }
-
 
 
 
@@ -343,36 +341,10 @@ class LOVD_ObservationCounts
 
 
 
-    public function getCurrentPopulationSize ()
-    {
-        // Retrieve the total number of individuals in the database NOW.
-
-        global $_DB;
-
-        if ($this->nCurrentPopulationSize === null) {
-            // Generate from database.
-            // Q: Doesn't seem to be very efficient to use a rowCount() to determine the number of individuals?
-            // A: if I can change it, do it.
-            $sSQL = 'SELECT COUNT(s.individualid) AS population_size
-                     FROM ' . TABLE_SCREENINGS . ' AS s 
-                       INNER JOIN ' . TABLE_INDIVIDUALS . ' AS i ON (s.individualid = i.id)
-                     GROUP BY s.individualid';
-            $this->nCurrentPopulationSize = $_DB->query($sSQL)->rowCount();
-        }
-
-        return $this->nCurrentPopulationSize;
-    }
-
-
-
-
-
-
     public function getData ()
     {
         return $this->aData;
     }
-
 
 
 
@@ -421,19 +393,19 @@ class LOVD_ObservationCounts
         global $_DB;
 
         // Query data related to this individual.
+        // Q: How to handle an individual with multiple screenings?
         $sSQL = 'SELECT i.*, s.*, vog.*, 
-                 GROUP_CONCAT(DISTINCT i2gp.genepanelid ORDER BY i2gp.genepanelid SEPARATOR ",") AS genepanel_ids, 
-                 GROUP_CONCAT(DISTINCT gp.name ORDER BY i2gp.genepanelid SEPARATOR ",") AS genepanel_names 
+                   GROUP_CONCAT(DISTINCT i2gp.genepanelid ORDER BY i2gp.genepanelid SEPARATOR ",") AS genepanel_ids, 
+                   GROUP_CONCAT(DISTINCT gp.name ORDER BY i2gp.genepanelid SEPARATOR ",") AS genepanel_names 
                  FROM ' . TABLE_VARIANTS . ' AS vog 
-                 INNER JOIN ' . TABLE_SCR2VAR . ' AS s2v ON (vog.id = s2v.variantid AND vog.id = "' . $this->nVariantID . '") 
-                 INNER JOIN ' . TABLE_SCREENINGS . ' AS s ON (s.id = s2v.screeningid) 
-                 INNER JOIN ' . TABLE_INDIVIDUALS . ' AS i ON (s.individualid = i.id) 
-                 LEFT JOIN ' . TABLE_IND2GP . ' AS i2gp ON (i.id = i2gp.individualid) 
-                 LEFT JOIN ' . TABLE_GENE_PANELS . ' AS gp ON (i2gp.genepanelid = gp.id)
+                   INNER JOIN ' . TABLE_SCR2VAR . ' AS s2v ON (vog.id = s2v.variantid AND vog.id = ?) 
+                   INNER JOIN ' . TABLE_SCREENINGS . ' AS s ON (s.id = s2v.screeningid) 
+                   INNER JOIN ' . TABLE_INDIVIDUALS . ' AS i ON (s.individualid = i.id) 
+                   LEFT OUTER JOIN ' . TABLE_IND2GP . ' AS i2gp ON (i.id = i2gp.individualid) 
+                   LEFT OUTER JOIN ' . TABLE_GENE_PANELS . ' AS gp ON (i2gp.genepanelid = gp.id)
                  WHERE gp.type IS NULL OR gp.type != "blacklist"
                  GROUP BY i.id';
-
-        $aIndividual = $_DB->query($sSQL)->fetchAssoc();
+        $aIndividual = $_DB->query($sSQL, array($this->nVariantID))->fetchAssoc();
 
         return $aIndividual;
     }
@@ -577,7 +549,6 @@ class LOVD_ObservationCounts
                 break;
 
             case 'genepanel':
-
                 // Build existing configuration options.
                 $aGenepanelIds = array();
                 $aGenepanelNames = array();
@@ -590,29 +561,28 @@ class LOVD_ObservationCounts
                 foreach ($aGenepanelIds as $nIndex => $sGenepanelId) {
                     $this->aIndividual['genepanel_' . $sGenepanelId] = $aGenepanelNames[$nIndex];
 
-                    $aConfig[$sGenepanelId] = array();
-                    $aConfig[$sGenepanelId]['all'] = array(
-                        'label' => 'Gene Panel',
-                        'fields' => array('genepanel_' . $sGenepanelId),
-                        'condition' => 'genepanelid = "' . $sGenepanelId . '"'
-                    );
-
-                    $aConfig[$sGenepanelId]['gender'] = array(
-                        'label' => 'Gender',
-                        'fields' => array('Individual/Gender'),
-                        'condition' => 'genepanelid = "' . $sGenepanelId . '"'
-                            . ' AND '
-                            . '`Individual/Gender` = "' . $this->aIndividual['Individual/Gender'] . '"',
-                        'incomplete' => ($this->aIndividual['Individual/Gender'] === ''? true: false)
-                    );
-
-                    $aConfig[$sGenepanelId]['ethnic'] = array(
-                        'label' => 'Ethinicity',
-                        'fields' => array('Individual/Origin/Ethnic'),
-                        'condition' => 'genepanelid = "' . $sGenepanelId . '"'
-                            . ' AND '
-                            . '`Individual/Origin/Ethnic` = "' . $this->aIndividual['Individual/Origin/Ethnic'] . '"',
-                        'incomplete' => ($this->aIndividual['Individual/Origin/Ethnic'] === ''? true: false)
+                    $aConfig[$sGenepanelId] = array(
+                        'all' => array(
+                            'label' => 'Gene Panel',
+                            'fields' => array('genepanel_' . $sGenepanelId),
+                            'condition' => 'genepanelid = "' . $sGenepanelId . '"'
+                        ),
+                        'gender' => array(
+                            'label' => 'Gender',
+                            'fields' => array('Individual/Gender'),
+                            'condition' => 'genepanelid = "' . $sGenepanelId . '"'
+                                . ' AND '
+                                . '`Individual/Gender` = "' . $this->aIndividual['Individual/Gender'] . '"',
+                            'incomplete' => ($this->aIndividual['Individual/Gender'] === ''? true: false)
+                        ),
+                        'ethnic' => array(
+                            'label' => 'Ethinicity',
+                            'fields' => array('Individual/Origin/Ethnic'),
+                            'condition' => 'genepanelid = "' . $sGenepanelId . '"'
+                                . ' AND '
+                                . '`Individual/Origin/Ethnic` = "' . $this->aIndividual['Individual/Origin/Ethnic'] . '"',
+                            'incomplete' => ($this->aIndividual['Individual/Origin/Ethnic'] === ''? true: false)
+                        ),
                     );
                 }
 
@@ -635,7 +605,6 @@ class LOVD_ObservationCounts
         }
         return $aCategories;
     }
-
 
 
 
