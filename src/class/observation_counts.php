@@ -276,14 +276,26 @@ class LOVD_ObservationCounts
             // TOTAL population in this database
             // Q: Doesn't seem to be very efficient to use a rowCount() to determine the number of individuals?
             // A: if I can change it, do it.
-            // Q: Why use a function?
-            // A: change it if I want.
-            $sSQL = static::getQueryFor('total_individuals', $aRules['condition']);
+            $sSQL =  'SELECT COUNT(s.individualid) AS total
+                      FROM ' . TABLE_INDIVIDUALS . ' i 
+                        INNER JOIN ' . TABLE_SCREENINGS . ' s ON (s.individualid = i.id)
+                        LEFT JOIN ' . TABLE_IND2GP . ' i2gp ON (i2gp.individualid = i.id) 
+                      WHERE ' . $aRules['condition'] . ' 
+                      GROUP BY s.individualid';
             $nCount = $_DB->query($sSQL, array())->rowCount();
             $aData['total_individuals'] = $nCount;
 
             // Number of individuals with this variant
-            $sSQL = static::getQueryFor('num_ind_with_variant', $aRules['condition'], array('dbid' => $this->aIndividual['VariantOnGenome/DBID']));
+            // Q: Unsafe query?
+            // A: Fix it.
+            $sSQL = 'SELECT COUNT(s.individualid) AS count_dbid, GROUP_CONCAT(DISTINCT TRIM(LEADING "0" FROM vog.id) SEPARATOR ";") as variant_ids
+                     FROM ' . TABLE_VARIANTS . ' AS vog 
+                       INNER JOIN ' . TABLE_SCR2VAR . ' AS s2v ON (vog.id = s2v.variantid AND vog.`VariantOnGenome/DBID` = "' . $this->aIndividual['VariantOnGenome/DBID'] . '") 
+                       INNER JOIN ' . TABLE_SCREENINGS . ' AS s ON (s.id = s2v.screeningid) 
+                       INNER JOIN ' . TABLE_INDIVIDUALS . ' AS i ON (s.individualid = i.id) 
+                       LEFT JOIN ' . TABLE_IND2GP . ' i2gp ON (i2gp.individualid = i.id) 
+                     WHERE ' . $aRules['condition'] . ' 
+                     GROUP BY s.individualid';
             $aData['variant_ids'] = array();
             $aData['num_ind_with_variant'] = 0;
             $zResult = $_DB->query($sSQL);
@@ -304,7 +316,12 @@ class LOVD_ObservationCounts
             if (!empty($this->aColumns[$sType]['num_affected'])) {
                 // Q: Doesn't seem to be very efficient to use a rowCount() to determine the number of individuals?
                 // A: if I can change it, do it.
-                $sSQL = static::getQueryFor('num_affected', $aRules['condition']);
+                $sSQL = 'SELECT COUNT(s.individualid) AS total_affected
+                         FROM ' . TABLE_INDIVIDUALS . ' i 
+                           INNER JOIN ' . TABLE_SCREENINGS . ' s ON (s.individualid = i.id AND i.`Individual/Affected` = "Affected")
+                           LEFT JOIN ' . TABLE_IND2GP . ' i2gp ON (i2gp.individualid = i.id) 
+                         WHERE ' . $aRules['condition'] . ' 
+                         GROUP BY s.individualid';
                 $nCount = $_DB->query($sSQL, array())->rowCount();
                 $aData['num_affected'] = $nCount;
             }
@@ -313,7 +330,12 @@ class LOVD_ObservationCounts
             if (!empty($this->aColumns[$sType]['num_not_affected'])) {
                 // Q: Doesn't seem to be very efficient to use a rowCount() to determine the number of individuals?
                 // A: if I can change it, do it.
-                $sSQL = static::getQueryFor('num_not_affected', $aRules['condition']);
+                $sSQL = 'SELECT COUNT(s.individualid) AS total_not_affected
+                         FROM ' . TABLE_INDIVIDUALS . ' i 
+                           INNER JOIN ' . TABLE_SCREENINGS . ' s ON (s.individualid = i.id AND i.`Individual/Affected` = "Not Affected")
+                           LEFT JOIN ' . TABLE_IND2GP . ' i2gp ON (i2gp.individualid = i.id) 
+                         WHERE ' . $aRules['condition'] . ' 
+                         GROUP BY s.individualid';
                 $nCount = $_DB->query($sSQL, array())->rowCount();
                 $aData['num_not_affected'] = $nCount;
             }
@@ -336,9 +358,10 @@ class LOVD_ObservationCounts
             // Generate from database.
             // Q: Doesn't seem to be very efficient to use a rowCount() to determine the number of individuals?
             // A: if I can change it, do it.
-            // Q: Why use a function for this?
-            // A: change it if I want.
-            $sSQL = static::getQueryFor('population_size');
+            $sSQL = 'SELECT COUNT(s.individualid) AS population_size
+                     FROM ' . TABLE_SCREENINGS . ' AS s 
+                       INNER JOIN ' . TABLE_INDIVIDUALS . ' AS i ON (s.individualid = i.id)
+                     GROUP BY s.individualid';
             $this->nCurrentPopulationSize = $_DB->query($sSQL)->rowCount();
         }
 
@@ -380,73 +403,6 @@ class LOVD_ObservationCounts
     {
         return $this->aData['updated'];
     }
-
-
-
-
-
-    protected static function getQueryFor ($sColumn, $sCondition = '', $aParams = array())
-    {
-        // Generate a string of SQL query for different columns of a category.
-        // Each observation count category requires a different SQL WHERE query which is passed by $sCondition.
-        // $sColumn: total_individuals|num_affected|num_not_affected|num_ind_with_variant|population_size
-        // $sCondition: SQL query that fits into 'WHERE' clause.
-        // $aParams: Each column might require different params. See comment on each category.
-
-        // Q: Each query is used only once.
-        // A: Remove function if I want.
-        switch ($sColumn) {
-            case 'total_individuals':
-                // Required $aParams: NONE
-                return 'SELECT COUNT(s.individualid) AS total
-                        FROM ' . TABLE_INDIVIDUALS . ' i 
-                        INNER JOIN ' . TABLE_SCREENINGS . ' s ON (s.individualid = i.id)
-                        LEFT JOIN ' . TABLE_IND2GP . ' i2gp ON (i2gp.individualid = i.id) 
-                        WHERE ' . $sCondition . ' 
-                        GROUP BY s.individualid';
-
-            case 'num_affected':
-                // Required $aParams: NONE
-                return 'SELECT COUNT(s.individualid) AS total_affected
-                        FROM ' . TABLE_INDIVIDUALS . ' i 
-                        INNER JOIN ' . TABLE_SCREENINGS . ' s ON (s.individualid = i.id AND i.`Individual/Affected` = "Affected")
-                        LEFT JOIN ' . TABLE_IND2GP . ' i2gp ON (i2gp.individualid = i.id) 
-                        WHERE ' . $sCondition . ' 
-                        GROUP BY s.individualid';
-
-            case 'num_not_affected':
-                // Required $aParams: NONE
-                return 'SELECT COUNT(s.individualid) AS total_not_affected
-                        FROM ' . TABLE_INDIVIDUALS . ' i 
-                        INNER JOIN ' . TABLE_SCREENINGS . ' s ON (s.individualid = i.id AND i.`Individual/Affected` = "Not Affected")
-                        LEFT JOIN ' . TABLE_IND2GP . ' i2gp ON (i2gp.individualid = i.id) 
-                        WHERE ' . $sCondition . ' 
-                        GROUP BY s.individualid';
-
-            case 'num_ind_with_variant' :
-                // Required $aParams: 'dbid'
-                // Q: Unsafe query?
-                // A: Fix it, after removing this function.
-                return 'SELECT COUNT(s.individualid) AS count_dbid, GROUP_CONCAT(DISTINCT TRIM(LEADING "0" FROM vog.id) SEPARATOR ";") as variant_ids
-                        FROM ' . TABLE_VARIANTS . ' AS vog 
-                        INNER JOIN ' . TABLE_SCR2VAR . ' AS s2v ON (vog.id = s2v.variantid AND vog.`VariantOnGenome/DBID` = "' . $aParams['dbid'] . '") 
-                        INNER JOIN ' . TABLE_SCREENINGS . ' AS s ON (s.id = s2v.screeningid) 
-                        INNER JOIN ' . TABLE_INDIVIDUALS . ' AS i ON (s.individualid = i.id) 
-                        LEFT JOIN ' . TABLE_IND2GP . ' i2gp ON (i2gp.individualid = i.id) 
-                        WHERE ' . $sCondition . ' 
-                        GROUP BY s.individualid';
-
-            case 'population_size':
-                // Required $aParams: NONE
-                return 'SELECT COUNT(s.individualid) AS population_size
-                        FROM ' . TABLE_SCREENINGS . ' AS s 
-                        INNER JOIN ' . TABLE_INDIVIDUALS . ' AS i ON (s.individualid = i.id)
-                        GROUP BY s.individualid';
-
-
-        }
-    }
-
 
 
 
