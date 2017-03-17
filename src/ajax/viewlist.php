@@ -216,6 +216,10 @@ if (POST && ACTION == 'applyFR') {
     die(AJAX_DATA_ERROR);
 }
 
+// Restrict the columns of this VL, if given.
+if (LOVD_plus && isset($_INSTANCE_CONFIG['viewlists'][$_GET['viewlistid']]['cols_to_show'])) {
+    $_DATA->setViewListCols($_INSTANCE_CONFIG['viewlists'][$_GET['viewlistid']]['cols_to_show']);
+}
 // Set $bHideNav to false always, since this ajax request could only have been sent if there were navigation buttons.
 $_DATA->viewList($_GET['viewlistid'], $aColsToSkip, (!empty($_GET['nohistory'])? true : false), (!empty($_GET['hidenav'])? true : false), (!empty($_GET['options'])? true : false), (!empty($_GET['only_rows'])? true : false));
 ?>
