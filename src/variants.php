@@ -702,6 +702,7 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && !ACTION) {
             lovd_load_obscount_table(<?php echo json_encode($aData)?>);
         });
 
+        // Q: These functions need comments - at least the header which should explain what they do.
         function lovd_generate_obscount(nVariantID) {
             $('#obscount-header-genepanel').hide();
             $('#obscount-data-genepanel').hide();
@@ -715,6 +716,7 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && !ACTION) {
 
             $.post(url, data, function(data) {
                 $('#obscount-loading').hide();
+                alert(data);
                 jsonData = JSON.parse(data);
 
                 if (jsonData && typeof(jsonData['success']) !== 'undefined') {
@@ -762,6 +764,8 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && !ACTION) {
                     }
 
                     sData = '';
+                    // Q: Shouldn't the generation of an HTML table be done in PHP? That should be much easier? (used for building new and existing data, what is better?)
+                    // A: Probably better to create a PHP function that builds this table.
                     if (typeof(aData[sType]['error']) !== 'undefined') {
                         sData = '<TD colspan="' + nCols + '">' + aData[sType]['error'] + '</TD>';
                     } else if (sType == 'genepanel') {

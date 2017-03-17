@@ -52,15 +52,21 @@ class LOVD_ObservationCounts
     // We currently divide the Observation Counts data calculations into these types.
     // They are essentially different because they have different criteria of
     // how the data should be calculated
+    // Q: Why used and named like a constant, but not defined like one? (usage also not everywhere)
+    // A: Just use the string, just like custom column categories.
     public static $TYPE_GENEPANEL = 'genepanel';
     public static $TYPE_GENERAL = 'general';
 
     public static $EMPTY_DATA_DISPLAY = '-'; // How we want to show that a category does not have sufficient data to generate observation counts.
+    // Q: Why this separately from the rest of the config?
+    // A: Just pull it into the other defaults.
     protected static $DEFAULT_MIN_POP_SIZE = 100;
 
     function __construct ($nVariantID)
     {
         $this->nVariantID = $nVariantID;
+        // Q: Why not assign variables here, and call functions get...()? They seem to return the data anyway.
+        // A: More flexible to let it just return the values, and assign it here.
         $this->initIndividualData();
         $this->loadExistingData();
     }
@@ -91,6 +97,8 @@ class LOVD_ObservationCounts
         //
         // Example:
         // array(
+        // Q: Let's choose one spot in where to define these defaults?
+        // A: Just set them in the constructor.
         //    // If we want to display gene panel observation counts using default config,
         //    // then simply add 'genepanel' => array()
         //
@@ -206,6 +214,8 @@ class LOVD_ObservationCounts
 
         global $_DB, $_AUTH;
 
+        // Q: Unsafe query?
+        // A: Make safe.
         $sSQL = 'SELECT s.analysis_statusid
                  FROM ' . TABLE_SCREENINGS . ' AS s
                  INNER JOIN ' . TABLE_SCR2VAR . ' AS s2v 
@@ -213,11 +223,16 @@ class LOVD_ObservationCounts
 
         $aResult = $_DB->query($sSQL)->fetchAssoc();
 
+        // Q: This means anyone can update as long as the screening is open. Is that intentional? There's a read-only user.
+        // A: Make it require at least LEVEL_ANALYZER. ANALYZER can also load data if THERE IS NO DATA YET, for status IN PROGRESS. Currently done in code below.
         if ($aResult['analysis_statusid'] == ANALYSIS_STATUS_READY) {
             return true;
         }
 
+        // Q: This is different than the "normal" authorization used in LOVD+. Maybe standardize that?
+        // A: STANDARDIZE THIS, BUT don't allow ADMIN for STATUS WAIT CONFIRMATION.
         if ($aResult['analysis_statusid'] == ANALYSIS_STATUS_IN_PROGRESS) {
+            // If the status is in progress, you either need to be owner or up, or there should be no previous observation counts.
             if ($_AUTH['level'] >= LEVEL_OWNER || !$this->loadExistingData()) {
                 return true;
             }
@@ -252,6 +267,7 @@ class LOVD_ObservationCounts
         $aData['percentage'] = static::$EMPTY_DATA_DISPLAY;
         $aData['threshold'] = static::$EMPTY_DATA_DISPLAY;
 
+        // Q: This function needs some more comments.
         // Only run query if this individual/screening has sufficient data.
         if (empty($aRules['incomplete'])) {
             $aData['values'] = array();
@@ -260,6 +276,10 @@ class LOVD_ObservationCounts
             }
 
             // TOTAL population in this database
+            // Q: Doesn't seem to be very efficient to use a rowCount() to determine the number of individuals?
+            // A: if I can change it, do it.
+            // Q: Why use a function?
+            // A: change it if I want.
             $sSQL = static::getQueryFor('total_individuals', $aRules['condition']);
             $nCount = $_DB->query($sSQL, array())->rowCount();
             $aData['total_individuals'] = $nCount;
@@ -284,6 +304,8 @@ class LOVD_ObservationCounts
             // These are the columns that don't always need to be calculated if this instance of LOVD does not need it.
             // TOTAL number of affected individuals in this database
             if (!empty($this->aColumns[$sType]['num_affected'])) {
+                // Q: Doesn't seem to be very efficient to use a rowCount() to determine the number of individuals?
+                // A: if I can change it, do it.
                 $sSQL = static::getQueryFor('num_affected', $aRules['condition']);
                 $nCount = $_DB->query($sSQL, array())->rowCount();
                 $aData['num_affected'] = $nCount;
@@ -291,6 +313,8 @@ class LOVD_ObservationCounts
 
             // TOTAL number of NOT affected individuals in this database
             if (!empty($this->aColumns[$sType]['num_not_affected'])) {
+                // Q: Doesn't seem to be very efficient to use a rowCount() to determine the number of individuals?
+                // A: if I can change it, do it.
                 $sSQL = static::getQueryFor('num_not_affected', $aRules['condition']);
                 $nCount = $_DB->query($sSQL, array())->rowCount();
                 $aData['num_not_affected'] = $nCount;
@@ -304,7 +328,6 @@ class LOVD_ObservationCounts
 
 
 
-
     public function getCurrentPopulationSize ()
     {
         // Retrieve the total number of individuals in the database NOW.
@@ -313,6 +336,10 @@ class LOVD_ObservationCounts
 
         if ($this->nCurrentPopulationSize === null) {
             // Generate from database.
+            // Q: Doesn't seem to be very efficient to use a rowCount() to determine the number of individuals?
+            // A: if I can change it, do it.
+            // Q: Why use a function for this?
+            // A: change it if I want.
             $sSQL = static::getQueryFor('population_size');
             $this->nCurrentPopulationSize = $_DB->query($sSQL)->rowCount();
         }
@@ -368,6 +395,8 @@ class LOVD_ObservationCounts
         // $sCondition: SQL query that fits into 'WHERE' clause.
         // $aParams: Each column might require different params. See comment on each category.
 
+        // Q: Each query is used only once.
+        // A: Remove function if I want.
         switch ($sColumn) {
             case 'total_individuals':
                 // Required $aParams: NONE
@@ -398,6 +427,8 @@ class LOVD_ObservationCounts
 
             case 'num_ind_with_variant' :
                 // Required $aParams: 'dbid'
+                // Q: Unsafe query?
+                // A: Fix it, after removing this function.
                 return 'SELECT COUNT(s.individualid) AS count_dbid, GROUP_CONCAT(DISTINCT TRIM(LEADING "0" FROM vog.id) SEPARATOR ";") as variant_ids
                         FROM ' . TABLE_VARIANTS . ' AS vog 
                         INNER JOIN ' . TABLE_SCR2VAR . ' AS s2v ON (vog.id = s2v.variantid AND vog.`VariantOnGenome/DBID` = "' . $aParams['dbid'] . '") 
@@ -438,6 +469,8 @@ class LOVD_ObservationCounts
     protected function initIndividualData ()
     {
         // Retrieve information about this individual who has this variant ID $this->nVariantID.
+        // Q: Better (more flexible) to just return the data?
+        // A: Yes, do so.
 
         global $_DB;
 
@@ -470,6 +503,8 @@ class LOVD_ObservationCounts
 
         global $_DB;
 
+        // Q: Unsafe query?
+        // A: Fix it.
         $sSQL = 'SELECT obscount_json FROM ' . TABLE_VARIANTS . ' WHERE id = "' . $this->nVariantID . '"';
         $zResult = $_DB->query($sSQL)->fetchAssoc();
         $this->refreshObject(json_decode($zResult['obscount_json'], true));
@@ -516,6 +551,13 @@ class LOVD_ObservationCounts
         switch ($sType) {
             case static::$TYPE_GENERAL:
                 // Build available configuration options
+                // Q: This is very unsafe. We should not feel that we can trust the data that's passed directly into the SQL. This needs to be implemented differently.
+                // A: Restructure this function. Anyway needs to be done because it's generating lots of notices if you don't have one of these functions, making the whole feature unavailable for everyone else.
+                // Q: The values here need comments to explain what they mean and what they are for.
+                // Q: If I understand correctly, "incomplete" needs to be false to get this stuff to run? Perhaps rename to "active" or so?
+                // A: Change it if I want to.
+                // Q: Should this array, which is basically the default settings, be set in __construct()?
+                // A: Change it, if I want to. Make sure the way it's set, doesn't generate these notices anymore.
                 $aConfig = array(
                     'all' => array(
                         'label' => 'All',
@@ -690,6 +732,9 @@ class LOVD_ObservationCounts
 
         global $_DB;
 
+        // Q: The values here need comments to explain what they mean and what they are for.
+        // Q: Should this array, which is basically the default settings, be set in __construct()?
+        // A: Change it if I want to.
         $aAvailableColumns = array(
             'genepanel' => array(
                 'label' => 'Category',
