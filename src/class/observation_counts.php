@@ -5,7 +5,7 @@
  * LEIDEN OPEN VARIATION DATABASE (LOVD)
  *
  * Created     : 2017-01-12
- * Modified    : 2017-03-17
+ * Modified    : 2017-03-20
  * For LOVD    : 3.0-18
  *
  * Copyright   : 2004-2017 Leiden University Medical Center; http://www.LUMC.nl/
@@ -177,7 +177,7 @@ class LOVD_ObservationCounts
                     foreach ($this->aCategories[$sType] as $sGenepanelId => $aGenepanelRules) {
                         foreach ($aGenepanelRules as $sCategory => $aRules) {
                             // Build the observation counts data for each category.
-                            $aData['genepanel'][$sGenepanelId][$sCategory] = $this->generateData($aRules, 'genepanel');
+                            $aData['genepanel'][$sGenepanelId][$sCategory] = $this->generateData($aRules, 'genepanel', $sGenepanelId);
                         }
                     }
                     break;
@@ -241,7 +241,7 @@ class LOVD_ObservationCounts
 
 
 
-    protected function generateData ($aRules, $sType)
+    protected function generateData ($aRules, $sType, $nGenePanelID = 0)
     {
         // Given the configuration of a category, construct an array of data for that category.
         // No data is saved into the database here.
@@ -264,13 +264,21 @@ class LOVD_ObservationCounts
         // Q: This function needs some more comments.
         // Only run query if this individual/screening has sufficient data.
         if (empty($aRules['incomplete'])) {
+            $aSQL = array(); // The arguments for the query.
+
+            // Gene panel counts always need to restrict the count on the gene panel.
+            if ($sType == 'genepanel') {
+                $aRules['condition'] = 'genepanelid = ?' . (!$aRules['condition']? '' : ' AND ') . $aRules['condition'];
+                $aSQL[] = $nGenePanelID;
+            }
+
             // Total number of individuals with screenings, matching the given conditions.
             $sSQL =  'SELECT COUNT(DISTINCT s.individualid)
                       FROM ' . TABLE_INDIVIDUALS . ' AS i 
                         INNER JOIN ' . TABLE_SCREENINGS . ' AS s ON (s.individualid = i.id)
                         LEFT OUTER JOIN ' . TABLE_IND2GP . ' AS i2gp ON (i2gp.individualid = i.id) 
                       WHERE ' . $aRules['condition'];
-            $nCount = $_DB->query($sSQL, array())->fetchColumn();
+            $nCount = $_DB->query($sSQL, $aSQL)->fetchColumn();
             $aData['total_individuals'] = $nCount;
 
             // Number of individuals with screenings with this variant, matching the given conditions.
@@ -284,7 +292,7 @@ class LOVD_ObservationCounts
                      GROUP BY s.individualid';
             $aData['variant_ids'] = array();
             $aData['num_ind_with_variant'] = 0;
-            $zResult = $_DB->query($sSQL, array($this->aIndividual['VariantOnGenome/DBID']));
+            $zResult = $_DB->query($sSQL, array_merge(array($this->aIndividual['VariantOnGenome/DBID']), $aSQL));
             while ($aRow = $zResult->fetchAssoc()) {
                 $aData['num_ind_with_variant']++;
                 $aData['variant_ids'] = array_merge($aData['variant_ids'], explode(';', $aRow['variant_ids']));
@@ -306,7 +314,7 @@ class LOVD_ObservationCounts
                            LEFT OUTER JOIN ' . TABLE_IND2GP . ' AS i2gp ON (i2gp.individualid = i.id) 
                          WHERE ' . $aRules['condition'] . ' 
                          GROUP BY s.individualid';
-                $nCount = $_DB->query($sSQL, array())->fetchColumn();
+                $nCount = $_DB->query($sSQL, $aSQL)->fetchColumn();
                 $aData['num_affected'] = $nCount;
             }
 
@@ -317,7 +325,7 @@ class LOVD_ObservationCounts
                            INNER JOIN ' . TABLE_SCREENINGS . ' s ON (s.individualid = i.id AND i.`Individual/Affected` = "Not Affected")
                            LEFT OUTER JOIN ' . TABLE_IND2GP . ' AS i2gp ON (i2gp.individualid = i.id) 
                          WHERE ' . $aRules['condition'];
-                $nCount = $_DB->query($sSQL, array())->fetchColumn();
+                $nCount = $_DB->query($sSQL, $aSQL)->fetchColumn();
                 $aData['num_not_affected'] = $nCount;
             }
         }
@@ -382,18 +390,20 @@ class LOVD_ObservationCounts
 
         // Query data related to this individual.
         // Q: How to handle an individual with multiple screenings?
-        $sSQL = 'SELECT i.*, s.*, vog.*, 
-                   GROUP_CONCAT(DISTINCT i2gp.genepanelid ORDER BY i2gp.genepanelid SEPARATOR ",") AS genepanel_ids, 
-                   GROUP_CONCAT(DISTINCT gp.name ORDER BY i2gp.genepanelid SEPARATOR ",") AS genepanel_names 
+        $sSQL = 'SELECT i.*, s.*, vog.* 
                  FROM ' . TABLE_VARIANTS . ' AS vog 
                    INNER JOIN ' . TABLE_SCR2VAR . ' AS s2v ON (vog.id = s2v.variantid AND vog.id = ?) 
                    INNER JOIN ' . TABLE_SCREENINGS . ' AS s ON (s.id = s2v.screeningid) 
                    INNER JOIN ' . TABLE_INDIVIDUALS . ' AS i ON (s.individualid = i.id) 
-                   LEFT OUTER JOIN ' . TABLE_IND2GP . ' AS i2gp ON (i.id = i2gp.individualid) 
-                   LEFT OUTER JOIN ' . TABLE_GENE_PANELS . ' AS gp ON (i2gp.genepanelid = gp.id)
-                 WHERE gp.type IS NULL OR gp.type != "blacklist"
                  GROUP BY i.id';
         $aIndividual = $_DB->query($sSQL, array($this->nVariantID))->fetchAssoc();
+
+        // Easier to just separate the genepanel query, so we can receive it properly.
+        $aIndividual['genepanels'] = $_DB->query('SELECT gp.id, gp.name
+                                                  FROM ' . TABLE_GENE_PANELS . ' AS gp
+                                                    INNER JOIN ' . TABLE_IND2GP . ' AS i2gp ON (gp.id = i2gp.genepanelid)
+                                                  WHERE i2gp.individualid = ? AND (gp.type IS NULL OR gp.type != "blacklist")',
+            array($aIndividual['individualid']))->fetchAllCombine();
 
         return $aIndividual;
     }
@@ -538,35 +548,24 @@ class LOVD_ObservationCounts
 
             case 'genepanel':
                 // Build existing configuration options.
-                $aGenepanelIds = array();
-                $aGenepanelNames = array();
-                if (!empty($this->aIndividual['genepanel_ids']) && !empty($this->aIndividual['genepanel_names'])) {
-                    $aGenepanelIds = explode(',', $this->aIndividual['genepanel_ids']);
-                    $aGenepanelNames = explode(',', $this->aIndividual['genepanel_names']);
-                }
-
                 $aConfig = array();
-                foreach ($aGenepanelIds as $nIndex => $sGenepanelId) {
-                    $aConfig[$sGenepanelId] = array(
+                foreach ($this->aIndividual['genepanels'] as $nGenePanelID => $sGenePanelName) {
+                    $aConfig[$nGenePanelID] = array(
                         'all' => array(
                             'label' => 'Gene Panel',
-                            'value' => $aGenepanelNames[$nIndex],
-                            'condition' => 'genepanelid = "' . $sGenepanelId . '"'
+                            'value' => $sGenePanelName,
+                            'condition' => ''
                         ),
                         'gender' => array(
                             'label' => 'Gender',
                             'value' => $this->aIndividual['Individual/Gender'],
-                            'condition' => 'genepanelid = "' . $sGenepanelId . '"'
-                                . ' AND '
-                                . '`Individual/Gender` = "' . $this->aIndividual['Individual/Gender'] . '"',
+                            'condition' => '`Individual/Gender` = "' . $this->aIndividual['Individual/Gender'] . '"',
                             'incomplete' => ($this->aIndividual['Individual/Gender'] === ''? true: false)
                         ),
                         'ethnic' => array(
                             'label' => 'Ethinicity',
                             'value' =>$this->aIndividual['Individual/Origin/Ethnic'],
-                            'condition' => 'genepanelid = "' . $sGenepanelId . '"'
-                                . ' AND '
-                                . '`Individual/Origin/Ethnic` = "' . $this->aIndividual['Individual/Origin/Ethnic'] . '"',
+                            'condition' => '`Individual/Origin/Ethnic` = "' . $this->aIndividual['Individual/Origin/Ethnic'] . '"',
                             'incomplete' => ($this->aIndividual['Individual/Origin/Ethnic'] === ''? true: false)
                         ),
                     );
@@ -579,9 +578,9 @@ class LOVD_ObservationCounts
                 } else {
                     // Otherwise, only select the categories specified in the instance settings.
                     foreach ($aSettings['categories'] as $sCategory) {
-                        foreach ($aGenepanelIds as $nIndex => $sGenepanelId) {
-                            if (isset($aConfig[$sGenepanelId][$sCategory])) {
-                                $aCategories[$sGenepanelId][$sCategory] = $aConfig[$sGenepanelId][$sCategory];
+                        foreach (array_keys($this->aIndividual['genepanels']) as $nGenePanelID) {
+                            if (isset($aConfig[$nGenePanelID][$sCategory])) {
+                                $aCategories[$nGenePanelID][$sCategory] = $aConfig[$nGenePanelID][$sCategory];
                             }
                         }
                     }
@@ -637,6 +636,7 @@ class LOVD_ObservationCounts
         );
 
         // Some columns require custom columns to be active.
+        // Q: Make this more efficient later.
         $sSQL = 'SELECT colid FROM ' . TABLE_ACTIVE_COLS . ' WHERE colid = "Individual/Affected"';
         $zResult = $_DB->query($sSQL)->fetchAssoc();
         $bIndAffectedColActive = ($zResult && $zResult['colid']? true: false);
