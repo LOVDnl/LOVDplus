@@ -65,8 +65,8 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && in_array(ACTION, array('downloadT
     lovd_requireAUTH(LEVEL_OWNER);
 
     // First, let's see if there is something that we need to confirm.
-    $aVariants = $_DB->query('SELECT "' . $_SETT['human_builds'][$_CONF['refseq_build']]['ncbi_name'] . '" AS refseq_build, vog.chromosome, "genomic_id_ncbi", vog.position_g_start, vog.position_g_end, vog.`VariantOnGenome/DNA`, vog.`VariantOnGenome/Sequencing/Father/VarPresent` AS is_present_father, vog.`VariantOnGenome/Sequencing/Mother/VarPresent` AS is_present_mother, g.id AS gene_id, g.name AS gene_name, t.id_ncbi AS transcript_id_ncbi, vot.`VariantOnTranscript/DNA`, vot.`VariantOnTranscript/RNA`, vot.`VariantOnTranscript/Protein`, vog.allele, "VariantOnGenome/Genetic_origin", MAX(IFNULL((i2d.diseaseid = g2d.diseaseid), 0)) AS in_gene_panel, CASE curation_statusid WHEN ' . CUR_STATUS_VARIANT_OF_INTEREST . ' THEN "0" WHEN ' . CUR_STATUS_REQUIRES_CONFIRMATION . ' THEN "1" WHEN ' . CUR_STATUS_CONFIRMED . ' THEN "1" ELSE "?" END AS confirm_in_lab
-                              FROM ' . TABLE_VARIANTS . ' AS vog INNER JOIN ' . TABLE_SCR2VAR . ' AS s2v ON (vog.id = s2v.variantid) INNER JOIN ' . TABLE_SCREENINGS . ' AS s ON (s2v.screeningid = s.id) LEFT OUTER JOIN ' . TABLE_IND2DIS . ' AS i2d USING (individualid) LEFT OUTER JOIN ' . TABLE_VARIANTS_ON_TRANSCRIPTS . ' AS vot ON (vog.id = vot.id) LEFT OUTER JOIN ' . TABLE_TRANSCRIPTS . ' t ON (vot.transcriptid = t.id) LEFT OUTER JOIN ' . TABLE_GENES . ' AS g ON (t.geneid = g.id) LEFT OUTER JOIN ' . TABLE_GEN2DIS . ' AS g2d ON (g.id = g2d.geneid)
+    $aVariants = $_DB->query('SELECT "' . $_SETT['human_builds'][$_CONF['refseq_build']]['ncbi_name'] . '" AS refseq_build, vog.chromosome, "genomic_id_ncbi", vog.position_g_start, vog.position_g_end, vog.`VariantOnGenome/DNA`, vog.`VariantOnGenome/Sequencing/Father/VarPresent` AS is_present_father, vog.`VariantOnGenome/Sequencing/Mother/VarPresent` AS is_present_mother, g.id AS gene_id, g.name AS gene_name, t.id_ncbi AS transcript_id_ncbi, vot.`VariantOnTranscript/DNA`, vot.`VariantOnTranscript/RNA`, vot.`VariantOnTranscript/Protein`, vog.allele, "VariantOnGenome/Genetic_origin", MAX(IFNULL((i2gp.genepanelid = gp2g.genepanelid), 0)) AS in_gene_panel, CASE curation_statusid WHEN ' . CUR_STATUS_VARIANT_OF_INTEREST . ' THEN "0" WHEN ' . CUR_STATUS_REQUIRES_CONFIRMATION . ' THEN "1" WHEN ' . CUR_STATUS_CONFIRMED . ' THEN "1" ELSE "?" END AS confirm_in_lab
+                              FROM ' . TABLE_VARIANTS . ' AS vog INNER JOIN ' . TABLE_SCR2VAR . ' AS s2v ON (vog.id = s2v.variantid) INNER JOIN ' . TABLE_SCREENINGS . ' AS s ON (s2v.screeningid = s.id) LEFT OUTER JOIN ' . TABLE_IND2GP . ' AS i2gp USING (individualid) LEFT OUTER JOIN ' . TABLE_VARIANTS_ON_TRANSCRIPTS . ' AS vot ON (vog.id = vot.id) LEFT OUTER JOIN ' . TABLE_TRANSCRIPTS . ' t ON (vot.transcriptid = t.id) LEFT OUTER JOIN ' . TABLE_GENES . ' AS g ON (t.geneid = g.id) LEFT OUTER JOIN ' . TABLE_GP2GENE . ' AS gp2g ON (g.id = gp2g.geneid)
                               WHERE vog.curation_statusid IN (?, ?) AND s2v.screeningid = ?
                               GROUP BY vog.chromosome, vog.`VariantOnGenome/DNA`, g.id', array(CUR_STATUS_VARIANT_OF_INTEREST, CUR_STATUS_REQUIRES_CONFIRMATION, $nID))->fetchAllAssoc();
     if (!$aVariants) {
@@ -84,9 +84,9 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && in_array(ACTION, array('downloadT
     // Fetch Miracle ID, we need that for matching the variants with the individual.
     $nMiracleID = $_DB->query('SELECT id_miracle FROM ' . TABLE_INDIVIDUALS . ' AS i INNER JOIN ' . TABLE_SCREENINGS . ' AS s ON (i.id = s.individualid) WHERE s.id = ?', array($nID))->fetchColumn();
 
-    // Load the gene panel (disease(s)), for the header.
-    // NOTE: We could fetch this earlier, and at the same time change the variant query to not join to the IND2DIS table, but oh, well.
-    $aDiseases = $_DB->query('SELECT d.id, d.symbol, d.edited_date, COUNT(g2d.geneid) AS genes FROM ' . TABLE_DISEASES . ' AS d INNER JOIN ' . TABLE_IND2DIS . ' AS i2d ON (d.id = i2d.diseaseid) INNER JOIN ' . TABLE_SCREENINGS . ' AS s USING (individualid) LEFT OUTER JOIN ' . TABLE_GEN2DIS . ' AS g2d ON (d.id = g2d.diseaseid) WHERE s.id = ? GROUP BY d.id HAVING genes > 0', array($nID))->fetchAllAssoc();
+    // Load the gene panel(s), for the header.
+    // NOTE: We could fetch this earlier, and at the same time change the variant query to not join to the IND2GP table, but oh, well.
+    $aGenePanels = $_DB->query('SELECT gp.id, gp.name, IFNULL(gp.edited_date, gp.created_date) AS edited_date, COUNT(gp2g.geneid) AS genes FROM ' . TABLE_GENE_PANELS . ' AS gp INNER JOIN ' . TABLE_IND2GP . ' AS i2gp ON (gp.id = i2gp.genepanelid) INNER JOIN ' . TABLE_SCREENINGS . ' AS s USING (individualid) LEFT OUTER JOIN ' . TABLE_GP2GENE . ' AS gp2g ON (gp.id = gp2g.genepanelid) WHERE s.id = ? GROUP BY gp.id HAVING genes > 0', array($nID))->fetchAllAssoc();
 
     $sPath = rtrim($_INI['paths']['confirm_variants'], '/') . '/';
     $sFile = 'LOVD_VariantsToBeConfirmed_' . $nMiracleID . '_' . date('Y-m-d_H.i.s') . '.txt';
@@ -99,8 +99,8 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && in_array(ACTION, array('downloadT
         ob_start();
     }
     print('# id_miracle = ' . $nMiracleID . "\r\n");
-    foreach ($aDiseases as $aDisease) {
-        print('# active_gene_panel = (' . $aDisease['id'] . ', ' . $aDisease['symbol'] . ', ' . $aDisease['edited_date'] . ', ' . $aDisease['genes'] . ' genes)' . "\r\n");
+    foreach ($aGenePanels as $aGenePanel) {
+        print('# active_gene_panel = (' . $aGenePanel['id'] . ', ' . $aGenePanel['name'] . ', ' . $aGenePanel['edited_date'] . ', ' . $aGenePanel['genes'] . ' genes)' . "\r\n");
     }
     print('"{{' . implode('}}"' . "\t" . '"{{', array_keys($aVariants[0])) . '}}"' . "\r\n");
 
