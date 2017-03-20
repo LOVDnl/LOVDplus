@@ -105,7 +105,7 @@ class LOVD_ObservationCounts
         //
         //        // If columns is empty, use default columns list
         //        'columns' => array(
-        //            'values' => 'Gene Panel',
+        //            'value' => 'Gene Panel',
         //            'total_individuals' => 'Total # Individuals',
         //            'num_affected' => '# of Affected Individuals',
         //            'num_not_affected' => '# of Unaffected Individuals',
@@ -124,7 +124,7 @@ class LOVD_ObservationCounts
         //        // if columns is empty, use default columns list
         //        'columns' => array(
         //            'label' => 'Category',
-        //            'values' => 'Value',
+        //            'value' => 'Value',
         //            'threshold' => 'Percentage'
         //        ),
         //
@@ -252,8 +252,8 @@ class LOVD_ObservationCounts
 
         $aData = array();
         $aData['label'] = $aRules['label'];
+        $aData['value'] = $aRules['value'];
 
-        $aData['values'] = static::$EMPTY_DATA_DISPLAY;
         $aData['total_individuals'] = static::$EMPTY_DATA_DISPLAY;
         $aData['num_affected'] = static::$EMPTY_DATA_DISPLAY;
         $aData['num_not_affected'] = static::$EMPTY_DATA_DISPLAY;
@@ -264,11 +264,6 @@ class LOVD_ObservationCounts
         // Q: This function needs some more comments.
         // Only run query if this individual/screening has sufficient data.
         if (empty($aRules['incomplete'])) {
-            $aData['values'] = array();
-            foreach ($aRules['fields'] as $sField) {
-                $aData['values'][] = $this->aIndividual[$sField];
-            }
-
             // Total number of individuals with screenings, matching the given conditions.
             $sSQL =  'SELECT COUNT(DISTINCT s.individualid)
                       FROM ' . TABLE_INDIVIDUALS . ' AS i 
@@ -455,55 +450,55 @@ class LOVD_ObservationCounts
                 $aConfig = array(
                     'all' => array(
                         'label' => 'All',
-                        'fields' => array(),
+                        'value' => '',
                         'condition' => 'i.id IS NOT NULL',
                         'threshold' => 2 // 2%
                     ),
                     'Individual/Gender' => array(
                         'label' => 'Gender',
-                        'fields' => array('Individual/Gender'),
+                        'value' => $this->aIndividual['Individual/Gender'],
                         'condition' => 'i.`Individual/Gender` = "' . $this->aIndividual['Individual/Gender'] . '"',
                         'incomplete' => ($this->aIndividual['Individual/Gender'] === ''? true : false),
                         'threshold' => 2 // 2%
                     ),
                     'Individual/Origin/Ethnic' => array(
                         'label' => 'Ethnicity',
-                        'fields' => array('Individual/Origin/Ethnic'),
+                        'value' => $this->aIndividual['Individual/Origin/Ethnic'],
                         'condition' => 'i.`Individual/Origin/Ethnic` = "' . $this->aIndividual['Individual/Origin/Ethnic'] . '"',
                         'incomplete' => ($this->aIndividual['Individual/Origin/Ethnic'] === ''? true : false),
                         'threshold' => 2 // 2%
                     ),
                     'Screening/Sample/Type' => array(
                         'label' => 'Sample Type',
-                        'fields' => array('Screening/Sample/Type'),
+                        'value' => $this->aIndividual['Screening/Sample/Type'],
                         'condition' => 's.`Screening/Sample/Type` = "' . $this->aIndividual['Screening/Sample/Type'] . '"',
                         'incomplete' => ($this->aIndividual['Screening/Sample/Type'] === ''? true : false),
                         'threshold' => 2 // 2%
                     ),
                     'Screening/Library_preparation' => array(
                         'label' => 'Capture Method',
-                        'fields' => array('Screening/Library_preparation'),
+                        'value' => $this->aIndividual['Screening/Library_preparation'],
                         'condition' => 's.`Screening/Library_preparation` = "' . $this->aIndividual['Screening/Library_preparation'] . '"',
                         'incomplete' => ($this->aIndividual['Screening/Library_preparation'] === ''? true : false),
                         'threshold' => 2 // 2%
                     ),
                     'Screening/Sequencing_software' => array(
                         'label' => 'Sequencing Technology',
-                        'fields' => array('Screening/Sequencing_software'),
+                        'value' => $this->aIndividual['Screening/Sequencing_software'],
                         'condition' => 's.`Screening/Sequencing_Software` = "' . $this->aIndividual['Screening/Sequencing_software'] . '"',
                         'incomplete' => ($this->aIndividual['Screening/Sequencing_software'] === ''? true : false),
                         'threshold' => 2 // 2%
                     ),
                     'Screening/Analysis_type' => array(
                         'label' => 'Analysis Pipeline',
-                        'fields' => array('Screening/Analysis_type'),
+                        'value' => $this->aIndividual['Screening/Analysis_type'],
                         'condition' => 's.`Screening/Analysis_type` = "' . $this->aIndividual['Screening/Analysis_type'] . '"',
                         'incomplete' => ($this->aIndividual['Screening/Analysis_type'] === ''? true : false),
                         'threshold' => 2 // 2%
                     ),
                     'Screening/Library_preparation&Screening/Sequencing_software' => array(
                         'label' => 'Same Capture Method and Sequencing Technology',
-                        'fields' => array('Screening/Library_preparation', 'Screening/Sequencing_software'),
+                        'value' => $this->aIndividual['Screening/Library_preparation'] . ', ' . $this->aIndividual['Screening/Sequencing_software'],
                         'condition' => 's.`Screening/Library_preparation` = "' . $this->aIndividual['Screening/Library_preparation'] . '"'
                             . ' AND '
                             . 's.`Screening/Sequencing_Software` = "' . $this->aIndividual['Screening/Sequencing_software'] . '"',
@@ -513,7 +508,7 @@ class LOVD_ObservationCounts
                     ),
                     'Screening/Library_preparation&Screening/Sequencing_software&Screening/Analysis_type' => array(
                         'label' => 'Same Capture Method, Sequencing Technology, and Analysis Pipeline',
-                        'fields' => array('Screening/Library_preparation', 'Screening/Sequencing_software', 'Screening/Analysis_type'),
+                        'value' => $this->aIndividual['Screening/Library_preparation'] . ', ' . $this->aIndividual['Screening/Sequencing_software'] . ', ' . $this->aIndividual['Screening/Analysis_type'],
                         'condition' => 's.`Screening/Library_preparation` = "' . $this->aIndividual['Screening/Library_preparation'] . '"'
                             . ' AND '
                             . 's.`Screening/Sequencing_Software` = "' . $this->aIndividual['Screening/Sequencing_software'] . '"'
@@ -552,17 +547,15 @@ class LOVD_ObservationCounts
 
                 $aConfig = array();
                 foreach ($aGenepanelIds as $nIndex => $sGenepanelId) {
-                    $this->aIndividual['genepanel_' . $sGenepanelId] = $aGenepanelNames[$nIndex];
-
                     $aConfig[$sGenepanelId] = array(
                         'all' => array(
                             'label' => 'Gene Panel',
-                            'fields' => array('genepanel_' . $sGenepanelId),
+                            'value' => $aGenepanelNames[$nIndex],
                             'condition' => 'genepanelid = "' . $sGenepanelId . '"'
                         ),
                         'gender' => array(
                             'label' => 'Gender',
-                            'fields' => array('Individual/Gender'),
+                            'value' => $this->aIndividual['Individual/Gender'],
                             'condition' => 'genepanelid = "' . $sGenepanelId . '"'
                                 . ' AND '
                                 . '`Individual/Gender` = "' . $this->aIndividual['Individual/Gender'] . '"',
@@ -570,7 +563,7 @@ class LOVD_ObservationCounts
                         ),
                         'ethnic' => array(
                             'label' => 'Ethinicity',
-                            'fields' => array('Individual/Origin/Ethnic'),
+                            'value' =>$this->aIndividual['Individual/Origin/Ethnic'],
                             'condition' => 'genepanelid = "' . $sGenepanelId . '"'
                                 . ' AND '
                                 . '`Individual/Origin/Ethnic` = "' . $this->aIndividual['Individual/Origin/Ethnic'] . '"',
@@ -628,7 +621,7 @@ class LOVD_ObservationCounts
         $aAvailableColumns = array(
             'genepanel' => array(
                 'label' => 'Category',
-                'values' => 'Gene Panel',
+                'value' => 'Gene Panel',
                 'total_individuals' => 'Total # Individuals',
                 'num_affected' => '# of Affected Individuals',
                 'num_not_affected' => '# of Unaffected Individuals',
@@ -637,7 +630,7 @@ class LOVD_ObservationCounts
             ),
             'general' => array(
                 'label' => 'Category',
-                'values' => 'Value',
+                'value' => 'Value',
                 'percentage' => 'Percentage',
                 'threshold' => 'Percentage'
             )

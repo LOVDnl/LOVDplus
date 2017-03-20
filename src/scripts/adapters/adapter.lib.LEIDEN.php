@@ -19,7 +19,7 @@ $_INSTANCE_CONFIG['viewlists']['Screenings_for_I_VE']['cols_to_show'] = array(
 $_INSTANCE_CONFIG['observation_counts'] = array(
     'genepanel' => array(
         'columns' => array(
-            'values' => 'Gene Panel',
+            'value' => 'Gene Panel',
             'total_individuals' => 'Total # Individuals',
             'percentage' => 'Percentage (%)'
         ),
@@ -32,7 +32,7 @@ $_INSTANCE_CONFIG['observation_counts'] = array(
         // if columns is empty, use default columns list
         'columns' => array(
             'label' => 'Category',
-            'values' => 'Value',
+            'value' => 'Value',
             'percentage' => 'Percentage (%)'
         ),
         'categories' => array(

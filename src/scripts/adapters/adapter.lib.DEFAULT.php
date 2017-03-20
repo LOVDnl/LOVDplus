@@ -113,7 +113,7 @@ $_INSTANCE_CONFIG['observation_counts'] = array(
     'genepanel' => array(
         // if columns is empty, use default columns list
         'columns' => array(
-            'values' => 'Gene Panel',
+            'value' => 'Gene Panel',
             'total_individuals' => 'Total # Individuals',
             'num_affected' => '# of Affected Individuals',
             'num_not_affected' => '# of Unaffected Individuals',
@@ -129,7 +129,7 @@ $_INSTANCE_CONFIG['observation_counts'] = array(
         // if columns is empty, use default columns list
         'columns' => array(
             'label' => 'Category',
-            'values' => 'Value',
+            'value' => 'Value',
             'threshold' => 'Percentage'
         ),
         // if categories is empty, use default categories list

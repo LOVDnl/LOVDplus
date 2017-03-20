@@ -780,7 +780,7 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && !ACTION) {
                                         colData = aData[sType][genepanelId][sCategory][sKey];
 
                                         // If data is empty, then show the category label
-                                        if (sKey == 'values') {
+                                        if (sKey == 'value') {
                                             noValue = true;
                                             for (var i in colData) {
                                                 if (colData[i] != '<?php echo $zObsCount::$EMPTY_DATA_DISPLAY?>') {
