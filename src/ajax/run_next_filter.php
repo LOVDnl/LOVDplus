@@ -392,42 +392,33 @@ if ($aVariantIDs) {
                 }
 
                 // SQL Query to find all variants in the group.
-                if (in_array(strtolower($aGroup['condition']), array ('in', 'not in'))) {
-                    if (strtolower($aGroup['grouping']) == 'and') {
-                        $sSQLVariantsInGroup = '
-                          SELECT vog2.`VariantOnGenome/DBID`
-	                      FROM ' . TABLE_SCR2VAR . ' s2v2
-	                      JOIN ' . TABLE_VARIANTS . ' vog2 ON (s2v2.variantid = vog2.id AND s2v2.screeningid IN (?' . str_repeat(', ?', count($aGroup['screenings'])-1) . '))
-                          GROUP BY vog2.`VariantOnGenome/DBID` 
-                          HAVING COUNT(DISTINCT screeningid) = ' . count($aGroup['screenings']);
-                    } else { // OR or empty string.
-                        $sSQLVariantsInGroup = '
-                          SELECT vog2.`VariantOnGenome/DBID`
-                          FROM ' . TABLE_SCR2VAR . ' s2v2
-                          JOIN ' . TABLE_VARIANTS . ' vog2 ON (s2v2.variantid = vog2.id AND s2v2.screeningid IN (?' . str_repeat(', ?', count($aGroup['screenings'])-1) . '))';
+                $sSQLVariantsInGroup = '
+                  SELECT vog2.`VariantOnGenome/DBID`
+                  FROM ' . TABLE_SCR2VAR . ' s2v2
+                  JOIN ' . TABLE_VARIANTS . ' vog2 ON (s2v2.variantid = vog2.id AND s2v2.screeningid IN (?' . str_repeat(', ?', count($aGroup['screenings'])-1) . '))';
 
-                    }
-                } elseif (in_array(strtolower($aGroup['condition']), array ('homozygous in', 'not homozygous in'))) {
-                    // TODO: build SQL query for Homozygous
-                    // Is MGHA using this column: VariantOnGenome/Sequencing/Allele/Frequency ?
-                    // How about Leiden?
-
+                // Heterozygous and Homozygous queries need additional condition.
+                if (in_array(strtolower($aGroup['condition']), array ('homozygous in', 'not homozygous in'))) {
+                    $sSQLVariantsInGroup .= ' WHERE  vog2.`VariantOnGenome/Sequencing/Allele/Frequency` = 1';
                 } elseif (in_array(strtolower($aGroup['condition']), array ('heterozygous in'))) {
-                    // TODO: build SQL query for heterozygous
-                    // Is MGHA using this column: VariantOnGenome/Sequencing/Allele/Frequency ?
-                    // How about Leiden?
+                    $sSQLVariantsInGroup .= ' WHERE  vog2.`VariantOnGenome/Sequencing/Allele/Frequency` < 1';
+                }
+
+                // Additional query when screenings are grouped with 'AND' condition.
+                if (strtolower($aGroup['grouping']) == 'and') {
+                    $sSQLVariantsInGroup .= ' GROUP BY vog2.`VariantOnGenome/DBID` HAVING COUNT(DISTINCT screeningid) = ' . count($aGroup['screenings']);
                 }
 
                 // Construct the full query.
+                // NOTE: the use if SELECT * in the subquery is to make the query a non-correlated query, therefore it will run faster
                 $sSQL = 'SELECT DISTINCT CAST(vog.id AS UNSIGNED)
                          FROM ' . TABLE_SCR2VAR . ' s2v
                          JOIN ' . TABLE_VARIANTS . ' vog ON (s2v.variantid = vog.id AND s2v.screeningid IN (?))
-                         WHERE vog.`VariantOnGenome/DBID` ' . $sSQLCondition . ' ('. $sSQLVariantsInGroup .') 
+                         WHERE vog.`VariantOnGenome/DBID` ' . $sSQLCondition . '( SELECT * FROM ('. $sSQLVariantsInGroup .') AS subquery)
                             AND vog.id IN (?' . str_repeat(', ?', count($aVariantIDs) - 1) . ')';
 
                 // If we add more queries in the future, we need to watch out for the order of the params.
-                $aSQL = array($nScreeningID);
-                $aSQL = array_merge($aSQL, $aGroup['screenings'], $aVariantIDsFiltered);
+                $aSQL = array_merge(array($nScreeningID), $aGroup['screenings'], $aVariantIDsFiltered);
                 $aVariantIDsFiltered = $_DB->query($sSQL, $aSQL, false)->fetchAllColumn();
             }
 
