@@ -123,7 +123,7 @@ if (ACTION == 'configure' && GET) {
                 } else {
                     // This individual has at least one gene panel or custom panel.
 
-                    $sFiltersFormItems .= '<DIV id=\'filter-config-'. $sFilter . '\'><TABLE>';
+                    $sFiltersFormItems .= '<DIV class=\'filter-config\' id=\'filter-config-'. $sFilter . '\'><TABLE>';
                     $sLastType = '';
                     foreach ($zIndividual['gene_panels'] as $nKey => $aGenePanel) {
                         // Create the gene panel type header.
@@ -192,11 +192,12 @@ if (ACTION == 'configure' && GET) {
                 // Print form.
                 $sFiltersFormItems .= '<H4>' . $sFilter . '</H4><BR>';
 
-                $sFiltersFormItems .= '<DIV id=\'filter-config-'. $sFilter .'-0\'><TABLE>';
-                $sFiltersFormItems .= '<TR><TD><LABEL>Description</LABEL></TD><TD><INPUT name=\'config[' . $sFilter . '][description]\' /></TD></TR>';
+                $sFiltersFormItems .= '<DIV class=\'filter-config\'>';
+                $sFiltersFormItems .= '<TABLE><TR><TD><LABEL>Description</LABEL></TD><TD><INPUT name=\'config[' . $sFilter . '][description]\' /></TD></TR></TABLE>';
+                $sFiltersFormItems .= '<DIV class=\'filter-cross-screening-group\' id=\'filter-config-'. $sFilter .'-0\'>';
 
                 // Conditions variants of this screening against the selected group
-                $sFiltersFormItems .= '<TR><TD><LABEL>Condition</LABEL></TD><TD><SELECT name=\'config[' . $sFilter . '][groups][0][condition]\'>';
+                $sFiltersFormItems .= '<TABLE><TR><TD><LABEL>Condition</LABEL></TD><TD><SELECT name=\'config[' . $sFilter . '][groups][0][condition]\'>';
                 foreach ($aConditions as $sCondition) {
                     $sFiltersFormItems .= '<OPTION value=\'' . $sCondition . '\'>' . $sCondition . '</OPTION>';
                 }
@@ -214,7 +215,31 @@ if (ACTION == 'configure' && GET) {
                 foreach ($aGrouping as $sCondition) {
                     $sFiltersFormItems .= '<OPTION value=\'' . $sCondition . '\'>' . $sCondition . '</OPTION>';
                 }
+                $sFiltersFormItems .= '</SELECT></TD></TR></TABLE></DIV>';
+
+                //==========
+
+                // Conditions variants of this screening against the selected group
+                $sFiltersFormItems .= '<DIV class=\'filter-cross-screening-group\' id=\'filter-config-'. $sFilter .'-1\'>';
+                $sFiltersFormItems .= '<TABLE><TR><TD><LABEL>Condition</LABEL></TD><TD><SELECT name=\'config[' . $sFilter . '][groups][1][condition]\'>';
+                foreach ($aConditions as $sCondition) {
+                    $sFiltersFormItems .= '<OPTION value=\'' . $sCondition . '\'>' . $sCondition . '</OPTION>';
+                }
                 $sFiltersFormItems .= '</SELECT></TD></TR>';
+
+                // The list of available screenings
+                $sFiltersFormItems .= '<TR><TD><LABEL>Screenings</LABEL></TD><TD><SELECT name=\'config[' . $sFilter . '][groups][1][screenings][]\' multiple=\'true\'>';
+                foreach ($aScreenings as $sScreeningID => $sText) {
+                    $sFiltersFormItems .= '<OPTION value=\'' . $sScreeningID . '\'>' . $sText . '</OPTION>';
+                }
+                $sFiltersFormItems .= '</SELECT></TD></TR>';
+
+                // How to group among selected screenings within a group
+                $sFiltersFormItems .= '<TR><TD><LABEL>Grouping</LABEL></TD><TD><SELECT name=\'config[' . $sFilter . '][groups][1][grouping]\'>';
+                foreach ($aGrouping as $sCondition) {
+                    $sFiltersFormItems .= '<OPTION value=\'' . $sCondition . '\'>' . $sCondition . '</OPTION>';
+                }
+                $sFiltersFormItems .= '</SELECT></TD></TR></TABLE></DIV>';
 
                 // TODO: how to display screenings to be selected
 

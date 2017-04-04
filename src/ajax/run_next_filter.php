@@ -378,6 +378,7 @@ if ($aVariantIDs) {
 
             // Loop through each group and narrow down the selected variant ids after SQL of each group is run.
             foreach ($aConfig['groups'] as $aGroup) {
+                
                 // IN or NOT IN the variants in the group
                 switch(strtolower($aGroup['condition'])) {
                     case 'in':
@@ -415,7 +416,7 @@ if ($aVariantIDs) {
                          FROM ' . TABLE_SCR2VAR . ' s2v
                          JOIN ' . TABLE_VARIANTS . ' vog ON (s2v.variantid = vog.id AND s2v.screeningid IN (?))
                          WHERE vog.`VariantOnGenome/DBID` ' . $sSQLCondition . '( SELECT * FROM ('. $sSQLVariantsInGroup .') AS subquery)
-                            AND vog.id IN (?' . str_repeat(', ?', count($aVariantIDs) - 1) . ')';
+                            AND vog.id IN (?' . str_repeat(', ?', count($aVariantIDsFiltered) - 1) . ')';
 
                 // If we add more queries in the future, we need to watch out for the order of the params.
                 $aSQL = array_merge(array($nScreeningID), $aGroup['screenings'], $aVariantIDsFiltered);
