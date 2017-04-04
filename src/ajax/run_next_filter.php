@@ -394,7 +394,7 @@ if ($aVariantIDs) {
 
                 // SQL Query to find all variants in the group.
                 $sSQLVariantsInGroup = '
-                  SELECT vog2.`VariantOnGenome/DBID`
+                  SELECT DISTINCT vog2.`VariantOnGenome/DBID`
                   FROM ' . TABLE_SCR2VAR . ' s2v2
                   JOIN ' . TABLE_VARIANTS . ' vog2 ON (s2v2.variantid = vog2.id AND s2v2.screeningid IN (?' . str_repeat(', ?', count($aGroup['screenings'])-1) . '))';
 
@@ -411,15 +411,16 @@ if ($aVariantIDs) {
                 }
 
                 // Construct the full query.
-                // NOTE: the use if SELECT * in the subquery is to make the query a non-correlated query, therefore it will run faster
+                // NOTE:
+                // - The use if 'SELECT *' in the subquery is to make the query a non-correlated query, therefore it will run faster.
+                // - We no longer need to join it with TABLE_SCR2VAR because our variants is already limited to the list in $aVariantIDsFiltered.
                 $sSQL = 'SELECT DISTINCT CAST(vog.id AS UNSIGNED)
-                         FROM ' . TABLE_SCR2VAR . ' s2v
-                         JOIN ' . TABLE_VARIANTS . ' vog ON (s2v.variantid = vog.id AND s2v.screeningid IN (?))
+                         FROM ' . TABLE_VARIANTS . ' vog 
                          WHERE vog.`VariantOnGenome/DBID` ' . $sSQLCondition . '( SELECT * FROM ('. $sSQLVariantsInGroup .') AS subquery)
                             AND vog.id IN (?' . str_repeat(', ?', count($aVariantIDsFiltered) - 1) . ')';
 
                 // If we add more queries in the future, we need to watch out for the order of the params.
-                $aSQL = array_merge(array($nScreeningID), $aGroup['screenings'], $aVariantIDsFiltered);
+                $aSQL = array_merge($aGroup['screenings'], $aVariantIDsFiltered);
                 $aVariantIDsFiltered = $_DB->query($sSQL, $aSQL, false)->fetchAllColumn();
             }
 
