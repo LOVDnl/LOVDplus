@@ -237,21 +237,21 @@ class LOVD_ObservationCounts
 
         global $_DB, $_INSTANCE_CONFIG;
 
-        // Previously from validateCategories:
+        // Previously from validateCategories():
         // These are the categories to choose from. We'll check which ones are needed, and generate the data for these.
-        // Q: This is very unsafe. We should not feel that we can trust the data that's passed directly into the SQL. This needs to be implemented differently.
-        // A: Restructure this function. Anyway needs to be done because it's generating lots of notices if you don't have one of these columns, making the whole feature unavailable for everyone else.
         // Q: Should this array, which is basically the default settings, be set in __construct()?
         // A: Change it, if I want to. Make sure the way it's set, doesn't generate these notices anymore.
-        // Q: Wouldn't it be much better to have the user configure just WHICH categories he wants, instead of having to reconfigure them when needed?
         static $aCategories;
         if (!$aCategories) {
+            // FIXME: value, condition_args and required are often the same. We
+            //  could simplify the code, sacrificing flexibility, by merging those.
             // Syntax:
             //  'category_type' => array(
             //      'category' => array(
             //          'label' => 'The name you wish to see displayed, disabled by default for gene panel type.',
             //          'value' => 'The value visible for this observation count, either a string or an array of $aIndividual keys.',
             //          'condition' => 'The condition to run in the database in the WHERE clause, calculating this observation count.',
+            //          'condition_args' => array('$aIndividual keys to be used to replace the question marks in the condition.'),
             //          'required' => array('$aIndividual keys that are required to be filled in.'),
             //          'threshold' => integer (0-100) that highlights the row if the percentage is above this threshold.
             //      ),
@@ -266,13 +266,15 @@ class LOVD_ObservationCounts
                     'gender' => array(
                         'label' => 'Gender',
                         'value' => array('Individual/Gender'),
-                        'condition' => '`Individual/Gender` = "' . $this->aIndividual['Individual/Gender'] . '"',
+                        'condition' => '`Individual/Gender` = ?',
+                        'condition_args' => array('Individual/Gender'),
                         'required' => array('Individual/Gender'),
                     ),
                     'ethnic' => array(
                         'label' => 'Ethinicity',
                         'value' => array('Individual/Origin/Ethnic'),
-                        'condition' => '`Individual/Origin/Ethnic` = "' . $this->aIndividual['Individual/Origin/Ethnic'] . '"',
+                        'condition' => '`Individual/Origin/Ethnic` = ?',
+                        'condition_args' => array('Individual/Origin/Ethnic'),
                         'required' => array('Individual/Origin/Ethnic'),
                     ),
                 ),
@@ -286,62 +288,64 @@ class LOVD_ObservationCounts
                     'Individual/Gender' => array(
                         'label' => 'Gender',
                         'value' => array('Individual/Gender'),
-                        'condition' => 'i.`Individual/Gender` = "' . $this->aIndividual['Individual/Gender'] . '"',
+                        'condition' => 'i.`Individual/Gender` = ?',
+                        'condition_args' => array('Individual/Gender'),
                         'required' => array('Individual/Gender'),
                         'threshold' => 2 // 2%
                     ),
                     'Individual/Origin/Ethnic' => array(
                         'label' => 'Ethnicity',
                         'value' => array('Individual/Origin/Ethnic'),
-                        'condition' => 'i.`Individual/Origin/Ethnic` = "' . $this->aIndividual['Individual/Origin/Ethnic'] . '"',
+                        'condition' => 'i.`Individual/Origin/Ethnic` = ?',
+                        'condition_args' => array('Individual/Origin/Ethnic'),
                         'required' => array('Individual/Origin/Ethnic'),
                         'threshold' => 2 // 2%
                     ),
                     'Screening/Sample/Type' => array(
                         'label' => 'Sample Type',
                         'value' => array('Screening/Sample/Type'),
-                        'condition' => 's.`Screening/Sample/Type` = "' . $this->aIndividual['Screening/Sample/Type'] . '"',
+                        'condition' => 's.`Screening/Sample/Type` = ?',
+                        'condition_args' => array('Screening/Sample/Type'),
                         'required' => array('Screening/Sample/Type'),
                         'threshold' => 2 // 2%
                     ),
                     'Screening/Library_preparation' => array(
                         'label' => 'Capture Method',
                         'value' => array('Screening/Library_preparation'),
-                        'condition' => 's.`Screening/Library_preparation` = "' . $this->aIndividual['Screening/Library_preparation'] . '"',
+                        'condition' => 's.`Screening/Library_preparation` = ?',
+                        'condition_args' => array('Screening/Library_preparation'),
                         'required' => array('Screening/Library_preparation'),
                         'threshold' => 2 // 2%
                     ),
                     'Screening/Sequencing_software' => array(
                         'label' => 'Sequencing Technology',
                         'value' => array('Screening/Sequencing_software'),
-                        'condition' => 's.`Screening/Sequencing_Software` = "' . $this->aIndividual['Screening/Sequencing_software'] . '"',
+                        'condition' => 's.`Screening/Sequencing_Software` = ?',
+                        'condition_args' => array('Screening/Sequencing_software'),
                         'required' => array('Screening/Sequencing_software'),
                         'threshold' => 2 // 2%
                     ),
                     'Screening/Analysis_type' => array(
                         'label' => 'Analysis Pipeline',
                         'value' => array('Screening/Analysis_type'),
-                        'condition' => 's.`Screening/Analysis_type` = "' . $this->aIndividual['Screening/Analysis_type'] . '"',
+                        'condition' => 's.`Screening/Analysis_type` = ?',
+                        'condition_args' => array('Screening/Analysis_type'),
                         'required' => array('Screening/Analysis_type'),
                         'threshold' => 2 // 2%
                     ),
                     'Screening/Library_preparation&Screening/Sequencing_software' => array(
                         'label' => 'Same Capture Method and Sequencing Technology',
                         'value' => array('Screening/Library_preparation', 'Screening/Sequencing_software'),
-                        'condition' => 's.`Screening/Library_preparation` = "' . $this->aIndividual['Screening/Library_preparation'] . '"'
-                            . ' AND '
-                            . 's.`Screening/Sequencing_Software` = "' . $this->aIndividual['Screening/Sequencing_software'] . '"',
+                        'condition' => 's.`Screening/Library_preparation` = ? AND s.`Screening/Sequencing_Software` = ?',
+                        'condition_args' => array('Screening/Library_preparation', 'Screening/Sequencing_software'),
                         'required' => array('Screening/Library_preparation', 'Screening/Sequencing_software'),
                         'threshold' => 2 // 2%
                     ),
                     'Screening/Library_preparation&Screening/Sequencing_software&Screening/Analysis_type' => array(
                         'label' => 'Same Capture Method, Sequencing Technology, and Analysis Pipeline',
                         'value' => array('Screening/Library_preparation', 'Screening/Sequencing_software', 'Screening/Analysis_type'),
-                        'condition' => 's.`Screening/Library_preparation` = "' . $this->aIndividual['Screening/Library_preparation'] . '"'
-                            . ' AND '
-                            . 's.`Screening/Sequencing_Software` = "' . $this->aIndividual['Screening/Sequencing_software'] . '"'
-                            . ' AND '
-                            . 's.`Screening/Analysis_type` = "' . $this->aIndividual['Screening/Analysis_type'] . '"',
+                        'condition' => 's.`Screening/Library_preparation` = ? AND s.`Screening/Sequencing_Software` = ? AND s.`Screening/Analysis_type` = ?',
+                        'condition_args' => array('Screening/Library_preparation', 'Screening/Sequencing_software', 'Screening/Analysis_type'),
                         'required' => array('Screening/Library_preparation', 'Screening/Sequencing_software', 'Screening/Analysis_type'),
                         'threshold' => 2 // 2%
                     ),
@@ -395,6 +399,7 @@ class LOVD_ObservationCounts
             if (is_array($aCategoryData['value'])) {
                 $sValue = '';
                 foreach ($aCategoryData['value'] as $sField) {
+                    // If the data is not found in the individual data, it is assumed to be just a textual value.
                     $sValue .= (!$sValue? '' : ', ') . (!isset($this->aIndividual[$sField])? $sField : $this->aIndividual[$sField]);
                 }
                 $aCategoryData['value'] = $sValue;
@@ -417,10 +422,18 @@ class LOVD_ObservationCounts
             if ($bComplete) {
                 $aSQL = array(); // The arguments for the query.
 
+                // If there is a condition, get the arguments to it, and add to the $aSQL array.
+                if (!empty($aRules['condition']) && !empty($aRules['condition_args'])) {
+                    foreach ($aRules['condition_args'] as $sField) {
+                        // If the data is not found in the individual data, it is assumed to be just a textual value.
+                        $aSQL[] = (!isset($this->aIndividual[$sField])? $sField : $this->aIndividual[$sField]);
+                    }
+                }
+
                 // Gene panel counts always need to restrict the count on the gene panel.
                 if ($sType == 'genepanel') {
                     $aRules['condition'] = 'genepanelid = ?' . (!$aRules['condition']? '' : ' AND ') . $aRules['condition'];
-                    $aSQL[] = $nGenePanelID;
+                    $aSQL = array_merge(array($nGenePanelID), $aSQL);
                 }
 
                 // Total number of individuals with screenings, matching the given conditions.
