@@ -5,7 +5,7 @@
  * LEIDEN OPEN VARIATION DATABASE (LOVD)
  *
  * Created     : 2017-01-12
- * Modified    : 2017-03-20
+ * Modified    : 2017-04-05
  * For LOVD    : 3.0-18
  *
  * Copyright   : 2004-2017 Leiden University Medical Center; http://www.LUMC.nl/
@@ -174,10 +174,14 @@ class LOVD_ObservationCounts
 
                 case 'genepanel':
                     $aData['genepanel'] = array();
-                    foreach ($this->aCategories[$sType] as $sGenepanelId => $aGenepanelRules) {
-                        foreach ($aGenepanelRules as $sCategory => $aRules) {
+                    foreach ($this->aIndividual['genepanels'] as $nGenePanelID => $sGenePanelName) {
+                        foreach ($this->aCategories[$sType] as $sCategory => $aRules) {
                             // Build the observation counts data for each category.
-                            $aData['genepanel'][$sGenepanelId][$sCategory] = $this->generateData($aRules, 'genepanel', $sGenepanelId);
+                            $aData['genepanel'][$nGenePanelID][$sCategory] = $this->generateData($aRules, 'genepanel', $nGenePanelID);
+                            if ($sCategory == 'all') {
+                                // This is the gene panel header. Name it after the gene panel.
+                                $aData['genepanel'][$nGenePanelID][$sCategory]['value'] = $sGenePanelName;
+                            }
                         }
                     }
                     break;
@@ -250,6 +254,7 @@ class LOVD_ObservationCounts
 
         global $_DB;
 
+        // Q: Building this can be improved.
         $aData = array();
         $aData['label'] = $aRules['label'];
         $aData['value'] = $aRules['value'];
@@ -451,12 +456,13 @@ class LOVD_ObservationCounts
             case 'general':
                 // Build available configuration options
                 // Q: This is very unsafe. We should not feel that we can trust the data that's passed directly into the SQL. This needs to be implemented differently.
-                // A: Restructure this function. Anyway needs to be done because it's generating lots of notices if you don't have one of these functions, making the whole feature unavailable for everyone else.
+                // A: Restructure this function. Anyway needs to be done because it's generating lots of notices if you don't have one of these columns, making the whole feature unavailable for everyone else.
                 // Q: The values here need comments to explain what they mean and what they are for.
                 // Q: If I understand correctly, "incomplete" needs to be false to get this stuff to run? Perhaps rename to "active" or so?
                 // A: Change it if I want to.
                 // Q: Should this array, which is basically the default settings, be set in __construct()?
                 // A: Change it, if I want to. Make sure the way it's set, doesn't generate these notices anymore.
+                // Q: Wouldn't it be much better to have the user configure just WHICH categories he wants, instead of having to reconfigure them when needed?
                 $aConfig = array(
                     'all' => array(
                         'label' => 'All',
@@ -548,28 +554,25 @@ class LOVD_ObservationCounts
 
             case 'genepanel':
                 // Build existing configuration options.
-                $aConfig = array();
-                foreach ($this->aIndividual['genepanels'] as $nGenePanelID => $sGenePanelName) {
-                    $aConfig[$nGenePanelID] = array(
-                        'all' => array(
-                            'label' => 'Gene Panel',
-                            'value' => $sGenePanelName,
-                            'condition' => ''
-                        ),
-                        'gender' => array(
-                            'label' => 'Gender',
-                            'value' => $this->aIndividual['Individual/Gender'],
-                            'condition' => '`Individual/Gender` = "' . $this->aIndividual['Individual/Gender'] . '"',
-                            'incomplete' => ($this->aIndividual['Individual/Gender'] === ''? true: false)
-                        ),
-                        'ethnic' => array(
-                            'label' => 'Ethinicity',
-                            'value' =>$this->aIndividual['Individual/Origin/Ethnic'],
-                            'condition' => '`Individual/Origin/Ethnic` = "' . $this->aIndividual['Individual/Origin/Ethnic'] . '"',
-                            'incomplete' => ($this->aIndividual['Individual/Origin/Ethnic'] === ''? true: false)
-                        ),
-                    );
-                }
+                $aConfig = array(
+                    'all' => array(
+                        'label' => 'Gene Panel',
+                        'value' => '', // Will be replaced in generateData(), depends on the gene panel.
+                        'condition' => ''
+                    ),
+                    'gender' => array(
+                        'label' => 'Gender',
+                        'value' => $this->aIndividual['Individual/Gender'],
+                        'condition' => '`Individual/Gender` = "' . $this->aIndividual['Individual/Gender'] . '"',
+                        'incomplete' => ($this->aIndividual['Individual/Gender'] === ''? true: false)
+                    ),
+                    'ethnic' => array(
+                        'label' => 'Ethinicity',
+                        'value' => $this->aIndividual['Individual/Origin/Ethnic'],
+                        'condition' => '`Individual/Origin/Ethnic` = "' . $this->aIndividual['Individual/Origin/Ethnic'] . '"',
+                        'incomplete' => ($this->aIndividual['Individual/Origin/Ethnic'] === ''? true: false)
+                    ),
+                );
 
                 // Now build columns for this instance of LOVD based on what is specified on the settings array.
                 if (empty($aSettings) || empty($aSettings['categories'])) {
@@ -578,10 +581,8 @@ class LOVD_ObservationCounts
                 } else {
                     // Otherwise, only select the categories specified in the instance settings.
                     foreach ($aSettings['categories'] as $sCategory) {
-                        foreach (array_keys($this->aIndividual['genepanels']) as $nGenePanelID) {
-                            if (isset($aConfig[$nGenePanelID][$sCategory])) {
-                                $aCategories[$nGenePanelID][$sCategory] = $aConfig[$nGenePanelID][$sCategory];
-                            }
+                        if (isset($aConfig[$sCategory])) {
+                            $aCategories[$sCategory] = $aConfig[$sCategory];
                         }
                     }
                 }
