@@ -243,8 +243,6 @@ class LOVD_ObservationCounts
         // Q: This is very unsafe. We should not feel that we can trust the data that's passed directly into the SQL. This needs to be implemented differently.
         // A: Restructure this function. Anyway needs to be done because it's generating lots of notices if you don't have one of these columns, making the whole feature unavailable for everyone else.
         // Q: The values here need comments to explain what they mean and what they are for.
-        // Q: If I understand correctly, "incomplete" needs to be false to get this stuff to run? Perhaps rename to "active" or so?
-        // A: Change it if I want to.
         // Q: Should this array, which is basically the default settings, be set in __construct()?
         // A: Change it, if I want to. Make sure the way it's set, doesn't generate these notices anymore.
         // Q: Wouldn't it be much better to have the user configure just WHICH categories he wants, instead of having to reconfigure them when needed?
@@ -261,13 +259,13 @@ class LOVD_ObservationCounts
                         'label' => 'Gender',
                         'value' => $this->aIndividual['Individual/Gender'],
                         'condition' => '`Individual/Gender` = "' . $this->aIndividual['Individual/Gender'] . '"',
-                        'incomplete' => ($this->aIndividual['Individual/Gender'] === ''? true : false)
+                        'required' => array('Individual/Gender'),
                     ),
                     'ethnic' => array(
                         'label' => 'Ethinicity',
                         'value' => $this->aIndividual['Individual/Origin/Ethnic'],
                         'condition' => '`Individual/Origin/Ethnic` = "' . $this->aIndividual['Individual/Origin/Ethnic'] . '"',
-                        'incomplete' => ($this->aIndividual['Individual/Origin/Ethnic'] === ''? true : false)
+                        'required' => array('Individual/Origin/Ethnic'),
                     ),
                 ),
                 'general' => array(
@@ -281,42 +279,42 @@ class LOVD_ObservationCounts
                         'label' => 'Gender',
                         'value' => $this->aIndividual['Individual/Gender'],
                         'condition' => 'i.`Individual/Gender` = "' . $this->aIndividual['Individual/Gender'] . '"',
-                        'incomplete' => ($this->aIndividual['Individual/Gender'] === ''? true : false),
+                        'required' => array('Individual/Gender'),
                         'threshold' => 2 // 2%
                     ),
                     'Individual/Origin/Ethnic' => array(
                         'label' => 'Ethnicity',
                         'value' => $this->aIndividual['Individual/Origin/Ethnic'],
                         'condition' => 'i.`Individual/Origin/Ethnic` = "' . $this->aIndividual['Individual/Origin/Ethnic'] . '"',
-                        'incomplete' => ($this->aIndividual['Individual/Origin/Ethnic'] === ''? true : false),
+                        'required' => array('Individual/Origin/Ethnic'),
                         'threshold' => 2 // 2%
                     ),
                     'Screening/Sample/Type' => array(
                         'label' => 'Sample Type',
                         'value' => $this->aIndividual['Screening/Sample/Type'],
                         'condition' => 's.`Screening/Sample/Type` = "' . $this->aIndividual['Screening/Sample/Type'] . '"',
-                        'incomplete' => ($this->aIndividual['Screening/Sample/Type'] === ''? true : false),
+                        'required' => array('Screening/Sample/Type'),
                         'threshold' => 2 // 2%
                     ),
                     'Screening/Library_preparation' => array(
                         'label' => 'Capture Method',
                         'value' => $this->aIndividual['Screening/Library_preparation'],
                         'condition' => 's.`Screening/Library_preparation` = "' . $this->aIndividual['Screening/Library_preparation'] . '"',
-                        'incomplete' => ($this->aIndividual['Screening/Library_preparation'] === ''? true : false),
+                        'required' => array('Screening/Library_preparation'),
                         'threshold' => 2 // 2%
                     ),
                     'Screening/Sequencing_software' => array(
                         'label' => 'Sequencing Technology',
                         'value' => $this->aIndividual['Screening/Sequencing_software'],
                         'condition' => 's.`Screening/Sequencing_Software` = "' . $this->aIndividual['Screening/Sequencing_software'] . '"',
-                        'incomplete' => ($this->aIndividual['Screening/Sequencing_software'] === ''? true : false),
+                        'required' => array('Screening/Sequencing_software'),
                         'threshold' => 2 // 2%
                     ),
                     'Screening/Analysis_type' => array(
                         'label' => 'Analysis Pipeline',
                         'value' => $this->aIndividual['Screening/Analysis_type'],
                         'condition' => 's.`Screening/Analysis_type` = "' . $this->aIndividual['Screening/Analysis_type'] . '"',
-                        'incomplete' => ($this->aIndividual['Screening/Analysis_type'] === ''? true : false),
+                        'required' => array('Screening/Analysis_type'),
                         'threshold' => 2 // 2%
                     ),
                     'Screening/Library_preparation&Screening/Sequencing_software' => array(
@@ -325,8 +323,7 @@ class LOVD_ObservationCounts
                         'condition' => 's.`Screening/Library_preparation` = "' . $this->aIndividual['Screening/Library_preparation'] . '"'
                             . ' AND '
                             . 's.`Screening/Sequencing_Software` = "' . $this->aIndividual['Screening/Sequencing_software'] . '"',
-                        'incomplete' => ($this->aIndividual['Screening/Library_preparation'] === ''
-                                        || $this->aIndividual['Screening/Sequencing_software'] === ''? true : false),
+                        'required' => array('Screening/Library_preparation', 'Screening/Sequencing_software'),
                         'threshold' => 2 // 2%
                     ),
                     'Screening/Library_preparation&Screening/Sequencing_software&Screening/Analysis_type' => array(
@@ -337,9 +334,7 @@ class LOVD_ObservationCounts
                             . 's.`Screening/Sequencing_Software` = "' . $this->aIndividual['Screening/Sequencing_software'] . '"'
                             . ' AND '
                             . 's.`Screening/Analysis_type` = "' . $this->aIndividual['Screening/Analysis_type'] . '"',
-                        'incomplete' => ($this->aIndividual['Screening/Library_preparation'] === ''
-                                        || $this->aIndividual['Screening/Sequencing_software'] === ''
-                                        || $this->aIndividual['Screening/Analysis_type'] === ''? true : false),
+                        'required' => array('Screening/Library_preparation', 'Screening/Sequencing_software', 'Screening/Analysis_type'),
                         'threshold' => 2 // 2%
                     ),
                 ),
@@ -388,11 +383,21 @@ class LOVD_ObservationCounts
                 $aCategoryData['value'] = $this->aIndividual['genepanels'][$nGenePanelID];
             }
 
-            // Some categories can only be run if some prerequisites have been satisfied,
-            // such as that certain columns need to be active and filled in.
-            // This is configured in the 'incomplete' field.
+            // Some categories can only be run if some prerequisites have been
+            //  satisfied; certain columns need to be active and filled in.
+            // This is configured in the 'required' field.
             // Only run query if this individual/screening has sufficient data.
-            if (empty($aRules['incomplete'])) {
+            $bComplete = true;
+            if (isset($aRules['required'])) {
+                foreach ($aRules['required'] as $sField) {
+                    if (!isset($this->aIndividual[$sField]) || $this->aIndividual[$sField] === '') {
+                        $bComplete = false;
+                        break;
+                    }
+                }
+            }
+
+            if ($bComplete) {
                 $aSQL = array(); // The arguments for the query.
 
                 // Gene panel counts always need to restrict the count on the gene panel.
@@ -457,9 +462,9 @@ class LOVD_ObservationCounts
                     $nCount = $_DB->query($sSQL, $aSQL)->fetchColumn();
                     $aCategoryData['num_not_affected'] = $nCount;
                 }
-            }
 
-            $aData[$sCategory] = $aCategoryData;
+                $aData[$sCategory] = $aCategoryData;
+            }
         }
 
         return $aData;
