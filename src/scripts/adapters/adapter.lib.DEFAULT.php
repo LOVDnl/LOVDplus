@@ -4,7 +4,7 @@
  * LEIDEN OPEN VARIATION DATABASE (LOVD)
  *
  * Created     : 2016-09-02
- * Modified    : 2017-03-14
+ * Modified    : 2017-04-05
  * For LOVD    : 3.0-19
  *
  * Copyright   : 2004-2017 Leiden University Medical Center; http://www.LUMC.nl/
@@ -101,17 +101,16 @@ $_INSTANCE_CONFIG['conversion'] = array(
     'check_indel_description' => true
 );
 
+// This is the default configuration of the observation count feature.
+// To disable this feature completely, set 'observation_counts' to an empty
+//  array in your instance-specific settings.
 $_INSTANCE_CONFIG['observation_counts'] = array(
-    'genepanel' => array(),
-    'general' => array(),
-);
-
-// FIXME: This is copied from the MGHA adapter, still need to figure this out.
-$_INSTANCE_CONFIG['observation_counts'] = array(
-    // If we want to display genepanel observation counts using default config,
-    // then simply add 'genepanel' => array()
+    // If you want to display the gene panel observation counts using the default
+    //  configuration, you can also simply write: 'genepanel' => array(),
     'genepanel' => array(
-        // if columns is empty, use default columns list
+        // These are the columns to choose from. If you'd like to display all
+        //  default columns, you can also simply write:
+        //  'columns' => array(),
         'columns' => array(
             'value' => 'Gene Panel',
             'total_individuals' => 'Total # Individuals',
@@ -119,21 +118,43 @@ $_INSTANCE_CONFIG['observation_counts'] = array(
             'num_not_affected' => '# of Unaffected Individuals',
             'percentage' => 'Percentage (%)'
         ),
-        // if categories is empty, use default categories listhahh
-        'categories' => array()
+        // These are the categories to choose from. If you'd like to use all
+        //  default categories, you can also also simply write:
+        //  'categories' => array(),
+        'categories' => array(
+            'all',
+            'gender',
+            'ethnic',
+        ),
     ),
 
-    // If we want to display general categories observation counts using default config,
-    // then simply add 'general' => array()
+    // If you want to display the general observation counts using the default
+    //  configuration, you can also simply write: 'general' => array(),
     'general' => array(
-        // if columns is empty, use default columns list
+        // These are the columns to choose from. If you'd like to display all
+        //  default columns, you can also simply write:
+        //  'columns' => array(),
         'columns' => array(
             'label' => 'Category',
             'value' => 'Value',
             'threshold' => 'Percentage'
         ),
-        // if categories is empty, use default categories list
-        'categories' => array(),
+        // These are the categories to choose from. If you'd like to use all
+        //  default categories, you can also also simply write:
+        //  'categories' => array(),
+        'categories' => array(
+            'all',
+            'Individual/Gender',
+            'Individual/Origin/Ethnic',
+            'Screening/Sample/Type',
+            'Screening/Library_preparation',
+            'Screening/Sequencing_software',
+            'Screening/Analysis_type',
+            'Screening/Library_preparation&Screening/Sequencing_software',
+            'Screening/Library_preparation&Screening/Sequencing_software&Screening/Analysis_type',
+        ),
+        // This is the minimal population size that is required for the
+        //  general observation counts to be calculated.
         'min_population_size' => 100
     ),
 );

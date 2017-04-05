@@ -46,11 +46,6 @@ class LOVD_ObservationCounts
     protected $aIndividual = array(); // Store details of the individual where this variant is found.
     protected $nVariantID = null; // The Id of the variant we are looking into.
 
-    // The configurations of observation counts categories for this instance.
-    protected $aCategories = array(
-        'genepanel' => array(),
-        'general' => array(),
-    );
     protected $aColumns = array(); // The list of observation counts columns to be displayed for this instance.
 
     // We currently divide the Observation Counts data calculations into these types.
@@ -146,8 +141,6 @@ class LOVD_ObservationCounts
         $aData['population_size'] = $_DB->query(
             'SELECT COUNT(DISTINCT individualid) FROM ' . TABLE_SCREENINGS)->fetchColumn();
         foreach ($aSettings as $sType => $aTypeSettings) {
-            // Initialize and validate if the categories selected by this instance is valid.
-            $this->aCategories[$sType] = $this->validateCategories($sType, $aTypeSettings);
             $this->aColumns = $this->validateColumns($sType, $aTypeSettings);
 
             // Now, generate observation counts data for each type selected in the settings.
@@ -165,24 +158,15 @@ class LOVD_ObservationCounts
                         break;
                     }
 
-                    $aData['general'] = array();
-                    foreach ($this->aCategories[$sType] as $sCategory => $aRules) {
-                        // Build the observation counts data for each category.
-                        $aData['general'][$sCategory] = $this->generateData($aRules, 'general');
-                    }
+                    // Build the observation counts data for each category.
+                    $aData['general'] = $this->generateData('general');
                     break;
 
                 case 'genepanel':
                     $aData['genepanel'] = array();
                     foreach ($this->aIndividual['genepanels'] as $nGenePanelID => $sGenePanelName) {
-                        foreach ($this->aCategories[$sType] as $sCategory => $aRules) {
-                            // Build the observation counts data for each category.
-                            $aData['genepanel'][$nGenePanelID][$sCategory] = $this->generateData($aRules, 'genepanel', $nGenePanelID);
-                            if ($sCategory == 'all') {
-                                // This is the gene panel header. Name it after the gene panel.
-                                $aData['genepanel'][$nGenePanelID][$sCategory]['value'] = $sGenePanelName;
-                            }
-                        }
+                        // Build the observation counts data for each category.
+                        $aData['genepanel'][$nGenePanelID] = $this->generateData('genepanel', $nGenePanelID);
                     }
                     break;
             }
@@ -245,94 +229,237 @@ class LOVD_ObservationCounts
 
 
 
-    protected function generateData ($aRules, $sType, $nGenePanelID = 0)
+    protected function generateData ($sType, $nGenePanelID = 0)
     {
         // Given the configuration of a category, construct an array of data for that category.
         // No data is saved into the database here.
         // $aRules : The set of configurations to calculate data for this category
         // $sType : The observation counts type (check available static variables in this class with TYPE_ prefix).
 
-        global $_DB;
+        global $_DB, $_INSTANCE_CONFIG;
 
-        // Q: Building this can be improved.
+        // Previously from validateCategories:
+        // These are the categories to choose from. We'll check which ones are needed, and generate the data for these.
+        // Q: This is very unsafe. We should not feel that we can trust the data that's passed directly into the SQL. This needs to be implemented differently.
+        // A: Restructure this function. Anyway needs to be done because it's generating lots of notices if you don't have one of these columns, making the whole feature unavailable for everyone else.
+        // Q: The values here need comments to explain what they mean and what they are for.
+        // Q: If I understand correctly, "incomplete" needs to be false to get this stuff to run? Perhaps rename to "active" or so?
+        // A: Change it if I want to.
+        // Q: Should this array, which is basically the default settings, be set in __construct()?
+        // A: Change it, if I want to. Make sure the way it's set, doesn't generate these notices anymore.
+        // Q: Wouldn't it be much better to have the user configure just WHICH categories he wants, instead of having to reconfigure them when needed?
+        static $aCategories;
+        if (!$aCategories) {
+            $aCategories = array(
+                'genepanel' => array(
+                    'all' => array(
+                        'label' => 'Gene Panel',
+                        'value' => '', // Will be replaced later, depends on the gene panel.
+                        'condition' => ''
+                    ),
+                    'gender' => array(
+                        'label' => 'Gender',
+                        'value' => $this->aIndividual['Individual/Gender'],
+                        'condition' => '`Individual/Gender` = "' . $this->aIndividual['Individual/Gender'] . '"',
+                        'incomplete' => ($this->aIndividual['Individual/Gender'] === ''? true : false)
+                    ),
+                    'ethnic' => array(
+                        'label' => 'Ethinicity',
+                        'value' => $this->aIndividual['Individual/Origin/Ethnic'],
+                        'condition' => '`Individual/Origin/Ethnic` = "' . $this->aIndividual['Individual/Origin/Ethnic'] . '"',
+                        'incomplete' => ($this->aIndividual['Individual/Origin/Ethnic'] === ''? true : false)
+                    ),
+                ),
+                'general' => array(
+                    'all' => array(
+                        'label' => 'All',
+                        'value' => '',
+                        'condition' => 'i.id IS NOT NULL',
+                        'threshold' => 2 // 2%
+                    ),
+                    'Individual/Gender' => array(
+                        'label' => 'Gender',
+                        'value' => $this->aIndividual['Individual/Gender'],
+                        'condition' => 'i.`Individual/Gender` = "' . $this->aIndividual['Individual/Gender'] . '"',
+                        'incomplete' => ($this->aIndividual['Individual/Gender'] === ''? true : false),
+                        'threshold' => 2 // 2%
+                    ),
+                    'Individual/Origin/Ethnic' => array(
+                        'label' => 'Ethnicity',
+                        'value' => $this->aIndividual['Individual/Origin/Ethnic'],
+                        'condition' => 'i.`Individual/Origin/Ethnic` = "' . $this->aIndividual['Individual/Origin/Ethnic'] . '"',
+                        'incomplete' => ($this->aIndividual['Individual/Origin/Ethnic'] === ''? true : false),
+                        'threshold' => 2 // 2%
+                    ),
+                    'Screening/Sample/Type' => array(
+                        'label' => 'Sample Type',
+                        'value' => $this->aIndividual['Screening/Sample/Type'],
+                        'condition' => 's.`Screening/Sample/Type` = "' . $this->aIndividual['Screening/Sample/Type'] . '"',
+                        'incomplete' => ($this->aIndividual['Screening/Sample/Type'] === ''? true : false),
+                        'threshold' => 2 // 2%
+                    ),
+                    'Screening/Library_preparation' => array(
+                        'label' => 'Capture Method',
+                        'value' => $this->aIndividual['Screening/Library_preparation'],
+                        'condition' => 's.`Screening/Library_preparation` = "' . $this->aIndividual['Screening/Library_preparation'] . '"',
+                        'incomplete' => ($this->aIndividual['Screening/Library_preparation'] === ''? true : false),
+                        'threshold' => 2 // 2%
+                    ),
+                    'Screening/Sequencing_software' => array(
+                        'label' => 'Sequencing Technology',
+                        'value' => $this->aIndividual['Screening/Sequencing_software'],
+                        'condition' => 's.`Screening/Sequencing_Software` = "' . $this->aIndividual['Screening/Sequencing_software'] . '"',
+                        'incomplete' => ($this->aIndividual['Screening/Sequencing_software'] === ''? true : false),
+                        'threshold' => 2 // 2%
+                    ),
+                    'Screening/Analysis_type' => array(
+                        'label' => 'Analysis Pipeline',
+                        'value' => $this->aIndividual['Screening/Analysis_type'],
+                        'condition' => 's.`Screening/Analysis_type` = "' . $this->aIndividual['Screening/Analysis_type'] . '"',
+                        'incomplete' => ($this->aIndividual['Screening/Analysis_type'] === ''? true : false),
+                        'threshold' => 2 // 2%
+                    ),
+                    'Screening/Library_preparation&Screening/Sequencing_software' => array(
+                        'label' => 'Same Capture Method and Sequencing Technology',
+                        'value' => $this->aIndividual['Screening/Library_preparation'] . ', ' . $this->aIndividual['Screening/Sequencing_software'],
+                        'condition' => 's.`Screening/Library_preparation` = "' . $this->aIndividual['Screening/Library_preparation'] . '"'
+                            . ' AND '
+                            . 's.`Screening/Sequencing_Software` = "' . $this->aIndividual['Screening/Sequencing_software'] . '"',
+                        'incomplete' => ($this->aIndividual['Screening/Library_preparation'] === ''
+                                        || $this->aIndividual['Screening/Sequencing_software'] === ''? true : false),
+                        'threshold' => 2 // 2%
+                    ),
+                    'Screening/Library_preparation&Screening/Sequencing_software&Screening/Analysis_type' => array(
+                        'label' => 'Same Capture Method, Sequencing Technology, and Analysis Pipeline',
+                        'value' => $this->aIndividual['Screening/Library_preparation'] . ', ' . $this->aIndividual['Screening/Sequencing_software'] . ', ' . $this->aIndividual['Screening/Analysis_type'],
+                        'condition' => 's.`Screening/Library_preparation` = "' . $this->aIndividual['Screening/Library_preparation'] . '"'
+                            . ' AND '
+                            . 's.`Screening/Sequencing_Software` = "' . $this->aIndividual['Screening/Sequencing_software'] . '"'
+                            . ' AND '
+                            . 's.`Screening/Analysis_type` = "' . $this->aIndividual['Screening/Analysis_type'] . '"',
+                        'incomplete' => ($this->aIndividual['Screening/Library_preparation'] === ''
+                                        || $this->aIndividual['Screening/Sequencing_software'] === ''
+                                        || $this->aIndividual['Screening/Analysis_type'] === ''? true : false),
+                        'threshold' => 2 // 2%
+                    ),
+                ),
+            );
+        }
+
+        // Which categories will we load? An empty array in the instance's configuration means we'll show them all.
+        // If we get here, we know the settings have defined this type at least.
+        if (empty($_INSTANCE_CONFIG['observation_counts'][$sType]['categories'])) {
+            // We have requested this type of observation counts, but we haven't selected which categories to see. Select them all.
+            $_INSTANCE_CONFIG['observation_counts'][$sType]['categories'] = array_keys($aCategories[$sType]);
+        } elseif (!is_array($_INSTANCE_CONFIG['observation_counts'][$sType]['categories'])) {
+            // Otherwise, if the user has filled in a string or so, turn the categories value into an array, so that in_array() won't fail.
+            $_INSTANCE_CONFIG['observation_counts'][$sType]['categories'] = array(
+                $_INSTANCE_CONFIG['observation_counts'][$sType]['categories'],
+            );
+        }
+
+
+
+        // Now, loop the requested categories and build up the returned array.
         $aData = array();
-        $aData['label'] = $aRules['label'];
-        $aData['value'] = $aRules['value'];
-
-        $aData['total_individuals'] = static::$EMPTY_DATA_DISPLAY;
-        $aData['num_affected'] = static::$EMPTY_DATA_DISPLAY;
-        $aData['num_not_affected'] = static::$EMPTY_DATA_DISPLAY;
-        $aData['num_ind_with_variant'] = static::$EMPTY_DATA_DISPLAY;
-        $aData['percentage'] = static::$EMPTY_DATA_DISPLAY;
-        $aData['threshold'] = static::$EMPTY_DATA_DISPLAY;
-
-        // Q: This function needs some more comments.
-        // Only run query if this individual/screening has sufficient data.
-        if (empty($aRules['incomplete'])) {
-            $aSQL = array(); // The arguments for the query.
-
-            // Gene panel counts always need to restrict the count on the gene panel.
-            if ($sType == 'genepanel') {
-                $aRules['condition'] = 'genepanelid = ?' . (!$aRules['condition']? '' : ' AND ') . $aRules['condition'];
-                $aSQL[] = $nGenePanelID;
+        foreach ($_INSTANCE_CONFIG['observation_counts'][$sType]['categories'] as $sCategory) {
+            if (!isset($aCategories[$sType][$sCategory])) {
+                // Unknown category requested.
+                continue;
             }
 
-            // Total number of individuals with screenings, matching the given conditions.
-            $sSQL =  'SELECT COUNT(DISTINCT s.individualid)
-                      FROM ' . TABLE_INDIVIDUALS . ' AS i 
-                        INNER JOIN ' . TABLE_SCREENINGS . ' AS s ON (s.individualid = i.id)
-                        LEFT OUTER JOIN ' . TABLE_IND2GP . ' AS i2gp ON (i2gp.individualid = i.id) 
-                      WHERE ' . $aRules['condition'];
-            $nCount = $_DB->query($sSQL, $aSQL)->fetchColumn();
-            $aData['total_individuals'] = $nCount;
+            // To simplify the code...
+            $aRules = $aCategories[$sType][$sCategory];
 
-            // Number of individuals with screenings with this variant, matching the given conditions.
-            $sSQL = 'SELECT COUNT(s.individualid) AS count_dbid, GROUP_CONCAT(DISTINCT TRIM(LEADING "0" FROM vog.id) SEPARATOR ";") as variant_ids
-                     FROM ' . TABLE_VARIANTS . ' AS vog 
-                       INNER JOIN ' . TABLE_SCR2VAR . ' AS s2v ON (vog.id = s2v.variantid AND vog.`VariantOnGenome/DBID` = ?) 
-                       INNER JOIN ' . TABLE_SCREENINGS . ' AS s ON (s.id = s2v.screeningid) 
-                       INNER JOIN ' . TABLE_INDIVIDUALS . ' AS i ON (s.individualid = i.id) 
-                       LEFT OUTER JOIN ' . TABLE_IND2GP . ' AS i2gp ON (i2gp.individualid = i.id) 
-                     WHERE ' . $aRules['condition'] . ' 
-                     GROUP BY s.individualid';
-            $aData['variant_ids'] = array();
-            $aData['num_ind_with_variant'] = 0;
-            $zResult = $_DB->query($sSQL, array_merge(array($this->aIndividual['VariantOnGenome/DBID']), $aSQL));
-            while ($aRow = $zResult->fetchAssoc()) {
-                $aData['num_ind_with_variant']++;
-                $aData['variant_ids'] = array_merge($aData['variant_ids'], explode(';', $aRow['variant_ids']));
+            // Build up this category's array.
+            $aCategoryData = array(
+                'label' => $aRules['label'],
+                'value' => $aRules['value'],
+                'total_individuals' => static::$EMPTY_DATA_DISPLAY,
+                'num_affected' => static::$EMPTY_DATA_DISPLAY,
+                'num_not_affected' => static::$EMPTY_DATA_DISPLAY,
+                'num_ind_with_variant' => static::$EMPTY_DATA_DISPLAY,
+                'percentage' => static::$EMPTY_DATA_DISPLAY,
+                'threshold' => static::$EMPTY_DATA_DISPLAY,
+            );
+
+            // If this is the gene panel header, name it after the gene panel.
+            if ($sType == 'genepanel' && $sCategory == 'all' && isset($this->aIndividual['genepanels'][$nGenePanelID])) {
+                $aCategoryData['value'] = $this->aIndividual['genepanels'][$nGenePanelID];
             }
 
-            if (!empty($aData['total_individuals'])) {
-                $aData['percentage'] = round((float)$aData['num_ind_with_variant'] / (float)$aData['total_individuals'] * 100, 0);
-                if (!empty($aRules['threshold'])) {
-                    $aData['threshold'] = ($aData['percentage'] > $aRules['threshold'] ? '> ' : '<= ') . $aRules['threshold'] . ' %';
+            // Some categories can only be run if some prerequisites have been satisfied,
+            // such as that certain columns need to be active and filled in.
+            // This is configured in the 'incomplete' field.
+            // Only run query if this individual/screening has sufficient data.
+            if (empty($aRules['incomplete'])) {
+                $aSQL = array(); // The arguments for the query.
+
+                // Gene panel counts always need to restrict the count on the gene panel.
+                if ($sType == 'genepanel') {
+                    $aRules['condition'] = 'genepanelid = ?' . (!$aRules['condition']? '' : ' AND ') . $aRules['condition'];
+                    $aSQL[] = $nGenePanelID;
                 }
-            }
 
-            // These are the columns that don't always need to be calculated if this instance of LOVD does not need it.
-            // TOTAL number of affected individuals in this database
-            if (!empty($this->aColumns[$sType]['num_affected'])) {
-                $sSQL = 'SELECT COUNT(DISTINCT s.individualid)
-                         FROM ' . TABLE_INDIVIDUALS . ' AS i 
-                           INNER JOIN ' . TABLE_SCREENINGS . ' AS s ON (s.individualid = i.id AND i.`Individual/Affected` = "Affected")
+                // Total number of individuals with screenings, matching the given conditions.
+                $sSQL =  'SELECT COUNT(DISTINCT s.individualid)
+                          FROM ' . TABLE_INDIVIDUALS . ' AS i 
+                            INNER JOIN ' . TABLE_SCREENINGS . ' AS s ON (s.individualid = i.id)
+                            LEFT OUTER JOIN ' . TABLE_IND2GP . ' AS i2gp ON (i2gp.individualid = i.id) 
+                          WHERE ' . $aRules['condition'];
+                $nCount = $_DB->query($sSQL, $aSQL)->fetchColumn();
+                $aCategoryData['total_individuals'] = $nCount;
+
+                // Number of individuals with screenings with this variant, matching the given conditions.
+                $sSQL = 'SELECT COUNT(s.individualid) AS count_dbid, GROUP_CONCAT(DISTINCT TRIM(LEADING "0" FROM vog.id) SEPARATOR ";") as variant_ids
+                         FROM ' . TABLE_VARIANTS . ' AS vog 
+                           INNER JOIN ' . TABLE_SCR2VAR . ' AS s2v ON (vog.id = s2v.variantid AND vog.`VariantOnGenome/DBID` = ?) 
+                           INNER JOIN ' . TABLE_SCREENINGS . ' AS s ON (s.id = s2v.screeningid) 
+                           INNER JOIN ' . TABLE_INDIVIDUALS . ' AS i ON (s.individualid = i.id) 
                            LEFT OUTER JOIN ' . TABLE_IND2GP . ' AS i2gp ON (i2gp.individualid = i.id) 
                          WHERE ' . $aRules['condition'] . ' 
                          GROUP BY s.individualid';
-                $nCount = $_DB->query($sSQL, $aSQL)->fetchColumn();
-                $aData['num_affected'] = $nCount;
+                $aCategoryData['variant_ids'] = array();
+                $aCategoryData['num_ind_with_variant'] = 0;
+                $zResult = $_DB->query($sSQL, array_merge(array($this->aIndividual['VariantOnGenome/DBID']), $aSQL));
+                while ($aRow = $zResult->fetchAssoc()) {
+                    $aCategoryData['num_ind_with_variant']++;
+                    $aCategoryData['variant_ids'] = array_merge($aCategoryData['variant_ids'], explode(';', $aRow['variant_ids']));
+                }
+
+                if (!empty($aCategoryData['total_individuals'])) {
+                    $aCategoryData['percentage'] = round((float)$aCategoryData['num_ind_with_variant'] / (float)$aCategoryData['total_individuals'] * 100, 0);
+                    if (!empty($aRules['threshold'])) {
+                        $aCategoryData['threshold'] = ($aCategoryData['percentage'] > $aRules['threshold'] ? '> ' : '<= ') . $aRules['threshold'] . ' %';
+                    }
+                }
+
+                // These are the columns that don't always need to be calculated if this instance of LOVD does not need it.
+                // TOTAL number of affected individuals in this database
+                if (!empty($this->aColumns[$sType]['num_affected'])) {
+                    $sSQL = 'SELECT COUNT(DISTINCT s.individualid)
+                             FROM ' . TABLE_INDIVIDUALS . ' AS i 
+                               INNER JOIN ' . TABLE_SCREENINGS . ' AS s ON (s.individualid = i.id AND i.`Individual/Affected` = "Affected")
+                               LEFT OUTER JOIN ' . TABLE_IND2GP . ' AS i2gp ON (i2gp.individualid = i.id) 
+                             WHERE ' . $aRules['condition'] . ' 
+                             GROUP BY s.individualid';
+                    $nCount = $_DB->query($sSQL, $aSQL)->fetchColumn();
+                    $aCategoryData['num_affected'] = $nCount;
+                }
+
+                // TOTAL number of NOT affected individuals in this database
+                if (!empty($this->aColumns[$sType]['num_not_affected'])) {
+                    $sSQL = 'SELECT COUNT(DISTINCT s.individualid)
+                             FROM ' . TABLE_INDIVIDUALS . ' i 
+                               INNER JOIN ' . TABLE_SCREENINGS . ' s ON (s.individualid = i.id AND i.`Individual/Affected` = "Not Affected")
+                               LEFT OUTER JOIN ' . TABLE_IND2GP . ' AS i2gp ON (i2gp.individualid = i.id) 
+                             WHERE ' . $aRules['condition'];
+                    $nCount = $_DB->query($sSQL, $aSQL)->fetchColumn();
+                    $aCategoryData['num_not_affected'] = $nCount;
+                }
             }
 
-            // TOTAL number of NOT affected individuals in this database
-            if (!empty($this->aColumns[$sType]['num_not_affected'])) {
-                $sSQL = 'SELECT COUNT(DISTINCT s.individualid)
-                         FROM ' . TABLE_INDIVIDUALS . ' i 
-                           INNER JOIN ' . TABLE_SCREENINGS . ' s ON (s.individualid = i.id AND i.`Individual/Affected` = "Not Affected")
-                           LEFT OUTER JOIN ' . TABLE_IND2GP . ' AS i2gp ON (i2gp.individualid = i.id) 
-                         WHERE ' . $aRules['condition'];
-                $nCount = $_DB->query($sSQL, $aSQL)->fetchColumn();
-                $aData['num_not_affected'] = $nCount;
-            }
+            $aData[$sCategory] = $aCategoryData;
         }
 
         return $aData;
@@ -426,170 +553,6 @@ class LOVD_ObservationCounts
         $zResult = $_DB->query($sSQL, array($this->nVariantID))->fetchAssoc();
 
         return json_decode($zResult['obscount_json'], true);
-    }
-
-
-
-
-
-    protected function validateCategories ($sType, $aSettings)
-    {
-        // Check if the categories specified in $aSettings is a valid category.
-        // We then load the configuration for all the valid categories into $aCategories.
-        // $sType : The observation counts type (check available static variables in this class with TYPE_ prefix).
-        // $aSettings: subarray passed to buildData
-        // array(
-        //  'categories' => array(
-        //      'category_key_1',
-        //      'category_key_2'
-        //  ),
-        //  'columns' => array(
-        //      'col_key_1' => 'Column Label 1',
-        //      'col_key_2' => 'Column Label 2'
-        //  )
-        // )
-
-        // Data structure can be different for different types.
-        // We will build them separately.
-        $aCategories = array();
-        switch ($sType) {
-            case 'general':
-                // Build available configuration options
-                // Q: This is very unsafe. We should not feel that we can trust the data that's passed directly into the SQL. This needs to be implemented differently.
-                // A: Restructure this function. Anyway needs to be done because it's generating lots of notices if you don't have one of these columns, making the whole feature unavailable for everyone else.
-                // Q: The values here need comments to explain what they mean and what they are for.
-                // Q: If I understand correctly, "incomplete" needs to be false to get this stuff to run? Perhaps rename to "active" or so?
-                // A: Change it if I want to.
-                // Q: Should this array, which is basically the default settings, be set in __construct()?
-                // A: Change it, if I want to. Make sure the way it's set, doesn't generate these notices anymore.
-                // Q: Wouldn't it be much better to have the user configure just WHICH categories he wants, instead of having to reconfigure them when needed?
-                $aConfig = array(
-                    'all' => array(
-                        'label' => 'All',
-                        'value' => '',
-                        'condition' => 'i.id IS NOT NULL',
-                        'threshold' => 2 // 2%
-                    ),
-                    'Individual/Gender' => array(
-                        'label' => 'Gender',
-                        'value' => $this->aIndividual['Individual/Gender'],
-                        'condition' => 'i.`Individual/Gender` = "' . $this->aIndividual['Individual/Gender'] . '"',
-                        'incomplete' => ($this->aIndividual['Individual/Gender'] === ''? true : false),
-                        'threshold' => 2 // 2%
-                    ),
-                    'Individual/Origin/Ethnic' => array(
-                        'label' => 'Ethnicity',
-                        'value' => $this->aIndividual['Individual/Origin/Ethnic'],
-                        'condition' => 'i.`Individual/Origin/Ethnic` = "' . $this->aIndividual['Individual/Origin/Ethnic'] . '"',
-                        'incomplete' => ($this->aIndividual['Individual/Origin/Ethnic'] === ''? true : false),
-                        'threshold' => 2 // 2%
-                    ),
-                    'Screening/Sample/Type' => array(
-                        'label' => 'Sample Type',
-                        'value' => $this->aIndividual['Screening/Sample/Type'],
-                        'condition' => 's.`Screening/Sample/Type` = "' . $this->aIndividual['Screening/Sample/Type'] . '"',
-                        'incomplete' => ($this->aIndividual['Screening/Sample/Type'] === ''? true : false),
-                        'threshold' => 2 // 2%
-                    ),
-                    'Screening/Library_preparation' => array(
-                        'label' => 'Capture Method',
-                        'value' => $this->aIndividual['Screening/Library_preparation'],
-                        'condition' => 's.`Screening/Library_preparation` = "' . $this->aIndividual['Screening/Library_preparation'] . '"',
-                        'incomplete' => ($this->aIndividual['Screening/Library_preparation'] === ''? true : false),
-                        'threshold' => 2 // 2%
-                    ),
-                    'Screening/Sequencing_software' => array(
-                        'label' => 'Sequencing Technology',
-                        'value' => $this->aIndividual['Screening/Sequencing_software'],
-                        'condition' => 's.`Screening/Sequencing_Software` = "' . $this->aIndividual['Screening/Sequencing_software'] . '"',
-                        'incomplete' => ($this->aIndividual['Screening/Sequencing_software'] === ''? true : false),
-                        'threshold' => 2 // 2%
-                    ),
-                    'Screening/Analysis_type' => array(
-                        'label' => 'Analysis Pipeline',
-                        'value' => $this->aIndividual['Screening/Analysis_type'],
-                        'condition' => 's.`Screening/Analysis_type` = "' . $this->aIndividual['Screening/Analysis_type'] . '"',
-                        'incomplete' => ($this->aIndividual['Screening/Analysis_type'] === ''? true : false),
-                        'threshold' => 2 // 2%
-                    ),
-                    'Screening/Library_preparation&Screening/Sequencing_software' => array(
-                        'label' => 'Same Capture Method and Sequencing Technology',
-                        'value' => $this->aIndividual['Screening/Library_preparation'] . ', ' . $this->aIndividual['Screening/Sequencing_software'],
-                        'condition' => 's.`Screening/Library_preparation` = "' . $this->aIndividual['Screening/Library_preparation'] . '"'
-                            . ' AND '
-                            . 's.`Screening/Sequencing_Software` = "' . $this->aIndividual['Screening/Sequencing_software'] . '"',
-                        'incomplete' => ($this->aIndividual['Screening/Library_preparation'] === ''
-                                        || $this->aIndividual['Screening/Sequencing_software'] === ''? true : false),
-                        'threshold' => 2 // 2%
-                    ),
-                    'Screening/Library_preparation&Screening/Sequencing_software&Screening/Analysis_type' => array(
-                        'label' => 'Same Capture Method, Sequencing Technology, and Analysis Pipeline',
-                        'value' => $this->aIndividual['Screening/Library_preparation'] . ', ' . $this->aIndividual['Screening/Sequencing_software'] . ', ' . $this->aIndividual['Screening/Analysis_type'],
-                        'condition' => 's.`Screening/Library_preparation` = "' . $this->aIndividual['Screening/Library_preparation'] . '"'
-                            . ' AND '
-                            . 's.`Screening/Sequencing_Software` = "' . $this->aIndividual['Screening/Sequencing_software'] . '"'
-                            . ' AND '
-                            . 's.`Screening/Analysis_type` = "' . $this->aIndividual['Screening/Analysis_type'] . '"',
-                        'incomplete' => ($this->aIndividual['Screening/Library_preparation'] === ''
-                                        || $this->aIndividual['Screening/Sequencing_software'] === ''
-                                        || $this->aIndividual['Screening/Analysis_type'] === ''? true : false),
-                        'threshold' => 2 // 2%
-                    )
-                );
-
-                // Now build categories for this instance of LOVD based on what is specified on the settings array.
-                if (empty($aSettings) || empty($aSettings['categories'])) {
-                    // If categories is not specified in the settings for this type, then use ALL available categories.
-                    $aCategories = $aConfig;
-                } else {
-                    // Otherwise, only select the category specified in the instance settings.
-                    foreach ($aSettings['categories'] as $sCategory) {
-                        if (isset($aConfig[$sCategory])) {
-                            $aCategories[$sCategory] = $aConfig[$sCategory];
-                        }
-                    }
-                }
-
-                break;
-
-            case 'genepanel':
-                // Build existing configuration options.
-                $aConfig = array(
-                    'all' => array(
-                        'label' => 'Gene Panel',
-                        'value' => '', // Will be replaced in generateData(), depends on the gene panel.
-                        'condition' => ''
-                    ),
-                    'gender' => array(
-                        'label' => 'Gender',
-                        'value' => $this->aIndividual['Individual/Gender'],
-                        'condition' => '`Individual/Gender` = "' . $this->aIndividual['Individual/Gender'] . '"',
-                        'incomplete' => ($this->aIndividual['Individual/Gender'] === ''? true: false)
-                    ),
-                    'ethnic' => array(
-                        'label' => 'Ethinicity',
-                        'value' => $this->aIndividual['Individual/Origin/Ethnic'],
-                        'condition' => '`Individual/Origin/Ethnic` = "' . $this->aIndividual['Individual/Origin/Ethnic'] . '"',
-                        'incomplete' => ($this->aIndividual['Individual/Origin/Ethnic'] === ''? true: false)
-                    ),
-                );
-
-                // Now build columns for this instance of LOVD based on what is specified on the settings array.
-                if (empty($aSettings) || empty($aSettings['categories'])) {
-                    // If categories is not specified in the settings for this type, then use ALL available categories.
-                    $aCategories = $aConfig;
-                } else {
-                    // Otherwise, only select the categories specified in the instance settings.
-                    foreach ($aSettings['categories'] as $sCategory) {
-                        if (isset($aConfig[$sCategory])) {
-                            $aCategories[$sCategory] = $aConfig[$sCategory];
-                        }
-                    }
-                }
-
-                break;
-        }
-        return $aCategories;
     }
 
 
