@@ -34,7 +34,6 @@ if (!defined('ROOT_PATH')) {
     exit;
 }
 
-error_reporting(~E_NOTICE);
 class LOVD_ObservationCounts
 {
     // Wrap all the logic related to generating observation counts here.
@@ -242,12 +241,21 @@ class LOVD_ObservationCounts
         // These are the categories to choose from. We'll check which ones are needed, and generate the data for these.
         // Q: This is very unsafe. We should not feel that we can trust the data that's passed directly into the SQL. This needs to be implemented differently.
         // A: Restructure this function. Anyway needs to be done because it's generating lots of notices if you don't have one of these columns, making the whole feature unavailable for everyone else.
-        // Q: The values here need comments to explain what they mean and what they are for.
         // Q: Should this array, which is basically the default settings, be set in __construct()?
         // A: Change it, if I want to. Make sure the way it's set, doesn't generate these notices anymore.
         // Q: Wouldn't it be much better to have the user configure just WHICH categories he wants, instead of having to reconfigure them when needed?
         static $aCategories;
         if (!$aCategories) {
+            // Syntax:
+            //  'category_type' => array(
+            //      'category' => array(
+            //          'label' => 'The name you wish to see displayed, disabled by default for gene panel type.',
+            //          'value' => 'The value visible for this observation count, either a string or an array of $aIndividual keys.',
+            //          'condition' => 'The condition to run in the database in the WHERE clause, calculating this observation count.',
+            //          'required' => array('$aIndividual keys that are required to be filled in.'),
+            //          'threshold' => integer (0-100) that highlights the row if the percentage is above this threshold.
+            //      ),
+            //  ),
             $aCategories = array(
                 'genepanel' => array(
                     'all' => array(
@@ -257,13 +265,13 @@ class LOVD_ObservationCounts
                     ),
                     'gender' => array(
                         'label' => 'Gender',
-                        'value' => $this->aIndividual['Individual/Gender'],
+                        'value' => array('Individual/Gender'),
                         'condition' => '`Individual/Gender` = "' . $this->aIndividual['Individual/Gender'] . '"',
                         'required' => array('Individual/Gender'),
                     ),
                     'ethnic' => array(
                         'label' => 'Ethinicity',
-                        'value' => $this->aIndividual['Individual/Origin/Ethnic'],
+                        'value' => array('Individual/Origin/Ethnic'),
                         'condition' => '`Individual/Origin/Ethnic` = "' . $this->aIndividual['Individual/Origin/Ethnic'] . '"',
                         'required' => array('Individual/Origin/Ethnic'),
                     ),
@@ -277,49 +285,49 @@ class LOVD_ObservationCounts
                     ),
                     'Individual/Gender' => array(
                         'label' => 'Gender',
-                        'value' => $this->aIndividual['Individual/Gender'],
+                        'value' => array('Individual/Gender'),
                         'condition' => 'i.`Individual/Gender` = "' . $this->aIndividual['Individual/Gender'] . '"',
                         'required' => array('Individual/Gender'),
                         'threshold' => 2 // 2%
                     ),
                     'Individual/Origin/Ethnic' => array(
                         'label' => 'Ethnicity',
-                        'value' => $this->aIndividual['Individual/Origin/Ethnic'],
+                        'value' => array('Individual/Origin/Ethnic'),
                         'condition' => 'i.`Individual/Origin/Ethnic` = "' . $this->aIndividual['Individual/Origin/Ethnic'] . '"',
                         'required' => array('Individual/Origin/Ethnic'),
                         'threshold' => 2 // 2%
                     ),
                     'Screening/Sample/Type' => array(
                         'label' => 'Sample Type',
-                        'value' => $this->aIndividual['Screening/Sample/Type'],
+                        'value' => array('Screening/Sample/Type'),
                         'condition' => 's.`Screening/Sample/Type` = "' . $this->aIndividual['Screening/Sample/Type'] . '"',
                         'required' => array('Screening/Sample/Type'),
                         'threshold' => 2 // 2%
                     ),
                     'Screening/Library_preparation' => array(
                         'label' => 'Capture Method',
-                        'value' => $this->aIndividual['Screening/Library_preparation'],
+                        'value' => array('Screening/Library_preparation'),
                         'condition' => 's.`Screening/Library_preparation` = "' . $this->aIndividual['Screening/Library_preparation'] . '"',
                         'required' => array('Screening/Library_preparation'),
                         'threshold' => 2 // 2%
                     ),
                     'Screening/Sequencing_software' => array(
                         'label' => 'Sequencing Technology',
-                        'value' => $this->aIndividual['Screening/Sequencing_software'],
+                        'value' => array('Screening/Sequencing_software'),
                         'condition' => 's.`Screening/Sequencing_Software` = "' . $this->aIndividual['Screening/Sequencing_software'] . '"',
                         'required' => array('Screening/Sequencing_software'),
                         'threshold' => 2 // 2%
                     ),
                     'Screening/Analysis_type' => array(
                         'label' => 'Analysis Pipeline',
-                        'value' => $this->aIndividual['Screening/Analysis_type'],
+                        'value' => array('Screening/Analysis_type'),
                         'condition' => 's.`Screening/Analysis_type` = "' . $this->aIndividual['Screening/Analysis_type'] . '"',
                         'required' => array('Screening/Analysis_type'),
                         'threshold' => 2 // 2%
                     ),
                     'Screening/Library_preparation&Screening/Sequencing_software' => array(
                         'label' => 'Same Capture Method and Sequencing Technology',
-                        'value' => $this->aIndividual['Screening/Library_preparation'] . ', ' . $this->aIndividual['Screening/Sequencing_software'],
+                        'value' => array('Screening/Library_preparation', 'Screening/Sequencing_software'),
                         'condition' => 's.`Screening/Library_preparation` = "' . $this->aIndividual['Screening/Library_preparation'] . '"'
                             . ' AND '
                             . 's.`Screening/Sequencing_Software` = "' . $this->aIndividual['Screening/Sequencing_software'] . '"',
@@ -328,7 +336,7 @@ class LOVD_ObservationCounts
                     ),
                     'Screening/Library_preparation&Screening/Sequencing_software&Screening/Analysis_type' => array(
                         'label' => 'Same Capture Method, Sequencing Technology, and Analysis Pipeline',
-                        'value' => $this->aIndividual['Screening/Library_preparation'] . ', ' . $this->aIndividual['Screening/Sequencing_software'] . ', ' . $this->aIndividual['Screening/Analysis_type'],
+                        'value' => array('Screening/Library_preparation', 'Screening/Sequencing_software', 'Screening/Analysis_type'),
                         'condition' => 's.`Screening/Library_preparation` = "' . $this->aIndividual['Screening/Library_preparation'] . '"'
                             . ' AND '
                             . 's.`Screening/Sequencing_Software` = "' . $this->aIndividual['Screening/Sequencing_software'] . '"'
@@ -381,6 +389,15 @@ class LOVD_ObservationCounts
             // If this is the gene panel header, name it after the gene panel.
             if ($sType == 'genepanel' && $sCategory == 'all' && isset($this->aIndividual['genepanels'][$nGenePanelID])) {
                 $aCategoryData['value'] = $this->aIndividual['genepanels'][$nGenePanelID];
+            }
+
+            // Set the values, in case they are keys of $aIndividual (which is mostly the case).
+            if (is_array($aCategoryData['value'])) {
+                $sValue = '';
+                foreach ($aCategoryData['value'] as $sField) {
+                    $sValue .= (!$sValue? '' : ', ') . (!isset($this->aIndividual[$sField])? $sField : $this->aIndividual[$sField]);
+                }
+                $aCategoryData['value'] = $sValue;
             }
 
             // Some categories can only be run if some prerequisites have been
