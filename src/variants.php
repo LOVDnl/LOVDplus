@@ -811,14 +811,16 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && !ACTION) {
                        <TH>Actions</TH>
                        </TR>');
                 }
-                $sDisableLink = ($aFileTypes[$sFileType]['type'] == 'image'? '' : 'style="pointer-events: none; text-decoration: none; color: grey;"');
+                $sDisableLinkStyle = 'style="pointer-events: none; text-decoration: none; color: grey;"';
+                $sDisablePreview = ($aFileTypes[$sFileType]['type'] == 'image'? '' : $sDisableLinkStyle);
+                $sDisableDelete = ($_AUTH['level'] >= LEVEL_OWNER && $zScreenings[0]['analysis_statusid'] == ANALYSIS_STATUS_IN_PROGRESS? '' : $sDisableLinkStyle);
                 $sFileUrl = lovd_getInstallURL() . 'variants/curation_files/' . basename($sFileName);
                 print('<TR>');
                 print('<TD>' . $sFileDesc . '</TD>');
                 print('<TD>' . date('d M Y H:i A', filemtime($sFileName)) . '</TD>');
-                print('<TD><A '. $sDisableLink .' href="#" onclick="lovd_openWindow(\'' . $sFileUrl . '?preview&amp;in_window\', \'\', 1280, 720); return false;">Preview</A>
+                print('<TD><A '. $sDisablePreview .' href="#" onclick="lovd_openWindow(\'' . $sFileUrl . '?preview&amp;in_window\', \'\', 1280, 720); return false;">Preview</A>
                          | <A href="' . $sFileUrl . '?download"  target="_BLANK">Download</A> 
-                         | <A href="#" onclick="lovd_openWindow(\''. $sFileUrl .'?remove&amp;in_window\', \'\', 780, 250); return false;">Delete</A></TD>');
+                         | <A ' . $sDisableDelete . 'href="#" onclick="lovd_openWindow(\''. $sFileUrl .'?remove&amp;in_window\', \'\', 780, 250); return false;">Delete</A></TD>');
                 print('</TR>');
             }
         }
