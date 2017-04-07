@@ -57,8 +57,7 @@ $_INSTANCE_CONFIG['viewlists']['CustomVL_AnalysisRunResults_for_I_VE'] = array(
     )
 );
 
-$_INSTANCE_CONFIG['variants'] = array(
-    'curation_files' => array(
+$_INSTANCE_CONFIG['file_uploads'] = array(
         'igv' => array(
             'type' => 'image' ,
             'id' => 'nid',
@@ -75,7 +74,6 @@ $_INSTANCE_CONFIG['variants'] = array(
             'type' => 'excel' ,
             'id' => 'nid',
             'label' => 'Excel file')
-    )
 );
 
 
