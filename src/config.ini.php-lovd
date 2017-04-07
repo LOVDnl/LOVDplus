@@ -49,8 +49,10 @@ data_files =
 # The following path is where LOVD+ will write imported files to.
 data_files_archive =
 
-# The following path is where users will save curation files (relative to the ROOT PATH).
-curation_files =
+# The following path is where LOVD will store uploaded files.
+# This directory should NOT be within the LOVD directory or any other part of
+# the disk that is served by a webserver like Apache (i.e., the document root).
+uploaded_files =
 
 # The following path contains alternative IDs for the patients in the database.
 alternative_ids =

@@ -48,7 +48,7 @@ if ($_PE[1] == 'curation_files' && ACTION == 'download') {
     lovd_requireAUTH(LEVEL_ANALYZER);
 
     // Get the location where we store curation files.
-    $sCurationFilesPath =  $_INI['paths']['curation_files'];
+    $sCurationFilesPath =  $_INI['paths']['uploaded_files'];
     $sFileName = $_PE[2];
     $sAbsoluteFileName = realpath($sCurationFilesPath . '/' . $sFileName);
     header('Content-Description: File Transfer');
@@ -141,7 +141,7 @@ if ($_PE[1] == 'curation_files' && ACTION == 'remove') {
 
         if (!lovd_error()) {
             // Get the location where uploaded curation files are stored.
-            $sCurationFilesPath =  $_INI['paths']['curation_files'];
+            $sCurationFilesPath =  $_INI['paths']['uploaded_files'];
             $sAbsoluteFileName = realpath($sCurationFilesPath . '/' . $sCurationFileName);
 
             // Remove the file permanently.
@@ -795,7 +795,7 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && !ACTION) {
         lovd_viewForm($aForm);
         print('</TR></TD></TABLE>');
         print('</FORM><br>' . "\n\n");
-        $sCurationFilesPath = $_INI['paths']['curation_files'];
+        $sCurationFilesPath = $_INI['paths']['uploaded_files'];
         // Search for curations files and display links to files if they exist in the curation files directory. This uses the glob php function to perform search.
         $nFiles = 0;
         foreach ($aLabels as $sFileType => $sFileDesc) {
@@ -1053,7 +1053,7 @@ if (PATH_COUNT == 2 && ACTION == 'curation_upload') {
         }
 
         if (!lovd_error()) {
-            $sCurationFilesPath = $_INI['paths']['curation_files'];
+            $sCurationFilesPath = $_INI['paths']['uploaded_files'];
             $sNewFileName = $sCurationFilesPath . '/' . $sFileName . '-' . time() . '.' . $ext;
             if (!move_uploaded_file($importFile, $sNewFileName)) {
                 lovd_errorAdd('import', 'Failed to move uploaded file.');
