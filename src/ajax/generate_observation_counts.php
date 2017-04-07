@@ -40,28 +40,9 @@ if (!empty($_POST['nVariantID'])) {
     exit;
 }
 
-if (!lovd_isAuthorized('variant', $nID)) {
-    // Q: Here, the auth check is split (see below for the rest). Use the same code somehow?
-    // A: Yes, standardize, and check, since right now it seems you can sometimes see the link but the ajax will throw an error.
-    $aResults = array('error' => 'You do not have permission to generate Observation Counts for this variant.');
-    print(json_encode($aResults));
-    exit;
-}
-
 require_once ROOT_PATH . 'class/observation_counts.php';
 $aSettings = (!empty($_INSTANCE_CONFIG['observation_counts'])? $_INSTANCE_CONFIG['observation_counts'] : array());
 $zObsCount = new LOVD_ObservationCounts($nID);
 $aData = $zObsCount->buildData($aSettings);
 
-if (empty($aData) && !$zObsCount->canUpdateData()) {
-    $aResults = array('error' => 'Current analysis status or your user permission does not allow Observation Counts data to be updated.');
-    print(json_encode($aResults));
-    exit;
-}
-
-$aResults = array('success' => array(
-    'data' => $aData,
-    'timestamp' => date('d M Y h:ia', $aData['updated'])
-));
-
-print(json_encode($aResults));
+print($zObsCount->display($aSettings));

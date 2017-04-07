@@ -661,4 +661,105 @@ class LOVD_ObservationCounts
 
         return $this->aColumns;
     }
+
+
+
+
+
+    public function display($aSettings)
+    {
+        // Returns a string of html to display observation counts data.
+        $aData = $this->aData;
+        $generateDataLink = ' <SPAN id="obscount-refresh"> | <A href="#" onClick="lovd_generate_obscount(\'' . $this->nVariantID . '\');return false;">Refresh Data</A></SPAN>';
+        $sMetadata = '';
+        $sDataTables = '';
+
+        if(!lovd_isAuthorized('variant', $this->nVariantID)) {
+            $sMetadata = '<TR><TD>You do not have permission to generate Observation Counts for this variant.</TD></TR>';
+        } elseif (!$this->canUpdateData()) {
+            $sMetadata = '<TR><TD>Current analysis status or your user permission does not allow Observation Counts data to be updated.</TD></TR>';
+        } elseif (empty($aData)) {
+            $sMetadata = '<TR><TD>There is no existing Observation Counts data <SPAN id="obscount-refresh"> | <A href="#" onClick="lovd_generate_obscount(\''. $this->nVariantID .'\');return false;">Generate Data</A></SPAN></TD></TR>';
+        } else {
+            // If there is data.
+
+            // General categories table.
+            $sGeneralColumns = '';
+            foreach ($aSettings['general']['columns'] as $sKey => $sLabel) {
+                $sGeneralColumns .= '<TH>' . $sLabel . '</TH>';
+            }
+
+            $sGeneralCategories = '';
+            foreach ($aData['general'] as $sCategory => $aCategoryData) {
+                $sGeneralCategories .= '<TR>';
+                foreach ($aSettings['general']['columns'] as $sKey => $sLabel) {
+                    $sGeneralCategories .= '<TD>' . $aCategoryData[$sKey] . '</TD>';
+                }
+                $sGeneralCategories .= '</TR>';
+            }
+
+            // Gene panel categories table.
+            $sGenepanelColumns = '';
+            foreach ($aSettings['genepanel']['columns'] as $sKey => $sLabel) {
+                $sGenepanelColumns .= '<TH>' . $sLabel . '</TH>';
+            }
+
+            $sGenepanelCategories = '';
+            foreach ($aData['genepanel'] as $sGpId => $aGpData) {
+                foreach ($aGpData as $sCategory => $aCategoryData) {
+                    $sGenepanelCategories .= '<TR>';
+                    foreach ($aSettings['genepanel']['columns'] as $sKey => $sLabel) {
+                        $sGenepanelCategories .= ($sCategory == 'all' ?'<TH>' : '<TD>');
+                        $sGenepanelCategories .= $aCategoryData[$sKey];
+                        $sGenepanelCategories .= ($sCategory == 'all' ?'</TH>' : '</TD>');
+                    }
+                    $sGenepanelCategories .= '</TR>';
+                }
+            }
+
+            $sGenepanelTable = '';
+            if (!empty($aData['genepanel'])) {
+                $sGenepanelTable = '
+            <TABLE id="obscount-table-genepanel" width="600" class="data">
+              <TR id="obscount-header-genepanel"></TR>
+              <TBODY id="obscount-data-genepanel">' .
+                    '<TR>' . $sGenepanelColumns . '</TR>' .
+                    $sGenepanelCategories . '
+              </TBODY>
+            </TABLE>';
+            }
+
+            $sGeneralTable = '';
+            if (!empty($aData['general'])) {
+                $sGeneralTable = '
+            <TABLE id="obscount-table-general" width="600" class="data">
+              <TR id="obscount-header-general"></TR>
+              <TBODY id="obscount-data-general">' .
+                    '<TR>' . $sGeneralColumns . '</TR>' .
+                    $sGeneralCategories . '
+              </TBODY>
+            </TABLE>';
+            }
+
+            $sMetadata = '
+            <TR id="obscount-info">
+                <TH>Data updated '. date('d M Y h:ia', $aData['updated']) .' | Population size was: ' . $aData['population_size'] . $generateDataLink . ' </TH>
+            </TR>';
+
+            $sDataTables = $sGenepanelTable . $sGeneralTable;
+        }
+
+        // HTML to be displayed.
+        $sTable = '
+            <TABLE width="600" class="data">
+              <TR><TH style="font-size : 13px;">Observation Counts</TH></TR>' .
+              $sMetadata . '
+              <TR id="obscount-feedback" style="display: none;">
+                <TH>Loading data...</TH>
+              </TR>
+            </TABLE>' . $sDataTables;
+            ;
+
+        return $sTable;
+    }
 }

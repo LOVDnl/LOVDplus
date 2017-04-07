@@ -672,34 +672,14 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && !ACTION) {
         $aData = $zObsCount->getData();
         $bHasPermissionToViewVariants = ($_AUTH['level'] >= LEVEL_MANAGER? true: false);
 
-        print('
-            <TABLE width="600" class="data">
-              <TR>
-                <TH style="font-size : 13px;">Observation Counts</TH></TR>
-              <TR id="obscount-info" style="display: none;">
-                <TH></TH></TR>
-              <TR id="obscount-feedback">
-                <TH>Loading data...</TH></TR>
-            </TABLE>
-
-            <TABLE id="obscount-table-genepanel" style="display: none;" width="600" class="data">
-              <TR id="obscount-header-genepanel"></TR>
-              <TBODY id="obscount-data-genepanel"></TBODY></TABLE>
-
-            <TABLE id="obscount-table-general" style="display: none;" width="600" class="data">
-              <TR id="obscount-header-general"></TR>
-              <TBODY id="obscount-data-general"></TBODY></TABLE>');
-
+        print('<DIV id="observation-counts">');
+        print($zObsCount->display($aSettings));
+        print('</DIV>');
 ?>
-        <SCRIPT type="text/javascript">
-        $( function () {
-            load_obscount_info('<?php echo ($zObsCount->getTimeGenerated()? date('d M Y h:ia', $zObsCount->getTimeGenerated()) : '')?>',
-                               '<?php echo $zObsCount->getDataPopulationSize() ?>');
-            lovd_load_obscount_table(<?php echo json_encode($aData)?>);
-        });
-
-        // Q: These functions need comments - at least the header which should explain what they do.
+<SCRIPT type="text/javascript">
         function lovd_generate_obscount(nVariantID) {
+console.log(nVariantID);
+            $('#obscount-loading').show();
             $('#obscount-header-genepanel').hide();
             $('#obscount-data-genepanel').hide();
             $('#obscount-header-general').hide();
@@ -712,172 +692,11 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && !ACTION) {
 
             $.post(url, data, function(data) {
                 $('#obscount-loading').hide();
-                //alert(data);
-                jsonData = JSON.parse(data);
-
-                if (jsonData && typeof(jsonData['success']) !== 'undefined') {
-                    var obsCountData = jsonData['success']['data'];
-                    load_obscount_info(jsonData['success']['timestamp'], obsCountData['population_size']);
-                    lovd_load_obscount_table(obsCountData);
-                    lovd_reload_obscount_initial_state();
-                } else {
-                    var sErrorMessage = 'Failed to load Observation Counts data.';
-                    if (jsonData && typeof(jsonData['error']) !== 'undefined') {
-                        sErrorMessage = jsonData['error'];
-                    }
-
-                    $('#obscount-info').hide();
-                    $('#obscount-feedback th').html(sErrorMessage + ' <A href="#" onClick="lovd_reload_obscount_initial_state();return false;">Reload existing data.</A>');
-                    $('#obscount-feedback').show();
-                }
-
+                $('#observation-counts').html(data);
             });
 
         }
-
-        function lovd_load_obscount_table(aData) {
-            if (!aData || aData.length <= 0) {
-                $('#obscount-table-genepanel').hide();
-                $('#obscount-table-general').hide();
-                return;
-            }
-
-            var aAllColumns = <?php echo json_encode($aSettings) ?>;
-            for (var sType in aAllColumns) {
-                if (aAllColumns.hasOwnProperty(sType)) {
-                    if (!aData[sType] || aData[sType].length <= 0) {
-                        continue;
-                    }
-
-                    aColumns = aAllColumns[sType]['columns'];
-                    var sHeader = '';
-                    var nCols = 0;
-                    for (var sKey in aColumns) {
-                        if (aColumns.hasOwnProperty(sKey)) {
-                            sHeader += '<TH>' + aColumns[sKey] + '</TH>';
-                            nCols++;
-                        }
-                    }
-
-                    sData = '';
-                    // Q: Shouldn't the generation of an HTML table be done in PHP? That should be much easier? (used for building new and existing data, what is better?)
-                    // A: Probably better to create a PHP function that builds this table.
-                    if (typeof(aData[sType]['error']) !== 'undefined') {
-                        sData = '<TD colspan="' + nCols + '">' + aData[sType]['error'] + '</TD>';
-                    } else if (sType == 'genepanel') {
-
-                        for (var genepanelId in aData[sType]) {
-                            // Loop through each gene panel
-
-                            for (var sCategory in aData[sType][genepanelId]) {
-                                // Loop through each category per gene panel
-
-                                sData += '<TR>';
-                                for (var sKey in aColumns) {
-                                    // Now print each column per row
-
-                                    if (aColumns.hasOwnProperty(sKey)) {
-                                        colData = aData[sType][genepanelId][sCategory][sKey];
-
-                                        // If data is empty, then show the category label
-                                        if (sKey == 'value') {
-                                            noValue = true;
-                                            for (var i in colData) {
-                                                if (colData[i] != '<?php echo $zObsCount::$EMPTY_DATA_DISPLAY?>') {
-                                                    noValue = false;
-                                                    break;
-                                                }
-                                            }
-
-                                            if (noValue) {
-                                                colData = '[' + aData[sType][genepanelId][sCategory]['label'] + ']';
-                                            }
-
-                                        }
-
-                                        // URL in the percentage column
-                                        if (sKey == 'percentage') {
-                                            aVariantIds = [];
-                                            if (typeof(aData[sType][genepanelId][sCategory]['variant_ids']) !== 'undefined') {
-                                                aVariantIds = aData[sType][genepanelId][sCategory]['variant_ids'];
-                                            }
-
-                                            nMaxVariantsToEnableLink = 100;
-                                            bCanEnableLink = <?php echo ($bHasPermissionToViewVariants? 1 : 0) ?> && aVariantIds.length > 0 && aVariantIds.length <= nMaxVariantsToEnableLink;
-                                            sIds = '';
-                                            if (bCanEnableLink) {
-                                                sIds = '?search_variantid=' + aVariantIds.join('|');
-                                                colData = '<A href="/variants/DBID/<?php echo $zObsCount->getVogDBID()?>' + sIds + '" target="_blank">' + colData + '</A>';
-                                            }
-                                        }
-
-                                        // Gene panel header
-                                        if (sCategory === 'all') {
-                                            sData += '<TH>' + colData + '</TH>';
-                                        } else {
-                                            sData += '<TD>' + colData + '</TD>';
-                                        }
-                                    }
-                                }
-                                sData += '</TR>';
-                            }
-                        }
-
-                    } else {
-                        for (var sCategory in aData[sType]) {
-                            sClass = '';
-                            if (aData[sType][sCategory]['threshold'].includes('>')) {
-                                sClass = 'class="above-threshold"';
-                            }
-
-                            sData += '<TR ' + sClass + '>';
-                            for (var sKey in aColumns) {
-                                if (aColumns.hasOwnProperty(sKey)) {
-                                    sData += '<TD>' + aData[sType][sCategory][sKey] + '</TD>';
-                                }
-                            }
-                            sData += '</TR>';
-                        }
-                    }
-
-                    $('#obscount-header-' + sType).html(sHeader);
-                    $('#obscount-data-' + sType).html(sData);
-                    $('#obscount-table-' + sType).show();
-                }
-            }
-        }
-
-        function load_obscount_info(timestamp, populationSize) {
-            var canGenerateData = '<?php echo  $zObsCount->canUpdateData(); ?>';
-            var generateDataLink = '';
-
-            if (!timestamp) {
-                if (canGenerateData) {
-                    generateDataLink = ' <SPAN id="obscount-refresh"> | <A href="#" onClick="lovd_generate_obscount(\'<?php echo $nID ?>\');return false;">Generate Data</A></SPAN>';
-                }
-                var sInfo = 'There is no existing Observation Counts data' + generateDataLink;
-            } else {
-                if (canGenerateData) {
-                    generateDataLink = ' <SPAN id="obscount-refresh"> | <A href="#" onClick="lovd_generate_obscount(\'<?php echo $nID ?>\');return false;">Refresh Data</A></SPAN>';
-                }
-                var sInfo = 'Data updated ' + timestamp + ' | Population size was: ' + populationSize + generateDataLink;
-            }
-            $('#obscount-info th').html(sInfo);
-            $('#obscount-info').show();
-            $('#obscount-feedback').hide();
-        }
-
-        function lovd_reload_obscount_initial_state() {
-            $('#obscount-info').show();
-            $('#obscount-header-general').fadeTo(1000, 1);
-            $('#obscount-data-general').fadeTo(1000, 1);
-            $('#obscount-header-genepanel').fadeTo(1000, 1);
-            $('#obscount-data-genepanel').fadeTo(1000, 1);
-
-            $('#obscount-refresh').show();
-            $('#obscount-feedback').hide();
-        }
-        </SCRIPT>
+</SCRIPT>
 <?php
     }
 
