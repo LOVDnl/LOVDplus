@@ -228,7 +228,7 @@ if (PATH_COUNT == 2 && ACTION == 'curation_upload') {
     lovd_convertIniValueToBytes(ini_get('post_max_size')));
     define('LOG_EVENT', 'CurationFileUpload');
     $nWarnings = 0;
-    if ($_FILES) { // || $_FILES is in use for the automatic loading of files.
+    if (POST) {
         // Form sent, first check the file itself.
         // If the file does not arrive (too big), it doesn't exist in $_FILES.
         if (empty($_FILES['import']) || ($_FILES['import']['error'] > 0 && $_FILES['import']['error'] < 4)) {

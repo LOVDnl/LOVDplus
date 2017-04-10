@@ -613,7 +613,7 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && !ACTION) {
 
     } else {
         // Otherwise show a button that can be used to create a new summary annotation record.
-        print('            <TABLE border="0" cellpadding="2" cellspacing="0" class="setup" width="400px">' . "\n" .
+        print('            <TABLE border="0" cellpadding="2" cellspacing="0" class="setup" width="400">' . "\n" .
               '              <TR>' . "\n" .
               '                <TH colspan="2">Summary annotations</TH>' . "\n" .
               '              </TR>' . "\n" .
@@ -625,7 +625,7 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && !ACTION) {
     }
 
     print('            <BR>
-            <TABLE width="600px" class="data">
+            <TABLE width="600" class="data">
               <TR>
                 <TH>Final Classification</TH>
                 <TH>Occurrences</TH>
@@ -642,55 +642,57 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && !ACTION) {
 
     // Only show curation upload form if this intance has a list of curation file types in the adapter
     if (!empty($_INSTANCE_CONFIG['file_uploads'])) {
-        // This is the array of file types to build the form.  There is a similar array in the form processing code below to handle file renaming.
-        $aFileTypes = $_INSTANCE_CONFIG['file_uploads'];
-        $aLabels = array();
-        foreach ($aFileTypes as $key => $sfileType) {
-            $aLabels[$key] = $sfileType['label'];
-        }
-        $aModes =
-        array_merge(array(
-             '' => '--select--'),
-             $aLabels);
         require ROOT_PATH . 'inc-lib-form.php';
-        print('      <br><FORM action="uploads/' . $nID . '?curation_upload&said=' . (empty($sSummaryAnnotationsID) ? '' : $sSummaryAnnotationsID) . '&in_window" onSubmit="popUp(this)" method="post" enctype="multipart/form-data">' . "\n" .
-        ' <TABLE border="0" cellpadding="10" cellspacing="1" class="data"  style="font-size : 13px;" ><TR> <TH style="font-size : 13px;">Upload curation files</TH> </TR><TD style="font-size : 13px;">' . "\n");
-        $aForm =
-            array(
-                array('POST', '', '', '', '15%', '14', '85%'),
-                array('Upload a file', '', 'file', 'import', 40),
-                array('File type','', 'select', 'mode', 1, $aModes, false, false, false),
-                array('', '', 'submit', 'Upload file'));
-        lovd_viewForm($aForm);
-        print('</TR></TD></TABLE>');
-        print('</FORM><br>' . "\n\n");
+        print('
+            <BR>
+            <FORM action="uploads/' . $nID . '?curation_upload&said=' . (empty($sSummaryAnnotationsID) ? '' : $sSummaryAnnotationsID) . '&in_window" onSubmit="popUp(this)" method="post" enctype="multipart/form-data">
+              <TABLE border="0" cellpadding="0" cellspacing="0" class="data" width="600" style="font-size : 13px;">
+                <TR>
+                  <TH colspan="2">Upload curation files</TH></TR>
+                <TR>
+                  <TD>Upload a file</TD>
+                  <TD><INPUT type="file" name="import" size="40" value=""></TD></TR>
+                <TR valign="top">
+                  <TD>File type</TD>
+                  <TD>
+                    <SELECT name="mode">
+                      <OPTION value="">-- select --</OPTION>');
+        foreach ($_INSTANCE_CONFIG['file_uploads'] as $sFileType => $aFileType) {
+            print('
+                      <OPTION value="' . $sFileType . '">' . $aFileType['label'] . '</OPTION>');
+        }
+        print('</SELECT></TD></TR>
+                <TR valign="top">
+                  <TD>&nbsp;</TD>
+                  <TD><INPUT type="submit" value="Upload file"></TD></TR></TABLE></FORM><BR>' . "\n\n");
         $sCurationFilesPath = $_INI['paths']['uploaded_files'];
         // Search for curations files and display links to files if they exist in the curation files directory. This uses the glob php function to perform search.
         $nFiles = 0;
-        foreach ($aLabels as $sFileType => $sFileDesc) {
+        foreach ($_INSTANCE_CONFIG['file_uploads'] as $sFileType => $aFileType) {
             $nFileID = ($sFileType == 'ucsc' && !empty($sSummaryAnnotationsID)? $sSummaryAnnotationsID : $nID);
             foreach (glob($sCurationFilesPath . "/" . $nFileID . "-" . $sFileType . "-*.*", GLOB_BRACE) as $sFileName) {
                 $nFiles++;
                 if ($nFiles == 1) {
-                print('<TABLE border="0" cellpadding="10" cellspacing="1" width="772px" class="data" style="font-size: 13px;">');
-                print('<TR><TH colspan="3">Existing curation files</TH></TR>');
-                print('<TR>
-                       <TH>File Type</TH>
-                       <TH>Uploaded</TH>
-                       <TH>Actions</TH>
-                       </TR>');
+                    print('
+            <TABLE border="0" cellpadding="0" cellspacing="0" width="600" class="data" style="font-size: 13px;">
+              <TR>
+                <TH colspan="3">Existing curation files</TH></TR>
+              <TR>
+                <TH>File Type</TH>
+                <TH>Uploaded</TH>
+                <TH>Actions</TH></TR>');
                 }
                 $sDisableLinkStyle = 'style="pointer-events: none; text-decoration: none; color: grey;"';
-                $sDisablePreview = ($aFileTypes[$sFileType]['type'] == 'image'? '' : $sDisableLinkStyle);
+                $sDisablePreview = ($aFileType['type'] == 'image'? '' : $sDisableLinkStyle);
                 $sDisableDelete = ($_AUTH['level'] >= LEVEL_OWNER && $zScreenings[0]['analysis_statusid'] == ANALYSIS_STATUS_IN_PROGRESS? '' : $sDisableLinkStyle);
                 $sFileUrl = lovd_getInstallURL() . 'uploads/curation_files/' . basename($sFileName);
-                print('<TR>');
-                print('<TD>' . $sFileDesc . '</TD>');
-                print('<TD>' . date('d M Y H:i A', filemtime($sFileName)) . '</TD>');
-                print('<TD><A '. $sDisablePreview .' href="#" onclick="lovd_openWindow(\'' . $sFileUrl . '?preview&amp;in_window\', \'\', 1280, 720); return false;">Preview</A>
-                         | <A href="' . $sFileUrl . '?download"  target="_BLANK">Download</A> 
-                         | <A ' . $sDisableDelete . 'href="#" onclick="lovd_openWindow(\''. $sFileUrl .'?remove&amp;in_window\', \'\', 780, 250); return false;">Delete</A></TD>');
-                print('</TR>');
+                print('
+              <TR>
+                <TD>' . $aFileType['label'] . '</TD>
+                <TD>' . date('d M Y H:i A', filemtime($sFileName)) . '</TD>
+                <TD><A ' . $sDisablePreview . ' href="#" onclick="lovd_openWindow(\'' . $sFileUrl . '?preview&amp;in_window\', \'\', 1280, 720); return false;">Preview</A>
+                  | <A href="' . $sFileUrl . '?download"  target="_blank">Download</A> 
+                  | <A ' . $sDisableDelete . 'href="#" onclick="lovd_openWindow(\'' . $sFileUrl . '?remove&amp;in_window\', \'\', 780, 250); return false;">Delete</A></TD></TR>');
             }
         }
         print('</TABLE>');
