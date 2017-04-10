@@ -645,7 +645,7 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && !ACTION) {
         require ROOT_PATH . 'inc-lib-form.php';
         print('
             <BR>
-            <FORM action="uploads/' . $nID . '?curation_upload&said=' . (empty($sSummaryAnnotationsID) ? '' : $sSummaryAnnotationsID) . '&in_window" onSubmit="popUp(this)" method="post" enctype="multipart/form-data">
+            <FORM action="uploads/' . $nID . '?curation_upload' . (empty($sSummaryAnnotationsID)? '' : '&summaryannotationid=' . $sSummaryAnnotationsID) . '&in_window" onSubmit="popUp(this)" method="post" enctype="multipart/form-data">
               <TABLE border="0" cellpadding="0" cellspacing="0" class="data" width="600" style="font-size : 13px;">
                 <TR>
                   <TH colspan="2">Upload curation files</TH></TR>
@@ -658,6 +658,10 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && !ACTION) {
                     <SELECT name="mode">
                       <OPTION value="">-- select --</OPTION>');
         foreach ($_INSTANCE_CONFIG['file_uploads'] as $sFileType => $aFileType) {
+            if ($aFileType['linked_to'] == 'summary_annotation' && !$sSummaryAnnotationsID) {
+                // This file type is meant for the Summary Annotation Record, but this variant doesn't have one.
+                continue;
+            }
             print('
                       <OPTION value="' . $sFileType . '">' . $aFileType['label'] . '</OPTION>');
         }
@@ -669,7 +673,7 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && !ACTION) {
         // Search for curations files and display links to files if they exist in the curation files directory. This uses the glob php function to perform search.
         $nFiles = 0;
         foreach ($_INSTANCE_CONFIG['file_uploads'] as $sFileType => $aFileType) {
-            $nFileID = ($sFileType == 'ucsc' && !empty($sSummaryAnnotationsID)? $sSummaryAnnotationsID : $nID);
+            $nFileID = ($aFileType['linked_to'] == 'summary_annotation' && !empty($sSummaryAnnotationsID)? $sSummaryAnnotationsID : $nID);
             foreach (glob($sCurationFilesPath . "/" . $nFileID . "-" . $sFileType . "-*.*", GLOB_BRACE) as $sFileName) {
                 $nFiles++;
                 if ($nFiles == 1) {
@@ -684,7 +688,7 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && !ACTION) {
                 }
                 $sDisableLinkStyle = 'style="pointer-events: none; text-decoration: none; color: grey;"';
                 $sDisablePreview = ($aFileType['type'] == 'image'? '' : $sDisableLinkStyle);
-                $sDisableDelete = ($_AUTH['level'] >= LEVEL_OWNER && $zScreenings[0]['analysis_statusid'] == ANALYSIS_STATUS_IN_PROGRESS? '' : $sDisableLinkStyle);
+                $sDisableDelete = ($_AUTH['level'] >= LEVEL_OWNER && (!isset($zScreenings[0]) || !isset($zScreenings[0]['analysis_statusid']) || $zScreenings[0]['analysis_statusid'] == ANALYSIS_STATUS_IN_PROGRESS)? '' : $sDisableLinkStyle);
                 $sFileUrl = lovd_getInstallURL() . 'uploads/curation_files/' . basename($sFileName);
                 print('
               <TR>

@@ -4,7 +4,7 @@
  * LEIDEN OPEN VARIATION DATABASE (LOVD)
  *
  * Created     : 2017-04-07
- * Modified    : 2017-04-07
+ * Modified    : 2017-04-10
  * For LOVD    : 3.0-18
  *
  * Copyright   : 2004-2017 Leiden University Medical Center; http://www.LUMC.nl/
@@ -174,7 +174,7 @@ if ($_PE[1] == 'curation_files' && ACTION == 'remove') {
 
 
 if (PATH_COUNT == 2 && ACTION == 'curation_upload') {
-    // URL: uploads?curation_upload&said=chrX_XXXXXX
+    // URL: uploads?curation_upload&summaryannotationid=chrX_XXXXXX
     // Upload a file during variant curation.
     require ROOT_PATH . 'inc-lib-form.php';
     $_T->printHeader();
@@ -215,7 +215,7 @@ if (PATH_COUNT == 2 && ACTION == 'curation_upload') {
         $_T->printFooter();
         exit;
     }
-    $saID = $_GET['said'];
+    $saID = $_GET['summaryannotationid'];
     if ($_POST['mode'] == '' ) {
         lovd_errorAdd('mode', 'The file type is not set!');
     }
@@ -285,10 +285,10 @@ if (PATH_COUNT == 2 && ACTION == 'curation_upload') {
             $sFileName = "";
             if ($aFileTypes[$_POST['mode']]) {
                 //
-                if ($aFileTypes[$_POST['mode']]['id'] == 'nid') {
+                if ($aFileTypes[$_POST['mode']]['linked_to'] == 'variant') {
                     $sFileName = $nID . '-' . $_POST['mode'];
                 }
-                elseif ($aFileTypes[$_POST['mode']]['id'] == 'said') {
+                elseif ($aFileTypes[$_POST['mode']]['linked_to'] == 'summary_annotation') {
                     if (empty($saID)) {
                         lovd_errorAdd('import', 'Summary annotation ID required for this file type.');
                     }
