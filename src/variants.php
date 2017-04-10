@@ -674,10 +674,6 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && !ACTION) {
         print('<DIV id="observation-counts">');
         print($zObsCount->display($aSettings));
         print('</DIV>');
-
-        print "<pre>";
-        print_r($aData);
-        print "</pre>";
 ?>
 <SCRIPT type="text/javascript">
         function lovd_generate_obscount(nVariantID) {

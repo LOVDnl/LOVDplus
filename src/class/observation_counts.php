@@ -696,18 +696,23 @@ class LOVD_ObservationCounts
             }
 
             $sGeneralCategories = '';
-            foreach ($aData[static::$TYPE_GENERAL] as $sCategory => $aCategoryData) {
-                // If threshold data has the greater than sign
-                $sClass = '';
-                if (strpos($aData[static::$TYPE_GENERAL][$sCategory]['threshold'], '>') !== false) {
-                    $sClass = ' class="above-threshold"';
-                }
+            if (!empty($aData[static::$TYPE_GENERAL]['error'])) {
+                $sColspan = ' colspan="' . count($aSettings[static::$TYPE_GENERAL]['columns']) . '"';
+                $sGeneralCategories .= '<TR><TD'. $sColspan .'>' . $aData[static::$TYPE_GENERAL]['error'] . '</TD></TR>';
+            } else {
+                foreach ($aData[static::$TYPE_GENERAL] as $sCategory => $aCategoryData) {
+                    // If threshold data has the greater than sign
+                    $sClass = '';
+                    if (strpos($aData[static::$TYPE_GENERAL][$sCategory]['threshold'], '>') !== false) {
+                        $sClass = ' class="above-threshold"';
+                    }
 
-                $sGeneralCategories .= '<TR' . $sClass . '>';
-                foreach ($aSettings[static::$TYPE_GENERAL]['columns'] as $sKey => $sLabel) {
-                    $sGeneralCategories .= '<TD>' . $aCategoryData[$sKey] . '</TD>';
+                    $sGeneralCategories .= '<TR' . $sClass . '>';
+                    foreach ($aSettings[static::$TYPE_GENERAL]['columns'] as $sKey => $sLabel) {
+                        $sGeneralCategories .= '<TD>' . $aCategoryData[$sKey] . '</TD>';
+                    }
+                    $sGeneralCategories .= '</TR>';
                 }
-                $sGeneralCategories .= '</TR>';
             }
 
             // Gene panel categories table.
@@ -717,24 +722,29 @@ class LOVD_ObservationCounts
             }
 
             $sGenepanelCategories = '';
-            foreach ($aData[static::$TYPE_GENEPANEL] as $sGpId => $aGpData) {
-                foreach ($aGpData as $sCategory => $aCategoryData) {
-                    $sGenepanelCategories .= '<TR>';
-                    foreach ($aSettings[static::$TYPE_GENEPANEL]['columns'] as $sKey => $sLabel) {
-                        $sFormattedValue = $aCategoryData[$sKey];
+            if (!empty($aData[static::$TYPE_GENEPANEL]['error'])) {
+                $sColspan = ' colspan="' . count($aSettings[static::$TYPE_GENEPANEL]['columns']) . '"';
+                $sGenepanelCategories .= '<TR><TD'. $sColspan .'>' . $aData[static::$TYPE_GENEPANEL]['error'] . '</TD></TR>';
+            } else {
+                foreach ($aData[static::$TYPE_GENEPANEL] as $sGpId => $aGpData) {
+                    foreach ($aGpData as $sCategory => $aCategoryData) {
+                        $sGenepanelCategories .= '<TR>';
+                        foreach ($aSettings[static::$TYPE_GENEPANEL]['columns'] as $sKey => $sLabel) {
+                            $sFormattedValue = $aCategoryData[$sKey];
 
-                        if ($sKey == 'percentage' && $bHasPermissionToViewVariants) {
-                            if (count($aCategoryData[$sKey]) > 0 && count($aCategoryData[$sKey]) <= static::$MAX_VAR_TO_ENABLE_LINK) {
-                                // If the total number of variants is not too big for us to generate an url.
-                                $sFormattedValue = '<A href="/variants/DBID/' . $this->getVogDBID() . '?search_variantid=' . implode('|', $aCategoryData['variant_ids']) . '" target="_blank">' . $aCategoryData[$sKey] . '</A>';
+                            if ($sKey == 'percentage' && $bHasPermissionToViewVariants) {
+                                if (count($aCategoryData[$sKey]) > 0 && count($aCategoryData[$sKey]) <= static::$MAX_VAR_TO_ENABLE_LINK) {
+                                    // If the total number of variants is not too big for us to generate an url.
+                                    $sFormattedValue = '<A href="/variants/DBID/' . $this->getVogDBID() . '?search_variantid=' . implode('|', $aCategoryData['variant_ids']) . '" target="_blank">' . $aCategoryData[$sKey] . '</A>';
+                                }
                             }
-                        }
 
-                        $sGenepanelCategories .= ($sCategory == 'all' ?'<TH>' : '<TD>');
-                        $sGenepanelCategories .= $sFormattedValue;
-                        $sGenepanelCategories .= ($sCategory == 'all' ?'</TH>' : '</TD>');
+                            $sGenepanelCategories .= ($sCategory == 'all' ?'<TH>' : '<TD>');
+                            $sGenepanelCategories .= $sFormattedValue;
+                            $sGenepanelCategories .= ($sCategory == 'all' ?'</TH>' : '</TD>');
+                        }
+                        $sGenepanelCategories .= '</TR>';
                     }
-                    $sGenepanelCategories .= '</TR>';
                 }
             }
 

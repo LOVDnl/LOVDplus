@@ -35,8 +35,10 @@ require ROOT_PATH . 'inc-init.php';
 if (!empty($_POST['nVariantID'])) {
     $nID = $_POST['nVariantID'];
 } else {
-    $aResults = array('error' => 'Failed to upload Observation Counts data');
-    print(json_encode($aResults));
+    print '<TABLE width="600" class="data">
+             <TR><TH style="font-size : 13px;">Observation Counts</TH></TR>
+             <TR><TD>Failed to upload Observation Counts data</TD></TR>
+           </TABLE>';
     exit;
 }
 
