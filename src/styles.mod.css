@@ -124,6 +124,7 @@ table.data span.anchor                    {cursor: pointer; color: #0000FF;}
 .gpheader       {font-weight : bold; text-align : left; padding-top: 10px;}
 .filter-config  {border: 1px solid #dddddd; padding: 5px;}
 .filter-cross-screening-group {border-top: 1px solid #dddddd;}
+.btn-right {float: right;}
 
 /* Gene panel information under the apply_selected_gene_panels filter */
 table.gpinfo               {margin-left: 10px;}

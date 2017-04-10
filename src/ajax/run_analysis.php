@@ -192,7 +192,9 @@ if (ACTION == 'configure' && GET) {
                 // Print form.
                 $sFiltersFormItems .= '<H4>' . $sFilter . '</H4><BR>';
 
-                $sFiltersFormItems .= '<DIV class=\'filter-config\'>';
+                $sFiltersFormItems .= '<DIV class=\'filter-config\' id=\'filter-config-'. $sFilter . '\'>';
+                $sFiltersFormItems .= '<TR><TD><BUTTON type=\'button\' class=\'btn-right\' id=\'btn-add-group\'>+ Add group</BUTTON></TD></TR>';
+
                 $sFiltersFormItems .= '<TABLE><TR><TD><LABEL>Description</LABEL></TD><TD><INPUT name=\'config[' . $sFilter . '][description]\' /></TD></TR></TABLE>';
                 $sFiltersFormItems .= '<DIV class=\'filter-cross-screening-group\' id=\'filter-config-'. $sFilter .'-0\'>';
 
@@ -217,33 +219,20 @@ if (ACTION == 'configure' && GET) {
                 }
                 $sFiltersFormItems .= '</SELECT></TD></TR></TABLE></DIV>';
 
-                //==========
-
-                // Conditions variants of this screening against the selected group
-                $sFiltersFormItems .= '<DIV class=\'filter-cross-screening-group\' id=\'filter-config-'. $sFilter .'-1\'>';
-                $sFiltersFormItems .= '<TABLE><TR><TD><LABEL>Condition</LABEL></TD><TD><SELECT name=\'config[' . $sFilter . '][groups][1][condition]\'>';
-                foreach ($aConditions as $sCondition) {
-                    $sFiltersFormItems .= '<OPTION value=\'' . $sCondition . '\'>' . $sCondition . '</OPTION>';
-                }
-                $sFiltersFormItems .= '</SELECT></TD></TR>';
-
-                // The list of available screenings
-                $sFiltersFormItems .= '<TR><TD><LABEL>Screenings</LABEL></TD><TD><SELECT name=\'config[' . $sFilter . '][groups][1][screenings][]\' multiple=\'true\'>';
-                foreach ($aScreenings as $sScreeningID => $sText) {
-                    $sFiltersFormItems .= '<OPTION value=\'' . $sScreeningID . '\'>' . $sText . '</OPTION>';
-                }
-                $sFiltersFormItems .= '</SELECT></TD></TR>';
-
-                // How to group among selected screenings within a group
-                $sFiltersFormItems .= '<TR><TD><LABEL>Grouping</LABEL></TD><TD><SELECT name=\'config[' . $sFilter . '][groups][1][grouping]\'>';
-                foreach ($aGrouping as $sCondition) {
-                    $sFiltersFormItems .= '<OPTION value=\'' . $sCondition . '\'>' . $sCondition . '</OPTION>';
-                }
-                $sFiltersFormItems .= '</SELECT></TD></TR></TABLE></DIV>';
-
                 // TODO: how to display screenings to be selected
 
                 $sFiltersFormItems .= '</TABLE></DIV>';
+
+                $sFiltersFormItems .= '<SCRIPT>';
+                $sFiltersFormItems .= '$(\'#btn-add-group\').click(function() {';
+                $sFiltersFormItems .= 'var numGroups = $(\'.filter-cross-screening-group\').length;';
+                $sFiltersFormItems .= 'var elemFilterConfig = $(\'#filter-config-' . $sFilter . '\');';
+                $sFiltersFormItems .= 'var elemGroup = $(\'#filter-config-' . $sFilter . '-0\').clone().attr(\'id\', \'#filter-config-' . $sFilter . '-\' + numGroups);';
+                $sFiltersFormItems .= 'elemGroup.find(\'[name]\').each(function(i, e) { var oldName = $(e).attr(\'name\'); var newName = oldName.replace(\'[groups][0]\', \'[groups][\' + numGroups + \']\'); $(e).attr(\'name\', newName)});';
+                $sFiltersFormItems .= 'elemFilterConfig.append(elemGroup);';
+                $sFiltersFormItems .= '});';
+                $sFiltersFormItems .= '</SCRIPT>';
+
                 break;
             default:
         }
@@ -268,7 +257,7 @@ if (ACTION == 'configure' && GET) {
         exit;
     }
 
-    // If further configurationi required, build modal to take the configuration inputs.
+    // If further configuration required, build modal to take the configuration inputs.
     // Implement an CSRF protection by working with tokens.
     $_SESSION['csrf_tokens']['run_analysis_configure'] = md5(uniqid());
     $sForm  = '<FORM id=\'configure_analysis_form\'><INPUT type=\'hidden\' name=\'csrf_token\' value=\'' . $_SESSION['csrf_tokens']['run_analysis_configure'] . '\'><BR>';
