@@ -4,6 +4,7 @@
  * Created: 2016-06-01
  * Programmer: Candice McGregor
  *************/
+require_once ROOT_PATH . 'class/observation_counts.php';
 
 $_INSTANCE_CONFIG['viewlists']['Screenings_for_I_VE']['cols_to_show'] = array(
     // Invisible.
@@ -89,7 +90,7 @@ $_INSTANCE_CONFIG['conversion'] = array(
 $_INSTANCE_CONFIG['observation_counts'] = array(
     // If we want to display genepanel observation counts using default config,
     // then simply add 'genepanel' => array()
-    'genepanel' => array(
+    LOVD_ObservationCounts::$TYPE_GENEPANEL => array(
         // if columns is empty, use default columns list
         'columns' => array(
             'value' => 'Gene Panel',
@@ -104,7 +105,7 @@ $_INSTANCE_CONFIG['observation_counts'] = array(
 
     // If we want to display general categories observation counts using default config,
     // then simply add 'general' => array()
-    'general' => array(
+    LOVD_ObservationCounts::$TYPE_GENERAL => array(
         // if columns is empty, use default columns list
         'columns' => array(
             'label' => 'Category',

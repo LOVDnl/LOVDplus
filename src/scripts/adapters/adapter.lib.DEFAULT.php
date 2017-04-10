@@ -28,6 +28,7 @@
  * along with LOVD.  If not, see <http://www.gnu.org/licenses/>.
  *
  *************/
+require_once ROOT_PATH . 'class/observation_counts.php';
 
 // These are the default instance-specific settings.
 // Create a new file, change the "DEFAULT" in the name to your uppercased
@@ -107,7 +108,7 @@ $_INSTANCE_CONFIG['conversion'] = array(
 $_INSTANCE_CONFIG['observation_counts'] = array(
     // If you want to display the gene panel observation counts using the default
     //  configuration, you can also simply write: 'genepanel' => array(),
-    'genepanel' => array(
+    LOVD_ObservationCounts::$TYPE_GENEPANEL => array(
         // These are the columns to choose from. If you'd like to display all
         //  default columns, you can also simply write:
         //  'columns' => array(),
@@ -130,7 +131,7 @@ $_INSTANCE_CONFIG['observation_counts'] = array(
 
     // If you want to display the general observation counts using the default
     //  configuration, you can also simply write: 'general' => array(),
-    'general' => array(
+    LOVD_ObservationCounts::$TYPE_GENERAL => array(
         // These are the columns to choose from. If you'd like to display all
         //  default columns, you can also simply write:
         //  'columns' => array(),

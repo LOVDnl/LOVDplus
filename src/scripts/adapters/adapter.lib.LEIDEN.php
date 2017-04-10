@@ -1,4 +1,6 @@
 <?php
+require_once ROOT_PATH . 'class/observation_counts.php';
+
 // Leiden specific adapter settings.
 $_INSTANCE_CONFIG['viewlists']['Screenings_for_I_VE']['cols_to_show'] = array(
     // The screenings data listing on the individual's detailed view.
@@ -17,7 +19,7 @@ $_INSTANCE_CONFIG['viewlists']['Screenings_for_I_VE']['cols_to_show'] = array(
 );
 
 $_INSTANCE_CONFIG['observation_counts'] = array(
-    'genepanel' => array(
+    LOVD_ObservationCounts::$TYPE_GENEPANEL => array(
         'columns' => array(
             'value' => 'Gene Panel',
             'total_individuals' => 'Total # Individuals',
@@ -28,7 +30,7 @@ $_INSTANCE_CONFIG['observation_counts'] = array(
             'gender',
         ),
     ),
-    'general' => array(
+    LOVD_ObservationCounts::$TYPE_GENERAL => array(
         // if columns is empty, use default columns list
         'columns' => array(
             'label' => 'Category',

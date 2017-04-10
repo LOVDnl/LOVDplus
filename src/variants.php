@@ -670,15 +670,17 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && !ACTION) {
         $aSettings = (!empty($_INSTANCE_CONFIG['observation_counts'])? $_INSTANCE_CONFIG['observation_counts'] : array());
         $zObsCount = new LOVD_ObservationCounts($nID);
         $aData = $zObsCount->getData();
-        $bHasPermissionToViewVariants = ($_AUTH['level'] >= LEVEL_MANAGER? true: false);
 
         print('<DIV id="observation-counts">');
         print($zObsCount->display($aSettings));
         print('</DIV>');
+
+        print "<pre>";
+        print_r($aData);
+        print "</pre>";
 ?>
 <SCRIPT type="text/javascript">
         function lovd_generate_obscount(nVariantID) {
-console.log(nVariantID);
             $('#obscount-loading').show();
             $('#obscount-header-genepanel').hide();
             $('#obscount-data-genepanel').hide();
