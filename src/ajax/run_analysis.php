@@ -199,10 +199,10 @@ if (ACTION == 'configure' && GET) {
 
                 // Conditions variants of this screening against the selected group
                 $sFiltersFormItems .= '<TABLE>';
-                $sFiltersFormItems .= '<TR><TD colspan=\'2\'><LABEL>Select variants from this screening that are </LABEL></TD></TR>';
+                $sFiltersFormItems .= '<TR><TD colspan=\'2\'><LABEL class=\'label-info\'>Select variants from this screening that are </LABEL></TD></TR>';
                 $sFiltersFormItems .= '<TR><TD><SELECT name=\'config[' . $sFilter . '][groups][0][condition]\'>';
-                foreach ($aConditions as $sCondition) {
-                    $sFiltersFormItems .= '<OPTION value=\'' . $sCondition . '\'>' . $sCondition . '</OPTION>';
+                foreach ($aConditions as $sValue => $sLabel) {
+                    $sFiltersFormItems .= '<OPTION value=\'' . $sValue . '\'>' . $sLabel . '</OPTION>';
                 }
                 $sFiltersFormItems .= '</SELECT>';
 
@@ -215,7 +215,7 @@ if (ACTION == 'configure' && GET) {
                 $sFiltersFormItems .= '<TR><TD colspan=\'2\'><LABEL>the following screenings</LABEL></TD></TR>';
 
                 // The list of available screenings
-                $sFiltersFormItems .= '<TR><TD><SELECT class=\'select-screenings\' name=\'config[' . $sFilter . '][groups][0][screenings][]\' multiple=\'true\'>';
+                $sFiltersFormItems .= '<TR><TD><SELECT id=\'select-screenings-0\' name=\'config[' . $sFilter . '][groups][0][screenings][]\' multiple=\'true\'>';
                 foreach ($aScreenings as $sScreeningID => $sText) {
                     $sFiltersFormItems .= '<OPTION value=\'' . $sScreeningID . '\'>' . $sText . '</OPTION>';
                 }
@@ -229,16 +229,23 @@ if (ACTION == 'configure' && GET) {
                 $sFiltersFormItems .= '</TABLE></DIV>';
 
                 $sFiltersFormItems .= '<SCRIPT type=\'text/javascript\'>';
-                $sFiltersFormItems .= '$(\'.select-screenings\').select2({ width: \'555px\'});';
+                $sFiltersFormItems .= '$(\'#select-screenings-0\').select2({ width: \'555px\'});';
                 $sFiltersFormItems .= '$(\'#btn-add-group\').click(function() {';
                 $sFiltersFormItems .= 'var numGroups = $(\'.filter-cross-screening-group\').length;';
                 $sFiltersFormItems .= 'var elemFilterConfig = $(\'#filter-config-' . $sFilter . '\');';
                 // Copy the first group of html form already loaded by php.
                 $sFiltersFormItems .= 'var elemGroup = $(\'#filter-config-' . $sFilter . '-0\').clone().attr(\'id\', \'#filter-config-' . $sFilter . '-\' + numGroups);';
+                // Rename select-screenings-0 to a new id.
+                $sFiltersFormItems .= 'elemGroup.find(\'#select-screenings-0\').attr(\'id\', \'select-screenings-\' + numGroups);';
+                // Remove the input box created by the select2 plugin.
+                $sFiltersFormItems .= 'elemGroup.find(\'.select2\').remove();';
+                // Subsequent groups have different labels
+                $sFiltersFormItems .= 'elemGroup.find(\'.label-info\').html(\'Then select variants <STRONG>from the results of the above selection</STRONG> that are \');';
                 // Rename 'name' attributes based on how many groups we already have.
                 $sFiltersFormItems .= 'elemGroup.find(\'[name]\').each(function(i, e) { var oldName = $(e).attr(\'name\'); var newName = oldName.replace(\'[groups][0]\', \'[groups][\' + numGroups + \']\'); $(e).attr(\'name\', newName)});';
                 // Append this new group into the form.
                 $sFiltersFormItems .= 'elemFilterConfig.append(elemGroup);';
+                $sFiltersFormItems .= '$(\'#select-screenings-\' + numGroups).select2({ width: \'555px\'});';
                 $sFiltersFormItems .= '});';
                 $sFiltersFormItems .= '</SCRIPT>';
 
