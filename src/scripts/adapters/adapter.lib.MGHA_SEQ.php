@@ -65,19 +65,15 @@ $_INSTANCE_CONFIG['viewlists']['CustomVL_AnalysisRunResults_for_I_VE']['cols_to_
 
 $_INSTANCE_CONFIG['file_uploads'] = array(
         'igv' => array(
-            'type' => 'image' ,
             'linked_to' => 'variant',
             'label' => 'IGV screenshot'),
         'ucsc' => array(
-            'type' => 'image' ,
             'linked_to' => 'summary_annotation',  // This file is stored using the Summary Annotation Record DBID.
             'label' => 'UCSC screenshot (Summary Annotation)'),
         'confirmation' => array(
-            'type' => 'image' ,
             'linked_to' => 'variant',
             'label' => 'Confirmation screenshot'),
         'workfile' => array(
-            'type' => 'excel' ,
             'linked_to' => 'variant',
             'label' => 'Excel file')
 );

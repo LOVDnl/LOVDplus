@@ -640,8 +640,8 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && !ACTION) {
     }
     print('</TABLE>');
 
-    // Only show curation upload form if this intance has a list of curation file types in the adapter
-    if (!empty($_INSTANCE_CONFIG['file_uploads'])) {
+    // Only show attachment upload form if enabled in LOVD and this intance has a list of file types in the adapter.
+    if (!empty($_SETT['attachment_file_types']) && !empty($_SETT['attachment_max_size']) && !empty($_INSTANCE_CONFIG['file_uploads'])) {
         require ROOT_PATH . 'inc-lib-form.php';
         print('
             <BR>
@@ -658,18 +658,17 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && !ACTION) {
                     <SELECT name="mode">
                       <OPTION value="">-- select --</OPTION>');
         foreach ($_INSTANCE_CONFIG['file_uploads'] as $sFileType => $aFileType) {
-            if ($aFileType['linked_to'] == 'summary_annotation' && !$sSummaryAnnotationsID) {
-                // This file type is meant for the Summary Annotation Record, but this variant doesn't have one.
-                continue;
-            }
-            print('
+            if ($aFileType['linked_to'] == 'variant' || ($aFileType['linked_to'] == 'summary_annotation' && $sSummaryAnnotationsID)) {
+                // Show only options meant for Variants or the Summary Annotation Record (if this variant has one).
+                print('
                       <OPTION value="' . $sFileType . '">' . $aFileType['label'] . '</OPTION>');
+            }
         }
         print('</SELECT></TD></TR>
                 <TR valign="top">
                   <TD>&nbsp;</TD>
                   <TD><INPUT type="submit" value="Upload file"></TD></TR></TABLE></FORM><BR>' . "\n\n");
-        $sCurationFilesPath = $_INI['paths']['uploaded_files'];
+        $sCurationFilesPath = $_INI['paths']['attachments'];
         // Search for curations files and display links to files if they exist in the curation files directory. This uses the glob php function to perform search.
         $nFiles = 0;
         foreach ($_INSTANCE_CONFIG['file_uploads'] as $sFileType => $aFileType) {
@@ -686,10 +685,12 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && !ACTION) {
                 <TH>Uploaded</TH>
                 <TH>Actions</TH></TR>');
                 }
+                // Parse the file name, use the basename and extension later.
+                $aPathInfo = pathinfo($sFileName);
                 $sDisableLinkStyle = 'style="pointer-events: none; text-decoration: none; color: grey;"';
-                $sDisablePreview = ($aFileType['type'] == 'image'? '' : $sDisableLinkStyle);
+                $sDisablePreview = (strpos(array_search($aPathInfo['extension'], $_SETT['attachment_file_types']), 'image') === 0? '' : $sDisableLinkStyle);
                 $sDisableDelete = ($_AUTH['level'] >= LEVEL_OWNER && (!isset($zScreenings[0]) || !isset($zScreenings[0]['analysis_statusid']) || $zScreenings[0]['analysis_statusid'] == ANALYSIS_STATUS_IN_PROGRESS)? '' : $sDisableLinkStyle);
-                $sFileUrl = lovd_getInstallURL() . 'uploads/curation_files/' . basename($sFileName);
+                $sFileUrl = lovd_getInstallURL() . 'uploads/curation_files/' . $aPathInfo['basename'];
                 print('
               <TR>
                 <TD>' . $aFileType['label'] . '</TD>
