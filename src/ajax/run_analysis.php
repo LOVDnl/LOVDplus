@@ -149,17 +149,16 @@ if (ACTION == 'configure' && GET) {
                 break;
             case 'cross_screenings':
                 $aConditions = array(
-                    'NOT IN',
-                    'NOT Homozygous IN',
-                    'IN',
-                    'Homozygous IN',
-                    'Heterozygous IN'
+                    'NOT IN' => "not found in",
+                    'NOT Homozygous IN' => "not homozygous in",
+                    'IN' => "found in",
+                    'Homozygous IN' => "homozygous in",
+                    'Heterozygous IN' => "heterozygous in"
                 );
 
                 $aGrouping = array(
-                    '',
-                    'AND',
-                    'OR'
+                    'AND' => 'all of',
+                    'OR' => 'one or more of'
                 );
 
                 // Find available screenings.
@@ -199,36 +198,46 @@ if (ACTION == 'configure' && GET) {
                 $sFiltersFormItems .= '<DIV class=\'filter-cross-screening-group\' id=\'filter-config-'. $sFilter .'-0\'>';
 
                 // Conditions variants of this screening against the selected group
-                $sFiltersFormItems .= '<TABLE><TR><TD><LABEL>Condition</LABEL></TD><TD><SELECT name=\'config[' . $sFilter . '][groups][0][condition]\'>';
+                $sFiltersFormItems .= '<TABLE>';
+                $sFiltersFormItems .= '<TR><TD colspan=\'2\'><LABEL>Select variants from this screening that are </LABEL></TD></TR>';
+                $sFiltersFormItems .= '<TR><TD><SELECT name=\'config[' . $sFilter . '][groups][0][condition]\'>';
                 foreach ($aConditions as $sCondition) {
                     $sFiltersFormItems .= '<OPTION value=\'' . $sCondition . '\'>' . $sCondition . '</OPTION>';
                 }
+                $sFiltersFormItems .= '</SELECT>';
+
+                // How to group among selected screenings within a group
+                $sFiltersFormItems .= '&nbsp;<SELECT name=\'config[' . $sFilter . '][groups][0][grouping]\'>';
+                foreach ($aGrouping as $sValue => $sLabel) {
+                    $sFiltersFormItems .= '<OPTION value=\'' . $sValue . '\'>' . $sLabel . '</OPTION>';
+                }
                 $sFiltersFormItems .= '</SELECT></TD></TR>';
+                $sFiltersFormItems .= '<TR><TD colspan=\'2\'><LABEL>the following screenings</LABEL></TD></TR>';
 
                 // The list of available screenings
-                $sFiltersFormItems .= '<TR><TD><LABEL>Screenings</LABEL></TD><TD><SELECT name=\'config[' . $sFilter . '][groups][0][screenings][]\' multiple=\'true\'>';
+                $sFiltersFormItems .= '<TR><TD><SELECT class=\'select-screenings\' name=\'config[' . $sFilter . '][groups][0][screenings][]\' multiple=\'true\'>';
                 foreach ($aScreenings as $sScreeningID => $sText) {
                     $sFiltersFormItems .= '<OPTION value=\'' . $sScreeningID . '\'>' . $sText . '</OPTION>';
                 }
-                $sFiltersFormItems .= '</SELECT></TD></TR>';
 
-                // How to group among selected screenings within a group
-                $sFiltersFormItems .= '<TR><TD><LABEL>Grouping</LABEL></TD><TD><SELECT name=\'config[' . $sFilter . '][groups][0][grouping]\'>';
-                foreach ($aGrouping as $sCondition) {
-                    $sFiltersFormItems .= '<OPTION value=\'' . $sCondition . '\'>' . $sCondition . '</OPTION>';
-                }
+
+
                 $sFiltersFormItems .= '</SELECT></TD></TR></TABLE></DIV>';
 
                 // TODO: how to display screenings to be selected
 
                 $sFiltersFormItems .= '</TABLE></DIV>';
 
-                $sFiltersFormItems .= '<SCRIPT>';
+                $sFiltersFormItems .= '<SCRIPT type=\'text/javascript\'>';
+                $sFiltersFormItems .= '$(\'.select-screenings\').select2({ width: \'555px\'});';
                 $sFiltersFormItems .= '$(\'#btn-add-group\').click(function() {';
                 $sFiltersFormItems .= 'var numGroups = $(\'.filter-cross-screening-group\').length;';
                 $sFiltersFormItems .= 'var elemFilterConfig = $(\'#filter-config-' . $sFilter . '\');';
+                // Copy the first group of html form already loaded by php.
                 $sFiltersFormItems .= 'var elemGroup = $(\'#filter-config-' . $sFilter . '-0\').clone().attr(\'id\', \'#filter-config-' . $sFilter . '-\' + numGroups);';
+                // Rename 'name' attributes based on how many groups we already have.
                 $sFiltersFormItems .= 'elemGroup.find(\'[name]\').each(function(i, e) { var oldName = $(e).attr(\'name\'); var newName = oldName.replace(\'[groups][0]\', \'[groups][\' + numGroups + \']\'); $(e).attr(\'name\', newName)});';
+                // Append this new group into the form.
                 $sFiltersFormItems .= 'elemFilterConfig.append(elemGroup);';
                 $sFiltersFormItems .= '});';
                 $sFiltersFormItems .= '</SCRIPT>';
