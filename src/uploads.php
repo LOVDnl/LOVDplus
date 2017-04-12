@@ -259,15 +259,15 @@ if (PATH_COUNT == 2 && ACTION == 'curation_upload') {
 
                 // Generate the new file name based on the file type and the ID to be used.
                 // First, check if the file type exists in the $aFiletypes array.
-                $sFileName = '';
+                $sFileName = $aFileTypes[$_POST['mode']]['linked_to'] . ':';
                 if ($aFileTypes[$_POST['mode']]) {
                     if ($aFileTypes[$_POST['mode']]['linked_to'] == 'variant') {
-                        $sFileName = $nID . '-' . $_POST['mode'];
+                        $sFileName .= $nID . '-' . $_POST['mode'];
                     } elseif ($aFileTypes[$_POST['mode']]['linked_to'] == 'summary_annotation') {
                         if (empty($saID)) {
                             lovd_errorAdd('import', 'Summary annotation ID required for this file type.');
                         } else {
-                            $sFileName = $saID . '-' . $_POST['mode'];
+                            $sFileName .= $saID . '-' . $_POST['mode'];
                         }
                     } else {
                         lovd_errorAdd('import', 'Error: could not generate file name - missing ID value.');

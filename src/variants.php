@@ -642,6 +642,9 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && !ACTION) {
 
     // Only show attachment upload form if enabled in LOVD and this intance has a list of file types in the adapter.
     if (!empty($_SETT['attachment_file_types']) && !empty($_SETT['attachment_max_size']) && !empty($_INSTANCE_CONFIG['file_uploads'])) {
+        // FIXME: Put all of this in functions (one for the upload form, one for showing the attachments).
+        // Put summary annotation file type with the summary annotation, to prevent confusion,
+        //  improve clarity what it belongs to, and to make the code simpler.
         require ROOT_PATH . 'inc-lib-form.php';
         print('
             <BR>
@@ -670,12 +673,15 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && !ACTION) {
                   <TD><INPUT type="submit" value="Upload file"></TD></TR></TABLE></FORM><BR>' . "\n\n");
         $sCurationFilesPath = $_INI['paths']['attachments'];
         // Search for curations files and display links to files if they exist in the curation files directory. This uses the glob php function to perform search.
-        $nFiles = 0;
-        foreach ($_INSTANCE_CONFIG['file_uploads'] as $sFileType => $aFileType) {
-            $nFileID = ($aFileType['linked_to'] == 'summary_annotation' && !empty($sSummaryAnnotationsID)? $sSummaryAnnotationsID : $nID);
-            foreach (glob($sCurationFilesPath . "/" . $nFileID . "-" . $sFileType . "-*.*", GLOB_BRACE) as $sFileName) {
-                $nFiles++;
-                if ($nFiles == 1) {
+        // FIXME: When we turn this code into a function, replace the file prefix with the object type.
+        $sFileTypes = implode(',', array_keys($_INSTANCE_CONFIG['file_uploads']));
+        // This already sorts the files based on their name, meaning sorted based on file type and then time (ascending).
+        $aFiles = array_merge(
+            glob($sCurationFilesPath . '/variant:' . $nID . '-{' . $sFileTypes . '}-*', GLOB_BRACE),
+            glob($sCurationFilesPath . '/summary_annotation:' . $sSummaryAnnotationsID . '-{' . $sFileTypes . '}-*', GLOB_BRACE)
+        );
+        if (count($aFiles)) {
+            // At least one match.
                     print('
             <TABLE border="0" cellpadding="0" cellspacing="0" width="600" class="data" style="font-size: 13px;">
               <TR>
@@ -684,23 +690,27 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && !ACTION) {
                 <TH>File Type</TH>
                 <TH>Uploaded</TH>
                 <TH>Actions</TH></TR>');
-                }
+
+            foreach ($aFiles as $sFileName) {
                 // Parse the file name, use the basename and extension later.
                 $aPathInfo = pathinfo($sFileName);
+                $aFileNameParts = explode('-', $sFileName); // object:ID-type-time.ext.
+                $sFileTypeLabel = $_INSTANCE_CONFIG['file_uploads'][$aFileNameParts[1]]['label'];
                 $sDisableLinkStyle = 'style="pointer-events: none; text-decoration: none; color: grey;"';
                 $sDisablePreview = (strpos(array_search($aPathInfo['extension'], $_SETT['attachment_file_types']), 'image') === 0? '' : $sDisableLinkStyle);
                 $sDisableDelete = ($_AUTH['level'] >= LEVEL_OWNER && (!isset($zScreenings[0]) || !isset($zScreenings[0]['analysis_statusid']) || $zScreenings[0]['analysis_statusid'] == ANALYSIS_STATUS_IN_PROGRESS)? '' : $sDisableLinkStyle);
                 $sFileUrl = lovd_getInstallURL() . 'uploads/curation_files/' . $aPathInfo['basename'];
                 print('
               <TR>
-                <TD>' . $aFileType['label'] . '</TD>
+                <TD>' . $sFileTypeLabel . '</TD>
                 <TD>' . date('d M Y H:i A', filemtime($sFileName)) . '</TD>
                 <TD><A ' . $sDisablePreview . ' href="#" onclick="lovd_openWindow(\'' . $sFileUrl . '?preview&amp;in_window\', \'\', 1280, 720); return false;">Preview</A>
                   | <A href="' . $sFileUrl . '?download"  target="_blank">Download</A> 
                   | <A ' . $sDisableDelete . 'href="#" onclick="lovd_openWindow(\'' . $sFileUrl . '?remove&amp;in_window\', \'\', 780, 250); return false;">Delete</A></TD></TR>');
             }
+
+            print('</TABLE>');
         }
-        print('</TABLE>');
     }
 
     print('
