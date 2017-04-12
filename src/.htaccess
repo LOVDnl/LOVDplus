@@ -21,6 +21,7 @@ php_flag mysql.trace_mode Off
     RewriteRule ^analyses(.*)$ analyses.php
     RewriteRule ^announcements(.*)$ announcements.php
     RewriteRule ^api(.*)$ api.php
+    RewriteRule ^attachments(.*)$ attachments.php
     RewriteRule ^check_update(.*)$ check_update.php
     RewriteRule ^columns(.*)$ columns.php
     RewriteRule ^configuration(.*)$ configuration.php
@@ -48,7 +49,6 @@ php_flag mysql.trace_mode Off
     RewriteRule ^summary_annotations(.*)$ summary_annotations.php
     RewriteRule ^transcripts(.*)$ transcripts.php
     RewriteRule ^uninstall(.*)$ uninstall.php
-    RewriteRule ^uploads(.*)$ uploads.php
     RewriteRule ^users(.*)$ users.php
     RewriteRule ^variants(.*)$ variants.php
     RewriteRule ^view(.*)$ view.php

@@ -4,7 +4,7 @@
  * LEIDEN OPEN VARIATION DATABASE (LOVD)
  *
  * Created     : 2017-04-07
- * Modified    : 2017-04-11
+ * Modified    : 2017-04-12
  * For LOVD    : 3.0-18
  *
  * Copyright   : 2004-2017 Leiden University Medical Center; http://www.LUMC.nl/
@@ -37,13 +37,13 @@ require ROOT_PATH . 'inc-init.php';
 
 
 
-if ($_PE[1] == 'curation_files' && ACTION == 'download') {
-    // /uploads/curation_files/[curation file name]?download
-    // Let user download curation files if they are logged in.
+if (PATH_COUNT == 2 && ACTION == 'download') {
+    // /attachments/[attachment name]?download
+    // Let user download attachments if they are logged in.
     lovd_requireAUTH(LEVEL_ANALYZER);
 
-    // Get the location where we store curation files.
-    $sFileName = $_PE[2];
+    // Get the location where we store attachments.
+    $sFileName = $_PE[1];
     $sAbsoluteFileName = realpath($_INI['paths']['attachments'] . '/' . $sFileName);
     header('Content-Description: File Transfer');
     header('Content-Type: application/octet-stream');
@@ -58,16 +58,16 @@ if ($_PE[1] == 'curation_files' && ACTION == 'download') {
 
 
 
-if ($_PE[1] == 'curation_files' && ACTION == 'preview') {
-    // /uploads/curation_files/[image file name]?preview
+if (PATH_COUNT == 2 && ACTION == 'preview') {
+    // /attachments/[image file name]?preview
     // Simply display image on the browser for quick preview.
 
     lovd_requireAUTH(LEVEL_ANALYZER);
-    $sCurationFileName = $_PE[2];
-    define('PAGE_TITLE', 'Preview curation file');
+    $sFileName = $_PE[1];
+    define('PAGE_TITLE', 'Preview attachment');
     $_T->printHeader();
     $_T->printTitle();
-    $sFileUrl = lovd_getInstallURL() . 'uploads/curation_files/' . basename($sCurationFileName) . '?download';
+    $sFileUrl = lovd_getInstallURL() . 'attachments/' . basename($sFileName) . '?download';
     print('<IMG src="' . $sFileUrl . '" />');
     $_T->printFooter();
 
@@ -78,14 +78,14 @@ if ($_PE[1] == 'curation_files' && ACTION == 'preview') {
 
 
 
-if ($_PE[1] == 'curation_files' && ACTION == 'remove') {
-    // /uploads/curation_files/[image file name]?remove
-    // Delete existing curation files.
+if (PATH_COUNT == 2 && ACTION == 'delete') {
+    // /attachments/[attachment name]?delete
+    // Delete existing attachments.
     require ROOT_PATH . 'inc-lib-form.php';
-    $sCurationFileName = $_PE[2];
-    list($nID) = explode('-', $sCurationFileName);
-    define('LOG_EVENT', 'CurationFileRemove');
-    define('PAGE_TITLE', 'Delete curation file');
+    $sFileName = $_PE[1];
+    list($sObject, $nID) = preg_split('/[:-]/', $sFileName);
+    define('LOG_EVENT', 'AttachmentDelete');
+    define('PAGE_TITLE', 'Delete attachment');
     $_T->printHeader();
     $_T->printTitle();
 
@@ -104,13 +104,12 @@ if ($_PE[1] == 'curation_files' && ACTION == 'remove') {
     }
 
     if (!$bAuthorised) {
-        lovd_errorAdd('delete', 'You are not authorised to delete this file');
-        lovd_errorPrint();
+        lovd_showInfoTable('You are not authorised to delete this file.', 'stop');
         $_T->printFooter();
         exit;
     }
 
-    print('<P>Please enter your password to confirm that you want to delete this curation file <STRONG>' . $sCurationFileName . '</STRONG></P>' . "\n");
+    print('<P>Please enter your password to confirm that you want to delete this attachment <STRONG>' . $sFileName . '</STRONG></P>' . "\n");
     $aForm =
         array(
             array('POST', '', '', '', '', '', ''),
@@ -134,10 +133,10 @@ if ($_PE[1] == 'curation_files' && ACTION == 'remove') {
         }
 
         if (!lovd_error()) {
-            // Get the location where uploaded curation files are stored.
-            $sAbsoluteFileName = realpath($_INI['paths']['attachments'] . '/' . $sCurationFileName);
+            // Get the location where uploaded attachments are stored.
+            $sAbsoluteFileName = realpath($_INI['paths']['attachments'] . '/' . $sFileName);
 
-            // Remove the file permanently.
+            // Delete the file permanently.
             if (file_exists($sAbsoluteFileName) && unlink($sAbsoluteFileName)) {
                 lovd_showInfoTable('File deleted successfully.<BR>', 'success', 600);
                 if (strpos($nID, 'chr') === false) {
@@ -145,9 +144,9 @@ if ($_PE[1] == 'curation_files' && ACTION == 'remove') {
                 } else {
                     $sLogMessage = 'summary annotation DBID #' . $nID;
                 }
-                lovd_writeLog('Event', LOG_EVENT, 'File ' . $sCurationFileName . ' deleted for ' . $sLogMessage);
+                lovd_writeLog('Event', LOG_EVENT, 'File ' . $sFileName . ' deleted for ' . $sLogMessage);
             } else {
-                lovd_errorAdd('delete', 'Failed to delete curation file ' . $sCurationFileName);
+                lovd_errorAdd('delete', 'Failed to delete attachment ' . $sFileName);
             }
 
             //  Set this popup to close after a few seconds and then refresh the variant VE to show the new file has bee uploaded.
@@ -171,9 +170,10 @@ if ($_PE[1] == 'curation_files' && ACTION == 'remove') {
 
 
 
-if (PATH_COUNT == 2 && ACTION == 'curation_upload') {
-    // URL: uploads?curation_upload&summaryannotationid=chrX_XXXXXX
-    // Upload a file during variant curation.
+if (PATH_COUNT == 2 && ACTION == 'upload') {
+    // URL: attachments/0000000001?upload
+    // URL: attachments/0000000001?upload&summaryannotationid=chrX_000001
+    // Upload an attachment.
 
     require ROOT_PATH . 'inc-lib-form.php';
     $_T->printHeader();
@@ -198,7 +198,7 @@ if (PATH_COUNT == 2 && ACTION == 'curation_upload') {
     }
 
     if (!$bAuthorised) {
-        lovd_showInfoTable('You are not authorised to upload curation file for this screening.', 'stop');
+        lovd_showInfoTable('You are not authorised to upload an attachment for this screening.', 'stop');
 
         if (isset($_GET['in_window'])) {
             // We're in a new window, refresh opener and close window.
@@ -210,12 +210,11 @@ if (PATH_COUNT == 2 && ACTION == 'curation_upload') {
     }
 
     if (empty($_INSTANCE_CONFIG['file_uploads'])) {
-        lovd_errorAdd('mode', 'Failed to upload curation file');
-        lovd_errorPrint();
+        lovd_showInfoTable('The attachment feature is turned off for this LOVD instance.', 'stop');
         $_T->printFooter();
         exit;
     }
-    $saID = $_GET['summaryannotationid'];
+    $saID = (!isset($_GET['summaryannotationid'])? '' : $_GET['summaryannotationid']);
     if ($_POST['mode'] == '' ) {
         lovd_errorAdd('mode', 'The file type is not set!');
     }
