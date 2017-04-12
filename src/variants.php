@@ -642,7 +642,7 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && !ACTION) {
     print('</TABLE>');
 
     // Only show attachment upload form if enabled in LOVD and this intance has a list of file types in the adapter.
-    if (!empty($_SETT['attachment_file_types']) && !empty($_SETT['attachment_max_size']) && !empty($_INSTANCE_CONFIG['file_uploads'])) {
+    if (!empty($_SETT['attachment_file_types']) && !empty($_SETT['attachment_max_size']) && !empty($_INSTANCE_CONFIG['attachments'])) {
         // FIXME: Put all of this in functions (one for the upload form, one for showing the attachments).
         // Put summary annotation file type with the summary annotation, to prevent confusion,
         //  improve clarity what it belongs to, and to make the code simpler.
@@ -665,7 +665,7 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && !ACTION) {
                   <TD>
                     <SELECT name="mode">
                       <OPTION value="">-- select --</OPTION>');
-        foreach ($_INSTANCE_CONFIG['file_uploads'] as $sFileType => $aFileType) {
+        foreach ($_INSTANCE_CONFIG['attachments'] as $sFileType => $aFileType) {
             if ($aFileType['linked_to'] == 'variant' || ($aFileType['linked_to'] == 'summary_annotation' && $sSummaryAnnotationsID)) {
                 // Show only options meant for Variants or the Summary Annotation Record (if this variant has one).
                 print('
@@ -679,7 +679,7 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && !ACTION) {
         $sAttachmentFilesPath = $_INI['paths']['attachments'];
         // Search for attachments and display links to them if they exist in the attachments directory. This uses the glob php function to perform the search.
         // FIXME: When we turn this code into a function, replace the file prefix with the object type.
-        $sFileTypes = implode(',', array_keys($_INSTANCE_CONFIG['file_uploads']));
+        $sFileTypes = implode(',', array_keys($_INSTANCE_CONFIG['attachments']));
         // This already sorts the files based on their name, meaning sorted based on file type and then time (ascending).
         $aFiles = array_merge(
             glob($sAttachmentFilesPath . '/variant:' . $nID . '-{' . $sFileTypes . '}-*', GLOB_BRACE),
@@ -699,7 +699,7 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && !ACTION) {
                 $aPathInfo = pathinfo($sFileName);
                 // Explode the file into parts
                 $aFileNameParts = explode('-', $aPathInfo['filename']); // object:ID-type-time.ext.
-                $sFileTypeLabel = $_INSTANCE_CONFIG['file_uploads'][$aFileNameParts[1]]['label'];
+                $sFileTypeLabel = $_INSTANCE_CONFIG['attachments'][$aFileNameParts[1]]['label'];
                 $sDisableLinkStyle = 'style="pointer-events: none; text-decoration: none; color: grey;"';
                 $sDisablePreview = (strpos(array_search($aPathInfo['extension'], $_SETT['attachment_file_types']), 'image') === 0? '' : $sDisableLinkStyle);
                 $sDisableDelete = ($_AUTH['level'] >= LEVEL_OWNER && (!isset($zScreenings[0]) || !isset($zScreenings[0]['analysis_statusid']) || $zScreenings[0]['analysis_statusid'] == ANALYSIS_STATUS_IN_PROGRESS)? '' : $sDisableLinkStyle);

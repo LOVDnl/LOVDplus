@@ -40,12 +40,23 @@ require ROOT_PATH . 'inc-init.php';
 if (PATH_COUNT == 2 && ACTION == 'download') {
     // /attachments/[attachment name]?download
     // Let user download attachments if they are logged in.
+
     lovd_requireAUTH(LEVEL_ANALYZER);
 
     // Get the location where we store attachments.
     $sFileName = $_PE[1];
     $sAbsoluteFileName = realpath($_INI['paths']['attachments'] . '/' . $sFileName);
+
+    // Check if file actually exists.
+    if (!is_readable($sAbsoluteFileName)) {
+        $_T->printHeader(false);
+        lovd_showInfoTable('File does not exist.', 'stop');
+        $_T->printFooter();
+        exit;
+    }
+
     header('Content-Description: File Transfer');
+    // FIXME: Add proper Content-Type?
     header('Content-Type: application/octet-stream');
     header('Content-Disposition: attachment; filename=' . $sFileName);
     header('Content-Length: ' . filesize($sAbsoluteFileName));
@@ -63,10 +74,29 @@ if (PATH_COUNT == 2 && ACTION == 'preview') {
     // Simply display image on the browser for quick preview.
 
     lovd_requireAUTH(LEVEL_ANALYZER);
+
     $sFileName = $_PE[1];
+    $sAbsoluteFileName = realpath($_INI['paths']['attachments'] . '/' . $sFileName);
+
     define('PAGE_TITLE', 'Preview attachment');
     $_T->printHeader();
     $_T->printTitle();
+
+    // Check if file actually exists.
+    if (!is_readable($sAbsoluteFileName)) {
+        lovd_showInfoTable('File does not exist.', 'stop');
+        $_T->printFooter();
+        exit;
+    }
+
+    // Only preview if it's an image.
+    $aPathInfo = pathinfo($sFileName);
+    if (strpos(array_search($aPathInfo['extension'], $_SETT['attachment_file_types']), 'image') !== 0) {
+        lovd_showInfoTable('File is not an image.', 'stop');
+        $_T->printFooter();
+        exit;
+    }
+
     $sFileUrl = lovd_getInstallURL() . 'attachments/' . basename($sFileName) . '?download';
     print('<IMG src="' . $sFileUrl . '" />');
     $_T->printFooter();
@@ -209,7 +239,7 @@ if (PATH_COUNT == 2 && ACTION == 'upload') {
         exit;
     }
 
-    if (empty($_INSTANCE_CONFIG['file_uploads'])) {
+    if (empty($_INSTANCE_CONFIG['attachments'])) {
         lovd_showInfoTable('The attachment feature is turned off for this LOVD instance.', 'stop');
         $_T->printFooter();
         exit;
@@ -254,7 +284,7 @@ if (PATH_COUNT == 2 && ACTION == 'upload') {
 
             } else {
                 // This array stores the file extensions and file types and whether the file is to be saved using nID or saID.
-                $aFileTypes = $_INSTANCE_CONFIG['file_uploads'];
+                $aFileTypes = $_INSTANCE_CONFIG['attachments'];
 
                 // Generate the new file name based on the file type and the ID to be used.
                 // First, check if the file type exists in the $aFiletypes array.

@@ -63,7 +63,7 @@ $_INSTANCE_CONFIG['viewlists']['CustomVL_AnalysisRunResults_for_I_VE']['cols_to_
     'vog_effect',
 );
 
-$_INSTANCE_CONFIG['file_uploads'] = array(
+$_INSTANCE_CONFIG['attachments'] = array(
         'igv' => array(
             'linked_to' => 'variant',
             'label' => 'IGV screenshot'),
