@@ -134,20 +134,9 @@ if (PATH_COUNT == 2 && ACTION == 'delete') {
         exit;
     }
 
-    print('<P>Please enter your password to confirm that you want to delete this attachment <STRONG>' . $sFileName . '</STRONG></P>' . "\n");
-    $aForm =
-        array(
-            array('POST', '', '', '', '', '', ''),
-            array('Enter your password for authorization', '', 'password', 'password', 20),
-            'skip',
-            array('', '', 'submit', 'Delete file')
-        );
-
-    print('<FORM action="" method="POST">' . "\n");
-    lovd_viewForm($aForm);
-    print('</FORM>');
-
     if (POST)  {
+        lovd_errorClean();
+
         // User had to enter his/her password for authorization.
         if (empty($_POST['password'])) {
             lovd_errorAdd('password', 'Please fill in the \'Enter your password for authorization\' field.');
@@ -163,7 +152,7 @@ if (PATH_COUNT == 2 && ACTION == 'delete') {
 
             // Delete the file permanently.
             if (file_exists($sAbsoluteFileName) && unlink($sAbsoluteFileName)) {
-                lovd_showInfoTable('File deleted successfully.<BR>', 'success', 600);
+                lovd_showInfoTable('File deleted successfully.<BR>', 'success');
                 if (strpos($nID, 'chr') === false) {
                     $sLogMessage = 'variant #' . $nID;
                 } else {
@@ -174,19 +163,38 @@ if (PATH_COUNT == 2 && ACTION == 'delete') {
                 lovd_errorAdd('delete', 'Failed to delete attachment ' . $sFileName);
             }
 
-            //  Set this popup to close after a few seconds and then refresh the variant VE to show the new file has bee uploaded.
+            // Set this popup to close after a few seconds and then refresh the variant VE to show the new file has been deleted.
             if (!lovd_error() && isset($_GET['in_window'])) {
                 // We're in a new window, refresh opener and close window.
                 print('<SCRIPT type="text/javascript">setTimeout(\'opener.location.reload();self.close();\', 1000);</SCRIPT>' . "\n\n");
             }
+
+            $_T->printFooter();
+            exit;
+
         } else {
             unset($_POST['password']);
         }
-        print('<BR/>');
-        lovd_errorPrint();
     }
-    $_T->printFooter();
 
+
+
+    lovd_errorPrint();
+
+    print('      Please enter your password to confirm that you want to delete this attachment <B>' . $sFileName . '</B>' . "\n");
+    $aForm =
+        array(
+            array('POST', '', '', '', '', '', ''),
+            array('Enter your password for authorization', '', 'password', 'password', 20),
+            'skip',
+            array('', '', 'submit', 'Delete file')
+        );
+
+    print('      <FORM action="' . CURRENT_PATH . '?' . ACTION . '" method="POST">' . "\n");
+    lovd_viewForm($aForm);
+    print('</FORM>');
+
+    $_T->printFooter();
     exit;
 }
 
@@ -213,7 +221,7 @@ if (PATH_COUNT == 2 && ACTION == 'upload') {
          FROM ' . TABLE_SCREENINGS . ' AS s
          INNER JOIN ' . TABLE_SCR2VAR . ' AS s2v 
            ON (s.id = s2v.screeningid AND s2v.variantid = ?)', array($nID))->fetchColumn();
-    if ($nAnalysisStatus != ANALYSIS_STATUS_IN_PROGRESS || $_AUTH['level'] < LEVEL_OWNER || true) {
+    if ($nAnalysisStatus != ANALYSIS_STATUS_IN_PROGRESS || $_AUTH['level'] < LEVEL_OWNER) {
         lovd_showInfoTable('You are not authorised to upload an attachment for this screening.', 'stop');
 
         $_T->printFooter();
