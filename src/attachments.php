@@ -111,29 +111,24 @@ if (PATH_COUNT == 2 && ACTION == 'preview') {
 if (PATH_COUNT == 2 && ACTION == 'delete') {
     // /attachments/[attachment name]?delete
     // Delete existing attachments.
+
     require ROOT_PATH . 'inc-lib-form.php';
+
     $sFileName = $_PE[1];
     list($sObject, $nID) = preg_split('/[:-]/', $sFileName);
+
     define('LOG_EVENT', 'AttachmentDelete');
     define('PAGE_TITLE', 'Delete attachment');
     $_T->printHeader();
     $_T->printTitle();
 
-    $bAuthorised = false;
-
-    $sSQL = 'SELECT s.analysis_statusid
-             FROM ' . TABLE_SCREENINGS . ' AS s
-             INNER JOIN ' . TABLE_SCR2VAR . ' AS s2v 
-             ON (s.id = s2v.screeningid AND s2v.variantid = ?)';
-    $aResult = $_DB->query($sSQL, array($nID))->fetchAssoc();
-
-    if ($aResult['analysis_statusid'] == ANALYSIS_STATUS_IN_PROGRESS) {
-        if ($_AUTH['level'] >= LEVEL_OWNER) {
-            $bAuthorised = true;
-        }
-    }
-
-    if (!$bAuthorised) {
+    // Analysis status should be "in progress" and $_AUTH level should be owner or higher.
+    $nAnalysisStatus = $_DB->query(
+        'SELECT s.analysis_statusid
+         FROM ' . TABLE_SCREENINGS . ' AS s
+         INNER JOIN ' . TABLE_SCR2VAR . ' AS s2v 
+           ON (s.id = s2v.screeningid AND s2v.variantid = ?)', array($nID))->fetchColumn();
+    if ($nAnalysisStatus != ANALYSIS_STATUS_IN_PROGRESS || $_AUTH['level'] < LEVEL_OWNER) {
         lovd_showInfoTable('You are not authorised to delete this file.', 'stop');
         $_T->printFooter();
         exit;
@@ -199,7 +194,6 @@ if (PATH_COUNT == 2 && ACTION == 'delete') {
 
 
 
-
 if (PATH_COUNT == 2 && ACTION == 'upload') {
     // URL: attachments/0000000001?upload
     // URL: attachments/0000000001?upload&summaryannotationid=chrX_000001
@@ -213,27 +207,14 @@ if (PATH_COUNT == 2 && ACTION == 'upload') {
 
     lovd_errorClean();
 
-    $bAuthorised = false;
-
-    $sSQL = 'SELECT s.analysis_statusid
-             FROM ' . TABLE_SCREENINGS . ' AS s
-             INNER JOIN ' . TABLE_SCR2VAR . ' AS s2v 
-             ON (s.id = s2v.screeningid AND s2v.variantid = ?)';
-    $aResult = $_DB->query($sSQL, array($nID))->fetchAssoc();
-
-    if ($aResult['analysis_statusid'] == ANALYSIS_STATUS_IN_PROGRESS) {
-        if ($_AUTH['level'] >= LEVEL_OWNER) {
-            $bAuthorised = true;
-        }
-    }
-
-    if (!$bAuthorised) {
+    // Analysis status should be "in progress" and $_AUTH level should be owner or higher.
+    $nAnalysisStatus = $_DB->query(
+        'SELECT s.analysis_statusid
+         FROM ' . TABLE_SCREENINGS . ' AS s
+         INNER JOIN ' . TABLE_SCR2VAR . ' AS s2v 
+           ON (s.id = s2v.screeningid AND s2v.variantid = ?)', array($nID))->fetchColumn();
+    if ($nAnalysisStatus != ANALYSIS_STATUS_IN_PROGRESS || $_AUTH['level'] < LEVEL_OWNER || true) {
         lovd_showInfoTable('You are not authorised to upload an attachment for this screening.', 'stop');
-
-        if (isset($_GET['in_window'])) {
-            // We're in a new window, refresh opener and close window.
-            print('      <SCRIPT type="text/javascript">setTimeout(\'window.location = document.referrer;\', 2000);</SCRIPT>' . "\n\n");
-        }
 
         $_T->printFooter();
         exit;
