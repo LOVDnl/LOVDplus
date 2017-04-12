@@ -43,6 +43,12 @@ table_prefix = lovd
 
 [paths]
 
+# The following path is where LOVD will store uploaded attachments, which are
+# file uploads attached to variants or other data types.
+# This directory should NOT be within the LOVD directory or any other part of
+# the disk that is served by a webserver like Apache (i.e., the document root).
+attachments =
+
 # The following path contains data files to load into LOVD+.
 data_files =
 

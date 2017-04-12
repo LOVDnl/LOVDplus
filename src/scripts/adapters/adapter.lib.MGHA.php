@@ -57,6 +57,21 @@ $_INSTANCE_CONFIG['viewlists']['CustomVL_AnalysisRunResults_for_I_VE'] = array(
     )
 );
 
+$_INSTANCE_CONFIG['attachments'] = array(
+        'igv' => array(
+            'linked_to' => 'variant',
+            'label' => 'IGV screenshot'),
+        'ucsc' => array(
+            'linked_to' => 'summary_annotation',  // This file is stored using the Summary Annotation Record DBID.
+            'label' => 'UCSC screenshot (Summary Annotation)'),
+        'confirmation' => array(
+            'linked_to' => 'variant',
+            'label' => 'Confirmation screenshot'),
+        'workfile' => array(
+            'linked_to' => 'variant',
+            'label' => 'Excel file')
+);
+
 
 $_INSTANCE_CONFIG['conversion'] = array(
     'max_annotation_error_allowed' => 20,

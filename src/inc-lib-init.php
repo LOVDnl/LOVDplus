@@ -1083,6 +1083,12 @@ function lovd_parseConfigFile($sConfigFile)
                     'path_is_readable' => true,
                     'path_is_writable' => true,
                 ),
+            'uploaded_files' =>
+                array(
+                    'required' => false,
+                    'path_is_readable' => true,
+                    'path_is_writable' => true,
+                ),
             'alternative_ids' =>
                 array(
                     'required' => false,
