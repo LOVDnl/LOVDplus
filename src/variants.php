@@ -293,23 +293,23 @@ if (PATH_COUNT == 3 && $_PE[1] == 'DBID' && preg_match('/^chr/', $_PE[2]) && !AC
 
 
 
-if (PATH_COUNT == 3 && $_PE[1] == 'DBID' && preg_match('/^chr/', $_PE[2]) && !ACTION) {
+if (PATH_COUNT == 3 && $_PE[1] == 'DBID' && preg_match('/^chr/', $_PE[2]) && !empty($_GET['search_variantid']) && !ACTION) {
     // URL: /variants/DBID/chr_00001
-    // View all genomic variant entries with the same DBID.
-    $sDbId = $_PE[2];
+    // View all genomic variant entries with the same DBID, but only if the correct variant ID has been given.
+    // This view is used for LOVD+ to show other observations of any given variant, without just allowing any DBID to be shown.
+
+    $sDBID = $_PE[2];
     define('PAGE_TITLE', 'View genomic variants');
     $_T->printHeader();
     $_T->printTitle();
 
     lovd_requireAUTH(LEVEL_MANAGER);
 
-    if (!empty($_GET['search_variantid'])) {
-        require ROOT_PATH . 'class/object_custom_viewlists.mod.php';
-        $_DATA = new LOVD_CustomViewListMOD(array('VariantOnGenome', 'VariantOnTranscript', 'Screening', 'Individual'));
+    require ROOT_PATH . 'class/object_custom_viewlists.mod.php';
+    $_DATA = new LOVD_CustomViewListMOD(array('VariantOnGenome', 'VariantOnTranscript', 'Screening', 'Individual'));
 
-        $_GET['search_VariantOnGenome/DBID'] = '="' . $sDbId . '"';
-        $_DATA->viewList('CustomVL_ObsCounts');
-    }
+    $_GET['search_VariantOnGenome/DBID'] = '="' . $sDBID . '"';
+    $_DATA->viewList('CustomVL_ObsCounts');
 
     $_T->printFooter();
     exit;
@@ -620,6 +620,7 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && !ACTION) {
     print('
           </TD>
           <TD valign="top" id="summary_annotation_view_entry" style="padding-left: 10px;">' . "\n\n\n");
+    // RIGHT COLUMN on the variant view entry.
 
     // Load the variant data so as we can search by the DBID.
     if ($zData['summaryannotationid']) {
@@ -670,7 +671,6 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && !ACTION) {
 
     // Observation counts.
     if (!empty($_INSTANCE_CONFIG['observation_counts'])) {
-        // RIGHT COLUMN on the variant view entry.
         print('            <BR><BR>' . "\n\n");
         require_once ROOT_PATH . 'class/observation_counts.php';
         $aSettings = (!empty($_INSTANCE_CONFIG['observation_counts'])? $_INSTANCE_CONFIG['observation_counts'] : array());
@@ -681,8 +681,9 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && !ACTION) {
         print($zObsCount->display($aSettings));
         print('</DIV>');
 ?>
-<SCRIPT type="text/javascript">
-        function lovd_generate_obscount(nVariantID) {
+        <SCRIPT type="text/javascript">
+          function lovd_generate_obscount (nVariantID)
+          {
             $('#obscount-loading').show();
             $('#obscount-header-genepanel').hide();
             $('#obscount-data-genepanel').hide();
@@ -694,13 +695,12 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && !ACTION) {
             var url = 'ajax/generate_observation_counts.php';
             var data = { "nVariantID" : nVariantID };
 
-            $.post(url, data, function(data) {
+            $.post(url, data, function (data) {
                 $('#obscount-loading').hide();
                 $('#observation-counts').html(data);
             });
-
-        }
-</SCRIPT>
+          }
+        </SCRIPT>
 <?php
     }
 

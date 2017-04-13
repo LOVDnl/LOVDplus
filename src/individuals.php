@@ -286,7 +286,7 @@ if (PATH_COUNT >= 2 && ctype_digit($_PE[1]) && !ACTION && (PATH_COUNT == 2 || PA
 
         // Display a notice that 'apply_selected_gene_panels' is selected for this analysis,
         //  but no gene panel has been added to this individual.
-        if (empty($zData['gene_panels']) && empty($zData['custom_panel'] )) {
+        if (empty($zData['gene_panels']) && empty($zData['custom_panel'])) {
             print('<P>There is no Gene Panel assigned to this individual. To continue running this analysis, please try one of the following options: </P>
                    <UL>
                      <LI>Add a gene panel to this individual, OR</LI>

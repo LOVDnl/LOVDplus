@@ -39,6 +39,6 @@ $_INSTANCE_CONFIG['observation_counts'] = array(
             'all',
             'Individual/Gender',
         ),
-        'min_population_size' => 1,
+        'min_population_size' => 100,
     ),
 );

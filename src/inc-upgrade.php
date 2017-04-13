@@ -719,7 +719,6 @@ if ($sCalcVersionFiles != $sCalcVersionDB) {
                  '3.0-17k' =>
                      array(
                          'ALTER TABLE ' . TABLE_VARIANTS . ' ADD COLUMN `obscount_json` TEXT NULL AFTER `confirmation_statusid`',
-//                         'INSERT INTO ' . TABLE_COLS . ' VALUES ("Individual/Affected", 255, 70, 0, 0, 0, "Affected",            "", "Whether individual is affected by disease","Whether individual is affected by disease","VARCHAR(100)","Affected|Whether individual is affected by disease|select|1|true|false|false","Affected\r\nNot Affected\r\nUnknown", "", 0, 1, 1, 0, NOW(), NULL, NULL)'
                      ),
                  '3.0-18' =>
                      array(
@@ -973,6 +972,17 @@ if ($sCalcVersionFiles != $sCalcVersionDB) {
                 //  be used by this LOVD+ instance, but the interface has the
                 //  power to decide now.
                 'ALTER TABLE ' . TABLE_GENES . ' MODIFY COLUMN id_hgnc INT(10) UNSIGNED',
+            )
+        );
+    }
+
+    if (LOVD_plus && $sCalcVersionDB < lovd_calculateVersion('3.0-17k') && lovd_verifyInstance('mgha')) {
+        // Run LOVD+ specific queries.
+
+        $aUpdates['3.0-17k'] = array_merge(
+            $aUpdates['3.0-17k'],
+            array(
+                'INSERT INTO ' . TABLE_COLS . ' VALUES ("Individual/Affected", 255, 70, 0, 0, 0, "Affected", "", "Whether individual is affected by disease","Whether individual is affected by disease","VARCHAR(100)","Affected|Whether individual is affected by disease|select|1|true|false|false","Affected\r\nNot Affected\r\nUnknown", "", 0, 1, 1, 0, NOW(), NULL, NULL)'
             )
         );
     }
