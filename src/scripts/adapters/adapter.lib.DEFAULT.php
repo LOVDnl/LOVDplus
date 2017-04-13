@@ -125,6 +125,10 @@ $_INSTANCE_CONFIG['conversion'] = array(
 // This is the default configuration of the observation count feature.
 // To disable this feature completely, set 'observation_counts' to an empty
 //  array in your instance-specific settings.
+// FIXME: Make the columns configurable like the categories; just let the
+//  instances select which columns they want; the values are defined elsewhere.
+//  Now, every instance has to redefine the labels, but never does actually
+//  change them.
 $_INSTANCE_CONFIG['observation_counts'] = array(
     // If you want to display the gene panel observation counts using the default
     //  configuration, you can also simply write: 'genepanel' => array(),

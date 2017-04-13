@@ -4,7 +4,7 @@
  * LEIDEN OPEN VARIATION DATABASE (LOVD)
  *
  * Created     : 2017-01-12
- * Modified    : 2017-03-17
+ * Modified    : 2017-04-13
  * For LOVD    : 3.0-18
  *
  * Copyright   : 2004-2017 Leiden University Medical Center; http://www.LUMC.nl/
@@ -35,16 +35,17 @@ require ROOT_PATH . 'inc-init.php';
 if (!empty($_POST['nVariantID'])) {
     $nID = $_POST['nVariantID'];
 } else {
-    print '<TABLE width="600" class="data">
-             <TR><TH style="font-size : 13px;">Observation Counts</TH></TR>
-             <TR><TD>Failed to upload Observation Counts data</TD></TR>
-           </TABLE>';
-    exit;
+    die('
+            <TABLE width="600" class="data">
+              <TR><TH style="font-size : 13px;">Observation Counts</TH></TR>
+              <TR><TD>Failed to upload Observation Counts data</TD></TR>
+            </TABLE>');
 }
 
 require_once ROOT_PATH . 'class/observation_counts.php';
 $aSettings = (!empty($_INSTANCE_CONFIG['observation_counts'])? $_INSTANCE_CONFIG['observation_counts'] : array());
 $zObsCount = new LOVD_ObservationCounts($nID);
-$aData = $zObsCount->buildData($aSettings);
+$zObsCount->buildData($aSettings);
 
 print($zObsCount->display($aSettings));
+?>

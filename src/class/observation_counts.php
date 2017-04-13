@@ -40,6 +40,8 @@ class LOVD_ObservationCounts
     // It includes:
     // - How the SQL query is constructed to get the data for each cateogory.
     // - Whether observation counts data can be updated depending on status of the screening and role of the user.
+    // - Generating and storing the data.
+    // - Displaying the data.
 
     protected $aData = array(); // Store the observation counts data fetched from the database or calculated by buildData.
     protected $aIndividual = array(); // Store details of the individual where this variant is found.
@@ -74,61 +76,8 @@ class LOVD_ObservationCounts
     {
         // Generate observation counts data and store it in the database in json format.
         //
-        // $aSettings is expected in the following format
-        // array(
-        //    TYPE_ABC => array(
-        //      'columns' => array(
-        //          'col_key_1' => 'Column Label 1',
-        //          'col_key_2' => 'Column Label 2'
-        //       ),
-        //      'categories' => array(
-        //          'category_key_1',
-        //          'category_key_2'
-        //      )
-        //    ),
-        //
-        //    TYPE_XYZ => array(...)
-        // );
-        //
-        // Example:
-        // array(
-        // Q: Let's choose one spot in where to define these defaults?
-        // A: Just set them in the constructor.
-        //    // If we want to display gene panel observation counts using default config,
-        //    // then simply add 'genepanel' => array()
-        //
-        //    'genepanel' => array(
-        //
-        //        // If columns is empty, use default columns list
-        //        'columns' => array(
-        //            'value' => 'Gene Panel',
-        //            'total_individuals' => 'Total # Individuals',
-        //            'num_affected' => '# of Affected Individuals',
-        //            'num_not_affected' => '# of Unaffected Individuals',
-        //            'percentage' => 'Percentage (%)'
-        //        ),
-        //
-        //        // if categories is empty, use default categories list
-        //        'categories' => array()
-        //     ),
-        //
-        //    // If we want to display general categories observation counts using default config,
-        //    // then simply add 'general' => array()
-        //
-        //    'general' => array(
-        //
-        //        // if columns is empty, use default columns list
-        //        'columns' => array(
-        //            'label' => 'Category',
-        //            'value' => 'Value',
-        //            'threshold' => 'Percentage'
-        //        ),
-        //
-        //        // if categories is empty, use default categories list
-        //        'categories' => array(),
-        //        'min_population_size' => 100
-        //     )
-        // );
+        // $aSettings is the instance-specific observation count settings,
+        //  see the default adapter file for the format.
         global $_DB;
 
         // Check if current analysis status as well as user's permission allow data to be generated.
@@ -178,7 +127,7 @@ class LOVD_ObservationCounts
         $aData['updated'] = time();
         $sObscountJson = json_encode($aData);
 
-        $sSQL = "UPDATE " . TABLE_VARIANTS . " SET obscount_json = ? WHERE id = ?";
+        $sSQL = 'UPDATE ' . TABLE_VARIANTS . ' SET obscount_json = ? WHERE id = ?';
         $_DB->query($sSQL, array($sObscountJson, $this->nVariantID));
 
         lovd_writeLog('Event', LOG_EVENT, 'Created Observation Counts for variant #' . $this->nVariantID . '. JSON DATA: ' . $sObscountJson);
@@ -555,7 +504,6 @@ class LOVD_ObservationCounts
         global $_DB;
 
         // Query data related to this individual.
-        // Q: How to handle an individual with multiple screenings?
         $sSQL = 'SELECT i.*, s.*, vog.* 
                  FROM ' . TABLE_VARIANTS . ' AS vog 
                    INNER JOIN ' . TABLE_SCR2VAR . ' AS s2v ON (vog.id = s2v.variantid AND vog.id = ?) 
@@ -634,10 +582,10 @@ class LOVD_ObservationCounts
         );
 
         // Some columns require custom columns to be active.
-        // Q: Make this more efficient later.
-        $sSQL = 'SELECT colid FROM ' . TABLE_ACTIVE_COLS . ' WHERE colid = "Individual/Affected"';
-        $zResult = $_DB->query($sSQL)->fetchAssoc();
-        $bIndAffectedColActive = ($zResult && $zResult['colid']? true: false);
+        $bIndAffectedColActive = $_DB->query(
+            'SELECT COUNT(*) 
+             FROM ' . TABLE_ACTIVE_COLS . '
+             WHERE colid = "Individual/Affected"')->fetchColumn();
 
         if (!$bIndAffectedColActive) {
             unset($aAvailableColumns['genepanel']['num_affected']);
@@ -665,15 +613,14 @@ class LOVD_ObservationCounts
 
 
 
-    public function display($aSettings)
+    public function display ($aSettings)
     {
+        // Returns a string of html to display observation counts data.
         global $_AUTH;
 
-        // Returns a string of html to display observation counts data.
         $aData = $this->aData;
-        $bHasPermissionToViewVariants = ($_AUTH['level'] >= LEVEL_MANAGER? true: false);
+        $bHasPermissionToViewVariants = ($_AUTH['level'] >= LEVEL_MANAGER);
         $generateDataLink = ' <SPAN id="obscount-refresh"> | <A href="#" onClick="lovd_generate_obscount(\'' . $this->nVariantID . '\');return false;">Refresh Data</A></SPAN>';
-        $sMetadata = '';
         $sDataTables = '';
 
         if(!lovd_isAuthorized('variant', $this->nVariantID)) {
@@ -697,7 +644,7 @@ class LOVD_ObservationCounts
                 $sGeneralCategories .= '<TR><TD'. $sColspan .'>' . $aData['general']['error'] . '</TD></TR>';
             } else {
                 foreach ($aData['general'] as $sCategory => $aCategoryData) {
-                    // If threshold data has the greater than sign
+                    // If threshold data has the greater than sign, mark the row.
                     $sClass = '';
                     if (strpos($aData['general'][$sCategory]['threshold'], '>') !== false) {
                         $sClass = ' class="above-threshold"';
@@ -735,9 +682,9 @@ class LOVD_ObservationCounts
                                 }
                             }
 
-                            $sGenepanelCategories .= ($sCategory == 'all' ?'<TH>' : '<TD>');
-                            $sGenepanelCategories .= $sFormattedValue;
-                            $sGenepanelCategories .= ($sCategory == 'all' ?'</TH>' : '</TD>');
+                            $sGenepanelCategories .= ($sCategory == 'all'? '<TH>' : '<TD>') .
+                                                     $sFormattedValue .
+                                                     ($sCategory == 'all'? '</TH>' : '</TD>');
                         }
                         $sGenepanelCategories .= '</TR>';
                     }
@@ -749,8 +696,8 @@ class LOVD_ObservationCounts
                 $sGenepanelTable = '
             <TABLE id="obscount-table-genepanel" width="600" class="data">
               <TR id="obscount-header-genepanel"></TR>
-              <TBODY id="obscount-data-genepanel">' .
-                    '<TR>' . $sGenepanelColumns . '</TR>' .
+              <TBODY id="obscount-data-genepanel">
+                <TR>' . $sGenepanelColumns . '</TR>' .
                     $sGenepanelCategories . '
               </TBODY>
             </TABLE>';
@@ -761,17 +708,17 @@ class LOVD_ObservationCounts
                 $sGeneralTable = '
             <TABLE id="obscount-table-general" width="600" class="data">
               <TR id="obscount-header-general"></TR>
-              <TBODY id="obscount-data-general">' .
-                    '<TR>' . $sGeneralColumns . '</TR>' .
+              <TBODY id="obscount-data-general">
+                <TR>' . $sGeneralColumns . '</TR>' .
                     $sGeneralCategories . '
               </TBODY>
             </TABLE>';
             }
 
             $sMetadata = '
-            <TR id="obscount-info">
+              <TR id="obscount-info">
                 <TH>Data updated '. date('d M Y h:ia', $aData['updated']) .' | Population size was: ' . $aData['population_size'] . $generateDataLink . ' </TH>
-            </TR>';
+              </TR>';
 
             $sDataTables = $sGenepanelTable . $sGeneralTable;
         }
@@ -785,7 +732,6 @@ class LOVD_ObservationCounts
                 <TH>Loading data...</TH>
               </TR>
             </TABLE>' . $sDataTables;
-            ;
 
         return $sTable;
     }
