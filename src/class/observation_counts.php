@@ -5,7 +5,7 @@
  * LEIDEN OPEN VARIATION DATABASE (LOVD)
  *
  * Created     : 2017-01-12
- * Modified    : 2017-04-05
+ * Modified    : 2017-04-13
  * For LOVD    : 3.0-18
  *
  * Copyright   : 2004-2017 Leiden University Medical Center; http://www.LUMC.nl/
@@ -52,8 +52,6 @@ class LOVD_ObservationCounts
     // how the data should be calculated
     // Q: Why used and named like a constant, but not defined like one? (usage also not everywhere)
     // A: Just use a variable.
-    public static $TYPE_GENEPANEL = 'genepanel';
-    public static $TYPE_GENERAL = 'general';
     public static $EMPTY_DATA_DISPLAY = '-'; // How we want to show that a category does not have sufficient data to generate observation counts.
     public static $MAX_VAR_TO_ENABLE_LINK = 100; // The maximum number of variants where we allow url to be generated to view other variants in the same category.
 
@@ -148,28 +146,28 @@ class LOVD_ObservationCounts
 
             // Now, generate observation counts data for each type selected in the settings.
             switch ($sType) {
-                case static::$TYPE_GENERAL:
+                case 'general':
                     // Generic categories have the requirement that it can only be calculated if
                     // there is a minimum number of individuals (with screenings) in the database.
                     $minPopSize = static::$DEFAULT_MIN_POP_SIZE;
-                    if (isset($aSettings[static::$TYPE_GENERAL]['min_population_size'])) {
-                        $minPopSize = $aSettings[static::$TYPE_GENERAL]['min_population_size'];
+                    if (isset($aSettings['general']['min_population_size'])) {
+                        $minPopSize = $aSettings['general']['min_population_size'];
                     }
 
                     if ($aData['population_size'] < $minPopSize) {
-                        $aData[static::$TYPE_GENERAL]['error'] = 'Data cannot be generated because population size is too small.';
+                        $aData['general']['error'] = 'Data cannot be generated because population size is too small.';
                         break;
                     }
 
                     // Build the observation counts data for each category.
-                    $aData[static::$TYPE_GENERAL] = $this->generateData(static::$TYPE_GENERAL);
+                    $aData['general'] = $this->generateData('general');
                     break;
 
-                case static::$TYPE_GENEPANEL:
-                    $aData[static::$TYPE_GENEPANEL] = array();
+                case 'genepanel':
+                    $aData['genepanel'] = array();
                     foreach ($this->aIndividual['genepanels'] as $nGenePanelID => $sGenePanelName) {
                         // Build the observation counts data for each category.
-                        $aData[static::$TYPE_GENEPANEL][$nGenePanelID] = $this->generateData(static::$TYPE_GENEPANEL, $nGenePanelID);
+                        $aData['genepanel'][$nGenePanelID] = $this->generateData('genepanel', $nGenePanelID);
                     }
                     break;
             }
@@ -243,8 +241,6 @@ class LOVD_ObservationCounts
 
         // Previously from validateCategories():
         // These are the categories to choose from. We'll check which ones are needed, and generate the data for these.
-        // Q: Should this array, which is basically the default settings, be set in __construct()?
-        // A: Change it, if I want to. Make sure the way it's set, doesn't generate these notices anymore.
         static $aCategories;
         if (!$aCategories) {
             // FIXME: value, condition_args and required are often the same. We
@@ -261,7 +257,7 @@ class LOVD_ObservationCounts
             //      ),
             //  ),
             $aCategories = array(
-                static::$TYPE_GENEPANEL => array(
+                'genepanel' => array(
                     'all' => array(
                         'label' => 'Gene Panel',
                         'value' => '', // Will be replaced later, depends on the gene panel.
@@ -282,7 +278,7 @@ class LOVD_ObservationCounts
                         'required' => array('Individual/Origin/Ethnic'),
                     ),
                 ),
-                static::$TYPE_GENERAL => array(
+                'general' => array(
                     'all' => array(
                         'label' => 'All',
                         'value' => '',
@@ -395,7 +391,7 @@ class LOVD_ObservationCounts
             );
 
             // If this is the gene panel header, name it after the gene panel.
-            if ($sType == static::$TYPE_GENEPANEL && $sCategory == 'all' && isset($this->aIndividual['genepanels'][$nGenePanelID])) {
+            if ($sType == 'genepanel' && $sCategory == 'all' && isset($this->aIndividual['genepanels'][$nGenePanelID])) {
                 $aCategoryData['value'] = $this->aIndividual['genepanels'][$nGenePanelID];
             }
 
@@ -435,7 +431,7 @@ class LOVD_ObservationCounts
                 }
 
                 // Gene panel counts always need to restrict the count on the gene panel.
-                if ($sType == static::$TYPE_GENEPANEL) {
+                if ($sType == 'genepanel') {
                     $aRules['condition'] = 'genepanelid = ?' . (!$aRules['condition']? '' : ' AND ') . $aRules['condition'];
                     $aSQL = array_merge(array($nGenePanelID), $aSQL);
                 }
@@ -620,7 +616,7 @@ class LOVD_ObservationCounts
         // Q: Should this array, which is basically the default settings, be set in __construct()?
         // A: Change it if I want to.
         $aAvailableColumns = array(
-            static::$TYPE_GENEPANEL => array(
+            'genepanel' => array(
                 'label' => 'Category',
                 'value' => 'Gene Panel',
                 'total_individuals' => 'Total # Individuals',
@@ -629,7 +625,7 @@ class LOVD_ObservationCounts
                 'num_ind_with_variant' => '# of Unaffected Individuals',
                 'percentage' => 'Percentage (%)'
             ),
-            static::$TYPE_GENERAL => array(
+            'general' => array(
                 'label' => 'Category',
                 'value' => 'Value',
                 'percentage' => 'Percentage',
@@ -644,8 +640,8 @@ class LOVD_ObservationCounts
         $bIndAffectedColActive = ($zResult && $zResult['colid']? true: false);
 
         if (!$bIndAffectedColActive) {
-            unset($aAvailableColumns[static::$TYPE_GENEPANEL]['num_affected']);
-            unset($aAvailableColumns[static::$TYPE_GENEPANEL]['num_not_affected']);
+            unset($aAvailableColumns['genepanel']['num_affected']);
+            unset($aAvailableColumns['genepanel']['num_not_affected']);
         }
 
         // Now build the list of valid columns for this LOVD instance.
@@ -691,24 +687,24 @@ class LOVD_ObservationCounts
 
             // General categories table.
             $sGeneralColumns = '';
-            foreach ($aSettings[static::$TYPE_GENERAL]['columns'] as $sKey => $sLabel) {
+            foreach ($aSettings['general']['columns'] as $sKey => $sLabel) {
                 $sGeneralColumns .= '<TH>' . $sLabel . '</TH>';
             }
 
             $sGeneralCategories = '';
-            if (!empty($aData[static::$TYPE_GENERAL]['error'])) {
-                $sColspan = ' colspan="' . count($aSettings[static::$TYPE_GENERAL]['columns']) . '"';
-                $sGeneralCategories .= '<TR><TD'. $sColspan .'>' . $aData[static::$TYPE_GENERAL]['error'] . '</TD></TR>';
+            if (!empty($aData['general']['error'])) {
+                $sColspan = ' colspan="' . count($aSettings['general']['columns']) . '"';
+                $sGeneralCategories .= '<TR><TD'. $sColspan .'>' . $aData['general']['error'] . '</TD></TR>';
             } else {
-                foreach ($aData[static::$TYPE_GENERAL] as $sCategory => $aCategoryData) {
+                foreach ($aData['general'] as $sCategory => $aCategoryData) {
                     // If threshold data has the greater than sign
                     $sClass = '';
-                    if (strpos($aData[static::$TYPE_GENERAL][$sCategory]['threshold'], '>') !== false) {
+                    if (strpos($aData['general'][$sCategory]['threshold'], '>') !== false) {
                         $sClass = ' class="above-threshold"';
                     }
 
                     $sGeneralCategories .= '<TR' . $sClass . '>';
-                    foreach ($aSettings[static::$TYPE_GENERAL]['columns'] as $sKey => $sLabel) {
+                    foreach ($aSettings['general']['columns'] as $sKey => $sLabel) {
                         $sGeneralCategories .= '<TD>' . $aCategoryData[$sKey] . '</TD>';
                     }
                     $sGeneralCategories .= '</TR>';
@@ -717,19 +713,19 @@ class LOVD_ObservationCounts
 
             // Gene panel categories table.
             $sGenepanelColumns = '';
-            foreach ($aSettings[static::$TYPE_GENEPANEL]['columns'] as $sKey => $sLabel) {
+            foreach ($aSettings['genepanel']['columns'] as $sKey => $sLabel) {
                 $sGenepanelColumns .= '<TH>' . $sLabel . '</TH>';
             }
 
             $sGenepanelCategories = '';
-            if (!empty($aData[static::$TYPE_GENEPANEL]['error'])) {
-                $sColspan = ' colspan="' . count($aSettings[static::$TYPE_GENEPANEL]['columns']) . '"';
-                $sGenepanelCategories .= '<TR><TD'. $sColspan .'>' . $aData[static::$TYPE_GENEPANEL]['error'] . '</TD></TR>';
+            if (!empty($aData['genepanel']['error'])) {
+                $sColspan = ' colspan="' . count($aSettings['genepanel']['columns']) . '"';
+                $sGenepanelCategories .= '<TR><TD'. $sColspan .'>' . $aData['genepanel']['error'] . '</TD></TR>';
             } else {
-                foreach ($aData[static::$TYPE_GENEPANEL] as $sGpId => $aGpData) {
+                foreach ($aData['genepanel'] as $sGpId => $aGpData) {
                     foreach ($aGpData as $sCategory => $aCategoryData) {
                         $sGenepanelCategories .= '<TR>';
-                        foreach ($aSettings[static::$TYPE_GENEPANEL]['columns'] as $sKey => $sLabel) {
+                        foreach ($aSettings['genepanel']['columns'] as $sKey => $sLabel) {
                             $sFormattedValue = $aCategoryData[$sKey];
 
                             if ($sKey == 'percentage' && $bHasPermissionToViewVariants) {
@@ -749,7 +745,7 @@ class LOVD_ObservationCounts
             }
 
             $sGenepanelTable = '';
-            if (!empty($aData[static::$TYPE_GENEPANEL])) {
+            if (!empty($aData['genepanel'])) {
                 $sGenepanelTable = '
             <TABLE id="obscount-table-genepanel" width="600" class="data">
               <TR id="obscount-header-genepanel"></TR>
@@ -761,7 +757,7 @@ class LOVD_ObservationCounts
             }
 
             $sGeneralTable = '';
-            if (!empty($aData[static::$TYPE_GENERAL])) {
+            if (!empty($aData['general'])) {
                 $sGeneralTable = '
             <TABLE id="obscount-table-general" width="600" class="data">
               <TR id="obscount-header-general"></TR>
