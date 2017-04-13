@@ -42,6 +42,10 @@ if ($_AUTH) {
     require ROOT_PATH . 'inc-upgrade.php';
 }
 
+
+
+
+
 // DIAGNOSTICS: AUTO LOAD VARIANT FILES.
 // Autoload is random string, just an extra requirement, since we're giving away Manager authorization here...
 if (PATH_COUNT == 2 && $_PE[1] == 'upload' && ACTION == 'create' && isset($_GET['autoload']) && $_GET['autoload'] == 'auth9hj9@U' && FORMAT == 'text/plain') {
@@ -306,8 +310,6 @@ if (PATH_COUNT == 3 && $_PE[1] == 'DBID' && preg_match('/^chr/', $_PE[2]) && !AC
         $_GET['search_VariantOnGenome/DBID'] = '="' . $sDbId . '"';
         $_DATA->viewList('CustomVL_ObsCounts');
     }
-
-
 
     $_T->printFooter();
     exit;
@@ -636,7 +638,8 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && !ACTION) {
 
     } else {
         // Otherwise show a button that can be used to create a new summary annotation record.
-        print('            <TABLE border="0" cellpadding="2" cellspacing="0" class="setup" width="400px">' . "\n" .
+        $sSummaryAnnotationsID = '';
+        print('            <TABLE border="0" cellpadding="2" cellspacing="0" class="setup" width="400">' . "\n" .
               '              <TR>' . "\n" .
               '                <TH colspan="2">Summary annotations</TH>' . "\n" .
               '              </TR>' . "\n" .
@@ -648,7 +651,7 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && !ACTION) {
     }
 
     print('            <BR>
-            <TABLE width="600px" class="data">
+            <TABLE width="600" class="data">
               <TR>
                 <TH>Final Classification</TH>
                 <TH>Occurrences</TH>
@@ -663,6 +666,9 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && !ACTION) {
     }
     print('</TABLE>' . "\n\n");
 
+
+
+    // Observation counts.
     if (!empty($_INSTANCE_CONFIG['observation_counts'])) {
         // RIGHT COLUMN on the variant view entry.
         print('            <BR><BR>' . "\n\n");
@@ -696,6 +702,85 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && !ACTION) {
         }
 </SCRIPT>
 <?php
+    }
+
+
+
+    // Attachments.
+    // Only show attachment upload form if enabled in LOVD and this intance has a list of file types in the adapter.
+    if (!empty($_SETT['attachment_file_types']) && !empty($_SETT['attachment_max_size']) && !empty($_INSTANCE_CONFIG['attachments'])) {
+        // FIXME: Put all of this in functions (one for the upload form, one for showing the attachments).
+        // Put summary annotation file type with the summary annotation, to prevent confusion,
+        //  improve clarity what it belongs to, and to make the code simpler.
+        require ROOT_PATH . 'inc-lib-form.php';
+        // FIXME: When all of this is in a function and we therefore know the object type, add this to the form submission URL.
+        // i.e.:
+        // 'attachments/variant/' . $nID . '?upload'
+        // 'attachments/summary_annotation/' . $sSummaryAnnotationsID . '?upload'
+        print('
+            <BR>
+            <FORM action="attachments/' . $nID . '?upload' . (!$sSummaryAnnotationsID? '' : '&summaryannotationid=' . $sSummaryAnnotationsID) . '&in_window" onSubmit="popUp(this)" method="post" enctype="multipart/form-data">
+              <TABLE border="0" cellpadding="0" cellspacing="0" class="data" width="600" style="font-size : 13px;">
+                <TR>
+                  <TH colspan="2">Upload attachments</TH></TR>
+                <TR>
+                  <TD>Upload a file</TD>
+                  <TD><INPUT type="file" name="import" size="40" value=""></TD></TR>
+                <TR valign="top">
+                  <TD>File type</TD>
+                  <TD>
+                    <SELECT name="mode">
+                      <OPTION value="">-- select --</OPTION>');
+        foreach ($_INSTANCE_CONFIG['attachments'] as $sFileType => $aFileType) {
+            if ($aFileType['linked_to'] == 'variant' || ($aFileType['linked_to'] == 'summary_annotation' && $sSummaryAnnotationsID)) {
+                // Show only options meant for Variants or the Summary Annotation Record (if this variant has one).
+                print('
+                      <OPTION value="' . $sFileType . '">' . $aFileType['label'] . '</OPTION>');
+            }
+        }
+        print('</SELECT></TD></TR>
+                <TR valign="top">
+                  <TD>&nbsp;</TD>
+                  <TD><INPUT type="submit" value="Upload file"></TD></TR></TABLE></FORM><BR>' . "\n\n");
+        $sAttachmentFilesPath = $_INI['paths']['attachments'];
+        // Search for attachments and display links to them if they exist in the attachments directory. This uses the glob php function to perform the search.
+        // FIXME: When we turn this code into a function, replace the file prefix with the object type.
+        $sFileTypes = implode(',', array_keys($_INSTANCE_CONFIG['attachments']));
+        // This already sorts the files based on their name, meaning sorted based on file type and then time (ascending).
+        $aFiles = array_merge(
+            glob($sAttachmentFilesPath . '/variant:' . $nID . '-{' . $sFileTypes . '}-*', GLOB_BRACE),
+            glob($sAttachmentFilesPath . '/summary_annotation:' . $sSummaryAnnotationsID . '-{' . $sFileTypes . '}-*', GLOB_BRACE)
+        );
+        if (count($aFiles)) {
+            // At least one match.
+                    print('
+            <TABLE border="0" cellpadding="0" cellspacing="0" width="600" class="data" style="font-size: 13px;">
+              <TR>
+                <TH>Attachment file type</TH>
+                <TH>Uploaded</TH>
+                <TH>Actions</TH></TR>');
+
+            foreach ($aFiles as $sFileName) {
+                // Parse the file name, use the basename and extension later.
+                $aPathInfo = pathinfo($sFileName);
+                // Explode the file into parts
+                $aFileNameParts = explode('-', $aPathInfo['filename']); // object:ID-type-time.ext.
+                $sFileTypeLabel = $_INSTANCE_CONFIG['attachments'][$aFileNameParts[1]]['label'];
+                $sDisableLinkStyle = 'style="pointer-events: none; text-decoration: none; color: grey;"';
+                $sDisablePreview = (strpos(array_search($aPathInfo['extension'], $_SETT['attachment_file_types']), 'image') === 0? '' : $sDisableLinkStyle);
+                $sDisableDelete = ($_AUTH['level'] >= LEVEL_OWNER && (!isset($zScreenings[0]) || !isset($zScreenings[0]['analysis_statusid']) || $zScreenings[0]['analysis_statusid'] == ANALYSIS_STATUS_IN_PROGRESS)? '' : $sDisableLinkStyle);
+                $sFileUrl = lovd_getInstallURL() . 'attachments/' . $aPathInfo['basename'];
+                print('
+              <TR>
+                <TD>' . $sFileTypeLabel . '</TD>
+                <TD>' . date('d M Y H:i A', filemtime($sFileName)) . '</TD>
+                <TD><A ' . $sDisablePreview . ' href="#" onclick="lovd_openWindow(\'' . $sFileUrl . '?preview&amp;in_window\', \'\', 1280, 720); return false;">Preview</A>
+                  | <A href="' . $sFileUrl . '?download"  target="_blank">Download</A> 
+                  | <A ' . $sDisableDelete . 'href="#" onclick="lovd_openWindow(\'' . $sFileUrl . '?delete&amp;in_window\', \'\', 780, 250); return false;">Delete</A></TD></TR>');
+            }
+
+            print('</TABLE>');
+        }
     }
 
     print('
