@@ -618,15 +618,17 @@ class LOVD_ObservationCounts
         // Returns a string of html to display observation counts data.
         global $_AUTH;
 
+        $sMetadata = '';
         $aData = $this->aData;
         $bHasPermissionToViewVariants = ($_AUTH['level'] >= LEVEL_MANAGER);
         $generateDataLink = ' <SPAN id="obscount-refresh"> | <A href="#" onClick="lovd_generate_obscount(\'' . $this->nVariantID . '\');return false;">Refresh Data</A></SPAN>';
+        if (!$this->canUpdateData()) {
+            $generateDataLink = '<TR><TD>Current analysis status or your user permission does not allow Observation Counts data to be updated.</TD></TR>';
+        }
         $sDataTables = '';
 
-        if(!lovd_isAuthorized('variant', $this->nVariantID)) {
+        if(empty($aData) && !lovd_isAuthorized('variant', $this->nVariantID)) {
             $sMetadata = '<TR><TD>You do not have permission to generate Observation Counts for this variant.</TD></TR>';
-        } elseif (!$this->canUpdateData()) {
-            $sMetadata = '<TR><TD>Current analysis status or your user permission does not allow Observation Counts data to be updated.</TD></TR>';
         } elseif (empty($aData)) {
             $sMetadata = '<TR><TD>There is no existing Observation Counts data <SPAN id="obscount-refresh"> | <A href="#" onClick="lovd_generate_obscount(\''. $this->nVariantID .'\');return false;">Generate Data</A></SPAN></TD></TR>';
         } else {
@@ -715,7 +717,7 @@ class LOVD_ObservationCounts
             </TABLE>';
             }
 
-            $sMetadata = '
+            $sMetadata .= '
               <TR id="obscount-info">
                 <TH>Data updated '. date('d M Y h:ia', $aData['updated']) .' | Population size was: ' . $aData['population_size'] . $generateDataLink . ' </TH>
               </TR>';
