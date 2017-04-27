@@ -106,6 +106,8 @@ if (ACTION == 'configure' && GET) {
     header('Content-type: text/javascript; charset=UTF-8');
     $aFilters = explode(';', (isset($zAnalysisRun['_filters'])? $zAnalysisRun['_filters']: $zAnalysis['_filters']));
     $sFiltersFormItems = '';
+    $sJsCanSubmit = 'true';
+    $sJsOtherFunctions = '';
     foreach ($aFilters as $sFilter) {
         switch($sFilter) {
             case 'apply_selected_gene_panels':
@@ -145,6 +147,9 @@ if (ACTION == 'configure' && GET) {
 
                     $sFiltersFormItems .= '</TABLE></DIV><BR>';
                 }
+
+                $sJsOtherFunctions .= 'function isValidGenePanel() {return true;}';
+                $sJsCanSubmit .= ' && isValidGenePanel()';
 
                 break;
             case 'cross_screenings':
@@ -194,20 +199,20 @@ if (ACTION == 'configure' && GET) {
                 $sFiltersFormItems .= '<DIV class=\'filter-config\' id=\'filter-config-'. $sFilter . '\'>';
                 $sFiltersFormItems .= '<TR><TD><BUTTON type=\'button\' class=\'btn-right\' id=\'btn-add-group\'>+ Add group</BUTTON></TD></TR>';
 
-                $sFiltersFormItems .= '<TABLE><TR><TD><LABEL>Description</LABEL></TD><TD><INPUT name=\'config[' . $sFilter . '][description]\' /></TD></TR></TABLE>';
+                $sFiltersFormItems .= '<TABLE><TR><TD><LABEL>Description</LABEL></TD><TD><INPUT class=\'required\' name=\'config[' . $sFilter . '][description]\' /></TD></TR></TABLE>';
                 $sFiltersFormItems .= '<DIV class=\'filter-cross-screening-group\' id=\'filter-config-'. $sFilter .'-0\'>';
 
                 // Conditions variants of this screening against the selected group
                 $sFiltersFormItems .= '<TABLE>';
                 $sFiltersFormItems .= '<TR><TD colspan=\'2\'><LABEL class=\'label-info\'>Select variants from this screening that are </LABEL></TD></TR>';
-                $sFiltersFormItems .= '<TR><TD><SELECT name=\'config[' . $sFilter . '][groups][0][condition]\'>';
+                $sFiltersFormItems .= '<TR><TD><SELECT class=\'required\' name=\'config[' . $sFilter . '][groups][0][condition]\'>';
                 foreach ($aConditions as $sValue => $sLabel) {
                     $sFiltersFormItems .= '<OPTION value=\'' . $sValue . '\'>' . $sLabel . '</OPTION>';
                 }
                 $sFiltersFormItems .= '</SELECT>';
 
                 // How to group among selected screenings within a group
-                $sFiltersFormItems .= '&nbsp;<SELECT name=\'config[' . $sFilter . '][groups][0][grouping]\'>';
+                $sFiltersFormItems .= '&nbsp;<SELECT class=\'required\' name=\'config[' . $sFilter . '][groups][0][grouping]\'>';
                 foreach ($aGrouping as $sValue => $sLabel) {
                     $sFiltersFormItems .= '<OPTION value=\'' . $sValue . '\'>' . $sLabel . '</OPTION>';
                 }
@@ -215,7 +220,7 @@ if (ACTION == 'configure' && GET) {
                 $sFiltersFormItems .= '<TR><TD colspan=\'2\'><LABEL>the following screenings</LABEL></TD></TR>';
 
                 // The list of available screenings
-                $sFiltersFormItems .= '<TR><TD><SELECT id=\'select-screenings-0\' name=\'config[' . $sFilter . '][groups][0][screenings][]\' multiple=\'true\'>';
+                $sFiltersFormItems .= '<TR><TD><SELECT class=\'required\' id=\'select-screenings-0\' name=\'config[' . $sFilter . '][groups][0][screenings][]\' multiple=\'true\'>';
                 foreach ($aScreenings as $sScreeningID => $sText) {
                     $sFiltersFormItems .= '<OPTION value=\'' . $sScreeningID . '\'>' . $sText . '</OPTION>';
                 }
@@ -246,8 +251,19 @@ if (ACTION == 'configure' && GET) {
                 // Append this new group into the form.
                 $sFiltersFormItems .= 'elemFilterConfig.append(elemGroup);';
                 $sFiltersFormItems .= '$(\'#select-screenings-\' + numGroups).select2({ width: \'555px\'});';
+                $sFiltersFormItems .= '$(\'#configure_analysis_dialog\').trigger(\'change\');';
                 $sFiltersFormItems .= '});';
                 $sFiltersFormItems .= '</SCRIPT>';
+
+                // Here we set the logic that control whether we have all the required fields for cross screenings configuration form.
+                $sJsOtherFunctions .= 'function isValidCrossScreenings() {';
+                $sJsOtherFunctions .= 'var bValid = true;';
+                $sJsOtherFunctions .= '$(\'#filter-config-cross_screenings .required\').each(function(i, e) {';
+                $sJsOtherFunctions .= 'if (!e.value.length) {bValid = false; return;}';
+                $sJsOtherFunctions .= '});';
+                $sJsOtherFunctions .= 'return bValid;}';
+
+                $sJsCanSubmit .= ' && isValidCrossScreenings()';
 
                 break;
             default:
@@ -292,18 +308,31 @@ if (ACTION == 'configure' && GET) {
     ');
 
     // Set JS variables and objects.
-    print('
+    print($sJsOtherFunctions . '
     var oButtonFormSubmit  = {"Submit":function () { $.post("' . CURRENT_PATH . '?' . ACTION . '", $("#configure_analysis_form").serialize()); }};
     var oButtonCancel = {"Cancel":function () { $(this).dialog("close"); }};
     var oButtonClose  = {"Close":function () { $(this).dialog("close"); }};
     ');
 
     // Display the form, and put the right buttons in place.
+    // To update validation rules of each filter, update the isValid...() function of each filter set in $sJsOtherFunctions variable.
     print('
     $("#configure_analysis_dialog").html("' . $sForm . '<BR>");
 
     // Select the right buttons.
     $("#configure_analysis_dialog").dialog({title: "Configure Analysis" ,buttons: $.extend({}, oButtonFormSubmit, oButtonCancel)});
+    
+    $("#configure_analysis_dialog").change(function() {
+        if ('. $sJsCanSubmit .') {
+            var bCanSubmit = "enable";
+        } else {
+            var bCanSubmit = "disable";
+        }
+        $(".ui-dialog-buttonpane button:contains(\'Submit\')").button(bCanSubmit);
+    });
+    
+    // When form is loaded for the first time. 
+    $("#configure_analysis_dialog").trigger("change");
     ');
     exit;
 }
