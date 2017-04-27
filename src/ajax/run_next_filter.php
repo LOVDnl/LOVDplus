@@ -374,10 +374,17 @@ if ($aVariantIDs) {
             $aVariantIDsFiltered = $_DB->query($sSQL, $aSQL, false)->fetchAllColumn();
             break;
         case 'cross_screenings':
+            if (empty($aConfig['groups'])) {
+                die(json_encode(array('result' => false, 'message' => 'Incomplete configuration for filter \'' . $sFilter . '\'.')));
+            }
+
             $aVariantIDsFiltered = $aVariantIDs;
 
             // Loop through each group and narrow down the selected variant ids after SQL of each group is run.
             foreach ($aConfig['groups'] as $aGroup) {
+                if (empty($aGroup['condition']) || empty($aGroup['grouping'])) {
+                    die(json_encode(array('result' => false, 'message' => 'Incomplete configuration for filter \'' . $sFilter . '\'.')));
+                }
                 
                 // IN or NOT IN the variants in the group
                 switch(strtolower($aGroup['condition'])) {
