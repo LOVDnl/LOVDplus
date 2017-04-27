@@ -363,11 +363,16 @@ class LOVD_ObservationCounts
                 foreach ($aRules['required'] as $sField) {
                     if (!isset($this->aIndividual[$sField]) || $this->aIndividual[$sField] === '') {
                         $bComplete = false;
+
+                        // Indicates that this category has insufficient data.
+                        $aCategoryData['value'] = static::$EMPTY_DATA_DISPLAY;
                         break;
                     }
                 }
             }
 
+            // We want to ensure every category is still displayed on the table even if it has incomplete data.
+            $aData[$sCategory] = $aCategoryData;
             if ($bComplete) {
                 $aSQL = array(); // The arguments for the query.
 
