@@ -408,10 +408,6 @@ if ($aVariantIDs) {
                 // Heterozygous and Homozygous queries need additional condition.
                 $sAlleleField = '`allele`';
                 $nHomozygous = 3;
-                if (lovd_verifyInstance('mgha', false)) {
-                    $sAlleleField = '`VariantOnGenome/Sequencing/Allele/Frequency`';
-                    $nHomozygous = 1;
-                }
 
                 if (in_array(strtolower($aGroup['condition']), array ('homozygous in', 'not homozygous in'))) {
                     $sSQLVariantsInGroup .= ' WHERE  vog2.' . $sAlleleField . ' = ' . $nHomozygous;
