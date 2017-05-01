@@ -63,25 +63,19 @@ $_INSTANCE_CONFIG['viewlists']['CustomVL_AnalysisRunResults_for_I_VE']['cols_to_
     'vog_effect',
 );
 
-$_INSTANCE_CONFIG['variants'] = array(
-    'curation_files' => array(
+$_INSTANCE_CONFIG['attachments'] = array(
         'igv' => array(
-            'type' => 'image' ,
-            'id' => 'nid',
+            'linked_to' => 'variant',
             'label' => 'IGV screenshot'),
         'ucsc' => array(
-            'type' => 'image' ,
-            'id' => 'said',  // This file is stored using the Summary Annotation Record DBID.
+            'linked_to' => 'summary_annotation',  // This file is stored using the Summary Annotation Record DBID.
             'label' => 'UCSC screenshot (Summary Annotation)'),
         'confirmation' => array(
-            'type' => 'image' ,
-            'id' => 'nid',
+            'linked_to' => 'variant',
             'label' => 'Confirmation screenshot'),
         'workfile' => array(
-            'type' => 'excel' ,
-            'id' => 'nid',
+            'linked_to' => 'variant',
             'label' => 'Excel file')
-    )
 );
 
 

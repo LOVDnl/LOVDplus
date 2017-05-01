@@ -133,6 +133,7 @@ $aRequired =
                             'xml_parser_create', // We could also look for libxml constants?
                             'openssl_seal',      // We could also look for openssl constants?
                             'curl_init',
+                            'mime_content_type', // For the attachment uploads.
                           ),
                 'PHP_classes' =>
                      array(
@@ -239,6 +240,8 @@ $_SETT = array(
                             1  => 'right',
                           ),
                 'unique_view_max_string_length' => 100,
+                'attachment_file_types' => array(), // Disable attachment uploads for LOVD for now.
+                'attachment_max_size' => 0, // Disable attachment uploads for LOVD for now.
                 'objectid_length' =>
                     array(
                         'analyses' => 3,
@@ -434,6 +437,23 @@ if (LOVD_plus) {
     define('CUR_STATUS_NOT_FOR_CURATION', 90);       // A curator has determined that this variant does not require curation and no further action will be taken on this variant.
     define('CUR_STATUS_ARTEFACT', 91);               // A curator has determined that this variant does not exist as a result of a sequencing error.
 
+    $_SETT['attachment_file_types'] = array(
+        'application/msword' => 'doc',
+        'application/pdf' => 'pdf',
+        'application/vnd.ms-excel' => 'xls',
+        'application/vnd.ms-powerpoint' => 'ppt',
+        'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' => 'xlsx',
+        'application/vnd.openxmlformats-officedocument.wordprocessingml.document' => 'docx',
+
+        'image/gif' => 'gif',
+        'image/jpeg' => 'jpeg',
+        'image/jpg' => 'jpg',
+        'image/png' => 'png',
+
+        'text/csv' => 'csv',
+        'text/plain' => 'txt',
+    );
+    $_SETT['attachment_max_size'] = 10000000; // 10 MB.
     $_SETT['analysis_status'] =
         array(
             ANALYSIS_STATUS_WAIT => 'Waiting for data upload',

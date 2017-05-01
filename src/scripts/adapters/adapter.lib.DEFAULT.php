@@ -4,7 +4,7 @@
  * LEIDEN OPEN VARIATION DATABASE (LOVD)
  *
  * Created     : 2016-09-02
- * Modified    : 2017-03-14
+ * Modified    : 2017-04-13
  * For LOVD    : 3.0-19
  *
  * Copyright   : 2004-2017 Leiden University Medical Center; http://www.LUMC.nl/
@@ -37,6 +37,27 @@
 
 // Default settings.
 $_INSTANCE_CONFIG = array();
+
+// If you wish to allow for attachment uploads, enable this code.
+// These are some example default file types and settings.
+// FIXME: Allow for one file type to be linked to multiple objects.
+//$_INSTANCE_CONFIG['attachments'] = array(
+//    'igv' => array(
+//        'linked_to' => 'variant',
+//        'label' => 'IGV screenshot'),
+//    'ucsc' => array(
+//        'linked_to' => 'summary_annotation',  // This file is stored using the Summary Annotation Record DBID.
+//        'label' => 'UCSC screenshot (Summary Annotation)'),
+//    'confirmation' => array(
+//        'linked_to' => 'variant',
+//        'label' => 'Confirmation screenshot'),
+//    'workfile' => array(
+//        'linked_to' => 'variant',
+//        'label' => 'Excel file'),
+//);
+
+
+
 $_INSTANCE_CONFIG['viewlists'] = array(
     // The screenings data listing on the individual's detailed view.
     'Screenings_for_I_VE' => array(

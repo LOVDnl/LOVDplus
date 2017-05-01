@@ -21,6 +21,7 @@ php_flag mysql.trace_mode Off
     RewriteRule ^analyses(.*)$ analyses.php
     RewriteRule ^announcements(.*)$ announcements.php
     RewriteRule ^api(.*)$ api.php
+    RewriteRule ^attachments(.*)$ attachments.php
     RewriteRule ^check_update(.*)$ check_update.php
     RewriteRule ^columns(.*)$ columns.php
     RewriteRule ^configuration(.*)$ configuration.php
