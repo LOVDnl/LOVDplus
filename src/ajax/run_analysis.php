@@ -198,12 +198,12 @@ if (ACTION == 'configure' && GET) {
                 $sFiltersFormItems .= '<DIV class=\'filter-config\' id=\'filter-config-'. $sFilter . '\'>';
                 $sFiltersFormItems .= '<TR><TD><BUTTON type=\'button\' class=\'btn-right\' id=\'btn-add-group\'>+ Add group</BUTTON></TD></TR>';
 
-                $sFiltersFormItems .= '<TABLE><TR><TD><LABEL>Description</LABEL></TD><TD><INPUT class=\'required\' name=\'config[' . $sFilter . '][description]\' /></TD></TR></TABLE>';
+                $sFiltersFormItems .= '<TABLE><TR><TD><LABEL>Description *</LABEL></TD><TD><INPUT class=\'required\' name=\'config[' . $sFilter . '][description]\' /></TD></TR></TABLE>';
                 $sFiltersFormItems .= '<DIV class=\'filter-cross-screening-group\' id=\'filter-config-'. $sFilter .'-0\'>';
 
                 // Conditions variants of this screening against the selected group
                 $sFiltersFormItems .= '<TABLE>';
-                $sFiltersFormItems .= '<TR><TD colspan=\'2\'><LABEL class=\'label-info\'>Select variants from this screening that are </LABEL></TD></TR>';
+                $sFiltersFormItems .= '<TR><TD colspan=\'2\'><LABEL class=\'label-info\'>Select variants from this screening that are *</LABEL></TD></TR>';
                 $sFiltersFormItems .= '<TR><TD><SELECT class=\'required\' name=\'config[' . $sFilter . '][groups][0][condition]\'>';
                 foreach ($aConditions as $sValue => $sLabel) {
                     $sFiltersFormItems .= '<OPTION value=\'' . $sValue . '\'>' . $sLabel . '</OPTION>';
@@ -216,7 +216,7 @@ if (ACTION == 'configure' && GET) {
                     $sFiltersFormItems .= '<OPTION value=\'' . $sValue . '\'>' . $sLabel . '</OPTION>';
                 }
                 $sFiltersFormItems .= '</SELECT></TD></TR>';
-                $sFiltersFormItems .= '<TR><TD colspan=\'2\'><LABEL>the following screenings</LABEL></TD></TR>';
+                $sFiltersFormItems .= '<TR><TD colspan=\'2\'><LABEL>the following screenings *</LABEL></TD></TR>';
 
                 // The list of available screenings
                 $sFiltersFormItems .= '<TR><TD><SELECT class=\'required\' id=\'select-screenings-0\' name=\'config[' . $sFilter . '][groups][0][screenings][]\' multiple=\'true\'>';
@@ -244,7 +244,7 @@ if (ACTION == 'configure' && GET) {
                 // Remove the input box created by the select2 plugin.
                 $sFiltersFormItems .= 'elemGroup.find(\'.select2\').remove();';
                 // Subsequent groups have different labels
-                $sFiltersFormItems .= 'elemGroup.find(\'.label-info\').html(\'Then select variants <STRONG>from the results of the above selection</STRONG> that are \');';
+                $sFiltersFormItems .= 'elemGroup.find(\'.label-info\').html(\'Then select variants <STRONG>from the results of the above selection</STRONG> that are *\');';
                 // Rename 'name' attributes based on how many groups we already have.
                 $sFiltersFormItems .= 'elemGroup.find(\'[name]\').each(function(i, e) { var oldName = $(e).attr(\'name\'); var newName = oldName.replace(\'[groups][0]\', \'[groups][\' + numGroups + \']\'); $(e).attr(\'name\', newName)});';
                 // Append this new group into the form.
@@ -321,11 +321,18 @@ if (ACTION == 'configure' && GET) {
     // Select the right buttons.
     $("#configure_analysis_dialog").dialog({title: "Configure Analysis" ,buttons: $.extend({}, oButtonFormSubmit, oButtonCancel)});
     
+    var sInfo = \'<SPAN id="filter-config-info"><EM>* Please fill in all required fields</EM></SPAN>\';
+    if ($("#filter-config-info").length === 0) {
+        $(".ui-dialog-buttonpane").append(sInfo);
+    }
+
     $("#configure_analysis_dialog").change(function() {
         if ('. $sJsCanSubmit .') {
             var bCanSubmit = "enable";
+            $("#filter-config-info").hide();
         } else {
             var bCanSubmit = "disable";
+            $("#filter-config-info").show();
         }
         $(".ui-dialog-buttonpane button:contains(\'Submit\')").button(bCanSubmit);
     });
