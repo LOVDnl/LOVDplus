@@ -400,12 +400,8 @@ if (PATH_COUNT >= 2 && ctype_digit($_PE[1]) && !ACTION && (PATH_COUNT == 2 || PA
                         }
                     }
 
-                    // Check if we need to display the information for the gene panels used in this analysis.
-                    $sGenePanelsInfo = '';
-                    if ($sFilter == 'apply_selected_gene_panels' && $bHasGenePanelFilter && $zAnalysis['analysis_run']) {
-                        // We're currently showing the gene panel filter, AND the gene panel filter was active AND this analysis has been run.
-                        $sGenePanelsInfo = getSelectedGenePanelsByRunID($zAnalysis['runid']);
-                    }
+                    // Check if we need to display the information for the filters used in this analysis.
+                    $sGenePanelsInfo = getSelectedFilterConfig($zAnalysis['runid'], $sFilter);
 
                     // Format the display of the filters.
                     if (isset($aFilterInfo[$sFilter]) && (!empty($aFilterInfo[$sFilter]['name']) || !empty($aFilterInfo[$sFilter]['description']))) {

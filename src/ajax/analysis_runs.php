@@ -164,8 +164,7 @@ if (ACTION == 'clone' && POST) {
     $("#run_' . $nPaddedNewRunID . ' tr.message td").html("Click to run this analysis");
     
     // Update gene panel description to un-run state.
-    sGenePanelFilterName = $("#run_' . $nPaddedNewRunID . '_filter_apply_selected_gene_panels td:eq(0)").html();
-    $("#run_' . $nPaddedNewRunID . '_filter_apply_selected_gene_panels td.filter_description table").remove();
+    $("#run_' . $nPaddedNewRunID . ' .filter-config-desc").remove();
     var sAction = "lovd_configureAnalysis";
 
     // Define which JS function to run when clicking this table.

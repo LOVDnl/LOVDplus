@@ -120,7 +120,6 @@ function lovd_runAnalysis (nScreeningID, nAnalysisID, nRunID, sElementID, aConfi
                     // Success! We're running...
                     // Now call the script that will start filtering.
                     var nRunID = oRegExp[1];
-console.log('in runAnalysis');
                     return lovd_runNextFilter(nAnalysisID, nRunID, sElementID);
                 } else if (data == '8') {
                     // Failure, reset table.
@@ -179,8 +178,8 @@ function lovd_runNextFilter (nAnalysisID, nRunID, sElementID)
                     oTR.children('td:eq(2)').html(dataObj.nVariantsLeft);
 
                     // Show the details of the selected gene panels under the apply_selected_gene_panels filter.
-                    if (dataObj.sGenePanelsInfo.length) {
-                        oTR.children('td:eq(0)').append(dataObj.sGenePanelsInfo);
+                    if (dataObj.sFilterConfig.length) {
+                        oTR.children('td:eq(0)').append(dataObj.sFilterConfig);
                     }
 
                     if (!dataObj.bDone) {

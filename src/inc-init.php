@@ -388,6 +388,19 @@ $_SETT = array(
                             'MT-CYB' => 'CYTB',
                             'MT-TT' => 'TRNT',
                     ),
+                'filter_cross_screenings' => array(
+                    'condition_list' => array(
+                        'NOT IN' => "not found in",
+                        'NOT Homozygous IN' => "not homozygous in",
+                        'IN' => "found in",
+                        'Homozygous IN' => "homozygous in",
+                        'Heterozygous IN' => "heterozygous in"
+                    ),
+                    'grouping_list' => array(
+                        'AND' => 'all of',
+                        'OR' => 'one or more of'
+                    )
+                )
             );
 
 // Complete version info.

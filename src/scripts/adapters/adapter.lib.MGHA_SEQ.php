@@ -92,6 +92,11 @@ $_INSTANCE_CONFIG['conversion'] = array(
     'check_indel_description' => false
 );
 
+$_INSTANCE_CONFIG['sampleId_columns'] = array(
+    'Screening/Mother/Sample_ID' => 'Mother',
+    'Screening/Father/Sample_ID' => 'Father'
+);
+
 
 class LOVD_MghaSeqDataConverter extends LOVD_DefaultDataConverter {
 

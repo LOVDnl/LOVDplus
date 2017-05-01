@@ -127,9 +127,11 @@ table.data span.anchor                    {cursor: pointer; color: #0000FF;}
 .btn-right {float: right;}
 
 /* Gene panel information under the apply_selected_gene_panels filter */
-table.gpinfo               {margin-left: 10px;}
-table.gpinfo td            {font-size: 10px; color: #000000;}
-table.gpinfo tr:hover td   {background: #8aba8a;}
+table.gpinfo                {margin-left: 10px;}
+table.gpinfo td             {font-size: 10px; color: #000000;}
+table.gpinfo tr:hover td    {background: #8aba8a;}
+table.filter-config-desc td {font-size: 10px; color: #000000;}
+table.filter-config-desc    {margin-left: 10px;}
 
 /* Filter information tooltip */
 table.filterinfo td        {font-size: 11px; color: #000000;}

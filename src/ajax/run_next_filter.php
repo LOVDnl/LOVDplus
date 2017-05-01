@@ -71,7 +71,7 @@ list(,$sFilter) = each($aFilters);
 $aVariantIDs = &$_SESSION['analyses'][$nRunID]['IDsLeft'];
 //sleep(2);
 // Information about the selected gene panels for the apply_selected_gene_panels filter.
-$sGenePanelsInfo = '';
+$sFilterConfig = '';
 
 // Read filter configurations.
 $sConfig = $_DB->query('SELECT config_json FROM ' . TABLE_ANALYSES_RUN_FILTERS . ' WHERE runid = ? AND filterid = ?', array($nRunID, $sFilter))->fetchColumn();
@@ -297,7 +297,7 @@ if ($aVariantIDs) {
         case 'apply_selected_gene_panels':
             // If no gene panels or custom panels are selected then don't do anything.
             // Regardless of success, we need to show the selected gene panels.
-            $sGenePanelsInfo = getSelectedGenePanelsByRunID($nRunID);
+            $sFilterConfig = getSelectedFilterConfig($nRunID, 'apply_selected_gene_panels');
             if (empty($_SESSION['analyses'][$nRunID]['custom_panel']) && empty($_SESSION['analyses'][$nRunID]['gene_panels'])) {
                 $aVariantIDsFiltered = $aVariantIDs;
                 break;
@@ -374,6 +374,7 @@ if ($aVariantIDs) {
             $aVariantIDsFiltered = $_DB->query($sSQL, $aSQL, false)->fetchAllColumn();
             break;
         case 'cross_screenings':
+            $sFilterConfig = getSelectedFilterConfig($nRunID, 'cross_screenings');
             if (empty($aConfig['groups'])) {
                 die(json_encode(array('result' => false, 'message' => 'Incomplete configuration for filter \'' . $sFilter . '\'.')));
             }
@@ -385,7 +386,15 @@ if ($aVariantIDs) {
                 if (empty($aGroup['condition']) || empty($aGroup['grouping'])) {
                     die(json_encode(array('result' => false, 'message' => 'Incomplete configuration for filter \'' . $sFilter . '\'.')));
                 }
-                
+
+                // Each item in $aGroup['screenings'] array is formatted screeningid:role.
+                // Here we only need the screening ID.
+                $aScreeningIDs = array();
+                foreach ($aGroup['screenings'] as $sGroup) {
+                    $aParts = explode(':', $sGroup);
+                    $aScreeningIDs[] = $aParts[0];
+                }
+
                 // IN or NOT IN the variants in the group
                 switch(strtolower($aGroup['condition'])) {
                     case 'in':
@@ -403,7 +412,7 @@ if ($aVariantIDs) {
                 $sSQLVariantsInGroup = '
                   SELECT DISTINCT vog2.`VariantOnGenome/DBID`
                   FROM ' . TABLE_SCR2VAR . ' s2v2
-                  JOIN ' . TABLE_VARIANTS . ' vog2 ON (s2v2.variantid = vog2.id AND s2v2.screeningid IN (?' . str_repeat(', ?', count($aGroup['screenings'])-1) . '))';
+                  JOIN ' . TABLE_VARIANTS . ' vog2 ON (s2v2.variantid = vog2.id AND s2v2.screeningid IN (?' . str_repeat(', ?', count($aScreeningIDs)-1) . '))';
 
                 // Heterozygous and Homozygous queries need additional condition.
                 $sAlleleField = '`allele`';
@@ -417,7 +426,7 @@ if ($aVariantIDs) {
 
                 // Additional query when screenings are grouped with 'AND' condition.
                 if (strtolower($aGroup['grouping']) == 'and') {
-                    $sSQLVariantsInGroup .= ' GROUP BY vog2.`VariantOnGenome/DBID` HAVING COUNT(DISTINCT screeningid) = ' . count($aGroup['screenings']);
+                    $sSQLVariantsInGroup .= ' GROUP BY vog2.`VariantOnGenome/DBID` HAVING COUNT(DISTINCT screeningid) = ' . count($aScreeningIDs);
                 }
 
                 // Construct the full query.
@@ -430,7 +439,7 @@ if ($aVariantIDs) {
                             AND vog.id IN (?' . str_repeat(', ?', count($aVariantIDsFiltered) - 1) . ')';
 
                 // If we add more queries in the future, we need to watch out for the order of the params.
-                $aSQL = array_merge($aGroup['screenings'], $aVariantIDsFiltered);
+                $aSQL = array_merge($aScreeningIDs, $aVariantIDsFiltered);
                 $aVariantIDsFiltered = $_DB->query($sSQL, $aSQL, false)->fetchAllColumn();
             }
 
@@ -495,7 +504,7 @@ array_shift($aFilters); // Will cascade into the $_SESSION variable.
 if ($aFilters) {
     // Still more to do.
     // FIXME: This script now returns JSON as well as simple return values. Standardize this.
-    die(json_encode(array('result' => true, 'sFilterID' => $sFilter, 'nVariantsLeft' => count($aVariantIDs), 'nTime' => lovd_convertSecondsToTime($nTimeSpent, 1), 'sGenePanelsInfo' => $sGenePanelsInfo, 'bDone' => false)));
+    die(json_encode(array('result' => true, 'sFilterID' => $sFilter, 'nVariantsLeft' => count($aVariantIDs), 'nTime' => lovd_convertSecondsToTime($nTimeSpent, 1), 'sFilterConfig' => $sFilterConfig, 'bDone' => false)));
 } else {
     // Since we're done, save the results in the database.
     $q = $_DB->prepare('INSERT INTO ' . TABLE_ANALYSES_RUN_RESULTS . ' VALUES (?, ?)');
@@ -507,6 +516,6 @@ if ($aFilters) {
     // Now that we're done, clean up after ourselves...
     unset($_SESSION['analyses'][$nRunID]);
     // FIXME: This script now returns JSON as well as simple return values. Standardize this.
-    die(json_encode(array('result' => true, 'sFilterID' => $sFilter, 'nVariantsLeft' => $nVariants, 'nTime' => lovd_convertSecondsToTime($nTimeSpent, 1), 'sGenePanelsInfo' => $sGenePanelsInfo, 'bDone' => true)));
+    die(json_encode(array('result' => true, 'sFilterID' => $sFilter, 'nVariantsLeft' => $nVariants, 'nTime' => lovd_convertSecondsToTime($nTimeSpent, 1), 'sFilterConfig' => $sFilterConfig, 'bDone' => true)));
 }
 ?>

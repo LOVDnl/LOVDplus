@@ -153,18 +153,8 @@ if (ACTION == 'configure' && GET) {
 
                 break;
             case 'cross_screenings':
-                $aConditions = array(
-                    'NOT IN' => "not found in",
-                    'NOT Homozygous IN' => "not homozygous in",
-                    'IN' => "found in",
-                    'Homozygous IN' => "homozygous in",
-                    'Heterozygous IN' => "heterozygous in"
-                );
-
-                $aGrouping = array(
-                    'AND' => 'all of',
-                    'OR' => 'one or more of'
-                );
+                $aConditions = $_SETT['filter_cross_screenings']['condition_list'];
+                $aGrouping = $_SETT['filter_cross_screenings']['grouping_list'];
 
                 // Find available screenings.
                 $sSQL = 'SELECT s.*, i.`Individual/Sample_ID`
@@ -178,16 +168,25 @@ if (ACTION == 'configure' && GET) {
                 $aRelatives = array();
                 foreach ($zScreenings as $zScreening) {
                     $sText = $zScreening['Individual/Sample_ID'];
-                    if (lovd_verifyInstance('mgha', false)) {
-                        $sText .= ' ' . $zScreening['Screening/Batch'] . ' ' . $zScreening['Screening/Pipeline/Run_ID'];
+                    if (!empty($zScreening['Screening/Pipeline/Run_ID']) && !empty($zScreening['Screening/Batch'])) {
+                        $sText .= ' (' . $zScreening['Screening/Pipeline/Run_ID'] . '_' . $zScreening['Screening/Batch'] . ') ';
+                    }
+                    $sKey = $zScreening['id'] . ':';
 
-                        if ($zScreening['Individual/Sample_ID'] == $zIndividual['Screening/Mother/Sample_ID']) {
-                            $sText = 'Mother: ' . $sText;
-                            $aRelatives[$zScreening['id']] = $sText;
+                    // Add role descriptions if sample has family relation with this screening.
+                    if (!empty($_INSTANCE_CONFIG['sampleId_columns'])) {
+                        foreach ($_INSTANCE_CONFIG['sampleId_columns'] as $sColumn => $sRole) {
+                            if ($zScreening['Individual/Sample_ID'] == $zIndividual[$sColumn]) {
+                                $sKey .= $sRole;
+                                $sText = $sRole . ': ' . $sText;
+                                $aRelatives[$sKey] = $sText;
+
+                                break; // We can stop once we find one. Assuming one role per screening.
+                            }
                         }
                     }
 
-                    $aScreenings[$zScreening['id']] = $sText;
+                    $aScreenings[$sKey] = $sText;
                 }
 
                 // We want screenings of the relatives of this patient to be sorted on top.
