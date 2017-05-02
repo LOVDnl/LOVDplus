@@ -5,7 +5,7 @@
  * LEIDEN OPEN VARIATION DATABASE (LOVD)
  *
  * Created     : 2017-01-12
- * Modified    : 2017-04-13
+ * Modified    : 2017-05-02
  * For LOVD    : 3.0-18
  *
  * Copyright   : 2004-2017 Leiden University Medical Center; http://www.LUMC.nl/
@@ -371,8 +371,6 @@ class LOVD_ObservationCounts
                 }
             }
 
-            // We want to ensure every category is still displayed on the table even if it has incomplete data.
-            $aData[$sCategory] = $aCategoryData;
             if ($bComplete) {
                 $aSQL = array(); // The arguments for the query.
 
@@ -445,9 +443,10 @@ class LOVD_ObservationCounts
                     $nCount = $_DB->query($sSQL, $aSQL)->fetchColumn();
                     $aCategoryData['num_not_affected'] = $nCount;
                 }
-
-                $aData[$sCategory] = $aCategoryData;
             }
+
+            // We want to ensure every category is still displayed on the table even if it has incomplete data.
+            $aData[$sCategory] = $aCategoryData;
         }
 
         return $aData;
