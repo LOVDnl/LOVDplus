@@ -715,9 +715,14 @@ if ($sCalcVersionFiles != $sCalcVersionDB) {
                          'PREPARE Statement FROM @sSQL',
                          'EXECUTE Statement',
                      ),
-                 '3.0-17j' => array(
-                     'ALTER TABLE ' . TABLE_ANALYSES_RUN_FILTERS . ' ADD COLUMN config_json TEXT NULL AFTER filterid',
-                 ), // Placeholder for LOVD+ queries, defined below.
+                 '3.0-17j' => array(), // Placeholder for LOVD+ queries, defined below.
+                 '3.0-17k' => array(
+                     'SET @bExists := (SELECT COUNT(*) FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = "' . TABLE_ANALYSES_RUN_FILTERS . '" AND COLUMN_NAME = "config_json")',
+                     'SET @sSQL := IF(@bExists > 0, \'SELECT "INFO: Column already exists."\', "
+                            ALTER TABLE ' . TABLE_ANALYSES_RUN_FILTERS . ' ADD COLUMN config_json TEXT NULL AFTER filterid")',
+                     'PREPARE Statement FROM @sSQL',
+                     'EXECUTE Statement',
+                 ),
                  '3.0-18' =>
                      array(
                          // These two will be ignored by LOVD+.
