@@ -32,7 +32,6 @@ $_INSTANCE_CONFIG['viewlists']['CustomVL_AnalysisRunResults_for_I_VE']['cols_to_
     'VariantOnGenome/DbSNP_IDs',
     'obs_variant',
     'obs_var_ind_ratio',
-    'obs_disease',
     'VariantOnGenome/Frequency/1000G/VEP',
     'VariantOnGenome/Frequency/EVS/VEP/European_American',
     'VariantOnGenome/COSMIC_IDs',

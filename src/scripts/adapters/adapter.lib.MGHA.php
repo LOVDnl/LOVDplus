@@ -48,14 +48,35 @@ $_INSTANCE_CONFIG['viewlists']['CustomVL_AnalysisRunResults_for_I_VE'] = array(
         'VariantOnTranscript/Consequence_Type',
         'VariantOnGenome/ExAC/Frequency/Adjusted',
         'VariantOnGenome/1000Gp3/Frequency',
-        'obs_disease',
-        'obs_var_dis_ind_ratio',
         'obs_variant',
         'obs_var_ind_ratio',
         'gene_panels',
         'VariantOnGenome/Frequency/EVS/VEP/European_American'
     )
 );
+$_INSTANCE_CONFIG['viewlists']['CustomVL_ObsCounts']['cols_to_show'] = array(
+    // Invisible.
+    'variantid',
+    'VariantOnGenome/DBID',
+
+    // Visible.
+    'vog_effect',
+    'allele_',
+    'Individual/Sample_ID',
+    'Individual/Clinical_indication',
+    'Screening/Library_preparation',
+    'Screening/Sequencing_chemistry',
+    'Screening/Pipeline/Run_ID',
+
+    'VariantOnGenome/Curation/Classification',
+    'VariantOnGenome/Sequencing/IGV',
+    'VariantOnGenome/Reference',
+    'VariantOnTranscript/DNA',
+    'VariantOnTranscript/Protein',
+    'symbol',
+    'gene_OMIM_'
+);
+
 
 $_INSTANCE_CONFIG['attachments'] = array(
         'igv' => array(
@@ -78,6 +99,37 @@ $_INSTANCE_CONFIG['conversion'] = array(
     'exit_on_annotation_error' => false,
     'enforce_hgnc_gene' => false,
     'check_indel_description' => false
+);
+
+$_INSTANCE_CONFIG['observation_counts'] = array(
+    // If we want to display genepanel observation counts using default config,
+    // then simply add 'genepanel' => array()
+    'genepanel' => array(
+        // if columns is empty, use default columns list
+        'columns' => array(
+            'value' => 'Gene Panel',
+            'total_individuals' => 'Total # Individuals',
+            'num_affected' => '# of Affected Individuals',
+            'num_not_affected' => '# of Unaffected Individuals',
+            'percentage' => 'Percentage (%)'
+        ),
+        // if categories is empty, use default categories listhahh
+        'categories' => array()
+    ),
+
+    // If we want to display general categories observation counts using default config,
+    // then simply add 'general' => array()
+    'general' => array(
+        // if columns is empty, use default columns list
+        'columns' => array(
+            'label' => 'Category',
+            'value' => 'Value',
+            'threshold' => 'Percentage'
+        ),
+        // if categories is empty, use default categories list
+        'categories' => array(),
+        'min_population_size' => 100
+    ),
 );
 
 
