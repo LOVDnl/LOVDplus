@@ -1262,7 +1262,7 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && ACTION == 'edit_panels') {
     //  to be a screening available, not yet set to ANALYSIS_STATUS_CLOSED and
     //  either started by them or freely available. For the latter check, we let
     //  lovd_isAuthorized() decide, but we'll have to check the analysis status
-    //  ourselves since lovd_isAuthorized() doesn't do this.
+    //  ourselves since lovd_isAuthorized() doesn't do this (yet).
     // FIXME: Should lovd_isAuthorized() check the status of the screening, and
     //  revoke editing authorization when the status is too high? We now have
     //  the check for screening status implemented in many different places.
@@ -1283,7 +1283,7 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && ACTION == 'edit_panels') {
     if ($_AUTH['level'] < LEVEL_OWNER) {
         foreach ($zScreenings as $nScreeningID) {
             lovd_isAuthorized('screening_analysis', $nScreeningID);
-            // If we're not authorized, skip the rest.
+            // If we're authorized, we can skip the rest.
             if ($_AUTH['level'] >= LEVEL_OWNER) {
                 break;
             }
