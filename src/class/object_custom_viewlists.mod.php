@@ -130,7 +130,10 @@ class LOVD_CustomViewListMOD extends LOVD_CustomViewList {
                 case 'VariantOnGenome':
                     $aSQL['SELECT'] .= (!$aSQL['SELECT']? '' : ', ') . 'vog.*, a.name AS allele_, eg.name AS vog_effect, CONCAT(cs.id, cs.name) AS curation_status_';
                     if (lovd_verifyInstance('mgha')) {
-                        $aSQL['SELECT'] .= ', IF(vog.`VariantOnGenome/Sequencing/Allele/Frequency` < 1, "Het", "Hom") as zygosity_, ROUND(vog.`VariantOnGenome/Sequencing/Depth/Alt/Fraction`, 2) as var_frac_';
+                        $aSQL['SELECT'] .= ', IF(vog.allele = 0, 
+                                                IF(vog.`VariantOnGenome/Sequencing/Allele/Frequency` < 1, "Het", "Hom"), 
+                                                IF(vog.allele = 3, "Hom", "Het")) as zygosity_, 
+                                            ROUND(vog.`VariantOnGenome/Sequencing/Depth/Alt/Fraction`, 2) as var_frac_';
                     }
                     // Observation count columns.
                     // Find the diseases that this individual has assigned using the analysis run ID in $_GET.

@@ -415,13 +415,18 @@ if ($aVariantIDs) {
                   JOIN ' . TABLE_VARIANTS . ' vog2 ON (s2v2.variantid = vog2.id AND s2v2.screeningid IN (?' . str_repeat(', ?', count($aScreeningIDs)-1) . '))';
 
                 // Heterozygous and Homozygous queries need additional condition.
-                $sAlleleField = '`allele`';
-                $nHomozygous = 3;
-
                 if (in_array(strtolower($aGroup['condition']), array ('homozygous in', 'not homozygous in'))) {
-                    $sSQLVariantsInGroup .= ' WHERE  vog2.' . $sAlleleField . ' = ' . $nHomozygous;
+                    if (lovd_verifyInstance('mgha', false)) {
+                        $sSQLVariantsInGroup .= ' WHERE (vog2.`allele` = 0 AND vog2.`VariantOnGenome/Sequencing/Allele/Frequency` >= 1) OR (vog2.`allele` = 3)';
+                    } else {
+                        $sSQLVariantsInGroup .= ' WHERE  vog2.`allele` = 3';
+                    }
                 } elseif (in_array(strtolower($aGroup['condition']), array ('heterozygous in'))) {
-                    $sSQLVariantsInGroup .= ' WHERE  vog2.' . $sAlleleField . ' != ' . $nHomozygous;
+                    if (lovd_verifyInstance('mgha', false)) {
+                        $sSQLVariantsInGroup .= ' WHERE (vog2.`allele` = 0 AND vog2.`VariantOnGenome/Sequencing/Allele/Frequency` < 1) OR (vog2.`allele` != 3)';
+                    } else {
+                        $sSQLVariantsInGroup .= ' WHERE  vog2.`allele` != 3';
+                    }
                 }
 
                 // Additional query when screenings are grouped with 'AND' condition.
