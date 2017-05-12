@@ -48,13 +48,15 @@ if (!$_AUTH || !lovd_isAuthorized('analysisrun', $nID)) {
 
 // Now get the analysis run's data, and check the screening's status.
 // We can't do anything if the screening has been closed, so then we'll fail here.
-$sSQL = 'SELECT a.*, ar.*, s.individualid
+$sSQL = 'SELECT a.*, ar.*, s.individualid, GROUP_CONCAT(af.id,":",IFNULL(af.has_config, 0) SEPARATOR ";") as filters_
          FROM ' . TABLE_ANALYSES_RUN . ' AS ar
            INNER JOIN ' . TABLE_SCREENINGS . ' AS s ON (ar.screeningid = s.id)
            INNER JOIN ' . TABLE_ANALYSES . ' AS a ON (ar.analysisid = a.id)
-         WHERE ar.id = ? AND s.analysis_statusid < ?';
+           INNER JOIN ' . TABLE_ANALYSES_RUN_FILTERS . ' AS arf ON (arf.runid = ar.id)
+           INNER JOIN ' . TABLE_ANALYSIS_FILTERS . ' AS af ON (arf.filterid = af.id)
+         WHERE ar.id = ? AND s.analysis_statusid < ?
+         GROUP BY ar.id';
 $aSQL = array($nID, ANALYSIS_STATUS_CLOSED);
-
 $zData = $_DB->query($sSQL, $aSQL)->fetchAssoc();
 if (!$zData) {
     die('alert("No such ID or not allowed!");');
@@ -77,7 +79,6 @@ if (!$("#analysis_run_dialog").hasClass("ui-dialog-content") || !$("#analysis_ru
 ');
 
 // Implement an CSRF protection by working with tokens.
-$sFormClone  = '<FORM id=\'analysis_run_clone_form\'><INPUT type=\'hidden\' name=\'csrf_token\' value=\'{{CSRF_TOKEN}}\'>Are you sure you want to duplicate this analysis run?<BR></FORM>';
 $sFormDelete = '<FORM id=\'analysis_run_delete_form\'><INPUT type=\'hidden\' name=\'csrf_token\' value=\'{{CSRF_TOKEN}}\'>Are you sure you want to remove this analysis run? The variants will not be deleted.<BR></FORM>';
 
 // Set JS variables and objects.
@@ -96,7 +97,27 @@ var oButtonClose  = {"Close":function () { $(this).dialog("close"); }};
 
 if (ACTION == 'clone' && GET) {
     // Request confirmation.
+    if (!empty($zData['filters_'])) {
+        $aFilters = explode(';', $zData['filters_']);
+        $afiltersWithConfig = array();
+        foreach ($aFilters as $sConfig) {
+            list($sFilterId, $bHasConfig) = explode(':', $sConfig);
+            if ($bHasConfig) {
+                $afiltersWithConfig[] = $sFilterId;
+            }
+        }
+    }
+
+    $sMessage = 'Are you sure you want to duplicate this analysis run?<BR>';
+    if (!empty($afiltersWithConfig)) {
+        $sMessage = 'Do you want to copy the configurations of these filters?<BR><BR>';
+        foreach ($afiltersWithConfig as $sFilterId) {
+            $sMessage .= '<LABEL><INPUT type=\'checkbox\' name=\'copy_config[]\' value=\'' . $sFilterId . '\'>'. $sFilterId .'</LABEL><BR>';
+        }
+    }
+
     // We do this in two steps, not only because we'd like the user to confirm, but also to prevent CSRF.
+    $sFormClone  = '<FORM id=\'analysis_run_clone_form\'><INPUT type=\'hidden\' name=\'csrf_token\' value=\'{{CSRF_TOKEN}}\'>' . $sMessage . '</FORM>';
 
     $_SESSION['csrf_tokens']['analysis_run_clone'] = md5(uniqid());
     $sFormClone = str_replace('{{CSRF_TOKEN}}', $_SESSION['csrf_tokens']['analysis_run_clone'], $sFormClone);
@@ -124,7 +145,7 @@ if (ACTION == 'clone' && POST) {
         die('alert("Error while sending data, possible security risk. Please reload the page, and try again.");');
     }
 
-    $zData['filters'] = $_DB->query('SELECT filterid FROM ' . TABLE_ANALYSES_RUN_FILTERS . ' WHERE runid = ? ORDER BY filter_order', array($nID))->fetchAllColumn();
+    $zData['filters'] = $_DB->query('SELECT filterid, config_json FROM ' . TABLE_ANALYSES_RUN_FILTERS . ' WHERE runid = ? ORDER BY filter_order', array($nID))->fetchAllAssoc();
     $nFilters = count($zData['filters']);
     $_DB->beginTransaction();
     // First, copy the analysis run.
@@ -133,9 +154,17 @@ if (ACTION == 'clone' && POST) {
     $nNewRunID = $_DB->lastInsertId();
 
     // Now insert filters.
-    foreach ($zData['filters'] as $nOrder => $sFilter) {
+    foreach ($zData['filters'] as $nOrder => $aFilter) {
+        $sFilter = $aFilter['filterid'];
+        $sFilterConfig = $aFilter['config_json'];
         $nOrder ++; // Let order begin by 1, not 0.
-        $_DB->query('INSERT INTO ' . TABLE_ANALYSES_RUN_FILTERS . ' (runid, filterid, filter_order) VALUES (?, ?, ?)', array($nNewRunID, $sFilter, $nOrder));
+
+        // If user chooses to copy the configurations of this filter from the analysis that they clone, then copy it over.
+        $sConfigToInsert = null;
+        if (!empty($_POST['copy_config']) && in_array($sFilter, $_POST['copy_config'])) {
+            $sConfigToInsert = $sFilterConfig;
+        }
+        $_DB->query('INSERT INTO ' . TABLE_ANALYSES_RUN_FILTERS . ' (runid, filterid, config_json, filter_order) VALUES (?, ?, ?, ?)', array($nNewRunID, $sFilter, $sConfigToInsert, $nOrder));
     }
 
     $nPaddedNewRunID = str_pad($nNewRunID, $_SETT['objectid_length']['analysisruns'], '0', STR_PAD_LEFT);

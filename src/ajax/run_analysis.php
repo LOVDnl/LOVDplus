@@ -80,7 +80,7 @@ if (!empty($zIndividual['__gene_panels'])) {
 $zAnalysis = $zAnalysisRun = false;
 if ($_REQUEST['runid']) {
     // Check if the run exists.
-    $zAnalysisRun = $_DB->query('SELECT ar.id, ar.analysisid, a.name, GROUP_CONCAT(arf.filterid ORDER BY arf.filter_order SEPARATOR ";") AS _filters FROM ' . TABLE_ANALYSES_RUN . ' AS ar INNER JOIN ' . TABLE_ANALYSES . ' AS a ON (ar.analysisid = a.id) INNER JOIN ' . TABLE_ANALYSES_RUN_FILTERS . ' AS arf ON (ar.id = arf.runid) WHERE ar.id = ?', array($_REQUEST['runid']))->fetchAssoc();
+    $zAnalysisRun = $_DB->query('SELECT ar.id, ar.analysisid, a.name, GROUP_CONCAT(arf.filterid,"|",IFNULL(arf.config_json, "") ORDER BY arf.filter_order SEPARATOR ";") AS _filters FROM ' . TABLE_ANALYSES_RUN . ' AS ar INNER JOIN ' . TABLE_ANALYSES . ' AS a ON (ar.analysisid = a.id) INNER JOIN ' . TABLE_ANALYSES_RUN_FILTERS . ' AS arf ON (ar.id = arf.runid) WHERE ar.id = ?', array($_REQUEST['runid']))->fetchAssoc();
     if (!$zAnalysisRun) {
         die('Analysis run not recognized. If the analysis run is defined properly, this is an error in the software.');
     }
@@ -108,7 +108,10 @@ if (ACTION == 'configure' && GET) {
     $sFiltersFormItems = '';
     $sJsCanSubmit = 'true';
     $sJsOtherFunctions = '';
-    foreach ($aFilters as $sFilter) {
+    foreach ($aFilters as $sFilterAndConfig) {
+        $aParts = explode('|', $sFilterAndConfig);
+        $sFilter = $aParts[0];
+        $sConfigJson = (empty($aParts[1])? '' : $aParts[1]);
         switch($sFilter) {
             case 'apply_selected_gene_panels':
                 // Display a notice that 'apply_selected_gene_panels' is selected for this analysis
@@ -155,12 +158,15 @@ if (ACTION == 'configure' && GET) {
             case 'cross_screenings':
                 $aConditions = $_SETT['filter_cross_screenings']['condition_list'];
                 $aGrouping = $_SETT['filter_cross_screenings']['grouping_list'];
+                if (!empty($sConfigJson)) {
+                    $aConfig = json_decode($sConfigJson, true);
+                }
 
                 // Find available screenings.
                 $sSQL = 'SELECT s.*, i.`Individual/Sample_ID`
-                         FROM ' . TABLE_SCREENINGS . ' AS s 
-                         JOIN ' . TABLE_INDIVIDUALS . ' AS i ON (s.individualid = i.id) 
-                         WHERE s.id != ?';
+                     FROM ' . TABLE_SCREENINGS . ' AS s 
+                     JOIN ' . TABLE_INDIVIDUALS . ' AS i ON (s.individualid = i.id) 
+                     WHERE s.id != ?';
                 $aSQL = array($_REQUEST['screeningid']);
 
                 $zScreenings = $_DB->query($sSQL, $aSQL)->fetchAllAssoc();
@@ -195,58 +201,69 @@ if (ACTION == 'configure' && GET) {
                 // Print form.
                 $sFiltersFormItems .= '<H4>' . $sFilter . '</H4><BR>';
 
-                $sFiltersFormItems .= '<DIV class=\'filter-config\' id=\'filter-config-'. $sFilter . '\'>';
+                $sFiltersFormItems .= '<DIV class=\'filter-config\' id=\'filter-config-' . $sFilter . '\'>';
                 $sFiltersFormItems .= '<TR><TD><BUTTON type=\'button\' class=\'btn-right\' id=\'btn-add-group\'>+ Add group</BUTTON></TD></TR>';
 
-                $sFiltersFormItems .= '<TABLE><TR><TD><LABEL>Description *</LABEL></TD><TD><INPUT class=\'required\' name=\'config[' . $sFilter . '][description]\' /></TD></TR></TABLE>';
-                $sFiltersFormItems .= '<DIV class=\'filter-cross-screening-group\' id=\'filter-config-'. $sFilter .'-0\'>';
+                $sValue = (empty($aConfig['description']) ? '' : "value='" . $aConfig['description'] ."'");
+                $sFiltersFormItems .= '<TABLE><TR><TD><LABEL>Description *</LABEL></TD><TD><INPUT class=\'required\' name=\'config[' . $sFilter . '][description]\' ' . $sValue . '/></TD></TR></TABLE>';
 
-                // Conditions variants of this screening against the selected group
-                $sFiltersFormItems .= '<TABLE>';
-                $sFiltersFormItems .= '<TR><TD colspan=\'2\'><LABEL class=\'label-info\'>Select variants from this screening that are *</LABEL></TD></TR>';
-                $sFiltersFormItems .= '<TR><TD><SELECT class=\'required\' name=\'config[' . $sFilter . '][groups][0][condition]\'>';
-                foreach ($aConditions as $sValue => $sLabel) {
-                    $sFiltersFormItems .= '<OPTION value=\'' . $sValue . '\'>' . $sLabel . '</OPTION>';
+                $sMsgSelectScreeningsFirst = 'Select variants from this screening that are *';
+                $sMsgSelectScreenings = 'Then select variants <STRONG>from the results of the above selection</STRONG> that are *';
+                $nGroups = (!isset($aConfig['groups'])? 0 : count($aConfig['groups']));
+                for ($i = 0; $i == 0 || $i < $nGroups; $i++) {
+                    $sFiltersFormItems .= '<DIV class=\'filter-cross-screening-group\' id=\'filter-config-' . $sFilter . '-' . $i . '\'>';
+                    $sMsg = ($i == 0? $sMsgSelectScreeningsFirst : $sMsgSelectScreenings);
+
+                    // Conditions variants of this screening against the selected group
+                    $sFiltersFormItems .= '<TABLE>';
+                    $sFiltersFormItems .= '<TR><TD colspan=\'2\'><LABEL class=\'label-info\'>' . $sMsg . '</LABEL></TD></TR>';
+                    $sFiltersFormItems .= '<TR><TD><SELECT class=\'required\' name=\'config[' . $sFilter . '][groups][' . $i . '][condition]\'>';
+                    foreach ($aConditions as $sValue => $sLabel) {
+                        $sSelected = (empty($aConfig) || $sValue != $aConfig['groups'][$i]['condition'] ? '' : "selected='selected'");
+                        $sFiltersFormItems .= '<OPTION value=\'' . $sValue . '\' '. $sSelected .' >' . $sLabel . '</OPTION>';
+                    }
+                    $sFiltersFormItems .= '</SELECT>';
+
+                    // How to group among selected screenings within a group
+                    $sFiltersFormItems .= '&nbsp;<SELECT class=\'required\' name=\'config[' . $sFilter . '][groups][' . $i . '][grouping]\'>';
+                    foreach ($aGrouping as $sValue => $sLabel) {
+                        $sSelected = (empty($aConfig) || $sValue != $aConfig['groups'][$i]['grouping'] ? '' : "selected='selected'");
+                        $sFiltersFormItems .= '<OPTION value=\'' . $sValue . '\' ' . $sSelected . ' >' . $sLabel . '</OPTION>';
+                    }
+                    $sFiltersFormItems .= '</SELECT></TD></TR>';
+                    $sFiltersFormItems .= '<TR><TD colspan=\'2\'><LABEL>the following screenings *</LABEL></TD></TR>';
+
+                    // The list of available screenings
+                    $sFiltersFormItems .= '<TR><TD><SELECT class=\'required\' id=\'select-screenings-' . $i . '\' name=\'config[' . $sFilter . '][groups][' . $i . '][screenings][]\' multiple=\'true\'>';
+                    foreach ($aScreenings as $sScreeningID => $sText) {
+                        $sSelected = (empty($aConfig) || !in_array($sScreeningID, $aConfig['groups'][$i]['screenings'])? '' : "selected='selected'");
+                        $sFiltersFormItems .= '<OPTION value=\'' . $sScreeningID . '\' ' . $sSelected . '>' . $sText . '</OPTION>';
+                    }
+                    $sFiltersFormItems .= '</SELECT></TD></TR></TABLE></DIV>';
                 }
-                $sFiltersFormItems .= '</SELECT>';
 
-                // How to group among selected screenings within a group
-                $sFiltersFormItems .= '&nbsp;<SELECT class=\'required\' name=\'config[' . $sFilter . '][groups][0][grouping]\'>';
-                foreach ($aGrouping as $sValue => $sLabel) {
-                    $sFiltersFormItems .= '<OPTION value=\'' . $sValue . '\'>' . $sLabel . '</OPTION>';
-                }
-                $sFiltersFormItems .= '</SELECT></TD></TR>';
-                $sFiltersFormItems .= '<TR><TD colspan=\'2\'><LABEL>the following screenings *</LABEL></TD></TR>';
-
-                // The list of available screenings
-                $sFiltersFormItems .= '<TR><TD><SELECT class=\'required\' id=\'select-screenings-0\' name=\'config[' . $sFilter . '][groups][0][screenings][]\' multiple=\'true\'>';
-                foreach ($aScreenings as $sScreeningID => $sText) {
-                    $sFiltersFormItems .= '<OPTION value=\'' . $sScreeningID . '\'>' . $sText . '</OPTION>';
-                }
-
-
-
-                $sFiltersFormItems .= '</SELECT></TD></TR></TABLE></DIV>';
-
-                // TODO: how to display screenings to be selected
-
+                // End of form.
                 $sFiltersFormItems .= '</TABLE></DIV>';
 
                 $sFiltersFormItems .= '<SCRIPT type=\'text/javascript\'>';
-                $sFiltersFormItems .= '$(\'#select-screenings-0\').select2({ width: \'555px\'});';
+                for ($i=0; $i == 0 || $i < $nGroups; $i++) {
+                    $sFiltersFormItems .= '$(\'#select-screenings-' . $i . '\').select2({ width: \'555px\'});';
+                }
                 $sFiltersFormItems .= '$(\'#btn-add-group\').click(function() {';
                 $sFiltersFormItems .= 'var numGroups = $(\'.filter-cross-screening-group\').length;';
                 $sFiltersFormItems .= 'var elemFilterConfig = $(\'#filter-config-' . $sFilter . '\');';
                 // Copy the first group of html form already loaded by php.
-                $sFiltersFormItems .= 'var elemGroup = $(\'#filter-config-' . $sFilter . '-0\').clone().attr(\'id\', \'#filter-config-' . $sFilter . '-\' + numGroups);';
+                $sFiltersFormItems .= 'var elemGroup = $(\'#filter-config-' . $sFilter . '-0\').clone().attr(\'id\', \'filter-config-' . $sFilter . '-\' + numGroups);';
                 // Rename select-screenings-0 to a new id.
                 $sFiltersFormItems .= 'elemGroup.find(\'#select-screenings-0\').attr(\'id\', \'select-screenings-\' + numGroups);';
                 // Remove the input box created by the select2 plugin.
                 $sFiltersFormItems .= 'elemGroup.find(\'.select2\').remove();';
                 // Subsequent groups have different labels
-                $sFiltersFormItems .= 'elemGroup.find(\'.label-info\').html(\'Then select variants <STRONG>from the results of the above selection</STRONG> that are *\');';
+                $sFiltersFormItems .= 'elemGroup.find(\'.label-info\').html(\'' . $sMsgSelectScreenings . '\');';
                 // Rename 'name' attributes based on how many groups we already have.
-                $sFiltersFormItems .= 'elemGroup.find(\'[name]\').each(function(i, e) { var oldName = $(e).attr(\'name\'); var newName = oldName.replace(\'[groups][0]\', \'[groups][\' + numGroups + \']\'); $(e).attr(\'name\', newName)});';
+                $sFiltersFormItems .= 'elemGroup.find(\'[name]\').each(function(i, e) { var oldName = $(e).attr(\'name\'); var newName = oldName.replace(\'[groups][0]\', \'[groups][\' + numGroups + \']\'); $(e).attr(\'name\', newName);});';
+                // Reset values of the form in the first group that we copy from.
+                $sFiltersFormItems .= 'elemGroup.find(\'[selected]\').each(function(i, e) { $(e).removeAttr(\'selected\'); });';
                 // Append this new group into the form.
                 $sFiltersFormItems .= 'elemFilterConfig.append(elemGroup);';
                 $sFiltersFormItems .= '$(\'#select-screenings-\' + numGroups).select2({ width: \'555px\'});';
@@ -352,7 +369,7 @@ if (ACTION == 'configure' && POST) {
     $aConfig = (empty($_REQUEST['config'])? array() : $_REQUEST['config']);
 
     // TODO: This is a good place for us to do our form inputs validation
-    if (empty($_POST['csrf_token']) || $_POST['csrf_token'] != $_SESSION['csrf_tokens']['run_analysis_configure']) {
+    if (!empty($_REQUEST['config']) && (empty($_POST['csrf_token']) || $_POST['csrf_token'] != $_SESSION['csrf_tokens']['run_analysis_configure'])) {
         die('alert("Error while sending data, possible security risk. Please reload the page, and try again.");');
     }
 
@@ -387,6 +404,7 @@ if (ACTION == 'run') {
     $_DB->beginTransaction();
     $_DB->query('UPDATE ' . TABLE_SCREENINGS . ' SET analysis_statusid = ?, analysis_by = ?, analysis_date = NOW() WHERE id = ? AND (analysis_statusid = ? OR analysis_by IS NULL OR analysis_date IS NULL)', array(ANALYSIS_STATUS_IN_PROGRESS, $_AUTH['id'], $_REQUEST['screeningid'], ANALYSIS_STATUS_READY));
 
+
     if (!$_REQUEST['runid']) {
         // Create analysis in database.
         $q = $_DB->query('INSERT INTO ' . TABLE_ANALYSES_RUN . ' VALUES (NULL, ?, ?, 0, ?, ?, NOW())', array($zAnalysis['id'], $_REQUEST['screeningid'], $sCustomPanel, $_AUTH['id']));
@@ -408,12 +426,15 @@ if (ACTION == 'run') {
         }
     } else {
         $nRunID = (int) $_REQUEST['runid']; // (int) is to prevent zerofill from messing things up.
-        $aFilters = explode(';', $zAnalysisRun['_filters']);
         // Update the existing analyses run record to store the custom panel genes.
         $_DB->query('UPDATE ' . TABLE_ANALYSES_RUN . ' SET custom_panel = ? WHERE id = ?', array($sCustomPanel, $nRunID));
         
         // Insert into database the new configurations.
-        foreach ($aFilters as $i => $sFilter) {
+        $aFiltersAndConfigs = explode(';', $zAnalysisRun['_filters']);
+        foreach ($aFiltersAndConfigs as $i => $sFilterAndConfig) {
+            $aParts = explode('|', $sFilterAndConfig);
+            $sFilter = $aParts[0];
+            $aFilters[] = $sFilter;
             $sFilterConfig = (empty($aConfig[$sFilter]) ? NULL : json_encode($aConfig[$sFilter]));
             $q = $_DB->query('UPDATE ' . TABLE_ANALYSES_RUN_FILTERS . ' SET config_json = ? WHERE filterid = ?', array($sFilterConfig, $sFilter));
             if (!$q) {

@@ -69,7 +69,7 @@ list(,$sFilter) = each($aFilters);
 
 // Run filter, but only if there are variants left.
 $aVariantIDs = &$_SESSION['analyses'][$nRunID]['IDsLeft'];
-//sleep(2);
+
 // Information about the selected gene panels for the apply_selected_gene_panels filter.
 $sFilterConfig = '';
 
@@ -383,6 +383,11 @@ if ($aVariantIDs) {
 
             // Loop through each group and narrow down the selected variant ids after SQL of each group is run.
             foreach ($aConfig['groups'] as $aGroup) {
+                // There is no need to filter further if there is no variant found here.
+                if (empty($aVariantIDsFiltered)) {
+                    break;
+                }
+
                 if (empty($aGroup['condition']) || empty($aGroup['grouping'])) {
                     die(json_encode(array('result' => false, 'message' => 'Incomplete configuration for filter \'' . $sFilter . '\'.')));
                 }
