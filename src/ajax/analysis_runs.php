@@ -48,7 +48,7 @@ if (!$_AUTH || !lovd_isAuthorized('analysisrun', $nID)) {
 
 // Now get the analysis run's data, and check the screening's status.
 // We can't do anything if the screening has been closed, so then we'll fail here.
-$sSQL = 'SELECT a.*, ar.*, s.individualid, GROUP_CONCAT(af.id,":",IFNULL(af.has_config, 0) SEPARATOR ";") as filters_
+$sSQL = 'SELECT a.*, ar.*, s.individualid, GROUP_CONCAT(af.id,"|",IFNULL(af.name, ""),"|",IFNULL(af.has_config, 0) SEPARATOR ";;") as __filters
          FROM ' . TABLE_ANALYSES_RUN . ' AS ar
            INNER JOIN ' . TABLE_SCREENINGS . ' AS s ON (ar.screeningid = s.id)
            INNER JOIN ' . TABLE_ANALYSES . ' AS a ON (ar.analysisid = a.id)
@@ -96,23 +96,31 @@ var oButtonClose  = {"Close":function () { $(this).dialog("close"); }};
 
 
 if (ACTION == 'clone' && GET) {
-    // Request confirmation.
-    if (!empty($zData['filters_'])) {
-        $aFilters = explode(';', $zData['filters_']);
-        $afiltersWithConfig = array();
+    // Gather information from the database whether this filter requires further configurations before it can be run.
+    if (!empty($zData['__filters'])) {
+        $aFilters = explode(';;', $zData['__filters']);
+
+        $aFiltersHaveConfig = array();
         foreach ($aFilters as $sConfig) {
-            list($sFilterId, $bHasConfig) = explode(':', $sConfig);
+            // We use "|" here instead of LOVD standard ";" because
+            // filter name and has_config columns can sometimes be empty and it will create a substring of ";;"
+            // which will be treated as filter separator.
+            list($sFilterId, $sFilterName, $bHasConfig) = explode('|', $sConfig);
             if ($bHasConfig) {
-                $afiltersWithConfig[] = $sFilterId;
+                $aFiltersHaveConfig[$sFilterId] = $sFilterName;
             }
         }
     }
 
+    // Request confirmation.
     $sMessage = 'Are you sure you want to duplicate this analysis run?<BR>';
-    if (!empty($afiltersWithConfig)) {
+    if (!empty($aFiltersHaveConfig)) {
+        // If there are filters that require extra configurations before it can be run,
+        // we want to ask users if they want to copy them.
         $sMessage = 'Do you want to copy the configurations of these filters?<BR><BR>';
-        foreach ($afiltersWithConfig as $sFilterId) {
-            $sMessage .= '<LABEL><INPUT type=\'checkbox\' name=\'copy_config[]\' value=\'' . $sFilterId . '\'>'. $sFilterId .'</LABEL><BR>';
+        foreach ($aFiltersHaveConfig as $sFilterId => $sFilterName) {
+            $sLabel = (!empty($sFilterName)? $sFilterName : $sFilterId);
+            $sMessage .= '<LABEL><INPUT type=\'checkbox\' name=\'copy_config[]\' value=\'' . $sFilterId . '\'>'. $sLabel .'</LABEL><BR>';
         }
     }
 
@@ -145,21 +153,23 @@ if (ACTION == 'clone' && POST) {
         die('alert("Error while sending data, possible security risk. Please reload the page, and try again.");');
     }
 
+    // Here, we also want to retrieve the configurations of each filter if they exist.
     $zData['filters'] = $_DB->query('SELECT filterid, config_json FROM ' . TABLE_ANALYSES_RUN_FILTERS . ' WHERE runid = ? ORDER BY filter_order', array($nID))->fetchAllAssoc();
     $nFilters = count($zData['filters']);
+
     $_DB->beginTransaction();
     // First, copy the analysis run.
     $_DB->query('INSERT INTO ' . TABLE_ANALYSES_RUN . ' (analysisid, screeningid, modified, created_by, created_date) VALUES (?, ?, ?, ?, NOW())',
         array($zData['analysisid'], $zData['screeningid'], $zData['modified'], $_AUTH['id']));
     $nNewRunID = $_DB->lastInsertId();
 
-    // Now insert filters.
+    // Now insert filters to the newly created analysis.
     foreach ($zData['filters'] as $nOrder => $aFilter) {
         $sFilter = $aFilter['filterid'];
-        $sFilterConfig = $aFilter['config_json'];
+        $sFilterConfig = $aFilter['config_json']; // The filter configuration from the analysis we want to copy from.
         $nOrder ++; // Let order begin by 1, not 0.
 
-        // If user chooses to copy the configurations of this filter from the analysis that they clone, then copy it over.
+        // If user chooses to copy the configurations of this filter from the analysis that they duplicate, then copy it over.
         $sConfigToInsert = null;
         if (!empty($_POST['copy_config']) && in_array($sFilter, $_POST['copy_config'])) {
             $sConfigToInsert = $sFilterConfig;
