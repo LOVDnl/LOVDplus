@@ -164,6 +164,7 @@ if (ACTION == 'clone' && POST) {
     $nNewRunID = $_DB->lastInsertId();
 
     // Now insert filters to the newly created analysis.
+    $aRemoveFiltersConfigDescription = array();
     foreach ($zData['filters'] as $nOrder => $aFilter) {
         $sFilter = $aFilter['filterid'];
         $sFilterConfig = $aFilter['config_json']; // The filter configuration from the analysis we want to copy from.
@@ -173,6 +174,9 @@ if (ACTION == 'clone' && POST) {
         $sConfigToInsert = null;
         if (!empty($_POST['copy_config']) && in_array($sFilter, $_POST['copy_config'])) {
             $sConfigToInsert = $sFilterConfig;
+        } else {
+            // Easier to collect all the names of the filter descriptions that need to be removed by JS here.
+            $aRemoveFiltersConfigDescription[] = $sFilter;
         }
         $_DB->query('INSERT INTO ' . TABLE_ANALYSES_RUN_FILTERS . ' (runid, filterid, config_json, filter_order) VALUES (?, ?, ?, ?)', array($nNewRunID, $sFilter, $sConfigToInsert, $nOrder));
     }
@@ -203,7 +207,6 @@ if (ACTION == 'clone' && POST) {
     $("#run_' . $nPaddedNewRunID . ' tr.message td").html("Click to run this analysis");
     
     // Update gene panel description to un-run state.
-    $("#run_' . $nPaddedNewRunID . ' .filter-config-desc").remove();
     var sAction = "lovd_configureAnalysis";
 
     // Define which JS function to run when clicking this table.
@@ -217,6 +220,11 @@ if (ACTION == 'clone' && POST) {
     
     $("#run_' . $nPaddedNewRunID . '").attr("onclick", sAction + "(\'' . $zData['screeningid'] . '\', \'' . $zData['analysisid'] . '\', \'' . $nPaddedNewRunID . '\', this.id" + sGenePanel + ")");
     ');
+
+    // Remove all configurations descriptions for those filters whose configurations are not copied.
+    foreach ($aRemoveFiltersConfigDescription as $sFilter) {
+        print('$("#run_' . $nPaddedNewRunID . '_filter_' . $sFilter . ' .filter-config-desc").remove();');
+    }
     exit;
 }
 
