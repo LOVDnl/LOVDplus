@@ -279,9 +279,9 @@ if (ACTION == 'configure' && GET) {
 
                 // We need to call this function for all existing groups.
                 $sFiltersFormItems .= '$(\'.filter-cross-screening-delete-group\').bind(\'click\', zFuncRemoveGroup);';
+                $sFiltersFormItems .= 'var numGroups = $(\'.filter-cross-screening-group\').length;';
 
                 $sFiltersFormItems .= '$(\'#btn-add-group\').click(function() {';
-                $sFiltersFormItems .= 'var numGroups = $(\'.filter-cross-screening-group\').length;';
                 $sFiltersFormItems .= 'var elemFilterConfig = $(\'#filter-config-' . $sFilter . '\');';
                 // Copy the first group of html form already loaded by php.
                 $sFiltersFormItems .= 'var elemGroup = $(\'#filter-config-' . $sFilter . '-0\').clone().attr(\'id\', \'filter-config-' . $sFilter . '-\' + numGroups);';
@@ -302,6 +302,7 @@ if (ACTION == 'configure' && GET) {
                 $sFiltersFormItems .= '$(\'.filter-cross-screening-delete-group\').bind(\'click\', zFuncRemoveGroup);';
                 $sFiltersFormItems .= '$(\'#select-screenings-\' + numGroups).select2({ width: \'555px\'});';
                 $sFiltersFormItems .= '$(\'#configure_analysis_dialog\').trigger(\'change\');';
+                $sFiltersFormItems .= 'numGroups += 1;';
                 $sFiltersFormItems .= '});';
 
                 $sFiltersFormItems .= '</SCRIPT>';
