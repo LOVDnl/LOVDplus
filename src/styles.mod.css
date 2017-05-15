@@ -131,6 +131,7 @@ table.gpinfo td             {font-size: 10px; color: #000000;}
 table.gpinfo tr:hover td    {background: #8aba8a;}
 div.filter-config-desc td   {font-size: 10px; color: #000000;}
 div.filter-config-desc      {margin-left: 10px;}
+.filter-cross-screening-delete-group {float: right; clear: right;}
 
 /* Filter information tooltip */
 table.filterinfo td        {font-size: 11px; color: #000000;}

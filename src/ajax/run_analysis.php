@@ -224,12 +224,20 @@ if (ACTION == 'configure' && GET) {
                 // Always print at least one group if there is no existing configurations in the database.
                 // Otherwise, loop through the configurations data to see how many groups had been saved.
                 for ($i = 0; $i == 0 || $i < $nGroups; $i++) {
-                    $sFiltersFormItems .= '<DIV class=\'filter-cross-screening-group\' id=\'filter-config-' . $sFilter . '-' . $i . '\'>';
+                    $sGroupId = 'filter-config-' . $sFilter . '-' . $i;
+                    $sFiltersFormItems .= '<DIV class=\'filter-cross-screening-group\' id=\'' . $sGroupId . '\'>';
                     $sMsg = ($i == 0? $sMsgSelectScreeningsFirst : $sMsgSelectScreenings);
 
                     // Conditions variants of this screening against the selected group
                     $sFiltersFormItems .= '<TABLE>';
-                    $sFiltersFormItems .= '<TR><TD colspan=\'2\'><LABEL class=\'label-info\'>' . $sMsg . '</LABEL></TD></TR>';
+                    $sFiltersFormItems .= '<TR><TD colspan=\'2\'><LABEL class=\'label-info\'>' . $sMsg . '</LABEL>';
+
+                    // First group should never be deleted.
+                    $sDisplay = ($i == 0? "style='display: none;'" : "");
+                    $sFiltersFormItems .= '<SPAN ' . $sDisplay . ' class=\'filter-cross-screening-delete-group\' data-group=\'' . $sGroupId . '\'><IMG alt=\'Remove this group\' src=\'gfx/cross.png\' /></SPAN>';
+
+                    // Drop down menu that provide options to find variants that exist, does not exist, homozygous, etc in the selected screenings.
+                    $sFiltersFormItems .= '</TD></TR>';
                     $sFiltersFormItems .= '<TR><TD><SELECT class=\'required\' name=\'config[' . $sFilter . '][groups][' . $i . '][condition]\'>';
                     foreach ($aConditions as $sValue => $sLabel) {
                         $sSelected = (empty($aConfig) || $sValue != $aConfig['groups'][$i]['condition'] ? '' : "selected='selected'");
@@ -237,7 +245,7 @@ if (ACTION == 'configure' && GET) {
                     }
                     $sFiltersFormItems .= '</SELECT>';
 
-                    // How to group among selected screenings within a group
+                    // Drop down menu that provide options on how to group among selected screenings within a group.
                     $sFiltersFormItems .= '&nbsp;<SELECT class=\'required\' name=\'config[' . $sFilter . '][groups][' . $i . '][grouping]\'>';
                     foreach ($aGrouping as $sValue => $sLabel) {
                         $sSelected = (empty($aConfig) || $sValue != $aConfig['groups'][$i]['grouping'] ? '' : "selected='selected'");
@@ -246,7 +254,7 @@ if (ACTION == 'configure' && GET) {
                     $sFiltersFormItems .= '</SELECT></TD></TR>';
                     $sFiltersFormItems .= '<TR><TD colspan=\'2\'><LABEL>the following screenings *</LABEL></TD></TR>';
 
-                    // The list of available screenings
+                    // The list of available screenings in the database.
                     $sFiltersFormItems .= '<TR><TD><SELECT class=\'required\' id=\'select-screenings-' . $i . '\' name=\'config[' . $sFilter . '][groups][' . $i . '][screenings][]\' multiple=\'true\'>';
                     foreach ($aScreenings as $sScreeningID => $sText) {
                         $sSelected = (empty($aConfig) || !in_array($sScreeningID, $aConfig['groups'][$i]['screenings'])? '' : "selected='selected'");
@@ -265,12 +273,20 @@ if (ACTION == 'configure' && GET) {
                 }
 
                 // Function to update the form when 'Add group' button is clicked.
+                $sFiltersFormItems .= 'var zFuncRemoveGroup = function() {';
+                $sFiltersFormItems .= 'var sGroupId = $(this).attr(\'data-group\'); $(\'#\' + sGroupId).remove();';
+                $sFiltersFormItems .= '};';
+
+                // We need to call this function for all existing groups.
+                $sFiltersFormItems .= '$(\'.filter-cross-screening-delete-group\').bind(\'click\', zFuncRemoveGroup);';
+
                 $sFiltersFormItems .= '$(\'#btn-add-group\').click(function() {';
                 $sFiltersFormItems .= 'var numGroups = $(\'.filter-cross-screening-group\').length;';
                 $sFiltersFormItems .= 'var elemFilterConfig = $(\'#filter-config-' . $sFilter . '\');';
                 // Copy the first group of html form already loaded by php.
                 $sFiltersFormItems .= 'var elemGroup = $(\'#filter-config-' . $sFilter . '-0\').clone().attr(\'id\', \'filter-config-' . $sFilter . '-\' + numGroups);';
                 // Rename select-screenings-0 to a new id.
+                $sFiltersFormItems .= 'elemGroup.find(\'[data-group]\').attr(\'data-group\', \'filter-config-' . $sFilter . '-\' + numGroups).show();';
                 $sFiltersFormItems .= 'elemGroup.find(\'#select-screenings-0\').attr(\'id\', \'select-screenings-\' + numGroups);';
                 // Remove the input box created by the select2 plugin.
                 $sFiltersFormItems .= 'elemGroup.find(\'.select2\').remove();';
@@ -282,9 +298,12 @@ if (ACTION == 'configure' && GET) {
                 $sFiltersFormItems .= 'elemGroup.find(\'[selected]\').each(function(i, e) { $(e).removeAttr(\'selected\'); });';
                 // Append this new group into the form.
                 $sFiltersFormItems .= 'elemFilterConfig.append(elemGroup);';
+                // We need to call this again for the newly created group.
+                $sFiltersFormItems .= '$(\'.filter-cross-screening-delete-group\').bind(\'click\', zFuncRemoveGroup);';
                 $sFiltersFormItems .= '$(\'#select-screenings-\' + numGroups).select2({ width: \'555px\'});';
                 $sFiltersFormItems .= '$(\'#configure_analysis_dialog\').trigger(\'change\');';
                 $sFiltersFormItems .= '});';
+
                 $sFiltersFormItems .= '</SCRIPT>';
 
                 // Here we set the logic that control whether we have all the required fields for cross screenings configuration form.
@@ -388,6 +407,19 @@ if (ACTION == 'configure' && POST) {
     // TODO: This is a good place for us to do our form inputs validation or data cleanup.
     if (!empty($_REQUEST['config']) && (empty($_POST['csrf_token']) || $_POST['csrf_token'] != $_SESSION['csrf_tokens']['run_analysis_configure'])) {
         die('alert("Error while sending data, possible security risk. Please reload the page, and try again.");');
+    }
+
+    // Data cleanup.
+    if (!empty($aConfig)) {
+        foreach ($aConfig as $sFilter => $aFilterConfig) {
+            switch($sFilter) {
+                case 'cross_screenings':
+                    // Reset index otherwise json_encode would be converted it to object instead of array.
+                    $aConfig[$sFilter]['groups'] = array_values($aFilterConfig['groups']);
+                    break;
+                default:
+            }
+        }
     }
 
     // Now that we know we have all our required inputs for all filters, we can pass it to 'run' to insert/update database entries
