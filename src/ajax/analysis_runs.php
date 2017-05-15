@@ -223,7 +223,7 @@ if (ACTION == 'clone' && POST) {
 
     // Remove all configurations descriptions for those filters whose configurations are not copied.
     foreach ($aRemoveFiltersConfigDescription as $sFilter) {
-        print('$("#run_' . $nPaddedNewRunID . '_filter_' . $sFilter . ' .filter-config-desc").remove();');
+        print('$("#run_' . $nPaddedNewRunID . '_filter_' . $sFilter . ' .filter-config-desc").html("");');
     }
     exit;
 }

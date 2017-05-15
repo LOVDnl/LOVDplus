@@ -179,7 +179,7 @@ function lovd_runNextFilter (nAnalysisID, nRunID, sElementID)
 
                     // Show the details of the selected gene panels under the apply_selected_gene_panels filter.
                     if (dataObj.sFilterConfig.length) {
-                        oTR.children('td:eq(0)').append(dataObj.sFilterConfig);
+                        oTR.find('div.filter-config-desc').html(dataObj.sFilterConfig);
                     }
 
                     if (!dataObj.bDone) {

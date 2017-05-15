@@ -92,7 +92,7 @@ function getSelectedGenePanelsByRunID ($nRunID)
     }
 
     // Layout for how the table should look like once the gene panels have been processed.
-    $sGenePanelsInfo = '<TABLE border="0" cellpadding="0" cellspacing="1" class="gpinfo filter-config-desc">' . $sGenePanelsInfo . '</TABLE>';
+    $sGenePanelsInfo = '<TABLE border="0" cellpadding="0" cellspacing="1" class="gpinfo">' . $sGenePanelsInfo . '</TABLE>';
 
     return $sGenePanelsInfo;
 }
@@ -159,7 +159,7 @@ function getSelectedFilterConfig ($nRunID, $sFilterID)
                     $sToolTip .= '</ul>';
                 }
 
-                $sConfigText = '<TABLE class="filter-config-desc"><TR onmouseover="lovd_showToolTip(\'' . htmlspecialchars($sToolTip) . '\', this, [100, -10]);"><TD>';
+                $sConfigText = '<TABLE><TR onmouseover="lovd_showToolTip(\'' . htmlspecialchars($sToolTip) . '\', this, [100, -10]);"><TD>';
                 $sConfigText .= $aConfig['description'];
                 $sConfigText .= '</TD></TR></TABLE>';
             }
