@@ -467,7 +467,7 @@ if (PATH_COUNT >= 2 && ctype_digit($_PE[1]) && !ACTION && (PATH_COUNT == 2 || PA
 
         require ROOT_PATH . 'class/object_custom_viewlists.mod.php';
         // VOG needs to be first, so it groups by the VOG ID.
-        $_DATA = new LOVD_CustomViewListMOD(array('VariantOnGenome', 'VariantOnTranscript', 'AnalysisRunResults', 'GenePanels'));
+        $_DATA = new LOVD_CustomViewListMOD(array('VariantOnGenome', 'ObservationCounts', 'VariantOnTranscript', 'AnalysisRunResults', 'GenePanels'));
         // Define menu, to set pathogenicity flags of multiple variants in one go.
         $_DATA->setRowLink('CustomVL_AnalysisRunResults_for_I_VE', 'javascript:lovd_openWindow(\'' . lovd_getInstallURL() . 'variants/{{ID}}?&in_window#{{zData_preferred_transcriptid}}\', \'VarVE_{{ID}}\', 1250); return false;');
         $bMenu         = true; // Show the gear-menu, with which users can mark and label variants?
@@ -1193,8 +1193,41 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && ACTION == 'edit_panels') {
     define('LOG_EVENT', 'IndividualEditPanels');
 
     // Load appropriate user level for this individual.
-    lovd_isAuthorized('individual', $nID);
-    lovd_requireAUTH(LEVEL_OWNER);
+    // Authorization depends on the screenings belonging to this individual.
+    // For managers and up, there needs to be a screening available that is not
+    //  yet set to ANALYSIS_STATUS_WAIT_CONFIRMATION. For Analyzers, there needs
+    //  to be a screening available, not yet set to ANALYSIS_STATUS_CLOSED and
+    //  either started by them or freely available. For the latter check, we let
+    //  lovd_isAuthorized() decide, but we'll have to check the analysis status
+    //  ourselves since lovd_isAuthorized() doesn't do this (yet).
+    // FIXME: Should lovd_isAuthorized() check the status of the screening, and
+    //  revoke editing authorization when the status is too high? We now have
+    //  the check for screening status implemented in many different places.
+    // Fetch only the analyses that we might have a successful authorization on.
+    $zScreenings = $_DB->query('SELECT id FROM ' . TABLE_SCREENINGS . ' WHERE individualid = ? AND analysis_statusid < ?',
+        array($nID, ($_AUTH['level'] >= LEVEL_MANAGER? ANALYSIS_STATUS_WAIT_CONFIRMATION : ANALYSIS_STATUS_CLOSED)))->fetchAllColumn();
+    if (!$zScreenings) {
+        // Manager or not, the screenings are closed (assuming there are any).
+        $_T->printHeader();
+        $_T->printTitle();
+        lovd_showInfoTable('Unable to assign gene panels, the analysis status requires a higher user level.', 'stop');
+        $_T->printFooter();
+        exit;
+    }
+
+    // If we get here, there are screenings to authorize against. Managers are
+    //  always cool at this point, we need at least LEVEL_OWNER.
+    if ($_AUTH['level'] < LEVEL_OWNER) {
+        foreach ($zScreenings as $nScreeningID) {
+            lovd_isAuthorized('screening_analysis', $nScreeningID);
+            // If we're authorized, we can skip the rest.
+            if ($_AUTH['level'] >= LEVEL_OWNER) {
+                break;
+            }
+        }
+    }
+
+    lovd_requireAUTH(LEVEL_OWNER); // Analyzer becomes Owner, if authorized.
 
     require ROOT_PATH . 'class/object_individuals.mod.php';
     $_DATA = new LOVD_IndividualMOD();

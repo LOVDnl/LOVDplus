@@ -716,7 +716,11 @@ if ($sCalcVersionFiles != $sCalcVersionDB) {
                          'EXECUTE Statement',
                      ),
                  '3.0-17j' => array(), // Placeholder for LOVD+ queries, defined below.
-                 '3.0-17k' => array(
+                 '3.0-17k' =>
+                     array(
+                         'ALTER TABLE ' . TABLE_VARIANTS . ' ADD COLUMN `obscount_json` TEXT NULL AFTER `confirmation_statusid`',
+                     ),
+                 '3.0-17l' => array(
                      'SET @bExists := (SELECT COUNT(*) FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = "' . TABLE_ANALYSES_RUN_FILTERS . '" AND COLUMN_NAME = "config_json")',
                      'SET @sSQL := IF(@bExists > 0, \'SELECT "INFO: Column already exists."\', "
                             ALTER TABLE ' . TABLE_ANALYSES_RUN_FILTERS . ' ADD COLUMN config_json TEXT NULL AFTER filterid")',
@@ -975,6 +979,17 @@ if ($sCalcVersionFiles != $sCalcVersionDB) {
                 //  be used by this LOVD+ instance, but the interface has the
                 //  power to decide now.
                 'ALTER TABLE ' . TABLE_GENES . ' MODIFY COLUMN id_hgnc INT(10) UNSIGNED',
+            )
+        );
+    }
+
+    if (LOVD_plus && $sCalcVersionDB < lovd_calculateVersion('3.0-17k') && lovd_verifyInstance('mgha')) {
+        // Run LOVD+ specific queries.
+
+        $aUpdates['3.0-17k'] = array_merge(
+            $aUpdates['3.0-17k'],
+            array(
+                'INSERT INTO ' . TABLE_COLS . ' VALUES ("Individual/Affected", 255, 70, 0, 0, 0, "Affected", "", "Whether individual is affected by disease","Whether individual is affected by disease","VARCHAR(100)","Affected|Whether individual is affected by disease|select|1|true|false|false","Affected\r\nNot Affected\r\nUnknown", "", 0, 1, 1, 0, NOW(), NULL, NULL)'
             )
         );
     }

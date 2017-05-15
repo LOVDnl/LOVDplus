@@ -46,7 +46,6 @@ if ($_AUTH) {
 
 
 
-
 // DIAGNOSTICS: AUTO LOAD VARIANT FILES.
 // Autoload is random string, just an extra requirement, since we're giving away Manager authorization here...
 if (PATH_COUNT == 2 && $_PE[1] == 'upload' && ACTION == 'create' && isset($_GET['autoload']) && $_GET['autoload'] == 'auth9hj9@U' && FORMAT == 'text/plain') {
@@ -270,7 +269,7 @@ if (PATH_COUNT == 3 && $_PE[1] == 'DBID' && preg_match('/^chr/', $_PE[2]) && !AC
     define('PAGE_TITLE', 'View genomic variants');
     $_T->printHeader();
     $_T->printTitle();
-    
+
     lovd_requireAUTH(LEVEL_MANAGER);
 
     require ROOT_PATH . 'class/object_custom_viewlists.mod.php';
@@ -285,6 +284,32 @@ if (PATH_COUNT == 3 && $_PE[1] == 'DBID' && preg_match('/^chr/', $_PE[2]) && !AC
     $aColsToHide = array_diff(array_keys($_DATA->aColumnsViewList), $aColsToShow);
 
     $_DATA->viewList('CustomVL_DBID', $aColsToHide, false, false, false);
+
+    $_T->printFooter();
+    exit;
+}
+
+
+
+
+
+if (PATH_COUNT == 3 && $_PE[1] == 'DBID' && preg_match('/^chr/', $_PE[2]) && !empty($_GET['search_variantid']) && !ACTION) {
+    // URL: /variants/DBID/chr_00001
+    // View all genomic variant entries with the same DBID, but only if the correct variant ID has been given.
+    // This view is used for LOVD+ to show other observations of any given variant, without just allowing any DBID to be shown.
+
+    $sDBID = $_PE[2];
+    define('PAGE_TITLE', 'View genomic variants');
+    $_T->printHeader();
+    $_T->printTitle();
+
+    lovd_requireAUTH(LEVEL_MANAGER);
+
+    require ROOT_PATH . 'class/object_custom_viewlists.mod.php';
+    $_DATA = new LOVD_CustomViewListMOD(array('VariantOnGenome', 'VariantOnTranscript', 'Screening', 'Individual'));
+
+    $_GET['search_VariantOnGenome/DBID'] = '="' . $sDBID . '"';
+    $_DATA->viewList('CustomVL_ObsCounts');
 
     $_T->printFooter();
     exit;
@@ -595,6 +620,7 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && !ACTION) {
     print('
           </TD>
           <TD valign="top" id="summary_annotation_view_entry" style="padding-left: 10px;">' . "\n\n\n");
+    // RIGHT COLUMN on the variant view entry.
 
     // Load the variant data so as we can search by the DBID.
     if ($zData['summaryannotationid']) {
@@ -639,8 +665,48 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && !ACTION) {
                 <TD>'. (isset($aClassificationsCount[$sClassificationID])? $aClassificationsCount[$sClassificationID] : 0) . '</TD>
               </TR>');
     }
-    print('</TABLE>');
+    print('</TABLE>' . "\n\n");
 
+
+
+    // Observation counts.
+    if (!empty($_INSTANCE_CONFIG['observation_counts'])) {
+        print('            <BR><BR>' . "\n\n");
+        require_once ROOT_PATH . 'class/observation_counts.php';
+        $aSettings = (!empty($_INSTANCE_CONFIG['observation_counts'])? $_INSTANCE_CONFIG['observation_counts'] : array());
+        $zObsCount = new LOVD_ObservationCounts($nID);
+        $aData = $zObsCount->getData();
+
+        print('<DIV id="observation-counts">');
+        print($zObsCount->display($aSettings));
+        print('</DIV>');
+?>
+        <SCRIPT type="text/javascript">
+          function lovd_generate_obscount (nVariantID)
+          {
+            $('#obscount-loading').show();
+            $('#obscount-header-genepanel').hide();
+            $('#obscount-data-genepanel').hide();
+            $('#obscount-header-general').hide();
+            $('#obscount-data-general').hide();
+
+            $('#obscount-refresh').hide();
+            $('#obscount-feedback').show();
+            var url = 'ajax/generate_observation_counts.php';
+            var data = { "nVariantID" : nVariantID };
+
+            $.post(url, data, function (data) {
+                $('#obscount-loading').hide();
+                $('#observation-counts').html(data);
+            });
+          }
+        </SCRIPT>
+<?php
+    }
+
+
+
+    // Attachments.
     // Only show attachment upload form if enabled in LOVD and this intance has a list of file types in the adapter.
     if (!empty($_SETT['attachment_file_types']) && !empty($_SETT['attachment_max_size']) && !empty($_INSTANCE_CONFIG['attachments'])) {
         // FIXME: Put all of this in functions (one for the upload form, one for showing the attachments).

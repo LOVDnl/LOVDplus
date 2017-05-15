@@ -115,7 +115,6 @@ $_INSTANCE_CONFIG['viewlists'] = array(
     )
 );
 
-
 $_INSTANCE_CONFIG['conversion'] = array(
     'max_annotation_error_allowed' => 20,
     'exit_on_annotation_error' => true,
@@ -123,7 +122,67 @@ $_INSTANCE_CONFIG['conversion'] = array(
     'check_indel_description' => true
 );
 
+// This is the default configuration of the observation count feature.
+// To disable this feature completely, set 'observation_counts' to an empty
+//  array in your instance-specific settings.
+// FIXME: Make the columns configurable like the categories; just let the
+//  instances select which columns they want; the values are defined elsewhere.
+//  Now, every instance has to redefine the labels, but never does actually
+//  change them.
+$_INSTANCE_CONFIG['observation_counts'] = array(
+    // If you want to display the gene panel observation counts using the default
+    //  configuration, you can also simply write: 'genepanel' => array(),
+    'genepanel' => array(
+        // These are the columns to choose from. If you'd like to display all
+        //  default columns, you can also simply write:
+        //  'columns' => array(),
+        'columns' => array(
+            'value' => 'Gene Panel',
+            'total_individuals' => 'Total # Individuals',
+            'num_affected' => '# of Affected Individuals',
+            'num_not_affected' => '# of Unaffected Individuals',
+            'percentage' => 'Percentage (%)'
+        ),
+        // These are the categories to choose from. If you'd like to use all
+        //  default categories, you can also also simply write:
+        //  'categories' => array(),
+        'categories' => array(
+            'all',
+            'gender',
+            'ethnic',
+        ),
+    ),
 
+    // If you want to display the general observation counts using the default
+    //  configuration, you can also simply write: 'general' => array(),
+    'general' => array(
+        // These are the columns to choose from. If you'd like to display all
+        //  default columns, you can also simply write:
+        //  'columns' => array(),
+        'columns' => array(
+            'label' => 'Category',
+            'value' => 'Value',
+            'threshold' => 'Percentage'
+        ),
+        // These are the categories to choose from. If you'd like to use all
+        //  default categories, you can also also simply write:
+        //  'categories' => array(),
+        'categories' => array(
+            'all',
+            'Individual/Gender',
+            'Individual/Origin/Ethnic',
+            'Screening/Sample/Type',
+            'Screening/Library_preparation',
+            'Screening/Sequencing_software',
+            'Screening/Analysis_type',
+            'Screening/Library_preparation&Screening/Sequencing_software',
+            'Screening/Library_preparation&Screening/Sequencing_software&Screening/Analysis_type',
+        ),
+        // This is the minimal population size that is required for the
+        //  general observation counts to be calculated.
+        'min_population_size' => 100
+    ),
+);
 
 class LOVD_DefaultDataConverter {
 
