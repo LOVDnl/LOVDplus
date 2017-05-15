@@ -79,8 +79,8 @@ if (!empty($zIndividual['__gene_panels'])) {
 
 $zAnalysis = $zAnalysisRun = false;
 if ($_REQUEST['runid']) {
-    // Check if the run exists.
-    $zAnalysisRun = $_DB->query('SELECT ar.id, ar.analysisid, a.name, GROUP_CONCAT(arf.filterid,"|",IFNULL(arf.config_json, "") ORDER BY arf.filter_order SEPARATOR ";") AS _filters FROM ' . TABLE_ANALYSES_RUN . ' AS ar INNER JOIN ' . TABLE_ANALYSES . ' AS a ON (ar.analysisid = a.id) INNER JOIN ' . TABLE_ANALYSES_RUN_FILTERS . ' AS arf ON (ar.id = arf.runid) WHERE ar.id = ?', array($_REQUEST['runid']))->fetchAssoc();
+    // Check if the run exists and retrieve any existing configurations data of each filter.
+    $zAnalysisRun = $_DB->query('SELECT ar.id, ar.analysisid, a.name, GROUP_CONCAT(arf.filterid,"|",IFNULL(arf.config_json, "") ORDER BY arf.filter_order SEPARATOR ";;") AS __filters FROM ' . TABLE_ANALYSES_RUN . ' AS ar INNER JOIN ' . TABLE_ANALYSES . ' AS a ON (ar.analysisid = a.id) INNER JOIN ' . TABLE_ANALYSES_RUN_FILTERS . ' AS arf ON (ar.id = arf.runid) WHERE ar.id = ?', array($_REQUEST['runid']))->fetchAssoc();
     if (!$zAnalysisRun) {
         die('Analysis run not recognized. If the analysis run is defined properly, this is an error in the software.');
     }
@@ -103,15 +103,24 @@ if ($_REQUEST['runid']) {
 
 
 if (ACTION == 'configure' && GET) {
+    // To display a filter configuration form if the analysis to be run requires further configurations.
+
     header('Content-type: text/javascript; charset=UTF-8');
-    $aFilters = explode(';', (isset($zAnalysisRun['_filters'])? $zAnalysisRun['_filters']: $zAnalysis['_filters']));
+    if (isset($zAnalysisRun['__filters'])) {
+        $aFilters = explode(';;', $zAnalysisRun['__filters']);
+    } else {
+        $aFilters = explode(';', $zAnalysis['_filters']);
+    }
+
     $sFiltersFormItems = '';
     $sJsCanSubmit = 'true';
     $sJsOtherFunctions = '';
     foreach ($aFilters as $sFilterAndConfig) {
         $aParts = explode('|', $sFilterAndConfig);
         $sFilter = $aParts[0];
-        $sConfigJson = (empty($aParts[1])? '' : $aParts[1]);
+        $sConfigJson = (empty($aParts[1])? '' : $aParts[1]); // If the filter already has configurations saved in the db, we want to pre-populate the html form.
+
+        // Custom build filter configurations form case by case depending on the filter id.
         switch($sFilter) {
             case 'apply_selected_gene_panels':
                 // Display a notice that 'apply_selected_gene_panels' is selected for this analysis
@@ -151,6 +160,7 @@ if (ACTION == 'configure' && GET) {
                     $sFiltersFormItems .= '</TABLE></DIV><BR>';
                 }
 
+                // Gene panels do not have required fields at the moment.
                 $sJsOtherFunctions .= 'function isValidGenePanel() {return true;}';
                 $sJsCanSubmit .= ' && isValidGenePanel()';
 
@@ -162,7 +172,7 @@ if (ACTION == 'configure' && GET) {
                     $aConfig = json_decode($sConfigJson, true);
                 }
 
-                // Find available screenings.
+                // Find available screenings in the database.
                 $sSQL = 'SELECT s.*, i.`Individual/Sample_ID`
                      FROM ' . TABLE_SCREENINGS . ' AS s 
                      JOIN ' . TABLE_INDIVIDUALS . ' AS i ON (s.individualid = i.id) 
@@ -210,6 +220,9 @@ if (ACTION == 'configure' && GET) {
                 $sMsgSelectScreeningsFirst = 'Select variants from this screening that are *';
                 $sMsgSelectScreenings = 'Then select variants <STRONG>from the results of the above selection</STRONG> that are *';
                 $nGroups = (!isset($aConfig['groups'])? 0 : count($aConfig['groups']));
+
+                // Always print at least one group if there is no existing configurations in the database.
+                // Otherwise, loop through the configurations data to see how many groups had been saved.
                 for ($i = 0; $i == 0 || $i < $nGroups; $i++) {
                     $sFiltersFormItems .= '<DIV class=\'filter-cross-screening-group\' id=\'filter-config-' . $sFilter . '-' . $i . '\'>';
                     $sMsg = ($i == 0? $sMsgSelectScreeningsFirst : $sMsgSelectScreenings);
@@ -245,10 +258,13 @@ if (ACTION == 'configure' && GET) {
                 // End of form.
                 $sFiltersFormItems .= '</TABLE></DIV>';
 
+                // Javascripts to make the form more user friendly.
                 $sFiltersFormItems .= '<SCRIPT type=\'text/javascript\'>';
                 for ($i=0; $i == 0 || $i < $nGroups; $i++) {
                     $sFiltersFormItems .= '$(\'#select-screenings-' . $i . '\').select2({ width: \'555px\'});';
                 }
+
+                // Function to update the form when 'Add group' button is clicked.
                 $sFiltersFormItems .= '$(\'#btn-add-group\').click(function() {';
                 $sFiltersFormItems .= 'var numGroups = $(\'.filter-cross-screening-group\').length;';
                 $sFiltersFormItems .= 'var elemFilterConfig = $(\'#filter-config-' . $sFilter . '\');';
@@ -279,6 +295,7 @@ if (ACTION == 'configure' && GET) {
                 $sJsOtherFunctions .= '});';
                 $sJsOtherFunctions .= 'return bValid;}';
 
+                // The 'submit' button can only be enabled if it has passed the validation of all filters.
                 $sJsCanSubmit .= ' && isValidCrossScreenings()';
 
                 break;
@@ -354,7 +371,7 @@ if (ACTION == 'configure' && GET) {
         $(".ui-dialog-buttonpane button:contains(\'Submit\')").button(bCanSubmit);
     });
     
-    // When form is loaded for the first time. 
+    // Ensure we call form validation functions when form is loaded for the first time. 
     $("#configure_analysis_dialog").trigger("change");
     ');
     exit;
@@ -368,7 +385,7 @@ if (ACTION == 'configure' && POST) {
     header('Content-type: text/javascript; charset=UTF-8');
     $aConfig = (empty($_REQUEST['config'])? array() : $_REQUEST['config']);
 
-    // TODO: This is a good place for us to do our form inputs validation
+    // TODO: This is a good place for us to do our form inputs validation or data cleanup.
     if (!empty($_REQUEST['config']) && (empty($_POST['csrf_token']) || $_POST['csrf_token'] != $_SESSION['csrf_tokens']['run_analysis_configure'])) {
         die('alert("Error while sending data, possible security risk. Please reload the page, and try again.");');
     }
@@ -430,7 +447,7 @@ if (ACTION == 'run') {
         $_DB->query('UPDATE ' . TABLE_ANALYSES_RUN . ' SET custom_panel = ? WHERE id = ?', array($sCustomPanel, $nRunID));
         
         // Insert into database the new configurations.
-        $aFiltersAndConfigs = explode(';', $zAnalysisRun['_filters']);
+        $aFiltersAndConfigs = explode(';;', $zAnalysisRun['__filters']);
         foreach ($aFiltersAndConfigs as $i => $sFilterAndConfig) {
             $aParts = explode('|', $sFilterAndConfig);
             $sFilter = $aParts[0];
