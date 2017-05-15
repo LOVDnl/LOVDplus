@@ -718,12 +718,22 @@ if ($sCalcVersionFiles != $sCalcVersionDB) {
                  '3.0-17j' => array(), // Placeholder for LOVD+ queries, defined below.
                  '3.0-17k' =>
                      array(
-                         'ALTER TABLE ' . TABLE_VARIANTS . ' ADD COLUMN `obscount_json` TEXT NULL AFTER `confirmation_statusid`',
+                         'SET @bExists := (SELECT COUNT(*) FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = "' . TABLE_VARIANTS . '" AND COLUMN_NAME = "obscount_json")',
+                         'SET @sSQL := IF(@bExists > 0, \'SELECT "INFO: Column already exists."\', "
+                            ALTER TABLE ' . TABLE_VARIANTS . ' ADD COLUMN `obscount_json` TEXT NULL AFTER `confirmation_statusid`")',
+                         'PREPARE Statement FROM @sSQL',
+                         'EXECUTE Statement',
                      ),
                  '3.0-17l' => array(
                      'SET @bExists := (SELECT COUNT(*) FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = "' . TABLE_ANALYSES_RUN_FILTERS . '" AND COLUMN_NAME = "config_json")',
                      'SET @sSQL := IF(@bExists > 0, \'SELECT "INFO: Column already exists."\', "
                             ALTER TABLE ' . TABLE_ANALYSES_RUN_FILTERS . ' ADD COLUMN config_json TEXT NULL AFTER filterid")',
+                     'PREPARE Statement FROM @sSQL',
+                     'EXECUTE Statement',
+
+                     'SET @bExists := (SELECT COUNT(*) FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = "' . TABLE_ANALYSIS_FILTERS . '" AND COLUMN_NAME = "has_config")',
+                     'SET @sSQL := IF(@bExists > 0, \'SELECT "INFO: Column already exists."\', "
+                            ALTER TABLE ' . TABLE_ANALYSIS_FILTERS . ' ADD COLUMN has_config TINYINT(1) NULL AFTER `description`")',
                      'PREPARE Statement FROM @sSQL',
                      'EXECUTE Statement',
                  ),
@@ -989,7 +999,7 @@ if ($sCalcVersionFiles != $sCalcVersionDB) {
         $aUpdates['3.0-17k'] = array_merge(
             $aUpdates['3.0-17k'],
             array(
-                'INSERT INTO ' . TABLE_COLS . ' VALUES ("Individual/Affected", 255, 70, 0, 0, 0, "Affected", "", "Whether individual is affected by disease","Whether individual is affected by disease","VARCHAR(100)","Affected|Whether individual is affected by disease|select|1|true|false|false","Affected\r\nNot Affected\r\nUnknown", "", 0, 1, 1, 0, NOW(), NULL, NULL)'
+                'INSERT IGNORE INTO ' . TABLE_COLS . ' VALUES ("Individual/Affected", 255, 70, 0, 0, 0, "Affected", "", "Whether individual is affected by disease","Whether individual is affected by disease","VARCHAR(100)","Affected|Whether individual is affected by disease|select|1|true|false|false","Affected\r\nNot Affected\r\nUnknown", "", 0, 1, 1, 0, NOW(), NULL, NULL)'
             )
         );
     }
