@@ -736,6 +736,7 @@ if ($sCalcVersionFiles != $sCalcVersionDB) {
                             ALTER TABLE ' . TABLE_ANALYSIS_FILTERS . ' ADD COLUMN has_config TINYINT(1) NULL AFTER `description`")',
                      'PREPARE Statement FROM @sSQL',
                      'EXECUTE Statement',
+
                  ),
                  '3.0-18' =>
                      array(
@@ -995,11 +996,24 @@ if ($sCalcVersionFiles != $sCalcVersionDB) {
 
     if (LOVD_plus && $sCalcVersionDB < lovd_calculateVersion('3.0-17k') && lovd_verifyInstance('mgha')) {
         // Run LOVD+ specific queries.
-
+        $aNewCustomCols = array('Individual/Affected');
         $aUpdates['3.0-17k'] = array_merge(
             $aUpdates['3.0-17k'],
             array(
-                'INSERT IGNORE INTO ' . TABLE_COLS . ' VALUES ("Individual/Affected", 255, 70, 0, 0, 0, "Affected", "", "Whether individual is affected by disease","Whether individual is affected by disease","VARCHAR(100)","Affected|Whether individual is affected by disease|select|1|true|false|false","Affected\r\nNot Affected\r\nUnknown", "", 0, 1, 1, 0, NOW(), NULL, NULL)'
+                'INSERT IGNORE INTO ' . TABLE_COLS . ' VALUES ("Individual/Affected", 255, 70, 0, 0, 0, "Affected", "", "Whether individual is affected by disease","Whether individual is affected by disease","VARCHAR(100)","Affected|Whether individual is affected by disease|select|1|true|false|false","Affected\r\nNot Affected\r\nUnknown", "", 0, 1, 1, 0, NOW(), NULL, NULL)',
+                lovd_getActivateCustomColumnQuery($aNewCustomCols)
+            )
+        );
+    }
+
+    if (LOVD_plus && $sCalcVersionDB < lovd_calculateVersion('3.0-17l') && lovd_verifyInstance('mgha')) {
+        // Run LOVD+ specific queries.
+        $aNewCustomCols = array('Screening/Tag');
+        $aUpdates['3.0-17l'] = array_merge(
+            $aUpdates['3.0-17l'],
+            array(
+                'INSERT IGNORE INTO ' . TABLE_COLS . ' VALUES ("Screening/Tag",255,100,0,0,0,"Tag","A single tag for this screening.","A single tag for this screening.","A single tag for this screening.","VARCHAR(50)","Tag|A single tag for this screening.|text|30","","",1,1,1,00001,NOW(),00001, NOW())',
+                lovd_getActivateCustomColumnQuery($aNewCustomCols)
             )
         );
     }

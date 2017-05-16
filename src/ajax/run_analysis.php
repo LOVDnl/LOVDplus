@@ -173,36 +173,46 @@ if (ACTION == 'configure' && GET) {
                 }
 
                 // Find available screenings in the database.
-                $sSQL = 'SELECT s.*, i.`Individual/Sample_ID`
+                $sSQL = 'SELECT s.id as screeningid, s.*, i.*
                      FROM ' . TABLE_SCREENINGS . ' AS s 
                      JOIN ' . TABLE_INDIVIDUALS . ' AS i ON (s.individualid = i.id) 
                      WHERE s.id != ?';
                 $aSQL = array($_REQUEST['screeningid']);
-
                 $zScreenings = $_DB->query($sSQL, $aSQL)->fetchAllAssoc();
+                
+                // Build the strings to represent screening
                 $aScreenings = array();
                 $aRelatives = array();
                 foreach ($zScreenings as $zScreening) {
-                    $sText = $zScreening['Individual/Sample_ID'];
-                    if (!empty($zScreening['Screening/Pipeline/Run_ID']) && !empty($zScreening['Screening/Batch'])) {
-                        $sText .= ' (' . $zScreening['Screening/Pipeline/Run_ID'] . '_' . $zScreening['Screening/Batch'] . ') ';
-                    }
-                    $sKey = $zScreening['id'] . ':';
+                    $sKey = $zScreening['screeningid'] . ':';
 
                     // Add role descriptions if sample has family relation with this screening.
                     if (!empty($_INSTANCE_CONFIG['sampleId_columns'])) {
+                        // All the custom columns that this instance use to identify family relationships
                         foreach ($_INSTANCE_CONFIG['sampleId_columns'] as $sColumn => $sRole) {
                             if ($zScreening['Individual/Sample_ID'] == $zIndividual[$sColumn]) {
                                 $sKey .= $sRole;
-                                $sText = $sRole . ': ' . $sText;
-                                $aRelatives[$sKey] = $sText;
+                                $zScreening['role'] = $sRole;
+                                $aRelatives[$sKey] = '';
 
                                 break; // We can stop once we find one. Assuming one role per screening.
                             }
                         }
                     }
 
+                    // Format display name of each screening.
+                    $sText = $zScreening['Individual/Sample_ID'];
+                    
+                    // If this instance has its own format, use it.
+                    if (!empty($_INSTANCE_CONFIG['cross_screenings']['format_screening_name'])) {
+                        $zFormatScreeningName = $_INSTANCE_CONFIG['cross_screenings']['format_screening_name'];
+                        $sText = $zFormatScreeningName($zScreening);
+                    }
+
                     $aScreenings[$sKey] = $sText;
+                    if (isset($aRelatives[$sKey])) {
+                        $aRelatives[$sKey] = $sText;
+                    }
                 }
 
                 // We want screenings of the relatives of this patient to be sorted on top.

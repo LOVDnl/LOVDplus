@@ -15,6 +15,8 @@ $_INSTANCE_CONFIG['viewlists']['Screenings_for_I_VE']['cols_to_show'] = array(
     'Screening/Mother/Sample_ID',
     'Screening/Mean_coverage',
     'Screening/Library_preparation',
+    'Screening/Tag',
+    'Screening/Batch',
     'Screening/Pipeline/Run_ID',
     'variants_found_',
     'analysis_status'
@@ -103,6 +105,28 @@ $_INSTANCE_CONFIG['conversion'] = array(
 $_INSTANCE_CONFIG['sampleId_columns'] = array(
     'Screening/Mother/Sample_ID' => 'Mother',
     'Screening/Father/Sample_ID' => 'Father'
+);
+
+$_INSTANCE_CONFIG['cross_screenings'] = array(
+    'format_screening_name' => function($zScreening) {
+        // role: Individual/Sample_ID - Individual/Affected (Screening/Pipeline/Run_ID_Screening/Batch) [Screening/Tag]
+
+        $sText = $zScreening['Individual/Sample_ID'];
+        if (!empty($zScreening['role'])) {
+            $sText = $zScreening['role'] . ': ' . $sText;
+        }
+        if (!empty($zScreening['Individual/Affected'])) {
+            $sText .= ' - ' . $zScreening['Individual/Affected'];
+        }
+        if (!empty($zScreening['Screening/Pipeline/Run_ID']) && !empty($zScreening['Screening/Batch'])) {
+            $sText .= ' (' . $zScreening['Screening/Pipeline/Run_ID'] . '_' . $zScreening['Screening/Batch'] . ') ';
+        }
+        if (!empty($zScreening['Screening/Tag'])) {
+            $sText .= ' [' . $zScreening['Screening/Tag'] . ']';
+        }
+        
+        return $sText;
+    }
 );
 
 $_INSTANCE_CONFIG['observation_counts'] = array(
