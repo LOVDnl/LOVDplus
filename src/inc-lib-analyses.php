@@ -44,46 +44,53 @@ function getSelectedGenePanelsByRunID ($nRunID)
     // This function will construct a table of information about the selected gene panels for an analysis.
     global $_DB;
 
+    $sConfig = $_DB->query('SELECT config_json FROM ' . TABLE_ANALYSES_RUN_FILTERS . ' WHERE filterid = "apply_selected_gene_panels" AND runid = ?', array($nRunID))->fetchColumn();
+    $aConfig = json_decode($sConfig, true);
+
+    // Only need to display gene panels information if there are gene panels selected.
     $sGenePanelsInfo = '';
-    $aGenePanelsFormatted = array();
-
-    // Load up the gene panel data.
-    $sCustomPanel = $_DB->query('SELECT custom_panel FROM ' . TABLE_ANALYSES_RUN . ' WHERE id = ?', array($nRunID))->fetchColumn();
-    $aGenePanels = $_DB->query('SELECT gp.id, gp.name, gp.type FROM ' . TABLE_AR2GP . ' AS ar2gp INNER JOIN ' . TABLE_GENE_PANELS . ' AS gp on (ar2gp.genepanelid = gp.id) WHERE ar2gp.runid = ? ORDER BY gp.type DESC, gp.name ASC', array($nRunID))->fetchAllGroupAssoc();
-
-    foreach ($aGenePanels as $nGenePanelID => $aGenePanel) {
-        // Group the gene panels together based on type, and make sub arrays to contain the gene panel information.
-        $aGenePanelsFormatted[$aGenePanel['type']][] = array('id' => $nGenePanelID, 'name' => $aGenePanel['name']);
-    }
-
-    foreach ($aGenePanelsFormatted as $sType => $aGenePanels) {
-        // Format each of the gene panel types into the info table.
-        $sDisplayText = '';
-        $nGenePanelCount = count($aGenePanels);
-        $sToolTip = '<B>' . ucfirst(str_replace('_', '&nbsp;', $sType)) . ($nGenePanelCount > 1? 's' : '') . '</B><BR>';
-
-        foreach ($aGenePanels as $aGenePanel) {
-            // Add the gene panel name to the tooltip and the text to show. We might shorten the text to show later.
-            $sToolTip .= '<A href="gene_panels/' . $aGenePanel['id'] . '">' . str_replace(' ', '&nbsp;', addslashes($aGenePanel['name'])) . '</A><BR>';
-            $sDisplayText .= (!$sDisplayText? '' : ', ') . $aGenePanel['name'];
+    if (!empty($aConfig['gene_panels'])) {
+        $aGpIds = array_keys($aConfig['metadata']);
+        $aGpIds = array_filter($aGpIds, 'ctype_digit');
+        if (!empty($aGpIds)) {
+            $aGpNames = $_DB->query('SELECT id, name FROM ' . TABLE_GENE_PANELS . ' WHERE id IN (?'. str_repeat(', ?', count($aGpIds)-1) . ')', $aGpIds)->fetchAllGroupAssoc();
+        }
+        if (!empty($aConfig['gene_panels']['custom_panel'])) {
+            $aGpNames['custom_panel'] = array('name' => 'Custom Panel');
         }
 
-        // If there is more than 1 of each type of gene panel selected, then display the summary.
-        if ($nGenePanelCount > 1) {
-            $sDisplayText = $nGenePanelCount . ' ' . ucfirst(str_replace('_', ' ', $sType)) . 's';
+        foreach ($aConfig['gene_panels'] as $sType => $aGenePanelIds) {
+            switch($sType) {
+                case 'custom_panel':
+                    // Add the custom panel info to the table.
+                    $aCustomPanelGenes = $aConfig['metadata']['custom_panel']['genes'];
+                    $sCustomPanel = implode(', ', $aCustomPanelGenes);
+                    $sToolTip = '<B>Custom&nbsp;panel</B><BR>' . $sCustomPanel;
+
+                    // If there are less than 5 genes in a custom gene panel, simply display all the gene symbols.
+                    $sCustomPanelDisplayText = (count($aCustomPanelGenes) <= 5? ': ' . $sCustomPanel : '(' . count($aCustomPanelGenes) . ' genes)');
+                    $sGenePanelsInfo .= '<TR onmouseover="lovd_showToolTip(\'' . htmlspecialchars($sToolTip) . '\', this, [100, -10]);"><TD>Custom panel '. $sCustomPanelDisplayText .'</TD></TR>' . "\n";
+                    break;
+                default:
+                    // Format each of the gene panel types into the info table.
+                    $sDisplayText = '';
+                    $nGenePanelCount = count($aGenePanelIds);
+                    $sToolTip = '<B>' . ucfirst(str_replace('_', '&nbsp;', $sType)) . ($nGenePanelCount > 1? 's' : '') . '</B><BR>';
+
+                    foreach ($aGenePanelIds as $aGenePanelId) {
+                        // Add the gene panel name to the tooltip and the text to show. We might shorten the text to show later.
+                        $sToolTip .= '<A href="gene_panels/' . $aGenePanelId . '">' . str_replace(' ', '&nbsp;', addslashes($aGpNames[$aGenePanelId]['name'])) . '</A><BR>';
+                        $sDisplayText .= (!$sDisplayText? '' : ', ') . $aGpNames[$aGenePanelId]['name'];
+                    }
+
+                    // If there is more than 1 of each type of gene panel selected, then display the summary.
+                    if ($nGenePanelCount > 1) {
+                        $sDisplayText = $nGenePanelCount . ' ' . ucfirst(str_replace('_', ' ', $sType)) . 's';
+                    }
+
+                    $sGenePanelsInfo .= '<TR onmouseover="lovd_showToolTip(\'' . htmlspecialchars($sToolTip) . '\', this, [100, -10]);"><TD>' . $sDisplayText . '</TD><TD>&nbsp;</TD></TR>' . "\n";
+            }
         }
-
-        $sGenePanelsInfo .= '<TR onmouseover="lovd_showToolTip(\'' . htmlspecialchars($sToolTip) . '\', this, [100, -10]);"><TD>' . $sDisplayText . '</TD><TD>&nbsp;</TD></TR>' . "\n";
-    }
-
-    if ($sCustomPanel) {
-        // Add the custom panel info to the table.
-        $sToolTip = '<B>Custom&nbsp;panel</B><BR>' . $sCustomPanel;
-        $aCustomPanelGenes = explode(', ', $sCustomPanel); // Custom panels are always stored separated by ', '.
-
-        // If there are less than 5 genes in a custom gene panel, simply display all the gene symbols.
-        $sCustomPanelDisplayText = (count($aCustomPanelGenes) <= 5? ': ' . $sCustomPanel : '(' . count($aCustomPanelGenes) . ' genes)');
-        $sGenePanelsInfo .= '<TR onmouseover="lovd_showToolTip(\'' . htmlspecialchars($sToolTip) . '\', this, [100, -10]);"><TD>Custom panel '. $sCustomPanelDisplayText .'</TD></TR>' . "\n";
     }
 
     if (!$sGenePanelsInfo) {
