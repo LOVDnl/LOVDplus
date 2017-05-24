@@ -537,7 +537,7 @@ if (ACTION == 'run') {
         foreach ($aFilters as $sFilter) {
             $aFilters[] = $sFilter;
             $sFilterConfig = (empty($aConfig[$sFilter]) ? NULL : json_encode($aConfig[$sFilter]));
-            $q = $_DB->query('UPDATE ' . TABLE_ANALYSES_RUN_FILTERS . ' SET config_json = ? WHERE filterid = ?', array($sFilterConfig, $sFilter));
+            $q = $_DB->query('UPDATE ' . TABLE_ANALYSES_RUN_FILTERS . ' SET config_json = ? WHERE filterid = ? AND runid = ?', array($sFilterConfig, $sFilter, $nRunID));
             if (!$q) {
                 $_DB->rollBack();
                 die('Failed to update analysis run filter in the database. If the analysis is defined properly, this is an error in the software.');
