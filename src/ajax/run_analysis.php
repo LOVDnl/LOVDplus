@@ -535,7 +535,6 @@ if (ACTION == 'run') {
         // Insert into database the new configurations.
         $aFilters = explode(';', $zAnalysisRun['_filters']);
         foreach ($aFilters as $sFilter) {
-            $aFilters[] = $sFilter;
             $sFilterConfig = (empty($aConfig[$sFilter]) ? NULL : json_encode($aConfig[$sFilter]));
             $q = $_DB->query('UPDATE ' . TABLE_ANALYSES_RUN_FILTERS . ' SET config_json = ? WHERE filterid = ? AND runid = ?', array($sFilterConfig, $sFilter, $nRunID));
             if (!$q) {
