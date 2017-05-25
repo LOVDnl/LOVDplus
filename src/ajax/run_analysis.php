@@ -449,20 +449,24 @@ if (ACTION == 'configure' && POST) {
                     }
 
                     if (!empty($aGenePanelIds)) {
-                        $sSQL = 'SELECT gp2g.genepanelid, IFNULL(gp.edited_date, gp.created_date) as last_modified, GROUP_CONCAT(gp2g.geneid SEPARATOR ";") as _genes
+                        // There is a limit to GROUP_CONCAT here. If we use GROUP_CONCAT our gene list will be truncated
+                        $sSQL = 'SELECT gp2g.genepanelid, IFNULL(gp.edited_date, gp.created_date) as last_modified, gp2g.geneid
                              FROM ' . TABLE_GP2GENE . ' AS gp2g
                              INNER JOIN ' . TABLE_GENE_PANELS . ' AS gp ON (gp2g.genepanelid = gp.id)
-                             WHERE gp2g.genepanelid IN (? ' . str_repeat(', ?', count($aGenePanelIds)-1) . ')
-                             GROUP BY gp2g.genepanelid';
+                             WHERE gp2g.genepanelid IN (? ' . str_repeat(', ?', count($aGenePanelIds)-1) . ')';
                         $zResult = $_DB->query($sSQL, $aGenePanelIds)->fetchAllAssoc();
 
                         // Populate data for each gene panel.
                         $aConfig[$sFilter]['metadata']  = array();
                         foreach ($zResult as $aRow) {
-                            $aConfig[$sFilter]['metadata'][$aRow['genepanelid']] = array(
-                                'genes' => explode(";", $aRow['_genes']),
-                                'last_modified' => $aRow['last_modified']
-                            );
+                            if (!isset($aConfig[$sFilter]['metadata'][$aRow['genepanelid']])) {
+                                $aConfig[$sFilter]['metadata'][$aRow['genepanelid']] = array(
+                                    'last_modified' => $aRow['last_modified'],
+                                    'genes' => array()
+                                );
+                            }
+
+                            $aConfig[$sFilter]['metadata'][$aRow['genepanelid']]['genes'][] = $aRow['geneid'];
                         }
                     }
 
