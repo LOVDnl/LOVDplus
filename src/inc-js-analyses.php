@@ -79,7 +79,7 @@ function lovd_configureAnalysis (nScreeningID, nAnalysisID, nRunID, sElementID)
 
 function lovd_runAnalysis (nScreeningID, nAnalysisID, nRunID, sElementID, aConfig)
 {
-    // When 'apply_selected_gene_panels' filter is NOT selected, sConfig is undefined.
+    // When 'apply_selected_gene_panels' filter is NOT selected, aConfig is undefined.
     if (typeof(aConfig) == 'undefined') {
         aConfig = '';
     }
@@ -92,12 +92,15 @@ function lovd_runAnalysis (nScreeningID, nAnalysisID, nRunID, sElementID, aConfi
     if (nRunID == '') {
         nRunID = 0;
     }
-    if (aConfig) {
-        sConfig = encodeURI('&config=' + JSON.stringify(aConfig));
-    } else {
-        sConfig = '';
-    }
-    $.get('<?php echo lovd_getInstallURL(); ?>ajax/run_analysis.php?run&screeningid=' + escape(nScreeningID) + '&analysisid=' + escape(nAnalysisID) + '&runid=' + escape(nRunID) + sConfig,
+
+    var aData = {
+        'screeningid' : escape(nScreeningID),
+        'analysisid' : escape(nAnalysisID),
+        'runid' : escape(nRunID),
+        'config' : JSON.stringify(aConfig)
+    };
+
+    $.post('<?php echo lovd_getInstallURL(); ?>ajax/run_analysis.php?run', aData,
         function () {
             // Remove onClick handler and change class of table, to visually show that it's running.
             $('#' + sElementID)
