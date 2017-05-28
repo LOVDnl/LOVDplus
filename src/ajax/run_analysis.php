@@ -75,6 +75,12 @@ if (!empty($zIndividual['__gene_panels'])) {
     }
 }
 
+// move custom_panel to $zIndividual['gene_panels'] to make further processing easier.
+if (!empty($zIndividual['custom_panel'])) {
+    // Use any non-digit values as ID.
+    $zIndividual['gene_panels'][GP_TYPE_CUSTOM] = array('custom_panel' => $zIndividual['custom_panel']);
+}
+
 
 
 $zAnalysis = $zAnalysisRun = $zFilterConfig = false;
@@ -142,7 +148,7 @@ if (ACTION == 'configure' && GET) {
                 } else {
                     // This individual has at least one gene panel or custom panel.
 
-                    $aGpOrderOfDisplay = array(GP_TYPE_GENEPANEL => true, GP_TYPE_BLACKLIST => true, GP_TYPE_MENDELIOME => false);
+                    $aGpOrderOfDisplay = array(GP_TYPE_GENEPANEL => true, GP_TYPE_BLACKLIST => true, GP_TYPE_MENDELIOME => false, GP_TYPE_CUSTOM => true);
 
                     $sFiltersFormItems .= '<DIV class=\'filter-config\' id=\'filter-config-'. $sFilter . '\'><TABLE>';
                     foreach ($aGpOrderOfDisplay as $sGpType => $bDefaultSelect) {
@@ -160,17 +166,6 @@ if (ACTION == 'configure' && GET) {
                                 $sFiltersFormItems .= '<TR><TD><INPUT type=\'checkbox\' name=\'config[' . $sFilter . '][gene_panels][' . $sGpType . '][]\' id=\'gene_panel_' . $sGpId . '\' value=\'' . $sGpId . '\'' . $sChecked . ' /></TD><TD><LABEL for=\'gene_panel_'. $sGpId .'\'>' . $sGpName . '</LABEL></TD></TR>';
                             }
                         }
-                    }
-
-                    // Add in the custom gene panel option.
-                    if ($zIndividual['custom_panel']) {
-                        $sChecked = 'checked';
-                        if (!empty($aConfig)) {
-                            $sChecked = (empty($aConfig['metadata']['custom_panel'])? '' : 'checked');
-                        }
-                        $sFiltersFormItems .= '<TR><TD class=\'gpheader\' colspan=\'2\'>Custom panel</TD></TR>';
-                        $sFiltersFormItems .= '<TR><TD><INPUT type=\'checkbox\' name=\'config[' . $sFilter . '][gene_panels][custom_panel]\' value=\'custom_panel\' id=\'custom_panel\' ' . $sChecked . '></TD>';
-                        $sFiltersFormItems .= '<TD><LABEL for=\'custom_panel\'>' . $zIndividual['custom_panel'] . '</LABEL></TD></TR>';
                     }
 
                     $sFiltersFormItems .= '</TABLE></DIV><BR>';
@@ -471,10 +466,19 @@ if (ACTION == 'configure' && POST) {
                     }
 
                     // Populate data for custom panel.
-                    $aConfig[$sFilter]['metadata']['custom_panel'] = array(
-                        'genes' => explode(', ', $zIndividual['custom_panel']),
-                        'last_modified' => date('Y-m-d H:i:s') // We cannot get the data of when custom panel is last modified. Fill in with current date for now.
-                    );
+                    // We know we only have one custom panel for now.
+                    // But, we store them as an array so that it follows the same storage format of other gene panels.
+                    // Let's not make assumption about what array key we use to store this one custom panel in case it is changed.
+                    // So, just loop through it like any other array.
+                    if (!empty($aConfig[$sFilter]['gene_panels'][GP_TYPE_CUSTOM])) {
+                        foreach ($aConfig[$sFilter]['gene_panels'][GP_TYPE_CUSTOM] as $sGpId) {
+                            $aConfig[$sFilter]['metadata'][$sGpId] = array(
+                                'genes' => explode(', ', $zIndividual['gene_panels'][GP_TYPE_CUSTOM][$sGpId]),
+                                'last_modified' => date('Y-m-d H:i:s') // We cannot get the data of when custom panel is last modified. Fill in with current date for now.
+                            );
+                        }
+                    }
+
                     break;
                 case 'cross_screenings':
                     // Reset index otherwise json_encode would be converted it to object instead of array.
@@ -499,12 +503,18 @@ if (ACTION == 'configure' && POST) {
 if (ACTION == 'run') {
     $aConfig = json_decode($_REQUEST['config'], true);
     $sCustomPanel = '';
-    $aGenePanels = array();
+    $aSelectedGenePanels = $aConfig['apply_selected_gene_panels']['gene_panels'];
 
-    $aGenePanels = (!empty($aConfig['apply_selected_gene_panels']['gene_panels'][GP_TYPE_GENEPANEL])? $aConfig['apply_selected_gene_panels']['gene_panels'][GP_TYPE_GENEPANEL] : array());
-    $aGenePanels = (!empty($aConfig['apply_selected_gene_panels']['gene_panels'][GP_TYPE_MENDELIOME])? array_merge($aGenePanels, $aConfig['apply_selected_gene_panels']['gene_panels'][GP_TYPE_MENDELIOME]) : $aGenePanels);
+    // Merge gene_panel and mendeliome gene panels
+    $aGenePanels = (!empty($aSelectedGenePanels[GP_TYPE_GENEPANEL])? $aSelectedGenePanels[GP_TYPE_GENEPANEL] : array());
+    $aGenePanels = (!empty($aSelectedGenePanels[GP_TYPE_MENDELIOME])? array_merge($aGenePanels, $aSelectedGenePanels[GP_TYPE_MENDELIOME]) : $aGenePanels);
 
-    $sCustomPanel = (empty($aConfig['apply_selected_gene_panels']['gene_panels']['custom_panel'])? '' : implode(", ", $aConfig['apply_selected_gene_panels']['metadata']['custom_panel']['genes']));
+    $sCustomPanel = '';
+    if (!empty($aSelectedGenePanels[GP_TYPE_CUSTOM]))  {
+        foreach ($aSelectedGenePanels[GP_TYPE_CUSTOM] as $sKey) {
+            $sCustomPanel .= implode(', ',  $aConfig['apply_selected_gene_panels']['metadata'][$sKey]['genes']);
+        }
+    }
 
     // All checked. Update individual. We already have checked that we're allowed to analyze this one. So just update the settings, if not already done before.
     define('LOG_EVENT', 'AnalysisRun');

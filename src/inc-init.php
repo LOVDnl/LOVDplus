@@ -441,6 +441,7 @@ if (LOVD_plus) {
     define('GP_TYPE_GENEPANEL', 'gene_panel');
     define('GP_TYPE_BLACKLIST', 'blacklist');
     define('GP_TYPE_MENDELIOME', 'mendeliome');
+    define('GP_TYPE_CUSTOM', 'custom_panel');
 
     $_SETT['attachment_file_types'] = array(
         'application/msword' => 'doc',

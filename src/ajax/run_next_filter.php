@@ -295,84 +295,52 @@ if ($aVariantIDs) {
             }
             break;
         case 'apply_selected_gene_panels':
-            // If no gene panels or custom panels are selected then don't do anything.
             // Regardless of success, we need to show the selected gene panels.
             $sFilterConfig = getSelectedFilterConfig($nRunID, 'apply_selected_gene_panels');
-            if (empty($aConfig['gene_panels']['custom_panel']) && empty($aConfig['gene_panels'][GP_TYPE_GENEPANEL])) {
+            $aSelectedGenePanels = (empty($aConfig['gene_panels']) ? array() : $aConfig['gene_panels']);
+
+            // General formula: (all selected genes - blacklist genes) + custom panel genes
+            $aGenes = array(
+                GP_TYPE_BLACKLIST => array(),
+                GP_TYPE_CUSTOM => array(),
+                'others' => array()
+            );
+
+            // Get the list of genes from 'metadata' in the $aConfig array
+            foreach ($aSelectedGenePanels as $sType => $aGpIDs) {
+                foreach ($aGpIDs as $sGpID) {
+                    $sKey = (isset($aGenes[$sType]) ? $sType : 'others');
+                    $aGenes[$sKey]  = array_merge($aGenes[$sKey], $aConfig['metadata'][$sGpID]['genes']);
+                }
+            }
+
+            // If no non-blacklist gene panels selected, then return all variants.
+            if (empty($aGenes['others']) && empty($aGenes[GP_TYPE_CUSTOM])) {
                 $aVariantIDsFiltered = $aVariantIDs;
-                break;
+                break; // switch case statement break
             }
 
-            if (!empty($aConfig['gene_panels']['custom_panel'])) {
-                $aCustomPanels = $aConfig['metadata']['custom_panel']['genes'];
+            // General formula: (all selected genes - blacklist genes) + custom panel genes
+            $aSelectedGenes = array_diff($aGenes['others'], $aGenes[GP_TYPE_BLACKLIST]);
+            $aSelectedGenes = array_merge($aSelectedGenes, $aGenes[GP_TYPE_CUSTOM]);
+            
+            // (all selected genes - blacklist genes) + custom panel genes =  0
+            // We don't need to run the SQL query. Return no variants.
+            if (empty($aSelectedGenes)) {
+                $aVariantIDsFiltered = array();
+                break; // switch case statement break
             }
 
-            // Merge gene panel IDs of gene_panel and mendeliome types.
-            $aGenePanels[GP_TYPE_GENEPANEL] = (!empty($aConfig['gene_panels'][GP_TYPE_GENEPANEL])? $aConfig['gene_panels'][GP_TYPE_GENEPANEL] : array());
-            $aGenePanels[GP_TYPE_GENEPANEL] = (!empty($aConfig['gene_panels'][GP_TYPE_MENDELIOME])? array_merge($aGenePanels[GP_TYPE_GENEPANEL], $aConfig['gene_panels'][GP_TYPE_MENDELIOME]) : $aGenePanels[GP_TYPE_GENEPANEL]);
-
-            // Load gene panel IDs of blacklist type.
-            $aGenePanels[GP_TYPE_BLACKLIST] = (!empty($aConfig['gene_panels'][GP_TYPE_BLACKLIST])? $aConfig['gene_panels'][GP_TYPE_BLACKLIST]: array());
-
-            $bPanels = !empty($aGenePanels);
-            $bGenePanels = !empty($aGenePanels[GP_TYPE_GENEPANEL]);
-            $bBlackLists = !empty($aGenePanels[GP_TYPE_BLACKLIST]);
-            $bCustomPanels = !empty($aCustomPanels);
-            $sWhereGenePanels = '';   // WHERE statement for the gene panels.
-            $sWhereBlacklists = '';   // WHERE statement for the blacklists.
-            $sWherePanelsSeparator = 'OR'; // The parts of the WHERE query of the panels and the custom panel are separated by ...?
-            $sWhereCustomPanels = ''; // WHERE statement for the custom panels.
-            $aSQL = array();          // Arguments to the query.
-            // Using a blacklist is not necessary and complicates things a lot,
-            // when we don't have a gene list, but we do have a custom list. The
-            // custom list then takes the lead, and the blacklist has no
-            // function. Better make this easier, by getting rid of it now.
-            if (!$bGenePanels && $bCustomPanels) {
-                $bPanels = $bBlackLists = false;
-            }
-            if (!$bPanels) {
-                $sWhereGenePanels = 'TRUE'; // To not have to make the query too custom.
-                if ($bCustomPanels) {
-                    // To make sure the custom panel works while the gene
-                    // panels are not used, we have to use AND instead of OR.
-                    $sWherePanelsSeparator = 'AND';
-                }
-            } else {
-                if ($bGenePanels) {
-                    $sWhereGenePanels = 'gp.id IS NOT NULL';
-                    $aSQL = array_merge($aSQL, $aGenePanels[GP_TYPE_GENEPANEL]); // For the JOIN.
-                }
-                if ($bBlackLists) {
-                    $sWhereBlacklists = (!$sWhereGenePanels? '' : ' AND ') .
-                        'NOT EXISTS (
-                      SELECT 1 
-                      FROM ' . TABLE_GP2GENE . ' AS bl2g
-                        INNER JOIN ' . TABLE_GENE_PANELS . ' AS bl ON (bl2g.genepanelid = bl.id)
-                      WHERE bl.id IN (?' . str_repeat(', ?', count($aGenePanels[GP_TYPE_BLACKLIST])-1) . ') AND t.geneid = bl2g.geneid)';
-                    $aSQL = array_merge($aSQL, $aGenePanels[GP_TYPE_BLACKLIST]);
-                }
-            }
-            if ($bCustomPanels) {
-                $sWhereCustomPanels = 't.geneid IN (?' . str_repeat(', ?', count($aCustomPanels)-1) . ')';
-                $aSQL = array_merge($aSQL, $aCustomPanels);
-            } else {
-                $sWhereCustomPanels = 'FALSE'; // To not have to make the query too custom.
-            }
-
-            // Build up the query.
+            // all other cases, we need to run the SQL query
             $sSQL = 'SELECT DISTINCT CAST(vot.id AS UNSIGNED)
                      FROM ' . TABLE_VARIANTS_ON_TRANSCRIPTS . ' AS vot
-                       INNER JOIN ' . TABLE_TRANSCRIPTS . ' AS t ON (vot.transcriptid = t.id)' .
-                (!$bGenePanels? '' : '
-                       LEFT OUTER JOIN ' . TABLE_GP2GENE . ' AS gp2g ON (t.geneid = gp2g.geneid)
-                       LEFT OUTER JOIN ' . TABLE_GENE_PANELS . ' AS gp ON (gp2g.genepanelid = gp.id AND gp.id IN (?' . str_repeat(', ?', count($aGenePanels[GP_TYPE_GENEPANEL])-1) . '))') . '
-                     WHERE (
-                        (' . $sWhereGenePanels . $sWhereBlacklists . ')
-                        ' . $sWherePanelsSeparator . ' ' . $sWhereCustomPanels . ')
-                       AND vot.id IN (?' . str_repeat(', ?', count($aVariantIDs) - 1) . ')';
-            $aSQL = array_merge($aSQL, $aVariantIDs);
+                     INNER JOIN ' . TABLE_TRANSCRIPTS . ' AS t ON (vot.transcriptid = t.id)
+                     WHERE t.geneid IN (?' . str_repeat(', ?', count($aSelectedGenes)-1) . ')
+                        AND vot.id IN (? ' . str_repeat(', ?', count($aVariantIDs) - 1) . ')';
 
+            $aSQL = array_merge($aSelectedGenes, $aVariantIDs);
             $aVariantIDsFiltered = $_DB->query($sSQL, $aSQL, false)->fetchAllColumn();
+
             break;
         case 'cross_screenings':
             $sFilterConfig = getSelectedFilterConfig($nRunID, 'cross_screenings');
