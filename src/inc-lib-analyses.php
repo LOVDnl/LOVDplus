@@ -51,7 +51,8 @@ function getSelectedGenePanelsByRunID ($nRunID)
     $sGenePanelsInfo = '';
     if (!empty($aConfig['gene_panels'])) {
         $aGpIds = array_keys($aConfig['metadata']);
-        $aGpIds = array_filter($aGpIds, 'ctype_digit');
+        $aGpIds = array_values(array_filter($aGpIds, 'ctype_digit'));
+
         if (!empty($aGpIds)) {
             $aGpNames = $_DB->query('SELECT id, name FROM ' . TABLE_GENE_PANELS . ' WHERE id IN (?'. str_repeat(', ?', count($aGpIds)-1) . ')', $aGpIds)->fetchAllGroupAssoc();
         }
