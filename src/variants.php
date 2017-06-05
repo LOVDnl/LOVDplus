@@ -748,8 +748,8 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && !ACTION) {
         $sFileTypes = implode(',', array_keys($_INSTANCE_CONFIG['attachments']));
         // This already sorts the files based on their name, meaning sorted based on file type and then time (ascending).
         $aFiles = array_merge(
-            glob($sAttachmentFilesPath . '/variant:' . $nID . '-{' . $sFileTypes . '}-*', GLOB_BRACE),
-            glob($sAttachmentFilesPath . '/summary_annotation:' . $sSummaryAnnotationsID . '-{' . $sFileTypes . '}-*', GLOB_BRACE)
+            glob($sAttachmentFilesPath . '/variant_' . $nID . '-{' . $sFileTypes . '}-*', GLOB_BRACE),
+            glob($sAttachmentFilesPath . '/summary_annotation_' . $sSummaryAnnotationsID . '-{' . $sFileTypes . '}-*', GLOB_BRACE)
         );
         if (count($aFiles)) {
             // At least one match.
