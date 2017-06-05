@@ -359,115 +359,127 @@ function lovd_fetchDBID ($aData)
     // this variant, otherwise returns next variant ID not in use.
     // NOTE: We're assuming that the DBID field actually exists. Using this
     // function implies you've checked for it's presence.
-    global $_DB;
+    global $_DB, $_CONF;
 
     $sGenomeVariant = '';
     if (!empty($aData['VariantOnGenome/DNA'])) {
         $sGenomeVariant = str_replace(array('(', ')', '?'), '', $aData['VariantOnGenome/DNA']);
     }
-    if (!isset($aData['aTranscripts'])) {
-        $aData['aTranscripts'] = array();
-    }
-    $aTranscriptVariants = array();
-    foreach ($aData['aTranscripts'] as $nTranscriptID => $aTranscript) {
-        // Check for non-empty VariantOnTranscript/DNA fields.
-        if (!empty($aData[$nTranscriptID . '_VariantOnTranscript/DNA'])) {
-            $aTranscriptVariants[$nTranscriptID] = str_replace(array('(', ')', '?'), '', $aData[$nTranscriptID . '_VariantOnTranscript/DNA']);
-        }
-        $aGenes[] = $aTranscript[1];
-    }
 
-    if (!empty($aData) && (!empty($sGenomeVariant) || !empty($aTranscriptVariants))) {
-        // Gather a list of DBIDs already present in the database to use.
-        // 2013-03-01; 3.0-03; To speed up this query in large databases, it has been optimized and rewritten with a UNION.
-        $sSQL = '';
-        $aArgs = array();
-        if (!empty($sGenomeVariant)) {
-            // SQL addition to check the genomic notation-chromosome combination.
-            $sSQL = 'SELECT DISTINCT vog.`VariantOnGenome/DBID` ' .
+    if (LOVD_plus) {
+        if (!empty($aData) && !empty($sGenomeVariant)) {
+            $sDBID = md5($_CONF['refseq_build'] . $aData['chromosome'] . '.g.' . $sGenomeVariant);
+            return $sDBID;
+        } else {
+            return false;
+        }
+    } else {
+        if (!isset($aData['aTranscripts'])) {
+            $aData['aTranscripts'] = array();
+        }
+        $aTranscriptVariants = array();
+        foreach ($aData['aTranscripts'] as $nTranscriptID => $aTranscript) {
+            // Check for non-empty VariantOnTranscript/DNA fields.
+            if (!empty($aData[$nTranscriptID . '_VariantOnTranscript/DNA'])) {
+                $aTranscriptVariants[$nTranscriptID] = str_replace(array('(', ')', '?'), '', $aData[$nTranscriptID . '_VariantOnTranscript/DNA']);
+            }
+            $aGenes[] = $aTranscript[1];
+        }
+
+        if (!empty($aData) && (!empty($sGenomeVariant) || !empty($aTranscriptVariants))) {
+            // Gather a list of DBIDs already present in the database to use.
+            // 2013-03-01; 3.0-03; To speed up this query in large databases, it has been optimized and rewritten with a UNION.
+            $sSQL = '';
+            $aArgs = array();
+            if (!empty($sGenomeVariant)) {
+                // SQL addition to check the genomic notation-chromosome combination.
+                $sSQL = 'SELECT DISTINCT vog.`VariantOnGenome/DBID` ' .
                     'FROM ' . TABLE_VARIANTS . ' AS vog ' .
                     'WHERE `VariantOnGenome/DBID` IS NOT NULL AND `VariantOnGenome/DBID` != "" AND REPLACE(REPLACE(REPLACE(vog.`VariantOnGenome/DNA`, "(", ""), ")", ""), "?", "") = ? AND vog.chromosome = ?';
-            $aArgs[] = $sGenomeVariant;
-            $aArgs[] = $aData['chromosome'];
-            // 2013-02-28; 3.0-03; If we have the variant's position available, we can use that, speeding up the query from
-            // 0.11s to 0.00s when having 1M variants. Would the position ever be different when we've got the same DNA field?
-            if (!empty($aData['position_g_start'])) {
-                $sSQL .= ' AND vog.position_g_start = ?';
-                $aArgs[] = $aData['position_g_start'];
-            }
-        }
-        if (!LOVD_plus && !empty($aTranscriptVariants)) {
-            if (!empty($sGenomeVariant)) {
-                $sSQL .= ' UNION ';
-            }
-            // 2013-03-01; 3.0-03; To speed up this query in large databases, it has been optimized and rewritten using INNER JOIN instead of LEFT OUTER JOIN, requiring a UNION.
-            $sSQL .= 'SELECT DISTINCT vog.`VariantOnGenome/DBID` ' .
-                     'FROM ' . TABLE_VARIANTS . ' AS vog INNER JOIN ' . TABLE_VARIANTS_ON_TRANSCRIPTS . ' AS vot USING (id) ' .
-                     'INNER JOIN ' . TABLE_TRANSCRIPTS . ' AS t ON (vot.transcriptid = t.id) ' .
-                     'WHERE `VariantOnGenome/DBID` IS NOT NULL AND `VariantOnGenome/DBID` != "" AND (';
-            $sWhere = '';
-            foreach ($aTranscriptVariants as $nTranscriptID => $sTranscriptVariant) {
-                // SQL addition to check the transcript notation-transcript combination.
-                $sWhere .= (empty($sWhere)? '' : ' OR ') . '(REPLACE(REPLACE(REPLACE(vot.`VariantOnTranscript/DNA`, "(", ""), ")", ""), "?", "") = ? AND vot.transcriptid = ?)';
-                $aArgs[] = $sTranscriptVariant;
-                $aArgs[] = $nTranscriptID;
-            }
-            $sWhere .= ')';
-            $sSQL .= $sWhere;
-        }
-
-        $aDBIDOptions = $_DB->query($sSQL, $aArgs)->fetchAllColumn();
-
-        // Set the default for the DBID.
-        $sDBID = 'chr' . $aData['chromosome'] . '_999999';
-        foreach($aDBIDOptions as $sDBIDoption) {
-            // Loop through all the options returned from the database and decide which option to take.
-            preg_match('/^((.+)_(\d{6}))$/', $sDBID, $aMatches);
-            list($sDBIDnew, $sDBIDnewSymbol, $sDBIDnewNumber) = array($aMatches[1], $aMatches[2], $aMatches[3]);
-
-            if (preg_match('/^(.+)_(\d{6})$/', $sDBIDoption, $aMatches)) {
-                list($sDBIDoption, $sDBIDoptionSymbol, $sDBIDoptionNumber) = $aMatches;
-                // Check this option, if it doesn't pass we'll skip it now.
-                $aDataCopy = $aData;
-                $aDataCopy['VariantOnGenome/DBID'] = $sDBIDoption;
-                if (!LOVD_plus && !lovd_checkDBID($aDataCopy)) {
-                    continue;
-                }
-                if ($sDBIDoptionSymbol == $sDBIDnewSymbol && $sDBIDoptionNumber < $sDBIDnewNumber && $sDBIDoptionNumber != '000000') {
-                    // If the symbol of the option is the same, but the number is lower (not including 000000), take it.
-                    $sDBID = $sDBIDoption;
-                } elseif ($sDBIDoptionSymbol != $sDBIDnewSymbol && isset($aGenes) && in_array($sDBIDoptionSymbol, $aGenes)) {
-                    // If the symbol of the option is different and is one of the genes of the variant you are editing/creating, take it.
-                    $sDBID = $sDBIDoption;
-                } elseif (substr($sDBIDnewSymbol, 0, 3) == 'chr' && substr($sDBIDoptionSymbol, 0, 3) != 'chr') {
-                    // If the symbol of the option is not a chromosome, but the current DBID is, take it.
-                    $sDBID = $sDBIDoption;
+                $aArgs[] = $sGenomeVariant;
+                $aArgs[] = $aData['chromosome'];
+                // 2013-02-28; 3.0-03; If we have the variant's position available, we can use that, speeding up the query from
+                // 0.11s to 0.00s when having 1M variants. Would the position ever be different when we've got the same DNA field?
+                if (!empty($aData['position_g_start'])) {
+                    $sSQL .= ' AND vog.position_g_start = ?';
+                    $aArgs[] = $aData['position_g_start'];
                 }
             }
-        }
-        if ((substr($sDBID, 0, 3) == 'chr' && !empty($aGenes)) || $sDBID == 'chr' . $aData['chromosome'] . '_999999') {
-            // Either this variant has a DBID with chr, but also a VOT that we want to change to, or
-            // no entries found with these combinations and a DBID, so we are going to use the gene symbol
-            // (or chromosome if there is no gene) and take the first number available to make a DBID.
-            // Query for getting the first available number for the new DBID.
-            if (LOVD_plus || empty($aGenes)) {
-                // No genes, simple query only on TABLE_VARIANTS.
-                // Also, LOVD_plus doesn't like it when chr DBIDs get changed on edits, so stick to chr DBIDs.
-                // 2013-02-28; 3.0-03; By querying the chromosome also we sped up this query from 0.43s to 0.09s when having 1M variants.
-                // NOTE: By adding an index on `VariantOnGenome/DBID` this query time can be reduced to 0.00s because of the LIKE on the DBID field.
-                $sSymbol = 'chr' . $aData['chromosome'];
-                $nDBIDnewNumber = $_DB->query('SELECT IFNULL(RIGHT(MAX(`VariantOnGenome/DBID`), 6), 0) + 1 FROM ' . TABLE_VARIANTS . ' AS vog WHERE vog.chromosome = ? AND `VariantOnGenome/DBID` LIKE ? AND `VariantOnGenome/DBID` REGEXP ?', array($aData['chromosome'], $sSymbol . '\_%', '^' . $sSymbol . '_[0-9]{6}$'))->fetchColumn();
-            } else {
-                // 2013-02-28; 3.0-03; By using INNER JOIN to VOT and T and placing a WHERE on t.geneid we sped up this query from 0.45s to 0.00s when having 1M variants.
-                $sSymbol = $aGenes[0];
-                $nDBIDnewNumber = $_DB->query('SELECT IFNULL(RIGHT(MAX(`VariantOnGenome/DBID`), 6), 0) + 1 FROM ' . TABLE_VARIANTS . ' AS vog INNER JOIN ' . TABLE_VARIANTS_ON_TRANSCRIPTS . ' AS vot USING (id) INNER JOIN ' . TABLE_TRANSCRIPTS . ' AS t ON (vot.transcriptid = t.id) WHERE t.geneid = ? AND `VariantOnGenome/DBID` REGEXP ?', array($sSymbol, '^' . $sSymbol . '_[0-9]{6}$'))->fetchColumn();
+            if (!empty($aTranscriptVariants)) {
+                if (!empty($sGenomeVariant)) {
+                    $sSQL .= ' UNION ';
+                }
+                // 2013-03-01; 3.0-03; To speed up this query in large databases, it has been optimized and rewritten using INNER JOIN instead of LEFT OUTER JOIN, requiring a UNION.
+                $sSQL .= 'SELECT DISTINCT vog.`VariantOnGenome/DBID` ' .
+                    'FROM ' . TABLE_VARIANTS . ' AS vog INNER JOIN ' . TABLE_VARIANTS_ON_TRANSCRIPTS . ' AS vot USING (id) ' .
+                    'INNER JOIN ' . TABLE_TRANSCRIPTS . ' AS t ON (vot.transcriptid = t.id) ' .
+                    'WHERE `VariantOnGenome/DBID` IS NOT NULL AND `VariantOnGenome/DBID` != "" AND (';
+                $sWhere = '';
+                foreach ($aTranscriptVariants as $nTranscriptID => $sTranscriptVariant) {
+                    // SQL addition to check the transcript notation-transcript combination.
+                    $sWhere .= (empty($sWhere)? '' : ' OR ') . '(REPLACE(REPLACE(REPLACE(vot.`VariantOnTranscript/DNA`, "(", ""), ")", ""), "?", "") = ? AND vot.transcriptid = ?)';
+                    $aArgs[] = $sTranscriptVariant;
+                    $aArgs[] = $nTranscriptID;
+                }
+                $sWhere .= ')';
+                $sSQL .= $sWhere;
             }
-            $sDBID = $sSymbol . '_' . sprintf('%06d', $nDBIDnewNumber);
+
+            $aDBIDOptions = $_DB->query($sSQL, $aArgs)->fetchAllColumn();
+
+            // Set the default for the DBID.
+            $sDBID = 'chr' . $aData['chromosome'] . '_999999';
+            foreach($aDBIDOptions as $sDBIDoption) {
+                // Loop through all the options returned from the database and decide which option to take.
+                preg_match('/^((.+)_(\d{6}))$/', $sDBID, $aMatches);
+                list($sDBIDnew, $sDBIDnewSymbol, $sDBIDnewNumber) = array($aMatches[1], $aMatches[2], $aMatches[3]);
+
+                if (preg_match('/^(.+)_(\d{6})$/', $sDBIDoption, $aMatches)) {
+                    list($sDBIDoption, $sDBIDoptionSymbol, $sDBIDoptionNumber) = $aMatches;
+                    // Check this option, if it doesn't pass we'll skip it now.
+                    $aDataCopy = $aData;
+                    $aDataCopy['VariantOnGenome/DBID'] = $sDBIDoption;
+                    if (!LOVD_plus && !lovd_checkDBID($aDataCopy)) {
+                        continue;
+                    }
+                    if ($sDBIDoptionSymbol == $sDBIDnewSymbol && $sDBIDoptionNumber < $sDBIDnewNumber && $sDBIDoptionNumber != '000000') {
+                        // If the symbol of the option is the same, but the number is lower (not including 000000), take it.
+                        $sDBID = $sDBIDoption;
+                    } elseif ($sDBIDoptionSymbol != $sDBIDnewSymbol && isset($aGenes) && in_array($sDBIDoptionSymbol, $aGenes)) {
+                        // If the symbol of the option is different and is one of the genes of the variant you are editing/creating, take it.
+                        $sDBID = $sDBIDoption;
+                    } elseif (substr($sDBIDnewSymbol, 0, 3) == 'chr' && substr($sDBIDoptionSymbol, 0, 3) != 'chr') {
+                        // If the symbol of the option is not a chromosome, but the current DBID is, take it.
+                        $sDBID = $sDBIDoption;
+                    }
+                }
+            }
+            if ((substr($sDBID, 0, 3) == 'chr' && !empty($aGenes)) || $sDBID == 'chr' . $aData['chromosome'] . '_999999') {
+                // Either this variant has a DBID with chr, but also a VOT that we want to change to, or
+                // no entries found with these combinations and a DBID, so we are going to use the gene symbol
+                // (or chromosome if there is no gene) and take the first number available to make a DBID.
+                // Query for getting the first available number for the new DBID.
+                if (empty($aGenes)) {
+                    // No genes, simple query only on TABLE_VARIANTS.
+                    // Also, LOVD_plus doesn't like it when chr DBIDs get changed on edits, so stick to chr DBIDs.
+                    // 2013-02-28; 3.0-03; By querying the chromosome also we sped up this query from 0.43s to 0.09s when having 1M variants.
+                    // NOTE: By adding an index on `VariantOnGenome/DBID` this query time can be reduced to 0.00s because of the LIKE on the DBID field.
+                    $sSymbol = 'chr' . $aData['chromosome'];
+                    $nDBIDnewNumber = $_DB->query('SELECT IFNULL(RIGHT(MAX(`VariantOnGenome/DBID`), 6), 0) + 1 FROM ' . TABLE_VARIANTS . ' AS vog WHERE vog.chromosome = ? AND `VariantOnGenome/DBID` LIKE ? AND `VariantOnGenome/DBID` REGEXP ?', array($aData['chromosome'], $sSymbol . '\_%', '^' . $sSymbol . '_[0-9]{6}$'))->fetchColumn();
+                } else {
+                    // 2013-02-28; 3.0-03; By using INNER JOIN to VOT and T and placing a WHERE on t.geneid we sped up this query from 0.45s to 0.00s when having 1M variants.
+                    $sSymbol = $aGenes[0];
+                    $nDBIDnewNumber = $_DB->query('SELECT IFNULL(RIGHT(MAX(`VariantOnGenome/DBID`), 6), 0) + 1 FROM ' . TABLE_VARIANTS . ' AS vog INNER JOIN ' . TABLE_VARIANTS_ON_TRANSCRIPTS . ' AS vot USING (id) INNER JOIN ' . TABLE_TRANSCRIPTS . ' AS t ON (vot.transcriptid = t.id) WHERE t.geneid = ? AND `VariantOnGenome/DBID` REGEXP ?', array($sSymbol, '^' . $sSymbol . '_[0-9]{6}$'))->fetchColumn();
+                }
+                $sDBID = $sSymbol . '_' . sprintf('%06d', $nDBIDnewNumber);
+            }
+            return $sDBID;
+        } else {
+            return false;
         }
-        return $sDBID;
-    } else {
-        return false;
     }
+
+
 }
 
 
