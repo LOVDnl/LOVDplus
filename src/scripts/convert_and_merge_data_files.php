@@ -644,7 +644,7 @@ foreach ($aFiles as $sID) {
         // VCF 4.2 can contain lines with an ALT allele of "*", indicating the allele is
         //  not WT at this position, but affected by an earlier mentioned variant instead.
         // Because these are not actually variants, we ignore them.
-        if ($aLine['ALT'] == '*') {
+        if (isset($aLine['ALT']) && $aLine['ALT'] == '*') {
             continue;
         }
 
