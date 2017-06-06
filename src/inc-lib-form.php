@@ -466,7 +466,7 @@ function lovd_fetchDBID ($aData)
                 // 2017-06-02; LOVD+ 3.0-17k; Even with an index, on a database with 22M variants, this query takes 2.2 seconds.
                 // Cache the DBIDs we saw to speed this up when we repeatedly ask for the DBIDs on the same chromosome.
                 $sSymbol = 'chr' . $aData['chromosome'];
-                $sSQL = 'SELECT SQL_NO_CACHE IFNULL(RIGHT(MAX(`VariantOnGenome/DBID`), 6), 0) + 1 FROM ' . TABLE_VARIANTS . ' AS vog WHERE vog.chromosome = ? AND `VariantOnGenome/DBID` LIKE ? AND `VariantOnGenome/DBID` REGEXP ?';
+                $sSQL = 'SELECT IFNULL(RIGHT(MAX(`VariantOnGenome/DBID`), 6), 0) + 1 FROM ' . TABLE_VARIANTS . ' AS vog WHERE vog.chromosome = ? AND `VariantOnGenome/DBID` LIKE ? AND `VariantOnGenome/DBID` REGEXP ?';
                 $aArgs = array($aData['chromosome'], $sSymbol . '\_%', '^' . $sSymbol . '_[0-9]{6}$');
                 if (isset($aDBIDsSeen[$aData['chromosome']])) {
                     $sSQL .= ' AND `VariantOnGenome/DBID` >= ?';
