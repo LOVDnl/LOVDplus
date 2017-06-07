@@ -2812,7 +2812,7 @@ if (PATH_COUNT == 2 && $_PE[1] == 'upload' && ACTION == 'create') {
 
 
 
-if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && in_array(ACTION, array('edit', 'publish'))) {
+if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && in_array(ACTION, array('edit', 'publish')) && !LOVD_plus) {
     // URL: /variants/0000000001?edit
     // URL: /variants/0000000001?publish
     // Edit an entry.
