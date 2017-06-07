@@ -408,6 +408,7 @@ class LOVD_GenomeVariant extends LOVD_Custom {
                     list($sPrefix,) = explode('_', $zData['VariantOnGenome/DBID'], 2);
                     $sLink = '<A href="' . (substr($sPrefix, 0, 3) == 'chr'? 'variants' : 'view/' . $sPrefix) . '?search_VariantOnGenome%2FDBID=%3D%22' . $zData['VariantOnGenome/DBID'] . '%22">See all ' . $n . ' reported entries</A>';
                     if (LOVD_plus && lovd_verifyInstance('mgha')) {
+                        // FIXME: Juny, do you still need this prefix check at all? I'm pretty sure you always want to link to this DBID view?
                         $sLink = '<A href="' . (substr($sPrefix, 0, 3) == 'chr'? 'variants/DBID/' . $zData['VariantOnGenome/DBID']  : 'view/' . $sPrefix . '?search_VariantOnGenome%2FDBID=%3D%22' . $zData['VariantOnGenome/DBID'] . '%22') .'">See all ' . $n . ' reported entries</A>';
                     }
                     // This is against our coding policy of never modifying actual contents of values (we always create a copy with _ appended), but now I simply can't without

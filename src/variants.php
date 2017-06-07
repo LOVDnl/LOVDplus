@@ -261,8 +261,8 @@ if (!ACTION && (empty($_PE[1]) || preg_match('/^chr[0-9A-Z]{1,2}$/', $_PE[1]))) 
 
 
 
-if (PATH_COUNT == 3 && $_PE[1] == 'DBID' && preg_match('/^chr/', $_PE[2]) && !ACTION) {
-    // URL: /variants/DBID/chr1_00001
+if (PATH_COUNT == 3 && $_PE[1] == 'DBID' && !ACTION) {
+    // URL: /variants/DBID/chr1_000001
     // View all genomic variant entries with the same DBID.
 
     $sID = $_PE[2];
@@ -293,8 +293,9 @@ if (PATH_COUNT == 3 && $_PE[1] == 'DBID' && preg_match('/^chr/', $_PE[2]) && !AC
 
 
 
-if (PATH_COUNT == 3 && $_PE[1] == 'DBID' && preg_match('/^chr/', $_PE[2]) && !empty($_GET['search_variantid']) && !ACTION) {
-    // URL: /variants/DBID/chr_00001
+// FIXME: This code can currently not be reached, as the block above captures this.
+if (PATH_COUNT == 3 && $_PE[1] == 'DBID' && !empty($_GET['search_variantid']) && !ACTION) {
+    // URL: /variants/DBID/chr_000001?search_variantid=0000000001
     // View all genomic variant entries with the same DBID, but only if the correct variant ID has been given.
     // This view is used for LOVD+ to show other observations of any given variant, without just allowing any DBID to be shown.
 
