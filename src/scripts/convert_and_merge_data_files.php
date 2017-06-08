@@ -644,10 +644,14 @@ foreach ($aFiles as $sID) {
         $aLine = $_ADAPTER->prepareVariantData($aLine);
 
         // If the prepareVariantData() method above determines that this variant line is not to be imported then it adds
-        //  lovd_ignore_variant to the $aLine array and sets it to true. We will then ignore them here. There will be no
-        //  record within LOVD of this variant being ignored.
-        if (isset($aLine['lovd_ignore_variant']) && $aLine['lovd_ignore_variant'] === true) {
-            print('Line ' . $nLine . ' is being ignored due to rules setup in the adapter library. This line will not be imported into LOVD.' . "\n");
+        //  lovd_ignore_variant to the $aLine array and sets it to something non-false.
+        // For possible values, see prepareVariantData() in the default adapter.
+        // We will process "silent" and "log" here. There will be no record within LOVD of this variant being ignored.
+        // Once we'll support "separate", we'll need to process there here, too.
+        if (!empty($aLine['lovd_ignore_variant'])) {
+            if ($aLine['lovd_ignore_variant'] == 'log') {
+                print('Line ' . $nLine . ' is being ignored due to rules setup in the adapter library. This line will not be imported into LOVD.' . "\n");
+            }
             continue;
         }
 
@@ -659,7 +663,7 @@ foreach ($aFiles as $sID) {
                 // Never mind then!
                 continue;
             }
-            
+
             if (empty($aLine[$sVEPColumn]) || $aLine[$sVEPColumn] == 'unknown' || $aLine[$sVEPColumn] == '.') {
                 $aVariant = $_ADAPTER->formatEmptyColumn($aLine, $sVEPColumn, $sLOVDColumn, $aVariant);
             } else {
@@ -958,7 +962,7 @@ print('No available transcripts for gene ' . $aGenes[$aVariant['symbol']]['id'] 
 
                     if ($sJSONResponse === false) {
                         print('>>>>> Attempted to call Mutalyzer ' . $nMutalyzerRetries . ' times for numberConversion and failed on line ' . $nLine . '.' . "\n");
-                    }                        
+                    }
 
                     if ($sJSONResponse && $aResponse = json_decode($sJSONResponse, true)) {
                         // Before we had to go two layers deep; through the result, then read out the string.
@@ -1281,7 +1285,7 @@ print('Mutalyzer returned EREF error, hg19/hg38 error?' . "\n");
             $aColumnsForVOG[] = $sCol;
         }
     }
-    
+
     foreach ($aVOTKeys as $sCol) {
         if (substr($sCol, 0, 20) == 'VariantOnTranscript/') {
             $aColumnsForVOT[] = $sCol;

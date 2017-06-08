@@ -372,11 +372,16 @@ class LOVD_DefaultDataConverter {
 
 
 
-    function prepareVariantData(&$aLine)
+    function prepareVariantData (&$aLine)
     {
         // Reformat a line of raw variant data into the format that works for this instance.
         // To stop certain variants being imported add some logic to check for these variants
-        //  and then add $aLine['lovd_ignore_variant'] = true.
+        //  and then set $aLine['lovd_ignore_variant'] to something non-false.
+        // Possible values:
+        // 'silent' - for silently ignoring the variant.
+        // 'log' - for ignoring the variant and logging the line number.
+        // 'separate' - for storing the variant in a separate screening (not implemented yet).
+        // When set to something else, 'log' is assumed.
 
         return $aLine;
     }
