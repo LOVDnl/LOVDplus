@@ -261,6 +261,33 @@ if (!ACTION && (empty($_PE[1]) || preg_match('/^chr[0-9A-Z]{1,2}$/', $_PE[1]))) 
 
 
 
+// FIXME: This code can currently not be reached, as the block above captures this.
+if (PATH_COUNT == 3 && $_PE[1] == 'DBID' && !empty($_GET['search_variantid']) && !ACTION) {
+    // URL: /variants/DBID/chr_000001?search_variantid=0000000001
+    // View all genomic variant entries with the same DBID, but only if the correct variant ID has been given.
+    // This view is used for LOVD+ to show other observations of any given variant, without just allowing any DBID to be shown.
+
+    $sDBID = $_PE[2];
+    define('PAGE_TITLE', 'View genomic variants');
+    $_T->printHeader();
+    $_T->printTitle();
+
+    lovd_requireAUTH(LEVEL_MANAGER);
+
+    require ROOT_PATH . 'class/object_custom_viewlists.mod.php';
+    $_DATA = new LOVD_CustomViewListMOD(array('VariantOnGenome', 'VariantOnTranscript', 'Screening', 'Individual'));
+ 
+    $_DATA->viewList('CustomVL_ObsCounts');
+
+    $_T->printFooter();
+    exit;
+}
+
+
+
+
+
+
 if (PATH_COUNT == 3 && $_PE[1] == 'DBID' && !ACTION) {
     // URL: /variants/DBID/chr1_000001
     // View all genomic variant entries with the same DBID.
@@ -289,32 +316,6 @@ if (PATH_COUNT == 3 && $_PE[1] == 'DBID' && !ACTION) {
     exit;
 }
 
-
-
-
-
-// FIXME: This code can currently not be reached, as the block above captures this.
-if (PATH_COUNT == 3 && $_PE[1] == 'DBID' && !empty($_GET['search_variantid']) && !ACTION) {
-    // URL: /variants/DBID/chr_000001?search_variantid=0000000001
-    // View all genomic variant entries with the same DBID, but only if the correct variant ID has been given.
-    // This view is used for LOVD+ to show other observations of any given variant, without just allowing any DBID to be shown.
-
-    $sDBID = $_PE[2];
-    define('PAGE_TITLE', 'View genomic variants');
-    $_T->printHeader();
-    $_T->printTitle();
-
-    lovd_requireAUTH(LEVEL_MANAGER);
-
-    require ROOT_PATH . 'class/object_custom_viewlists.mod.php';
-    $_DATA = new LOVD_CustomViewListMOD(array('VariantOnGenome', 'VariantOnTranscript', 'Screening', 'Individual'));
-
-    $_GET['search_VariantOnGenome/DBID'] = '="' . $sDBID . '"';
-    $_DATA->viewList('CustomVL_ObsCounts');
-
-    $_T->printFooter();
-    exit;
-}
 
 
 
