@@ -747,9 +747,15 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && !ACTION) {
         // FIXME: When we turn this code into a function, replace the file prefix with the object type.
         $sFileTypes = implode(',', array_keys($_INSTANCE_CONFIG['attachments']));
         // This already sorts the files based on their name, meaning sorted based on file type and then time (ascending).
+        // Below we have two methods of matching the file names, one containing a colon ':' and the other containing an underscore '_'. Originally the colon
+        // was used but this is an illegal file name character in Windows so it was changed to an underscore. We had to keep the colon option as files were already
+        // named using this. If in the future we want to reduce this to just the underscore we need to write an update script to rename all the existing files
+        // that contains the colon to use the underscore instead.
         $aFiles = array_merge(
             glob($sAttachmentFilesPath . '/variant:' . $nID . '-{' . $sFileTypes . '}-*', GLOB_BRACE),
-            glob($sAttachmentFilesPath . '/summary_annotation:' . $sSummaryAnnotationsID . '-{' . $sFileTypes . '}-*', GLOB_BRACE)
+            glob($sAttachmentFilesPath . '/variant_' . $nID . '-{' . $sFileTypes . '}-*', GLOB_BRACE),
+            glob($sAttachmentFilesPath . '/summary_annotation:' . $sSummaryAnnotationsID . '-{' . $sFileTypes . '}-*', GLOB_BRACE),
+            glob($sAttachmentFilesPath . '/summary_annotation_' . $sSummaryAnnotationsID . '-{' . $sFileTypes . '}-*', GLOB_BRACE)
         );
         if (count($aFiles)) {
             // At least one match.

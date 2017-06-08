@@ -277,7 +277,7 @@ if (PATH_COUNT == 2 && ACTION == 'upload') {
 
                 // Generate the new file name based on the file type and the ID to be used.
                 // First, check if the file type exists in the $aFiletypes array.
-                $sFileName = $aFileTypes[$_POST['mode']]['linked_to'] . ':';
+                $sFileName = $aFileTypes[$_POST['mode']]['linked_to'] . '_';
                 if ($aFileTypes[$_POST['mode']]) {
                     if ($aFileTypes[$_POST['mode']]['linked_to'] == 'variant') {
                         $sFileName .= $nID . '-' . $_POST['mode'];
