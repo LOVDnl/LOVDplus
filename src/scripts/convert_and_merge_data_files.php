@@ -640,16 +640,16 @@ foreach ($aFiles as $sID) {
         $aVariant = array(); // Will contain the mapped, possibly modified, data.
         // $aLine = array_map('trim', $aLine, array_fill(0, count($aLine), '"')); // In case we ever need to trim off quotes.
 
-
-        // VCF 4.2 can contain lines with an ALT allele of "*", indicating the allele is
-        //  not WT at this position, but affected by an earlier mentioned variant instead.
-        // Because these are not actually variants, we ignore them.
-        if (isset($aLine['ALT']) && $aLine['ALT'] == '*') {
-            continue;
-        }
-
         // Reformat variant data if extra modification required by different instance of LOVD.
         $aLine = $_ADAPTER->prepareVariantData($aLine);
+
+        // If the prepareVariantData() method above determines that this variant line is not to be imported then it adds
+        //  lovd_ignore_variant to the $aLine array and sets it to true. We will then ignore them here. There will be no
+        //  record within LOVD of this variant being ignored.
+        if (isset($aLine['lovd_ignore_variant']) && $aLine['lovd_ignore_variant'] === true) {
+            print('Line ' . $nLine . ' is being ignored due to rules setup in the adapter library. This line will not be imported into LOVD.' . "\n");
+            continue;
+        }
 
         // Map VEP columns to LOVD columns.
         foreach ($aColumnMappings as $sVEPColumn => $sLOVDColumn) {
@@ -665,6 +665,14 @@ foreach ($aFiles as $sID) {
             } else {
                 $aVariant[$sLOVDColumn] = $aLine[$sVEPColumn];
             }
+        }
+
+        // VCF 4.2 can contain lines with an ALT allele of "*", indicating the allele is
+        //  not WT at this position, but affected by an earlier mentioned variant instead.
+        // Because these are not actually variants, we ignore them.
+        if ($aVariant['alt'] == '*') {
+            print('Line ' . $nLine . ' is being ignored because the allele is not wild type but is affected by an earlier mentioned variant. This line will not be imported into LOVD.' . "\n");
+            continue;
         }
 
         // When seeing a new chromosome, reset these variables. We don't want them too big; it's useless and takes up a lot of memory.

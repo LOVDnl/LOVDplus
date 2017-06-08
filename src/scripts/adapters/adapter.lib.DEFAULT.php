@@ -375,6 +375,8 @@ class LOVD_DefaultDataConverter {
     function prepareVariantData(&$aLine)
     {
         // Reformat a line of raw variant data into the format that works for this instance.
+        // To stop certain variants being imported add some logic to check for these variants
+        //  and then add $aLine['lovd_ignore_variant'] = true.
 
         return $aLine;
     }
