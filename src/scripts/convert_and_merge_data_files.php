@@ -308,7 +308,6 @@ function lovd_getVariantDescription (&$aVariant, $sRef, $sAlt)
 
 
 
-// FIXME: Replace by lovd_getVariantInfo()?
 function lovd_getVariantPosition ($sVariant, $aTranscript = array())
 {
     // Constructs an array with the position fields 'start', 'start_intron', 'end', 'end_intron', from the variant description.
@@ -660,7 +659,7 @@ foreach ($aFiles as $sID) {
                 // Never mind then!
                 continue;
             }
-
+            
             if (empty($aLine[$sVEPColumn]) || $aLine[$sVEPColumn] == 'unknown' || $aLine[$sVEPColumn] == '.') {
                 $aVariant = $_ADAPTER->formatEmptyColumn($aLine, $sVEPColumn, $sLOVDColumn, $aVariant);
             } else {
@@ -951,7 +950,7 @@ print('No available transcripts for gene ' . $aGenes[$aVariant['symbol']]['id'] 
 
                     if ($sJSONResponse === false) {
                         print('>>>>> Attempted to call Mutalyzer ' . $nMutalyzerRetries . ' times for numberConversion and failed on line ' . $nLine . '.' . "\n");
-                    }
+                    }                        
 
                     if ($sJSONResponse && $aResponse = json_decode($sJSONResponse, true)) {
                         // Before we had to go two layers deep; through the result, then read out the string.
@@ -1274,7 +1273,7 @@ print('Mutalyzer returned EREF error, hg19/hg38 error?' . "\n");
             $aColumnsForVOG[] = $sCol;
         }
     }
-
+    
     foreach ($aVOTKeys as $sCol) {
         if (substr($sCol, 0, 20) == 'VariantOnTranscript/') {
             $aColumnsForVOT[] = $sCol;
