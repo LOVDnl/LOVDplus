@@ -4,11 +4,13 @@
  * LEIDEN OPEN VARIATION DATABASE (LOVD)
  *
  * Created     : 2014-11-28
- * Modified    : 2017-02-06
+ * Modified    : 2017-06-09
  * For LOVD+   : 3.0-18
  *
  * Copyright   : 2004-2017 Leiden University Medical Center; http://www.LUMC.nl/
- * Programmer  : Ivo F.A.C. Fokkema <I.F.A.C.Fokkema@LUMC.nl>
+ * Programmers : Ivo F.A.C. Fokkema <I.F.A.C.Fokkema@LUMC.nl>
+ *               Anthony Marty <anthony.marty@unimelb.edu.au>
+ *               Juny Kesumadewi <juny.kesumadewi@unimelb.edu.au>
  *
  *************/
 
@@ -649,7 +651,7 @@ foreach ($aFiles as $sID) {
         // We will process "silent" and "log" here. There will be no record within LOVD of this variant being ignored.
         // Once we'll support "separate", we'll need to process there here, too.
         if (!empty($aLine['lovd_ignore_variant'])) {
-            if ($aLine['lovd_ignore_variant'] == 'log') {
+            if ($aLine['lovd_ignore_variant'] != 'silent') {
                 print('Line ' . $nLine . ' is being ignored due to rules setup in the adapter library. This line will not be imported into LOVD.' . "\n");
             }
             continue;
