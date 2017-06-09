@@ -149,7 +149,7 @@ class LOVD_MghaDataConverter extends LOVD_DefaultDataConverter {
             'vog_ref' => 'VariantOnGenome/Ref',
             'ALT' => 'alt',
             'vog_alt' => 'VariantOnGenome/Alt',
-            'Existing_variation' => 'existingvariation',
+            'Existing_variation' => 'existing_variation',
             'Feature' => 'transcriptid',
             // VariantOnGenome/DNA - constructed by the lovd_getVariantDescription function later on.
             'CHROM' => 'chromosome',
@@ -368,7 +368,7 @@ class LOVD_MghaDataConverter extends LOVD_DefaultDataConverter {
 
 
 
-    function prepareVariantData(&$aLine)
+    function prepareVariantData (&$aLine)
     {
         // Processes the variant data file for MGHA.
         // Cleans up data in existing columns and splits some columns out to two columns.
@@ -738,30 +738,6 @@ class LOVD_MghaDataConverter extends LOVD_DefaultDataConverter {
 
 
 
-    
-    function prepareHeaders($aHeaders)
-    {
-        // Verify the identity of this file. Some columns are appended by the Miracle ID.
-        // Check the child's Miracle ID with that we have in the meta data file, and remove all the IDs so the headers are recognized normally.
-        foreach ($aHeaders as $key => $sHeader) {
-            if (preg_match('/(Child|Patient|Father|Mother)_(\d+)$/', $sHeader, $aRegs)) {
-                // If Child, check ID.
-                if (!empty($this->aScriptVars['nMiracleID']) && in_array($aRegs[1], array('Child', 'Patient')) && $aRegs[2] != $this->aScriptVars['nMiracleID']) {
-                    // Here, we won't try and remove the temp file. We need it for diagnostics, and it will save us from running into the same error over and over again.
-                    die('Fatal: Miracle ID of ' . $aRegs[1] . ' (' . $aRegs[2] . ') does not match that from the meta file (' . $this->aScriptVars['nMiracleID'] . ')' . "\n");
-                }
-                // Clean ID from column.
-                $aHeaders[$key] = substr($sHeader, 0, -(strlen($aRegs[2]) + 1));
-            }
-        }
-
-        return $aHeaders;
-    }
-
-
-
-
-
 
     function formatEmptyColumn($aLine, $sVEPColumn, $sLOVDColumn, $aVariant)
     {
@@ -836,7 +812,7 @@ class LOVD_MghaDataConverter extends LOVD_DefaultDataConverter {
     {
         // Returns the regex pattern of the prefix of variant input file names.
 
-        return '(.+)';
+        return '.+';
     }
 
 

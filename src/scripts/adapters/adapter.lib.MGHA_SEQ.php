@@ -90,6 +90,22 @@ class LOVD_MghaSeqDataConverter extends LOVD_DefaultDataConverter {
 
     static $sAdapterName = 'MGHA_SEQ';
 
+    function formatEmptyColumn ($aLine, $sVEPColumn, $sLOVDColumn, $aVariant)
+    {
+        // Returns how we want to represent empty data in $aVariant array given a LOVD column name.
+        if (isset($aLine[$sVEPColumn]) && ($aLine[$sVEPColumn] === 0 || $aLine[$sVEPColumn] === '0')) {
+            $aVariant[$sLOVDColumn] = 0;
+        } else {
+            $aVariant[$sLOVDColumn] = '';
+        }
+
+        return $aVariant;
+    }
+
+
+
+
+
     function prepareMappings()
     {
         // Returns an array that map VEP columns to LOVD columns.
@@ -500,7 +516,7 @@ class LOVD_MghaSeqDataConverter extends LOVD_DefaultDataConverter {
     {
         // Returns the regex pattern of the prefix of variant input file names.
 
-        return '(.+)';
+        return '.+';
     }
 
 

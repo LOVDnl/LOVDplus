@@ -18,7 +18,6 @@
 define('ROOT_PATH', str_replace('\\', '/', dirname(__FILE__) . '/../'));
 define('FORMAT_ALLOW_TEXTPLAIN', true);
 
-
 $_GET['format'] = 'text/plain';
 // To prevent notices when running inc-init.php.
 $_SERVER = array_merge($_SERVER, array(
@@ -41,9 +40,8 @@ require ROOT_PATH . 'inc-init.php';
 require ROOT_PATH . 'inc-lib-genes.php';
 // 128MB was not enough for a 100MB file. We're already no longer using file(), now we're using fgets().
 // But still, loading all the gene and transcript data, uses too much memory. After some 18000 lines, the thing dies.
-
-// Setting to 1.5GB, but still maybe we'll run into problems. Do we need to reset the genes and transcripts arrays after each chromosome?
-ini_set('memory_limit', '4294967296'); // MGHA AM - This may need to be site specific so you can adjust this to your servers available resources. We have set it to bytes here to avoid some issues with our dev environment.
+// Setting to 4GB, but still maybe we'll run into problems.
+ini_set('memory_limit', '4294967296'); // Put in bytes to avoid some issues with some environments.
 
 // But we don't care about your session (in fact, it locks the whole LOVD if we keep this page running).
 session_write_close();
@@ -58,7 +56,7 @@ ignore_user_abort(true);
 $ch = curl_init();
 curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
 
-// Set proxy
+// Set proxy.
 if ($_CONF['proxy_host']) {
     curl_setopt($ch, CURLOPT_PROXY, 'https://' . $_CONF['proxy_host'] . ':' . $_CONF['proxy_port']);
 }
@@ -66,7 +64,8 @@ if (!empty($_CONF['proxy_username']) && !empty($_CONF['proxy_password'])) {
     curl_setopt($ch, CURLOPT_PROXYUSERPWD, $_CONF['proxy_username'] . ':' . $_CONF['proxy_password']);
 }
 
-function mutalyzer_getTranscriptsAndInfo($ref, $gene) {
+function mutalyzer_getTranscriptsAndInfo ($ref, $gene)
+{
     global $ch;
 
     $sUrl = 'https://mutalyzer.nl/json/getTranscriptsAndInfo?genomicReference=' . $ref . '&geneName=' . $gene;
@@ -75,7 +74,8 @@ function mutalyzer_getTranscriptsAndInfo($ref, $gene) {
     return curl_exec($ch);
 }
 
-function mutalyzer_numberConversion($build, $variant) {
+function mutalyzer_numberConversion ($build, $variant)
+{
     global $ch;
 
     $sUrl = 'https://mutalyzer.nl/json/numberConversion?build=' . $build . '&variant=' . $variant;
@@ -84,7 +84,8 @@ function mutalyzer_numberConversion($build, $variant) {
     return curl_exec($ch);
 }
 
-function mutalyzer_runMutalyzer($variant) {
+function mutalyzer_runMutalyzer ($variant)
+{
     global $ch;
 
     $sUrl = 'https://mutalyzer.nl/json/runMutalyzer?variant=' . $variant;
@@ -100,20 +101,18 @@ function mutalyzer_runMutalyzer($variant) {
 
 // This script will be called from localhost by a cron job.
 
-
 // Define the array of suffixes for the files names expected.
 $aSuffixes = array(
     'meta' => 'meta.lovd',
     'vep' => 'directvep.data.lovd',
     'total.tmp' => 'total.data.tmp',
     'total' => 'total.data.lovd',
-    'error' => 'error'
+    'error' => 'error',
 );
 
 // Define list of genes to ignore, because they can't be found by the HGNC.
 // LOC* genes are always ignored, because they never work (HGNC doesn't know them).
 $aGenesToIgnore = $_ADAPTER->prepareGenesToIgnore();
-
 
 // Define list of gene aliases. Genes not mentioned in here, are searched for in the database. If not found,
 // HGNC will be queried and gene will be added. If the symbols don't match, we'll get a duplicate key error.
@@ -121,9 +120,11 @@ $aGenesToIgnore = $_ADAPTER->prepareGenesToIgnore();
 $aGeneAliases = $_ADAPTER->prepareGeneAliases();
 
 
+
+
+
 // Define list of columns that we are recognizing.
 $aColumnMappings = $_ADAPTER->prepareMappings();
-
 
 // These columns will be taken out of $aVariant and stored as the VOG data.
 // This array is also used to build the LOVD file.
@@ -154,10 +155,8 @@ $aColumnsForVOT = array(
     'position_c_start',
     'position_c_start_intron',
     'position_c_end',
-    'position_c_end_intron'
+    'position_c_end_intron',
 );
-
-$aVOTKeys = array();
 
 // Default values.
 $aDefaultValues = array(
@@ -184,9 +183,11 @@ $aFiles = array(); // array(ID => array(files), ...);
 
 
 
-
-function lovd_handleAnnotationError(&$aVariant, $sErrorMsg) {
+function lovd_handleAnnotationError (&$aVariant, $sErrorMsg)
+{
+    // Function that prints error messages to the screen if they occur, and optionally halts.
     global $fError, $nAnnotationErrors, $nLine, $sFileError, $_INSTANCE_CONFIG;
+
     $nAnnotationErrors++;
 
     $sLineErrorMsg = "LINE " . $nLine . " - VariantOnTranscript data dropped: " . $sErrorMsg . "\n";
@@ -310,6 +311,7 @@ function lovd_getVariantDescription (&$aVariant, $sRef, $sAlt)
 
 
 
+// FIXME: Replace by lovd_getVariantInfo()?
 function lovd_getVariantPosition ($sVariant, $aTranscript = array())
 {
     // Constructs an array with the position fields 'start', 'start_intron', 'end', 'end_intron', from the variant description.
@@ -355,6 +357,8 @@ function lovd_getVariantPosition ($sVariant, $aTranscript = array())
 
 
 
+
+
 $_ADAPTER->convertInputFiles();
 
 // Loop through the files in the dir and try and find a meta and data file, that match but have no total data file.
@@ -369,7 +373,8 @@ while (($sFile = readdir($h)) !== false) {
     }
 
 
-    if (preg_match('/^'. $_ADAPTER->getInputFilePrefixPattern() .'\.(' . implode('|', array_map('preg_quote', array_values($aSuffixes))) . ')$/', $sFile, $aRegs)) {
+    if (preg_match('/^('. $_ADAPTER->getInputFilePrefixPattern() .')\.(' . implode('|', array_map('preg_quote', array_values($aSuffixes))) . ')$/', $sFile, $aRegs)) {
+        //             1                                               2
         // Files we need to merge.
         list(, $sID, $sFileType) = $aRegs;
         if (!isset($aFiles[$sID])) {
@@ -464,7 +469,7 @@ foreach ($aFiles as $sID) {
     foreach ($_ADAPTER->getRequiredHeaderColumns() as $sColumn) {
         if (!in_array($sColumn, $aHeaders, true)) {
             print('Ignoring file, does not conform to format: ' . $sFileToConvert . ".\n");
-            continue 2; // Continue the $aFiles loop.
+            continue 2; // Continue to try the next file.
         }
     }
 
@@ -490,7 +495,6 @@ foreach ($aFiles as $sID) {
     // Isolate the used Screening ID, so we'll connect the variants to the right ID.
     // It could just be 1 always, but they use the Miracle ID.
     // FIXME: This is quite a lot of code, for something simple as that... Can't we do this in an easier way? More assumptions, less checks?
-
     $aMetaData = file($sFileTmp, FILE_IGNORE_NEW_LINES);
     if (!$aMetaData) {
         print('Error reading out temporary output file: ' . $sFileTmp . ".\n");
@@ -504,9 +508,14 @@ foreach ($aFiles as $sID) {
     $nMiracleID = 0;
 
 
+    // This function doesn't do anything. Why is this here?
     $_ADAPTER->readMetadata($aMetaData);
+    // Although this function makes sure the code below is not run for the MGHA, it's not very pretty.
+    // Since the screening ID has to be in your meta files anyway, isn't it better to get it from there?
+    // Having assigned it in two places is redundant and can cause issues for new users trying to figure things out.
     $nScreeningID = $_ADAPTER->prepareScreeningID($aMetaData);
-    if (empty($nScreeningID)) {
+
+    if (!$nScreeningID) {
         foreach ($aMetaData as $nLine => $sLine) {
             if (!trim($sLine)) {
                 continue;
@@ -586,7 +595,6 @@ foreach ($aFiles as $sID) {
     $aHeaders = $_ADAPTER->prepareHeaders($aHeaders);
     $nHeaders = count($aHeaders);
 
-
     // Now start parsing the file, reading it out line by line, building up the variant data in $aData.
     $dStart = time();
     $aMutalyzerCalls = array(
@@ -601,28 +609,36 @@ foreach ($aFiles as $sID) {
 
     $nLine = 0;
     $sLastChromosome = '';
+    $aVOT = array();
     $aGenes = array(); // GENE => array(<gene_info_from_database>)
     $aTranscripts = array(); // NM_000001.1 => array(<transcript_info>)
     $nHGNC = 0; // Count the number of times HGNC is called.
     $nMutalyzer = 0; // Count the number of times Mutalyzer is called.
-    $nAnnotationErrors = 0; // Count the number of line we cannot import.
+    $nAnnotationErrors = 0; // Count the number of lines we cannot import.
 
-    // Get all the genes related data in one database call.
+    // Get all the gene data in one database call.
     $aResult = $_DB->query('SELECT g.id, g.refseq_UD, g.name FROM ' . TABLE_GENES . ' AS g')->fetchAllAssoc();
-    foreach ($aResult as $key => $aGene) {
-        $aGene['transcripts_in_UD'] = array();
-        $aGenes[$aGene['id']] = $aGene;
+    foreach ($aResult as $aGene) {
+        // Sometimes, we don't have an UD there. It happens, because now and then we manually created genes and transcripts.
+        if (!$aGene['refseq_UD']) {
+            $aGene['refseq_UD'] = lovd_getUDForGene($_CONF['refseq_build'], $aGene['id']);
+        }
+        if ($aGene['refseq_UD']) {
+            // Silent error if not found. We were already like this. But we'll ignore the gene.
+            $aGenes[$aGene['id']] = array_merge($aGene, array('transcripts_in_UD' => array()));
+        }
     }
 
     // Get all the transcripts related data in one database call.
     $aResult = $_DB->query('SELECT id, geneid, id_mutalyzer, id_ncbi, position_c_cds_end, position_g_mrna_start, position_g_mrna_end FROM ' . TABLE_TRANSCRIPTS . ' ORDER BY id_ncbi DESC, id DESC')->fetchAllAssoc();
-    foreach ($aResult as $key => $aTranscript) {
-        $sTranscriptId = $aTranscript['id_ncbi'];
-        if (empty($aTranscripts[$sTranscriptId])) {
-            $aTranscripts[$sTranscriptId] = $aTranscript;
-        }
+    foreach ($aResult as $aTranscript) {
+        $aTranscripts[$aTranscript['id_ncbi']] = $aTranscript;
     }
 
+
+
+    // This copies rather large arrays (used to be smaller, per chromosome) into the object.
+    // We don't need it, perhaps just store it in the object from the start then?
     $_ADAPTER->setScriptVars(compact('aGenes', 'aTranscripts'));
     while ($sLine = fgets($fInput)) {
         $nLine ++;
@@ -685,30 +701,29 @@ foreach ($aFiles as $sID) {
         if ($sLastChromosome != $aVariant['chromosome']) {
             $sLastChromosome = $aVariant['chromosome'];
             $aMappings = array(); // chrX:g.123456del => array(NM_000001.1 => 'c.123del', ...); // To prevent us from running numberConversion too many times.
-
         }
 
         // Now "fix" certain values.
         // First, VOG fields.
         // Allele.
-        if (!empty($aVariant['allele'])) {
-            if ($aVariant['allele'] == '1/1') {
-                $aVariant['allele'] = 3; // Homozygous.
-            } elseif (isset($aVariant['VariantOnGenome/Sequencing/Father/VarPresent']) && isset($aVariant['VariantOnGenome/Sequencing/Mother/VarPresent'])) {
-                if ($aVariant['VariantOnGenome/Sequencing/Father/VarPresent'] >= 5 && $aVariant['VariantOnGenome/Sequencing/Mother/VarPresent'] <= 3) {
-                    // From father, inferred.
-                    $aVariant['allele'] = 10;
-                } elseif ($aVariant['VariantOnGenome/Sequencing/Mother/VarPresent'] >= 5 && $aVariant['VariantOnGenome/Sequencing/Father/VarPresent'] <= 3) {
-                    // From mother, inferred.
-                    $aVariant['allele'] = 20;
-                } else {
-                    $aVariant['allele'] = 0;
-                }
+        if (!isset($aVariant['allele'])) {
+            $aVariant['allele'] = '';
+        }
+        if ($aVariant['allele'] == '1/1') {
+            $aVariant['allele'] = 3; // Homozygous.
+        } elseif (isset($aVariant['VariantOnGenome/Sequencing/Father/VarPresent']) && isset($aVariant['VariantOnGenome/Sequencing/Mother/VarPresent'])) {
+            if ($aVariant['VariantOnGenome/Sequencing/Father/VarPresent'] >= 5 && $aVariant['VariantOnGenome/Sequencing/Mother/VarPresent'] <= 3) {
+                // From father, inferred.
+                $aVariant['allele'] = 10;
+            } elseif ($aVariant['VariantOnGenome/Sequencing/Mother/VarPresent'] >= 5 && $aVariant['VariantOnGenome/Sequencing/Father/VarPresent'] <= 3) {
+                // From mother, inferred.
+                $aVariant['allele'] = 20;
             } else {
                 $aVariant['allele'] = 0;
             }
+        } else {
+            $aVariant['allele'] = 0;
         }
-
 
         // Chromosome.
         $aVariant['chromosome'] = substr($aVariant['chromosome'], 3); // chr1 -> 1
@@ -719,8 +734,8 @@ foreach ($aFiles as $sID) {
             // Sometimes we get two dbSNP IDs. Store the first one, only.
             $aDbSNP = explode(';', $aVariant['VariantOnGenome/dbSNP']);
             $aVariant['VariantOnGenome/dbSNP'] = $aDbSNP[0];
-        } elseif (!$aVariant['VariantOnGenome/dbSNP'] && !empty($aVariant['existingvariation']) && $aVariant['existingvariation'] != 'unknown') {
-            $aIDs = explode('&', $aVariant['existingvariation']);
+        } elseif (!$aVariant['VariantOnGenome/dbSNP'] && !empty($aVariant['existing_variation']) && $aVariant['existing_variation'] != 'unknown') {
+            $aIDs = explode('&', $aVariant['existing_variation']);
             foreach ($aIDs as $sID) {
                 if (substr($sID, 0, 2) == 'rs') {
                     $aVariant['VariantOnGenome/dbSNP'] = $sID;
@@ -767,7 +782,6 @@ foreach ($aFiles as $sID) {
             } else {
 
                 // Getting all gene information from the HGNC takes a few seconds.
-                $aGeneInfo = false;
                 if (!empty($_INSTANCE_CONFIG['conversion']['enforce_hgnc_gene'])) {
 print('Loading gene information for ' . $aVariant['symbol'] . '...' . "\n");
                     $aGeneInfo = lovd_getGeneInfoFromHGNC($aVariant['symbol'], true);
@@ -775,48 +789,48 @@ print('Loading gene information for ' . $aVariant['symbol'] . '...' . "\n");
                     if (!$aGeneInfo) {
                         // We can't gene information from the HGNC, so we can't add them.
                         // This is a major problem and we can't just continue.
-//                    die('Gene ' . $aLine['SYMBOL'] . ' can\'t be identified by the HGNC.' . "\n\n");
+//                        die('Gene ' . $aVariant['symbol'] . ' can\'t be identified by the HGNC.' . "\n\n");
 print('Gene ' . $aVariant['symbol'] . ' can\'t be identified by the HGNC.' . "\n");
                     }
-                }
 
-                // Detect alias. We should store these, for next run (which will crash on a duplicate key error).
-                if ($aGeneInfo && $aVariant['symbol'] != $aGeneInfo['symbol']) {
-                    print('\'' . $aVariant['symbol'] . '\' => \'' . $aGeneInfo['symbol'] . '\',' . "\n");
-                    // In fact, let's try not to die if we know we'll die.
-                    // FIXME: This is duplicated code. Make it into a function, perhaps?
-                    if ($aGene = $_DB->query('SELECT g.id, g.refseq_UD, g.name FROM ' . TABLE_GENES . ' AS g WHERE g.id = ?', array($aGeneInfo['symbol']))->fetchAssoc()) {
-                        // We've got the alias already in the database.
-                        $aGenes[$aVariant['symbol']] = array_merge($aGene, array('transcripts_in_UD' => array()));
+                    // Detect alias. We should store these, for next run (which will crash on a duplicate key error).
+                    if ($aGeneInfo && $aVariant['symbol'] != $aGeneInfo['symbol']) {
+                        print('\'' . $aVariant['symbol'] . '\' => \'' . $aGeneInfo['symbol'] . '\',' . "\n");
+                        // In fact, let's try not to die if we know we'll die.
+                        // FIXME: This is duplicated code. Make it into a function, perhaps?
+                        if ($aGene = $_DB->query('SELECT g.id, g.refseq_UD, g.name FROM ' . TABLE_GENES . ' AS g WHERE g.id = ?', array($aGeneInfo['symbol']))->fetchAssoc()) {
+                            // We've got the alias already in the database.
+                            $aGenes[$aVariant['symbol']] = array_merge($aGene, array('transcripts_in_UD' => array()));
+                        }
                     }
-                }
 
-                if ($aGeneInfo && !isset($aGenes[$aVariant['symbol']])) {
-                    $sRefseqUD = lovd_getUDForGene($_CONF['refseq_build'], $aGeneInfo['symbol']);
-                    if (!$sRefseqUD) {
-//                        die('Can\'t load UD for gene ' . $aLine['SYMBOL'] . '.' . "\n");
+                    if ($aGeneInfo && !isset($aGenes[$aVariant['symbol']])) {
+                        $sRefseqUD = lovd_getUDForGene($_CONF['refseq_build'], $aGeneInfo['symbol']);
+                        if (!$sRefseqUD) {
+//                            die('Can\'t load UD for gene ' . $aVariant['symbol'] . '.' . "\n");
 print('Can\'t load UD for gene ' . $aGeneInfo['symbol'] . '.' . "\n");
-                    }
-
-                    // Not getting an UD no longer kills the script, so...
-                    if ($sRefseqUD) {
-                        if (!$_DB->query('INSERT INTO ' . TABLE_GENES . '
-                             (id, name, chromosome, chrom_band, refseq_genomic, refseq_UD, reference, url_homepage, url_external, allow_download, allow_index_wiki, id_hgnc, id_entrez, id_omim, show_hgmd, show_genecards, show_genetests, note_index, note_listing, refseq, refseq_url, disclaimer, disclaimer_text, header, header_align, footer, footer_align, created_by, created_date, updated_by, updated_date)
-                            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), ?, NOW())',
-                            array($aGeneInfo['symbol'], $aGeneInfo['name'], $aGeneInfo['chromosome'], $aGeneInfo['chrom_band'], $_SETT['human_builds'][$_CONF['refseq_build']]['ncbi_sequences'][$aGeneInfo['chromosome']], $sRefseqUD, '', '', '', 0, 0, $aGeneInfo['hgnc_id'], $aGeneInfo['entrez_id'], (!$aGeneInfo['omim_id']? NULL : $aGeneInfo['omim_id']), 0, 0, 0, '', '', '', '', 0, '', '', 0, '', 0, 0, 0))) {
-                            die('Can\'t create gene ' . $aVariant['symbol'] . '.' . "\n");
                         }
 
-                        // Add the default custom columns to this gene.
-                        lovd_addAllDefaultCustomColumns('gene', $aGeneInfo['symbol']);
+                        // Not getting an UD no longer kills the script, so...
+                        if ($sRefseqUD) {
+                            if (!$_DB->query('INSERT INTO ' . TABLE_GENES . '
+                                 (id, name, chromosome, chrom_band, refseq_genomic, refseq_UD, reference, url_homepage, url_external, allow_download, allow_index_wiki, id_hgnc, id_entrez, id_omim, show_hgmd, show_genecards, show_genetests, note_index, note_listing, refseq, refseq_url, disclaimer, disclaimer_text, header, header_align, footer, footer_align, created_by, created_date, updated_by, updated_date)
+                                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), ?, NOW())',
+                                array($aGeneInfo['symbol'], $aGeneInfo['name'], $aGeneInfo['chromosome'], $aGeneInfo['chrom_band'], $_SETT['human_builds'][$_CONF['refseq_build']]['ncbi_sequences'][$aGeneInfo['chromosome']], $sRefseqUD, '', '', '', 0, 0, $aGeneInfo['hgnc_id'], $aGeneInfo['entrez_id'], (!$aGeneInfo['omim_id']? NULL : $aGeneInfo['omim_id']), 0, 0, 0, '', '', '', '', 0, '', '', 0, '', 0, 0, 0))) {
+                                die('Can\'t create gene ' . $aVariant['symbol'] . '.' . "\n");
+                            }
 
-                        // Write to log...
-                        lovd_writeLog('Event', LOG_EVENT, 'Created gene information entry ' . $aGeneInfo['symbol'] . ' (' . $aGeneInfo['name'] . ')');
-                        print('Created gene ' . $aGeneInfo['symbol'] . ".\n");
-                        flush();
+                            // Add the default custom columns to this gene.
+                            lovd_addAllDefaultCustomColumns('gene', $aGeneInfo['symbol']);
 
-                        // Store this gene.
-                        $aGenes[$aVariant['symbol']] = array('id' => $aGeneInfo['symbol'], 'refseq_UD' => $sRefseqUD, 'name' => $aGeneInfo['name'], 'transcripts_in_UD' => array());
+                            // Write to log...
+                            lovd_writeLog('Event', LOG_EVENT, 'Created gene information entry ' . $aGeneInfo['symbol'] . ' (' . $aGeneInfo['name'] . ')');
+                            print('Created gene ' . $aGeneInfo['symbol'] . ".\n");
+                            flush();
+
+                            // Store this gene.
+                            $aGenes[$aVariant['symbol']] = array('id' => $aGeneInfo['symbol'], 'refseq_UD' => $sRefseqUD, 'name' => $aGeneInfo['name'], 'transcripts_in_UD' => array());
+                        }
                     }
                 }
             }
@@ -830,11 +844,10 @@ print('Can\'t load UD for gene ' . $aGeneInfo['symbol'] . '.' . "\n");
             // We really couldn't do anything with this gene (now, or last time).
             $aGenes[$aVariant['symbol']] = false;
 
-        } elseif (!empty($aLine['Feature']) && !isset($aTranscripts[$aVariant['transcriptid']])) {
-            // Gene found, get transcript information.
-            // First try to get this transcript from the database.
-            if ($aTranscript = $_DB->query('SELECT id, geneid, id_mutalyzer, id_ncbi, position_c_cds_end, position_g_mrna_start, position_g_mrna_end FROM ' . TABLE_TRANSCRIPTS . ' WHERE id_ncbi LIKE ? ORDER BY (id_ncbi = ?) DESC, id DESC LIMIT 1', array(substr($aVariant['transcriptid'], 0, strpos($aVariant['transcriptid'] . '.', '.')+1) . '%', $aVariant['transcriptid']))->fetchAssoc()) {
-
+        } elseif (!empty($aVariant['transcriptid']) && !isset($aTranscripts[$aVariant['transcriptid']])) {
+            // Gene found, transcript given but not yet seen before. Get transcript information.
+            // First try to get this transcript from the database, ignoring (but preferring) version.
+            if ($aTranscript = $_DB->query('SELECT id, geneid, id_mutalyzer, id_ncbi, position_c_cds_end, position_g_mrna_start, position_g_mrna_end FROM ' . TABLE_TRANSCRIPTS . ' WHERE id_ncbi LIKE ? ORDER BY (id_ncbi = ?) DESC, id DESC LIMIT 1', array($aLine['transcript_noversion'] . '%', $aVariant['transcriptid']))->fetchAssoc()) {
                 // We've got it in the database.
                 $aTranscripts[$aVariant['transcriptid']] = $aTranscript;
 
@@ -845,17 +858,19 @@ print('Can\'t load UD for gene ' . $aGeneInfo['symbol'] . '.' . "\n");
 
                 } else {
                     $aTranscriptInfo = array();
-                    $sJSONResponse = false;
                     if (!empty($_INSTANCE_CONFIG['conversion']['enforce_hgnc_gene'])) {
 print('Loading transcript information for ' . $aGenes[$aVariant['symbol']]['id'] . '...' . "\n");
                         $nSleepTime = 2;
-                        for ($i = 0; $i <= $nMutalyzerRetries; $i++) { // Retry Mutalyzer call several times until successful.
+                        // Retry Mutalyzer call several times until successful.
+                        for ($i = 0; $i <= $nMutalyzerRetries; $i++) {
                             $aMutalyzerCalls['getTranscriptsAndInfo'] ++;
                             $tMutalyzerStart = microtime(true);
+//                            $sJSONResponse = file_get_contents('https://mutalyzer.nl/json/getTranscriptsAndInfo?genomicReference=' . $aGenes[$aVariant['symbol']]['refseq_UD'] . '&geneName=' . $aGenes[$aVariant['symbol']]['id']);
                             $sJSONResponse = mutalyzer_getTranscriptsAndInfo($aGenes[$aVariant['symbol']]['refseq_UD'], $aGenes[$aVariant['symbol']]['id']);
                             $tMutalyzerCalls += (microtime(true) - $tMutalyzerStart);
                             $nMutalyzer++;
-                            if ($sJSONResponse === false) { // The Mutalyzer call has failed.
+                            if ($sJSONResponse === false) {
+                                // The Mutalyzer call has failed.
                                 sleep($nSleepTime); // Sleep for some time.
                                 $nSleepTime = $nSleepTime * 2; // Double the amount of time that we sleep each time.
                             } else {
@@ -864,21 +879,22 @@ print('Loading transcript information for ' . $aGenes[$aVariant['symbol']]['id']
                         }
                         if ($sJSONResponse === false) {
                             print('>>>>> Attempted to call Mutalyzer ' . $nMutalyzerRetries . ' times to getTranscriptsAndInfo and failed on line ' . $nLine . '.' . "\n");
+
+                        } elseif ($aResponse = json_decode($sJSONResponse, true)) {
+                            // Before we had to go two layers deep; through the result, then read out the info.
+                            // But now apparently this service just returns the string with quotes (the latter are removed by json_decode()).
+                            $aTranscriptInfo = $aResponse;
+
+                            if (empty($aTranscriptInfo)) {
+//                                die('Can\'t load available transcripts for gene ' . $aVariant['symbol'] . '.' . "\n");
+//print('Can\'t load available transcripts for gene ' . $aVariant['symbol'] . '.' . "\n");
+print('No available transcripts for gene ' . $aGenes[$aVariant['symbol']]['id'] . ' found.' . "\n"); // Usually this is the case. Not always an error. We might get an error, but that will show now.
+                                $aTranscripts[$aVariant['transcriptid']] = false; // Ignore transcript.
+                                $aTranscriptInfo = array(array('id' => 'NO_TRANSCRIPTS')); // Basically, any text will do. Just stop searching for other transcripts for this gene.
+                            }
                         }
                     }
 
-                    if ($sJSONResponse && $aResponse = json_decode($sJSONResponse, true)) {
-                        // Before we had to go two layers deep; through the result, then read out the info.
-                        // But now apparently this service just returns the string with quotes (the latter are removed by json_decode()).
-                        $aTranscriptInfo = $aResponse;
-                    }
-                    if (empty($aTranscriptInfo)) {
-//                        die('Can\'t load available transcripts for gene ' . $aLine['SYMBOL'] . '.' . "\n");
-//print('Can\'t load available transcripts for gene ' . $aLine['SYMBOL'] . '.' . "\n");
-print('No available transcripts for gene ' . $aGenes[$aVariant['symbol']]['id'] . ' found.' . "\n"); // Usually this is the case. Not always an error. We might get an error, but that will show now.
-                        $aTranscripts[$aVariant['transcriptid']] = false; // Ignore transcript.
-                        $aTranscriptInfo = array(array('id' => 'NO_TRANSCRIPTS')); // Basically, any text will do. Just stop searching for other transcripts for this gene.
-                    }
                     // Store for next time.
                     $aGenes[$aVariant['symbol']]['transcripts_in_UD'] = $aTranscriptInfo;
                 }
@@ -923,16 +939,17 @@ print('No available transcripts for gene ' . $aGenes[$aVariant['symbol']]['id'] 
         }
 
         // Now check, if we managed to get the transcript ID. If not, then we'll have to continue without it.
-        if ($_ADAPTER->ignoreTranscript($aVariant['transcriptid']) || !isset($aTranscripts[$aVariant['transcriptid']]) || !$aTranscripts[$aVariant['transcriptid']]) {
+        if (empty($aVariant['transcriptid']) || $_ADAPTER->ignoreTranscript($aVariant['transcriptid']) || !isset($aTranscripts[$aVariant['transcriptid']]) || !$aTranscripts[$aVariant['transcriptid']]) {
             // When the transcript still doesn't exist, or it evaluates to false (we don't have it, we can't get it), then skip it.
             $aVariant['transcriptid'] = '';
         } else {
             // Handle the rest of the VOT columns.
             // First, take off the transcript name, so we can easily check for a del/ins checking for an underscore.
             $aVariant['VariantOnTranscript/DNA'] = substr($aVariant['VariantOnTranscript/DNA'], strpos($aVariant['VariantOnTranscript/DNA'], ':')+1); // NM_000000.1:c.1del -> c.1del
-            $bCallMutalyzer = !$aVariant['VariantOnTranscript/DNA'];
+
+            $bCallMutalyzer = (!$aVariant['VariantOnTranscript/DNA']);
             if ($_INSTANCE_CONFIG['conversion']['check_indel_description']) {
-                $bCallMutalyzer = $bCallMutalyzer || (strpos($aVariant['VariantOnTranscript/DNA'], '_') !== false);
+                $bCallMutalyzer = ($bCallMutalyzer || (strpos($aVariant['VariantOnTranscript/DNA'], '_') !== false));
             }
 
             if ($bCallMutalyzer) {
@@ -945,16 +962,17 @@ print('No available transcripts for gene ' . $aGenes[$aVariant['symbol']]['id'] 
                     $aMappings[$aVariant['chromosome'] . ':' . $aVariant['VariantOnGenome/DNA']] = array();
 //print('Running position converter, DNA was: "' . $aVariant['VariantOnTranscript/DNA'] . '"' . "\n");
 
-
-                    $sJSONResponse = false;
                     $nSleepTime = 2;
-                    for($i=0; $i <= $nMutalyzerRetries; $i++){ // Retry Mutalyzer call several times until successful.
+                    // Retry Mutalyzer call several times until successful.
+                    for ($i=0; $i <= $nMutalyzerRetries; $i++) {
                         $aMutalyzerCalls['numberConversion'] ++;
                         $tMutalyzerStart = microtime(true);
+//                        $sJSONResponse = file_get_contents('https://mutalyzer.nl/json/numberConversion?build=' . $_CONF['refseq_build'] . '&variant=' . $_SETT['human_builds'][$_CONF['refseq_build']]['ncbi_sequences'][$aVariant['chromosome']] . ':' . $aVariant['VariantOnGenome/DNA']);
                         $sJSONResponse = mutalyzer_numberConversion($_CONF['refseq_build'], $_SETT['human_builds'][$_CONF['refseq_build']]['ncbi_sequences'][$aVariant['chromosome']] . ':' . $aVariant['VariantOnGenome/DNA']);
                         $tMutalyzerCalls += (microtime(true) - $tMutalyzerStart);
                         $nMutalyzer++;
-                        if ($sJSONResponse === false) { // The Mutalyzer call has failed.
+                        if ($sJSONResponse === false) {
+                            // The Mutalyzer call has failed.
                             sleep($nSleepTime); // Sleep for some time.
                             $nSleepTime = $nSleepTime * 2; // Double the amount of time that we sleep each time.
                         } else {
@@ -986,6 +1004,7 @@ print('No available transcripts for gene ' . $aGenes[$aVariant['symbol']]['id'] 
                         // The database has selected a different version; just copy that...
                         $aMappings[$aVariant['chromosome'] . ':' . $aVariant['VariantOnGenome/DNA']][$aTranscripts[$aVariant['transcriptid']]['id_ncbi']] = $aMappings[$aVariant['chromosome'] . ':' . $aVariant['VariantOnGenome/DNA']][$aVariant['transcriptid']];
                     } else {
+                        // Do one more attempt, finding the transcript for other versions. Just take first one you find.
                         $aAlternativeVersions = array();
                         foreach ($aMappings[$aVariant['chromosome'] . ':' . $aVariant['VariantOnGenome/DNA']] as $sRef => $sDNA) {
                             if (strpos($sRef, $aLine['transcript_noversion']) === 0) {
@@ -993,8 +1012,8 @@ print('No available transcripts for gene ' . $aGenes[$aVariant['symbol']]['id'] 
                             }
                         }
                         if ($aAlternativeVersions) {
-                            var_dump('Found alternative by searching: ', $aLine['Feature'], $aAlternativeVersions);
-                            $aMappings[$aVariant['chromosome'] . ':' . $aVariant['VariantOnGenome/DNA']][$aTranscripts[$aLine['Feature']]['id_ncbi']] = $aMappings[$aVariant['chromosome'] . ':' . $aVariant['VariantOnGenome/DNA']][$aAlternativeVersions[0]];
+                            var_dump('Found alternative by searching: ', $aVariant['transcriptid'], $aAlternativeVersions);
+                            $aMappings[$aVariant['chromosome'] . ':' . $aVariant['VariantOnGenome/DNA']][$aTranscripts[$aVariant['transcriptid']]['id_ncbi']] = $aMappings[$aVariant['chromosome'] . ':' . $aVariant['VariantOnGenome/DNA']][$aAlternativeVersions[0]];
                         } else {
                             // This happens when VEP says we can map on a known transcript, but doesn't provide us a valid mapping,
                             // *and* Mutalyzer at the same time doesn't seem to be able to map to this transcript at all.
@@ -1004,10 +1023,11 @@ print('No available transcripts for gene ' . $aGenes[$aVariant['symbol']]['id'] 
                     }
 
                     if (!isset($aMappings[$aVariant['chromosome'] . ':' . $aVariant['VariantOnGenome/DNA']][$aTranscripts[$aVariant['transcriptid']]['id_ncbi']])) {
-                        $sErrorMsg = 'Can\'t map variant ' . $aVariant['VariantOnGenome/DNA'] . ' onto transcript ' . $aTranscripts[$aVariant['transcriptid']]['id_ncbi'] . '.';
+                        // FIXME: This used to die() here. Now that it doesn't, it will cause an immense load of notices and other failures.
+                        // Leiden still dies here because of the settings, but this code needs to be fixed for you and possible future users.
+                        $sErrorMsg = 'Can\'t map variant ' . $aVariant['VariantOnGenome/DNA'] . ' (' . $aVariant['chromosome'] . ':' . $aVariant['position'] . $aVariant['ref'] . '>' . $aVariant['alt'] . ') onto transcript ' . $aTranscripts[$aVariant['transcriptid']]['id_ncbi'] . '.';
                         $nAnnotationErrors = lovd_handleAnnotationError($aVariant, $sErrorMsg);
                         $bDropTranscriptData = true;
-
                     }
                 }
                 $aVariant['VariantOnTranscript/DNA'] = $aMappings[$aVariant['chromosome'] . ':' . $aVariant['VariantOnGenome/DNA']][$aTranscripts[$aVariant['transcriptid']]['id_ncbi']];
@@ -1050,19 +1070,22 @@ print('No available transcripts for gene ' . $aGenes[$aVariant['symbol']]['id'] 
                 // It sometimes happens that we don't have a id_mutalyzer value. Before, we used to create transcripts manually if we couldn't recognize them.
                 // This is now working against us, as we really need this ID now.
                 if ($aTranscripts[$aVariant['transcriptid']]['id_mutalyzer'] == '000') {
+                    // FIXME: Remove this?
                     // Normally, we would implement a cache here, but we rarely run Mutalyzer, and if we do, we will not likely run it on a variant on the same transcript.
                     // So, first just check if we still don't have a Mutalyzer ID.
-                    $sJSONResponse = false;
                     if (!empty($_INSTANCE_CONFIG['conversion']['enforce_hgnc_gene'])) {
-                        print('Reloading Mutalyzer ID for ' . $aTranscripts[$aVariant['transcriptid']]['id_ncbi'] . ' in ' . $aVariant[$aVariant['symbol']]['refseq_UD'] . ' (' . $aGenes[$aVariant['symbol']]['id'] . ')' . "\n");
+print('Reloading Mutalyzer ID for ' . $aTranscripts[$aVariant['transcriptid']]['id_ncbi'] . ' in ' . $aGenes[$aVariant['symbol']]['refseq_UD'] . ' (' . $aGenes[$aVariant['symbol']]['id'] . ')' . "\n");
                         $nSleepTime = 2;
-                        for ($i = 0; $i <= $nMutalyzerRetries; $i++) { // Retry Mutalyzer call several times until successful.
+                        // Retry Mutalyzer call several times until successful.
+                        for ($i = 0; $i <= $nMutalyzerRetries; $i++) {
                             $aMutalyzerCalls['getTranscriptsAndInfo'] ++;
                             $tMutalyzerStart = microtime(true);
+                            // $sJSONResponse = file_get_contents('https://mutalyzer.nl/json/getTranscriptsAndInfo?genomicReference=' . rawurlencode($aGenes[$aVariant['symbol']]['refseq_UD']) . '&geneName=' . rawurlencode($aGenes[$aVariant['symbol']]['id']));
                             $sJSONResponse = mutalyzer_getTranscriptsAndInfo(rawurlencode($aGenes[$aVariant['symbol']]['refseq_UD']), rawurlencode($aGenes[$aVariant['symbol']]['id']));
                             $tMutalyzerCalls += (microtime(true) - $tMutalyzerStart);
                             $nMutalyzer++;
-                            if ($sJSONResponse === false) { // The Mutalyzer call has failed.
+                            if ($sJSONResponse === false) {
+                                // The Mutalyzer call has failed.
                                 sleep($nSleepTime); // Sleep for some time.
                                 $nSleepTime = $nSleepTime * 2; // Double the amount of time that we sleep each time.
                             } else {
@@ -1072,33 +1095,35 @@ print('No available transcripts for gene ' . $aGenes[$aVariant['symbol']]['id'] 
                         if ($sJSONResponse === false) {
                             print('>>>>> Attempted to call Mutalyzer ' . $nMutalyzerRetries . ' times to getTranscriptsAndInfo and failed on line ' . $nLine . '.' . "\n");
                         }
-                    }
 
-                    if ($sJSONResponse && $aResponse = json_decode($sJSONResponse, true)) {
-                        // Loop transcripts, find the one in question, then isolate Mutalyzer ID.
-                        foreach ($aResponse as $aTranscript) {
-                            if ($aTranscript['id'] == $aTranscripts[$aVariant['transcriptid']]['id_ncbi'] && $aTranscript['name']) {
-                                $sMutalyzerID = str_replace($aGenes[$aVariant['symbol']]['id'] . '_v', '', $aTranscript['name']);
+                        if ($sJSONResponse && $aResponse = json_decode($sJSONResponse, true)) {
+                            // Loop transcripts, find the one in question, then isolate Mutalyzer ID.
+                            foreach ($aResponse as $aTranscript) {
+                                if ($aTranscript['id'] == $aTranscripts[$aVariant['transcriptid']]['id_ncbi'] && $aTranscript['name']) {
+                                    $sMutalyzerID = str_replace($aGenes[$aVariant['symbol']]['id'] . '_v', '', $aTranscript['name']);
 
-                                // Store locally, then store in database.
-                                $aTranscripts[$aVariant['transcriptid']]['id_mutalyzer'] = $sMutalyzerID;
-                                $_DB->query('UPDATE ' . TABLE_TRANSCRIPTS . ' SET id_mutalyzer = ? WHERE id_ncbi = ?', array($sMutalyzerID, $aTranscript['id']));
-                                break;
+                                    // Store locally, then store in database.
+                                    $aTranscripts[$aVariant['transcriptid']]['id_mutalyzer'] = $sMutalyzerID;
+                                    $_DB->query('UPDATE ' . TABLE_TRANSCRIPTS . ' SET id_mutalyzer = ? WHERE id_ncbi = ?', array($sMutalyzerID, $aTranscript['id']));
+                                    break;
+                                }
                             }
                         }
                     }
                 }
 
 print('Running mutalyzer to predict protein change for ' . $aGenes[$aVariant['symbol']]['refseq_UD'] . '(' . $aGenes[$aVariant['symbol']]['id'] . '_v' . $aTranscripts[$aVariant['transcriptid']]['id_mutalyzer'] . '):' . $aVariant['VariantOnTranscript/DNA'] . "\n");
-                $sJSONResponse = false;
                 $nSleepTime = 2;
-                for($i=0; $i <= $nMutalyzerRetries; $i++){ // Retry Mutalyzer call several times until successful.
+                // Retry Mutalyzer call several times until successful.
+                for ($i=0; $i <= $nMutalyzerRetries; $i++) {
                     $aMutalyzerCalls['runMutalyzer'] ++;
                     $tMutalyzerStart = microtime(true);
+                    // $sJSONResponse = file_get_contents('https://mutalyzer.nl/json/runMutalyzer?variant=' . rawurlencode($aGenes[$aVariant['symbol']]['refseq_UD'] . '(' . $aGenes[$aVariant['symbol']]['id'] . '_v' . $aTranscripts[$aVariant['transcriptid']]['id_mutalyzer'] . '):' . $aVariant['VariantOnTranscript/DNA']));
                     $sJSONResponse = mutalyzer_runMutalyzer(rawurlencode($aGenes[$aLine['SYMBOL']]['refseq_UD'] . '(' . $aTranscripts[$aVariant['transcriptid']]['id_ncbi'] . '):' . $aVariant['VariantOnTranscript/DNA']));
                     $tMutalyzerCalls += (microtime(true) - $tMutalyzerStart);
                     $nMutalyzer++;
-                    if ($sJSONResponse === false) { // The Mutalyzer call has failed.
+                    if ($sJSONResponse === false) {
+                        // The Mutalyzer call has failed.
                         sleep($nSleepTime); // Sleep for some time.
                         $nSleepTime = $nSleepTime * 2; // Double the amount of time that we sleep each time.
                     } else {
@@ -1109,7 +1134,7 @@ print('Running mutalyzer to predict protein change for ' . $aGenes[$aVariant['sy
                     print('>>>>> Attempted to call Mutalyzer ' . $nMutalyzerRetries . ' times to runMutalyzer and failed on line ' . $nLine . '.' . "\n");
                 }
 
-//var_dump('https://mutalyzer.nl/json/runMutalyzer?variant=' . rawurlencode($aGenes[$aLine['SYMBOL']]['refseq_UD'] . '(' . $aGenes[$aLine['SYMBOL']]['id'] . '_v' . $aTranscripts[$aLine['Feature']]['id_mutalyzer'] . '):' . $aVariant['VariantOnTranscript/DNA']));
+//var_dump('https://mutalyzer.nl/json/runMutalyzer?variant=' . rawurlencode($aGenes[$aVariant['symbol']]['refseq_UD'] . '(' . $aGenes[$aVariant['symbol']]['id'] . '_v' . $aTranscripts[$aVariant['transcriptid']]['id_mutalyzer'] . '):' . $aVariant['VariantOnTranscript/DNA']));
                 if ($sJSONResponse && $aResponse = json_decode($sJSONResponse, true)) {
                     if (!isset($aResponse['proteinDescriptions'])) {
                         // Not sure if this can happen using JSON.
@@ -1187,9 +1212,6 @@ print('Mutalyzer returned EREF error, hg19/hg38 error?' . "\n");
 
             if (!$aVariant['VariantOnTranscript/RNA']) {
                 // Script dies here, because I want to know if I missed something. This happens with NR transcripts, but those were ignored anyway, right?
-                //var_dump($aVariant);
-                //exit;
-
                 $sErrorMsg = "Missing VariantOnTranscript/RNA. Chromosome: ". $aVariant['chromosome'] . ". VariantOnGenome/DNA: " . $aVariant['VariantOnGenome/DNA'] . ".";
                 $nAnnotationErrors = lovd_handleAnnotationError($aVariant, $sErrorMsg);
                 $bDropTranscriptData = true;
@@ -1215,6 +1237,7 @@ print('Mutalyzer returned EREF error, hg19/hg38 error?' . "\n");
         $aVariant['transcriptid'] = (!isset($aTranscripts[$aVariant['transcriptid']]['id'])? '' : $aTranscripts[$aVariant['transcriptid']]['id']);
 
 
+
         // Now store the variants, first the genomic stuff, then the VOT stuff.
         // If the VOG data has already been stored, we will *not* overwrite it.
         // Build the key.
@@ -1231,16 +1254,16 @@ print('Mutalyzer returned EREF error, hg19/hg38 error?' . "\n");
             $aData[$sKey] = array($aVOG);
         }
 
+        // Perform any postprocessing, for instance based all this VOG's VOTs.
         $_ADAPTER->postValueAssignmentUpdate($sKey, $aVariant, $aData);
 
         // Now, store VOT data. Because I had received test files with repeated lines, and allowing repeated lines will break import, also here we will check for the key.
         // Also check for a set transcriptid, because it can be empty (transcript could not be created).
-        $aVOT = array();
         if (!$bDropTranscriptData && !isset($aData[$sKey][$aVariant['transcriptid']]) && $aVariant['transcriptid']) {
+            $aVOT = array();
             foreach ($aVariant as $sCol => $sVal) {
                 if (in_array($sCol, $aColumnsForVOT) || substr($sCol, 0, 20) == 'VariantOnTranscript/') {
                     $aVOT[$sCol] = $sVal;
-                    $aVOTKeys[$sCol] = $sCol;
                 }
             }
 
@@ -1257,8 +1280,12 @@ print('Mutalyzer returned EREF error, hg19/hg38 error?' . "\n");
 
     print('Done parsing file. Current time: ' . date('Y-m-d H:i:s') . ".\n");
     // Show the number of times HGNC and Mutalyzer were called.
-    print('Number of times HGNC called: ' . $nHGNC . ".\n");
-    print('Number of times Mutalyzer called: ' . $nMutalyzer . ".\n");
+    print('Number of times HGNC called: ' . $nHGNC . ".\n" .
+          'Number of times Mutalyzer called: ' . $nMutalyzer . ".\n" .
+          'Parsing took ' . round((time() - $dStart)/60) . ' minutes, Mutalyzer calls taking ' . round($tMutalyzerCalls/60) . ' minutes, ' . round($tMutalyzerCalls/$nMutalyzer, 2) . ' sec/call.' . "\n");
+    foreach ($aMutalyzerCalls as $sFunction => $nCalls) {
+        print('  ' . $sFunction . ': ' . $nCalls . "\n");
+    }
     print('Number of lines with annotation error: ' . $nAnnotationErrors . ".\n");
     if (filesize($sFileError) > 0) {
         print("ERROR FILE: Please check details of dropped annotation data in " . $sFileError . "\n");
@@ -1288,11 +1315,14 @@ print('Mutalyzer returned EREF error, hg19/hg38 error?' . "\n");
         }
     }
 
-    foreach ($aVOTKeys as $sCol) {
+    // Take VOT columns from the last time we encountered an VOT.
+    foreach (array_keys($aVOT) as $sCol) {
         if (substr($sCol, 0, 20) == 'VariantOnTranscript/') {
             $aColumnsForVOT[] = $sCol;
         }
     }
+
+
 
     // Start storing the data into the total data file.
     $fOutput = fopen($sFileTmp, 'a');
@@ -1303,12 +1333,12 @@ print('Mutalyzer returned EREF error, hg19/hg38 error?' . "\n");
 
 
     // VOG data.
-    $nVOG = 0;
+    $nVOGs = count($aData);
     fputs($fOutput, "\r\n" .
         '## Genes ## Do not remove or alter this header ##' . "\r\n" . // Needed to load the existing genes, otherwise we'll only have errors.
         '## Transcripts ## Do not remove or alter this header ##' . "\r\n" . // Needed to load the existing transcripts, otherwise we'll only have errors.
         '## Variants_On_Genome ## Do not remove or alter this header ##' . "\r\n" .
-        '## Count = ' . count($aData) . "\r\n" .
+        '## Count = ' . $nVOGs . "\r\n" .
         '{{' . implode("}}\t{{", $aColumnsForVOG) . '}}' . "\r\n");
     $nVariant = 0;
     $nVOTs = 0;
@@ -1326,16 +1356,14 @@ print('Mutalyzer returned EREF error, hg19/hg38 error?' . "\n");
             fputs($fOutput, (!$nKey? '' : "\t") . '"' . (!isset($aVariant[0][$sCol])? '' : str_replace(array("\r\n", "\r", "\n"), array('\r\n', '\r', '\n'), addslashes($aVariant[0][$sCol]))) . '"');
         }
         fputs($fOutput, "\r\n");
-        $nVOG++;
     }
 
     // Show number of Variants on Genome data created.
-    print("Number of Variants On Genome rows created: " . $nVOG . "\n");
+    print('Number of Variants On Genome rows created: ' . $nVOGs . "\n");
 
 
 
     // VOT data.
-    $nVOT = 0;
     fputs($fOutput, "\r\n\r\n" .
         '## Variants_On_Transcripts ## Do not remove or alter this header ##' . "\r\n" .
         '## Count = ' . $nVOTs . "\r\n" .
@@ -1355,12 +1383,12 @@ print('Mutalyzer returned EREF error, hg19/hg38 error?' . "\n");
                 fputs($fOutput, (!$nKey? '' : "\t") . '"' . (!isset($aVOT[$sCol])? '' : str_replace(array("\r\n", "\r", "\n"), array('\r\n', '\r', '\n'), addslashes($aVOT[$sCol]))) . '"');
             }
             fputs($fOutput, "\r\n");
-            $nVOT++;
         }
     }
 
     // Show number of Variants on Transcripts data created.
-    print("Number of Variants On Transcripts rows created: " . $nVOT . "\n");
+    print('Number of Variants On Transcripts rows created: ' . $nVOTs . "\n");
+
 
 
     // Link all variants to the screening.
@@ -1392,10 +1420,7 @@ print('Mutalyzer returned EREF error, hg19/hg38 error?' . "\n");
     }
 
     print('All done, ' . $sFileDone . ' ready for import.' . "\n" . 'Current time: ' . date('Y-m-d H:i:s') . "\n" .
-          '  Took ' . round((time() - $dStart)/60) . ' minutes, Mutalyzer calls taking ' . round($tMutalyzerCalls/60) . ' minutes.' . "\n");
-    foreach ($aMutalyzerCalls as $sFunction => $nCalls) {
-        print('    ' . $sFunction . ': ' . $nCalls . "\n");
-    }
+          '  Took ' . round((time() - $dStart)/60) . ' minutes.' . "\n");
     print("\n");
     break;// Keep this break in the loop, so we will only continue the loop to the next file when there is a continue;
 }

@@ -4,7 +4,7 @@
  * LEIDEN OPEN VARIATION DATABASE (LOVD)
  *
  * Created     : 2016-09-02
- * Modified    : 2017-04-13
+ * Modified    : 2017-06-09
  * For LOVD    : 3.0-19
  *
  * Copyright   : 2004-2017 Leiden University Medical Center; http://www.LUMC.nl/
@@ -55,6 +55,8 @@ $_INSTANCE_CONFIG = array();
 //        'linked_to' => 'variant',
 //        'label' => 'Excel file'),
 //);
+
+
 
 
 
@@ -116,10 +118,10 @@ $_INSTANCE_CONFIG['viewlists'] = array(
 );
 
 $_INSTANCE_CONFIG['conversion'] = array(
-    'max_annotation_error_allowed' => 20,
-    'exit_on_annotation_error' => true,
-    'enforce_hgnc_gene' => true,
-    'check_indel_description' => true
+    'max_annotation_error_allowed' => 20, // Maximum number of errors with VOTs before the script dies.
+    'exit_on_annotation_error' => true, // Whether to halt on an annotation error.
+    'enforce_hgnc_gene' => true, // Check for aliases, allow automatic creation of genes using the HGNC, allow automatic creation of transcripts.
+    'check_indel_description' => true, // Should we check all indels using Mutalyzer? Vep usually does a bad job at them.
 );
 
 // This is the default configuration of the observation count feature.
@@ -184,7 +186,12 @@ $_INSTANCE_CONFIG['observation_counts'] = array(
     ),
 );
 
+
+
+
+
 class LOVD_DefaultDataConverter {
+    // Class with methods and variables for convert_and_merge_data_files.php.
 
     var $sAdapterPath;
     var $aScriptVars;
@@ -202,7 +209,7 @@ class LOVD_DefaultDataConverter {
 
 
 
-    function convertInputFiles()
+    function convertInputFiles ()
     {
         // Run the adapter script for this instance.
 
@@ -220,7 +227,7 @@ class LOVD_DefaultDataConverter {
 
 
 
-    function readMetadata($aMetaDataLines)
+    function readMetadata ($aMetaDataLines)
     {
         // Read array of lines from .meta.lovd file of each .directvep.lovd file.
         // Return an array of metadata keyed by column names.
@@ -275,7 +282,7 @@ class LOVD_DefaultDataConverter {
 
 
 
-    function setScriptVars($aVars = array())
+    function setScriptVars ($aVars = array())
     {
         // Keep track of the values of some variables defined in the script that calls this adapter object.
 
@@ -287,7 +294,7 @@ class LOVD_DefaultDataConverter {
 
 
 
-    function prepareMappings()
+    function prepareMappings ()
     {
         // Returns an array that map VEP columns to LOVD columns.
 
@@ -361,7 +368,7 @@ class LOVD_DefaultDataConverter {
             'SYMBOL' => 'symbol',
             'REF' => 'ref',
             'ALT' => 'alt',
-            'Existing_variation' => 'existingvariation'
+            'Existing_variation' => 'existing_variation'
 
         );
 
@@ -390,12 +397,11 @@ class LOVD_DefaultDataConverter {
 
 
 
-    function prepareGeneAliases()
+    function prepareGeneAliases ()
     {
         // Prepare the $aGeneAliases array with a site specific gene alias list.
         // The convert and merge script will provide suggested gene alias key value pairs to add to this array.
         $aGeneAliases = array(
-            /*
             // Sort? Keep forever?
             'C1orf63' => 'RSRP1',
             'C1orf170' => 'PERM1',
@@ -603,7 +609,6 @@ class LOVD_DefaultDataConverter {
             'ZNF259' => 'ZPR1',
             'ZNF812' => 'ZNF812P',
             // 2016-03-04; New aliases.
-            */
         );
 
         return $aGeneAliases;
@@ -614,10 +619,11 @@ class LOVD_DefaultDataConverter {
 
 
 
-    function prepareGenesToIgnore()
+    function prepareGenesToIgnore ()
     {
         // Prepare the $aGenesToIgnore array with a site specific gene list.
         $aGenesToIgnore = array(
+            /*
             // 2015-01-19; Not recognized by HGNC.
             'FLJ12825',
             'FLJ27354',
@@ -837,7 +843,6 @@ class LOVD_DefaultDataConverter {
             'CDRT8',
             'LRRC75A-AS1',
             'C17orf76-AS1',
-            'KANSL1',
             'SNF8',
             'ZNF271',
             'TCEB3CL',
@@ -1184,6 +1189,7 @@ class LOVD_DefaultDataConverter {
             'ZNF812P',
             'ZPR1',
             // 2016-03-04; No transcripts could be found.
+            */
         );
 
         return $aGenesToIgnore;
@@ -1193,10 +1199,11 @@ class LOVD_DefaultDataConverter {
 
 
 
-    function ignoreTranscript($sTranscriptId)
+    function ignoreTranscript ($sTranscriptId)
     {
         // Check if we want to skip importing the annotation for this transcript.
 
+        // What is this?
         if ($sTranscriptId === static::$NO_TRANSCRIPT) {
             return true;
         }
@@ -1208,7 +1215,7 @@ class LOVD_DefaultDataConverter {
 
 
 
-    function prepareTranscriptsPrefixToIgnore()
+    function prepareTranscriptsPrefixToIgnore ()
     {
         // Prepare the $aGenesToIgnore array with a site specific gene list.
         $aTranscriptsPrefixToIgnore = array(
@@ -1221,7 +1228,7 @@ class LOVD_DefaultDataConverter {
 
 
 
-    function prepareScreeningID($aMetaData)
+    function prepareScreeningID ($aMetaData)
     {
         // Returns the screening ID.
 
@@ -1233,11 +1240,11 @@ class LOVD_DefaultDataConverter {
 
 
 
-    function getInputFilePrefixPattern()
+    function getInputFilePrefixPattern ()
     {
         // Returns the regex pattern of the prefix of variant input file names.
 
-        return '((?:Child|Patient)_(?:\d+))';
+        return '(?:Child|Patient)_(?:\d+)';
     }
 
 
@@ -1245,7 +1252,7 @@ class LOVD_DefaultDataConverter {
 
 
 
-    function getRequiredHeaderColumns()
+    function getRequiredHeaderColumns ()
     {
         // Returns an array of required input variant file column headers. The order of these columns does NOT matter.
 
@@ -1264,9 +1271,21 @@ class LOVD_DefaultDataConverter {
 
 
 
-    function prepareHeaders($aHeaders)
+    function prepareHeaders ($aHeaders)
     {
-        // Returns an array of ordered column headers of the input files.
+        // Verify the identity of this file. Some columns are appended by the Miracle ID.
+        // Check the child's Miracle ID with that we have in the meta data file, and remove all the IDs so the headers are recognized normally.
+        foreach ($aHeaders as $key => $sHeader) {
+            if (preg_match('/(Child|Patient|Father|Mother)_(\d+)$/', $sHeader, $aRegs)) {
+                // If Child, check ID.
+                if (!empty($this->aScriptVars['nMiracleID']) && in_array($aRegs[1], array('Child', 'Patient')) && $aRegs[2] != $this->aScriptVars['nMiracleID']) {
+                    // Here, we won't try and remove the temp file. We need it for diagnostics, and it will save us from running into the same error over and over again.
+                    die('Fatal: Miracle ID of ' . $aRegs[1] . ' (' . $aRegs[2] . ') does not match that from the meta file (' . $this->aScriptVars['nMiracleID'] . ')' . "\n");
+                }
+                // Clean ID from column.
+                $aHeaders[$key] = substr($sHeader, 0, -(strlen($aRegs[2]) + 1));
+            }
+        }
 
         return $aHeaders;
     }
@@ -1276,14 +1295,16 @@ class LOVD_DefaultDataConverter {
 
 
 
-    function formatEmptyColumn($aLine, $sVEPColumn, $sLOVDColumn, $aVariant)
+    function formatEmptyColumn ($aLine, $sVEPColumn, $sLOVDColumn, $aVariant)
     {
         // Returns how we want to represent empty data in $aVariant array given a LOVD column name.
+        /*
         if (isset($aLine[$sVEPColumn]) && ($aLine[$sVEPColumn] === 0 || $aLine[$sVEPColumn] === '0')) {
             $aVariant[$sLOVDColumn] = 0;
         } else {
             $aVariant[$sLOVDColumn] = '';
         }
+        */
 
         return $aVariant;
     }
@@ -1293,7 +1314,7 @@ class LOVD_DefaultDataConverter {
 
 
 
-    function postValueAssignmentUpdate($sKey, &$aVariant, &$aData)
+    function postValueAssignmentUpdate ($sKey, &$aVariant, &$aData)
     {
         // Update $aData if there is any aggregated data that we need to update after each input line is read.
 
