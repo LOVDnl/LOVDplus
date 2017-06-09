@@ -388,7 +388,6 @@ class LOVD_DefaultDataConverter {
         // Prepare the $aGeneAliases array with a site specific gene alias list.
         // The convert and merge script will provide suggested gene alias key value pairs to add to this array.
         $aGeneAliases = array(
-            /*
             // Sort? Keep forever?
             'C1orf63' => 'RSRP1',
             'C1orf170' => 'PERM1',
@@ -596,7 +595,6 @@ class LOVD_DefaultDataConverter {
             'ZNF259' => 'ZPR1',
             'ZNF812' => 'ZNF812P',
             // 2016-03-04; New aliases.
-            */
         );
 
         return $aGeneAliases;
@@ -611,6 +609,7 @@ class LOVD_DefaultDataConverter {
     {
         // Prepare the $aGenesToIgnore array with a site specific gene list.
         $aGenesToIgnore = array(
+            /*
             // 2015-01-19; Not recognized by HGNC.
             'FLJ12825',
             'FLJ27354',
@@ -830,7 +829,6 @@ class LOVD_DefaultDataConverter {
             'CDRT8',
             'LRRC75A-AS1',
             'C17orf76-AS1',
-            'KANSL1',
             'SNF8',
             'ZNF271',
             'TCEB3CL',
@@ -1177,6 +1175,7 @@ class LOVD_DefaultDataConverter {
             'ZNF812P',
             'ZPR1',
             // 2016-03-04; No transcripts could be found.
+            */
         );
 
         return $aGenesToIgnore;
