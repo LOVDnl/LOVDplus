@@ -4,7 +4,7 @@
  * LEIDEN OPEN VARIATION DATABASE (LOVD)
  *
  * Created     : 2016-09-02
- * Modified    : 2017-06-09
+ * Modified    : 2017-06-12
  * For LOVD    : 3.0-19
  *
  * Copyright   : 2004-2017 Leiden University Medical Center; http://www.LUMC.nl/
@@ -299,7 +299,6 @@ class LOVD_DefaultDataConverter {
         // Returns an array that map VEP columns to LOVD columns.
 
         $aColumnMappings = array(
-
             'chromosome' => 'chromosome',
             'position' => 'position', // lovd_getVariantDescription() needs this.
             'QUAL' => 'VariantOnGenome/Sequencing/Quality',
@@ -314,13 +313,13 @@ class LOVD_DefaultDataConverter {
             'Grantham' => 'VariantOnTranscript/Prediction/Grantham',
             'INDB_COUNT_UG' => 'VariantOnGenome/InhouseDB/Count/UG',
             'INDB_COUNT_HC' => 'VariantOnGenome/InhouseDB/Count/HC',
-            'GLOBAL_VN' => 'VariantOnGenome/InhouseDB/Position/Global/Samples_with_coverage',
+            'GLOBAL_VN' => 'VariantOnGenome/InhouseDB/Position/Global/Samples_w_coverage',
             'GLOBAL_VF_HET' => 'VariantOnGenome/InhouseDB/Count/Global/Heterozygotes',
             'GLOBAL_VF_HOM' => 'VariantOnGenome/InhouseDB/Count/Global/Homozygotes',
-            'WITHIN_PANEL_VN' => 'VariantOnGenome/InhouseDB/Position/InPanel/Samples_with_coverage',
+            'WITHIN_PANEL_VN' => 'VariantOnGenome/InhouseDB/Position/InPanel/Samples_w_coverage',
             'WITHIN_PANEL_VF_HET' => 'VariantOnGenome/InhouseDB/Count/InPanel/Heterozygotes',
             'WITHIN_PANEL_VF_HOM' => 'VariantOnGenome/InhouseDB/Count/InPanel/Homozygotes',
-            'OUTSIDE_PANEL_VN' => 'VariantOnGenome/InhouseDB/Position/OutOfPanel/Samples_with_coverage',
+            'OUTSIDE_PANEL_VN' => 'VariantOnGenome/InhouseDB/Position/OutOfPanel/Samples_w_coverage',
             'OUTSIDE_PANEL_VF_HET' => 'VariantOnGenome/InhouseDB/Count/OutOfPanel/Heterozygotes',
             'OUTSIDE_PANEL_VF_HOM' => 'VariantOnGenome/InhouseDB/Count/OutOfPanel/Homozygotes',
             'AF1000G' => 'VariantOnGenome/Frequency/1000G',
@@ -369,7 +368,6 @@ class LOVD_DefaultDataConverter {
             'REF' => 'ref',
             'ALT' => 'alt',
             'Existing_variation' => 'existing_variation'
-
         );
 
         return $aColumnMappings;
