@@ -905,7 +905,6 @@ if ($sCalcVersionFiles != $sCalcVersionDB) {
     }
 
     if (LOVD_plus && $sCalcVersionDB < lovd_calculateVersion('3.0-17h')) { // Improvements to the way analyses are stored and displayed.
-
         // Return the existing analyses records as we need these to populate the new tables.
         $zAnalyses = $_DB->query('SELECT * FROM ' . TABLE_ANALYSES)->fetchAllAssoc();
 

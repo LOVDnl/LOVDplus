@@ -1305,6 +1305,7 @@ class LOVD_DefaultDataConverter {
             $aVariant[$sLOVDColumn] = '';
         }
         */
+        $aVariant[$sLOVDColumn] = '';
 
         return $aVariant;
     }
