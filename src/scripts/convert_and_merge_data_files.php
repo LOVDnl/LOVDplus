@@ -4,7 +4,7 @@
  * LEIDEN OPEN VARIATION DATABASE (LOVD)
  *
  * Created     : 2014-11-28
- * Modified    : 2017-06-09
+ * Modified    : 2017-06-12
  * For LOVD+   : 3.0-18
  *
  * Copyright   : 2004-2017 Leiden University Medical Center; http://www.LUMC.nl/
@@ -619,14 +619,7 @@ foreach ($aFiles as $sID) {
     // Get all the gene data in one database call.
     $aResult = $_DB->query('SELECT g.id, g.refseq_UD, g.name FROM ' . TABLE_GENES . ' AS g')->fetchAllAssoc();
     foreach ($aResult as $aGene) {
-        // Sometimes, we don't have an UD there. It happens, because now and then we manually created genes and transcripts.
-        if (!$aGene['refseq_UD']) {
-            $aGene['refseq_UD'] = lovd_getUDForGene($_CONF['refseq_build'], $aGene['id']);
-        }
-        if ($aGene['refseq_UD']) {
-            // Silent error if not found. We were already like this. But we'll ignore the gene.
-            $aGenes[$aGene['id']] = array_merge($aGene, array('transcripts_in_UD' => array()));
-        }
+        $aGenes[$aGene['id']] = array_merge($aGene, array('transcripts_in_UD' => array()));
     }
 
     // Get all the transcripts related data in one database call.
@@ -771,16 +764,9 @@ foreach ($aFiles as $sID) {
             // FIXME: This is duplicated code. Make it into a function, perhaps?
             if ($aGene = $_DB->query('SELECT g.id, g.refseq_UD, g.name FROM ' . TABLE_GENES . ' AS g WHERE g.id = ?', array($aVariant['symbol']))->fetchAssoc()) {
                 // We've got it in the database.
-                // Sometimes, we don't have an UD there. It happens, because now and then we manually created genes and transcripts.
-                if (!$aGene['refseq_UD']) {
-                    $aGene['refseq_UD'] = lovd_getUDForGene($_CONF['refseq_build'], $aGene['id']);
-                }
-                if ($aGene['refseq_UD']) {
-                    // Silent error if not found. We were already like this. But we'll ignore the gene.
-                    $aGenes[$aVariant['symbol']] = array_merge($aGene, array('transcripts_in_UD' => array()));
-                }
-            } else {
+                $aGenes[$aVariant['symbol']] = array_merge($aGene, array('transcripts_in_UD' => array()));
 
+            } else {
                 // Getting all gene information from the HGNC takes a few seconds.
                 if (!empty($_INSTANCE_CONFIG['conversion']['enforce_hgnc_gene'])) {
 print('Loading gene information for ' . $aVariant['symbol'] . '...' . "\n");
@@ -846,7 +832,20 @@ print('Can\'t load UD for gene ' . $aGeneInfo['symbol'] . '.' . "\n");
 
         } elseif (!empty($aVariant['transcriptid']) && !isset($aTranscripts[$aVariant['transcriptid']])) {
             // Gene found, transcript given but not yet seen before. Get transcript information.
-            // First try to get this transcript from the database, ignoring (but preferring) version.
+
+            // Genes are now accepted as well without an UD. But we can't search for transcripts if we don't have an UD.
+            // See if we have one; if not, try and create it.
+            if (!$aGenes[$aVariant['symbol']]['refseq_UD']) {
+                $sRefseqUD = lovd_getUDForGene($_CONF['refseq_build'], $aVariant['symbol']);
+                if ($sRefseqUD) {
+                    $aGenes[$aVariant['symbol']]['refseq_UD'] = $sRefseqUD;
+                    // And prevent us from having this issue again.
+                    $_DB->query('UPDATE ' . TABLE_GENES . ' SET refseq_UD = ? WHERE id = ?',
+                        array($sRefseqUD, $aVariant['symbol']));
+                }
+            }
+
+            // Then try to get this transcript from the database, ignoring (but preferring) version.
             if ($aTranscript = $_DB->query('SELECT id, geneid, id_mutalyzer, id_ncbi, position_c_cds_end, position_g_mrna_start, position_g_mrna_end FROM ' . TABLE_TRANSCRIPTS . ' WHERE id_ncbi LIKE ? ORDER BY (id_ncbi = ?) DESC, id DESC LIMIT 1', array($aLine['transcript_noversion'] . '%', $aVariant['transcriptid']))->fetchAssoc()) {
                 // We've got it in the database.
                 $aTranscripts[$aVariant['transcriptid']] = $aTranscript;
