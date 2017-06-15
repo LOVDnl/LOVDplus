@@ -1022,6 +1022,7 @@ print('No available transcripts for gene ' . $aGenes[$aVariant['symbol']]['id'] 
             // VariantOnTranscript/RNA && VariantOnTranscript/Protein.
             // Try to do as much as possible by ourselves.
             $aVariant['VariantOnTranscript/RNA'] = '';
+            $aVariant['VariantOnTranscript/Protein'] = urldecode($aVariant['VariantOnTranscript/Protein']);
             if ($aVariant['VariantOnTranscript/Protein']) {
                 // VEP came up with something...
                 $aVariant['VariantOnTranscript/RNA'] = 'r.(?)';
