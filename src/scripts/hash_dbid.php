@@ -30,7 +30,7 @@ require ROOT_PATH . 'inc-lib-form.php';
 
 // 1. Update Summary Annotation Records
 // This step has to be performed BEFORE we update VariantOnGenome/DBID in TABLE_VARIANTS.
-define('PATTERN_DBID', '%_%');
+define('PATTERN_DBID', '_[0-9]{6}$');
 $aMapOldToNew = array();
 
 print(date('Y-m-d H:i:s') . ": Updating summary annotation records\n");
@@ -64,6 +64,11 @@ foreach ($aLogs as $aOneLogEntry) {
     if (count($aMatches) > 1) {
         $sOldDBID = $aMatches[1];
 
+        // Don't do anything if pattern is not chrph_XXXXXX or symbol_XXXXXX
+        if (!preg_match('/' . PATTERN_DBID . '/', $sOldDBID)) {
+            break;
+        }
+
         // Find new DBID
         if (!isset($aMapOldToNew[$sOldDBID])) {
             // search one more time
@@ -88,26 +93,40 @@ foreach ($aLogs as $aOneLogEntry) {
 }
 print(date('Y-m-d H:i:s') . ": Finished updating summary annotation log entries\n");
 
-// Final Step: Update the DBID
-print(date('Y-m-d H:i:s') . ": Fetch unique variants data\n");
-$sSQL = 'SELECT DISTINCT `VariantOnGenome/DBID`, `VariantOnGenome/DNA`, chromosome, position_g_start
-         FROM ' . TABLE_VARIANTS . '
-         WHERE `VariantOnGenome/DBID` LIKE "' . PATTERN_DBID . '"';
+// Final step: Update VariantOnGenome/DBID in TABLE_VARIANTS
+$sSQL = 'SELECT COUNT(id) AS num FROM ' . TABLE_VARIANTS . ' WHERE `VariantOnGenome/DBID` REGEXP "' . PATTERN_DBID . '"';
+$nRow = $_DB->query($sSQL)->fetchColumn();
 
-$aUniqueVariants = $_DB->query($sSQL)->fetchAllGroupAssoc();
-print(date('Y-m-d H:i:s') . ": Finished fetching unique variants data\n");
-
-
-$zUpdateDBIDQuery = $_DB->prepare('UPDATE ' . TABLE_VARIANTS . ' SET `VariantOnGenome/DBID` = ? WHERE `VariantOnGenome/DBID` = ?');
-$nUpdated = 0;
-foreach ($aUniqueVariants as $sOldDBID => $aVariantData) {
-    $sNewDBID = lovd_fetchDBID($aVariantData);
-    $zUpdateDBIDQuery->execute(array($sNewDBID, $sOldDBID));
-    $nUpdated++;
-
-    if ($nUpdated%1000 == 0) {
-        print(date('Y-m-d H:i:s') . ": Updated " . $nUpdated . " unique variants \n");
-    }
+if (!$nRow) {
+    print(date('Y-m-d H:i:s') . ": All DBIDs have been updated\n");
 }
 
-print(date('Y-m-d H:i:s') . ": Updated " . $nUpdated . " unique variants \n");
+$nBatchSize = 1000;
+$nBatches = (int) ($nRow/$nBatchSize) + 1;
+
+print("Rows: " . $nRow . "\n");
+print("Batches: " . $nBatches . "\n");
+
+$sHashFunc = 'SHA1';
+$sSQLUpdateDBID = 'UPDATE '  . TABLE_VARIANTS . ' SET `VariantOnGenome/DBID`  = ' . $sHashFunc . '(CONCAT("' . $_CONF['refseq_build'] . '", chromosome, ".g.", REPLACE(REPLACE(REPLACE(`VariantOnGenome/DNA`, "(", ""), ")", ""), "?", "") )) WHERE id IN ';
+$zUpdateDBIDQuery = $_DB->prepare($sSQLUpdateDBID . ' (?' . str_repeat(',?', $nBatchSize-1) . ')');
+$nUpdated = 0;
+for ($i=0; $i<$nBatches; $i++) {
+    $sSQL = 'SELECT id FROM '  . TABLE_VARIANTS . ' WHERE `VariantOnGenome/DBID` REGEXP "' . PATTERN_DBID . '" ORDER BY `VariantOnGenome/DBID` LIMIT ' . $nBatchSize;
+    $aVariantIds = $_DB->query($sSQL)->fetchAllColumn();
+
+    if (count($aVariantIds) > 0) {
+        // Update DBID
+
+        // The prepare statement needs to be modified if number of variants is smaller than batch size.
+        $zFinalQuery = $zUpdateDBIDQuery;
+        if (count($aVariantIds) !== $nBatchSize) {
+            $zCustomisedQuery = $_DB->prepare($sSQLUpdateDBID . ' (?' . str_repeat(',?', count($aVariantIds)-1) . ')');
+            $zFinalQuery = $zCustomisedQuery;
+        }
+        $zFinalQuery->execute($aVariantIds);
+
+        $nUpdated += count($aVariantIds);
+        print(date('Y-m-d H:i:s') . ": " . $nUpdated . " DBIDs updated\n");
+    }
+}

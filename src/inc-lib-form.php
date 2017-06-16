@@ -368,7 +368,7 @@ function lovd_fetchDBID ($aData)
 
     if (LOVD_plus) {
         if (!empty($aData) && !empty($sGenomeVariant)) {
-            $sDBID = md5($_CONF['refseq_build'] . $aData['chromosome'] . '.g.' . $sGenomeVariant);
+            $sDBID = sha1($_CONF['refseq_build'] . $aData['chromosome'] . '.g.' . $sGenomeVariant);
             return $sDBID;
         } else {
             return false;
