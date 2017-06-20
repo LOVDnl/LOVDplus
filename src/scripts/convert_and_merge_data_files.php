@@ -1022,11 +1022,13 @@ print('No available transcripts for gene ' . $aGenes[$aVariant['symbol']]['id'] 
             // VariantOnTranscript/RNA && VariantOnTranscript/Protein.
             // Try to do as much as possible by ourselves.
             $aVariant['VariantOnTranscript/RNA'] = '';
+            // convert p(.%3D) to p(.=)
+            $aVariant['VariantOnTranscript/Protein'] = urldecode($aVariant['VariantOnTranscript/Protein']);
             if ($aVariant['VariantOnTranscript/Protein']) {
                 // VEP came up with something...
                 $aVariant['VariantOnTranscript/RNA'] = 'r.(?)';
-                if ($aVariant['VariantOnTranscript/Protein'] == $aVariant['VariantOnTranscript/DNA'] . '(p.%3D)') {
-                    // But sometimes VEP messes up; DNA: NM_000093.4:c.4482G>A; Prot: NM_000093.4:c.4482G>A(p.%3D)
+                if ($aVariant['VariantOnTranscript/Protein'] == $aVariant['VariantOnTranscript/DNA'] . '(p.=)') {
+                    // But sometimes VEP messes up; DNA: NM_000093.4:c.4482G>A; Prot: NM_000093.4:c.4482G>A(p.=)
                     $aVariant['VariantOnTranscript/Protein'] = 'p.(=)';
                 } else {
                     $aVariant['VariantOnTranscript/Protein'] = substr($aVariant['VariantOnTranscript/Protein'], strpos($aVariant['VariantOnTranscript/Protein'], ':')+1); // NP_000000.1:p.Met1? -> p.Met1?
