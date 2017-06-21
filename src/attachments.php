@@ -4,7 +4,7 @@
  * LEIDEN OPEN VARIATION DATABASE (LOVD)
  *
  * Created     : 2017-04-07
- * Modified    : 2017-04-12
+ * Modified    : 2017-06-07
  * For LOVD    : 3.0-18
  *
  * Copyright   : 2004-2017 Leiden University Medical Center; http://www.LUMC.nl/
@@ -153,7 +153,7 @@ if (PATH_COUNT == 2 && ACTION == 'delete') {
             // Delete the file permanently.
             if (file_exists($sAbsoluteFileName) && unlink($sAbsoluteFileName)) {
                 lovd_showInfoTable('File deleted successfully.<BR>', 'success');
-                if (strpos($nID, 'chr') === false) {
+                if (ctype_digit($nID)) {
                     $sLogMessage = 'variant #' . $nID;
                 } else {
                     $sLogMessage = 'summary annotation DBID #' . $nID;
@@ -277,7 +277,7 @@ if (PATH_COUNT == 2 && ACTION == 'upload') {
 
                 // Generate the new file name based on the file type and the ID to be used.
                 // First, check if the file type exists in the $aFiletypes array.
-                $sFileName = $aFileTypes[$_POST['mode']]['linked_to'] . ':';
+                $sFileName = $aFileTypes[$_POST['mode']]['linked_to'] . '_';
                 if ($aFileTypes[$_POST['mode']]) {
                     if ($aFileTypes[$_POST['mode']]['linked_to'] == 'variant') {
                         $sFileName .= $nID . '-' . $_POST['mode'];

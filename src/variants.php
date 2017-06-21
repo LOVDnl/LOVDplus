@@ -261,8 +261,35 @@ if (!ACTION && (empty($_PE[1]) || preg_match('/^chr[0-9A-Z]{1,2}$/', $_PE[1]))) 
 
 
 
-if (PATH_COUNT == 3 && $_PE[1] == 'DBID' && preg_match('/^chr/', $_PE[2]) && !ACTION) {
-    // URL: /variants/DBID/chr1_00001
+// FIXME: This view shows only *one* variant. This view does not do what it promises (showing all observations of a certain variant).
+if (PATH_COUNT == 3 && $_PE[1] == 'DBID' && !empty($_GET['search_variantid']) && !ACTION) {
+    // URL: /variants/DBID/chr_000001?search_variantid=0000000001
+    // View all genomic variant entries with the same DBID, but only if the correct variant ID has been given.
+    // This view is used for LOVD+ to show other observations of any given variant, without just allowing any DBID to be shown.
+
+    $sDBID = $_PE[2];
+    define('PAGE_TITLE', 'View genomic variants');
+    $_T->printHeader();
+    $_T->printTitle();
+
+    lovd_requireAUTH(LEVEL_MANAGER);
+
+    require ROOT_PATH . 'class/object_custom_viewlists.mod.php';
+    $_DATA = new LOVD_CustomViewListMOD(array('VariantOnGenome', 'VariantOnTranscript', 'Screening', 'Individual'));
+
+    $_DATA->viewList('CustomVL_ObsCounts');
+
+    $_T->printFooter();
+    exit;
+}
+
+
+
+
+
+
+if (PATH_COUNT == 3 && $_PE[1] == 'DBID' && !ACTION) {
+    // URL: /variants/DBID/chr1_000001
     // View all genomic variant entries with the same DBID.
 
     $sID = $_PE[2];
@@ -289,31 +316,6 @@ if (PATH_COUNT == 3 && $_PE[1] == 'DBID' && preg_match('/^chr/', $_PE[2]) && !AC
     exit;
 }
 
-
-
-
-
-if (PATH_COUNT == 3 && $_PE[1] == 'DBID' && preg_match('/^chr/', $_PE[2]) && !empty($_GET['search_variantid']) && !ACTION) {
-    // URL: /variants/DBID/chr_00001
-    // View all genomic variant entries with the same DBID, but only if the correct variant ID has been given.
-    // This view is used for LOVD+ to show other observations of any given variant, without just allowing any DBID to be shown.
-
-    $sDBID = $_PE[2];
-    define('PAGE_TITLE', 'View genomic variants');
-    $_T->printHeader();
-    $_T->printTitle();
-
-    lovd_requireAUTH(LEVEL_MANAGER);
-
-    require ROOT_PATH . 'class/object_custom_viewlists.mod.php';
-    $_DATA = new LOVD_CustomViewListMOD(array('VariantOnGenome', 'VariantOnTranscript', 'Screening', 'Individual'));
-
-    $_GET['search_VariantOnGenome/DBID'] = '="' . $sDBID . '"';
-    $_DATA->viewList('CustomVL_ObsCounts');
-
-    $_T->printFooter();
-    exit;
-}
 
 
 
@@ -747,9 +749,15 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && !ACTION) {
         // FIXME: When we turn this code into a function, replace the file prefix with the object type.
         $sFileTypes = implode(',', array_keys($_INSTANCE_CONFIG['attachments']));
         // This already sorts the files based on their name, meaning sorted based on file type and then time (ascending).
+        // Below we have two methods of matching the file names, one containing a colon ':' and the other containing an underscore '_'. Originally the colon
+        // was used but this is an illegal file name character in Windows so it was changed to an underscore. We had to keep the colon option as files were already
+        // named using this. If in the future we want to reduce this to just the underscore we need to write an update script to rename all the existing files
+        // that contains the colon to use the underscore instead.
         $aFiles = array_merge(
             glob($sAttachmentFilesPath . '/variant:' . $nID . '-{' . $sFileTypes . '}-*', GLOB_BRACE),
-            glob($sAttachmentFilesPath . '/summary_annotation:' . $sSummaryAnnotationsID . '-{' . $sFileTypes . '}-*', GLOB_BRACE)
+            glob($sAttachmentFilesPath . '/variant_' . $nID . '-{' . $sFileTypes . '}-*', GLOB_BRACE),
+            glob($sAttachmentFilesPath . '/summary_annotation:' . $sSummaryAnnotationsID . '-{' . $sFileTypes . '}-*', GLOB_BRACE),
+            glob($sAttachmentFilesPath . '/summary_annotation_' . $sSummaryAnnotationsID . '-{' . $sFileTypes . '}-*', GLOB_BRACE)
         );
         if (count($aFiles)) {
             // At least one match.
@@ -2811,7 +2819,7 @@ if (PATH_COUNT == 2 && $_PE[1] == 'upload' && ACTION == 'create') {
 
 
 
-if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && in_array(ACTION, array('edit', 'publish'))) {
+if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && in_array(ACTION, array('edit', 'publish')) && !LOVD_plus) {
     // URL: /variants/0000000001?edit
     // URL: /variants/0000000001?publish
     // Edit an entry.

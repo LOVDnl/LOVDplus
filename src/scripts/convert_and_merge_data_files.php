@@ -4,11 +4,13 @@
  * LEIDEN OPEN VARIATION DATABASE (LOVD)
  *
  * Created     : 2014-11-28
- * Modified    : 2017-02-06
+ * Modified    : 2017-06-09
  * For LOVD+   : 3.0-18
  *
  * Copyright   : 2004-2017 Leiden University Medical Center; http://www.LUMC.nl/
- * Programmer  : Ivo F.A.C. Fokkema <I.F.A.C.Fokkema@LUMC.nl>
+ * Programmers : Ivo F.A.C. Fokkema <I.F.A.C.Fokkema@LUMC.nl>
+ *               Anthony Marty <anthony.marty@unimelb.edu.au>
+ *               Juny Kesumadewi <juny.kesumadewi@unimelb.edu.au>
  *
  *************/
 
@@ -640,16 +642,20 @@ foreach ($aFiles as $sID) {
         $aVariant = array(); // Will contain the mapped, possibly modified, data.
         // $aLine = array_map('trim', $aLine, array_fill(0, count($aLine), '"')); // In case we ever need to trim off quotes.
 
-
-        // VCF 4.2 can contain lines with an ALT allele of "*", indicating the allele is
-        //  not WT at this position, but affected by an earlier mentioned variant instead.
-        // Because these are not actually variants, we ignore them.
-        if ($aLine['ALT'] == '*') {
-            continue;
-        }
-
         // Reformat variant data if extra modification required by different instance of LOVD.
         $aLine = $_ADAPTER->prepareVariantData($aLine);
+
+        // If the prepareVariantData() method above determines that this variant line is not to be imported then it adds
+        //  lovd_ignore_variant to the $aLine array and sets it to something non-false.
+        // For possible values, see prepareVariantData() in the default adapter.
+        // We will process "silent" and "log" here. There will be no record within LOVD of this variant being ignored.
+        // Once we'll support "separate", we'll need to process there here, too.
+        if (!empty($aLine['lovd_ignore_variant'])) {
+            if ($aLine['lovd_ignore_variant'] != 'silent') {
+                print('Line ' . $nLine . ' is being ignored due to rules setup in the adapter library. This line will not be imported into LOVD.' . "\n");
+            }
+            continue;
+        }
 
         // Map VEP columns to LOVD columns.
         foreach ($aColumnMappings as $sVEPColumn => $sLOVDColumn) {
@@ -659,12 +665,20 @@ foreach ($aFiles as $sID) {
                 // Never mind then!
                 continue;
             }
-            
+
             if (empty($aLine[$sVEPColumn]) || $aLine[$sVEPColumn] == 'unknown' || $aLine[$sVEPColumn] == '.') {
                 $aVariant = $_ADAPTER->formatEmptyColumn($aLine, $sVEPColumn, $sLOVDColumn, $aVariant);
             } else {
                 $aVariant[$sLOVDColumn] = $aLine[$sVEPColumn];
             }
+        }
+
+        // VCF 4.2 can contain lines with an ALT allele of "*", indicating the allele is
+        //  not WT at this position, but affected by an earlier mentioned variant instead.
+        // Because these are not actually variants, we ignore them.
+        if ($aVariant['alt'] == '*') {
+            print('Line ' . $nLine . ' is being ignored because the allele is not wild type but is affected by an earlier mentioned variant. This line will not be imported into LOVD.' . "\n");
+            continue;
         }
 
         // When seeing a new chromosome, reset these variables. We don't want them too big; it's useless and takes up a lot of memory.
@@ -950,7 +964,7 @@ print('No available transcripts for gene ' . $aGenes[$aVariant['symbol']]['id'] 
 
                     if ($sJSONResponse === false) {
                         print('>>>>> Attempted to call Mutalyzer ' . $nMutalyzerRetries . ' times for numberConversion and failed on line ' . $nLine . '.' . "\n");
-                    }                        
+                    }
 
                     if ($sJSONResponse && $aResponse = json_decode($sJSONResponse, true)) {
                         // Before we had to go two layers deep; through the result, then read out the string.
@@ -1008,11 +1022,13 @@ print('No available transcripts for gene ' . $aGenes[$aVariant['symbol']]['id'] 
             // VariantOnTranscript/RNA && VariantOnTranscript/Protein.
             // Try to do as much as possible by ourselves.
             $aVariant['VariantOnTranscript/RNA'] = '';
+            // convert p(.%3D) to p(.=)
+            $aVariant['VariantOnTranscript/Protein'] = urldecode($aVariant['VariantOnTranscript/Protein']);
             if ($aVariant['VariantOnTranscript/Protein']) {
                 // VEP came up with something...
                 $aVariant['VariantOnTranscript/RNA'] = 'r.(?)';
-                if ($aVariant['VariantOnTranscript/Protein'] == $aVariant['VariantOnTranscript/DNA'] . '(p.%3D)') {
-                    // But sometimes VEP messes up; DNA: NM_000093.4:c.4482G>A; Prot: NM_000093.4:c.4482G>A(p.%3D)
+                if ($aVariant['VariantOnTranscript/Protein'] == $aVariant['VariantOnTranscript/DNA'] . '(p.=)') {
+                    // But sometimes VEP messes up; DNA: NM_000093.4:c.4482G>A; Prot: NM_000093.4:c.4482G>A(p.=)
                     $aVariant['VariantOnTranscript/Protein'] = 'p.(=)';
                 } else {
                     $aVariant['VariantOnTranscript/Protein'] = substr($aVariant['VariantOnTranscript/Protein'], strpos($aVariant['VariantOnTranscript/Protein'], ':')+1); // NP_000000.1:p.Met1? -> p.Met1?
@@ -1273,7 +1289,7 @@ print('Mutalyzer returned EREF error, hg19/hg38 error?' . "\n");
             $aColumnsForVOG[] = $sCol;
         }
     }
-    
+
     foreach ($aVOTKeys as $sCol) {
         if (substr($sCol, 0, 20) == 'VariantOnTranscript/') {
             $aColumnsForVOT[] = $sCol;
