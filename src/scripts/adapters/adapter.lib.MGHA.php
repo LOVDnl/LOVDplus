@@ -29,7 +29,6 @@ $_INSTANCE_CONFIG['viewlists']['CustomVL_AnalysisRunResults_for_I_VE'] = array(
         'curation_statusid',
         'variantid',
 
-
         // Visible.
         'curation_status_',
         'vog_effect',
@@ -43,17 +42,18 @@ $_INSTANCE_CONFIG['viewlists']['CustomVL_AnalysisRunResults_for_I_VE'] = array(
         'zygosity_', // 'VariantOnGenome/Sequencing/Allele/Frequency'
         'var_frac_', // 'VariantOnGenome/Sequencing/Depth/Alt/Fraction'
         'gene_OMIM_',
-        'gene_disease_names',
+        'gene_disease_name',
         'VariantOnTranscript/Clinical_Significance',
         'allele_',
         'VariantOnTranscript/Consequence_Impact',
         'VariantOnTranscript/Consequence_Type',
+        'VariantOnTranscript/Prediction/CADD_Raw',
         'VariantOnGenome/ExAC/Frequency/Adjusted',
         'VariantOnGenome/1000Gp3/Frequency',
-        'obs_variant',
-        'obs_var_ind_ratio',
+        'obs_genepanel',
+        'obs_var_gp_ind_ratio',
         'gene_panels',
-        'VariantOnGenome/Frequency/EVS/VEP/European_American'
+        'VariantOnGenome/Remarks'
     )
 );
 $_INSTANCE_CONFIG['viewlists']['CustomVL_ObsCounts']['cols_to_show'] = array(
