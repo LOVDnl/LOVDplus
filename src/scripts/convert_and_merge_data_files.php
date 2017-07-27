@@ -4,7 +4,7 @@
  * LEIDEN OPEN VARIATION DATABASE (LOVD)
  *
  * Created     : 2014-11-28
- * Modified    : 2017-06-12
+ * Modified    : 2017-07-27
  * For LOVD+   : 3.0-18
  *
  * Copyright   : 2004-2017 Leiden University Medical Center; http://www.LUMC.nl/
@@ -1238,15 +1238,17 @@ print('Mutalyzer returned EREF error, hg19/hg38 error?' . "\n");
         }
 
         // DNA fields and protein field can be super long with long inserts.
+        // For the DNA fields, shorten insAAAAAA to ins(6), for DNA descriptions >100 characters.
         foreach (array('VariantOnGenome/DNA', 'VariantOnTranscript/DNA') as $sField) {
             if (isset($aVariant[$sField]) && strlen($aVariant[$sField]) > 100 && preg_match('/ins([ACTG]+)$/', $aVariant[$sField], $aRegs)) {
-                $aVariant[$sField] = str_replace('ins' . $aRegs[1], 'ins' . strlen($aRegs[1]), $aVariant[$sField]);
+                $aVariant[$sField] = str_replace('ins' . $aRegs[1], 'ins(' . strlen($aRegs[1]) . ')', $aVariant[$sField]);
             }
         }
 
+        // For the protein field, shorten insArgArgArg to ins(3), for protein descriptions >100 characters.
         $sField = 'VariantOnTranscript/Protein';
         if (isset($aVariant[$sField]) && strlen($aVariant[$sField]) > 100 && preg_match('/ins(([A-Z][a-z]{2})+)\)$/', $aVariant[$sField], $aRegs)) {
-            $aVariant[$sField] = str_replace('ins' . $aRegs[1], 'ins' . strlen($aRegs[1]), $aVariant[$sField]);
+            $aVariant[$sField] = str_replace('ins' . $aRegs[1], 'ins(' . strlen($aRegs[1]) . ')', $aVariant[$sField]);
         }
 
         // Replace the ncbi ID with the transcripts LOVD database ID to be used when creating the VOT record.
