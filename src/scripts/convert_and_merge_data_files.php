@@ -946,17 +946,22 @@ print('No available transcripts for gene ' . $aGenes[$aVariant['symbol']]['id'] 
             // First, take off the transcript name, so we can easily check for a del/ins checking for an underscore.
             $aVariant['VariantOnTranscript/DNA'] = substr($aVariant['VariantOnTranscript/DNA'], strpos($aVariant['VariantOnTranscript/DNA'], ':')+1); // NM_000000.1:c.1del -> c.1del
 
+            // Decide if we need to call Mutalyzer's position converter to generate the VOT/DNA.
+            // For sure, we need to do so, when there is no VOT/DNA from VEP.
             $bCallMutalyzer = (!$aVariant['VariantOnTranscript/DNA']);
+            // If VEP did come up with something, check if this LOVD+ instance trusts VEP's output for indels.
             if ($_INSTANCE_CONFIG['conversion']['check_indel_description']) {
+                // This LOVD+ instance chooses to ignore VEP's predictions looking like indels.
+                // VEP doesn't understand that when the gene is on reverse, they have to switch the positions.
+                // Also, sometimes a delins is simply a substitution, when the VCF file was complicated (ACGT to ACCT for example).
+                // We've also seen cases where VEP's intronic positions in the DNA field were simply wrong.
+                // Call Mutalyzer to fix these errors.
                 $bCallMutalyzer = ($bCallMutalyzer || (strpos($aVariant['VariantOnTranscript/DNA'], '_') !== false));
             }
 
             if ($bCallMutalyzer) {
-                // We don't have a DNA field from VEP, or we get them with an underscore which we don't trust, because
-                //  at VEP they don't understand that when the gene is on reverse, they have to switch the positions.
-                // Also, sometimes a delins is simply a substitution, when the VCF file is all messed up (ACGT to ACCT for example).
-                // No other option, call Mutalyzer.
-                // But first check if I did that before.
+                // We don't have a DNA field from VEP, or we don't trust it (see above).
+                // Call Mutalyzer, but first check if I did that before already.
                 if (!isset($aMappings[$aVariant['chromosome'] . ':' . $aVariant['VariantOnGenome/DNA']])) {
                     $aMappings[$aVariant['chromosome'] . ':' . $aVariant['VariantOnGenome/DNA']] = array();
 //print('Running position converter, DNA was: "' . $aVariant['VariantOnTranscript/DNA'] . '"' . "\n");
@@ -1069,7 +1074,10 @@ print('No available transcripts for gene ' . $aGenes[$aVariant['symbol']]['id'] 
                 // It sometimes happens that we don't have a id_mutalyzer value. Before, we used to create transcripts manually if we couldn't recognize them.
                 // This is now working against us, as we really need this ID now.
                 if ($aTranscripts[$aVariant['transcriptid']]['id_mutalyzer'] == '000') {
-                    // FIXME: Remove this?
+                    // FIXME: This can in principle be removed. There is still just one use
+                    //  of id_mutalyzer in this code, and it's not even done correctly.
+                    //  (search for id_mutalyzer in this code for more info)
+                    //  Once that has been removed/fixed, we can remove id_mutalyzer everywhere, and remove this whole block of code.
                     // Normally, we would implement a cache here, but we rarely run Mutalyzer, and if we do, we will not likely run it on a variant on the same transcript.
                     // So, first just check if we still don't have a Mutalyzer ID.
                     if (!empty($_INSTANCE_CONFIG['conversion']['enforce_hgnc_gene'])) {
@@ -1111,7 +1119,7 @@ print('Reloading Mutalyzer ID for ' . $aTranscripts[$aVariant['transcriptid']]['
                     }
                 }
 
-print('Running mutalyzer to predict protein change for ' . $aGenes[$aVariant['symbol']]['refseq_UD'] . '(' . $aGenes[$aVariant['symbol']]['id'] . '_v' . $aTranscripts[$aVariant['transcriptid']]['id_mutalyzer'] . '):' . $aVariant['VariantOnTranscript/DNA'] . "\n");
+print('Running mutalyzer to predict protein change for ' . $aGenes[$aVariant['symbol']]['refseq_UD'] . '(' . $aTranscripts[$aVariant['transcriptid']]['id_ncbi'] . '):' . $aVariant['VariantOnTranscript/DNA'] . "\n");
                 $nSleepTime = 2;
                 // Retry Mutalyzer call several times until successful.
                 for ($i=0; $i <= $nMutalyzerRetries; $i++) {
@@ -1133,7 +1141,6 @@ print('Running mutalyzer to predict protein change for ' . $aGenes[$aVariant['sy
                     print('>>>>> Attempted to call Mutalyzer ' . $nMutalyzerRetries . ' times to runMutalyzer and failed on line ' . $nLine . '.' . "\n");
                 }
 
-//var_dump('https://mutalyzer.nl/json/runMutalyzer?variant=' . rawurlencode($aGenes[$aVariant['symbol']]['refseq_UD'] . '(' . $aGenes[$aVariant['symbol']]['id'] . '_v' . $aTranscripts[$aVariant['transcriptid']]['id_mutalyzer'] . '):' . $aVariant['VariantOnTranscript/DNA']));
                 if ($sJSONResponse && $aResponse = json_decode($sJSONResponse, true)) {
                     if (!isset($aResponse['proteinDescriptions'])) {
                         // Not sure if this can happen using JSON.
@@ -1189,6 +1196,19 @@ print('Mutalyzer returned EREF error, hg19/hg38 error?' . "\n");
                     }
                     if (!$aVariant['VariantOnTranscript/Protein'] && !empty($aResponse['proteinDescriptions'])) {
                         foreach ($aResponse['proteinDescriptions'] as $sVariantOnProtein) {
+                            // FIXME: This is the last usage of id_mutalyzer in this code, and it's not even correct.
+                            //  We know we can't count on id_mutalyzer to be correct, so in lovd_getRNAProteinPrediction()
+                            //  we have implemented a proper matching technique for the correct protein description.
+                            //  However, that function is not compatible with the CURL method used here to connect to Mutalyzer.
+                            //  Steps to follow:
+                            //  1) Make lovd_getRNAProteinPrediction() work on the JSON, not SOAP methods.
+                            //  2) Make lovd_getRNAProteinPrediction() work with CURL, if present. Probably,
+                            //     the CURL methods needs to be improved a little, because globalling a
+                            //     variable called $ch is not such a great idea. If this leaves the
+                            //     CURL function for runMutalyzer unused, remove it.
+                            //  3) Implement that function here, instead of this duplicated code.
+                            //  4) Remove code block that loads the id_mutalyzer if we don't have it.
+                            //  5) Remove other usages of id_mutalyzer.
                             if (($nPos = strpos($sVariantOnProtein, $aGenes[$aVariant['symbol']]['id'] . '_i' . $aTranscripts[$aVariant['transcriptid']]['id_mutalyzer'] . '):p.')) !== false) {
                                 // FIXME: Since this code is the same as the code used in the variant mapper (2x), better make a function out of it.
                                 $aVariant['VariantOnTranscript/Protein'] = substr($sVariantOnProtein, $nPos + strlen($aGenes[$aVariant['symbol']]['id'] . '_i' . $aTranscripts[$aVariant['transcriptid']]['id_mutalyzer'] . '):'));
