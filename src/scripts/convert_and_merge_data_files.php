@@ -1231,7 +1231,7 @@ print('Mutalyzer returned EREF error, hg19/hg38 error?' . "\n");
 
             if (!$aVariant['VariantOnTranscript/RNA']) {
                 // Script dies here, because I want to know if I missed something. This happens with NR transcripts, but those were ignored anyway, right?
-                $sErrorMsg = "Missing VariantOnTranscript/RNA. Chromosome: ". $aVariant['chromosome'] . ". VariantOnGenome/DNA: " . $aVariant['VariantOnGenome/DNA'] . ".";
+                $sErrorMsg = 'Missing VariantOnTranscript/RNA. Chromosome: ' . $aVariant['chromosome'] . '. VariantOnGenome/DNA: ' . $aVariant['VariantOnGenome/DNA'] . '.';
                 $nAnnotationErrors = lovd_handleAnnotationError($aVariant, $sErrorMsg);
                 $bDropTranscriptData = true;
             }
@@ -1245,10 +1245,20 @@ print('Mutalyzer returned EREF error, hg19/hg38 error?' . "\n");
             }
         }
 
-        // For the protein field, shorten insArgArgArg to ins(3), for protein descriptions >100 characters.
+        // For the protein field, protein descriptions >100 characters can be shortened.
         $sField = 'VariantOnTranscript/Protein';
-        if (isset($aVariant[$sField]) && strlen($aVariant[$sField]) > 100 && preg_match('/ins(([A-Z][a-z]{2})+)\)$/', $aVariant[$sField], $aRegs)) {
-            $aVariant[$sField] = str_replace('ins' . $aRegs[1], 'ins(' . strlen($aRegs[1]) . ')', $aVariant[$sField]);
+        if (isset($aVariant[$sField]) && strlen($aVariant[$sField]) > 100) {
+            // For the protein field, shorten insArgArgArg to ins(3), for protein descriptions >100 characters.
+            if (preg_match('/ins(([A-Z][a-z]{2})+)\)$/', $aVariant[$sField], $aRegs)) {
+                $aVariant[$sField] = str_replace('ins' . $aRegs[1], 'ins(' . strlen($aRegs[1]) . ')', $aVariant[$sField]);
+            }
+            // Vep produces interestingly long deletions as well.
+            // p.TerSerProProGlyLysProGlnGlyProProProGlnGlyGlyAsnGlnProGlnGlyProProProProProGlyLysProGlnGlyProProProGlnGlyGlyLysLysProGlnGlyProProProProGlyLysProGlnGlyProProProGlnGlyAspLysSerArgSerSer152del -> p.Ter152_Ser212del
+            // We might want to fix these either way, as they are wrong either way?
+            if (preg_match('/^p.\(([A-Z][a-z]{2})((?:[A-Z][a-z]{2})+)([A-Z][a-z]{2})([0-9]+)del\)$/', $aVariant[$sField], $aRegs)) {
+                //                 1              2                   3              4
+                $aVariant[$sField] = 'p.(' . $aRegs[1] . $aRegs[4] . '_' . $aRegs[3] . ($aRegs[4] + (strlen($aRegs[2])/3)+1) . 'del)';
+            }
         }
 
         // Replace the ncbi ID with the transcripts LOVD database ID to be used when creating the VOT record.
