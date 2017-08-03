@@ -1005,16 +1005,25 @@ if ($sCalcVersionFiles != $sCalcVersionDB) {
         );
     }
 
-    if (LOVD_plus && $sCalcVersionDB < lovd_calculateVersion('3.0-17l') && lovd_verifyInstance('mgha')) {
+    if (LOVD_plus && $sCalcVersionDB < lovd_calculateVersion('3.0-17l')) {
         // Run LOVD+ specific queries.
-        $aNewCustomCols = array('Screening/Tag');
-        $aUpdates['3.0-17l'] = array_merge(
-            $aUpdates['3.0-17l'],
-            array(
-                'INSERT IGNORE INTO ' . TABLE_COLS . ' VALUES ("Screening/Tag",255,100,0,0,0,"Tag","A single tag for this screening.","A single tag for this screening.","A single tag for this screening.","VARCHAR(50)","Tag|A single tag for this screening.|text|30","","",1,1,1,00001,NOW(),00001, NOW())',
-                lovd_getActivateCustomColumnQuery($aNewCustomCols)
-            )
-        );
+        if (lovd_verifyInstance('mgha')) {
+            $aNewCustomCols = array('Screening/Tag');
+            $aUpdates['3.0-17l'] = array_merge(
+                $aUpdates['3.0-17l'],
+                array(
+                    'INSERT IGNORE INTO ' . TABLE_COLS . ' VALUES ("Screening/Tag",255,100,0,0,0,"Tag","A single tag for this screening.","A single tag for this screening.","A single tag for this screening.","VARCHAR(50)","Tag|A single tag for this screening.|text|30","","",1,1,1,00001,NOW(),00001, NOW())',
+                    lovd_getActivateCustomColumnQuery($aNewCustomCols)
+                )
+            );
+        } elseif (lovd_verifyInstance('leiden')) {
+            $aUpdates['3.0-17l'] = array_merge(
+                $aUpdates['3.0-17l'],
+                array(
+                    'INSERT INTO ' . TABLE_ANALYIS_FILTERS . ' (`id`, `name`, `description`) VALUES ("cross_screenings", "Compare multiple screenings", "Select variants that satisfy the criteria configured by you, comparing several screenings.")',
+                )
+            );
+        }
     }
 
 

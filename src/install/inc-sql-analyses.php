@@ -4,7 +4,7 @@
  * LEIDEN OPEN VARIATION DATABASE (LOVD)
  *
  * Created     : 2016-07-15
- * Modified    : 2017-03-08
+ * Modified    : 2017-08-03
  * For LOVD    : 3.0-18
  *
  * Copyright   : 2004-2017 Leiden University Medical Center; http://www.LUMC.nl/
@@ -54,6 +54,7 @@ switch ($_INI['instance']['name']) {
                 'INSERT INTO ' . TABLE_ANALYSIS_FILTERS . ' (`id`, `name`, `description`) VALUES 
                   ("apply_selected_gene_panels", "", "Select only variants that are associated with a gene that is in the selected gene panels and not within the selected blacklists."),
                   ("chromosome_X", "", "Select only variants that are located on the X chromosome."),
+                  ("cross_screenings", "Compare multiple screenings", "Select variants that satisfy the criteria configured by you, comparing several screenings."),
                   ("is_present_father_1", "", ""),
                   ("is_present_father_lte_4", "", ""),
                   ("is_present_mother_1", "", ""),
