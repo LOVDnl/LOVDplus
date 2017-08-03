@@ -736,7 +736,6 @@ if ($sCalcVersionFiles != $sCalcVersionDB) {
                             ALTER TABLE ' . TABLE_ANALYSIS_FILTERS . ' ADD COLUMN has_config TINYINT(1) NULL AFTER `description`")',
                      'PREPARE Statement FROM @sSQL',
                      'EXECUTE Statement',
-
                  ),
                  '3.0-18' =>
                      array(

@@ -79,7 +79,7 @@ function lovd_configureAnalysis (nScreeningID, nAnalysisID, nRunID, sElementID)
 
 function lovd_runAnalysis (nScreeningID, nAnalysisID, nRunID, sElementID, aConfig)
 {
-    // When 'apply_selected_gene_panels' filter is NOT selected, aConfig is undefined.
+    // When no filters are selected that have configuration, aConfig is undefined.
     if (typeof(aConfig) == 'undefined') {
         aConfig = '';
     }
@@ -180,7 +180,7 @@ function lovd_runNextFilter (nAnalysisID, nRunID, sElementID)
                     oTR.children('td:eq(1)').html(dataObj.nTime);
                     oTR.children('td:eq(2)').html(dataObj.nVariantsLeft);
 
-                    // Show the details of the selected gene panels under the apply_selected_gene_panels filter.
+                    // For filters with configuration, show the details underneath the filter.
                     if (dataObj.sFilterConfig.length) {
                         oTR.find('div.filter-config-desc').html(dataObj.sFilterConfig);
                     }
@@ -217,6 +217,7 @@ function lovd_runNextFilter (nAnalysisID, nRunID, sElementID)
                     // Now load the VL.
                     lovd_showAnalysisResults(nRunID);
                     return true;
+
                 } else if (data == '8') {
                     // Failure, we're in trouble, reload view.
                     alert('Lost your session. Please log in again.');
