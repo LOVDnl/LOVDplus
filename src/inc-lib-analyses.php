@@ -39,13 +39,10 @@ if (!defined('ROOT_PATH')) {
 
 
 
-function getSelectedGenePanelsByRunID ($nRunID)
+function getSelectedGenePanelsByRunID ($aConfig)
 {
     // This function will construct a table of information about the selected gene panels for an analysis.
     global $_DB;
-
-    $sConfig = $_DB->query('SELECT config_json FROM ' . TABLE_ANALYSES_RUN_FILTERS . ' WHERE filterid = "apply_selected_gene_panels" AND runid = ?', array($nRunID))->fetchColumn();
-    $aConfig = json_decode($sConfig, true);
 
     // Only need to display gene panels information if there are gene panels selected.
     $sGenePanelsInfo = '';
@@ -111,22 +108,27 @@ function getSelectedGenePanelsByRunID ($nRunID)
 
 function getSelectedFilterConfig ($nRunID, $sFilterID)
 {
+    // This function gathers the configuration of the selected filter run, and returns
+    //  the text that should be printed below the filter in the analysis display.
     global $_DB, $_SETT;
+
+    // Read filter configurations.
+    $sConfig = $_DB->query('SELECT config_json FROM ' . TABLE_ANALYSES_RUN_FILTERS . ' WHERE runid = ? AND filterid = ?', array($nRunID, $sFilterID))->fetchColumn();
+    $aConfig = (empty($sConfig)? array() : json_decode($sConfig, true));
+
     switch ($sFilterID) {
         case 'apply_selected_gene_panels':
-            return getSelectedGenePanelsByRunID($nRunID);
-        case 'cross_screenings':
-            // Read filter configurations.
-            $sConfig = $_DB->query('SELECT config_json FROM ' . TABLE_ANALYSES_RUN_FILTERS . ' WHERE runid = ? AND filterid = ?', array($nRunID, $sFilterID))->fetchColumn();
-            $aConfig = (empty($sConfig) ? array() : json_decode($sConfig, true));
+            return getSelectedGenePanelsByRunID($aConfig);
+            break;
 
+        case 'cross_screenings':
             $aConditions = $_SETT['filter_cross_screenings']['condition_list'];
             $aGrouping = $_SETT['filter_cross_screenings']['grouping_list'];
 
             $sToolTip = '';
             $sConfigText = '';
-            if (!empty($aConfig['description'])) {
 
+            if (!empty($aConfig['description'])) {
                 // Collect all screening IDs so that we can run just one SQL query to retrieve screening data.
                 $aScreeningIDs = array();
                 foreach ($aConfig['groups'] as $aGroup) {
@@ -156,23 +158,25 @@ function getSelectedFilterConfig ($nRunID, $sFilterID)
                         $sToolTip .= '<BR>Then select variants <strong>from the results of the above selection</strong> that are';
                     }
 
-                    $sToolTip .= ' ' . $aConditions[$aGroup['condition']];
-                    $sToolTip .= ' ' . $aGrouping[$aGroup['grouping']];
-                    $sToolTip .= '<ul>';
+                    $sToolTip .= ' ' . $aConditions[$aGroup['condition']] .
+                                 ' ' . $aGrouping[$aGroup['grouping']] .
+                                 '<UL>';
                     foreach ($aGroup['screenings'] as $sScreening) {
                         list($nScreeningID, $sRole) = explode(':', $sScreening);
                         $nScreeningText = (!$sRole? '' : $sRole . ': ') . $aScreenings[$nScreeningID]['Individual/Sample_ID'];
-                        $sToolTip .= '<li>' . $nScreeningText . '</li>';
+                        $sToolTip .= '<LI>' . $nScreeningText . '</LI>';
                     }
-                    $sToolTip .= '</ul>';
+                    $sToolTip .= '</UL>';
                 }
 
-                $sConfigText = '<TABLE><TR onmouseover="lovd_showToolTip(\'' . htmlspecialchars($sToolTip) . '\', this, [100, -10]);"><TD>';
-                $sConfigText .= $aConfig['description'];
-                $sConfigText .= '</TD></TR></TABLE>';
+                $sConfigText = '<TABLE><TR onmouseover="lovd_showToolTip(\'' . htmlspecialchars($sToolTip) . '\', this, [100, -10]);"><TD>' .
+                                $aConfig['description'] .
+                                '</TD></TR></TABLE>';
             }
 
             return $sConfigText;
+            break;
+
         default:
             return '';
     }
