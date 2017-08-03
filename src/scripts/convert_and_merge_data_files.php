@@ -513,6 +513,7 @@ foreach ($aFiles as $sID) {
     // Although this function makes sure the code below is not run for the MGHA, it's not very pretty.
     // Since the screening ID has to be in your meta files anyway, isn't it better to get it from there?
     // Having assigned it in two places is redundant and can cause issues for new users trying to figure things out.
+    // FIXME: Should this code below then actually be moved into that function? Because right now, it's weird.
     $nScreeningID = $_ADAPTER->prepareScreeningID($aMetaData);
 
     if (!$nScreeningID) {

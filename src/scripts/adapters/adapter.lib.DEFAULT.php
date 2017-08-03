@@ -41,20 +41,22 @@ $_INSTANCE_CONFIG = array();
 // If you wish to allow for attachment uploads, enable this code.
 // These are some example default file types and settings.
 // FIXME: Allow for one file type to be linked to multiple objects.
-//$_INSTANCE_CONFIG['attachments'] = array(
-//    'igv' => array(
-//        'linked_to' => 'variant',
-//        'label' => 'IGV screenshot'),
-//    'ucsc' => array(
-//        'linked_to' => 'summary_annotation',  // This file is stored using the Summary Annotation Record DBID.
-//        'label' => 'UCSC screenshot (Summary Annotation)'),
-//    'confirmation' => array(
-//        'linked_to' => 'variant',
-//        'label' => 'Confirmation screenshot'),
-//    'workfile' => array(
-//        'linked_to' => 'variant',
-//        'label' => 'Excel file'),
-//);
+/*
+$_INSTANCE_CONFIG['attachments'] = array(
+    'igv' => array(
+        'linked_to' => 'variant',
+        'label' => 'IGV screenshot'),
+    'ucsc' => array(
+        'linked_to' => 'summary_annotation',  // This file is stored using the Summary Annotation Record DBID.
+        'label' => 'UCSC screenshot (Summary Annotation)'),
+    'confirmation' => array(
+        'linked_to' => 'variant',
+        'label' => 'Confirmation screenshot'),
+    'workfile' => array(
+        'linked_to' => 'variant',
+        'label' => 'Excel file'),
+);
+*/
 
 
 
@@ -190,6 +192,8 @@ $_INSTANCE_CONFIG['observation_counts'] = array(
 
 
 
+// FIXME: This class should not be mixed with the above settings, I reckon? Split it?
+// FIXME: Some methods are never overloaded and aren't meant to be, better put those elsewhere to prevent confusion.
 class LOVD_DefaultDataConverter {
     // Class with methods and variables for convert_and_merge_data_files.php.
 
@@ -199,27 +203,28 @@ class LOVD_DefaultDataConverter {
     static $sAdapterName = 'DEFAULT';
     static $NO_TRANSCRIPT = '-----';
 
-    public function __construct($sAdapterPath)
+    public function __construct ($sAdapterPath)
     {
         $this->sAdapterPath = $sAdapterPath;
-
     }
 
 
 
 
 
+    // FIXME: This function is not overwritten anywhere, and should perhaps not be defined here. Maybe remove and move the functionality?
+    // FIXME: This function does not have a valid name, it does not convert any input files.
     function convertInputFiles ()
     {
-        // Run the adapter script for this instance.
+        // Run the script for this instance, that will run actions that are meant to be run before anything else is done.
 
         $this->aScriptVars = array();
 
-        print("> Running " . static::$sAdapterName . " adapter\n");
-        $cmd = 'php '. $this->sAdapterPath .'/adapter.' . static::$sAdapterName .'.php';
-        passthru($cmd, $adapterResult);
-        if ($adapterResult !== 0){
-            die('Adapter Failed');
+        print('> Running ' . static::$sAdapterName . " adapter\n");
+        $sCmd = 'php ' . $this->sAdapterPath . '/adapter.' . static::$sAdapterName . '.php';
+        passthru($sCmd, $nAdapterResult);
+        if ($nAdapterResult !== 0) {
+            die("Adapter Failed\n");
         }
     }
 
@@ -227,178 +232,109 @@ class LOVD_DefaultDataConverter {
 
 
 
-    function readMetadata ($aMetaDataLines)
+    function formatEmptyColumn ($aLine, $sVEPColumn, $sLOVDColumn, $aVariant)
     {
-        // Read array of lines from .meta.lovd file of each .directvep.lovd file.
-        // Return an array of metadata keyed by column names.
+        // Returns how we want to represent empty data in the $aVariant array.
+        // Fields that evaluate true with empty() or set to "." or "unknown" are sent here.
+        // The default is to set them to an empty string.
+        // You can overload this function to include different functionality,
+        //  such as returning 0 in some cases.
 
-        $aKeyedMetadata = array();
-        $aColNamesByPos = array();
-        $bHeaderPrevRow = false;
-        foreach ($aMetaDataLines as $sLine) {
-            $sLine = trim($sLine);
-            if (empty($sLine)) {
-                continue;
-            }
-
-            if ($bHeaderPrevRow) {
-                // Assuming we always only have 1 row of data after each header.
-
-                // Some lines are commented out so that they can be skipped during import.
-                // But, this metadata is still valid and we want this data.
-                $sLine = trim($sLine, "# ");
-                $aDataRow = explode("\t", $sLine);
-                $aDataRow = array_map(function($sData) {
-                    return trim($sData, '"');
-                }, $aDataRow);
-
-                foreach ($aColNamesByPos as $nPos => $sColName) {
-                    // Read data.
-                    $aKeyedMetadata[$sColName] = $aDataRow[$nPos];
-                }
-
-                $bHeaderPrevRow = false;
-            }
-
-            if (substr($sLine, 0) == '#') {
-                continue;
-            } elseif (substr($sLine, 0, 3) == '"{{') {
-                // Read header
-                $aColNamesByPos = array();
-                $aCols = explode("\t", $sLine);
-                foreach ($aCols as $sColName) {
-                    $sColName = trim($sColName, '"{}');
-                    $aColNamesByPos[] = $sColName;
-                }
-                $bHeaderPrevRow = true;
-            }
+        /*
+        if (isset($aLine[$sVEPColumn]) && ($aLine[$sVEPColumn] === 0 || $aLine[$sVEPColumn] === '0')) {
+            $aVariant[$sLOVDColumn] = 0;
+        } else {
+            $aVariant[$sLOVDColumn] = '';
         }
+        */
+        $aVariant[$sLOVDColumn] = '';
 
-        $this->aMetadata = $aKeyedMetadata;
-        return $this->aMetadata;
+        return $aVariant;
     }
 
 
 
 
 
-    function setScriptVars ($aVars = array())
+    // FIXME: This is Leiden-specific code, put it in the Leiden adapter and make a proper default.
+    function getInputFilePrefixPattern ()
     {
-        // Keep track of the values of some variables defined in the script that calls this adapter object.
+        // Returns the regex pattern of the prefix of variant data file names.
+        // The prefix is often the sample ID or individual ID, and can be formatted to your liking.
+        // Data files must be named "prefix.suffix", using the suffixes as defined in the conversion script.
 
-        // Newly set vars overwrites existing vars.
-        $this->aScriptVars = $aVars + $this->aScriptVars;
+        return '(?:Child|Patient)_(?:\d+)';
     }
 
 
 
 
 
-    function prepareMappings ()
+    // FIXME: This is Leiden-specific code, put it in the Leiden adapter and make a proper default.
+    function getRequiredHeaderColumns ()
     {
-        // Returns an array that map VEP columns to LOVD columns.
+        // Returns an array of required variant input file column headers.
+        // The order of these columns does NOT matter.
 
-        $aColumnMappings = array(
-            'chromosome' => 'chromosome',
-            'position' => 'position', // lovd_getVariantDescription() needs this.
-            'QUAL' => 'VariantOnGenome/Sequencing/Quality',
-            'FILTERvcf' => 'VariantOnGenome/Sequencing/Filter',
-            'GATKCaller' => 'VariantOnGenome/Sequencing/GATKcaller',
-            'Feature' => 'transcriptid',
-            'GVS' => 'VariantOnTranscript/GVS/Function',
-            'CDS_position' => 'VariantOnTranscript/Position',
-//    'PolyPhen' => 'VariantOnTranscript/PolyPhen', // We don't use this anymore.
-            'HGVSc' => 'VariantOnTranscript/DNA',
-            'HGVSp' => 'VariantOnTranscript/Protein',
-            'Grantham' => 'VariantOnTranscript/Prediction/Grantham',
-            'INDB_COUNT_UG' => 'VariantOnGenome/InhouseDB/Count/UG',
-            'INDB_COUNT_HC' => 'VariantOnGenome/InhouseDB/Count/HC',
-            'GLOBAL_VN' => 'VariantOnGenome/InhouseDB/Position/Global/Samples_w_coverage',
-            'GLOBAL_VF_HET' => 'VariantOnGenome/InhouseDB/Count/Global/Heterozygotes',
-            'GLOBAL_VF_HOM' => 'VariantOnGenome/InhouseDB/Count/Global/Homozygotes',
-            'WITHIN_PANEL_VN' => 'VariantOnGenome/InhouseDB/Position/InPanel/Samples_w_coverage',
-            'WITHIN_PANEL_VF_HET' => 'VariantOnGenome/InhouseDB/Count/InPanel/Heterozygotes',
-            'WITHIN_PANEL_VF_HOM' => 'VariantOnGenome/InhouseDB/Count/InPanel/Homozygotes',
-            'OUTSIDE_PANEL_VN' => 'VariantOnGenome/InhouseDB/Position/OutOfPanel/Samples_w_coverage',
-            'OUTSIDE_PANEL_VF_HET' => 'VariantOnGenome/InhouseDB/Count/OutOfPanel/Heterozygotes',
-            'OUTSIDE_PANEL_VF_HOM' => 'VariantOnGenome/InhouseDB/Count/OutOfPanel/Homozygotes',
-            'AF1000G' => 'VariantOnGenome/Frequency/1000G',
-            'rsID' => 'VariantOnGenome/dbSNP',
-            'AFESP5400' => 'VariantOnGenome/Frequency/EVS', // Will be divided by 100 later.
-            'CALC_GONL_AF' => 'VariantOnGenome/Frequency/GoNL',
-            'AFGONL' => 'VariantOnGenome/Frequency/GoNL_old',
-            'EXAC_AF' => 'VariantOnGenome/Frequency/ExAC',
-            'MutationTaster_pred' => 'VariantOnTranscript/Prediction/MutationTaster',
-            'MutationTaster_score' => 'VariantOnTranscript/Prediction/MutationTaster/Score',
-            'Polyphen2_HDIV_score' => 'VariantOnTranscript/PolyPhen/HDIV',
-            'Polyphen2_HVAR_score' => 'VariantOnTranscript/PolyPhen/HVAR',
-            'SIFT_score' => 'VariantOnTranscript/Prediction/SIFT',
-            'CADD_raw' => 'VariantOnGenome/CADD/Raw',
-            'CADD_phred' => 'VariantOnGenome/CADD/Phred',
-            'HGMD_association' => 'VariantOnGenome/HGMD/Association',
-            'HGMD_reference' => 'VariantOnGenome/HGMD/Reference',
-            'phyloP' => 'VariantOnGenome/Conservation_score/PhyloP',
-            'scorePhastCons' => 'VariantOnGenome/Conservation_score/Phast',
-            'GT_Child' => 'allele',
-            'GT_Patient' => 'allele',
-            'GQ_Child' => 'VariantOnGenome/Sequencing/GenoType/Quality',
-            'GQ_Patient' => 'VariantOnGenome/Sequencing/GenoType/Quality',
-            'DP_Child' => 'VariantOnGenome/Sequencing/Depth/Total',
-            'DP_Patient' => 'VariantOnGenome/Sequencing/Depth/Total',
-            'DPREF_Child' => 'VariantOnGenome/Sequencing/Depth/Ref',
-            'DPREF_Patient' => 'VariantOnGenome/Sequencing/Depth/Ref',
-            'DPALT_Child' => 'VariantOnGenome/Sequencing/Depth/Alt',
-            'DPALT_Patient' => 'VariantOnGenome/Sequencing/Depth/Alt',
-            'ALTPERC_Child' => 'VariantOnGenome/Sequencing/Depth/Alt/Fraction', // Will be divided by 100 later.
-            'ALTPERC_Patient' => 'VariantOnGenome/Sequencing/Depth/Alt/Fraction', // Will be divided by 100 later.
-            'GT_Father' => 'VariantOnGenome/Sequencing/Father/GenoType',
-            'GQ_Father' => 'VariantOnGenome/Sequencing/Father/GenoType/Quality',
-            'DP_Father' => 'VariantOnGenome/Sequencing/Father/Depth/Total',
-            'ALTPERC_Father' => 'VariantOnGenome/Sequencing/Father/Depth/Alt/Fraction', // Will be divided by 100 later.
-            'ISPRESENT_Father' => 'VariantOnGenome/Sequencing/Father/VarPresent',
-            'GT_Mother' => 'VariantOnGenome/Sequencing/Mother/GenoType',
-            'GQ_Mother' => 'VariantOnGenome/Sequencing/Mother/GenoType/Quality',
-            'DP_Mother' => 'VariantOnGenome/Sequencing/Mother/Depth/Total',
-            'ALTPERC_Mother' => 'VariantOnGenome/Sequencing/Mother/Depth/Alt/Fraction', // Will be divided by 100 later.
-            'ISPRESENT_Mother' => 'VariantOnGenome/Sequencing/Mother/VarPresent',
-//    'distanceToSplice' => 'VariantOnTranscript/Distance_to_splice_site',
-
-            // Mappings for fields used to process other fields but not imported into the database.
-            'SYMBOL' => 'symbol',
-            'REF' => 'ref',
-            'ALT' => 'alt',
-            'Existing_variation' => 'existing_variation'
+        return array(
+            'chromosome',
+            'position',
+            'REF',
+            'ALT',
+            'QUAL',
+            'FILTERvcf',
+            'GATKCaller'
         );
-
-        return $aColumnMappings;
     }
 
 
 
 
 
-    function prepareVariantData (&$aLine)
+    function ignoreTranscript ($sTranscriptId)
     {
-        // Reformat a line of raw variant data into the format that works for this instance.
-        // To stop certain variants being imported add some logic to check for these variants
-        //  and then set $aLine['lovd_ignore_variant'] to something non-false.
-        // Possible values:
-        // 'silent' - for silently ignoring the variant.
-        // 'log' - for ignoring the variant and logging the line number.
-        // 'separate' - for storing the variant in a separate screening (not implemented yet).
-        // When set to something else, 'log' is assumed.
+        // Returns true for transcripts whose annotation should be ignored.
+        // You can overload this function to define which transcripts to ignore;
+        //  you can use lists, prefixes or other rules.
 
-        return $aLine;
+        // FIXME: What is this?
+        if ($sTranscriptId === static::$NO_TRANSCRIPT) {
+            return true;
+        }
+
+        return false;
     }
 
 
 
 
 
+    function postValueAssignmentUpdate ($sKey, &$aVariant, &$aData)
+    {
+        // This function is run after every line has been read;
+        // $aData[$sKey] contains the parsed and stored data of the genomic variant.
+        // $aVariant contains all the data of the line just read,
+        //  including the transcript-specific data.
+        // You can overload this function if you need to generate aggregated
+        //  data over the different transcripts mapped to one variant.
+
+        return $aData;
+    }
+
+
+
+
+
+    // FIXME: This is Leiden-specific code, put it in the Leiden adapter and make a proper default.
     function prepareGeneAliases ()
     {
-        // Prepare the $aGeneAliases array with a site specific gene alias list.
-        // The convert and merge script will provide suggested gene alias key value pairs to add to this array.
+        // Return an array of gene aliases, with the gene symbol as given by VEP
+        //  as the key, and the symbol as known by LOVD/HGNC as the value.
+        // Example:
+        // return array(
+        //     'C4orf40' => 'PRR27',
+        // );
+
         $aGeneAliases = array(
             // This list needs to be replaced now and then.
             // These below have been added 2017-07-27. Expire 2018-07-27.
@@ -470,10 +406,19 @@ class LOVD_DefaultDataConverter {
 
 
 
-
+    // FIXME: This is Leiden-specific code, put it in the Leiden adapter and make a proper default.
     function prepareGenesToIgnore ()
     {
-        // Prepare the $aGenesToIgnore array with a site specific gene list.
+        // Return an array of gene symbols of genes you wish to ignore.
+        // These could be genes that you know can't be imported/created in LOVD,
+        //  or genes whose annotation you wish to ignore for a different reason.
+        // Example:
+        // return array(
+        //     'FLJ12825',
+        //     'FLJ27354',
+        //     'FLJ37453',
+        // );
+
         $aGenesToIgnore = array(
             /*
             // 2015-01-19; Not recognized by HGNC.
@@ -1051,78 +996,8 @@ class LOVD_DefaultDataConverter {
 
 
 
-    function ignoreTranscript ($sTranscriptId)
-    {
-        // Check if we want to skip importing the annotation for this transcript.
-
-        // What is this?
-        if ($sTranscriptId === static::$NO_TRANSCRIPT) {
-            return true;
-        }
-
-        return false;
-    }
-
-
-
-
-
-    function prepareTranscriptsPrefixToIgnore ()
-    {
-        // Prepare the $aGenesToIgnore array with a site specific gene list.
-        $aTranscriptsPrefixToIgnore = array(
-            'NR_'
-        );
-        return $aTranscriptsPrefixToIgnore;
-    }
-
-
-
-
-
-    function prepareScreeningID ($aMetaData)
-    {
-        // Returns the screening ID.
-
-        return '';
-    }
-
-
-
-
-
-
-    function getInputFilePrefixPattern ()
-    {
-        // Returns the regex pattern of the prefix of variant input file names.
-
-        return '(?:Child|Patient)_(?:\d+)';
-    }
-
-
-
-
-
-
-    function getRequiredHeaderColumns ()
-    {
-        // Returns an array of required input variant file column headers. The order of these columns does NOT matter.
-
-        return array(
-            'chromosome',
-            'position',
-            'REF',
-            'ALT',
-            'QUAL',
-            'FILTERvcf',
-            'GATKCaller'
-        );
-    }
-
-
-
-
-
+    // FIXME: This is Leiden-specific code, put it in the Leiden adapter? It's not defined anywhere else, so make a default that doesn't do anything?
+    // FIXME: This function does not have a valid name, it does not prepare any headers.
     function prepareHeaders ($aHeaders)
     {
         // Verify the identity of this file. Some columns are appended by the Miracle ID.
@@ -1146,31 +1021,206 @@ class LOVD_DefaultDataConverter {
 
 
 
-
-    function formatEmptyColumn ($aLine, $sVEPColumn, $sLOVDColumn, $aVariant)
+    // FIXME: This is Leiden-specific code, put it in the Leiden adapter and make a proper default.
+    // FIXME: This function does not have a clearly matching name.
+    function prepareMappings ()
     {
-        // Returns how we want to represent empty data in $aVariant array given a LOVD column name.
-        /*
-        if (isset($aLine[$sVEPColumn]) && ($aLine[$sVEPColumn] === 0 || $aLine[$sVEPColumn] === '0')) {
-            $aVariant[$sLOVDColumn] = 0;
-        } else {
-            $aVariant[$sLOVDColumn] = '';
-        }
-        */
-        $aVariant[$sLOVDColumn] = '';
+        // Returns an array that map VEP columns to LOVD columns.
 
-        return $aVariant;
+        $aColumnMappings = array(
+            'chromosome' => 'chromosome',
+            'position' => 'position', // lovd_getVariantDescription() needs this.
+            'QUAL' => 'VariantOnGenome/Sequencing/Quality',
+            'FILTERvcf' => 'VariantOnGenome/Sequencing/Filter',
+            'GATKCaller' => 'VariantOnGenome/Sequencing/GATKcaller',
+            'Feature' => 'transcriptid',
+            'GVS' => 'VariantOnTranscript/GVS/Function',
+            'CDS_position' => 'VariantOnTranscript/Position',
+//    'PolyPhen' => 'VariantOnTranscript/PolyPhen', // We don't use this anymore.
+            'HGVSc' => 'VariantOnTranscript/DNA',
+            'HGVSp' => 'VariantOnTranscript/Protein',
+            'Grantham' => 'VariantOnTranscript/Prediction/Grantham',
+            'INDB_COUNT_UG' => 'VariantOnGenome/InhouseDB/Count/UG',
+            'INDB_COUNT_HC' => 'VariantOnGenome/InhouseDB/Count/HC',
+            'GLOBAL_VN' => 'VariantOnGenome/InhouseDB/Position/Global/Samples_w_coverage',
+            'GLOBAL_VF_HET' => 'VariantOnGenome/InhouseDB/Count/Global/Heterozygotes',
+            'GLOBAL_VF_HOM' => 'VariantOnGenome/InhouseDB/Count/Global/Homozygotes',
+            'WITHIN_PANEL_VN' => 'VariantOnGenome/InhouseDB/Position/InPanel/Samples_w_coverage',
+            'WITHIN_PANEL_VF_HET' => 'VariantOnGenome/InhouseDB/Count/InPanel/Heterozygotes',
+            'WITHIN_PANEL_VF_HOM' => 'VariantOnGenome/InhouseDB/Count/InPanel/Homozygotes',
+            'OUTSIDE_PANEL_VN' => 'VariantOnGenome/InhouseDB/Position/OutOfPanel/Samples_w_coverage',
+            'OUTSIDE_PANEL_VF_HET' => 'VariantOnGenome/InhouseDB/Count/OutOfPanel/Heterozygotes',
+            'OUTSIDE_PANEL_VF_HOM' => 'VariantOnGenome/InhouseDB/Count/OutOfPanel/Homozygotes',
+            'AF1000G' => 'VariantOnGenome/Frequency/1000G',
+            'rsID' => 'VariantOnGenome/dbSNP',
+            'AFESP5400' => 'VariantOnGenome/Frequency/EVS', // Will be divided by 100 later.
+            'CALC_GONL_AF' => 'VariantOnGenome/Frequency/GoNL',
+            'AFGONL' => 'VariantOnGenome/Frequency/GoNL_old',
+            'EXAC_AF' => 'VariantOnGenome/Frequency/ExAC',
+            'MutationTaster_pred' => 'VariantOnTranscript/Prediction/MutationTaster',
+            'MutationTaster_score' => 'VariantOnTranscript/Prediction/MutationTaster/Score',
+            'Polyphen2_HDIV_score' => 'VariantOnTranscript/PolyPhen/HDIV',
+            'Polyphen2_HVAR_score' => 'VariantOnTranscript/PolyPhen/HVAR',
+            'SIFT_score' => 'VariantOnTranscript/Prediction/SIFT',
+            'CADD_raw' => 'VariantOnGenome/CADD/Raw',
+            'CADD_phred' => 'VariantOnGenome/CADD/Phred',
+            'HGMD_association' => 'VariantOnGenome/HGMD/Association',
+            'HGMD_reference' => 'VariantOnGenome/HGMD/Reference',
+            'phyloP' => 'VariantOnGenome/Conservation_score/PhyloP',
+            'scorePhastCons' => 'VariantOnGenome/Conservation_score/Phast',
+            'GT_Child' => 'allele',
+            'GT_Patient' => 'allele',
+            'GQ_Child' => 'VariantOnGenome/Sequencing/GenoType/Quality',
+            'GQ_Patient' => 'VariantOnGenome/Sequencing/GenoType/Quality',
+            'DP_Child' => 'VariantOnGenome/Sequencing/Depth/Total',
+            'DP_Patient' => 'VariantOnGenome/Sequencing/Depth/Total',
+            'DPREF_Child' => 'VariantOnGenome/Sequencing/Depth/Ref',
+            'DPREF_Patient' => 'VariantOnGenome/Sequencing/Depth/Ref',
+            'DPALT_Child' => 'VariantOnGenome/Sequencing/Depth/Alt',
+            'DPALT_Patient' => 'VariantOnGenome/Sequencing/Depth/Alt',
+            'ALTPERC_Child' => 'VariantOnGenome/Sequencing/Depth/Alt/Fraction', // Will be divided by 100 later.
+            'ALTPERC_Patient' => 'VariantOnGenome/Sequencing/Depth/Alt/Fraction', // Will be divided by 100 later.
+            'GT_Father' => 'VariantOnGenome/Sequencing/Father/GenoType',
+            'GQ_Father' => 'VariantOnGenome/Sequencing/Father/GenoType/Quality',
+            'DP_Father' => 'VariantOnGenome/Sequencing/Father/Depth/Total',
+            'ALTPERC_Father' => 'VariantOnGenome/Sequencing/Father/Depth/Alt/Fraction', // Will be divided by 100 later.
+            'ISPRESENT_Father' => 'VariantOnGenome/Sequencing/Father/VarPresent',
+            'GT_Mother' => 'VariantOnGenome/Sequencing/Mother/GenoType',
+            'GQ_Mother' => 'VariantOnGenome/Sequencing/Mother/GenoType/Quality',
+            'DP_Mother' => 'VariantOnGenome/Sequencing/Mother/Depth/Total',
+            'ALTPERC_Mother' => 'VariantOnGenome/Sequencing/Mother/Depth/Alt/Fraction', // Will be divided by 100 later.
+            'ISPRESENT_Mother' => 'VariantOnGenome/Sequencing/Mother/VarPresent',
+//    'distanceToSplice' => 'VariantOnTranscript/Distance_to_splice_site',
+
+            // Mappings for fields used to process other fields but not imported into the database.
+            'SYMBOL' => 'symbol',
+            'REF' => 'ref',
+            'ALT' => 'alt',
+            'Existing_variation' => 'existing_variation'
+        );
+
+        return $aColumnMappings;
     }
 
 
 
 
 
-
-    function postValueAssignmentUpdate ($sKey, &$aVariant, &$aData)
+    // FIXME: There is Leiden-specific data in the conversion script that should perhaps be moved in here, if possible.
+    function prepareScreeningID ($aMetaData)
     {
-        // Update $aData if there is any aggregated data that we need to update after each input line is read.
+        // Parse and find the screening ID, as stored in the meta data file.
+        // LOVD needs the meta data file's screening ID to be able to connect
+        //  the variants to the screening. In case your meta data file does not
+        //  have a fixed screening ID, you can put code here to read it from the
+        //  meta data.
+        // Otherwise, you can simply have this function return the fixed value
+        //  for the screening ID.
 
-        return $aData;
+        return '';
+    }
+
+
+
+
+
+    // FIXME: Merge this with ignoreTranscript(), this is too much of the same and no need to make it so complicated.
+    // FIXME: This function is not referenced anywhere, so it can't do anything.
+    function prepareTranscriptsPrefixToIgnore ()
+    {
+        // Prepare the $aGenesToIgnore array with a site specific gene list.
+        $aTranscriptsPrefixToIgnore = array(
+            'NR_'
+        );
+        return $aTranscriptsPrefixToIgnore;
+    }
+
+
+
+
+
+    // FIXME: This function does not have a clearly matching name.
+    function prepareVariantData (&$aLine)
+    {
+        // Reformat a line of raw variant data into the format that works for this instance.
+        // To stop certain variants being imported add some logic to check for these variants
+        //  and then set $aLine['lovd_ignore_variant'] to something non-false.
+        // Possible values:
+        // 'silent' - for silently ignoring the variant.
+        // 'log' - for ignoring the variant and logging the line number.
+        // 'separate' - for storing the variant in a separate screening (not implemented yet).
+        // When set to something else, 'log' is assumed.
+
+        return $aLine;
+    }
+
+
+
+
+
+    // FIXME: This function is not overwritten anywhere, and should perhaps not be defined here. Maybe remove and move the functionality?
+    function readMetadata ($aMetaDataLines)
+    {
+        // Read array of lines from .meta.lovd file of each .directvep.lovd file.
+        // Return an array of metadata keyed by column names.
+
+        $aKeyedMetadata = array();
+        $aColNamesByPos = array();
+        $bHeaderPrevRow = false;
+        foreach ($aMetaDataLines as $sLine) {
+            $sLine = trim($sLine);
+            if (empty($sLine)) {
+                continue;
+            }
+
+            if ($bHeaderPrevRow) {
+                // Assuming we always only have 1 row of data after each header.
+
+                // Some lines are commented out so that they can be skipped during import.
+                // But, this metadata is still valid and we want this data.
+                $sLine = trim($sLine, "# ");
+                $aDataRow = explode("\t", $sLine);
+                $aDataRow = array_map(function($sData) {
+                    return trim($sData, '"');
+                }, $aDataRow);
+
+                foreach ($aColNamesByPos as $nPos => $sColName) {
+                    // Read data.
+                    $aKeyedMetadata[$sColName] = $aDataRow[$nPos];
+                }
+
+                $bHeaderPrevRow = false;
+            }
+
+            if (substr($sLine, 0) == '#') {
+                continue;
+            } elseif (substr($sLine, 0, 3) == '"{{') {
+                // Read header
+                $aColNamesByPos = array();
+                $aCols = explode("\t", $sLine);
+                foreach ($aCols as $sColName) {
+                    $sColName = trim($sColName, '"{}');
+                    $aColNamesByPos[] = $sColName;
+                }
+                $bHeaderPrevRow = true;
+            }
+        }
+
+        $this->aMetadata = $aKeyedMetadata;
+        return $this->aMetadata;
+    }
+
+
+
+
+
+    // FIXME: This function is not overwritten anywhere, and should perhaps not be defined here. Maybe remove and move the functionality?
+    // FIXME: What is this for?
+    function setScriptVars ($aVars = array())
+    {
+        // Keep track of the values of some variables defined in the script that calls this adapter object.
+
+        // Newly set vars overwrites existing vars.
+        $this->aScriptVars = $aVars + $this->aScriptVars;
     }
 }
