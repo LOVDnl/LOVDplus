@@ -736,6 +736,9 @@ if ($sCalcVersionFiles != $sCalcVersionDB) {
                             ALTER TABLE ' . TABLE_ANALYSIS_FILTERS . ' ADD COLUMN has_config TINYINT(1) NULL AFTER `description`")',
                      'PREPARE Statement FROM @sSQL',
                      'EXECUTE Statement',
+
+                     'INSERT INTO ' . TABLE_ANALYSIS_FILTERS . ' VALUES ("cross_screenings", "Select variants that satisfy the criteria configured in this cross screenings filter", "Select variants that satisfy the criteria configured in this cross screenings filter", 1)',
+                     'UPDATE ' . TABLE_ANALYSIS_FILTERS . ' SET has_config = 1 WHERE id = "apply_selected_gene_panels"'
                  ),
                  '3.0-18' =>
                      array(
