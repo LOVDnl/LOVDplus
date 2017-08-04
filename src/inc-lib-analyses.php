@@ -38,6 +38,86 @@ if (!defined('ROOT_PATH')) {
 
 
 
+function getSelectedFilterConfig ($nRunID, $sFilterID)
+{
+    // This function gathers the configuration of the selected filter run, and returns
+    //  the text that should be printed below the filter in the analysis display.
+    global $_DB, $_SETT;
+
+    // Read filter configurations.
+    $sConfig = $_DB->query('SELECT config_json FROM ' . TABLE_ANALYSES_RUN_FILTERS . ' WHERE runid = ? AND filterid = ?', array($nRunID, $sFilterID))->fetchColumn();
+    $aConfig = (empty($sConfig)? array() : json_decode($sConfig, true));
+
+    switch ($sFilterID) {
+        case 'apply_selected_gene_panels':
+            return getSelectedGenePanelsByRunID($aConfig);
+            break;
+
+        case 'cross_screenings':
+            $aConditions = $_SETT['filter_cross_screenings']['condition_list'];
+            $aGrouping = $_SETT['filter_cross_screenings']['grouping_list'];
+
+            $sToolTip = '';
+            $sConfigText = '';
+
+            if (!empty($aConfig['description'])) {
+                // Collect all screening IDs so that we can run just one SQL query to retrieve screening data.
+                $aScreeningIDs = array();
+                foreach ($aConfig['groups'] as $aGroup) {
+                    foreach ($aGroup['screenings'] as $sKey => $sScreening) {
+                        list($nScreeningID) = explode(':', $sScreening);
+                        $aScreeningIDs[] = $nScreeningID;
+                    }
+                }
+
+                // Find available screenings.
+                $sSQL = 'SELECT s.*, i.`Individual/Sample_ID`
+                         FROM ' . TABLE_SCREENINGS . ' AS s 
+                         JOIN ' . TABLE_INDIVIDUALS . ' AS i ON (s.individualid = i.id) 
+                         WHERE s.id IN (?' . str_repeat(', ?', count($aScreeningIDs)-1) . ')';
+                $aSQL = $aScreeningIDs;
+
+                $zScreenings = $_DB->query($sSQL, $aSQL)->fetchAllAssoc();
+                $aScreenings = array();
+                foreach ($zScreenings as $aScreening) {
+                    $aScreenings[$aScreening['id']] = $aScreening;
+                }
+
+                foreach ($aConfig['groups'] as $aGroup) {
+                    if (empty($sToolTip)) {
+                        $sToolTip .= 'Select variants from this screening that are';
+                    } else {
+                        $sToolTip .= '<BR>Then select variants <strong>from the results of the above selection</strong> that are';
+                    }
+
+                    $sToolTip .= ' ' . $aConditions[$aGroup['condition']] .
+                        ' ' . $aGrouping[$aGroup['grouping']] .
+                        '<UL>';
+                    foreach ($aGroup['screenings'] as $sScreening) {
+                        list($nScreeningID, $sRole) = explode(':', $sScreening);
+                        $nScreeningText = (!$sRole? '' : $sRole . ': ') . $aScreenings[$nScreeningID]['Individual/Sample_ID'];
+                        $sToolTip .= '<LI>' . $nScreeningText . '</LI>';
+                    }
+                    $sToolTip .= '</UL>';
+                }
+
+                $sConfigText = '<TABLE><TR onmouseover="lovd_showToolTip(\'' . htmlspecialchars($sToolTip) . '\', this, [100, -10]);"><TD>' .
+                    $aConfig['description'] .
+                    '</TD></TR></TABLE>';
+            }
+
+            return $sConfigText;
+            break;
+
+        default:
+            return '';
+    }
+}
+
+
+
+
+
 
 function getSelectedGenePanelsByRunID ($aConfig)
 {
@@ -100,85 +180,5 @@ function getSelectedGenePanelsByRunID ($aConfig)
     $sGenePanelsInfo = '<TABLE border="0" cellpadding="0" cellspacing="1" class="gpinfo">' . $sGenePanelsInfo . '</TABLE>';
 
     return $sGenePanelsInfo;
-}
-
-
-
-
-
-function getSelectedFilterConfig ($nRunID, $sFilterID)
-{
-    // This function gathers the configuration of the selected filter run, and returns
-    //  the text that should be printed below the filter in the analysis display.
-    global $_DB, $_SETT;
-
-    // Read filter configurations.
-    $sConfig = $_DB->query('SELECT config_json FROM ' . TABLE_ANALYSES_RUN_FILTERS . ' WHERE runid = ? AND filterid = ?', array($nRunID, $sFilterID))->fetchColumn();
-    $aConfig = (empty($sConfig)? array() : json_decode($sConfig, true));
-
-    switch ($sFilterID) {
-        case 'apply_selected_gene_panels':
-            return getSelectedGenePanelsByRunID($aConfig);
-            break;
-
-        case 'cross_screenings':
-            $aConditions = $_SETT['filter_cross_screenings']['condition_list'];
-            $aGrouping = $_SETT['filter_cross_screenings']['grouping_list'];
-
-            $sToolTip = '';
-            $sConfigText = '';
-
-            if (!empty($aConfig['description'])) {
-                // Collect all screening IDs so that we can run just one SQL query to retrieve screening data.
-                $aScreeningIDs = array();
-                foreach ($aConfig['groups'] as $aGroup) {
-                    foreach ($aGroup['screenings'] as $sKey => $sScreening) {
-                        list($nScreeningID) = explode(':', $sScreening);
-                        $aScreeningIDs[] = $nScreeningID;
-                    }
-                }
-
-                // Find available screenings.
-                $sSQL = 'SELECT s.*, i.`Individual/Sample_ID`
-                         FROM ' . TABLE_SCREENINGS . ' AS s 
-                         JOIN ' . TABLE_INDIVIDUALS . ' AS i ON (s.individualid = i.id) 
-                         WHERE s.id IN (?' . str_repeat(', ?', count($aScreeningIDs)-1) . ')';
-                $aSQL = $aScreeningIDs;
-
-                $zScreenings = $_DB->query($sSQL, $aSQL)->fetchAllAssoc();
-                $aScreenings = array();
-                foreach ($zScreenings as $aScreening) {
-                    $aScreenings[$aScreening['id']] = $aScreening;
-                }
-
-                foreach ($aConfig['groups'] as $aGroup) {
-                    if (empty($sToolTip)) {
-                        $sToolTip .= 'Select variants from this screening that are';
-                    } else {
-                        $sToolTip .= '<BR>Then select variants <strong>from the results of the above selection</strong> that are';
-                    }
-
-                    $sToolTip .= ' ' . $aConditions[$aGroup['condition']] .
-                                 ' ' . $aGrouping[$aGroup['grouping']] .
-                                 '<UL>';
-                    foreach ($aGroup['screenings'] as $sScreening) {
-                        list($nScreeningID, $sRole) = explode(':', $sScreening);
-                        $nScreeningText = (!$sRole? '' : $sRole . ': ') . $aScreenings[$nScreeningID]['Individual/Sample_ID'];
-                        $sToolTip .= '<LI>' . $nScreeningText . '</LI>';
-                    }
-                    $sToolTip .= '</UL>';
-                }
-
-                $sConfigText = '<TABLE><TR onmouseover="lovd_showToolTip(\'' . htmlspecialchars($sToolTip) . '\', this, [100, -10]);"><TD>' .
-                                $aConfig['description'] .
-                                '</TD></TR></TABLE>';
-            }
-
-            return $sConfigText;
-            break;
-
-        default:
-            return '';
-    }
 }
 ?>
