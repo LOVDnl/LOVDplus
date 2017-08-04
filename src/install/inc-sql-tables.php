@@ -947,6 +947,7 @@ $aTableSQL =
     id VARCHAR(50) NOT NULL,
     name VARCHAR(100) NOT NULL DEFAULT "",
     description TEXT,
+    has_config TINYINT(1) NULL,
     PRIMARY KEY (id))
     ' . $sSettings
 
