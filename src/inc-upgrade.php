@@ -737,7 +737,6 @@ if ($sCalcVersionFiles != $sCalcVersionDB) {
                      'PREPARE Statement FROM @sSQL',
                      'EXECUTE Statement',
 
-                     'INSERT INTO ' . TABLE_ANALYSIS_FILTERS . ' VALUES ("cross_screenings", "Select variants that satisfy the criteria configured in this cross screenings filter", "Select variants that satisfy the criteria configured in this cross screenings filter", 1)',
                      'UPDATE ' . TABLE_ANALYSIS_FILTERS . ' SET has_config = 1 WHERE id = "apply_selected_gene_panels"'
                  ),
                  '3.0-18' =>
@@ -1006,12 +1005,19 @@ if ($sCalcVersionFiles != $sCalcVersionDB) {
         if (lovd_verifyInstance('mgha')) {
             $aNewCustomCols = array('Screening/Tag');
             $aUpdates['3.0-17l'] = array_merge(
-                $aUpdates['3.0-17l'], lovd_getActivateCustomColumnQuery($aNewCustomCols));
+                $aUpdates['3.0-17l'],
+                lovd_getActivateCustomColumnQuery($aNewCustomCols),
+                array(
+                    // MGHA's cross screening analysis filter.
+                    'INSERT INTO ' . TABLE_ANALYSIS_FILTERS . ' VALUES ("cross_screenings", "Select variants that satisfy the criteria configured in this cross screenings filter", "Select variants that satisfy the criteria configured in this cross screenings filter", 1)',
+                )
+            );
         } elseif (lovd_verifyInstance('leiden')) {
             $aUpdates['3.0-17l'] = array_merge(
                 $aUpdates['3.0-17l'],
                 array(
-                    'INSERT INTO ' . TABLE_ANALYIS_FILTERS . ' (`id`, `name`, `description`) VALUES ("cross_screenings", "Compare multiple screenings", "Select variants that satisfy the criteria configured by you, comparing several screenings.")',
+                    // Leiden's cross screening analysis filter.
+                    'INSERT INTO ' . TABLE_ANALYIS_FILTERS . ' VALUES ("cross_screenings", "Compare multiple screenings", "Select variants that satisfy the criteria configured by you, comparing several screenings.", 1)',
                 )
             );
         }
