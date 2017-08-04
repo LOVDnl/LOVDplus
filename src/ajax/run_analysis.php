@@ -4,11 +4,12 @@
  * LEIDEN OPEN VARIATION DATABASE (LOVD)
  *
  * Created     : 2013-11-05
- * Modified    : 2016-05-13
- * For LOVD    : 3.0-15
+ * Modified    : 2017-08-04
+ * For LOVD    : 3.0-18
  *
- * Copyright   : 2004-2016 Leiden University Medical Center; http://www.LUMC.nl/
- * Programmer  : Ing. Ivo F.A.C. Fokkema <I.F.A.C.Fokkema@LUMC.nl>
+ * Copyright   : 2004-2017 Leiden University Medical Center; http://www.LUMC.nl/
+ * Programmers : Ivo F.A.C. Fokkema <I.F.A.C.Fokkema@LUMC.nl>
+ *               Juny Kesumadewi <juny.kesumadewi@unimelb.edu.au>
  *
  *
  * This file is part of LOVD.
@@ -220,7 +221,7 @@ if (ACTION == 'configure' && GET) {
                      WHERE s.id != ?';
                 $aSQL = array($_REQUEST['screeningid']);
                 $zScreenings = $_DB->query($sSQL, $aSQL)->fetchAllAssoc();
-                
+
                 // Build the strings to represent screening
                 $aScreenings = array();
                 $aRelatives = array();
@@ -243,7 +244,7 @@ if (ACTION == 'configure' && GET) {
 
                     // Format display name of each screening.
                     $sText = $zScreening['Individual/Sample_ID'];
-                    
+
                     // If this instance has its own format, use it.
                     if (!empty($_INSTANCE_CONFIG['cross_screenings']['format_screening_name'])) {
                         $zFormatScreeningName = $_INSTANCE_CONFIG['cross_screenings']['format_screening_name'];
@@ -494,6 +495,10 @@ if (ACTION == 'configure' && POST) {
                     // 1. If user chooses to use the older version of the gene panel
                     // (the exact same set of genes this gene panel had when this analysis we cloned from was run)
                     $aUseOlderGenePanels = array();
+                    // But, prevent notice when this setting is not sent. The notice will break the JS and make the analysis fail to run.
+                    if (!isset($aFormConfig[$sFilter]['run_older_version'])) {
+                        $aFormConfig[$sFilter]['run_older_version'] = array();
+                    }
                     foreach ($aFormConfig[$sFilter]['run_older_version'] as $sGpId => $bUseOlderVersion) {
                         if (!empty($aFormConfig[$sFilter]['run_older_version'][$sGpId])) {
                             $aFormConfig[$sFilter]['metadata'][$sGpId] = $aDbConfig['metadata'][$sGpId];
@@ -616,7 +621,7 @@ if (ACTION == 'run') {
         $nRunID = (int) $_REQUEST['runid']; // (int) is to prevent zerofill from messing things up.
         // Update the existing analyses run record to store the custom panel genes.
         $_DB->query('UPDATE ' . TABLE_ANALYSES_RUN . ' SET custom_panel = ? WHERE id = ?', array($sCustomPanel, $nRunID));
-        
+
         // Insert into database the new configurations.
         $aFilters = explode(';', $zAnalysisRun['_filters']);
         foreach ($aFilters as $sFilter) {

@@ -4,7 +4,7 @@
  * LEIDEN OPEN VARIATION DATABASE (LOVD)
  *
  * Created     : 2016-05-03
- * Modified    : 2017-02-14
+ * Modified    : 2017-08-04
  * For LOVD    : 3.0-18
  *
  * Copyright   : 2004-2016 Leiden University Medical Center; http://www.LUMC.nl/
@@ -91,8 +91,8 @@ function getSelectedFilterConfig ($nRunID, $sFilterID)
                     }
 
                     $sToolTip .= ' ' . $aConditions[$aGroup['condition']] .
-                        ' ' . $aGrouping[$aGroup['grouping']] .
-                        '<UL>';
+                                 ' ' . $aGrouping[$aGroup['grouping']] .
+                                 '<UL>';
                     foreach ($aGroup['screenings'] as $sScreening) {
                         list($nScreeningID, $sRole) = explode(':', $sScreening);
                         $nScreeningText = (!$sRole? '' : $sRole . ': ') . $aScreenings[$nScreeningID]['Individual/Sample_ID'];
@@ -127,42 +127,42 @@ function getSelectedGenePanelsByRunID ($aConfig)
     // Only need to display gene panels information if there are gene panels selected.
     $sGenePanelsInfo = '';
     if (!empty($aConfig['gene_panels'])) {
-
-    //        Example gene panel config:
-    //        It has two main fields:
-    //          - gene_panels: the list of gene panels used subgrouped by gene panel type
-    //          - metadata: data about each gene panel keyed by gene panel ID or 'custom_panel' for custom panel (it does not have a db id)
-    //        This structure allow easy access to the details of each gene panel once we know the gene panel id
-    //
-    //        {
-    //           "gene_panels":{
-    //              "gene_panel":[
-    //                 "00001"
-    //              ],
-    //              "custom_panel":[
-    //                 "custom_panel"
-    //              ]
-    //           },
-    //           "metadata":{
-    //              "00001":{
-    //                 "last_modified":"2017-04-12 07:21:10",
-    //                 "genes":[
-    //                    "ABCC6",
-    //                    "ABCC8"
-    //                 ]
-    //              },
-    //              "custom_panel":{
-    //                 "genes":[
-    //                    "SOX2"
-    //                 ],
-    //                 "last_modified":"2017-08-04 13:46:06"
-    //              }
-    //           }
-    //        }
+        //    Example gene panel config:
+        //    It has two main fields:
+        //      - gene_panels: the list of gene panels used subgrouped by gene panel type
+        //      - metadata: data about each gene panel keyed by gene panel ID or 'custom_panel' for custom panel (it does not have a db id)
+        //    This structure allow easy access to the details of each gene panel once we know the gene panel id
+        //
+        //    {
+        //       "gene_panels":{
+        //          "gene_panel":[
+        //             "00001"
+        //          ],
+        //          "custom_panel":[
+        //             "custom_panel"
+        //          ]
+        //       },
+        //       "metadata":{
+        //          "00001":{
+        //             "last_modified":"2017-04-12 07:21:10",
+        //             "genes":[
+        //                "ABCC6",
+        //                "ABCC8"
+        //             ]
+        //          },
+        //          "custom_panel":{
+        //             "genes":[
+        //                "SOX2"
+        //             ],
+        //             "last_modified":"2017-08-04 13:46:06"
+        //          }
+        //       }
+        //    }
 
         // Get the gene panel ids used by this filter.
         $aGpIds = array_keys($aConfig['metadata']);
         // Keep only gene panels that are identified using their database gene panel IDs.
+        // Basically, remove the custom panel, if present.
         $aGpIds = array_values(array_filter($aGpIds, 'ctype_digit'));
 
         if (!empty($aGpIds)) {
