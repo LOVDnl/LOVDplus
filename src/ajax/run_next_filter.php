@@ -318,15 +318,22 @@ if ($aVariantIDs) {
                 }
             }
 
-            // If no non-blacklist gene panels selected, then return all variants.
-            if (empty($aGenes['others']) && empty($aGenes[GP_TYPE_CUSTOM])) {
+            // If no gene panels selected, then return all variants.
+            if (empty($aGenes['others']) && empty($aGenes[GP_TYPE_CUSTOM]) && empty($aGenes[GP_TYPE_BLACKLIST])) {
                 $aVariantIDsFiltered = $aVariantIDs;
                 break; // switch case statement break
             }
 
-            // General formula: (all selected genes - blacklist genes) + custom panel genes
-            $aSelectedGenes = array_diff($aGenes['others'], $aGenes[GP_TYPE_BLACKLIST]);
-            $aSelectedGenes = array_merge($aSelectedGenes, $aGenes[GP_TYPE_CUSTOM]);
+            // If ONLY blacklist is selected
+            if (empty($aGenes['others']) && empty($aGenes[GP_TYPE_CUSTOM]) && !empty($aGenes[GP_TYPE_BLACKLIST])) {
+                $sGeneSelection = 'NOT IN';
+                $aSelectedGenes = $aGenes[GP_TYPE_BLACKLIST];
+            } else {
+                // General formula: (all selected genes - blacklist genes) + custom panel genes
+                $sGeneSelection = 'IN';
+                $aSelectedGenes = array_diff($aGenes['others'], $aGenes[GP_TYPE_BLACKLIST]);
+                $aSelectedGenes = array_merge($aSelectedGenes, $aGenes[GP_TYPE_CUSTOM]);
+            }
             
             // (all selected genes - blacklist genes) + custom panel genes =  0
             // We don't need to run the SQL query. Return no variants.
@@ -339,7 +346,7 @@ if ($aVariantIDs) {
             $sSQL = 'SELECT DISTINCT CAST(vot.id AS UNSIGNED)
                      FROM ' . TABLE_VARIANTS_ON_TRANSCRIPTS . ' AS vot
                      INNER JOIN ' . TABLE_TRANSCRIPTS . ' AS t ON (vot.transcriptid = t.id)
-                     WHERE t.geneid IN (?' . str_repeat(', ?', count($aSelectedGenes)-1) . ')
+                     WHERE t.geneid ' . $sGeneSelection . ' (?' . str_repeat(', ?', count($aSelectedGenes)-1) . ')
                         AND vot.id IN (? ' . str_repeat(', ?', count($aVariantIDs) - 1) . ')';
 
             $aSQL = array_merge($aSelectedGenes, $aVariantIDs);
