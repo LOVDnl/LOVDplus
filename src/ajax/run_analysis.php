@@ -31,6 +31,7 @@
 
 define('ROOT_PATH', '../');
 require ROOT_PATH . 'inc-init.php';
+require ROOT_PATH . 'inc-lib-analyses.php';
 
 // Require collaborator clearance.
 if (!$_AUTH || $_AUTH['level'] < LEVEL_ANALYZER) {
@@ -174,14 +175,9 @@ if (ACTION == 'configure' && GET) {
                                             $sCheckboxToRunOldGp .= '<TR><TD></TD><TD><INPUT type=\'radio\' name=\'config[' . $sFilter . '][run_older_version][' . $sGpId . ']\' value=\'1\' checked> The custom panel we copied from: ' . implode(', ', $aFilterConfigGenes) . '</TD></TR>';
                                         }
                                     } else {
-                                        // Get gene panel last modified date from logs table because gene panel table does not store the latest date genes were modified
-                                        // log text: 'Updated gene list for the gene panel #00023'
-                                        $sSQL = 'SELECT date FROM ' . TABLE_LOGS . ' WHERE event = ? AND log = ? ORDER BY date DESC LIMIT 1';
-                                        $aSQL = array('GenePanelManage', 'Updated gene list for the gene panel #' . str_pad($sGpId, 5, '0'), );
-                                        $zModified = $_DB->query($sSQL, $aSQL)->fetchAssoc();
-
+                                        $sModified = getGenePanelLastModifiedDate($sGpId);
                                         // Show options to select current version or the version we cloned from.
-                                        if ($zModified && strtotime($aConfig['metadata'][$sGpId]['last_modified']) < strtotime($zModified['date'])) {
+                                        if ($sModified && strtotime($aConfig['metadata'][$sGpId]['last_modified']) < strtotime($sModified)) {
                                             $sCheckboxToRunOldGp .= '<TR><TD></TD><TD><INPUT type=\'radio\' name=\'config[' . $sFilter . '][run_older_version][' . $sGpId . ']\' value=\'0\'> Current version</TD></TR>';
                                             $sCheckboxToRunOldGp .= '<TR><TD></TD><TD><INPUT type=\'radio\' name=\'config[' . $sFilter . '][run_older_version][' . $sGpId . ']\' value=\'1\' checked> Apply the version of this gene panel as of ' . $aConfig['metadata'][$sGpId]['last_modified'] . '</TD></TR>';
                                         }
@@ -467,6 +463,7 @@ if (ACTION == 'configure' && POST) {
         foreach ($aFormConfig as $sFilter => $aFilterConfig) {
             switch($sFilter) {
                 case 'apply_selected_gene_panels':
+                    $sToday = date('Y-m-d H:i:s');
                     // Get the saved configurations in the database.
                     if (!empty($zFilterConfig[$sFilter])) {
                         $sConfigJson = $zFilterConfig[$sFilter]['config_json'];
@@ -507,7 +504,7 @@ if (ACTION == 'configure' && POST) {
                     }
 
                     // 2. Use the list of genes assigned to this gene panel in the database now.
-                    // First, remove the gene panels whose data we do not need to fetch from database.
+                    // First, remove the gene panels whose data we do not need to be fetched from database.
                     $aGenePanelIds = array_values(array_diff($aGenePanelIds, $aUseOlderGenePanels));
                     if (!empty($aGenePanelIds)) {
                         // There is a limit to GROUP_CONCAT here. If we use GROUP_CONCAT our gene list will be truncated
@@ -520,14 +517,10 @@ if (ACTION == 'configure' && POST) {
                         // Populate data for each gene panel.
                         foreach ($zResult as $aRow) {
                             if (!isset($aFormConfig[$sFilter]['metadata'][$aRow['genepanelid']])) {
-                                // Get gene panel last modified date from logs table because gene panel table does not store the latest date genes were modified
-                                // log text: 'Updated gene list for the gene panel #00023'
-                                $sSQL = 'SELECT date FROM ' . TABLE_LOGS . ' WHERE event = ? AND log = ? ORDER BY date DESC LIMIT 1';
-                                $aSQL = array('GenePanelManage', 'Updated gene list for the gene panel #' . str_pad($aRow['genepanelid'], 5, '0'), );
-                                $zModified = $_DB->query($sSQL, $aSQL)->fetchAssoc();
-
+                                // Get gene panel last modified date from revisions table
+                                $sModified = getGenePanelLastModifiedDate($aRow['genepanelid']);
                                 $aFormConfig[$sFilter]['metadata'][$aRow['genepanelid']] = array(
-                                    'last_modified' => (!$zModified? $aRow['last_modified']: $zModified['date']),
+                                    'last_modified' => (!empty($sModified) ? $sModified : $sToday),
                                     'genes' => array()
                                 );
                             }
@@ -546,7 +539,7 @@ if (ACTION == 'configure' && POST) {
                             if (empty($aFormConfig[$sFilter]['run_older_version'][$sGpId])) {
                                 $aFormConfig[$sFilter]['metadata'][$sGpId] = array(
                                     'genes' => explode(', ', $zIndividual['gene_panels'][GP_TYPE_CUSTOM][$sGpId]['name']),
-                                    'last_modified' => date('Y-m-d H:i:s') // We cannot get the data of when custom panel is last modified. Fill in with current date for now.
+                                    'last_modified' => $sToday // We cannot get the data of when custom panel is last modified. Fill in with current date for now.
                                 );
                             }
                         }

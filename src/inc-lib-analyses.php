@@ -38,6 +38,19 @@ if (!defined('ROOT_PATH')) {
 
 
 
+function getGenePanelLastModifiedDate($sGpId) {
+    global $_DB;
+
+    $sSQL = 'SELECT valid_from FROM ' . TABLE_GP2GENE_REV . ' WHERE genepanelid = ? ORDER BY valid_from DESC LIMIT 1';
+    $aSQL = array($sGpId);
+    $sModified = $_DB->query($sSQL, $aSQL)->fetchColumn();
+
+    return $sModified;
+}
+
+
+
+
 function getSelectedFilterConfig ($nRunID, $sFilterID)
 {
     // This function gathers the configuration of the selected filter run, and returns
