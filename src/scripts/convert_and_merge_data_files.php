@@ -4,7 +4,7 @@
  * LEIDEN OPEN VARIATION DATABASE (LOVD)
  *
  * Created     : 2014-11-28
- * Modified    : 2017-07-27
+ * Modified    : 2017-08-30
  * For LOVD+   : 3.0-18
  *
  * Copyright   : 2004-2017 Leiden University Medical Center; http://www.LUMC.nl/
@@ -1253,12 +1253,12 @@ print('Mutalyzer returned EREF error, hg19/hg38 error?' . "\n");
             if (preg_match('/ins(([A-Z][a-z]{2})+)\)$/', $aVariant[$sField], $aRegs)) {
                 $aVariant[$sField] = str_replace('ins' . $aRegs[1], 'ins(' . strlen($aRegs[1]) . ')', $aVariant[$sField]);
             }
-            // Vep produces interestingly long deletions as well.
+            // Vep produces interestingly long deletions and duplications as well.
             // p.TerSerProProGlyLysProGlnGlyProProProGlnGlyGlyAsnGlnProGlnGlyProProProProProGlyLysProGlnGlyProProProGlnGlyGlyLysLysProGlnGlyProProProProGlyLysProGlnGlyProProProGlnGlyAspLysSerArgSerSer152del -> p.Ter152_Ser212del
             // We might want to fix these either way, as they are wrong either way?
-            if (preg_match('/^p.\(([A-Z][a-z]{2})((?:[A-Z][a-z]{2})+)([A-Z][a-z]{2})([0-9]+)del\)$/', $aVariant[$sField], $aRegs)) {
-                //                 1              2                   3              4
-                $aVariant[$sField] = 'p.(' . $aRegs[1] . $aRegs[4] . '_' . $aRegs[3] . ($aRegs[4] + (strlen($aRegs[2])/3)+1) . 'del)';
+            if (preg_match('/^p.\(([A-Z][a-z]{2})((?:[A-Z][a-z]{2})+)([A-Z][a-z]{2})([0-9]+)(del|dup)\)$/', $aVariant[$sField], $aRegs)) {
+                //                 1              2                   3              4       5
+                $aVariant[$sField] = 'p.(' . $aRegs[1] . $aRegs[4] . '_' . $aRegs[3] . ($aRegs[4] + (strlen($aRegs[2])/3)+1) . $aRegs[5] . ')';
             }
         }
 
