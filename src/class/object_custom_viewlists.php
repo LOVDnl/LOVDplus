@@ -797,9 +797,11 @@ class LOVD_CustomViewList extends LOVD_Object {
         }
 
         foreach ($this->aColumns as $sCol => $aCol) {
-            if ($_AUTH['level'] < LEVEL_MANAGER && !$this->nID && substr($sCol, 0, 19) == 'VariantOnTranscript') {
+            if (!LOVD_plus && $_AUTH['level'] < LEVEL_MANAGER && !$this->nID && substr($sCol, 0, 19) == 'VariantOnTranscript') {
                 // Not a special authorized person, no gene selected, VOT column.
+                // Empty the field if the column is not actually active for the gene(s) of this entry.
                 // A column that has been disabled for this gene, may still show its value to collaborators and higher.
+                // For LOVD+, shared columns are no longer shared, and public_view is not an array, so this code won't work.
                 if ((!$_AUTH || !in_array($zData['geneid'], $_AUTH['allowed_to_view'])) && ((is_array($zData['geneid']) && count(array_diff($zData['geneid'], $aCol['public_view']))) || (!is_array($zData['geneid']) && !in_array($zData['geneid'], $aCol['public_view'])))) {
                     $zData[$sCol] = '';
                 }
