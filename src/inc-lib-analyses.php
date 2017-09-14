@@ -158,12 +158,14 @@ function getSelectedGenePanelsByRunID ($aConfig)
         //       "metadata":{
         //          "00001":{
         //             "last_modified":"2017-04-12 07:21:10",
+        //             "name" : "Special Gene Panel",
         //             "genes":[
         //                "ABCC6",
         //                "ABCC8"
         //             ]
         //          },
         //          "custom_panel":{
+        //             "name" : "",
         //             "genes":[
         //                "SOX2"
         //             ],
@@ -205,8 +207,9 @@ function getSelectedGenePanelsByRunID ($aConfig)
 
                     foreach ($aGenePanelIds as $aGenePanelId) {
                         // Add the gene panel name to the tooltip and the text to show. We might shorten the text to show later.
-                        $sToolTip .= '<A href="gene_panels/' . $aGenePanelId . '">' . str_replace(' ', '&nbsp;', addslashes($aGpNames[$aGenePanelId]['name'])) . '</A><BR>';
-                        $sDisplayText .= (!$sDisplayText? '' : ', ') . $aGpNames[$aGenePanelId]['name'];
+                        $sGpName = (empty($aConfig['metadata'][$aGenePanelId]['name'])? $aGpNames[$aGenePanelId]['name'] : $aConfig['metadata'][$aGenePanelId]['name']);
+                        $sToolTip .= '<A href="gene_panels/' . $aGenePanelId . '">' . str_replace(' ', '&nbsp;', addslashes($sGpName)) . '</A><BR>';
+                        $sDisplayText .= (!$sDisplayText? '' : ', ') . $sGpName;
                     }
 
                     // If there is more than 1 of each type of gene panel selected, then display the summary.

@@ -508,7 +508,7 @@ if (ACTION == 'configure' && POST) {
                     $aGenePanelIds = array_values(array_diff($aGenePanelIds, $aUseOlderGenePanels));
                     if (!empty($aGenePanelIds)) {
                         // There is a limit to GROUP_CONCAT here. If we use GROUP_CONCAT our gene list will be truncated
-                        $sSQL = 'SELECT gp2g.genepanelid, gp.created_date as last_modified, gp2g.geneid
+                        $sSQL = 'SELECT gp2g.genepanelid, gp.name AS gp_name, gp.created_date AS last_modified, gp2g.geneid
                              FROM ' . TABLE_GP2GENE . ' AS gp2g
                              INNER JOIN ' . TABLE_GENE_PANELS . ' AS gp ON (gp2g.genepanelid = gp.id)
                              WHERE gp2g.genepanelid IN (? ' . str_repeat(', ?', count($aGenePanelIds)-1) . ')';
@@ -521,6 +521,7 @@ if (ACTION == 'configure' && POST) {
                                 $sModified = getGenePanelLastModifiedDate($aRow['genepanelid']);
                                 $aFormConfig[$sFilter]['metadata'][$aRow['genepanelid']] = array(
                                     'last_modified' => (!empty($sModified) ? $sModified : $sToday),
+                                    'name' => $aRow['gp_name'],
                                     'genes' => array()
                                 );
                             }
@@ -539,7 +540,8 @@ if (ACTION == 'configure' && POST) {
                             if (empty($aFormConfig[$sFilter]['run_older_version'][$sGpId])) {
                                 $aFormConfig[$sFilter]['metadata'][$sGpId] = array(
                                     'genes' => explode(', ', $zIndividual['gene_panels'][GP_TYPE_CUSTOM][$sGpId]['name']),
-                                    'last_modified' => $sToday // We cannot get the data of when custom panel is last modified. Fill in with current date for now.
+                                    'last_modified' => $sToday, // We cannot get the data of when custom panel is last modified. Fill in with current date for now.
+                                    'name' => '' // placeholder, just to keep metadata structure consistent
                                 );
                             }
                         }
