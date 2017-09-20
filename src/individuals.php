@@ -478,7 +478,7 @@ if (PATH_COUNT >= 2 && ctype_digit($_PE[1]) && !ACTION && (PATH_COUNT == 2 || PA
 
                     print('
                   <TR id="' . $sElementID . '_filter_' . preg_replace('/[^a-z0-9_]/i', '_', $sFilter) . '"' . (!$sFilterClassName ? '' : ' class="' . $sFilterClassName . '"') . ' valign="top">
-                    <TD class="filter_description">' . $sFormattedFilter . $sGenePanelsInfo . '</TD>
+                    <TD class="filter_description">' . $sFormattedFilter . '<DIV class="filter-config-desc">' . $sGenePanelsInfo . '</DIV></TD>
                     <TD class="filter_time">' . ($nTime == '-'? '-' : lovd_convertSecondsToTime($nTime, 1)) . '</TD>
                     <TD class="filter_var_left">' . ($nTime == '-'? '-' : $nVariantsLeft) . '</TD>
                   </TR>');
