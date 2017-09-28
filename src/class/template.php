@@ -387,7 +387,7 @@ class LOVD_Template {
 <SCRIPT type="text/javascript">
   <!--
 <?php
-        if (!((ROOT_PATH == '../' && !(defined('TAB_SELECTED') && TAB_SELECTED == 'docs')) || defined('NOT_INSTALLED'))) {
+        if (!LOVD_plus && !((ROOT_PATH == '../' && !(defined('TAB_SELECTED') && TAB_SELECTED == 'docs')) || defined('NOT_INSTALLED'))) {
             // In install directory.
             print('
 function lovd_mapVariants ()
