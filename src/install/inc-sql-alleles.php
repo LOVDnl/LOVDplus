@@ -28,15 +28,28 @@
  *
  *************/
 
-$aAlleleSQL =
-         array(
-                'INSERT INTO ' . TABLE_ALLELES . ' VALUES(0,  "Unknown", 1),
-                                                         (11, "Paternal (confirmed)", 2),
-                                                         (10, "Paternal (inferred)", 3),
-                                                         (21, "Maternal (confirmed)", 4),
-                                                         (20, "Maternal (inferred)", 5),
-                                                         (1,  "Parent #1", 6),
-                                                         (2,  "Parent #2", 7),
-                                                         (3,  "Both (homozygous)", 8)',
-              );
-?>
+if (lovd_verifyInstance('mgha', false)) {
+    $aAlleleSQL =
+        array(
+            'INSERT INTO ' . TABLE_ALLELES . ' VALUES(0,  "Heterozygous", 1),
+                                                     (11, "Heterozygous - Paternal (confirmed)", 2),
+                                                     (10, "Heterozygous - Paternal (inferred)", 3),
+                                                     (21, "Heterozygous - Maternal (confirmed)", 4),
+                                                     (20, "Heterozygous - Maternal (inferred)", 5),
+                                                     (1,  "Heterozygous - Parent #1", 6),
+                                                     (2,  "Heterozygous - Parent #2", 7),
+                                                     (3,  "Homozygous", 8)',
+        );
+} else {
+    $aAlleleSQL =
+        array(
+            'INSERT INTO ' . TABLE_ALLELES . ' VALUES(0,  "Heterozygous", 1),
+                                                     (11, "Heterozygous - Paternal (confirmed)", 2),
+                                                     (10, "Heterozygous - Paternal (inferred)", 3),
+                                                     (21, "Heterozygous - Maternal (confirmed)", 4),
+                                                     (20, "Heterozygous - Maternal (inferred)", 5),
+                                                     (1,  "Heterozygous - Parent #1", 6),
+                                                     (2,  "Heterozygous - Parent #2", 7),
+                                                     (3,  "Both (homozygous)", 8)',
+        );
+}

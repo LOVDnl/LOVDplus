@@ -720,6 +720,10 @@ if ($sCalcVersionFiles != $sCalcVersionDB) {
                      array(
                          'ALTER TABLE ' . TABLE_VARIANTS . ' ADD COLUMN `obscount_json` TEXT NULL AFTER `confirmation_statusid`',
                      ),
+                 '3.0-17l' =>
+                     array(
+                         'ALTER TABLE ' . TABLE_ALLELES . ' CHANGE COLUMN `name` `name` VARCHAR(100) NOT NULL',
+                     ),
                  '3.0-18' =>
                      array(
                          // These two will be ignored by LOVD+.
@@ -985,6 +989,28 @@ if ($sCalcVersionFiles != $sCalcVersionDB) {
                 'INSERT INTO ' . TABLE_COLS . ' VALUES ("Individual/Affected", 255, 70, 0, 0, 0, "Affected", "", "Whether individual is affected by disease","Whether individual is affected by disease","VARCHAR(100)","Affected|Whether individual is affected by disease|select|1|true|false|false","Affected\r\nNot Affected\r\nUnknown", "", 0, 1, 1, 0, NOW(), NULL, NULL)'
             )
         );
+    }
+
+    if (LOVD_plus && $sCalcVersionDB < lovd_calculateVersion('3.0-17l')) {
+        // Run LOVD+ specific queries.
+        $aAlleles = array(
+            0 => "Heterozygous",
+            11 => "Heterozygous - Paternal (confirmed)",
+            10 => "Heterozygous - Paternal (inferred)",
+            21 => "Heterozygous - Maternal (confirmed)",
+            20 => "Heterozygous - Maternal (inferred)",
+            1 => "Heterozygous - Parent #1",
+            2 => "Heterozygous - Parent #2",
+            3 => "Both (homozygous)"
+        );
+
+        if (lovd_verifyInstance('mgha', false)) {
+            $aAlleles[3] = "Homozygous";
+        }
+
+        foreach ($aAlleles as $nKey => $sText) {
+            $aUpdates['3.0-17l'][] = 'UPDATE ' . TABLE_ALLELES . ' SET `name`="' . $sText . '" WHERE `id`=' . $nKey;
+        }
     }
 
 
