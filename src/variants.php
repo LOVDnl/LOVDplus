@@ -585,6 +585,8 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && !ACTION) {
         $aNavigation[CURRENT_PATH . '?map']        = array('menu_transcripts.png', 'Manage transcripts for this variant', 1);
         if ($_AUTH['level'] >= LEVEL_CURATOR) {
             $aNavigation[CURRENT_PATH . '?delete_preferred_transcripts'] = array('menu_transcripts.png', 'Delete non-preferred transcripts', 1);
+        }
+        if ($_AUTH['level'] >= $_SETT['user_level_settings']['delete_variant']) {
             $aNavigation[CURRENT_PATH . '?delete'] = array('cross.png', 'Delete variant entry', 1);
         }
         if (!empty($zData['position_g_start']) && $_CONF['refseq_build'] != '----') {
@@ -3342,7 +3344,7 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && ACTION == 'delete') {
     define('LOG_EVENT', 'VariantDelete');
 
     lovd_isAuthorized('variant', $nID);
-    lovd_requireAUTH(LEVEL_CURATOR);
+    lovd_requireAUTH($_SETT['user_level_settings']['delete_variant']);
 
     require ROOT_PATH . 'class/object_genome_variants.php';
     $_DATA = new LOVD_GenomeVariant();
