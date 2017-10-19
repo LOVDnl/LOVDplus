@@ -993,24 +993,9 @@ if ($sCalcVersionFiles != $sCalcVersionDB) {
 
     if (LOVD_plus && $sCalcVersionDB < lovd_calculateVersion('3.0-17l')) {
         // Run LOVD+ specific queries.
-        $aAlleles = array(
-            0 => "Heterozygous",
-            11 => "Heterozygous - Paternal (confirmed)",
-            10 => "Heterozygous - Paternal (inferred)",
-            21 => "Heterozygous - Maternal (confirmed)",
-            20 => "Heterozygous - Maternal (inferred)",
-            1 => "Heterozygous - Parent #1",
-            2 => "Heterozygous - Parent #2",
-            3 => "Both (homozygous)"
-        );
-
-        if (lovd_verifyInstance('mgha', false)) {
-            $aAlleles[3] = "Homozygous";
-        }
-
-        foreach ($aAlleles as $nKey => $sText) {
-            $aUpdates['3.0-17l'][] = 'UPDATE ' . TABLE_ALLELES . ' SET `name`="' . $sText . '" WHERE `id`=' . $nKey;
-        }
+        require ROOT_PATH . 'install/inc-sql-alleles.php';
+        $aAlleleSQL[0] .= ' ON DUPLICATE KEY UPDATE name=VALUES(name)';
+        $aUpdates['3.0-17l'][] = $aAlleleSQL[0];
     }
 
 
