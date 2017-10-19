@@ -243,7 +243,7 @@ class LOVD_Template {
             unset($this->aMenu['configuration'], $this->aMenu['configuration_']);
             unset($this->aMenu['setup_']['/download/columns']);
             unset($this->aMenu['setup_']['/download/all']);
-            if ($_AUTH && $_AUTH['level'] <= LEVEL_ANALYZER) {
+            if (!$_AUTH || $_AUTH['level'] <= LEVEL_ANALYZER) {
                 unset($this->aMenu['diseases'], $this->aMenu['diseases_']);
             }
         } else {
