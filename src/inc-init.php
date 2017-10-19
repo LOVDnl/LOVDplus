@@ -161,6 +161,7 @@ $_SETT = array(
                 array(
                     // Checking for LEVEL_COLLABORATOR assumes lovd_isAuthorized()
                     // has already been called for gene-specific overviews.
+                    'delete_variant' => (LOVD_plus? LEVEL_ADMIN : LEVEL_CURATOR),
                     'see_nonpublic_data' => (LOVD_plus? LEVEL_SUBMITTER : LEVEL_COLLABORATOR),
                     'submit_new_data' => (LOVD_plus? LEVEL_MANAGER : LEVEL_SUBMITTER),
                 ),

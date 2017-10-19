@@ -618,10 +618,16 @@ class LOVD_CustomViewListMOD extends LOVD_CustomViewList {
 
         // Coloring...
         if (!empty($zData['VariantOnTranscript/GVS/Function'])) {
+            // FIXME: This needs to be recoded somehow, to allow the coloring to
+            //  work when multiple values exist for this variant.
+            // The coloring of the "worst" prediction should be applied.
+            // How to implement this?
             switch ($zData['VariantOnTranscript/GVS/Function']) {
                 case 'coding-synonymous':
                 case 'coding-synonymous-near-splice':
                 case 'intron':
+                case 'utr-3':
+                case 'utr-5':
                     $zData['class_name'] = 'colGreen';
                     break;
                 case 'coding':

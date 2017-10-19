@@ -43,6 +43,20 @@ if ($_AUTH) {
 
 
 
+if (LOVD_plus && PATH_COUNT == 1 && !ACTION && !isset($_GET['search_analysis_status'])) {
+    // URL: /individuals
+    // LOVD+ only; Due to a bug fix where emptying the hash now properly resets a VL,
+    //  all search terms in open fields must be provided in the $_GET to make sure they are kept.
+    // So we must reload the individuals VL, with the filter in $_GET.
+    // Hide confirmed analyses by default.
+    header('Location: ' . lovd_getInstallURL() . CURRENT_PATH . '?search_analysis_status=' . urlencode('!="Confirmed"'));
+    exit;
+}
+
+
+
+
+
 if (PATH_COUNT == 1 && !ACTION) {
     // URL: /individuals
     // View all entries.
@@ -60,8 +74,6 @@ if (PATH_COUNT == 1 && !ACTION) {
         lovd_requireAUTH();
     }
 
-    // Hide confirmed analyses by default.
-    $_GET['search_analysis_status'] = '!="Confirmed"';
     require ROOT_PATH . 'class/object_individuals.mod.php';
     $_DATA = new LOVD_IndividualMOD();
     $_DATA->setRowLink('Individuals', 'javascript:window.location.href=\'' . lovd_getInstallURL() . $_PE[0] . '/{{id}}/analyze/{{screeningid}}\'; return false');
