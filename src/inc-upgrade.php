@@ -722,7 +722,7 @@ if ($sCalcVersionFiles != $sCalcVersionDB) {
                      ),
                  '3.0-17l' =>
                      array(
-                         'ALTER TABLE ' . TABLE_ALLELES . ' CHANGE COLUMN `name` `name` VARCHAR(100) NOT NULL',
+                         'ALTER TABLE ' . TABLE_ALLELES . ' MODIFY COLUMN name VARCHAR(50) NOT NULL',
                      ),
                  '3.0-18' =>
                      array(
