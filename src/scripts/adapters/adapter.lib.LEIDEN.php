@@ -42,3 +42,10 @@ $_INSTANCE_CONFIG['observation_counts'] = array(
         'min_population_size' => 100,
     ),
 );
+
+
+
+
+
+class LOVD_LeidenDataConverter extends LOVD_DefaultDataConverter {
+}

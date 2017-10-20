@@ -198,34 +198,13 @@ class LOVD_DefaultDataConverter {
     // Class with methods and variables for convert_and_merge_data_files.php.
 
     var $sAdapterPath;
-    var $aScriptVars;
+    var $aScriptVars = array();
     var $aMetadata;
-    static $sAdapterName = 'DEFAULT';
     static $NO_TRANSCRIPT = '-----';
 
     public function __construct ($sAdapterPath)
     {
         $this->sAdapterPath = $sAdapterPath;
-    }
-
-
-
-
-
-    // FIXME: This function is not overwritten anywhere, and should perhaps not be defined here. Maybe remove and move the functionality?
-    // FIXME: This function does not have a valid name, it does not convert any input files.
-    function convertInputFiles ()
-    {
-        // Run the script for this instance, that will run actions that are meant to be run before anything else is done.
-
-        $this->aScriptVars = array();
-
-        print('> Running ' . static::$sAdapterName . " adapter\n");
-        $sCmd = 'php ' . $this->sAdapterPath . '/adapter.' . static::$sAdapterName . '.php';
-        passthru($sCmd, $nAdapterResult);
-        if ($nAdapterResult !== 0) {
-            die("Adapter Failed\n");
-        }
     }
 
 

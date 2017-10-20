@@ -98,7 +98,6 @@ function mutalyzer_runMutalyzer ($variant)
 
 
 
-
 // This script will be called from localhost by a cron job.
 
 // Define the array of suffixes for the files names expected.
@@ -227,6 +226,14 @@ function lovd_getVariantDescription (&$aVariant, $sRef, $sAlt)
     // Constructs a variant description from $sRef and $sAlt and adds it to $aVariant in a new 'VariantOnGenome/DNA' key.
     // The 'position_g_start' and 'position_g_end' keys in $aVariant are adjusted accordingly and a 'type' key is added too.
     // The numbering scheme is either g. or m. and depends on the 'chromosome' key in $aVariant.
+    // Requires:
+    //   $aVariant['chromosome']
+    //   $aVariant['position']
+    // Adds:
+    //   $aVariant['position_g_start']
+    //   $aVariant['position_g_end']
+    //   $aVariant['type']
+    //   $aVariant['VariantOnGenome/DNA']
 
     // Make all bases uppercase.
     $sRef = strtoupper($sRef);
@@ -359,7 +366,20 @@ function lovd_getVariantPosition ($sVariant, $aTranscript = array())
 
 
 
-$_ADAPTER->convertInputFiles();
+// Run the "adapter" script for this instance, that will run actions that are meant to be run before anything else is done.
+$sInstanceName = strtoupper($_INI['instance']['name']);
+$sAdaptersDir = $_ADAPTER->sAdapterPath;
+if (!file_exists($sAdaptersDir . 'adapter.' . $sInstanceName . '.php')) {
+    $sInstanceName = 'DEFAULT';
+}
+print('> Running ' . $sInstanceName . ' adapter...' . "\n");
+$sCmd = 'php ' . $_ADAPTER->sAdapterPath . '/adapter.' . $sInstanceName . '.php';
+passthru($sCmd, $nAdapterResult);
+if ($nAdapterResult !== 0) {
+    die("Adapter Failed\n");
+}
+
+
 
 // Loop through the files in the dir and try and find a meta and data file, that match but have no total data file.
 $h = opendir($_INI['paths']['data_files']);

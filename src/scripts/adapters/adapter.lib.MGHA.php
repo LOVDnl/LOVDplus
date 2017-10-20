@@ -135,8 +135,6 @@ $_INSTANCE_CONFIG['observation_counts'] = array(
 
 class LOVD_MghaDataConverter extends LOVD_DefaultDataConverter {
 
-    static $sAdapterName = 'MGHA';
-
     function prepareMappings()
     {
 

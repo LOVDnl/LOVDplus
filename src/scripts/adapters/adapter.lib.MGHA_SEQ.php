@@ -88,8 +88,6 @@ $_INSTANCE_CONFIG['conversion'] = array(
 
 class LOVD_MghaSeqDataConverter extends LOVD_DefaultDataConverter {
 
-    static $sAdapterName = 'MGHA_SEQ';
-
     function formatEmptyColumn ($aLine, $sVEPColumn, $sLOVDColumn, $aVariant)
     {
         // Returns how we want to represent empty data in $aVariant array given a LOVD column name.
