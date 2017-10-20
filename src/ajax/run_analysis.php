@@ -4,11 +4,11 @@
  * LEIDEN OPEN VARIATION DATABASE (LOVD)
  *
  * Created     : 2013-11-05
- * Modified    : 2016-05-13
- * For LOVD    : 3.0-15
+ * Modified    : 2017-10-20
+ * For LOVD    : 3.0-18
  *
- * Copyright   : 2004-2016 Leiden University Medical Center; http://www.LUMC.nl/
- * Programmer  : Ing. Ivo F.A.C. Fokkema <I.F.A.C.Fokkema@LUMC.nl>
+ * Copyright   : 2004-2017 Leiden University Medical Center; http://www.LUMC.nl/
+ * Programmer  : Ivo F.A.C. Fokkema <I.F.A.C.Fokkema@LUMC.nl>
  *
  *
  * This file is part of LOVD.
@@ -127,11 +127,11 @@ if (!$_GET['runid']) {
 }
 
 // Process the selected gene panels.
-// FIXME: This will fail if we already have the run ID in the database. That can
-// happen, when somehow the analysis run was created, but didn't start (JS error?).
+// Since this will fail if we already have the run ID in the database, use INSERT IGNORE.
+// That can happen, when somehow the analysis run was created, but didn't start (JS error?).
 foreach ($aGenePanels as $nKey => $nGenePanelID) {
     // Write the gene panels selected to the analyses_run2gene_panel table.
-    $q = $_DB->query('INSERT INTO ' . TABLE_AR2GP . ' VALUES (?, ?)', array($nRunID, $nGenePanelID));
+    $q = $_DB->query('INSERT IGNORE INTO ' . TABLE_AR2GP . ' VALUES (?, ?)', array($nRunID, $nGenePanelID));
     if (!$q) {
         $_DB->rollBack();
         die('Failed to store the gene panels for this analysis. This may be a temporary error, or an error in the software.');
