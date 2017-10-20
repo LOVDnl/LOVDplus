@@ -87,6 +87,7 @@ $_INSTANCE_CONFIG['conversion'] = array(
 
 
 class LOVD_MghaSeqDataConverter extends LOVD_DefaultDataConverter {
+    // Contains the overloaded functions that we want different from the default.
 
     function formatEmptyColumn ($aLine, $sVEPColumn, $sLOVDColumn, $aVariant)
     {
@@ -504,17 +505,6 @@ class LOVD_MghaSeqDataConverter extends LOVD_DefaultDataConverter {
         // Returns the screening ID.
 
         return 1;
-    }
-
-
-
-
-
-    function getInputFilePrefixPattern()
-    {
-        // Returns the regex pattern of the prefix of variant input file names.
-
-        return '.+';
     }
 
 

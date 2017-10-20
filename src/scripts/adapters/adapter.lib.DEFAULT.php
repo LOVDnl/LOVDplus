@@ -235,14 +235,15 @@ class LOVD_DefaultDataConverter {
 
 
 
-    // FIXME: This is Leiden-specific code, put it in the Leiden adapter and make a proper default.
     function getInputFilePrefixPattern ()
     {
-        // Returns the regex pattern of the prefix of variant data file names.
+        // Returns the regex pattern of the prefix of variant input file names.
         // The prefix is often the sample ID or individual ID, and can be formatted to your liking.
         // Data files must be named "prefix.suffix", using the suffixes as defined in the conversion script.
 
-        return '(?:Child|Patient)_(?:\d+)';
+        // If using sub patterns, make sure they are not counted, like so:
+        //  (?:subpattern)
+        return '.+';
     }
 
 

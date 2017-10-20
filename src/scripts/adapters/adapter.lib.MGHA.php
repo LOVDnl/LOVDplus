@@ -134,6 +134,7 @@ $_INSTANCE_CONFIG['observation_counts'] = array(
 
 
 class LOVD_MghaDataConverter extends LOVD_DefaultDataConverter {
+    // Contains the overloaded functions that we want different from the default.
 
     function prepareMappings()
     {
@@ -800,19 +801,6 @@ class LOVD_MghaDataConverter extends LOVD_DefaultDataConverter {
 
         return 1;
     }
-
-
-
-
-
-
-    function getInputFilePrefixPattern()
-    {
-        // Returns the regex pattern of the prefix of variant input file names.
-
-        return '.+';
-    }
-
 
 
 

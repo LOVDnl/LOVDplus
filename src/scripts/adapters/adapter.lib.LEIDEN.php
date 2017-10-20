@@ -48,4 +48,17 @@ $_INSTANCE_CONFIG['observation_counts'] = array(
 
 
 class LOVD_LeidenDataConverter extends LOVD_DefaultDataConverter {
+    // Contains the overloaded functions that we want different from the default.
+
+    // FIXME: This is Leiden-specific code, put it in the Leiden adapter and make a proper default.
+    function getInputFilePrefixPattern ()
+    {
+        // Returns the regex pattern of the prefix of variant input file names.
+        // The prefix is often the sample ID or individual ID, and can be formatted to your liking.
+        // Data files must be named "prefix.suffix", using the suffixes as defined in the conversion script.
+
+        // If using sub patterns, make sure they are not counted, like so:
+        //  (?:subpattern)
+        return '(?:Child|Patient)_(?:\d+)';
+    }
 }
