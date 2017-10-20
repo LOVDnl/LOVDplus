@@ -806,9 +806,10 @@ class LOVD_MghaDataConverter extends LOVD_DefaultDataConverter {
 
 
 
-    function getRequiredHeaderColumns()
+    function getRequiredHeaderColumns ()
     {
-        // Returns an array of required input variant file column headers. The order of these columns does NOT matter.
+        // Returns an array of required input variant file column headers.
+        // The order of these columns does NOT matter.
 
         return array(
             'CHROM',

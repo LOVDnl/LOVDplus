@@ -250,20 +250,19 @@ class LOVD_DefaultDataConverter {
 
 
 
-    // FIXME: This is Leiden-specific code, put it in the Leiden adapter and make a proper default.
     function getRequiredHeaderColumns ()
     {
         // Returns an array of required variant input file column headers.
         // The order of these columns does NOT matter.
 
         return array(
-            'chromosome',
-            'position',
-            'REF',
-            'ALT',
+            'Location',
+            'GIVEN_REF',
+            'Allele',
             'QUAL',
-            'FILTERvcf',
-            'GATKCaller'
+            'Consequence',
+            'SYMBOL',
+            'Feature',
         );
     }
 
