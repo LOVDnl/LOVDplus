@@ -4,7 +4,7 @@
  * LEIDEN OPEN VARIATION DATABASE (LOVD)
  *
  * Created     : 2013-11-07
- * Modified    : 2017-03-17
+ * Modified    : 2017-10-20
  * For LOVD    : 3.0-18
  *
  * Copyright   : 2004-2017 Leiden University Medical Center; http://www.LUMC.nl/
@@ -146,7 +146,9 @@ class LOVD_CustomViewListMOD extends LOVD_CustomViewList {
                         // First data table in query.
                         $aSQL['SELECT'] .= ', vog.id AS row_id'; // To ensure other table's id columns don't interfere.
                         $aSQL['FROM'] = TABLE_VARIANTS . ' AS vog';
-                        $this->nCount = $_DB->query('SELECT COUNT(*) FROM ' . TABLE_VARIANTS)->fetchColumn();
+                        // MAX(id) gets nowhere nearly the correct number of results when data has been removed or archived, but this number
+                        //  anyway doesn't need to be accurate at all, and a COUNT(*) can be too slow on larger systems.
+                        $this->nCount = $_DB->query('SELECT MAX(id) FROM ' . TABLE_VARIANTS)->fetchColumn();
                         $aSQL['GROUP_BY'] = 'vog.id'; // Necessary for GROUP_CONCAT(), such as in Screening.
                         $aSQL['ORDER_BY'] = 'vog.chromosome ASC, vog.position_g_start';
                     } else {
@@ -172,13 +174,13 @@ class LOVD_CustomViewListMOD extends LOVD_CustomViewList {
                     $nKeyVOG = array_search('VariantOnGenome', $aObjects);
                     if ($nKeyVOG !== false && $nKeyVOG < $nKey) {
                         $aSQL['SELECT'] .= ', COUNT(DISTINCT os.individualid) AS obs_variant';
-                        $aSQL['SELECT'] .= ', COUNT(DISTINCT os.individualid) / ' . $_DB->query('SELECT COUNT(*) FROM ' . TABLE_INDIVIDUALS)->fetchColumn() . ' AS obs_var_ind_ratio';
+                        $aSQL['SELECT'] .= ', (COUNT(DISTINCT os.individualid) / ' . $_DB->query('SELECT COUNT(*) FROM ' . TABLE_INDIVIDUALS)->fetchColumn() . ') AS obs_var_ind_ratio';
 
                         if (!lovd_verifyInstance('mgha', false) && $bDiseases) {
                             // If this individual has diseases then setup the disease specific observation count columns.
                             // MGHA doesn't use this, but uses gene-panel specific counts instead.
                             $aSQL['SELECT'] .= ', COUNT(DISTINCT odi2d.individualid) AS obs_disease';
-                            $aSQL['SELECT'] .= ', COUNT(DISTINCT odi2d.individualid) / ' . $_DB->query('SELECT COUNT(DISTINCT i2d.individualid) FROM ' . TABLE_IND2DIS . ' AS i2d WHERE i2d.diseaseid IN (' . $sDiseaseIDs . ')')->fetchColumn() . ' AS obs_var_dis_ind_ratio';
+                            $aSQL['SELECT'] .= ', (COUNT(DISTINCT odi2d.individualid) / ' . $_DB->query('SELECT COUNT(DISTINCT i2d.individualid) FROM ' . TABLE_IND2DIS . ' AS i2d WHERE i2d.diseaseid IN (' . $sDiseaseIDs . ')')->fetchColumn() . ') AS obs_var_dis_ind_ratio';
                         } else {
                             // Otherwise do not do anything for the disease specific observation count columns.
                             $aSQL['SELECT'] .= ', NULL AS obs_disease, NULL AS obs_var_dis_ind_ratio';
@@ -206,7 +208,9 @@ class LOVD_CustomViewListMOD extends LOVD_CustomViewList {
                         // First data table in query.
                         $aSQL['SELECT'] .= (!$aSQL['SELECT']? '' : ', ') . 'vot.*, vot.id AS row_id'; // To ensure other table's id columns don't interfere.
                         $aSQL['FROM'] = TABLE_VARIANTS_ON_TRANSCRIPTS . ' AS vot';
-                        $this->nCount = $_DB->query('SELECT COUNT(*) FROM ' . TABLE_VARIANTS_ON_TRANSCRIPTS)->fetchColumn();
+                        // MAX(id) on the VOT table gets nowhere nearly the correct number of results, but this number
+                        //  anyway doesn't need to be accurate at all, and a COUNT(*) can be too slow on larger systems.
+                        $this->nCount = $_DB->query('SELECT MAX(id) FROM ' . TABLE_VARIANTS_ON_TRANSCRIPTS)->fetchColumn();
                         $aSQL['GROUP_BY'] = 'vot.id'; // Necessary for GROUP_CONCAT(), such as in Screening.
                     } elseif ($nKeyVOG !== false && $nKeyVOG < $nKey) {
                         // Previously, VOG was used. We will join VOT with VOG, using GROUP_CONCAT.
@@ -608,10 +612,16 @@ class LOVD_CustomViewListMOD extends LOVD_CustomViewList {
 
         // Coloring...
         if (!empty($zData['VariantOnTranscript/GVS/Function'])) {
+            // FIXME: This needs to be recoded somehow, to allow the coloring to
+            //  work when multiple values exist for this variant.
+            // The coloring of the "worst" prediction should be applied.
+            // How to implement this?
             switch ($zData['VariantOnTranscript/GVS/Function']) {
                 case 'coding-synonymous':
                 case 'coding-synonymous-near-splice':
                 case 'intron':
+                case 'utr-3':
+                case 'utr-5':
                     $zData['class_name'] = 'colGreen';
                     break;
                 case 'coding':

@@ -720,6 +720,10 @@ if ($sCalcVersionFiles != $sCalcVersionDB) {
                      array(
                          'ALTER TABLE ' . TABLE_VARIANTS . ' ADD COLUMN `obscount_json` TEXT NULL AFTER `confirmation_statusid`',
                      ),
+                 '3.0-17l' =>
+                     array(
+                         'ALTER TABLE ' . TABLE_ALLELES . ' MODIFY COLUMN name VARCHAR(50) NOT NULL',
+                     ),
                  '3.0-18' =>
                      array(
                          // These two will be ignored by LOVD+.
@@ -984,6 +988,13 @@ if ($sCalcVersionFiles != $sCalcVersionDB) {
                 'INSERT INTO ' . TABLE_COLS . ' VALUES ("Individual/Affected", 255, 70, 0, 0, 0, "Affected", "", "Whether individual is affected by disease","Whether individual is affected by disease","VARCHAR(100)","Affected|Whether individual is affected by disease|select|1|true|false|false","Affected\r\nNot Affected\r\nUnknown", "", 0, 1, 1, 0, NOW(), NULL, NULL)'
             )
         );
+    }
+
+    if (LOVD_plus && $sCalcVersionDB < lovd_calculateVersion('3.0-17l')) {
+        // Run LOVD+ specific queries.
+        require ROOT_PATH . 'install/inc-sql-alleles.php';
+        $aAlleleSQL[0] .= ' ON DUPLICATE KEY UPDATE name=VALUES(name)';
+        $aUpdates['3.0-17l'][] = $aAlleleSQL[0];
     }
 
 

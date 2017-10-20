@@ -775,7 +775,7 @@ class LOVD_Object {
             // Analyzing the SELECT. This is quite difficult as we can have simple SELECTs but also really complicated ones,
             // such as GROUP_CONCAT() or subselects. These should all be parsed and needed tables should be identified.
             //                    t.* || t.col                    [t.col || "value" || (t.col ... val) || FUNCTION() || CASE ... END] AS alias
-            if (preg_match_all('/(([a-z0-9_]+)\.(?:\*|[a-z0-9_]+)|(?:(?:([a-z0-9_]+)\.[a-z0-9_]+|".*"|[A-Z_]*\(.+\)|CASE .+ END) AS +([a-z0-9_]+|`[A-Za-z0-9_\/]+`)))(?:,|$)/U', $aSQL['SELECT'], $aRegs)) {
+            if (preg_match_all('/(([a-z0-9_]+)\.(?:\*|[a-z0-9_]+)|(?:(?:([a-z0-9_]+)\.[a-z0-9_]+|".*"|[A-Z_]*\(.+\)|CASE .+ END)\s+AS\s+([A-Za-z0-9_]+|`[A-Za-z0-9_\/]+`)))(?:,|$)/Us', $aSQL['SELECT'], $aRegs)) {
                 for ($i = 0; $i < count($aRegs[0]); $i ++) {
                     // First we'll store the column information, later we'll loop though it to see which tables they refer to.
                     // 1: entire SELECT string incl. possible alias;
@@ -840,7 +840,7 @@ class LOVD_Object {
                     // OK, this really shouldn't happen. Either the column wasn't a
                     // category we recognized, or the SQL was too complicated?
                     // Let's log this.
-                    lovd_writeLog('Error', 'LOVD-Lib', 'LOVD_Object::getRowCountForViewList() - Function identified custom column category ' . $sCategory . ', but couldn\'t find corresponding table alias in query.' . "\n" . 'URL: ' . preg_replace('/^' . preg_quote(rtrim(lovd_getInstallURL(false), '/'), '/') . '/', '', $_SERVER['REQUEST_URI']) . "\n" . 'From: ' . $aSQL['FROM']);
+                    lovd_writeLog('Error', 'LOVD-Lib', 'LOVD_Object::' . __FUNCTION__ . '() - Function identified custom column category ' . $sCategory . ', but couldn\'t find corresponding table alias in query.' . "\n" . 'URL: ' . preg_replace('/^' . preg_quote(rtrim(lovd_getInstallURL(false), '/'), '/') . '/', '', $_SERVER['REQUEST_URI']) . "\n" . 'From: ' . $aSQL['FROM']);
                 }
             }
         }
@@ -1919,6 +1919,9 @@ class LOVD_Object {
         require_once ROOT_PATH . 'inc-lib-viewlist.php';
 
         // First, check if entries are in the database at all.
+        // FIXME: This check, meant for optimization, proves to be slowing down the entire VL on larger DBs.
+        // FIXME: It would be better to remove this and remove the nCount calculators in the custom VL object completely.
+        // FIXME: Currently anyway we don't provide correct counts there for performance reasons, so the variable name isn't correct.
         $nTotal = $this->getCount();
         if (!$nTotal && FORMAT == 'text/html') {
             if ($bOnlyRows) {
@@ -2117,7 +2120,7 @@ class LOVD_Object {
             // Manipulate SELECT to include SQL_CALC_FOUND_ROWS.
             $bSQLCALCFOUNDROWS = false;
             // TODO: Remove this block. For now, this will be bypassed because $bTrueCount will always be true.
-            if (!$bTrueCount && $_INI['database']['driver'] == 'mysql' && ($aSessionViewList['counts'][$sFilterMD5]['t'] < 2 || $aSessionViewList['counts'][$sFilterMD5]['d'] < (time() - (60*15)))) {
+            if (!$bTrueCount && $_INI['database']['driver'] == 'mysql' && ($aSessionViewList['counts'][$sFilterMD5]['t'] < 4 || $aSessionViewList['counts'][$sFilterMD5]['d'] < (time() - (60*15)))) {
                 // But only if we're using MySQL and it takes less than a second to get the correct number of results, or it's been more than 15 minutes since the last check!
                 $this->aSQLViewList['SELECT'] = 'SQL_CALC_FOUND_ROWS ' . $this->aSQLViewList['SELECT'];
                 $bSQLCALCFOUNDROWS = true;
@@ -2175,7 +2178,7 @@ class LOVD_Object {
             }
 
             // ORDER BY will only occur when we estimate we have time for it.
-            if ($aSessionViewList['counts'][$sFilterMD5]['t'] < 2 && $aSessionViewList['counts'][$sFilterMD5]['n'] <= $_SETT['lists']['max_sortable_rows']) {
+            if ($aSessionViewList['counts'][$sFilterMD5]['t'] < 4 && $aSessionViewList['counts'][$sFilterMD5]['n'] <= $_SETT['lists']['max_sortable_rows']) {
                 $bSortableVL = true;
             } else {
                 // Not sortable, indicate this on the VL...
@@ -2461,7 +2464,7 @@ FROptions
 
                 if (substr($this->sObject, -7) == 'Variant') {
                     $sUnit = 'variants' . (substr($this->sObject, 0, 10) == 'Transcript'? ' on transcripts' : '');
-                } elseif ($this->sObject == 'Custom_Viewlist') {
+                } elseif ($this->sObject == 'Custom_ViewList' || $this->sObject == 'Custom_ViewListMOD') {
                     $sUnit = 'entries';
                 } elseif ($this->sObject == 'Shared_Column') {
                     $sUnit = 'active columns';

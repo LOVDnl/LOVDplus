@@ -274,7 +274,7 @@ $aTableSQL =
              , 'TABLE_ALLELES' =>
    'CREATE TABLE ' . TABLE_ALLELES . ' (
     id TINYINT(2) UNSIGNED NOT NULL,
-    name VARCHAR(20) NOT NULL,
+    name VARCHAR(50) NOT NULL,
     display_order TINYINT(1) UNSIGNED NOT NULL,
     PRIMARY KEY (id))
     ' . $sSettings
