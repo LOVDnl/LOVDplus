@@ -533,63 +533,9 @@ foreach ($aFiles as $sID) {
     // FIXME: Should this code below then actually be moved into that function? Because right now, it's weird.
     $nScreeningID = $_ADAPTER->prepareScreeningID($aMetaData);
 
-    if (!$nScreeningID) {
-        foreach ($aMetaData as $nLine => $sLine) {
-            if (!trim($sLine)) {
-                continue;
-            }
-            $nLine ++;
-            if (!$bParseColumns) {
-                if (substr($sLine, 0, 17) == '## Individuals ##') {
-                    $bParseColumns = 'Individuals';
-                } elseif (substr($sLine, 0, 16) == '## Screenings ##') {
-                    $bParseColumns = 'Screenings';
-                }
-            } else {
-                if ($nColumnIndexIDMiracle === false && $nColumnIndexIDScreening === false) {
-                    // We are expecting columns now, because we just started a new section.
-                    if (!preg_match('/^(("\{\{[A-Za-z0-9_\/]+\}\}"|\{\{[A-Za-z0-9_\/]+\}\})\t)+$/', $sLine . "\t")) { // FIXME: Can we make this a simpler regexp?
-                        // Columns not found; either we have data without a column header, or a malformed column header. Abort import.
-                        print('Error while parsing meta file (line ' . $nLine . '): Expected column header, but got something else.' . "\n");
-                        continue 2; // Continue to try the next file.
-                    }
-
-                    $aColumns = explode("\t", $sLine);
-                    $nColumns = count($aColumns);
-                    $aColumns = array_map('trim', $aColumns, array_fill(0, $nColumns, '"{ }'));
-                    if ($bParseColumns == 'Individuals' && $nColumnIndexIDMiracle === false) {
-                        $nColumnIndexIDMiracle = array_search('id_miracle', $aColumns);
-                    } elseif ($bParseColumns == 'Screenings') {
-                        $nColumnIndexIDScreening = array_search('id', $aColumns);
-                    }
-                    if ($nColumnIndexIDScreening === false && $nColumnIndexIDMiracle === false) {
-                        print('Error while parsing meta file (line ' . $nLine . '): Expected ID column header, could not find it.' . "\n");
-                        continue 2; // Continue to try the next file.
-                    }
-                    continue; // Data is on the next line.
-
-                } else {
-                    // We've got a line of data here. Isolate the values.
-                    $aLine = explode("\t", rtrim($sLine, "\r\n"));
-                    // For any category, the number of columns should be the same as the number of fields.
-                    // However, less fields may be encountered because the spreadsheet program just put tabs and no quotes in empty fields.
-                    if (count($aLine) < $nColumns) {
-                        $aLine = array_pad($aLine, $nColumns, '');
-                    }
-                    if ($nColumnIndexIDMiracle !== false) {
-                        $nMiracleID = trim($aLine[$nColumnIndexIDMiracle], '"');
-                        $nColumnIndexIDMiracle = false;
-                    } elseif ($nColumnIndexIDScreening !== false) {
-                        $nScreeningID = trim($aLine[$nColumnIndexIDScreening], '"');
-                        $nColumnIndexIDScreening = false;
-                    }
-                    $bParseColumns = false;
-                    if ($nMiracleID && $nScreeningID) {
-                        break;
-                    }
-                }
-            }
-        }
+    if (lovd_verifyInstance('leiden')) {
+        $nScreeningID = $_ADAPTER->aMetadata['Screenings']['id'];
+        $nMiracleID = $_ADAPTER->aMetadata['Individuals']['id_miracle'];
         if (!$nScreeningID || !$nMiracleID) {
             print('Error while parsing meta file: Unable to find the Screening ID and/or Miracle ID.' . "\n");
             // Here, we won't try and remove the temp file. We need it for diagnostics, and it will save us from running into the same error over and over again.
