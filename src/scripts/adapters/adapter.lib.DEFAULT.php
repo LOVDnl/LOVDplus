@@ -4,7 +4,7 @@
  * LEIDEN OPEN VARIATION DATABASE (LOVD)
  *
  * Created     : 2016-09-02
- * Modified    : 2017-07-27
+ * Modified    : 2017-10-24
  * For LOVD    : 3.0-19
  *
  * Copyright   : 2004-2017 Leiden University Medical Center; http://www.LUMC.nl/
@@ -199,7 +199,7 @@ class LOVD_DefaultDataConverter {
 
     var $sAdapterPath;
     var $aScriptVars = array();
-    var $aMetadata;
+    var $aMetadata; // Contains the meta data file, parsed.
     static $NO_TRANSCRIPT = '-----';
 
     public function __construct ($sAdapterPath)
@@ -1137,15 +1137,15 @@ class LOVD_DefaultDataConverter {
 
 
 
-    // FIXME: This function is not overwritten anywhere, and should perhaps not be defined here. Maybe remove and move the functionality?
     function readMetadata ($aMetaDataLines)
     {
         // Read array of lines from .meta.lovd file of each .directvep.lovd file.
         // Return an array of metadata keyed by column names.
 
-        $aKeyedMetadata = array();
-        $aColNamesByPos = array();
-        $bHeaderPrevRow = false;
+        $aKeyedMetadata = array(); // The array we're building up.
+        $aColNamesByPos = array(); // The list of columns in the section, temp variable.
+        $bHeaderPrevRow = false;   // Boolean indicating whether we just saw the header row or not.
+        $sSection = '';            // In which section are we?
         foreach ($aMetaDataLines as $sLine) {
             $sLine = trim($sLine);
             if (empty($sLine)) {
@@ -1157,6 +1157,7 @@ class LOVD_DefaultDataConverter {
 
                 // Some lines are commented out so that they can be skipped during import.
                 // But, this metadata is still valid and we want this data.
+                // FIXME: Does somebody really need this functionality? It's not really in line with LOVD normally handles reading files.
                 $sLine = trim($sLine, "# ");
                 $aDataRow = explode("\t", $sLine);
                 $aDataRow = array_map(function($sData) {
@@ -1165,16 +1166,21 @@ class LOVD_DefaultDataConverter {
 
                 foreach ($aColNamesByPos as $nPos => $sColName) {
                     // Read data.
-                    $aKeyedMetadata[$sColName] = $aDataRow[$nPos];
+                    $aKeyedMetadata[$sSection][$sColName] = $aDataRow[$nPos];
                 }
 
                 $bHeaderPrevRow = false;
             }
 
-            if (substr($sLine, 0) == '#') {
+            if (preg_match('/^##\s*([A-Za-z_]+)\s*##\s*Do not remove/', ltrim($sLine, '"'), $aRegs)) {
+                // New section. Store variables per section, so they don't get overwritten.
+                $sSection = $aRegs[1];
+                $aKeyedMetadata[$sSection] = array();
+                continue;
+            } elseif (substr($sLine, 0) == '#') {
                 continue;
             } elseif (substr($sLine, 0, 3) == '"{{') {
-                // Read header
+                // Read header.
                 $aColNamesByPos = array();
                 $aCols = explode("\t", $sLine);
                 foreach ($aCols as $sColName) {

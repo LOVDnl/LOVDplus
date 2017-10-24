@@ -767,8 +767,8 @@ class LOVD_MghaDataConverter extends LOVD_DefaultDataConverter {
 
         // Create IGV links
         $aLinkTypes = array('bhc', 'rec');
-        if (!empty($this->aMetadata['Individual/Sample_ID']) &&
-            !empty($this->aMetadata['Screening/Pipeline/Run_ID']) &&
+        if (!empty($this->aMetadata['Individuals']['Individual/Sample_ID']) &&
+            !empty($this->aMetadata['Screenings']['Screening/Pipeline/Run_ID']) &&
             !empty($aVariant['chromosome']) &&
             !empty($aVariant['position_g_start']) &&
             !empty($aVariant['position_g_end'])
@@ -777,8 +777,8 @@ class LOVD_MghaDataConverter extends LOVD_DefaultDataConverter {
             $aLinks = array();
             foreach ($aLinkTypes as $sLinkPrefix) {
                 $aLinks[] = '{' . $sLinkPrefix . ':' .
-                            implode(':', array($this->aMetadata['Individual/Sample_ID'],
-                                               $this->aMetadata['Screening/Pipeline/Run_ID'],
+                            implode(':', array($this->aMetadata['Individuals']['Individual/Sample_ID'],
+                                               $this->aMetadata['Screenings']['Screening/Pipeline/Run_ID'],
                                                $aVariant['chromosome'],
                                                $aVariant['position_g_start'],
                                                $aVariant['position_g_end']))

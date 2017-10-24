@@ -4,7 +4,7 @@
  * LEIDEN OPEN VARIATION DATABASE (LOVD)
  *
  * Created     : 2014-11-28
- * Modified    : 2017-08-30
+ * Modified    : 2017-10-24
  * For LOVD+   : 3.0-18
  *
  * Copyright   : 2004-2017 Leiden University Medical Center; http://www.LUMC.nl/
@@ -392,7 +392,6 @@ while (($sFile = readdir($h)) !== false) {
         continue;
     }
 
-
     if (preg_match('/^('. $_ADAPTER->getInputFilePrefixPattern() .')\.(' . implode('|', array_map('preg_quote', array_values($aSuffixes))) . ')$/', $sFile, $aRegs)) {
         //             1                                               2
         // Files we need to merge.
@@ -461,7 +460,7 @@ if ($nFilesBeingMerged >= $nMaxFilesBeingMerged) {
 
 
 
-// We're simply taking the first one, with the lowest ID (or actually, alphabetically the lowest ID, since we have the Child|Patient prefix.
+// We're simply taking the first one, with the lowest ID (or actually, alphabetically the lowest ID, since we have the file's prefix).
 // To make sure that we don't hang if one file is messed up, we'll start parsing them one by one, and the first one with an OK header, we take.
 $aFiles = array_keys($aFiles);
 sort($aFiles);
@@ -513,7 +512,7 @@ foreach ($aFiles as $sID) {
     $fError = @fopen($sFileError, 'w');
 
     // Isolate the used Screening ID, so we'll connect the variants to the right ID.
-    // It could just be 1 always, but they use the Miracle ID.
+    // It could just be 1 always, but this is not a requirement.
     // FIXME: This is quite a lot of code, for something simple as that... Can't we do this in an easier way? More assumptions, less checks?
     $aMetaData = file($sFileTmp, FILE_IGNORE_NEW_LINES);
     if (!$aMetaData) {
@@ -527,8 +526,6 @@ foreach ($aFiles as $sID) {
     $nScreeningID = 0;
     $nMiracleID = 0;
 
-
-    // This function doesn't do anything. Why is this here?
     $_ADAPTER->readMetadata($aMetaData);
     // Although this function makes sure the code below is not run for the MGHA, it's not very pretty.
     // Since the screening ID has to be in your meta files anyway, isn't it better to get it from there?
@@ -654,6 +651,7 @@ foreach ($aFiles as $sID) {
     // This copies rather large arrays (used to be smaller, per chromosome) into the object.
     // We don't need it, perhaps just store it in the object from the start then?
     $_ADAPTER->setScriptVars(compact('aGenes', 'aTranscripts'));
+
     while ($sLine = fgets($fInput)) {
         $nLine ++;
         $bDropTranscriptData = false;
@@ -679,7 +677,7 @@ foreach ($aFiles as $sID) {
         //  lovd_ignore_variant to the $aLine array and sets it to something non-false.
         // For possible values, see prepareVariantData() in the default adapter.
         // We will process "silent" and "log" here. There will be no record within LOVD of this variant being ignored.
-        // Once we'll support "separate", we'll need to process there here, too.
+        // Once we'll support "separate", we'll need to process that here, too.
         if (!empty($aLine['lovd_ignore_variant'])) {
             if ($aLine['lovd_ignore_variant'] != 'silent') {
                 print('Line ' . $nLine . ' is being ignored due to rules setup in the adapter library. This line will not be imported into LOVD.' . "\n");
