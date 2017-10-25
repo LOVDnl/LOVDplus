@@ -25,16 +25,6 @@ $_SERVER = array_merge($_SERVER, array(
     'QUERY_STRING' => '',
     'REQUEST_METHOD' => 'GET',
 ));
-// Try and improve HTTP_HOST, since settings may depend on it.
-$aPath = explode('/', trim(dirname($_SERVER['SCRIPT_NAME']), '/'));
-foreach ($aPath as $sDirName) {
-    // Stupid but effective check.
-    if (preg_match('/^((([0-9a-z][-0-9a-z]*[0-9a-z]|[0-9a-z])\.)+[a-z]{2,6})$/', $sDirName)) {
-        // Valid host name.
-        $_SERVER['HTTP_HOST'] = $sDirName;
-        break;
-    }
-}
 require ROOT_PATH . 'inc-init.php';
 require ROOT_PATH . 'inc-lib-genes.php';
 // 128MB was not enough for a 100MB file. We're already no longer using file(), now we're using fgets().
