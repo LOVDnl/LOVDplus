@@ -377,6 +377,7 @@ function lovd_fetchDBID ($aData)
 
     if (LOVD_plus) {
         if (!empty($aData) && !empty($sGenomeVariant)) {
+            // TODO: WARNING! UPDATE THE QUERY IN scripts/hash_dbid.php WHENEVER THIS IS UPDATED!
             $sDBID = sha1($_CONF['refseq_build'] . $aData['chromosome'] . '.g.' . $sGenomeVariant);
             return $sDBID;
         } else {
