@@ -32,12 +32,20 @@
 
 function lovd_checkDBID ($aData)
 {
-    // Checks if given variant and DBID match. I.e., whether or not there is
-    // already an entry where this variant and DBID come together.
+    // Checks if given variant and DBID match.
+    // For LOVD+, regenerates the DBID and verifies.
+    // For LOVD, it checks whether or not there is already an entry where this
+    //  variant and this DBID come together. Ignores the current variant, if the
+    //  ID is given.
     // NOTE: We're assuming that the DBID field actually exists. Using this
     // function implies you've checked for it's presence.
-    // All checks ignore the current variant, if the ID is given.
     global $_DB;
+
+    if (LOVD_plus) {
+        // The LOVD+ version of the fetch function is very fast and will
+        //  generate an DBID irrespective of the database contents.
+        return ($aData['VariantOnGenome/DBID'] == lovd_fetchDBID($aData));
+    }
 
     // <chr||GENE>_000000 is always allowed.
     $sSymbol = substr($aData['VariantOnGenome/DBID'], 0, strpos($aData['VariantOnGenome/DBID'], '_'));
@@ -355,8 +363,9 @@ function lovd_formatMail ($aBody)
 
 function lovd_fetchDBID ($aData)
 {
-    // Searches through the $aData variants to fetch lowest DBID belonging to
-    // this variant, otherwise returns next variant ID not in use.
+    // For LOVD+, generates the DBID based on the DNA data.
+    // For LOVD, searches through the $aData variants to fetch lowest DBID
+    //  belonging to this variant, otherwise returns next variant ID not in use.
     // NOTE: We're assuming that the DBID field actually exists. Using this
     // function implies you've checked for it's presence.
     global $_DB, $_CONF;
@@ -395,8 +404,8 @@ function lovd_fetchDBID ($aData)
         if (!empty($sGenomeVariant)) {
             // SQL addition to check the genomic notation-chromosome combination.
             $sSQL = 'SELECT DISTINCT vog.`VariantOnGenome/DBID` ' .
-                'FROM ' . TABLE_VARIANTS . ' AS vog ' .
-                'WHERE `VariantOnGenome/DBID` IS NOT NULL AND `VariantOnGenome/DBID` != "" AND REPLACE(REPLACE(REPLACE(vog.`VariantOnGenome/DNA`, "(", ""), ")", ""), "?", "") = ? AND vog.chromosome = ?';
+                    'FROM ' . TABLE_VARIANTS . ' AS vog ' .
+                    'WHERE `VariantOnGenome/DBID` IS NOT NULL AND `VariantOnGenome/DBID` != "" AND REPLACE(REPLACE(REPLACE(vog.`VariantOnGenome/DNA`, "(", ""), ")", ""), "?", "") = ? AND vog.chromosome = ?';
             $aArgs[] = $sGenomeVariant;
             $aArgs[] = $aData['chromosome'];
             // 2013-02-28; 3.0-03; If we have the variant's position available, we can use that, speeding up the query from
@@ -412,9 +421,9 @@ function lovd_fetchDBID ($aData)
             }
             // 2013-03-01; 3.0-03; To speed up this query in large databases, it has been optimized and rewritten using INNER JOIN instead of LEFT OUTER JOIN, requiring a UNION.
             $sSQL .= 'SELECT DISTINCT vog.`VariantOnGenome/DBID` ' .
-                'FROM ' . TABLE_VARIANTS . ' AS vog INNER JOIN ' . TABLE_VARIANTS_ON_TRANSCRIPTS . ' AS vot USING (id) ' .
-                'INNER JOIN ' . TABLE_TRANSCRIPTS . ' AS t ON (vot.transcriptid = t.id) ' .
-                'WHERE `VariantOnGenome/DBID` IS NOT NULL AND `VariantOnGenome/DBID` != "" AND (';
+                     'FROM ' . TABLE_VARIANTS . ' AS vog INNER JOIN ' . TABLE_VARIANTS_ON_TRANSCRIPTS . ' AS vot USING (id) ' .
+                     'INNER JOIN ' . TABLE_TRANSCRIPTS . ' AS t ON (vot.transcriptid = t.id) ' .
+                     'WHERE `VariantOnGenome/DBID` IS NOT NULL AND `VariantOnGenome/DBID` != "" AND (';
             $sWhere = '';
             foreach ($aTranscriptVariants as $nTranscriptID => $sTranscriptVariant) {
                 // SQL addition to check the transcript notation-transcript combination.
