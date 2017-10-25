@@ -1,10 +1,24 @@
 <?php
-/*
- * Script to update old DBID format chr_XXXXXX to an md5 hash of columns that identify unique variants
- */
+/*******************************************************************************
+ *
+ * LEIDEN OPEN VARIATION DATABASE (LOVD)
+ *
+ * Created     : 2017-06-05
+ * Modified    : 2017-02-06
+ * For LOVD+   : 3.0-18
+ *
+ * Copyright   : 2004-2017 Leiden University Medical Center; http://www.LUMC.nl/
+ * Programmer  : Ivo F.A.C. Fokkema <I.F.A.C.Fokkema@LUMC.nl>
+ *
+ *************/
+
+// Script to update old DBID format chr_XXXXXX to a sha1
+//  hash of columns that identify unique variants.
 
 define('ROOT_PATH', str_replace('\\', '/', dirname(__FILE__) . '/../'));
 define('FORMAT_ALLOW_TEXTPLAIN', true);
+
+
 $_GET['format'] = 'text/plain';
 // To prevent notices when running inc-init.php.
 $_SERVER = array_merge($_SERVER, array(
@@ -25,6 +39,7 @@ foreach ($aPath as $sDirName) {
 }
 require ROOT_PATH . 'inc-init.php';
 require ROOT_PATH . 'inc-lib-form.php';
+
 ////////////////////////////////
 ///// Script starts here //////
 
@@ -33,32 +48,35 @@ require ROOT_PATH . 'inc-lib-form.php';
 define('PATTERN_DBID', '_[0-9]{6}$');
 $aMapOldToNew = array();
 
-print(date('Y-m-d H:i:s') . ": Updating summary annotation records\n");
+print(date('Y-m-d H:i:s') . ": Updating summary annotation records...\n");
 // Get variant data for each dbid in summary annotation records
-$sSQL = 'SELECT DISTINCT vog.`VariantOnGenome/DBID`, vog.`VariantOnGenome/DNA`, vog.chromosome, vog.position_g_start 
+$sSQL = 'SELECT DISTINCT vog.`VariantOnGenome/DBID`, vog.`VariantOnGenome/DNA`, vog.chromosome
          FROM ' . TABLE_VARIANTS . ' AS vog 
          JOIN ' . TABLE_SUMMARY_ANNOTATIONS . ' AS sa ON (vog.`VariantOnGenome/DBID` = sa.id)';
 
-$aVariantsData = $_DB->query($sSQL)->fetchAllGroupAssoc();
-foreach ($aVariantsData as $sOldDBID => $aOneVariant) {
+$zVariantsData = $_DB->query($sSQL)->fetchAllGroupAssoc();
+foreach ($zVariantsData as $sOldDBID => $aOneVariant) {
     $aMapOldToNew[$sOldDBID] = lovd_fetchDBID($aOneVariant);
 }
 
-$zUpdateSAQuery = $_DB->prepare('UPDATE ' . TABLE_SUMMARY_ANNOTATIONS . ' SET id = ? WHERE id = ?');
+$qUpdateSAQuery = $_DB->prepare('UPDATE ' . TABLE_SUMMARY_ANNOTATIONS . ' SET id = ? WHERE id = ?');
 foreach ($aMapOldToNew as $sOldDBID => $sNewDBID) {
-    $zUpdateSAQuery->execute(array($sNewDBID, $sOldDBID));
+    $qUpdateSAQuery->execute(array($sNewDBID, $sOldDBID));
 }
-print(date('Y-m-d H:i:s') . ": Finished updating summary annotation records\n");
+print(date('Y-m-d H:i:s') . ": Finished updating summary annotation records!\n");
+
+
+
 
 
 // 2. Update references to VariantOnGenome/DBID in TABLE_LOGS
 // This step has to be performed BEFORE we update VariantOnGenome/DBID in TABLE_VARIANTS
-print(date('Y-m-d H:i:s') . ": Updating summary annotation log entries\n");
+print(date('Y-m-d H:i:s') . ": Updating summary annotation log entries...\n");
 $sSQL = 'SELECT date, mtime, event, log FROM ' . TABLE_LOGS . ' WHERE event IN ("SARCreate", "SAREdit")';
-$aLogs = $_DB->query($sSQL)->fetchALLAssoc();
+$zLogs = $_DB->query($sSQL)->fetchAllAssoc();
 
-$zUpdateQuery = $_DB->prepare('UPDATE ' . TABLE_LOGS . ' SET log = ? WHERE event = ? AND date = ? AND mtime = ? AND log = ?');
-foreach ($aLogs as $aOneLogEntry) {
+$qUpdateQuery = $_DB->prepare('UPDATE ' . TABLE_LOGS . ' SET log = ? WHERE event = ? AND date = ? AND mtime = ? AND log = ?');
+foreach ($zLogs as $aOneLogEntry) {
     $sText = $aOneLogEntry['log'];
     preg_match('/- (.+)/', $sText, $aMatches);
     if (count($aMatches) > 1) {
@@ -72,7 +90,7 @@ foreach ($aLogs as $aOneLogEntry) {
         // Find new DBID
         if (!isset($aMapOldToNew[$sOldDBID])) {
             // search one more time
-            $sSQL = 'SELECT DISTINCT vog.`VariantOnGenome/DBID`, vog.`VariantOnGenome/DNA`, vog.chromosome, vog.position_g_start
+            $sSQL = 'SELECT DISTINCT vog.`VariantOnGenome/DBID`, vog.`VariantOnGenome/DNA`, vog.chromosome
                      FROM ' . TABLE_VARIANTS . ' AS vog
                      WHERE vog.`VariantOnGenome/DBID` IN (?)';
 
@@ -88,17 +106,17 @@ foreach ($aLogs as $aOneLogEntry) {
             print('Failed to update log entry: ' . $sText);
         }
 
-        $zUpdateQuery->execute(array($sUpdatedText, $aOneLogEntry['event'], $aOneLogEntry['date'], $aOneLogEntry['mtime'], $aOneLogEntry['log']));
+        $qUpdateQuery->execute(array($sUpdatedText, $aOneLogEntry['event'], $aOneLogEntry['date'], $aOneLogEntry['mtime'], $aOneLogEntry['log']));
     }
 }
-print(date('Y-m-d H:i:s') . ": Finished updating summary annotation log entries\n");
+print(date('Y-m-d H:i:s') . ": Finished updating summary annotation log entries!\n");
 
 // Final step: Update VariantOnGenome/DBID in TABLE_VARIANTS
 $sSQL = 'SELECT COUNT(id) AS num FROM ' . TABLE_VARIANTS . ' WHERE `VariantOnGenome/DBID` REGEXP "' . PATTERN_DBID . '"';
 $nRow = $_DB->query($sSQL)->fetchColumn();
 
 if (!$nRow) {
-    print(date('Y-m-d H:i:s') . ": All DBIDs have been updated\n");
+    print(date('Y-m-d H:i:s') . ": No DBIDs to update!\n");
 }
 
 $nBatchSize = 1000;
@@ -127,6 +145,6 @@ for ($i=0; $i<$nBatches; $i++) {
         $zFinalQuery->execute($aVariantIds);
 
         $nUpdated += count($aVariantIds);
-        print(date('Y-m-d H:i:s') . ": " . $nUpdated . " DBIDs updated\n");
+        print(date('Y-m-d H:i:s') . ": " . $nUpdated . " DBIDs updated!\n");
     }
 }
