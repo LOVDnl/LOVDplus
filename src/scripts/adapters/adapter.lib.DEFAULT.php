@@ -4,8 +4,8 @@
  * LEIDEN OPEN VARIATION DATABASE (LOVD)
  *
  * Created     : 2016-09-02
- * Modified    : 2017-10-24
- * For LOVD    : 3.0-19
+ * Modified    : 2017-10-25
+ * For LOVD    : 3.0-18
  *
  * Copyright   : 2004-2017 Leiden University Medical Center; http://www.LUMC.nl/
  * Programmers : Juny Kesumadewi <juny.kesumadewi@unimelb.edu.au>
@@ -1079,24 +1079,6 @@ class LOVD_DefaultDataConverter {
         );
 
         return $aColumnMappings;
-    }
-
-
-
-
-
-    // FIXME: There is Leiden-specific data in the conversion script that should perhaps be moved in here, if possible.
-    function prepareScreeningID ($aMetaData)
-    {
-        // Parse and find the screening ID, as stored in the meta data file.
-        // LOVD needs the meta data file's screening ID to be able to connect
-        //  the variants to the screening. In case your meta data file does not
-        //  have a fixed screening ID, you can put code here to read it from the
-        //  meta data.
-        // Otherwise, you can simply have this function return the fixed value
-        //  for the screening ID.
-
-        return '';
     }
 
 

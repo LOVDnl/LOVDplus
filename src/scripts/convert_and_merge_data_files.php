@@ -4,7 +4,7 @@
  * LEIDEN OPEN VARIATION DATABASE (LOVD)
  *
  * Created     : 2014-11-28
- * Modified    : 2017-10-24
+ * Modified    : 2017-10-25
  * For LOVD+   : 3.0-18
  *
  * Copyright   : 2004-2017 Leiden University Medical Center; http://www.LUMC.nl/
@@ -527,14 +527,9 @@ foreach ($aFiles as $sID) {
     $nMiracleID = 0;
 
     $_ADAPTER->readMetadata($aMetaData);
-    // Although this function makes sure the code below is not run for the MGHA, it's not very pretty.
-    // Since the screening ID has to be in your meta files anyway, isn't it better to get it from there?
-    // Having assigned it in two places is redundant and can cause issues for new users trying to figure things out.
-    // FIXME: Should this code below then actually be moved into that function? Because right now, it's weird.
-    $nScreeningID = $_ADAPTER->prepareScreeningID($aMetaData);
+    $nScreeningID = $_ADAPTER->aMetadata['Screenings']['id'];
 
     if (lovd_verifyInstance('leiden')) {
-        $nScreeningID = $_ADAPTER->aMetadata['Screenings']['id'];
         $nMiracleID = $_ADAPTER->aMetadata['Individuals']['id_miracle'];
         if (!$nScreeningID || !$nMiracleID) {
             print('Error while parsing meta file: Unable to find the Screening ID and/or Miracle ID.' . "\n");

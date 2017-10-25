@@ -500,17 +500,6 @@ class LOVD_MghaSeqDataConverter extends LOVD_DefaultDataConverter {
 
 
 
-    function prepareScreeningID($aMetaData)
-    {
-        // Returns the screening ID.
-
-        return 1;
-    }
-
-
-
-
-
     function getRequiredHeaderColumns ()
     {
         // Returns an array of required input variant file column headers.
