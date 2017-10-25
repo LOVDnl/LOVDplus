@@ -449,7 +449,7 @@ function lovd_fetchDBID ($aData)
                 // Check this option, if it doesn't pass we'll skip it now.
                 $aDataCopy = $aData;
                 $aDataCopy['VariantOnGenome/DBID'] = $sDBIDoption;
-                if (!LOVD_plus && !lovd_checkDBID($aDataCopy)) {
+                if (!lovd_checkDBID($aDataCopy)) {
                     continue;
                 }
                 if ($sDBIDoptionSymbol == $sDBIDnewSymbol && $sDBIDoptionNumber < $sDBIDnewNumber && $sDBIDoptionNumber != '000000') {
@@ -471,7 +471,6 @@ function lovd_fetchDBID ($aData)
             // Query for getting the first available number for the new DBID.
             if (empty($aGenes)) {
                 // No genes, simple query only on TABLE_VARIANTS.
-                // Also, LOVD_plus doesn't like it when chr DBIDs get changed on edits, so stick to chr DBIDs.
                 // 2013-02-28; 3.0-03; By querying the chromosome also we sped up this query from 0.43s to 0.09s when having 1M variants.
                 // NOTE: By adding an index on `VariantOnGenome/DBID` this query time can be reduced to 0.00s because of the LIKE on the DBID field.
                 $sSymbol = 'chr' . $aData['chromosome'];
