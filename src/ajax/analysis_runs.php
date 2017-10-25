@@ -31,10 +31,11 @@
 
 define('ROOT_PATH', '../');
 require ROOT_PATH . 'inc-init.php';
+require ROOT_PATH . 'inc-lib-analyses.php';
 header('Content-type: text/javascript; charset=UTF-8');
 
 // Check for basic format.
-if (PATH_COUNT != 3 || !ctype_digit($_PE[2]) || !in_array(ACTION, array('delete', 'clone'))) {
+if (PATH_COUNT != 3 || !ctype_digit($_PE[2]) || !in_array(ACTION, array('delete', 'clone', 'showGenes'))) {
     die('alert("Error while sending data.");');
 }
 
@@ -276,5 +277,55 @@ if (ACTION == 'delete' && POST) {
     $("#run_' . $nID . '").fadeOut(500, function () { $(this).remove(); });
     ');
     exit;
+}
+
+
+
+
+
+if (ACTION == 'showGenes' && GET) {
+    // Request confirmation.
+    // We do this in two steps, not only because we'd like the user to confirm, but also to prevent CSRF.
+
+    $_SESSION['csrf_tokens']['analysis_run_show_genes'] = md5(uniqid());
+
+
+
+    $sConfig = $_DB->query('SELECT config_json FROM ' . TABLE_ANALYSES_RUN_FILTERS . ' WHERE runid = ? AND filterid = ?', array($nID, 'apply_selected_gene_panels'))->fetchColumn();
+    $aConfig = json_decode($sConfig, true);
+
+    $aGenePanelIDs = array_keys($aConfig['metadata']);
+    $sSelectForm = '<p>These genes were active at the time the analysis was run. These genes may differ from the current list of genes in these gene panels.</p>';
+    $sSelectForm .= '<label>Gene Panel: </label><select id=\'show-gp-genes\'>';
+
+    $sGenes = '';
+    foreach ($aGenePanelIDs as $sGpID) {
+        $aGpDetails = $aConfig['metadata'][$sGpID];
+        $sGenes .= '<div class=\'genes-list\' id=\'genes-'. $sGpID .'\' style=\'display:none; overflow: scroll; max-height: 300px;\'>';
+        $sGenes .= implode(', ', $aGpDetails['genes']);
+        $sGenes .= '</div>';
+        $sSelectForm .= '<option value=\'' . $sGpID . '\'>'. $aGpDetails['name'] .'</option>';
+    }
+    $sSelectForm .= '</select>';
+
+    // Display the form, and put the right buttons in place.
+    $sFormGenes  = '<FORM id=\'analysis_run_clone_form\'><INPUT type=\'hidden\' name=\'csrf_token\' value=\'{{CSRF_TOKEN}}\'>' . $sSelectForm . '<BR><BR>' . $sGenes . '</FORM>';
+    $sFormGenes = str_replace('{{CSRF_TOKEN}}', $_SESSION['csrf_tokens']['analysis_run_show_genes'], $sFormGenes);
+
+    print('
+    $("#analysis_run_dialog").html("' . $sFormGenes . '<BR>");
+
+    // Select the right buttons.
+    $("#analysis_run_dialog").dialog({title: "Gene Panels", buttons: $.extend({}, oButtonClose)});
+    $("#show-gp-genes").change(function() {
+        gpID = $(this).val();
+        $(".genes-list").hide();
+        $("#genes-" + gpID).show();
+    });
+     $("#show-gp-genes").trigger("change");
+    
+    ');
+    exit;
+
 }
 ?>

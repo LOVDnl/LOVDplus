@@ -331,3 +331,13 @@ function lovd_showAnalysisResults (nRunID)
 
     lovd_AJAX_viewListSubmit('CustomVL_AnalysisRunResults_for_I_VE');
 }
+
+
+
+
+
+function lovd_showGenes (nRunID)
+{
+    $.get('ajax/analysis_runs.php/' + nRunID + '?showGenes');
+    console.log(nRunID);
+}

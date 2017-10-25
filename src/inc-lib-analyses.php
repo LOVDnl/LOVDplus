@@ -63,7 +63,7 @@ function getSelectedFilterConfig ($nRunID, $sFilterID)
 
     switch ($sFilterID) {
         case 'apply_selected_gene_panels':
-            return getSelectedGenePanelsByRunID($aConfig);
+            return getSelectedGenePanelsByRunID($aConfig, $nRunID);
             break;
 
         case 'cross_screenings':
@@ -132,7 +132,7 @@ function getSelectedFilterConfig ($nRunID, $sFilterID)
 
 
 
-function getSelectedGenePanelsByRunID ($aConfig)
+function getSelectedGenePanelsByRunID ($aConfig, $nRunID)
 {
     // This function will construct a table of information about the selected gene panels for an analysis.
     global $_DB;
@@ -203,12 +203,13 @@ function getSelectedGenePanelsByRunID ($aConfig)
                     // Format each of the gene panel types into the info table.
                     $sDisplayText = '';
                     $nGenePanelCount = count($aGenePanelIds);
-                    $sToolTip = '<B>' . ucfirst(str_replace('_', '&nbsp;', $sType)) . ($nGenePanelCount > 1? 's' : '') . '</B><BR>';
+                    $sToolTip = '<B>' . ucfirst(str_replace('_', '&nbsp;', $sType)) . ($nGenePanelCount > 1? 's' : '') . '</B>';
+                    $sToolTip .= ' <A onclick="lovd_showGenes(' . $nRunID . ')">Click for details</A><BR>';
 
                     foreach ($aGenePanelIds as $aGenePanelId) {
                         // Add the gene panel name to the tooltip and the text to show. We might shorten the text to show later.
                         $sGpName = (empty($aConfig['metadata'][$aGenePanelId]['name'])? $aGpNames[$aGenePanelId]['name'] : $aConfig['metadata'][$aGenePanelId]['name']);
-                        $sToolTip .= '<A href="gene_panels/' . $aGenePanelId . '">' . str_replace(' ', '&nbsp;', addslashes($sGpName)) . '</A><BR>';
+                        $sToolTip .=  str_replace(' ', '&nbsp;', addslashes($sGpName)) . '<BR>';
                         $sDisplayText .= (!$sDisplayText? '' : ', ') . $sGpName;
                     }
 
