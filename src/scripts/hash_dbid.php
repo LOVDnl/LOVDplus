@@ -4,7 +4,7 @@
  * LEIDEN OPEN VARIATION DATABASE (LOVD)
  *
  * Created     : 2017-06-05
- * Modified    : 2017-02-06
+ * Modified    : 2017-10-26
  * For LOVD+   : 3.0-18
  *
  * Copyright   : 2004-2017 Leiden University Medical Center; http://www.LUMC.nl/
@@ -114,7 +114,7 @@ print('Rows: ' . $nRow . "\n");
 print('Batches: ' . $nBatches . "\n");
 
 // TODO: WARNING! UPDATE THIS QUERY WHENEVER lovd_fetchDBID() IS UPDATED!
-$sSQLUpdateDBID = 'UPDATE '  . TABLE_VARIANTS . ' SET `VariantOnGenome/DBID` = SHA1(CONCAT("' . $_CONF['refseq_build'] . '", chromosome, ".g.", REPLACE(REPLACE(REPLACE(`VariantOnGenome/DNA`, "(", ""), ")", ""), "?", "") )) WHERE id IN ';
+$sSQLUpdateDBID = 'UPDATE '  . TABLE_VARIANTS . ' SET `VariantOnGenome/DBID` = SHA1(CONCAT("' . $_CONF['refseq_build'] . ':chr", chromosome, ":", REPLACE(REPLACE(REPLACE(`VariantOnGenome/DNA`, "(", ""), ")", ""), "?", "") )) WHERE id IN ';
 $zUpdateDBIDQuery = $_DB->prepare($sSQLUpdateDBID . ' (?' . str_repeat(',?', $nBatchSize-1) . ')');
 $nUpdated = 0;
 for ($i=0; $i<$nBatches; $i++) {
