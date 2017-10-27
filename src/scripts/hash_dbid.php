@@ -17,7 +17,7 @@
 
 define('ROOT_PATH', str_replace('\\', '/', dirname(__FILE__) . '/../'));
 define('FORMAT_ALLOW_TEXTPLAIN', true);
-
+date_default_timezone_set('Australia/Melbourne');
 
 $_GET['format'] = 'text/plain';
 // To prevent notices when running inc-init.php.
@@ -114,25 +114,14 @@ print('Rows: ' . $nRow . "\n");
 print('Batches: ' . $nBatches . "\n");
 
 // TODO: WARNING! UPDATE THIS QUERY WHENEVER lovd_fetchDBID() IS UPDATED!
-$sSQLUpdateDBID = 'UPDATE '  . TABLE_VARIANTS . ' SET `VariantOnGenome/DBID` = SHA1(CONCAT("' . $_CONF['refseq_build'] . ':chr", chromosome, ":", REPLACE(REPLACE(REPLACE(`VariantOnGenome/DNA`, "(", ""), ")", ""), "?", "") )) WHERE id IN ';
-$zUpdateDBIDQuery = $_DB->prepare($sSQLUpdateDBID . ' (?' . str_repeat(',?', $nBatchSize-1) . ')');
-$nUpdated = 0;
-for ($i=0; $i<$nBatches; $i++) {
-    $sSQL = 'SELECT id FROM '  . TABLE_VARIANTS . ' WHERE `VariantOnGenome/DBID` REGEXP "' . PATTERN_DBID . '" ORDER BY `VariantOnGenome/DBID` LIMIT ' . $nBatchSize;
-    $aVariantIds = $_DB->query($sSQL)->fetchAllColumn();
+$sSQLUpdateDBID = 'UPDATE '  . TABLE_VARIANTS . ' SET `VariantOnGenome/DBID` = SHA1(CONCAT("' . $_CONF['refseq_build'] . ':chr", chromosome, ":", REPLACE(REPLACE(REPLACE(`VariantOnGenome/DNA`, "(", ""), ")", ""), "?", "") )) 
+                   WHERE `VariantOnGenome/DBID` REGEXP "'. PATTERN_DBID . '" 
+                   ORDER BY `VariantOnGenome/DBID` 
+                   LIMIT ' . $nBatchSize;
+$zUpdateDBIDQuery = $_DB->prepare($sSQLUpdateDBID);
 
-    if (count($aVariantIds) > 0) {
-        // Update DBID
 
-        // The prepare statement needs to be modified if number of variants is smaller than batch size.
-        $zFinalQuery = $zUpdateDBIDQuery;
-        if (count($aVariantIds) !== $nBatchSize) {
-            $zCustomisedQuery = $_DB->prepare($sSQLUpdateDBID . ' (?' . str_repeat(',?', count($aVariantIds)-1) . ')');
-            $zFinalQuery = $zCustomisedQuery;
-        }
-        $zFinalQuery->execute($aVariantIds);
-
-        $nUpdated += count($aVariantIds);
-        print(date('Y-m-d H:i:s') . ": " . $nUpdated . " DBIDs updated!\n");
-    }
+for ($batchNum=1; $batchNum<=$nBatches; $batchNum++) {
+    $zUpdateDBIDQuery->execute();
+    print(date('Y-m-d H:i:s') . ": " . $batchNum . " batches of ". $nBatchSize ." updated!\n");
 }
