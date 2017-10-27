@@ -17,7 +17,6 @@
 
 define('ROOT_PATH', str_replace('\\', '/', dirname(__FILE__) . '/../'));
 define('FORMAT_ALLOW_TEXTPLAIN', true);
-date_default_timezone_set('Australia/Melbourne');
 
 $_GET['format'] = 'text/plain';
 // To prevent notices when running inc-init.php.
