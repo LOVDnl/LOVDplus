@@ -8,7 +8,8 @@
  * For LOVD+   : 3.0-18
  *
  * Copyright   : 2004-2017 Leiden University Medical Center; http://www.LUMC.nl/
- * Programmer  : Ivo F.A.C. Fokkema <I.F.A.C.Fokkema@LUMC.nl>
+ * Programmers : Juny Kesumadewi <juny.kesumadewi@unimelb.edu.au>
+ *               Ivo F.A.C. Fokkema <I.F.A.C.Fokkema@LUMC.nl>
  *
  *************/
 
@@ -113,7 +114,7 @@ print('Rows: ' . $nRow . "\n");
 print('Batches: ' . $nBatches . "\n");
 
 // TODO: WARNING! UPDATE THIS QUERY WHENEVER lovd_fetchDBID() IS UPDATED!
-$sSQLUpdateDBID = 'UPDATE '  . TABLE_VARIANTS . ' SET `VariantOnGenome/DBID` = SHA1(CONCAT("' . $_CONF['refseq_build'] . ':chr", chromosome, ":", REPLACE(REPLACE(REPLACE(`VariantOnGenome/DNA`, "(", ""), ")", ""), "?", "") )) 
+$sSQLUpdateDBID = 'UPDATE '  . TABLE_VARIANTS . ' SET `VariantOnGenome/DBID` = SHA1(CONCAT("' . $_CONF['refseq_build'] . '.chr", chromosome, ":", REPLACE(REPLACE(REPLACE(`VariantOnGenome/DNA`, "(", ""), ")", ""), "?", "") )) 
                    WHERE `VariantOnGenome/DBID` REGEXP "'. PATTERN_DBID . '" 
                    ORDER BY `VariantOnGenome/DBID` 
                    LIMIT ' . $nBatchSize;
