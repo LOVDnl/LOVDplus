@@ -115,13 +115,13 @@ print('Batches: ' . $nBatches . "\n");
 
 // TODO: WARNING! UPDATE THIS QUERY WHENEVER lovd_fetchDBID() IS UPDATED!
 $sSQLUpdateDBID = 'UPDATE '  . TABLE_VARIANTS . ' SET `VariantOnGenome/DBID` = SHA1(CONCAT("' . $_CONF['refseq_build'] . '.chr", chromosome, ":", REPLACE(REPLACE(REPLACE(`VariantOnGenome/DNA`, "(", ""), ")", ""), "?", "") )) 
-                   WHERE `VariantOnGenome/DBID` REGEXP "'. PATTERN_DBID . '" 
+                   WHERE `VariantOnGenome/DBID` REGEXP ? 
                    ORDER BY `VariantOnGenome/DBID` 
                    LIMIT ' . $nBatchSize;
 $zUpdateDBIDQuery = $_DB->prepare($sSQLUpdateDBID);
 
 
 for ($batchNum=1; $batchNum<=$nBatches; $batchNum++) {
-    $zUpdateDBIDQuery->execute();
+    $zUpdateDBIDQuery->execute(array(PATTERN_DBID));
     print(date('Y-m-d H:i:s') . ": " . $batchNum . " batches of ". $nBatchSize ." updated!\n");
 }
