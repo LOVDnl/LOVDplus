@@ -4,7 +4,7 @@
  * LEIDEN OPEN VARIATION DATABASE (LOVD)
  *
  * Created     : 2017-06-05
- * Modified    : 2017-10-26
+ * Modified    : 2017-11-03
  * For LOVD+   : 3.0-18
  *
  * Copyright   : 2004-2017 Leiden University Medical Center; http://www.LUMC.nl/
@@ -99,29 +99,31 @@ print(date('Y-m-d H:i:s') . ": Finished updating summary annotation log entries!
 
 
 
-// Final step: Update VariantOnGenome/DBID in TABLE_VARIANTS
-$sSQL = 'SELECT COUNT(id) AS num FROM ' . TABLE_VARIANTS . ' WHERE `VariantOnGenome/DBID` REGEXP ?';
-$nRow = $_DB->query($sSQL, array(PATTERN_DBID))->fetchColumn();
+// Final step: Update VariantOnGenome/DBID in TABLE_VARIANTS.
+// The LIKE "ch%" makes sure we don't match any SHA1 results, as that cannot include an 'h'.
+$sSQL = 'SELECT COUNT(id) AS num FROM ' . TABLE_VARIANTS . ' WHERE `VariantOnGenome/DBID` LIKE "ch%"';
+$nRow = $_DB->query($sSQL, array())->fetchColumn();
 
 if (!$nRow) {
     print(date('Y-m-d H:i:s') . ": No DBIDs to update!\n");
 }
 
-$nBatchSize = 1000;
+$nBatchSize = 10000;
 $nBatches = ceil($nRow/$nBatchSize);
 
 print('Rows: ' . $nRow . "\n");
 print('Batches: ' . $nBatches . "\n");
 
 // TODO: WARNING! UPDATE THIS QUERY WHENEVER lovd_fetchDBID() IS UPDATED!
-$sSQLUpdateDBID = 'UPDATE '  . TABLE_VARIANTS . ' SET `VariantOnGenome/DBID` = SHA1(CONCAT("' . $_CONF['refseq_build'] . '.chr", chromosome, ":", REPLACE(REPLACE(REPLACE(`VariantOnGenome/DNA`, "(", ""), ")", ""), "?", "") )) 
-                   WHERE `VariantOnGenome/DBID` REGEXP ? 
-                   ORDER BY `VariantOnGenome/DBID` 
+$sSQLUpdateDBID = 'UPDATE '  . TABLE_VARIANTS . ' SET `VariantOnGenome/DBID` = SHA1(CONCAT("' . $_CONF['refseq_build'] . '.chr", chromosome, ":", REPLACE(REPLACE(REPLACE(`VariantOnGenome/DNA`, "(", ""), ")", ""), "?", ""))) 
+                   WHERE `VariantOnGenome/DBID` LIKE "ch%"
                    LIMIT ' . $nBatchSize;
 $zUpdateDBIDQuery = $_DB->prepare($sSQLUpdateDBID);
 
 
-for ($batchNum=1; $batchNum<=$nBatches; $batchNum++) {
-    $zUpdateDBIDQuery->execute(array(PATTERN_DBID));
-    print(date('Y-m-d H:i:s') . ": " . $batchNum . " batches of ". $nBatchSize ." updated!\n");
+for ($nBatch = 1; $nBatch <= $nBatches; $nBatch++) {
+    $zUpdateDBIDQuery->execute();
+    print(date('Y-m-d H:i:s') . ': ' . $nBatch . ' batches of ' . $nBatchSize . " updated!\n");
+    flush(); // May not actually result in output, depends on some other factors, too.
 }
+?>
