@@ -261,7 +261,6 @@ if (!ACTION && (empty($_PE[1]) || preg_match('/^chr[0-9A-Z]{1,2}$/', $_PE[1]))) 
 
 
 
-// FIXME: This view shows only *one* variant. This view does not do what it promises (showing all observations of a certain variant).
 if (PATH_COUNT == 3 && $_PE[1] == 'DBID' && !empty($_GET['search_variantid']) && !ACTION) {
     // URL: /variants/DBID/chr_000001?search_variantid=0000000001
     // View all genomic variant entries with the same DBID, but only if the correct variant ID has been given.
@@ -277,12 +276,12 @@ if (PATH_COUNT == 3 && $_PE[1] == 'DBID' && !empty($_GET['search_variantid']) &&
     require ROOT_PATH . 'class/object_custom_viewlists.mod.php';
     $_DATA = new LOVD_CustomViewListMOD(array('VariantOnGenome', 'VariantOnTranscript', 'Screening', 'Individual'));
 
+    $_GET['search_VariantOnGenome/DBID'] = '="' . $sDBID . '"';
     $_DATA->viewList('CustomVL_ObsCounts');
 
     $_T->printFooter();
     exit;
 }
-
 
 
 
@@ -315,7 +314,6 @@ if (PATH_COUNT == 3 && $_PE[1] == 'DBID' && !ACTION) {
     $_T->printFooter();
     exit;
 }
-
 
 
 
