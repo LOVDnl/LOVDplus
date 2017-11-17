@@ -70,6 +70,7 @@ if ($sCalcVersionFiles != $sCalcVersionDB) {
     $aUpdateMessages =
         array(
             '3.0-17m' => array(), // Placeholder for an LOVD+ message, defined below.
+            '3.0-17n' => array(), // Placeholder for an LOVD+ message, defined below.
         );
 
     // LOVD+ messages should be built up separately, so that LOVDs won't show them.
@@ -79,6 +80,10 @@ if ($sCalcVersionFiles != $sCalcVersionDB) {
             'stop',
             '100%',
             'lovd_openWindow(\'scripts/hash_dbid.php\')',
+        );
+        $aUpdateMessages['3.0-17n'] = array(
+            'If you have a cron job set up for the auto import feature, grepping for lines starting with a colon (:), then turn off this grep from now on. Output no longer is prefixed by a colon, and grepping is no longer needed because no HTML is output by the script anymore. LOVD now defaults to text/plain output for the auto importer, so you also don\'t need to request it anymore in the URL, either. See the updated INSTALL.txt for the new suggested cron job to use.',
+            'important',
         );
     }
 

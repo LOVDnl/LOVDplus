@@ -7,9 +7,9 @@
  * Modified    : 2016-10-17
  * For LOVD    : 3.0-18
  *
- * Copyright   : 2004-2016 Leiden University Medical Center; http://www.LUMC.nl/
- * Programmers : Ing. Ivo F.A.C. Fokkema <I.F.A.C.Fokkema@LUMC.nl>
- *               Msc. Daan Asscheman <D.Asscheman@LUMC.nl>
+ * Copyright   : 2004-2017 Leiden University Medical Center; http://www.LUMC.nl/
+ * Programmers : Ivo F.A.C. Fokkema <I.F.A.C.Fokkema@LUMC.nl>
+ *               Daan Asscheman <D.Asscheman@LUMC.nl>
  *               M. Kroon <m.kroon@lumc.nl>
  *
  *
@@ -54,10 +54,19 @@ if (ACTION == 'schedule' && PATH_COUNT == 1) {
     // Require manager clearance.
     lovd_requireAUTH(LEVEL_MANAGER);
 
+    // This feature requires you to have the data files and the archive settings configured.
+    if (empty($_INI['paths']['data_files']) || empty($_INI['paths']['data_files_archive'])) {
+        lovd_showInfoTable('To use this feature, you will need to configure both the "data_files" and "data_files_archive" paths.', 'stop');
+        $_T->printFooter();
+        exit;
+    }
+
     // Loop through the files in the dir and find importable files.
     $h = @opendir($_INI['paths']['data_files']);
     if (!$h) {
         lovd_showInfoTable('Can\'t open directory: ' . $_INI['paths']['data_files'], 'stop');
+        $_T->printFooter();
+        exit;
     }
 
     // To see if the file has already been imported, fetch a list of imported individuals.
@@ -68,6 +77,8 @@ if (ACTION == 'schedule' && PATH_COUNT == 1) {
         array(),
         array(),
     );
+
+    // Read out directory and store files in the correct array.
     while (($sFile = readdir($h)) !== false) {
         if (preg_match('/^(Child|Patient)_(\d+).total.data.lovd$/', $sFile, $aRegs)) {
             // Match!
@@ -82,8 +93,8 @@ if (ACTION == 'schedule' && PATH_COUNT == 1) {
     }
 
     if (!$aFiles) {
-        // No files found!
-        lovd_showInfoTable('No files found! Normally this might mean trouble; I should find at least some files that are already imported... Right?', 'question');
+        // No files found, and nothing scheduled!
+        lovd_showInfoTable('No files found, and nothing scheduled!<BR>Please check the documentation to see how to import LOVD files directly from the server.', 'information');
         $_T->printFooter();
         exit;
     }
@@ -104,7 +115,7 @@ if (ACTION == 'schedule' && PATH_COUNT == 1) {
             if ($nValue && isset($aFiles[0][$sFile])) {
                 // Process this file, it's present indeed and not yet imported.
                 if ($_DB->query('INSERT IGNORE INTO ' . TABLE_SCHEDULED_IMPORTS . ' (filename, scheduled_by, scheduled_date) VALUES (?, ?, NOW())', array($sFile, $_AUTH['id']))->rowCount()) {
-                    // Scheduled successfully.
+                    // Scheduled successfully, didn't exist yet.
                     $nScheduled ++;
                     lovd_writeLog('Event', LOG_EVENT, 'Scheduled ' . $sFile . ' for import');
                 }
@@ -181,12 +192,15 @@ if (ACTION == 'schedule' && PATH_COUNT == 1) {
 
 
 
-if (ACTION == 'autoupload_scheduled_file' && PATH_COUNT == 1 && FORMAT == 'text/plain') {
-    // This script will be called from localhost, and the output will be parsed.
-    // That is the easiest I think, because then at this point I don't need to
-    // change the HTML output to something else. All output that should go
-    // directly through the parser, should be prepended with a colon (:).
+if (ACTION == 'autoupload_scheduled_file' && PATH_COUNT == 1) {
+    // This URL forces FORMAT to be text/plain.
+    // All unneeded output will be prevented.
     define('FORMAT_ALLOW_TEXTPLAIN', true); // To allow automatic data loading.
+
+    // This feature requires you to have the data files and the archive settings configured.
+    if (empty($_INI['paths']['data_files']) || empty($_INI['paths']['data_files_archive'])) {
+        die('Error: To use this feature, you will need to configure both the "data_files" and "data_files_archive" paths.');
+    }
 
     // If we have nothing to do, let's stop.
     if (!$_DB->query('SELECT COUNT(*) FROM ' . TABLE_SCHEDULED_IMPORTS . ' WHERE in_progress = 0')->fetchColumn()) {
@@ -196,25 +210,23 @@ if (ACTION == 'autoupload_scheduled_file' && PATH_COUNT == 1 && FORMAT == 'text/
     // First, check if the database is free, and not currently uploading anything.
     // Instead of monitoring the number of connections, I really want to check if something is uploading already.
     // We'll ignore the possibility of a file being manually uploaded. We just check the schedule.
-    // We'll check for active uploads started more than an hour ago.
+    // We'll check for active uploads started later than an hour ago, with no errors filled in.
     $sMaxDate = date('Y-m-d H:i:s', time() - (60*60));
-    if ($_DB->query('SELECT COUNT(*) FROM ' . TABLE_SCHEDULED_IMPORTS . ' WHERE in_progress = 1 AND processed_date >= ?', array($sMaxDate))->fetchColumn()) {
-        die(':Error: Last file is still being imported...' . "\n");
+    if ($_DB->query('SELECT COUNT(*) FROM ' . TABLE_SCHEDULED_IMPORTS . ' WHERE in_progress = 1 AND processed_date >= ? AND process_errors IS NULL', array($sMaxDate))->fetchColumn()) {
+        die('Error: Last file is still being imported...' . "\n");
     }
 
     // Begin transaction, take rows from the schedule while write locking them, until we find a scheduled file that we can find.
     // Should be the first, of course. But I'll check anyway, to nicely handle the error message.
     $_DB->beginTransaction();
     $sFile = '';
-    for ($i = 0; $sFile = $_DB->query('SELECT filename FROM ' . TABLE_SCHEDULED_IMPORTS . ' WHERE in_progress = 0 ORDER BY scheduled_date ASC, filename LIMIT ' . $i . ', 1 FOR UPDATE')->fetchColumn(); $i++) {
+    for ($i = 0; $sFile = $_DB->query('SELECT filename FROM ' . TABLE_SCHEDULED_IMPORTS . ' WHERE in_progress = 0 ORDER BY priority DESC, scheduled_date, filename LIMIT ' . $i . ', 1 FOR UPDATE')->fetchColumn(); $i++) {
         if (!is_readable($_INI['paths']['data_files'] . '/' . $sFile)) {
-            print(':Error: ' . $sFile . ' not found...' . "\n");
+            print('Warning: ' . $sFile . ' not found...' . "\n");
         } else {
-            // FIXME: Perhaps here we could try *some* sanity check if the file seems OK. Of course it should be, but you never know.
-            //   Errors downstream are hard to catch, and will block the importing for at least an hour.
             // Select this file. Since filename is primary key, we don't need more stuff in the WHERE.
             if (!$_DB->query('UPDATE ' . TABLE_SCHEDULED_IMPORTS . ' SET in_progress = 1, processed_by = 0, processed_date = NOW() WHERE filename = ?', array($sFile))->rowCount()) {
-                die(':Error: Can not obtain processing lock on file ' . $sFile . '.' . "\n");
+                die('Error: Can not obtain processing lock on file ' . $sFile . '.' . "\n");
             }
             // We selected our file. Stop going through the list.
             break;
@@ -222,9 +234,9 @@ if (ACTION == 'autoupload_scheduled_file' && PATH_COUNT == 1 && FORMAT == 'text/
     }
     $_DB->commit();
 
-    // This should not happen (we already checked if there was something to do), but just in case...
+    // This can happen when scheduled files are not found.
     if (!$sFile) {
-        die(':Error: Failed to retrieve a filename from the database.' . "\n");
+        die('Error: Failed to retrieve a filename from the database.' . "\n");
     }
 
     // Load necessary authorisation.
@@ -248,10 +260,10 @@ if (ACTION == 'autoupload_scheduled_file' && PATH_COUNT == 1 && FORMAT == 'text/
                 )
         );
 
-    print(':Preparing to upload ' . $sFile . ' into database...' . "\n" .
-          ':Current time: ' . date('Y-m-d H:i:s.') . "\n");
+    print('Preparing to upload ' . $sFile . ' into database...' . "\n" .
+          'Current time: ' . date('Y-m-d H:i:s.') . "\n\n");
 
-    // If we're running automatically, ignore user aborts (dying caller script).
+    // Since we're running automatically, ignore user aborts (dying caller script).
     ignore_user_abort(true);
 }
 
@@ -488,7 +500,7 @@ if (POST || $_FILES) { // || $_FILES is in use for the automatic loading of file
         lovd_errorAdd('import', 'There was a problem with the file transfer. Please try again. The file cannot be larger than ' . round($nMaxSize/pow(1024, 2), 1) . ' MB' . ($nMaxSize == $nMaxSizeLOVD? '' : ', due to restrictions on this server') . '.');
 
     } elseif ($_FILES['import']['error'] == 4 || !$_FILES['import']['size']) {
-        lovd_errorAdd('import', 'Please select a file to upload.');
+        lovd_errorAdd('import', 'Please select a non-empty file to upload.');
 
     } elseif ($_FILES['import']['size'] > $nMaxSize) {
         lovd_errorAdd('import', 'The file cannot be larger than ' . round($nMaxSize/pow(1024, 2), 1) . ' MB' . ($nMaxSize == $nMaxSizeLOVD? '' : ', due to restrictions on this server') . '.');
@@ -648,6 +660,8 @@ if (POST || $_FILES) { // || $_FILES is in use for the automatic loading of file
                 continue;
             }
 
+
+
             if (substr(ltrim($sLine, '"'), 0, 1) == '#') {
                 if (preg_match('/^#\s*([a-z_]+)\s*=\s*(.+)$/', ltrim($sLine, '"'), $aRegs)) {
                     // Import flag (setting).
@@ -670,13 +684,15 @@ if (POST || $_FILES) { // || $_FILES is in use for the automatic loading of file
                         // If we had at least one unknown column in the previous section, we will mention in the output the number of values gone lost.
                         // The column name has already been written to the output, so we should simply add command to append the number of lost values.
                         if (isset($aUnknownCols) && count($aUnknownCols)) {
-                            print('<SCRIPT type="text/javascript">' . "\n" .
-                                  '  var sMessage = $("#lovd_parser_progress_message_done").html();' . "\n");
-                            foreach ($aLostValues as $sCol => $n) {
-                                print('  sMessage = sMessage.replace(/' . preg_quote($sCol, '/') . '/, "' . $sCol . ' (lost ' . $n . ' value' . ($n == 1? '' : 's') . ')");' . "\n");
+                            if (FORMAT == 'text/html') {
+                                print('<SCRIPT type="text/javascript">' . "\n" .
+                                      '  var sMessage = $("#lovd_parser_progress_message_done").html();' . "\n");
+                                foreach ($aLostValues as $sCol => $n) {
+                                    print('  sMessage = sMessage.replace(/' . preg_quote($sCol, '/') . '/, "' . $sCol . ' (lost ' . $n . ' value' . ($n == 1? '' : 's') . ')");' . "\n");
+                                }
+                                print('  $("#lovd_parser_progress_message_done").html(sMessage);' . "\n" .
+                                      '</SCRIPT>' . "\n");
                             }
-                            print('  $("#lovd_parser_progress_message_done").html(sMessage);' . "\n" .
-                                  '</SCRIPT>');
                             $aUnknownCols = $aLostValues = array(); // 2013-10-14; 3.0-08; Reset, because it's normally reset when parsing the next section's columns, which might not be there.
                             flush();
                         }
@@ -1931,14 +1947,14 @@ if (POST || $_FILES) { // || $_FILES is in use for the automatic loading of file
 
             // If we had at least one unknown column in the previous section, we will mention in the output the number of values gone lost.
             // The column name has already been written to the output, so we should simply add command to append the number of lost values.
-            if (isset($aUnknownCols) && count($aUnknownCols)) {
+            if (isset($aUnknownCols) && count($aUnknownCols) && FORMAT == 'text/html') {
                 print('<SCRIPT type="text/javascript">' . "\n" .
                       '  var sMessage = $("#lovd_parser_progress_message_done").html();' . "\n");
                 foreach ($aLostValues as $sCol => $n) {
                     print('  sMessage = sMessage.replace(/' . preg_quote($sCol, '/') . '/, "' . $sCol . ' (lost ' . $n . ' value' . ($n == 1? '' : 's') . ')");' . "\n");
                 }
                 print('  $("#lovd_parser_progress_message_done").html(sMessage);' . "\n" .
-                      '</SCRIPT>');
+                      '</SCRIPT>' . "\n");
                 flush();
             }
         }
@@ -2014,7 +2030,11 @@ if (POST || $_FILES) { // || $_FILES is in use for the automatic loading of file
         require ROOT_PATH . 'inc-lib-actions.php';
         if (!lovd_error() && $nDataTotal) {
             define('LOG_EVENT', 'Import');
-            print('<BR>');
+            if (FORMAT == 'text/html') {
+                print('<BR>');
+            } else {
+                print("\n");
+            }
             $_BAR[] = new ProgressBar('sql', 'Applying changes...');
             $nEntry = 0;
             $bError = false;
@@ -2258,7 +2278,6 @@ if (!lovd_isCurator($_SESSION['currdb'])) {
 *///////////////////////////////////////////////////////////////////////////////
                     $_BAR[1]->setProgress(($nEntry/$nDataTotal)*100);
                 }
-
                 unset($aData); // break the reference with the last element.
 
                 // Done with all this section!
@@ -2389,12 +2408,18 @@ if (!lovd_isCurator($_SESSION['currdb'])) {
 
         if (!lovd_error() && !$nDataTotal) {
             if ($sMode == 'update')
-                lovd_showInfoTable('No entries found that can be updated via the import file.', 'stop');
+                $sMessage = 'No entries found that can be updated via the import file.';
             if ($sMode == 'insert') {
-                lovd_showInfoTable('No entries found that need to be imported in the database. Either your uploaded file contains no variants, or all entries are already in the database.', 'stop');
+                $sMessage = 'No entries found that need to be imported in the database. Either your uploaded file contains no variants, or all entries are already in the database.';
             }
-            $_T->printFooter();
-            exit;
+            lovd_showInfoTable($sMessage, 'stop');
+            if (ACTION == 'autoupload_scheduled_file') {
+                // We are to nicely return this error message, so it can be stored.
+                lovd_errorAdd('', $sMessage);
+            } else {
+                $_T->printFooter();
+                exit;
+            }
         }
     }
 
@@ -2403,6 +2428,21 @@ if (!lovd_isCurator($_SESSION['currdb'])) {
     if (in_array(ACTION, array_keys($aModes))) {
         $_POST['mode'] = ACTION;
     }
+}
+
+
+
+if (ACTION == 'autoupload_scheduled_file') {
+    // If we get here, we tried to upload a file automatically, but something failed.
+    // Display the error messages and store them in the database. Then try again.
+    $sErrors = '';
+    foreach ($_ERROR['messages'] as $sMessage) {
+        if ($sMessage) {
+            $sErrors .= (!$sErrors? '' : "\n") . html_entity_decode(strip_tags($sMessage));
+        }
+    }
+    $_DB->query('UPDATE ' . TABLE_SCHEDULED_IMPORTS . ' SET process_errors = ? WHERE filename = ?', array($sErrors, $sFile));
+    die('Errors while processing file:' . "\n" . $sErrors);
 }
 
 
