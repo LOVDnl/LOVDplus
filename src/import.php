@@ -148,19 +148,26 @@ if (ACTION == 'schedule' && PATH_COUNT == 1) {
 
     // Process POST if present.
     $nScheduled = 0;
-    if (POST && $_POST) {
-        // Loop through variables, find them in $aFiles[0], mark them in the database as scheduled, reload page.
-        foreach ($_POST as $sFile => $nValue) {
-            // Even though most (all?) browsers just forward the checkboxes that have been checked, I'm checking the value anyways.
-            // I don't really care much about the value, it just needs to resolve to (bool) true.
-            // Because PHP is replacing dots in the variable name (makes sense in a way, but this is a key value, but well), I need to fix the file name:
-            $sFile = preg_replace('/_([a-z])/', ".$1", $sFile); // Put dots only when an underscore is followed by a text character.
-            if ($nValue && isset($aFiles[0][$sFile])) {
+    if (POST && !empty($_POST['files_to_schedule'])) {
+        // We can't use the file names as keys, as PHP replaces dots with underscores and then we can't find the files reliably anymore.
+        // Loop through variables, find them in $aFiles[0], mark them in the database as scheduled.
+        foreach ($_POST['files_to_schedule'] as $sFile) {
+            if (isset($aFiles[0][$sFile])) {
                 // Process this file, it's present indeed and not yet imported.
                 if ($_DB->query('INSERT IGNORE INTO ' . TABLE_SCHEDULED_IMPORTS . ' (filename, scheduled_by, scheduled_date) VALUES (?, ?, NOW())', array($sFile, $_AUTH['id']))->rowCount()) {
                     // Scheduled successfully, didn't exist yet.
                     $nScheduled ++;
                     lovd_writeLog('Event', LOG_EVENT, 'Scheduled ' . $sFile . ' for import');
+
+                    // Now, to facilitate proper sorting, refresh the information in the files array.
+                    // FIXME: This assumes a priority of 0 (stored as 9); we need to change this when we implement priority scheduling.
+                    $aFiles[0][$sFile] = '0,9,0000-00-00 00:00:00,' . date('Y-m-d H:i:s') . substr($aFiles[0][$sFile], 43);
+
+                    // Also, to display statistics, load the file's info.
+                    // This includes the filename field, that we usually don't have, but whatever.
+                    $zScheduledFiles[$sFile] = $_DB->query('SELECT sf.*, u.name AS scheduled_by_name
+                                                            FROM ' . TABLE_SCHEDULED_IMPORTS . ' AS sf LEFT OUTER JOIN ' . TABLE_USERS . ' AS u ON (sf.scheduled_by = u.id)
+                                                            WHERE sf.filename = ?', array($sFile))->fetchAssoc();
                 }
             }
         }
@@ -223,7 +230,7 @@ if (ACTION == 'schedule' && PATH_COUNT == 1) {
                     // Not imported yet, can be scheduled.
                     print("\n" .
                           '                <TR class="data" style="cursor : pointer;" onclick="if ($(this).find(\':checkbox\').prop(\'checked\')) { $(this).find(\':checkbox\').attr(\'checked\', false); $(this).find(\'img\').hide(); $(this).removeClass(\'colGreen\'); } else { $(this).find(\':checkbox\').attr(\'checked\', true);  $(this).find(\'img\').show(); $(this).addClass(\'colGreen\'); }">
-                  <TD width="30" style="text-align : center;"><INPUT type="checkbox" name="' . $sFile . '" value="1" style="display : none;"><IMG src="gfx/check.png" alt="Import" width="16" height="16" style="display : none;"></TD>');
+                  <TD width="30" style="text-align : center;"><INPUT type="checkbox" name="files_to_schedule[]" value="' . $sFile . '" style="display : none;"><IMG src="gfx/check.png" alt="Import" width="16" height="16" style="display : none;"></TD>');
                 }
             }
             $sInformationHTML = ($bUnscheduled? '' : '
