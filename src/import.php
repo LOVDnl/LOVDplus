@@ -69,30 +69,73 @@ if (ACTION == 'schedule' && PATH_COUNT == 1) {
         exit;
     }
 
-    // To see if the file has already been imported, fetch a list of imported individuals.
-    $aImportedIDs = $_DB->query('SELECT `Individual/Lab_ID`, 1 FROM ' . TABLE_INDIVIDUALS)->fetchAllCombine();
+    // Fetch all info from the database, for annotation and error reporting.
+    // This will group by filename.
+    $zScheduledFiles = $_DB->query('SELECT sf.*, u.name AS scheduled_by_name
+                                    FROM ' . TABLE_SCHEDULED_IMPORTS . ' AS sf LEFT OUTER JOIN ' . TABLE_USERS . ' AS u ON (sf.scheduled_by = u.id)
+                                    ORDER BY (sf.processed_date IS NOT NULL) DESC, sf.priority DESC, sf.processed_date, sf.scheduled_date, sf.filename')
+                           ->fetchAllGroupAssoc();
 
-    // [0/1] indicates imported no/yes, second level [filename] = mod_time.
+    // [0/1] indicates processed no/yes.
+    // Files in format [filename] = sort_code (unscheduled(0|1), reverse_priority(0-9), processed_date, scheduled_date, file_timestamp).
+    // NOTE: If you change the sort code, be sure to update this comment, the code that builds it, the code the fills in the orphaned database entries, and the scheduling part.
     $aFiles = array(
         array(),
         array(),
     );
 
     // Read out directory and store files in the correct array.
+    $nFilesSchedulable = 0; // Keeping track of how many files on disk are not scheduled yet.
     while (($sFile = readdir($h)) !== false) {
-        if (preg_match('/^(Child|Patient)_(\d+).total.data.lovd$/', $sFile, $aRegs)) {
-            // Match!
-            $sFileID = $aRegs[1] . '_' . $aRegs[2];
+        if (preg_match('/(^LOVD_API_submission.+|.total.data).lovd$/', $sFile, $aRegs)) {
+            // This should be an importable file.
+            $bScheduled = isset($zScheduledFiles[$sFile]);
+            if ($bScheduled) {
+                $bProcessed = (int) $zScheduledFiles[$sFile]['in_progress'];
+                $nPriority = $zScheduledFiles[$sFile]['priority'];
+                $sProcessedDate = (!$zScheduledFiles[$sFile]['processed_date']? '0000-00-00 00:00:00' : $zScheduledFiles[$sFile]['processed_date']);
+                $sScheduledDate = $zScheduledFiles[$sFile]['scheduled_date'];
+            } else {
+                $bProcessed = 0;
+                $nPriority = 0;
+                $sProcessedDate = '0000-00-00 00:00:00';
+                $sScheduledDate = '0000-00-00 00:00:00';
+            }
+            $tFileModified = filemtime($_INI['paths']['data_files'] . '/' . $sFile);
 
-            // Get mod time.
-            $tFile = filemtime($_INI['paths']['data_files'] . '/' . $sFile);
+            // Build the sorting code by concatenating a few variables.
+            $sSorting = '';
+            // Scheduled files should go on top.
+            $sSorting .= (int) !$bScheduled . ',';
+            // Then, priority samples should go on top.
+            $sSorting .= (9 - $nPriority) . ',';
+            // Then, sort on date processed.
+            $sSorting .= $sProcessedDate . ',';
+            // Then, sort on date scheduled.
+            $sSorting .= $sScheduledDate . ',';
+            // Then, sort on the file's timestamp.
+            $sSorting .= date('Y-m-d H:i:s', $tFileModified);
 
             // Store file in the files array.
-            $aFiles[isset($aImportedIDs[$sFileID])][$sFile] = $tFile;
+            $aFiles[$bProcessed][$sFile] = $sSorting;
+
+            $nFilesSchedulable += (int) !$bScheduled;
         }
     }
 
-    if (!$aFiles) {
+    // To make sure we see entries where the file is gone, but the entry persists in the schedule, add all scheduled files that are not found.
+    foreach ($zScheduledFiles as $sFile => $zScheduledFile) {
+        if (!isset($aFiles[0][$sFile]) && !isset($aFiles[1][$sFile])) {
+            $aFiles[1][$sFile] =
+                '0,' .
+                (9 - $zScheduledFile['priority']) . ',' .
+                (!$zScheduledFile['processed_date']? '0000-00-00 00:00:00' : $zScheduledFile['processed_date']) . ',' .
+                 $zScheduledFile['scheduled_date'] . ',' .
+                 $sFile;
+        }
+    }
+
+    if (!$zScheduledFiles && !$aFiles[0] && !$aFiles[1]) {
         // No files found, and nothing scheduled!
         lovd_showInfoTable('No files found, and nothing scheduled!<BR>Please check the documentation to see how to import LOVD files directly from the server.', 'information');
         $_T->printFooter();
@@ -127,46 +170,55 @@ if (ACTION == 'schedule' && PATH_COUNT == 1) {
 
 
 
-    arsort($aFiles[0]); // RSort importable files, newest files first, keeping indices.
-    arsort($aFiles[1]); // RSort imported files, newest files first, keeping indices.
+    // Sort the file list (the DB list is already sorted).
+    asort($aFiles[0]); // Sort data files, keeping indices.
+    asort($aFiles[1]); // Sort data files, keeping indices.
+    $nFilesTotal = count($aFiles[0]) + count($aFiles[1]);
 
-    $nFilesImportable = (!isset($aFiles[0])? 0 : count($aFiles[0]));
-    $nFilesTotal = $nFilesImportable + (!isset($aFiles[1])? 0 : count($aFiles[1]));
-
-    lovd_showInfoTable($nFilesImportable . ' file' . ($nFilesImportable == 1? '' : 's') . ' ready for import, ' . $nFilesTotal . ' file' . ($nFilesTotal == 1? '' : 's') . ' in total.', 'information');
+    lovd_showInfoTable($nFilesSchedulable . ' file' . ($nFilesSchedulable == 1? '' : 's') . ' unscheduled, ' . $nFilesTotal . ' file' . ($nFilesTotal == 1? '' : 's') . ' in total.', 'information');
 
     if ($nScheduled) {
         // We also just scheduled some files.
         lovd_showInfoTable('Successfully scheduled ' . $nScheduled . ' file' . ($nScheduled == 1? '' : 's') . ' for import.', 'success');
     }
 
-    // To see which files are already scheduled for import, I need to fetch that list, too.
-    // Using fetchAllCombine() may create a bit of an awkward array, but it's a lot faster using isset() than in_array().
-    $aFilesScheduled = $_DB->query('SELECT filename, 1 FROM ' . TABLE_SCHEDULED_IMPORTS)->fetchAllCombine();
-
     $tNow = time();
-    print('      <FORM action="' . CURRENT_PATH . '?' . ACTION . '" method="post">
+    // We need a form, because to schedule files you need to select them; this triggers a hidden checkbox to be updated.
+    print('
+      <FORM action="' . CURRENT_PATH . '?' . ACTION . '" method="post">
         <TABLE border="0" cellpadding="10" cellspacing="0">
           <TR valign="top">' . "\n");
     foreach (array(1, 0) as $i) {
         print('            <TD>
               <TABLE border="0" cellpadding="10" cellspacing="1" width="' . ($i? '350' : '450') . '" class="data" style="font-size : 13px;">
                 <TR>
-                  <TH' . ($i? '' : '></TH><TH') . ' class="S16">' . ($i? 'Files already imported' : 'Files to be imported') . '</TH></TR>');
-        foreach ($aFiles[$i] as $sFile => $tFile) {
-            $bScheduled = false;
-            $nAgeInDays = floor(($tNow - $tFile)/(60*60*24));
+                  <TH' . ($i? '' : '></TH><TH') . ' class="S16">' . ($i? 'Files already processed' : 'Files to be processed') . '</TH></TR>');
+        foreach ($aFiles[$i] as $sFile => $sSortString) {
+            list($bUnscheduled, $nReversePriority, $sProcessedDate, $sScheduledDate, $sFileModified) = explode(',', $sSortString);
+            // Scheduled that no longer exist, have the name of the file as their modification date.
+            $bFileLost = ($sFile == $sFileModified);
+
+            $bAPI = false;
+            $sFileDisplayName = $sFile;
+
+            $bScheduled = (!$bUnscheduled);
+            $nPriority = (9 - $nReversePriority);
+            $nAgeInDays = floor(($tNow - strtotime($sFileModified))/(60*60*24));
             if ($i) {
-                // Already imported.
+                // Already processed.
+                $bError = !empty($zScheduledFiles[$sFile]['process_errors']);
+                $bProcessing = ($zScheduledFiles[$sFile]['in_progress'] && !$bError);
+
                 print("\n" .
-                      '                <TR class="del">');
+                      '                <TR class="' . ($bError? 'colRed' : 'del') . '">');
             } else {
-                $bScheduled = isset($aFilesScheduled[$sFile]);
+                $bError = false;
+                $bProcessing = false;
                 if ($bScheduled) {
                     // Not imported yet, but scheduled.
                     print("\n" .
                           '                <TR class="del">
-                  <TD width="30" style="text-align : center;"><IMG src="gfx/menu_clock.png" alt="Scheduled" width="16" height="16"></TD>');
+                  <TD width="30" style="text-align : center;"><IMG src="gfx/menu_clock.png" alt="Scheduled" width="16" height="16" title="Scheduled for import"></TD>');
                 } else {
                     // Not imported yet, can be scheduled.
                     print("\n" .
@@ -174,9 +226,19 @@ if (ACTION == 'schedule' && PATH_COUNT == 1) {
                   <TD width="30" style="text-align : center;"><INPUT type="checkbox" name="' . $sFile . '" value="1" style="display : none;"><IMG src="gfx/check.png" alt="Import" width="16" height="16" style="display : none;"></TD>');
                 }
             }
+            $sInformationHTML = ($bUnscheduled? '' : '
+                    <IMG src="gfx/lovd_form_information.png" alt="Information" width="16" height="16" title="' . ($sFile == $sFileDisplayName? '' : $sFile . ' - ') . 'Scheduled ' . $zScheduledFiles[$sFile]['scheduled_date'] . ' by ' . $zScheduledFiles[$sFile]['scheduled_by_name'] . '" style="float : right;">');
+            $sPriorityHTML = (!$nPriority? '' : '
+                    <IMG src="gfx/lovd_form_warning.png" alt="Priority" width="16" height="16" title="Priority import: ' . $_SETT['import_priorities'][$nPriority] . '" style="float : right;">');
+            $sProcessingHTML = (!$bProcessing? '' : '
+                    <IMG src="gfx/menu_clock.png" alt="Processing ..." width="16" height="16" title="Processing started ' . $zScheduledFiles[$sFile]['processed_date'] . '" style="float : right;">');
+            $sErrorsHTML = (!$bError? '' : '
+                    <IMG src="gfx/cross.png" alt="Errors while processing" width="16" height="16" title="Errors while processing:' . "\n" . htmlspecialchars($zScheduledFiles[$sFile]['process_errors']) . '" style="float : right;">');
             print('
-                  <TD><SPAN class="S15"><B>' . $sFile . '</B>' . (!$bScheduled? '' : ' <SPAN class="S13">(scheduled for import)</SPAN>') . '</SPAN><BR>
-                    ' . date('Y-m-d H:i:s', $tFile) . ' - Converted ' . $nAgeInDays . ' day' . ($nAgeInDays == 1? '' : 's') . ' ago</TD></TR>');
+                  <TD>' . $sInformationHTML . $sPriorityHTML . $sProcessingHTML . $sErrorsHTML . '
+                    <B>' . $sFileDisplayName . '</B><BR>
+                    <SPAN class="S11">' . ($bFileLost? 'File not found' : $sFileModified . ' - ' . ($bAPI? 'Submitted' : (LOVD_plus? 'Converted' : 'Created')) . ' ' . $nAgeInDays . ' day' . ($nAgeInDays == 1? '' : 's') . ' ago') . '</SPAN>
+                  </TD></TR>');
         }
         print('</TABLE></TD>' . "\n");
     }
