@@ -67,7 +67,6 @@ if ($sCalcVersionFiles != $sCalcVersionDB) {
     // Array of messages that should be displayed.
     // Each item should be an array with arguments to the lovd_showInfoTable() function.
     // Only the first argument is required, just like in the function itself.
-    // NOTE: If you want your message to be shown, make *sure* you also define your version in the $aUpdates array!!!
     $aUpdateMessages =
         array(
             '3.0-17m' => array(), // Placeholder for an LOVD+ message, defined below.
@@ -79,7 +78,7 @@ if ($sCalcVersionFiles != $sCalcVersionDB) {
             'To complete the upgrade to 3.0-17m, it is <B>required</B> to run an upgrade script separately, that will convert your existing DBID values to the new format.<BR>The "hash_dbid.php" script is located in your scripts folder. Please wait for the upgrade below to finish, then click here to run the script.',
             'stop',
             '100%',
-            'lovd_openWindow(\'scripts/hash_dbid2.php\')',
+            'lovd_openWindow(\'scripts/hash_dbid.php\')',
         );
     }
 
