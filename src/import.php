@@ -190,6 +190,7 @@ if (ACTION == 'schedule' && PATH_COUNT == 1) {
     }
 
     $tNow = time();
+    $aUsers = array(); // Array of users submitting things through the API.
     // We need a form, because to schedule files you need to select them; this triggers a hidden checkbox to be updated.
     print('
       <FORM action="' . CURRENT_PATH . '?' . ACTION . '" method="post">
@@ -205,8 +206,23 @@ if (ACTION == 'schedule' && PATH_COUNT == 1) {
             // Scheduled that no longer exist, have the name of the file as their modification date.
             $bFileLost = ($sFile == $sFileModified);
 
-            $bAPI = false;
-            $sFileDisplayName = $sFile;
+            // For LOVD API submissions, we change the annotation.
+            // File names are long, we can shorten it and annotate better.
+            // We deliberately overwrite $sFileModified here.
+            if (preg_match('/^LOVD_API_submission_(\d+)_([0-9:_-]+)\.(\d+)\.lovd$/', $sFile, $aRegs)) {
+                $bAPI = true;
+                list(, $nUserID, $sFileModified) = $aRegs;
+                $nUserID = sprintf('%0' . $_SETT['objectid_length']['users'] . 'd', $nUserID);
+                $sFileModified = str_replace('_', ' ', $sFileModified);
+                $sFileDisplayName = 'API submission (' . $nUserID . ': ';
+                if (!isset($aUsers[$nUserID])) {
+                    $aUsers[$nUserID] = $_DB->query('SELECT name FROM ' . TABLE_USERS . ' WHERE id = ?', array($nUserID))->fetchColumn();
+                }
+                $sFileDisplayName .= (!isset($aUsers[$nUserID])? 'User unknown' : $aUsers[$nUserID]) . ')';
+            } else {
+                $bAPI = false;
+                $sFileDisplayName = $sFile;
+            }
 
             $bScheduled = (!$bUnscheduled);
             $nPriority = (9 - $nReversePriority);
