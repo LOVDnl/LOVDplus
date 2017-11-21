@@ -64,6 +64,24 @@ if ($sCalcVersionFiles != $sCalcVersionDB) {
 
     print('      Please wait while LOVD is upgrading the database backend from ' . $_STAT['version'] . ' to ' . $_SETT['system']['version'] . '.<BR><BR>' . "\n");
 
+    // Array of messages that should be displayed.
+    // Each item should be an array with arguments to the lovd_showInfoTable() function.
+    // Only the first argument is required, just like in the function itself.
+    $aUpdateMessages =
+        array(
+            '3.0-17m' => array(), // Placeholder for an LOVD+ message, defined below.
+        );
+
+    // LOVD+ messages should be built up separately, so that LOVDs won't show them.
+    if (LOVD_plus) {
+        $aUpdateMessages['3.0-17m'] = array(
+            'To complete the upgrade to 3.0-17m, it is <B>required</B> to run an upgrade script separately, that will convert your existing DBID values to the new format.<BR>The "hash_dbid.php" script is located in your scripts folder. Please wait for the upgrade below to finish, then click here to run the script.',
+            'stop',
+            '100%',
+            'lovd_openWindow(\'scripts/hash_dbid.php\')',
+        );
+    }
+
     // Array of changes.
     $aUpdates =
              array(
@@ -724,7 +742,11 @@ if ($sCalcVersionFiles != $sCalcVersionDB) {
                          'PREPARE Statement FROM @sSQL',
                          'EXECUTE Statement',
                      ),
-                 '3.0-17l' => array(
+                 '3.0-17l' =>
+                     array(
+                         'ALTER TABLE ' . TABLE_ALLELES . ' MODIFY COLUMN name VARCHAR(50) NOT NULL',
+                     ),
+                 '3.0-17n' => array(
                      'SET @bExists := (SELECT COUNT(*) FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = "' . TABLE_ANALYSES_RUN_FILTERS . '" AND COLUMN_NAME = "config_json")',
                      'SET @sSQL := IF(@bExists > 0, \'SELECT "INFO: Column already exists."\', "
                             ALTER TABLE ' . TABLE_ANALYSES_RUN_FILTERS . ' ADD COLUMN config_json TEXT NULL AFTER filterid")',
@@ -1002,10 +1024,17 @@ if ($sCalcVersionFiles != $sCalcVersionDB) {
 
     if (LOVD_plus && $sCalcVersionDB < lovd_calculateVersion('3.0-17l')) {
         // Run LOVD+ specific queries.
+        require ROOT_PATH . 'install/inc-sql-alleles.php';
+        $aAlleleSQL[0] .= ' ON DUPLICATE KEY UPDATE name=VALUES(name)';
+        $aUpdates['3.0-17l'][] = $aAlleleSQL[0];
+    }
+
+    if (LOVD_plus && $sCalcVersionDB < lovd_calculateVersion('3.0-17n')) {
+        // Run LOVD+ specific queries.
         if (lovd_verifyInstance('mgha')) {
             $aNewCustomCols = array('Screening/Tag');
-            $aUpdates['3.0-17l'] = array_merge(
-                $aUpdates['3.0-17l'],
+            $aUpdates['3.0-17n'] = array_merge(
+                $aUpdates['3.0-17n'],
                 lovd_getActivateCustomColumnQuery($aNewCustomCols),
                 array(
                     // MGHA's cross screening analysis filter.
@@ -1013,8 +1042,8 @@ if ($sCalcVersionFiles != $sCalcVersionDB) {
                 )
             );
         } elseif (lovd_verifyInstance('leiden')) {
-            $aUpdates['3.0-17l'] = array_merge(
-                $aUpdates['3.0-17l'],
+            $aUpdates['3.0-17n'] = array_merge(
+                $aUpdates['3.0-17n'],
                 array(
                     // Leiden's cross screening analysis filter.
                     'INSERT INTO ' . TABLE_ANALYIS_FILTERS . ' VALUES ("cross_screenings", "Compare multiple screenings", "Select variants that satisfy the criteria configured by you, comparing several screenings.", 1)',
@@ -1024,6 +1053,16 @@ if ($sCalcVersionFiles != $sCalcVersionDB) {
     }
 
 
+
+    // First, print the messages belonging to the updates. Otherwise we'll have to work around the progress bar, that I don't want.
+    foreach ($aUpdateMessages as $sVersion => $aMessage) {
+        if (lovd_calculateVersion($sVersion) > $sCalcVersionDB && lovd_calculateVersion($sVersion) <= $sCalcVersionFiles && $aMessage) {
+            // Message should be displayed.
+            // Prepare default values for arguments.
+            $aMessage += array('', 'information', '100%', '', true);
+            lovd_showInfoTable($aMessage[0], $aMessage[1], $aMessage[2], $aMessage[3], $aMessage[4]);
+        }
+    }
 
     // To make sure we upgrade the database correctly, we add the current version to the list...
     if (!isset($aUpdates[$_SETT['system']['version']])) {
