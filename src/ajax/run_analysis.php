@@ -209,6 +209,7 @@ if (ACTION == 'configure' && GET) {
             case 'cross_screenings':
                 $aConditions = $_SETT['filter_cross_screenings']['condition_list'];
                 $aGrouping = $_SETT['filter_cross_screenings']['grouping_list'];
+                $sLabIDColName = $_INSTANCE_CONFIG['columns']['lab_id'];
 
                 // Find available screenings in the database.
                 $sSQL = 'SELECT s.id as screeningid, s.*, i.*
@@ -225,10 +226,10 @@ if (ACTION == 'configure' && GET) {
                     $sKey = $zScreening['screeningid'] . ':';
 
                     // Add role descriptions if sample has family relation with this screening.
-                    if (!empty($_INSTANCE_CONFIG['sampleId_columns'])) {
+                    if (!empty($_INSTANCE_CONFIG['columns']['family'])) {
                         // All the custom columns that this instance use to identify family relationships
-                        foreach ($_INSTANCE_CONFIG['sampleId_columns'] as $sColumn => $sRole) {
-                            if ($zScreening['Individual/Sample_ID'] == $zIndividual[$sColumn]) {
+                        foreach ($_INSTANCE_CONFIG['columns']['family'] as $sRole => $sColumn) {
+                            if ($zScreening[$sLabIDColName] == $zIndividual[$sColumn]) {
                                 $sKey .= $sRole;
                                 $zScreening['role'] = $sRole;
                                 $aRelatives[$sKey] = '';
@@ -239,7 +240,7 @@ if (ACTION == 'configure' && GET) {
                     }
 
                     // Format display name of each screening.
-                    $sText = $zScreening['Individual/Sample_ID'];
+                    $sText = $zScreening[$sLabIDColName];
 
                     // If this instance has its own format, use it.
                     if (!empty($_INSTANCE_CONFIG['cross_screenings']['format_screening_name'])) {
@@ -574,7 +575,7 @@ if (ACTION == 'configure' && POST) {
 if (ACTION == 'run') {
     $aConfig = json_decode($_REQUEST['config'], true);
     $sCustomPanel = '';
-    $aSelectedGenePanels = $aConfig['apply_selected_gene_panels']['gene_panels'];
+    $aSelectedGenePanels = (empty($aConfig['apply_selected_gene_panels']['gene_panels']) ? array() : $aConfig['apply_selected_gene_panels']['gene_panels']);
 
     // Merge gene_panel and mendeliome gene panels
     $aGenePanels = (!empty($aSelectedGenePanels[GP_TYPE_GENEPANEL])? $aSelectedGenePanels[GP_TYPE_GENEPANEL] : array());

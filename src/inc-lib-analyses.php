@@ -55,7 +55,7 @@ function getSelectedFilterConfig ($nRunID, $sFilterID)
 {
     // This function gathers the configuration of the selected filter run, and returns
     //  the text that should be printed below the filter in the analysis display.
-    global $_DB, $_SETT;
+    global $_DB, $_SETT, $_INSTANCE_CONFIG;
 
     // Read filter configurations.
     $sConfig = $_DB->query('SELECT config_json FROM ' . TABLE_ANALYSES_RUN_FILTERS . ' WHERE runid = ? AND filterid = ?', array($nRunID, $sFilterID))->fetchColumn();
@@ -69,6 +69,7 @@ function getSelectedFilterConfig ($nRunID, $sFilterID)
         case 'cross_screenings':
             $aConditions = $_SETT['filter_cross_screenings']['condition_list'];
             $aGrouping = $_SETT['filter_cross_screenings']['grouping_list'];
+            $sLabIDColName = $_INSTANCE_CONFIG['columns']['lab_id'];
 
             $sToolTip = '';
             $sConfigText = '';
@@ -84,7 +85,7 @@ function getSelectedFilterConfig ($nRunID, $sFilterID)
                 }
 
                 // Find available screenings.
-                $sSQL = 'SELECT s.*, i.`Individual/Sample_ID`
+                $sSQL = 'SELECT s.*, i.`' . $sLabIDColName . '`
                          FROM ' . TABLE_SCREENINGS . ' AS s 
                          JOIN ' . TABLE_INDIVIDUALS . ' AS i ON (s.individualid = i.id) 
                          WHERE s.id IN (?' . str_repeat(', ?', count($aScreeningIDs)-1) . ')';
@@ -108,7 +109,7 @@ function getSelectedFilterConfig ($nRunID, $sFilterID)
                                  '<UL>';
                     foreach ($aGroup['screenings'] as $sScreening) {
                         list($nScreeningID, $sRole) = explode(':', $sScreening);
-                        $nScreeningText = (!$sRole? '' : $sRole . ': ') . $aScreenings[$nScreeningID]['Individual/Sample_ID'];
+                        $nScreeningText = (!$sRole? '' : $sRole . ': ') . $aScreenings[$nScreeningID][$sLabIDColName];
                         $sToolTip .= '<LI>' . $nScreeningText . '</LI>';
                     }
                     $sToolTip .= '</UL>';

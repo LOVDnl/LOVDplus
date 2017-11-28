@@ -5,6 +5,14 @@
  * Programmer: Candice McGregor
  *************/
 
+$_INSTANCE_CONFIG['columns'] = array(
+    'lab_id' => 'Individual/Sample_ID',
+    'family' => array(
+        'mother' => 'Screening/Mother/Sample_ID',
+        'father' => 'Screening/Father/Sample_ID'
+    )
+);
+
 $_INSTANCE_CONFIG['viewlists']['Screenings_for_I_VE']['cols_to_show'] = array(
     // Invisible.
     'individualid',
@@ -100,11 +108,6 @@ $_INSTANCE_CONFIG['conversion'] = array(
     'exit_on_annotation_error' => false,
     'enforce_hgnc_gene' => false,
     'check_indel_description' => false
-);
-
-$_INSTANCE_CONFIG['sampleId_columns'] = array(
-    'Screening/Mother/Sample_ID' => 'Mother',
-    'Screening/Father/Sample_ID' => 'Father'
 );
 
 $_INSTANCE_CONFIG['cross_screenings'] = array(

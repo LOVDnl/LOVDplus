@@ -56,7 +56,9 @@ $_INSTANCE_CONFIG = array();
 //        'label' => 'Excel file'),
 //);
 
-
+$_INSTANCE_CONFIG['columns'] = array(
+    'lab_id' => 'Individual/Lab_ID'
+);
 
 $_INSTANCE_CONFIG['viewlists'] = array(
     // The screenings data listing on the individual's detailed view.
