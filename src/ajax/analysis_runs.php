@@ -49,12 +49,12 @@ if (!$_AUTH || !lovd_isAuthorized('analysisrun', $nID)) {
 
 // Now get the analysis run's data, and check the screening's status.
 // We can't do anything if the screening has been closed, so then we'll fail here.
-$sSQL = 'SELECT a.*, ar.*, s.individualid, GROUP_CONCAT(af.id,"|",IFNULL(af.name, ""),"|",IFNULL(af.has_config, 0) SEPARATOR ";;") as __filters
+$sSQL = 'SELECT a.*, ar.*, s.individualid, af.has_config, GROUP_CONCAT(af.id,"|",IFNULL(af.name, "") SEPARATOR ";;")  as __filters
          FROM ' . TABLE_ANALYSES_RUN . ' AS ar
            INNER JOIN ' . TABLE_SCREENINGS . ' AS s ON (ar.screeningid = s.id)
            INNER JOIN ' . TABLE_ANALYSES . ' AS a ON (ar.analysisid = a.id)
            INNER JOIN ' . TABLE_ANALYSES_RUN_FILTERS . ' AS arf ON (arf.runid = ar.id)
-           INNER JOIN ' . TABLE_ANALYSIS_FILTERS . ' AS af ON (arf.filterid = af.id)
+           LEFT OUTER JOIN ' . TABLE_ANALYSIS_FILTERS . ' AS af ON (arf.filterid = af.id AND af.has_config = 1)
          WHERE ar.id = ? AND s.analysis_statusid < ?
          GROUP BY ar.id';
 $aSQL = array($nID, ANALYSIS_STATUS_CLOSED);
@@ -98,28 +98,22 @@ var oButtonClose  = {"Close":function () { $(this).dialog("close"); }};
 
 if (ACTION == 'clone' && GET) {
     // Gather information from the database whether this filter requires further configurations before it can be run.
-    if (!empty($zData['__filters'])) {
-        $aFilters = explode(';;', $zData['__filters']);
 
-        $aFiltersHaveConfig = array();
+    // Request confirmation.
+    $sMessage = 'Are you sure you want to duplicate this analysis run?<BR>';
+    if (!empty($zData['__filters'])) {
+        // If there are filters that require extra configurations before it can be run,
+        // we want to ask users if they want to copy them.
+        $sMessage = 'Do you want to copy the configurations of these filters?<BR><BR>';
+
+        // $zData['__filters'] only contains filters that require further configurations before it can be run
+        $aFilters = explode(';;', $zData['__filters']);
         foreach ($aFilters as $sConfig) {
             // We use "|" here instead of LOVD standard ";" because
             // filter name and has_config columns can sometimes be empty and it will create a substring of ";;"
             // which will be treated as filter separator.
-            list($sFilterId, $sFilterName, $bHasConfig) = explode('|', $sConfig);
-            if ($bHasConfig) {
-                $aFiltersHaveConfig[$sFilterId] = $sFilterName;
-            }
-        }
-    }
+            list($sFilterId, $sFilterName) = explode('|', $sConfig);
 
-    // Request confirmation.
-    $sMessage = 'Are you sure you want to duplicate this analysis run?<BR>';
-    if (!empty($aFiltersHaveConfig)) {
-        // If there are filters that require extra configurations before it can be run,
-        // we want to ask users if they want to copy them.
-        $sMessage = 'Do you want to copy the configurations of these filters?<BR><BR>';
-        foreach ($aFiltersHaveConfig as $sFilterId => $sFilterName) {
             $sLabel = (!empty($sFilterName)? $sFilterName : $sFilterId);
             $sMessage .= '<LABEL><INPUT type=\'checkbox\' name=\'copy_config[]\' value=\'' . $sFilterId . '\'>'. $sLabel .'</LABEL><BR>';
         }
