@@ -53,7 +53,14 @@ if (empty($_REQUEST['screeningid']) || empty($_REQUEST['analysisid']) || !ctype_
 // Find screening data, make sure we have the right to analyze this patient.
 // MANAGER can always start an analysis, even when the individual's analysis hasn't been started by him.
 $sSQL = 'SELECT i.id, i.custom_panel';
-$sSQL .= (!lovd_verifyInstance('mgha', false)? '' : ', s.`Screening/Mother/Sample_ID`, s.`Screening/Father/Sample_ID`');
+if (!empty($_INSTANCE_CONFIG['columns']['family'])) {
+    foreach ($_INSTANCE_CONFIG['columns']['family'] as $sKey => $sColumn) {
+        if (strpos($sColumn, 'Screening/') === 0) {
+            $sSQL .= ', s.`' . $sColumn . '`';
+        }
+    }
+}
+//$sSQL .= (!lovd_verifyInstance('mgha', false)? '' : ', s.`Screening/Mother/Sample_ID`, s.`Screening/Father/Sample_ID`');
 $sSQL .= ', GROUP_CONCAT(DISTINCT gp.id, ";", gp.name, ";", gp.type, ";", IFNULL(gp.edited_date, gp.created_date) ORDER BY gp.type DESC, gp.name ASC SEPARATOR ";;") AS __gene_panels
          FROM ' . TABLE_INDIVIDUALS . ' AS i 
          INNER JOIN ' . TABLE_SCREENINGS . ' AS s ON (i.id = s.individualid) 
