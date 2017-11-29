@@ -87,6 +87,29 @@ $_INSTANCE_CONFIG['viewlists']['CustomVL_ObsCounts']['cols_to_show'] = array(
     'gene_OMIM_'
 );
 
+$_INSTANCE_CONFIG['viewlists']['CustomVL_DBID']['cols_to_show'] = array(
+    // Invisible.
+    'variantid',
+    'VariantOnGenome/DBID',
+
+    'id_',
+    'vog_effect',
+    'allele_',
+    'Individual/Sample_ID',
+    'Individual/Clinical_indication',
+    'Screening/Library_preparation',
+    'Screening/Sequencing_chemistry',
+    'Screening/Pipeline/Run_ID',
+    'VariantOnGenome/DNA',
+    'VariantOnGenome/Curation/Classification',
+    'VariantOnGenome/Sequencing/IGV',
+    'VariantOnGenome/Reference',
+    'VariantOnTranscript/DNA',
+    'VariantOnTranscript/Protein',
+    'gene_OMIM_',
+    'gene_disease_names'
+);
+
 
 $_INSTANCE_CONFIG['attachments'] = array(
         'igv' => array(
