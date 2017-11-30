@@ -7,9 +7,9 @@
  * Modified    : 2016-10-14
  * For LOVD    : 3.0-18
  *
- * Copyright   : 2004-2016 Leiden University Medical Center; http://www.LUMC.nl/
- * Programmers : Ing. Ivo F.A.C. Fokkema <I.F.A.C.Fokkema@LUMC.nl>
- *               Ing. Ivar C. Lugtenburg <I.C.Lugtenburg@LUMC.nl>
+ * Copyright   : 2004-2017 Leiden University Medical Center; http://www.LUMC.nl/
+ * Programmers : Ivo F.A.C. Fokkema <I.F.A.C.Fokkema@LUMC.nl>
+ *               Ivar C. Lugtenburg <I.C.Lugtenburg@LUMC.nl>
  *
  *
  * This file is part of LOVD.
@@ -46,7 +46,7 @@ class ProgressBar {
 
 
 
-    function ProgressBar ($sID = '', $sMessageInit = '', $sMessageDone = '')
+    function __construct ($sID = '', $sMessageInit = '', $sMessageDone = '')
     {
         // Default constructor.
 
@@ -80,6 +80,9 @@ class ProgressBar {
                   '        var oPB_' . $this->sID . '_message = document.getElementById(\'lovd_' . $this->sID . '_progress_message\');' . "\n" .
                   '        var oPB_' . $this->sID . '_message_done = document.getElementById(\'lovd_' . $this->sID . '_progress_message_done\');' . "\n" .
                   '      </SCRIPT>' . "\n\n\n");
+        } elseif ($sMessageInit) {
+            // For text/plain, we print the init message.
+            print($sMessageInit . "\n");
         }
         flush();
         @ob_end_flush(); // Can generate errors on the screen if no buffer found.
@@ -156,7 +159,7 @@ class ProgressBar {
         if (FORMAT == 'text/html') {
             print('<SCRIPT type="text/javascript">oPB_' . $this->sID . '_message' . (!$sType? '' : '_done') . '.innerHTML' . ($bAppend? '+' : '') . '=\'' . str_replace(array('\'', "\r", "\n"), array('\\\'', '', '\n'), $sMessage) . '\';</SCRIPT>' . "\n");
         } elseif (FORMAT == 'text/plain') {
-            print(':' . str_replace("\n", "\n:", rtrim(strip_tags($sMessage))) . "\n");
+            print(rtrim(strip_tags($sMessage)) . "\n");
         }
         flush();
         return true;

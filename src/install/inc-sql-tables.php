@@ -7,9 +7,9 @@
  * Modified    : 2016-09-05
  * For LOVD    : 3.0-17
  *
- * Copyright   : 2004-2016 Leiden University Medical Center; http://www.LUMC.nl/
- * Programmers : Ing. Ivo F.A.C. Fokkema <I.F.A.C.Fokkema@LUMC.nl>
- *               Ing. Ivar C. Lugtenburg <I.C.Lugtenburg@LUMC.nl>
+ * Copyright   : 2004-2017 Leiden University Medical Center; http://www.LUMC.nl/
+ * Programmers : Ivo F.A.C. Fokkema <I.F.A.C.Fokkema@LUMC.nl>
+ *               Ivar C. Lugtenburg <I.C.Lugtenburg@LUMC.nl>
  *               M. Kroon <m.kroon@lumc.nl>
  *
  *
@@ -1028,9 +1028,11 @@ $aTableSQL =
         , 'TABLE_SCHEDULED_IMPORTS' =>
    'CREATE TABLE ' . TABLE_SCHEDULED_IMPORTS . ' (
     filename VARCHAR(255) NOT NULL,
+    priority TINYINT(1) UNSIGNED NOT NULL DEFAULT 0,
     in_progress BOOLEAN NOT NULL DEFAULT 0,
     scheduled_by SMALLINT(5) UNSIGNED ZEROFILL,
     scheduled_date DATETIME NOT NULL,
+    process_errors TEXT,
     processed_by SMALLINT(5) UNSIGNED ZEROFILL,
     processed_date DATETIME,
     PRIMARY KEY (filename),
