@@ -4,7 +4,7 @@
  * LEIDEN OPEN VARIATION DATABASE (LOVD)
  *
  * Created     : 2014-11-28
- * Modified    : 2017-10-25
+ * Modified    : 2017-11-17
  * For LOVD+   : 3.0-18
  *
  * Copyright   : 2004-2017 Leiden University Medical Center; http://www.LUMC.nl/
@@ -26,16 +26,6 @@ $_SERVER = array_merge($_SERVER, array(
     'QUERY_STRING' => '',
     'REQUEST_METHOD' => 'GET',
 ));
-// Try and improve HTTP_HOST, since settings may depend on it.
-$aPath = explode('/', trim(dirname($_SERVER['SCRIPT_NAME']), '/'));
-foreach ($aPath as $sDirName) {
-    // Stupid but effective check.
-    if (preg_match('/^((([0-9a-z][-0-9a-z]*[0-9a-z]|[0-9a-z])\.)+[a-z]{2,6})$/', $sDirName)) {
-        // Valid host name.
-        $_SERVER['HTTP_HOST'] = $sDirName;
-        break;
-    }
-}
 require ROOT_PATH . 'inc-init.php';
 require ROOT_PATH . 'inc-lib-genes.php';
 // 128MB was not enough for a 100MB file. We're already no longer using file(), now we're using fgets().
@@ -1403,10 +1393,11 @@ print('Mutalyzer returned EREF error, hg19/hg38 error?' . "\n");
         die('Error moving temp file to target: ' . $sFileDone . ".\n");
     }
 
-    // OK, so file is done, and can be scheduled now. Just auto-schedule it.
+    // OK, so file is done, and can be scheduled now. Just auto-schedule it, overwriting any possible errored entry.
+    // FIXME: This can also be done with one INSERT ON DUPLICATE KEY UPDATE query.
     if ($_DB->query('INSERT IGNORE INTO ' . TABLE_SCHEDULED_IMPORTS . ' (filename, scheduled_by, scheduled_date) VALUES (?, 0, NOW())', array(basename($sFileDone)))->rowCount()) {
         print('File scheduled for import.' . "\n");
-    } elseif ($_DB->query('UPDATE ' . TABLE_SCHEDULED_IMPORTS . ' SET scheduled_date = NOW() WHERE filename = ?', array(basename($sFileDone)))->rowCount()) {
+    } elseif ($_DB->query('UPDATE ' . TABLE_SCHEDULED_IMPORTS . ' SET in_progress = 0, scheduled_by = 0, scheduled_date = NOW(), process_errors = NULL, processed_by = NULL, processed_date = NULL WHERE filename = ?', array(basename($sFileDone)))->rowCount()) {
         print('File scheduled for import.' . "\n");
     } else {
         print('Error scheduling file for import!' . "\n");

@@ -32,12 +32,20 @@
 
 function lovd_checkDBID ($aData)
 {
-    // Checks if given variant and DBID match. I.e., whether or not there is
-    // already an entry where this variant and DBID come together.
+    // Checks if given variant and DBID match.
+    // For LOVD+, regenerates the DBID and verifies.
+    // For LOVD, it checks whether or not there is already an entry where this
+    //  variant and this DBID come together. Ignores the current variant, if the
+    //  ID is given.
     // NOTE: We're assuming that the DBID field actually exists. Using this
     // function implies you've checked for it's presence.
-    // All checks ignore the current variant, if the ID is given.
     global $_DB;
+
+    if (LOVD_plus) {
+        // The LOVD+ version of the fetch function is very fast and will
+        //  generate an DBID irrespective of the database contents.
+        return ($aData['VariantOnGenome/DBID'] == lovd_fetchDBID($aData));
+    }
 
     // <chr||GENE>_000000 is always allowed.
     $sSymbol = substr($aData['VariantOnGenome/DBID'], 0, strpos($aData['VariantOnGenome/DBID'], '_'));
@@ -355,11 +363,12 @@ function lovd_formatMail ($aBody)
 
 function lovd_fetchDBID ($aData)
 {
-    // Searches through the $aData variants to fetch lowest DBID belonging to
-    // this variant, otherwise returns next variant ID not in use.
+    // For LOVD+, generates the DBID based on the DNA data.
+    // For LOVD, searches through the $aData variants to fetch lowest DBID
+    //  belonging to this variant, otherwise returns next variant ID not in use.
     // NOTE: We're assuming that the DBID field actually exists. Using this
     // function implies you've checked for it's presence.
-    global $_DB;
+    global $_DB, $_CONF;
 
     // Array to remember which IDs we saw. This is to speed up the generation of
     //  DBIDs for new variants. The search in the database for the max ID in use
@@ -373,6 +382,17 @@ function lovd_fetchDBID ($aData)
     if (!empty($aData['VariantOnGenome/DNA'])) {
         $sGenomeVariant = str_replace(array('(', ')', '?'), '', $aData['VariantOnGenome/DNA']);
     }
+
+    if (LOVD_plus) {
+        if (!empty($aData) && !empty($sGenomeVariant)) {
+            // TODO: WARNING! UPDATE THE QUERY IN scripts/hash_dbid.php WHENEVER THIS IS UPDATED!
+            $sDBID = sha1($_CONF['refseq_build'] . '.chr' . $aData['chromosome'] . ':' . $sGenomeVariant);
+            return $sDBID;
+        } else {
+            return false;
+        }
+    }
+
     if (!isset($aData['aTranscripts'])) {
         $aData['aTranscripts'] = array();
     }
@@ -404,7 +424,7 @@ function lovd_fetchDBID ($aData)
                 $aArgs[] = $aData['position_g_start'];
             }
         }
-        if (!LOVD_plus && !empty($aTranscriptVariants)) {
+        if (!empty($aTranscriptVariants)) {
             if (!empty($sGenomeVariant)) {
                 $sSQL .= ' UNION ';
             }
@@ -438,7 +458,7 @@ function lovd_fetchDBID ($aData)
                 // Check this option, if it doesn't pass we'll skip it now.
                 $aDataCopy = $aData;
                 $aDataCopy['VariantOnGenome/DBID'] = $sDBIDoption;
-                if (!LOVD_plus && !lovd_checkDBID($aDataCopy)) {
+                if (!lovd_checkDBID($aDataCopy)) {
                     continue;
                 }
                 if ($sDBIDoptionSymbol == $sDBIDnewSymbol && $sDBIDoptionNumber < $sDBIDnewNumber && $sDBIDoptionNumber != '000000') {
@@ -458,9 +478,8 @@ function lovd_fetchDBID ($aData)
             // no entries found with these combinations and a DBID, so we are going to use the gene symbol
             // (or chromosome if there is no gene) and take the first number available to make a DBID.
             // Query for getting the first available number for the new DBID.
-            if (LOVD_plus || empty($aGenes)) {
+            if (empty($aGenes)) {
                 // No genes, simple query only on TABLE_VARIANTS.
-                // Also, LOVD_plus doesn't like it when chr DBIDs get changed on edits, so stick to chr DBIDs.
                 // 2013-02-28; 3.0-03; By querying the chromosome also we sped up this query from 0.43s to 0.09s when having 1M variants.
                 // NOTE: By adding an index on `VariantOnGenome/DBID` this query time can be reduced to 0.00s because of the LIKE on the DBID field.
                 // 2017-06-02; LOVD+ 3.0-17k; Even with an index, on a database with 22M variants, this query takes 2.2 seconds.

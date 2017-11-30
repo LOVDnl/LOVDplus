@@ -91,7 +91,7 @@ Converted files can be scheduled for automatic import by the scheduling feature
 available from the Setup area. To facilitate automatic import of the scheduled
 import files, insert the following cronjob, for a user of your choice:
 
-*/15 0-5,19-23 * * * GET "http://URL_to_LOVD/import?autoupload_scheduled_file&format=text/plain" -t 2h | grep -E "^(:|[0-9]+0\%)" | sed -r 's/^://'
+*/15 0-5,19-23 * * * GET "http://URL_to_LOVD/import?autoupload_scheduled_file" -t 2h
 
 Make sure GET is installed (libwww-perl) and its directory is in the PATH
 environment variable. Using wget or curl is also possible, just make sure the

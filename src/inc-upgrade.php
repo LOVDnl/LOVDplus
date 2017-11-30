@@ -7,9 +7,9 @@
  * Modified    : 2016-10-17
  * For LOVD    : 3.0-18
  *
- * Copyright   : 2004-2016 Leiden University Medical Center; http://www.LUMC.nl/
- * Programmers : Ing. Ivo F.A.C. Fokkema <I.F.A.C.Fokkema@LUMC.nl>
- *               Ing. Ivar C. Lugtenburg <I.C.Lugtenburg@LUMC.NL>
+ * Copyright   : 2004-2017 Leiden University Medical Center; http://www.LUMC.nl/
+ * Programmers : Ivo F.A.C. Fokkema <I.F.A.C.Fokkema@LUMC.nl>
+ *               Ivar C. Lugtenburg <I.C.Lugtenburg@LUMC.NL>
  *               M. Kroon <m.kroon@lumc.nl>
  *
  *
@@ -63,6 +63,29 @@ if ($sCalcVersionFiles != $sCalcVersionDB) {
     require_once ROOT_PATH . 'inc-lib-columns.php';
 
     print('      Please wait while LOVD is upgrading the database backend from ' . $_STAT['version'] . ' to ' . $_SETT['system']['version'] . '.<BR><BR>' . "\n");
+
+    // Array of messages that should be displayed.
+    // Each item should be an array with arguments to the lovd_showInfoTable() function.
+    // Only the first argument is required, just like in the function itself.
+    $aUpdateMessages =
+        array(
+            '3.0-17m' => array(), // Placeholder for an LOVD+ message, defined below.
+            '3.0-17n' => array(), // Placeholder for an LOVD+ message, defined below.
+        );
+
+    // LOVD+ messages should be built up separately, so that LOVDs won't show them.
+    if (LOVD_plus) {
+        $aUpdateMessages['3.0-17m'] = array(
+            'To complete the upgrade to 3.0-17m, it is <B>required</B> to run an upgrade script separately, that will convert your existing DBID values to the new format.<BR>The "hash_dbid.php" script is located in your scripts folder. Please wait for the upgrade below to finish, then click here to run the script.',
+            'stop',
+            '100%',
+            'lovd_openWindow(\'scripts/hash_dbid.php\')',
+        );
+        $aUpdateMessages['3.0-17n'] = array(
+            'If you have a cron job set up for the auto import feature, grepping for lines starting with a colon (:), then turn off this grep from now on. Output no longer is prefixed by a colon, and grepping is no longer needed because no HTML is output by the script anymore. LOVD now defaults to text/plain output for the auto importer, so you also don\'t need to request it anymore in the URL, either. See the updated INSTALL.txt for the new suggested cron job to use.',
+            'important',
+        );
+    }
 
     // Array of changes.
     $aUpdates =
@@ -724,6 +747,7 @@ if ($sCalcVersionFiles != $sCalcVersionDB) {
                      array(
                          'ALTER TABLE ' . TABLE_ALLELES . ' MODIFY COLUMN name VARCHAR(50) NOT NULL',
                      ),
+                 '3.0-17n' => array(), // Placeholder for LOVD+ queries, defined below.
                  '3.0-18' =>
                      array(
                          // These two will be ignored by LOVD+.
@@ -997,7 +1021,27 @@ if ($sCalcVersionFiles != $sCalcVersionDB) {
         $aUpdates['3.0-17l'][] = $aAlleleSQL[0];
     }
 
+    if (LOVD_plus && $sCalcVersionDB < lovd_calculateVersion('3.0-17n')) {
+        // Run LOVD+ specific queries.
+        // LOVD has this table since 3.0-20b, in its current form.
+        // LOVD+ has this table since 3.0-12g, and takes LOVD's 20b improvements in 17m.
+        $aUpdates['3.0-17n'][] =
+            'ALTER TABLE ' . TABLE_SCHEDULED_IMPORTS . ' 
+             ADD COLUMN priority TINYINT(1) UNSIGNED NOT NULL DEFAULT 0 AFTER filename,
+             ADD COLUMN process_errors TEXT AFTER scheduled_date';
+    }
 
+
+
+    // First, print the messages belonging to the updates. Otherwise we'll have to work around the progress bar, that I don't want.
+    foreach ($aUpdateMessages as $sVersion => $aMessage) {
+        if (lovd_calculateVersion($sVersion) > $sCalcVersionDB && lovd_calculateVersion($sVersion) <= $sCalcVersionFiles && $aMessage) {
+            // Message should be displayed.
+            // Prepare default values for arguments.
+            $aMessage += array('', 'information', '100%', '', true);
+            lovd_showInfoTable($aMessage[0], $aMessage[1], $aMessage[2], $aMessage[3], $aMessage[4]);
+        }
+    }
 
     // To make sure we upgrade the database correctly, we add the current version to the list...
     if (!isset($aUpdates[$_SETT['system']['version']])) {
