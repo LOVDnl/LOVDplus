@@ -80,6 +80,7 @@ if (!$("#analysis_run_dialog").hasClass("ui-dialog-content") || !$("#analysis_ru
 ');
 
 // Implement an CSRF protection by working with tokens.
+$sFormClone  = '<FORM id=\'analysis_run_clone_form\'><INPUT type=\'hidden\' name=\'csrf_token\' value=\'{{CSRF_TOKEN}}\'>{{MESSAGE}}</FORM>';
 $sFormDelete = '<FORM id=\'analysis_run_delete_form\'><INPUT type=\'hidden\' name=\'csrf_token\' value=\'{{CSRF_TOKEN}}\'>Are you sure you want to remove this analysis run? The variants will not be deleted.<BR></FORM>';
 
 // Set JS variables and objects.
@@ -120,10 +121,10 @@ if (ACTION == 'clone' && GET) {
     }
 
     // We do this in two steps, not only because we'd like the user to confirm, but also to prevent CSRF.
-    $sFormClone  = '<FORM id=\'analysis_run_clone_form\'><INPUT type=\'hidden\' name=\'csrf_token\' value=\'{{CSRF_TOKEN}}\'>' . $sMessage . '</FORM>';
-
     $_SESSION['csrf_tokens']['analysis_run_clone'] = md5(uniqid());
-    $sFormClone = str_replace('{{CSRF_TOKEN}}', $_SESSION['csrf_tokens']['analysis_run_clone'], $sFormClone);
+    $sFormClone = str_replace(
+        array('{{MESSAGE}}', '{{CSRF_TOKEN}}'),
+        array($sMessage, $_SESSION['csrf_tokens']['analysis_run_clone']), $sFormClone);
 
     // Display the form, and put the right buttons in place.
     print('

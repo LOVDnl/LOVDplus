@@ -1038,7 +1038,7 @@ if ($sCalcVersionFiles != $sCalcVersionDB) {
                 lovd_getActivateCustomColumnQuery($aNewCustomCols),
                 array(
                     // MGHA's cross screening analysis filter.
-                    'INSERT INTO ' . TABLE_ANALYSIS_FILTERS . ' VALUES ("cross_screenings", "Select variants that satisfy the criteria configured in this cross screenings filter", "Select variants that satisfy the criteria configured in this cross screenings filter", 1)',
+                    'INSERT IGNORE INTO ' . TABLE_ANALYSIS_FILTERS . ' VALUES ("cross_screenings", "Select variants that satisfy the criteria configured in this cross screenings filter", "Select variants that satisfy the criteria configured in this cross screenings filter", 1)',
                 )
             );
         } elseif (lovd_verifyInstance('leiden')) {
@@ -1046,7 +1046,7 @@ if ($sCalcVersionFiles != $sCalcVersionDB) {
                 $aUpdates['3.0-17n'],
                 array(
                     // Leiden's cross screening analysis filter.
-                    'INSERT INTO ' . TABLE_ANALYIS_FILTERS . ' VALUES ("cross_screenings", "Compare multiple screenings", "Select variants that satisfy the criteria configured by you, comparing several screenings.", 1)',
+                    'INSERT IGNORE INTO ' . TABLE_ANALYIS_FILTERS . ' VALUES ("cross_screenings", "Compare multiple screenings", "Select variants that satisfy the criteria configured by you, comparing several screenings.", 1)',
                 )
             );
         }
