@@ -450,18 +450,6 @@ class LOVD_MghaSeqDataConverter extends LOVD_DefaultDataConverter {
 
 
 
-    function prepareGeneAliases()
-    {
-        // Prepare the $aGeneAliases array with a site specific gene alias list.
-        // The convert and merge script will provide suggested gene alias key value pairs to add to this array.
-        $aGeneAliases = array();
-        return $aGeneAliases;
-    }
-
-
-
-
-
     function ignoreTranscript($sTranscriptId)
     {
         // Check if we want to skip importing the annotation for this transcript.

@@ -715,18 +715,6 @@ class LOVD_MghaDataConverter extends LOVD_DefaultDataConverter {
 
 
 
-    function prepareGeneAliases()
-    {
-        // Prepare the $aGeneAliases array with a site specific gene alias list.
-        // The convert and merge script will provide suggested gene alias key value pairs to add to this array.
-        $aGeneAliases = array();
-        return $aGeneAliases;
-    }
-
-
-
-
-
     function formatEmptyColumn($aLine, $sVEPColumn, $sLOVDColumn, $aVariant)
     {
         // Returns how we want to represent empty data in $aVariant array given a LOVD column name.

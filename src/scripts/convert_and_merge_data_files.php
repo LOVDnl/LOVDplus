@@ -4,7 +4,7 @@
  * LEIDEN OPEN VARIATION DATABASE (LOVD)
  *
  * Created     : 2014-11-28
- * Modified    : 2017-11-17
+ * Modified    : 2017-12-22
  * For LOVD+   : 3.0-18
  *
  * Copyright   : 2004-2017 Leiden University Medical Center; http://www.LUMC.nl/
@@ -705,7 +705,8 @@ foreach ($aFiles as $sID) {
         // Now, VOT fields.
         // Find gene && transcript in database. When not found, try to create it. Otherwise, throw a fatal error.
         // Trusting the gene symbol information from VEP is by far the easiest method, and the fastest. This can fail, therefore we also created an alias list.
-        if (!empty($_INSTANCE_CONFIG['conversion']['enforce_hgnc_gene']) && isset($aGeneAliases[$aVariant['symbol']])) {
+        // Use the alias only however, if we don't have the gene already in the gene database. We have run into problems when an incorrect alias caused problems.
+        if (!empty($_INSTANCE_CONFIG['conversion']['enforce_hgnc_gene']) && !isset($aGenes[$aVariant['symbol']]) && isset($aGeneAliases[$aVariant['symbol']])) {
             $aVariant['symbol'] = $aGeneAliases[$aVariant['symbol']];
         }
         // Get gene information. LOC* genes always fail here, so those we don't try.
