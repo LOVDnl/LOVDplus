@@ -462,17 +462,6 @@ class LOVD_MghaSeqDataConverter extends LOVD_DefaultDataConverter {
 
 
 
-    function prepareGenesToIgnore()
-    {
-        // Prepare the $aGenesToIgnore array with a site specific gene list.
-        $aGenesToIgnore = array();
-        return $aGenesToIgnore;
-    }
-
-
-
-
-
     function ignoreTranscript($sTranscriptId)
     {
         // Check if we want to skip importing the annotation for this transcript.

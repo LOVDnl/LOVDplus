@@ -70,7 +70,8 @@ LOVD+: AUTOMATIC INPUT FILE CONVERSION AND AUTOMATIC FILE IMPORT
 In order to use the automatic file conversion feature and the automatic import
 feature, make sure you have configured all the necessary paths in the
 config.ini.php file, specifically set data_files to the folder where the data
-files (meta data and VEP data file) are stored.
+files (meta data and VEP data file) are stored, and set data_files_archive to
+the folder where the data files will be moved to after a successful import.
 
 Then, for any user with write access to the data directory insert the following
 cronjob to facilitate automatic conversion of meta and data files into LOVD+
@@ -102,9 +103,6 @@ of large data files does slow down normal functionality of LOVD+, and as such is
 recommended to run only outside of working hours. Also make sure that the caller
 script (here, we use GET) doesn't time out if the process doesn't return output
 for a while.
-
-The grep and sed statements in the cronjob filter out unnecessary output. Feel
-free to edit them to get more or fewer lines of output.
 
 
 QUESTIONS?

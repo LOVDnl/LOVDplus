@@ -727,17 +727,6 @@ class LOVD_MghaDataConverter extends LOVD_DefaultDataConverter {
 
 
 
-    function prepareGenesToIgnore()
-    {
-        // Prepare the $aGenesToIgnore array with a site specific gene list.
-        $aGenesToIgnore = array();
-        return $aGenesToIgnore;
-    }
-
-
-
-
-
     function formatEmptyColumn($aLine, $sVEPColumn, $sLOVDColumn, $aVariant)
     {
         // Returns how we want to represent empty data in $aVariant array given a LOVD column name.
