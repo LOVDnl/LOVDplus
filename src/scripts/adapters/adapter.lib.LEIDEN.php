@@ -87,6 +87,16 @@ class LOVD_LeidenDataConverter extends LOVD_DefaultDataConverter {
 
 
 
+    function ignoreTranscript ($sTranscriptID)
+    {
+        // Leiden's LOVD+ doesn't ignore transcripts, their pipeline decides.
+        return false;
+    }
+
+
+
+
+
     function prepareGeneAliases ()
     {
         // Return an array of gene aliases, with the gene symbol as given by VEP

@@ -4,7 +4,7 @@
  * LEIDEN OPEN VARIATION DATABASE (LOVD)
  *
  * Created     : 2016-09-02
- * Modified    : 2017-10-25
+ * Modified    : 2017-12-22
  * For LOVD    : 3.0-18
  *
  * Copyright   : 2004-2017 Leiden University Medical Center; http://www.LUMC.nl/
@@ -200,7 +200,7 @@ class LOVD_DefaultDataConverter {
     var $sAdapterPath;
     var $aScriptVars = array();
     var $aMetadata; // Contains the meta data file, parsed.
-    static $NO_TRANSCRIPT = '-----';
+    static $NO_TRANSCRIPT = '-----'; // Transcripts with this value will be ignored.
 
     public function __construct ($sAdapterPath)
     {
@@ -270,15 +270,25 @@ class LOVD_DefaultDataConverter {
 
 
 
-    function ignoreTranscript ($sTranscriptId)
+    function ignoreTranscript ($sTranscriptID)
     {
         // Returns true for transcripts whose annotation should be ignored.
         // You can overload this function to define which transcripts to ignore;
         //  you can use lists, prefixes or other rules.
 
-        // FIXME: What is this?
-        if ($sTranscriptId === static::$NO_TRANSCRIPT) {
+        if ($sTranscriptID === static::$NO_TRANSCRIPT) {
             return true;
+        }
+
+        // Here, set any prefixes of transcripts that you'd like ignored, like 'NR_'.
+        $aTranscriptsPrefixToIgnore = array(
+            // 'NR_',
+        );
+
+        foreach ($aTranscriptsPrefixToIgnore as $sPrefix) {
+            if (strpos($sTranscriptID, $sPrefix) === 0) {
+                return true;
+            }
         }
 
         return false;
@@ -445,21 +455,6 @@ class LOVD_DefaultDataConverter {
         );
 
         return $aColumnMappings;
-    }
-
-
-
-
-
-    // FIXME: Merge this with ignoreTranscript(), this is too much of the same and no need to make it so complicated.
-    // FIXME: This function is not referenced anywhere, so it can't do anything.
-    function prepareTranscriptsPrefixToIgnore ()
-    {
-        // Prepare the $aGenesToIgnore array with a site specific gene list.
-        $aTranscriptsPrefixToIgnore = array(
-            'NR_'
-        );
-        return $aTranscriptsPrefixToIgnore;
     }
 
 
