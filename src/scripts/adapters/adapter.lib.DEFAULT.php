@@ -211,6 +211,18 @@ class LOVD_DefaultDataConverter {
 
 
 
+    function cleanHeaders ($aHeaders)
+    {
+        // Return the headers, cleaned up if needed.
+        // You can add code here that will clean the headers, directly after reading.
+
+        return $aHeaders;
+    }
+
+
+
+
+
     function formatEmptyColumn ($aLine, $sVEPColumn, $sLOVDColumn, $aVariant)
     {
         // Returns how we want to represent empty data in the $aVariant array.
@@ -345,31 +357,6 @@ class LOVD_DefaultDataConverter {
 
         return array(
         );
-    }
-
-
-
-
-
-    // FIXME: This is Leiden-specific code, put it in the Leiden adapter? It's not defined anywhere else, so make a default that doesn't do anything?
-    // FIXME: This function does not have a valid name, it does not prepare any headers.
-    function prepareHeaders ($aHeaders)
-    {
-        // Verify the identity of this file. Some columns are appended by the Miracle ID.
-        // Check the child's Miracle ID with that we have in the meta data file, and remove all the IDs so the headers are recognized normally.
-        foreach ($aHeaders as $key => $sHeader) {
-            if (preg_match('/(Child|Patient|Father|Mother)_(\d+)$/', $sHeader, $aRegs)) {
-                // If Child, check ID.
-                if (!empty($this->aScriptVars['nMiracleID']) && in_array($aRegs[1], array('Child', 'Patient')) && $aRegs[2] != $this->aScriptVars['nMiracleID']) {
-                    // Here, we won't try and remove the temp file. We need it for diagnostics, and it will save us from running into the same error over and over again.
-                    die('Fatal: Miracle ID of ' . $aRegs[1] . ' (' . $aRegs[2] . ') does not match that from the meta file (' . $this->aScriptVars['nMiracleID'] . ')' . "\n");
-                }
-                // Clean ID from column.
-                $aHeaders[$key] = substr($sHeader, 0, -(strlen($aRegs[2]) + 1));
-            }
-        }
-
-        return $aHeaders;
     }
 
 

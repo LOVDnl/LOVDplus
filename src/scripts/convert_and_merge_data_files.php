@@ -541,7 +541,7 @@ foreach ($aFiles as $sID) {
     // It's usually a big file, and we don't want to use too much memory... so using fgets().
     // First line should be headers, we already read it out somewhere above here.
     // $aHeaders = array_map('trim', $aHeaders, array_fill(0, count($aHeaders), '"')); // In case we ever need to trim off quotes.
-    $aHeaders = $_ADAPTER->prepareHeaders($aHeaders);
+    $aHeaders = $_ADAPTER->cleanHeaders($aHeaders);
     $nHeaders = count($aHeaders);
 
     // Now start parsing the file, reading it out line by line, building up the variant data in $aData.

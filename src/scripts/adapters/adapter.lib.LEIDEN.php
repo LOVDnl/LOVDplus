@@ -50,6 +50,30 @@ $_INSTANCE_CONFIG['observation_counts'] = array(
 class LOVD_LeidenDataConverter extends LOVD_DefaultDataConverter {
     // Contains the overloaded functions that we want different from the default.
 
+    function cleanHeaders ($aHeaders)
+    {
+        // Leiden's headers can be appended by the Miracle ID.
+        // Clean this off, and verify the identity of this file.
+        // Check the child's Miracle ID with that we have in the meta data file, and die if there is a mismatch.
+        foreach ($aHeaders as $key => $sHeader) {
+            if (preg_match('/(Child|Patient|Father|Mother)_(\d+)$/', $sHeader, $aRegs)) {
+                // If Child, check ID.
+                if (!empty($this->aScriptVars['nMiracleID']) && in_array($aRegs[1], array('Child', 'Patient')) && $aRegs[2] != $this->aScriptVars['nMiracleID']) {
+                    // Here, we won't try and remove the temp file. We need it for diagnostics, and it will save us from running into the same error over and over again.
+                    die('Fatal: Miracle ID of ' . $aRegs[1] . ' (' . $aRegs[2] . ') does not match that from the meta file (' . $this->aScriptVars['nMiracleID'] . ')' . "\n");
+                }
+                // Clean ID from column.
+                $aHeaders[$key] = substr($sHeader, 0, -(strlen($aRegs[2]) + 1));
+            }
+        }
+
+        return $aHeaders;
+    }
+
+
+
+
+
     function getInputFilePrefixPattern ()
     {
         // Returns the regex pattern of the prefix of variant input file names.
