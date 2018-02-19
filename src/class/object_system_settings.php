@@ -259,7 +259,7 @@ class LOVD_SystemSetting extends LOVD_Object {
     function setDefaultValues ()
     {
         // Sets default values of fields in $_POST.
-        $_POST['system_title'] = 'LOVD - Leiden Open Variation Database';
+        $_POST['system_title'] = (LOVD_plus? 'Leiden Open Variation Database for diagnostics' : 'LOVD - Leiden Open Variation Database');
         $_POST['location_url'] = ($_SERVER['HTTP_HOST'] == 'localhost' || lovd_matchIPRange($_SERVER['HTTP_HOST'])? '' : lovd_getInstallURL());
         $_POST['refseq_build'] = 'hg38';
         $_POST['api_feed_history'] = 3;

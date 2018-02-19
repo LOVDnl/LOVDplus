@@ -644,7 +644,7 @@ if (!$_CONF) {
     define('MISSING_CONF', true);
     $_CONF =
          array(
-                'system_title' => 'LOVD 3.0 - Leiden Open Variation Database',
+                'system_title' => (LOVD_plus? 'Leiden Open Variation Database for diagnostics' : 'LOVD 3.0 - Leiden Open Variation Database'),
                 'logo_uri' => 'gfx/' . (LOVD_plus? 'LOVD_plus_logo200x50' : 'LOVD3_logo145x50') . '.jpg',
                 'lovd_read_only' => false,
               );
