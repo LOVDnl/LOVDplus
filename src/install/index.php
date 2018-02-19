@@ -198,7 +198,7 @@ if ($_GET['step'] == 0 && defined('NOT_INSTALLED')) {
     $sMultiViews  = '<IMG src="gfx/mark_' . (int) $bMultiViews . '.png" alt="" width="11" height="11">&nbsp;MultiViews, mod_rewrite or equivalent : ' . ($bMultiViews? 'en' : 'dis') . 'abled (required)';
     // FIXME; link to manual?
 
-    if (!$bPHP || !$bPHPFunctions || !$bMySQL || !$bInnoDB || !$bMultiViews) {
+    if (!$bPHP || !$bPHPFunctions || !$bPHPClasses || !$bMySQL || !$bInnoDB || !$bMultiViews) {
         // Failure!
         lovd_showInfoTable('One or more requirements are not met!<BR>I will now bluntly refuse to install.<BR><BR>' .
                            $sPHP . '<BR>' .
