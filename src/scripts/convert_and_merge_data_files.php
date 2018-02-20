@@ -506,46 +506,24 @@ foreach ($aFiles as $sID) {
         exit;
     }
 
-    $sHeaders = fgets($fInput);
-    $aHeaders = explode("\t", rtrim($sHeaders, "\r\n"));
-    foreach ($_ADAPTER->getRequiredHeaderColumns() as $sColumn) {
-        if (!in_array($sColumn, $aHeaders, true)) {
-            lovd_printIfVerbose(VERBOSITY_MEDIUM, 'Ignoring file, does not conform to format: ' . $sFileToConvert . ".\n");
-            continue 2; // Continue to try the next file.
-        }
+    // Get the meta data. Prepare creating the output file, based on the meta file.
+    // We just add the analysis_status, so the analysis can start directly after importing.
+    $aMetaData = file($sFileMeta, FILE_IGNORE_NEW_LINES);
+    if (!$aMetaData) {
+        lovd_printIfVerbose(VERBOSITY_LOW, 'Error reading out meta data file: ' . $sFileMeta . ".\n");
+        continue; // Continue to try the next file.
     }
-
-    // Start creating the output file, based on the meta file. We just add the analysis_status, so the analysis can start directly after importing.
-    $aFileMeta = file($sFileMeta, FILE_IGNORE_NEW_LINES);
-    foreach ($aFileMeta as $nLine => $sLine) {
+    foreach ($aMetaData as $nLine => $sLine) {
         if (strpos($sLine, '{{Screening/') !== false) {
-            $aFileMeta[$nLine]   .= "\t\"{{analysis_statusid}}\"";
-            $aFileMeta[$nLine+1] .= "\t\"" . ANALYSIS_STATUS_READY . '"';
+            $aMetaData[$nLine]   .= "\t\"{{analysis_statusid}}\"";
+            $aMetaData[$nLine+1] .= "\t\"" . ANALYSIS_STATUS_READY . '"';
             break;
         }
     }
-    $fOutput = @fopen($sFileTmp, 'w');
-    if (!$fOutput || !fputs($fOutput, implode("\r\n", $aFileMeta))) {
-        lovd_printIfVerbose(VERBOSITY_LOW, 'Error copying meta file to target: ' . $sFileTmp . ".\n");
-        fclose($fOutput);
-        continue; // Continue to try the next file.
-    }
-    fclose($fOutput);
-
-    $fError = @fopen($sFileError, 'w');
 
     // Isolate the used Screening ID, so we'll connect the variants to the right ID.
     // It could just be 1 always, but this is not a requirement.
     // FIXME: This is quite a lot of code, for something simple as that... Can't we do this in an easier way? More assumptions, less checks?
-    $aMetaData = file($sFileTmp, FILE_IGNORE_NEW_LINES);
-    if (!$aMetaData) {
-        lovd_printIfVerbose(VERBOSITY_LOW, 'Error reading out temporary output file: ' . $sFileTmp . ".\n");
-        unlink($sFileTmp);
-        continue; // Continue to try the next file.
-    }
-    $bParseColumns = false;
-    $nColumnIndexIDMiracle = false;
-    $nColumnIndexIDScreening = false;
     $nScreeningID = 0;
     $nMiracleID = 0;
 
@@ -565,6 +543,36 @@ foreach ($aFiles as $sID) {
     $nScreeningID = sprintf('%010d', $nScreeningID);
     lovd_printIfVerbose(VERBOSITY_FULL, 'Isolated Screening ID: ' . $nScreeningID . "...\n");
     flush();
+
+
+
+
+
+    $sHeaders = fgets($fInput);
+    $aHeaders = explode("\t", rtrim($sHeaders, "\r\n"));
+    // First line should be headers, we already read it out somewhere above here.
+    // $aHeaders = array_map('trim', $aHeaders, array_fill(0, count($aHeaders), '"')); // In case we ever need to trim off quotes.
+    $aHeaders = $_ADAPTER->cleanHeaders($aHeaders);
+    $nHeaders = count($aHeaders);
+
+    // Check for mandatory headers (needs to be run after the headers have been cleaned).
+    foreach ($_ADAPTER->getRequiredHeaderColumns() as $sColumn) {
+        if (!in_array($sColumn, $aHeaders, true)) {
+            lovd_printIfVerbose(VERBOSITY_MEDIUM, 'Ignoring file, does not conform to format: ' . $sFileToConvert . ".\n");
+            continue 2; // Continue to try the next file.
+        }
+    }
+
+    // Input headers are OK, so we can start with the output file.
+    $fOutput = @fopen($sFileTmp, 'w');
+    if (!$fOutput || !fputs($fOutput, implode("\r\n", $aMetaData))) {
+        lovd_printIfVerbose(VERBOSITY_LOW, 'Error copying meta file to target: ' . $sFileTmp . ".\n");
+        fclose($fOutput);
+        continue; // Continue to try the next file.
+    }
+    fclose($fOutput);
+
+    $fError = @fopen($sFileError, 'w');
 
 
 
@@ -730,7 +738,7 @@ foreach ($aFiles as $sID) {
         // 2015-10-28; Because of the double column mappings, we ended up with values divided twice.
         // Flipping the array makes sure we get rid of double mappings.
         foreach (array_flip($aColumnMappings) as $sLOVDColumn => $sVEPColumn) {
-            if ($sVEPColumn == 'AFESP5400' || strpos($sVEPColumn, 'ALTPERC_') === 0) {
+            if ($sVEPColumn == 'AFESP5400' || $sVEPColumn == 'ALTPERC' || strpos($sVEPColumn, 'ALTPERC_') === 0) {
                 $aVariant[$sLOVDColumn] /= 100;
             }
         }

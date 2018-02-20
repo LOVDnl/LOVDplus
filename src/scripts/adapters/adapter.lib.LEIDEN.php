@@ -64,6 +64,8 @@ class LOVD_LeidenDataConverter extends LOVD_DefaultDataConverter {
                 }
                 // Clean ID from column.
                 $aHeaders[$key] = substr($sHeader, 0, -(strlen($aRegs[2]) + 1));
+                // Also clean "Child" and "Patient" off.
+                $aHeaders[$key] = preg_replace('/_(Child|Patient)$/', '', $aHeaders[$key]);
             }
         }
 
@@ -102,6 +104,7 @@ class LOVD_LeidenDataConverter extends LOVD_DefaultDataConverter {
             'QUAL',
             'FILTERvcf',
             'GATKCaller',
+            'GT',
             'SYMBOL',
             'Feature',
         );
@@ -192,6 +195,18 @@ class LOVD_LeidenDataConverter extends LOVD_DefaultDataConverter {
             'YES' => 'YES1',
             'ZAK' => 'MAP3K20',
             // These above have been added 2017-07-27. Expire 2018-07-27.
+
+            // Added 2018-02-20, expire 2019-02-20.
+            'CPSF3L' => 'INTS11',
+            'GLTPD1' => 'CPTP',
+            'C1orf233' => 'FNDC10',
+            'KIAA1751' => 'CFAP74',
+            'C1orf86' => 'FAAP20',
+            'APITD1-CORT' => 'CENPS-CORT',
+            'APITD1' => 'CENPS',
+            'PTCHD2' => 'DISP3',
+            'PRAMEF23' => 'PRAMEF5',
+            'HNRNPCP5' => 'HNRNPCL2',
         );
     }
 }
