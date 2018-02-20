@@ -124,8 +124,8 @@ $_INSTANCE_CONFIG['conversion'] = array(
     'exit_on_annotation_error' => true, // Whether to halt on an annotation error.
     'enforce_hgnc_gene' => true, // Check for aliases, allow automatic creation of genes using the HGNC, allow automatic creation of transcripts.
     'check_indel_description' => true, // Should we check all indels using Mutalyzer? Vep usually does a bad job at them.
-    'verbosity_cron' => 5, // How verbose should we be when running through cron? (default: 5; currently supported: 5,7,9)
-    'verbosity_other' => 7, // How verbose should we be otherwise? (default: 7; currently supported: 5,7,9)
+    'verbosity_cron' => 5, // How verbose should we be when running through cron? (default: 5; currently supported: 0,3,5,7,9)
+    'verbosity_other' => 7, // How verbose should we be otherwise? (default: 7; currently supported: 0,3,5,7,9)
 );
 
 // This is the default configuration of the observation count feature.
@@ -461,6 +461,7 @@ class LOVD_DefaultDataConverter {
         // 'log' - for ignoring the variant and logging the line number.
         // 'separate' - for storing the variant in a separate screening (not implemented yet).
         // When set to something else, 'log' is assumed.
+        // Note that when verbosity is set to low (3) or none (0), then no logging will occur.
 
         return $aLine;
     }
