@@ -1290,7 +1290,7 @@ print('Mutalyzer returned EREF error, hg19/hg38 error?' . "\n");
     // Show the number of times HGNC and Mutalyzer were called.
     print('Number of times HGNC called: ' . $nHGNC . ".\n" .
           'Number of times Mutalyzer called: ' . $nMutalyzer . ".\n" .
-          'Parsing took ' . round((time() - $dStart)/60) . ' minutes, Mutalyzer calls taking ' . round($tMutalyzerCalls/60) . ' minutes, ' . round($tMutalyzerCalls/$nMutalyzer, 2) . ' sec/call.' . "\n");
+          'Parsing took ' . round((time() - $dStart)/60) . ' minutes' . (!$nMutalyzer? '' : ', Mutalyzer calls taking ' . round($tMutalyzerCalls/60) . ' minutes, ' . round($tMutalyzerCalls/$nMutalyzer, 2) . ' sec/call') . '.' . "\n");
     foreach ($aMutalyzerCalls as $sFunction => $nCalls) {
         print('  ' . $sFunction . ': ' . $nCalls . "\n");
     }
