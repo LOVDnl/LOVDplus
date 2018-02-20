@@ -98,7 +98,9 @@ $_INSTANCE_CONFIG['conversion'] = array(
     'max_annotation_error_allowed' => 20,
     'exit_on_annotation_error' => false,
     'enforce_hgnc_gene' => false,
-    'check_indel_description' => false
+    'check_indel_description' => false,
+    'verbosity_cron' => 7, // How verbose should we be when running through cron? (default: 5; currently supported: 5,7,9)
+    'verbosity_other' => 7, // How verbose should we be otherwise? (default: 7; currently supported: 5,7,9)
 );
 
 $_INSTANCE_CONFIG['observation_counts'] = array(

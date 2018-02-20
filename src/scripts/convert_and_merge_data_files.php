@@ -4,10 +4,10 @@
  * LEIDEN OPEN VARIATION DATABASE (LOVD)
  *
  * Created     : 2014-11-28
- * Modified    : 2017-12-22
+ * Modified    : 2018-02-20
  * For LOVD+   : 3.0-18
  *
- * Copyright   : 2004-2017 Leiden University Medical Center; http://www.LUMC.nl/
+ * Copyright   : 2004-2018 Leiden University Medical Center; http://www.LUMC.nl/
  * Programmers : Ivo F.A.C. Fokkema <I.F.A.C.Fokkema@LUMC.nl>
  *               Anthony Marty <anthony.marty@unimelb.edu.au>
  *               Juny Kesumadewi <juny.kesumadewi@unimelb.edu.au>
@@ -37,6 +37,15 @@ ini_set('memory_limit', '4294967296'); // Put in bytes to avoid some issues with
 session_write_close();
 set_time_limit(0);
 ignore_user_abort(true);
+
+// Define and verify settings.
+define('VERBOSITY_NONE', 0); // No output whatsoever. Currently not implemented.
+define('VERBOSITY_LOW', 3); // Low output, only the really important messages. Currently not implemented.
+define('VERBOSITY_MEDIUM', 5); // Medium output. No output if there is nothing to do. Useful for when using cron.
+define('VERBOSITY_HIGH', 7); // High output. The default.
+define('VERBOSITY_FULL', 9); // Full output, including debug statements.
+$bCron = (empty($_SERVER['REMOTE_ADDR']) && empty($_SERVER['TERM']));
+define('VERBOSITY', $_INSTANCE_CONFIG['conversion']['verbosity_' . ($bCron? 'cron' : 'other')]);
 
 
 
@@ -82,6 +91,21 @@ function mutalyzer_runMutalyzer ($variant)
     curl_setopt($ch, CURLOPT_URL, $sUrl);
 
     return curl_exec($ch);
+}
+
+function lovd_printIfVerbose ($nVerbosity, $sMessage)
+{
+    // This function only prints the given message when the current verbosity is set to a level high enough.
+
+    // If no verbosity is currently defined, just print everything.
+    if (!defined('VERBOSITY')) {
+        define('VERBOSITY', 9);
+    }
+
+    if (VERBOSITY >= $nVerbosity) {
+        print($sMessage);
+    }
+    return true;
 }
 
 
