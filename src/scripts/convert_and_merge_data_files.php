@@ -4,7 +4,7 @@
  * LEIDEN OPEN VARIATION DATABASE (LOVD)
  *
  * Created     : 2014-11-28
- * Modified    : 2018-02-20
+ * Modified    : 2018-02-22
  * For LOVD+   : 3.0-18
  *
  * Copyright   : 2004-2018 Leiden University Medical Center; http://www.LUMC.nl/
@@ -645,21 +645,10 @@ foreach ($aFiles as $sID) {
         // Reformat variant data if extra modification required by different instance of LOVD.
         $aLine = $_ADAPTER->prepareVariantData($aLine);
 
-        // If the prepareVariantData() method above determines that this variant line is not to be imported then it adds
-        //  lovd_ignore_variant to the $aLine array and sets it to something non-false.
-        // For possible values, see prepareVariantData() in the default adapter.
-        // We will process "silent" and "log" here. There will be no record within LOVD of this variant being ignored.
-        // Once we'll support "separate", we'll need to process that here, too.
-        if (!empty($aLine['lovd_ignore_variant'])) {
-            if ($aLine['lovd_ignore_variant'] != 'silent') {
-                lovd_printIfVerbose(VERBOSITY_MEDIUM, 'Line ' . $nLine . ' is being ignored due to rules setup in the adapter library. This line will not be imported into LOVD.' . "\n");
-            }
-            continue;
-        }
-
         // Map VEP columns to LOVD columns.
+        $aColumnMappings['lovd_ignore_variant'] = 'lovd_ignore_variant'; // Make sure we take this if we have it.
         foreach ($aColumnMappings as $sVEPColumn => $sLOVDColumn) {
-            // 2015-10-28; But don't let columns overwrite each other! Problem because we have double mappings; two MAGPIE columns pointing to the same LOVD column.
+            // But don't let columns overwrite each other! We might have double mappings; two VEP columns pointing to the same LOVD column.
             if (!isset($aLine[$sVEPColumn]) && isset($aVariant[$sLOVDColumn])) {
                 // VEP column doesn't actually exist in the file, but we do already have created the column in the $aVariant array...
                 // Never mind then!
@@ -671,6 +660,24 @@ foreach ($aFiles as $sID) {
             } else {
                 $aVariant[$sLOVDColumn] = $aLine[$sVEPColumn];
             }
+        }
+
+        // Verify the GT (allele) column. VCFs might have many interesting values (mostly for multisample VCFs).
+        // This function converts the GT values to proper LOVD-style allele values.
+        // It can also instruct LOVD+ to ignore the variant (for instance, when we have a "0/0" GT).
+        // To allow this function to use all fields and to set the 'lovd_ignore_variant' field, we must pass everything.
+        $aVariant = $_ADAPTER->convertGenoTypeToAllele($aVariant);
+
+        // If the prepareVariantData() or convertGenoTypeToAllele() methods above determine that this variant line is
+        //  not to be imported then they add an 'lovd_ignore_variant' key to the $aLine/$aVariant arrays and set it to
+        //  something non-false. For possible values, see the methods in the default adapter.
+        // We will process "silent" and "log" here. There will be no record within LOVD of this variant being ignored.
+        // Once we'll support "separate", we'll need to process that here, too.
+        if (!empty($aVariant['lovd_ignore_variant'])) {
+            if ($aVariant['lovd_ignore_variant'] != 'silent') {
+                lovd_printIfVerbose(VERBOSITY_MEDIUM, 'Line ' . $nLine . ' is being ignored due to rules setup in the adapter library. This line will not be imported into LOVD.' . "\n");
+            }
+            continue;
         }
 
         // VCF 4.2 can contain lines with an ALT allele of "*", indicating the allele is
@@ -689,26 +696,6 @@ foreach ($aFiles as $sID) {
 
         // Now "fix" certain values.
         // First, VOG fields.
-        // Allele.
-        if (!isset($aVariant['allele'])) {
-            $aVariant['allele'] = '';
-        }
-        if ($aVariant['allele'] == '1/1') {
-            $aVariant['allele'] = 3; // Homozygous.
-        } elseif (isset($aVariant['VariantOnGenome/Sequencing/Father/VarPresent']) && isset($aVariant['VariantOnGenome/Sequencing/Mother/VarPresent'])) {
-            if ($aVariant['VariantOnGenome/Sequencing/Father/VarPresent'] >= 5 && $aVariant['VariantOnGenome/Sequencing/Mother/VarPresent'] <= 3) {
-                // From father, inferred.
-                $aVariant['allele'] = 10;
-            } elseif ($aVariant['VariantOnGenome/Sequencing/Mother/VarPresent'] >= 5 && $aVariant['VariantOnGenome/Sequencing/Father/VarPresent'] <= 3) {
-                // From mother, inferred.
-                $aVariant['allele'] = 20;
-            } else {
-                $aVariant['allele'] = 0;
-            }
-        } else {
-            $aVariant['allele'] = 0;
-        }
-
         // Chromosome.
         $aVariant['chromosome'] = substr($aVariant['chromosome'], 3); // chr1 -> 1
         // VOG/DNA and the position fields.

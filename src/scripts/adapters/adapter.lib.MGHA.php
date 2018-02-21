@@ -138,6 +138,34 @@ $_INSTANCE_CONFIG['observation_counts'] = array(
 class LOVD_MghaDataConverter extends LOVD_DefaultDataConverter {
     // Contains the overloaded functions that we want different from the default.
 
+    function cleanGenoType ($sGenoType)
+    {
+        // Returns a "cleaned" genotype (GT) field, given the VCF's GT field.
+        // VCFs can contain many different GT values that should be cleaned/simplified into fewer options.
+
+        static $aGenotypes = array(
+            './.' => '0/1', // No coverage taken as heterozygous variant.
+            './0' => '0/1', // REF + no coverage taken as heterozygous variant.
+            '0/.' => '0/1', // REF + no coverage taken as heterozygous variant.
+            '0/0' => '0/1', // REF taken as heterozygous variant.
+
+            './1' => '1/1', // ALT + no coverage taken as homozygous ALT.
+            '1/.' => '1/1', // ALT + no coverage taken as homozygous ALT.
+
+            '1/0' => '0/1', // Just making sure we only have one way to describe HET calls.
+        );
+
+        if (isset($aGenotypes[$sGenoType])) {
+            return $aGenotypes[$sGenoType];
+        } else {
+            return $sGenoType;
+        }
+    }
+
+
+
+
+
     function prepareMappings()
     {
 
