@@ -84,20 +84,13 @@ class LOVD_ScreeningMOD extends LOVD_Screening {
         // SQL code for viewing the list of screenings
         $this->aSQLViewList['SELECT']   = 's.*, ' .
                                           's.id AS screeningid, ' .
-                                          'IF(s.variants_found = 1 AND COUNT(s2v.variantid) = 0, -1, COUNT(DISTINCT ' . ($_AUTH['level'] >= $_SETT['user_level_settings']['see_nonpublic_data']? 's2v.variantid' : 'vog.id') . ')) AS variants_found_, ' .
-                                          'GROUP_CONCAT(DISTINCT s2g.geneid SEPARATOR ", ") AS genes, ' .
-                                          ($_AUTH['level'] < $_SETT['user_level_settings']['see_nonpublic_data']? '' :
-                                              'CASE i.statusid WHEN ' . STATUS_MARKED . ' THEN "marked" WHEN ' . STATUS_HIDDEN .' THEN "del" END AS class_name, ') .
+                                          'IF(s.variants_found = 1 AND EXISTS(SELECT 1 FROM ' . TABLE_SCR2VAR . ' AS s2v WHERE s2v.screeningid = s.id) = 0, -1, (SELECT COUNT(s2v.variantid) FROM ' . TABLE_SCR2VAR . ' AS s2v WHERE s2v.screeningid = s.id)) AS variants_found_, ' .
                                           'uo.name AS owned_by_, ' .
                                           'ua.name AS analysis_by_, ' .
                                           'uaa.name AS analysis_approved_by_, ' .
                                           'ds.name AS analysis_status, ' .
                                           'CONCAT_WS(";", uo.id, uo.name, uo.email, uo.institute, uo.department, IFNULL(uo.countryid, "")) AS _owner';
         $this->aSQLViewList['FROM']     = TABLE_SCREENINGS . ' AS s ' .
-                                          'LEFT OUTER JOIN ' . TABLE_SCR2VAR . ' AS s2v ON (s.id = s2v.screeningid) ' .
-                                          ($_AUTH['level'] >= $_SETT['user_level_settings']['see_nonpublic_data']? '' :
-                                              'LEFT OUTER JOIN ' . TABLE_VARIANTS . ' AS vog ON (s2v.variantid = vog.id AND (vog.statusid >= ' . STATUS_MARKED . (!$_AUTH? '' : ' OR vog.created_by = "' . $_AUTH['id'] . '" OR vog.owned_by = "' . $_AUTH['id'] . '"') . ')) ') .
-                                          'LEFT OUTER JOIN ' . TABLE_SCR2GENE . ' AS s2g ON (s.id = s2g.screeningid) ' .
                                           'LEFT OUTER JOIN ' . TABLE_INDIVIDUALS . ' AS i ON (s.individualid = i.id) ' .
                                           'LEFT OUTER JOIN ' . TABLE_USERS . ' AS ua ON (s.analysis_by = ua.id) ' .
                                           'LEFT OUTER JOIN ' . TABLE_USERS . ' AS uaa ON (s.analysis_approved_by = uaa.id) ' .
