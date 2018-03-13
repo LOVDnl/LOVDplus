@@ -4,10 +4,10 @@
  * LEIDEN OPEN VARIATION DATABASE (LOVD)
  *
  * Created     : 2016-07-15
- * Modified    : 2017-03-08
+ * Modified    : 2018-03-13
  * For LOVD    : 3.0-18
  *
- * Copyright   : 2004-2017 Leiden University Medical Center; http://www.LUMC.nl/
+ * Copyright   : 2004-2018 Leiden University Medical Center; http://www.LUMC.nl/
  * Programmers : Anthony Marty <anthony.marty@unimelb.edu.au>
  *               Ivo F.A.C. Fokkema <I.F.A.C.Fokkema@LUMC.nl>
  *
@@ -50,7 +50,8 @@ switch ($_INI['instance']['name']) {
                   (3, 3, "X-linked recessive",      "Filters for X-linked recessive variants, not found in father, not homozygous in mother. High frequencies (> 3%) are also filtered out.", 1, 0, NOW(), NULL, NULL),
                   (4, 4, "Recessive (gene panel)",  "Filters for recessive variants, homozygous or compound heterozygous in patient, but not in the parents. High frequencies (> 3%) are also filtered out.", 1, 0, NOW(), NULL, NULL),
                   (5, 5, "Recessive (whole exome)", "Filters for recessive variants, homozygous or compound heterozygous in patient, but not in the parents. High frequencies (> 3%) are also filtered out.", 1, 0, NOW(), NULL, NULL),
-                  (6, 6, "Imprinted genes",         "Filters for variants found in imprinted genes.", 1, 0, NOW(), NULL, NULL)',
+                  (6, 6, "Imprinted genes",         "Filters for variants found in imprinted genes.", 1, 0, NOW(), NULL, NULL),
+                  (7, 7, "Mosaic",                  "Filters for mosaic variants.", 1, 0, NOW(), NULL, NULL)',
                 'INSERT INTO ' . TABLE_ANALYSIS_FILTERS . ' (`id`, `name`, `description`) VALUES 
                   ("apply_selected_gene_panels", "", "Select only variants that are associated with a gene that is in the selected gene panels and not within the selected blacklists."),
                   ("chromosome_X", "", "Select only variants that are located on the X chromosome."),
@@ -166,7 +167,18 @@ switch ($_INI['instance']['name']) {
                   (6, "remove_by_function_utr5", 14), 
                   (6, "remove_by_function_utr_or_intronic", 15), 
                   (6, "remove_by_function_coding_synonymous", 16), 
-                  (6, "remove_by_function_utr_or_intronic_or_synonymous", 17)',
+                  (6, "remove_by_function_utr_or_intronic_or_synonymous", 17),
+                  (7, "apply_selected_gene_panels", 1), 
+                  (7, "remove_by_quality_lte_100", 2), 
+                  (7, "remove_by_indb_count_hc_gte_2", 3), 
+                  (7, "remove_by_indb_count_ug_gte_2", 4), 
+                  (7, "remove_intronic_distance_gt_8", 5), 
+                  (7, "remove_intronic_distance_gt_2", 6), 
+                  (7, "remove_by_function_utr3", 7), 
+                  (7, "remove_by_function_utr5", 8), 
+                  (7, "remove_by_function_utr_or_intronic", 9), 
+                  (7, "remove_by_function_coding_synonymous", 10), 
+                  (7, "remove_by_function_utr_or_intronic_or_synonymous", 11)',
             );
         break;
     case 'mgha':
