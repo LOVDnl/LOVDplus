@@ -1110,6 +1110,7 @@ print('Running mutalyzer to predict protein change for ' . $aGenes[$aVariant['sy
 
                     // Predict RNA && Protein change.
                     // 'Intelligent' error handling.
+                    // FIXME: Implement lovd_getRNAProteinPrediction() here.
                     foreach ($aResponse['messages'] as $aError) {
                         // Pass other errors on to the users?
                         // FIXME: This is implemented as well in inc-lib-variants.php (LOVD3.0-15).
