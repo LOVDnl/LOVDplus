@@ -746,7 +746,7 @@ if ($sCalcVersionFiles != $sCalcVersionDB) {
                      array(
                          'ALTER TABLE ' . TABLE_ALLELES . ' MODIFY COLUMN name VARCHAR(50) NOT NULL',
                      ),
-                 '3.0-17n' => array(
+                 '3.0-17o' => array(
                      'SET @bExists := (SELECT COUNT(*) FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = "' . TABLE_ANALYSES_RUN_FILTERS . '" AND COLUMN_NAME = "config_json")',
                      'SET @sSQL := IF(@bExists > 0, \'SELECT "INFO: Column already exists."\', "
                             ALTER TABLE ' . TABLE_ANALYSES_RUN_FILTERS . ' ADD COLUMN config_json TEXT NULL AFTER filterid")',
