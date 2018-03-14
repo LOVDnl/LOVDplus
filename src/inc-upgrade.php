@@ -1062,7 +1062,7 @@ if ($sCalcVersionFiles != $sCalcVersionDB) {
                 $aUpdates['3.0-17o'],
                 array(
                     // Leiden's cross screening analysis filter.
-                    'INSERT IGNORE INTO ' . TABLE_ANALYIS_FILTERS . ' VALUES ("cross_screenings", "Compare multiple screenings", "Select variants that satisfy the criteria configured by you, comparing several screenings.", 1)',
+                    'INSERT IGNORE INTO ' . TABLE_ANALYSIS_FILTERS . ' VALUES ("cross_screenings", "Compare multiple screenings", "Select variants that satisfy the criteria configured by you, comparing several screenings.", 1)',
                 )
             );
         }
