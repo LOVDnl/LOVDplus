@@ -7,9 +7,9 @@
  * Modified    : 2016-10-17
  * For LOVD    : 3.0-18
  *
- * Copyright   : 2004-2016 Leiden University Medical Center; http://www.LUMC.nl/
- * Programmers : Ing. Ivo F.A.C. Fokkema <I.F.A.C.Fokkema@LUMC.nl>
- *               Ing. Ivar C. Lugtenburg <I.C.Lugtenburg@LUMC.NL>
+ * Copyright   : 2004-2017 Leiden University Medical Center; http://www.LUMC.nl/
+ * Programmers : Ivo F.A.C. Fokkema <I.F.A.C.Fokkema@LUMC.nl>
+ *               Ivar C. Lugtenburg <I.C.Lugtenburg@LUMC.NL>
  *               M. Kroon <m.kroon@lumc.nl>
  *
  *
@@ -70,6 +70,7 @@ if ($sCalcVersionFiles != $sCalcVersionDB) {
     $aUpdateMessages =
         array(
             '3.0-17m' => array(), // Placeholder for an LOVD+ message, defined below.
+            '3.0-17n' => array(), // Placeholder for an LOVD+ message, defined below.
         );
 
     // LOVD+ messages should be built up separately, so that LOVDs won't show them.
@@ -79,6 +80,10 @@ if ($sCalcVersionFiles != $sCalcVersionDB) {
             'stop',
             '100%',
             'lovd_openWindow(\'scripts/hash_dbid.php\')',
+        );
+        $aUpdateMessages['3.0-17n'] = array(
+            'If you have a cron job set up for the auto import feature, grepping for lines starting with a colon (:), then turn off this grep from now on. Output no longer is prefixed by a colon, and grepping is no longer needed because no HTML is output by the script anymore. LOVD now defaults to text/plain output for the auto importer, so you also don\'t need to request it anymore in the URL, either. See the updated INSTALL.txt for the new suggested cron job to use.',
+            'important',
         );
     }
 
@@ -746,6 +751,7 @@ if ($sCalcVersionFiles != $sCalcVersionDB) {
                      array(
                          'ALTER TABLE ' . TABLE_ALLELES . ' MODIFY COLUMN name VARCHAR(50) NOT NULL',
                      ),
+                 '3.0-17n' => array(), // Placeholder for LOVD+ queries, defined below.
                  '3.0-17o' => array(
                      'SET @bExists := (SELECT COUNT(*) FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = "' . TABLE_ANALYSES_RUN_FILTERS . '" AND COLUMN_NAME = "config_json")',
                      'SET @sSQL := IF(@bExists > 0, \'SELECT "INFO: Column already exists."\', "
@@ -1031,10 +1037,20 @@ if ($sCalcVersionFiles != $sCalcVersionDB) {
 
     if (LOVD_plus && $sCalcVersionDB < lovd_calculateVersion('3.0-17n')) {
         // Run LOVD+ specific queries.
+        // LOVD has this table since 3.0-20b, in its current form.
+        // LOVD+ has this table since 3.0-12g, and takes LOVD's 20b improvements in 17m.
+        $aUpdates['3.0-17n'][] =
+            'ALTER TABLE ' . TABLE_SCHEDULED_IMPORTS . ' 
+             ADD COLUMN priority TINYINT(1) UNSIGNED NOT NULL DEFAULT 0 AFTER filename,
+             ADD COLUMN process_errors TEXT AFTER scheduled_date';
+    }
+
+    if (LOVD_plus && $sCalcVersionDB < lovd_calculateVersion('3.0-17o')) {
+        // Run LOVD+ specific queries.
         if (lovd_verifyInstance('mgha')) {
             $aNewCustomCols = array('Screening/Tag');
-            $aUpdates['3.0-17n'] = array_merge(
-                $aUpdates['3.0-17n'],
+            $aUpdates['3.0-17o'] = array_merge(
+                $aUpdates['3.0-17o'],
                 lovd_getActivateCustomColumnQuery($aNewCustomCols),
                 array(
                     // MGHA's cross screening analysis filter.
@@ -1042,8 +1058,8 @@ if ($sCalcVersionFiles != $sCalcVersionDB) {
                 )
             );
         } elseif (lovd_verifyInstance('leiden')) {
-            $aUpdates['3.0-17n'] = array_merge(
-                $aUpdates['3.0-17n'],
+            $aUpdates['3.0-17o'] = array_merge(
+                $aUpdates['3.0-17o'],
                 array(
                     // Leiden's cross screening analysis filter.
                     'INSERT IGNORE INTO ' . TABLE_ANALYIS_FILTERS . ' VALUES ("cross_screenings", "Compare multiple screenings", "Select variants that satisfy the criteria configured by you, comparing several screenings.", 1)',

@@ -96,25 +96,6 @@ table.analysis_half_run th
 table.analysis_half_run th
   img.modify                 {display: inline; cursor: pointer;}
 
-/* Color coding the variants */
-table.data tr.colRed td                   {background : #FAD5D5;}
-table.data tr.colRed td.ordered           {background : #FFB5B5;}
-table.data tr.colRed:hover td             {background : #FFB5B5;}
-table.data tr.colRed:hover td.ordered     {background : #FF9090;}
-table.data tr.colRed:hover td.checkbox    {background : #FAD5D5; cursor : default;}
-
-table.data tr.colGreen td                 {background : #D0FFD0;}
-table.data tr.colGreen td.ordered         {background : #B0FFB0;}
-table.data tr.colGreen:hover td           {background : #B0FFB0;}
-table.data tr.colGreen:hover td.ordered   {background : #80FF80;}
-table.data tr.colGreen:hover td.checkbox  {background : #D0FFD0; cursor : default;}
-
-table.data tr.colOrange td                {background : #FFE5C0;}
-table.data tr.colOrange td.ordered        {background : #FFD090;}
-table.data tr.colOrange:hover td          {background : #FFD090;}
-table.data tr.colOrange:hover td.ordered  {background : #FFC070;}
-table.data tr.colOrange:hover td.checkbox {background : #FFE5C0; cursor : default;}
-
 table.data tr.transparent50               {opacity:0.5; filter:alpha(opacity=50);}
 
 /* Span looking like an Anchor */

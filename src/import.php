@@ -7,9 +7,9 @@
  * Modified    : 2016-10-17
  * For LOVD    : 3.0-18
  *
- * Copyright   : 2004-2016 Leiden University Medical Center; http://www.LUMC.nl/
- * Programmers : Ing. Ivo F.A.C. Fokkema <I.F.A.C.Fokkema@LUMC.nl>
- *               Msc. Daan Asscheman <D.Asscheman@LUMC.nl>
+ * Copyright   : 2004-2017 Leiden University Medical Center; http://www.LUMC.nl/
+ * Programmers : Ivo F.A.C. Fokkema <I.F.A.C.Fokkema@LUMC.nl>
+ *               Daan Asscheman <D.Asscheman@LUMC.nl>
  *               M. Kroon <m.kroon@lumc.nl>
  *
  *
@@ -54,36 +54,90 @@ if (ACTION == 'schedule' && PATH_COUNT == 1) {
     // Require manager clearance.
     lovd_requireAUTH(LEVEL_MANAGER);
 
+    // This feature requires you to have the data files and the archive settings configured.
+    if (empty($_INI['paths']['data_files']) || empty($_INI['paths']['data_files_archive'])) {
+        lovd_showInfoTable('To use this feature, you will need to configure both the "data_files" and "data_files_archive" paths.', 'stop');
+        $_T->printFooter();
+        exit;
+    }
+
     // Loop through the files in the dir and find importable files.
     $h = @opendir($_INI['paths']['data_files']);
     if (!$h) {
         lovd_showInfoTable('Can\'t open directory: ' . $_INI['paths']['data_files'], 'stop');
+        $_T->printFooter();
+        exit;
     }
 
-    // To see if the file has already been imported, fetch a list of imported individuals.
-    $aImportedIDs = $_DB->query('SELECT `Individual/Lab_ID`, 1 FROM ' . TABLE_INDIVIDUALS)->fetchAllCombine();
+    // Fetch all info from the database, for annotation and error reporting.
+    // This will group by filename.
+    $zScheduledFiles = $_DB->query('SELECT sf.*, u.name AS scheduled_by_name
+                                    FROM ' . TABLE_SCHEDULED_IMPORTS . ' AS sf LEFT OUTER JOIN ' . TABLE_USERS . ' AS u ON (sf.scheduled_by = u.id)
+                                    ORDER BY (sf.processed_date IS NOT NULL) DESC, sf.priority DESC, sf.processed_date, sf.scheduled_date, sf.filename')
+                           ->fetchAllGroupAssoc();
 
-    // [0/1] indicates imported no/yes, second level [filename] = mod_time.
+    // [0/1] indicates processed no/yes.
+    // Files in format [filename] = sort_code (unscheduled(0|1), reverse_priority(0-9), processed_date, scheduled_date, file_timestamp).
+    // NOTE: If you change the sort code, be sure to update this comment, the code that builds it, the code the fills in the orphaned database entries, and the scheduling part.
     $aFiles = array(
         array(),
         array(),
     );
-    while (($sFile = readdir($h)) !== false) {
-        if (preg_match('/^(Child|Patient)_(\d+).total.data.lovd$/', $sFile, $aRegs)) {
-            // Match!
-            $sFileID = $aRegs[1] . '_' . $aRegs[2];
 
-            // Get mod time.
-            $tFile = filemtime($_INI['paths']['data_files'] . '/' . $sFile);
+    // Read out directory and store files in the correct array.
+    $nFilesSchedulable = 0; // Keeping track of how many files on disk are not scheduled yet.
+    while (($sFile = readdir($h)) !== false) {
+        if (preg_match('/(^LOVD_API_submission.+|.total.data).lovd$/', $sFile, $aRegs)) {
+            // This should be an importable file.
+            $bScheduled = isset($zScheduledFiles[$sFile]);
+            if ($bScheduled) {
+                $bProcessed = (int) $zScheduledFiles[$sFile]['in_progress'];
+                $nPriority = $zScheduledFiles[$sFile]['priority'];
+                $sProcessedDate = (!$zScheduledFiles[$sFile]['processed_date']? '0000-00-00 00:00:00' : $zScheduledFiles[$sFile]['processed_date']);
+                $sScheduledDate = $zScheduledFiles[$sFile]['scheduled_date'];
+            } else {
+                $bProcessed = 0;
+                $nPriority = 0;
+                $sProcessedDate = '0000-00-00 00:00:00';
+                $sScheduledDate = '0000-00-00 00:00:00';
+            }
+            $tFileModified = filemtime($_INI['paths']['data_files'] . '/' . $sFile);
+
+            // Build the sorting code by concatenating a few variables.
+            $sSorting = '';
+            // Scheduled files should go on top.
+            $sSorting .= (int) !$bScheduled . ',';
+            // Then, priority samples should go on top.
+            $sSorting .= (9 - $nPriority) . ',';
+            // Then, sort on date processed.
+            $sSorting .= $sProcessedDate . ',';
+            // Then, sort on date scheduled.
+            $sSorting .= $sScheduledDate . ',';
+            // Then, sort on the file's timestamp.
+            $sSorting .= date('Y-m-d H:i:s', $tFileModified);
 
             // Store file in the files array.
-            $aFiles[isset($aImportedIDs[$sFileID])][$sFile] = $tFile;
+            $aFiles[$bProcessed][$sFile] = $sSorting;
+
+            $nFilesSchedulable += (int) !$bScheduled;
         }
     }
 
-    if (!$aFiles) {
-        // No files found!
-        lovd_showInfoTable('No files found! Normally this might mean trouble; I should find at least some files that are already imported... Right?', 'question');
+    // To make sure we see entries where the file is gone, but the entry persists in the schedule, add all scheduled files that are not found.
+    foreach ($zScheduledFiles as $sFile => $zScheduledFile) {
+        if (!isset($aFiles[0][$sFile]) && !isset($aFiles[1][$sFile])) {
+            $aFiles[1][$sFile] =
+                '0,' .
+                (9 - $zScheduledFile['priority']) . ',' .
+                (!$zScheduledFile['processed_date']? '0000-00-00 00:00:00' : $zScheduledFile['processed_date']) . ',' .
+                 $zScheduledFile['scheduled_date'] . ',' .
+                 $sFile;
+        }
+    }
+
+    if (!$zScheduledFiles && !$aFiles[0] && !$aFiles[1]) {
+        // No files found, and nothing scheduled!
+        lovd_showInfoTable('No files found, and nothing scheduled!<BR>Please check the documentation to see how to import LOVD files directly from the server.', 'information');
         $_T->printFooter();
         exit;
     }
@@ -94,19 +148,26 @@ if (ACTION == 'schedule' && PATH_COUNT == 1) {
 
     // Process POST if present.
     $nScheduled = 0;
-    if (POST && $_POST) {
-        // Loop through variables, find them in $aFiles[0], mark them in the database as scheduled, reload page.
-        foreach ($_POST as $sFile => $nValue) {
-            // Even though most (all?) browsers just forward the checkboxes that have been checked, I'm checking the value anyways.
-            // I don't really care much about the value, it just needs to resolve to (bool) true.
-            // Because PHP is replacing dots in the variable name (makes sense in a way, but this is a key value, but well), I need to fix the file name:
-            $sFile = preg_replace('/_([a-z])/', ".$1", $sFile); // Put dots only when an underscore is followed by a text character.
-            if ($nValue && isset($aFiles[0][$sFile])) {
+    if (POST && !empty($_POST['files_to_schedule'])) {
+        // We can't use the file names as keys, as PHP replaces dots with underscores and then we can't find the files reliably anymore.
+        // Loop through variables, find them in $aFiles[0], mark them in the database as scheduled.
+        foreach ($_POST['files_to_schedule'] as $sFile) {
+            if (isset($aFiles[0][$sFile])) {
                 // Process this file, it's present indeed and not yet imported.
                 if ($_DB->query('INSERT IGNORE INTO ' . TABLE_SCHEDULED_IMPORTS . ' (filename, scheduled_by, scheduled_date) VALUES (?, ?, NOW())', array($sFile, $_AUTH['id']))->rowCount()) {
-                    // Scheduled successfully.
+                    // Scheduled successfully, didn't exist yet.
                     $nScheduled ++;
                     lovd_writeLog('Event', LOG_EVENT, 'Scheduled ' . $sFile . ' for import');
+
+                    // Now, to facilitate proper sorting, refresh the information in the files array.
+                    // FIXME: This assumes a priority of 0 (stored as 9); we need to change this when we implement priority scheduling.
+                    $aFiles[0][$sFile] = '0,9,0000-00-00 00:00:00,' . date('Y-m-d H:i:s') . substr($aFiles[0][$sFile], 43);
+
+                    // Also, to display statistics, load the file's info.
+                    // This includes the filename field, that we usually don't have, but whatever.
+                    $zScheduledFiles[$sFile] = $_DB->query('SELECT sf.*, u.name AS scheduled_by_name
+                                                            FROM ' . TABLE_SCHEDULED_IMPORTS . ' AS sf LEFT OUTER JOIN ' . TABLE_USERS . ' AS u ON (sf.scheduled_by = u.id)
+                                                            WHERE sf.filename = ?', array($sFile))->fetchAssoc();
                 }
             }
         }
@@ -116,56 +177,93 @@ if (ACTION == 'schedule' && PATH_COUNT == 1) {
 
 
 
-    arsort($aFiles[0]); // RSort importable files, newest files first, keeping indices.
-    arsort($aFiles[1]); // RSort imported files, newest files first, keeping indices.
+    // Sort the file list (the DB list is already sorted).
+    asort($aFiles[0]); // Sort data files, keeping indices.
+    asort($aFiles[1]); // Sort data files, keeping indices.
+    $nFilesTotal = count($aFiles[0]) + count($aFiles[1]);
 
-    $nFilesImportable = (!isset($aFiles[0])? 0 : count($aFiles[0]));
-    $nFilesTotal = $nFilesImportable + (!isset($aFiles[1])? 0 : count($aFiles[1]));
-
-    lovd_showInfoTable($nFilesImportable . ' file' . ($nFilesImportable == 1? '' : 's') . ' ready for import, ' . $nFilesTotal . ' file' . ($nFilesTotal == 1? '' : 's') . ' in total.', 'information');
+    lovd_showInfoTable($nFilesSchedulable . ' file' . ($nFilesSchedulable == 1? '' : 's') . ' unscheduled, ' . $nFilesTotal . ' file' . ($nFilesTotal == 1? '' : 's') . ' in total.', 'information');
 
     if ($nScheduled) {
         // We also just scheduled some files.
         lovd_showInfoTable('Successfully scheduled ' . $nScheduled . ' file' . ($nScheduled == 1? '' : 's') . ' for import.', 'success');
     }
 
-    // To see which files are already scheduled for import, I need to fetch that list, too.
-    // Using fetchAllCombine() may create a bit of an awkward array, but it's a lot faster using isset() than in_array().
-    $aFilesScheduled = $_DB->query('SELECT filename, 1 FROM ' . TABLE_SCHEDULED_IMPORTS)->fetchAllCombine();
-
     $tNow = time();
-    print('      <FORM action="' . CURRENT_PATH . '?' . ACTION . '" method="post">
+    $aUsers = array(); // Array of users submitting things through the API.
+    // We need a form, because to schedule files you need to select them; this triggers a hidden checkbox to be updated.
+    print('
+      <FORM action="' . CURRENT_PATH . '?' . ACTION . '" method="post">
         <TABLE border="0" cellpadding="10" cellspacing="0">
           <TR valign="top">' . "\n");
     foreach (array(1, 0) as $i) {
         print('            <TD>
               <TABLE border="0" cellpadding="10" cellspacing="1" width="' . ($i? '350' : '450') . '" class="data" style="font-size : 13px;">
                 <TR>
-                  <TH' . ($i? '' : '></TH><TH') . ' class="S16">' . ($i? 'Files already imported' : 'Files to be imported') . '</TH></TR>');
-        foreach ($aFiles[$i] as $sFile => $tFile) {
-            $bScheduled = false;
-            $nAgeInDays = floor(($tNow - $tFile)/(60*60*24));
-            if ($i) {
-                // Already imported.
-                print("\n" .
-                      '                <TR class="del">');
+                  <TH' . ($i? '' : '></TH><TH') . ' class="S16">' . ($i? 'Files already processed' : 'Files to be processed') . '</TH></TR>');
+        foreach ($aFiles[$i] as $sFile => $sSortString) {
+            list($bUnscheduled, $nReversePriority, $sProcessedDate, $sScheduledDate, $sFileModified) = explode(',', $sSortString);
+            // Scheduled that no longer exist, have the name of the file as their modification date.
+            $bFileLost = ($sFile == $sFileModified);
+
+            // For LOVD API submissions, we change the annotation.
+            // File names are long, we can shorten it and annotate better.
+            // We deliberately overwrite $sFileModified here.
+            if (preg_match('/^LOVD_API_submission_(\d+)_([0-9:_-]+)\.(\d+)\.lovd$/', $sFile, $aRegs)) {
+                $bAPI = true;
+                list(, $nUserID, $sFileModified) = $aRegs;
+                $nUserID = sprintf('%0' . $_SETT['objectid_length']['users'] . 'd', $nUserID);
+                $sFileModified = str_replace('_', ' ', $sFileModified);
+                $sFileDisplayName = 'API submission (' . $nUserID . ': ';
+                if (!isset($aUsers[$nUserID])) {
+                    $aUsers[$nUserID] = $_DB->query('SELECT name FROM ' . TABLE_USERS . ' WHERE id = ?', array($nUserID))->fetchColumn();
+                }
+                $sFileDisplayName .= (!isset($aUsers[$nUserID])? 'User unknown' : $aUsers[$nUserID]) . ')';
             } else {
-                $bScheduled = isset($aFilesScheduled[$sFile]);
+                $bAPI = false;
+                $sFileDisplayName = $sFile;
+            }
+
+            $bScheduled = (!$bUnscheduled);
+            $nPriority = (9 - $nReversePriority);
+            $nAgeInDays = floor(($tNow - strtotime($sFileModified))/(60*60*24));
+            // Build the link for actions for already scheduled files.
+            $sAjaxActions = 'onclick="$.get(\'ajax/import_scheduler.php/' . urlencode($sFile) . '?view\').fail(function(){alert(\'Error retrieving actions, please try again later.\');}); return false;"';
+            if ($i) {
+                // Already processed.
+                $bError = !empty($zScheduledFiles[$sFile]['process_errors']);
+                $bProcessing = ($zScheduledFiles[$sFile]['in_progress'] && !$bError);
+
+                print("\n" .
+                      '                <TR class="' . ($bError? 'colRed' : 'del') . '" ' . $sAjaxActions . '>');
+            } else {
+                $bError = false;
+                $bProcessing = false;
                 if ($bScheduled) {
                     // Not imported yet, but scheduled.
                     print("\n" .
-                          '                <TR class="del">
-                  <TD width="30" style="text-align : center;"><IMG src="gfx/menu_clock.png" alt="Scheduled" width="16" height="16"></TD>');
+                          '                <TR class="del" ' . $sAjaxActions . '>
+                  <TD width="30" style="text-align : center;"><IMG src="gfx/menu_clock.png" alt="Scheduled" width="16" height="16" title="Scheduled for import"></TD>');
                 } else {
                     // Not imported yet, can be scheduled.
                     print("\n" .
                           '                <TR class="data" style="cursor : pointer;" onclick="if ($(this).find(\':checkbox\').prop(\'checked\')) { $(this).find(\':checkbox\').attr(\'checked\', false); $(this).find(\'img\').hide(); $(this).removeClass(\'colGreen\'); } else { $(this).find(\':checkbox\').attr(\'checked\', true);  $(this).find(\'img\').show(); $(this).addClass(\'colGreen\'); }">
-                  <TD width="30" style="text-align : center;"><INPUT type="checkbox" name="' . $sFile . '" value="1" style="display : none;"><IMG src="gfx/check.png" alt="Import" width="16" height="16" style="display : none;"></TD>');
+                  <TD width="30" style="text-align : center;"><INPUT type="checkbox" name="files_to_schedule[]" value="' . $sFile . '" style="display : none;"><IMG src="gfx/check.png" alt="Import" width="16" height="16" style="display : none;"></TD>');
                 }
             }
+            $sInformationHTML = ($bUnscheduled? '' : '
+                    <IMG src="gfx/lovd_form_information.png" alt="Information" width="16" height="16" title="' . ($sFile == $sFileDisplayName? '' : $sFile . ' - ') . 'Scheduled ' . $zScheduledFiles[$sFile]['scheduled_date'] . ' by ' . $zScheduledFiles[$sFile]['scheduled_by_name'] . '" style="float : right;">');
+            $sPriorityHTML = (!$nPriority? '' : '
+                    <IMG src="gfx/lovd_form_warning.png" alt="Priority" width="16" height="16" title="Priority import: ' . $_SETT['import_priorities'][$nPriority] . '" style="float : right;">');
+            $sProcessingHTML = (!$bProcessing? '' : '
+                    <IMG src="gfx/menu_clock.png" alt="Processing ..." width="16" height="16" title="Processing started ' . $zScheduledFiles[$sFile]['processed_date'] . '" style="float : right;">');
+            $sErrorsHTML = (!$bError? '' : '
+                    <IMG src="gfx/cross.png" alt="Errors while processing" width="16" height="16" title="Errors while processing:' . "\n" . htmlspecialchars($zScheduledFiles[$sFile]['process_errors']) . '" style="float : right;">');
             print('
-                  <TD><SPAN class="S15"><B>' . $sFile . '</B>' . (!$bScheduled? '' : ' <SPAN class="S13">(scheduled for import)</SPAN>') . '</SPAN><BR>
-                    ' . date('Y-m-d H:i:s', $tFile) . ' - Converted ' . $nAgeInDays . ' day' . ($nAgeInDays == 1? '' : 's') . ' ago</TD></TR>');
+                  <TD>' . $sInformationHTML . $sPriorityHTML . $sProcessingHTML . $sErrorsHTML . '
+                    <B>' . $sFileDisplayName . '</B><BR>
+                    <SPAN class="S11">' . ($bFileLost? 'File not found' : $sFileModified . ' - ' . ($bAPI? 'Submitted' : (LOVD_plus? 'Converted' : 'Created')) . ' ' . $nAgeInDays . ' day' . ($nAgeInDays == 1? '' : 's') . ' ago') . '</SPAN>
+                  </TD></TR>');
         }
         print('</TABLE></TD>' . "\n");
     }
@@ -181,12 +279,15 @@ if (ACTION == 'schedule' && PATH_COUNT == 1) {
 
 
 
-if (ACTION == 'autoupload_scheduled_file' && PATH_COUNT == 1 && FORMAT == 'text/plain') {
-    // This script will be called from localhost, and the output will be parsed.
-    // That is the easiest I think, because then at this point I don't need to
-    // change the HTML output to something else. All output that should go
-    // directly through the parser, should be prepended with a colon (:).
+if (ACTION == 'autoupload_scheduled_file' && PATH_COUNT == 1) {
+    // This URL forces FORMAT to be text/plain.
+    // All unneeded output will be prevented.
     define('FORMAT_ALLOW_TEXTPLAIN', true); // To allow automatic data loading.
+
+    // This feature requires you to have the data files and the archive settings configured.
+    if (empty($_INI['paths']['data_files']) || empty($_INI['paths']['data_files_archive'])) {
+        die('Error: To use this feature, you will need to configure both the "data_files" and "data_files_archive" paths.');
+    }
 
     // If we have nothing to do, let's stop.
     if (!$_DB->query('SELECT COUNT(*) FROM ' . TABLE_SCHEDULED_IMPORTS . ' WHERE in_progress = 0')->fetchColumn()) {
@@ -196,25 +297,23 @@ if (ACTION == 'autoupload_scheduled_file' && PATH_COUNT == 1 && FORMAT == 'text/
     // First, check if the database is free, and not currently uploading anything.
     // Instead of monitoring the number of connections, I really want to check if something is uploading already.
     // We'll ignore the possibility of a file being manually uploaded. We just check the schedule.
-    // We'll check for active uploads started more than an hour ago.
+    // We'll check for active uploads started later than an hour ago, with no errors filled in.
     $sMaxDate = date('Y-m-d H:i:s', time() - (60*60));
-    if ($_DB->query('SELECT COUNT(*) FROM ' . TABLE_SCHEDULED_IMPORTS . ' WHERE in_progress = 1 AND processed_date >= ?', array($sMaxDate))->fetchColumn()) {
-        die(':Error: Last file is still being imported...' . "\n");
+    if ($_DB->query('SELECT COUNT(*) FROM ' . TABLE_SCHEDULED_IMPORTS . ' WHERE in_progress = 1 AND processed_date >= ? AND process_errors IS NULL', array($sMaxDate))->fetchColumn()) {
+        die('Error: Last file is still being imported...' . "\n");
     }
 
     // Begin transaction, take rows from the schedule while write locking them, until we find a scheduled file that we can find.
     // Should be the first, of course. But I'll check anyway, to nicely handle the error message.
     $_DB->beginTransaction();
     $sFile = '';
-    for ($i = 0; $sFile = $_DB->query('SELECT filename FROM ' . TABLE_SCHEDULED_IMPORTS . ' WHERE in_progress = 0 ORDER BY scheduled_date ASC, filename LIMIT ' . $i . ', 1 FOR UPDATE')->fetchColumn(); $i++) {
+    for ($i = 0; $sFile = $_DB->query('SELECT filename FROM ' . TABLE_SCHEDULED_IMPORTS . ' WHERE in_progress = 0 ORDER BY priority DESC, scheduled_date, filename LIMIT ' . $i . ', 1 FOR UPDATE')->fetchColumn(); $i++) {
         if (!is_readable($_INI['paths']['data_files'] . '/' . $sFile)) {
-            print(':Error: ' . $sFile . ' not found...' . "\n");
+            print('Warning: ' . $sFile . ' not found...' . "\n");
         } else {
-            // FIXME: Perhaps here we could try *some* sanity check if the file seems OK. Of course it should be, but you never know.
-            //   Errors downstream are hard to catch, and will block the importing for at least an hour.
             // Select this file. Since filename is primary key, we don't need more stuff in the WHERE.
             if (!$_DB->query('UPDATE ' . TABLE_SCHEDULED_IMPORTS . ' SET in_progress = 1, processed_by = 0, processed_date = NOW() WHERE filename = ?', array($sFile))->rowCount()) {
-                die(':Error: Can not obtain processing lock on file ' . $sFile . '.' . "\n");
+                die('Error: Can not obtain processing lock on file ' . $sFile . '.' . "\n");
             }
             // We selected our file. Stop going through the list.
             break;
@@ -222,9 +321,9 @@ if (ACTION == 'autoupload_scheduled_file' && PATH_COUNT == 1 && FORMAT == 'text/
     }
     $_DB->commit();
 
-    // This should not happen (we already checked if there was something to do), but just in case...
+    // This can happen when scheduled files are not found.
     if (!$sFile) {
-        die(':Error: Failed to retrieve a filename from the database.' . "\n");
+        die('Error: Failed to retrieve a filename from the database.' . "\n");
     }
 
     // Load necessary authorisation.
@@ -248,10 +347,10 @@ if (ACTION == 'autoupload_scheduled_file' && PATH_COUNT == 1 && FORMAT == 'text/
                 )
         );
 
-    print(':Preparing to upload ' . $sFile . ' into database...' . "\n" .
-          ':Current time: ' . date('Y-m-d H:i:s.') . "\n");
+    print('Preparing to upload ' . $sFile . ' into database...' . "\n" .
+          'Current time: ' . date('Y-m-d H:i:s.') . "\n\n");
 
-    // If we're running automatically, ignore user aborts (dying caller script).
+    // Since we're running automatically, ignore user aborts (dying caller script).
     ignore_user_abort(true);
 }
 
@@ -488,7 +587,7 @@ if (POST || $_FILES) { // || $_FILES is in use for the automatic loading of file
         lovd_errorAdd('import', 'There was a problem with the file transfer. Please try again. The file cannot be larger than ' . round($nMaxSize/pow(1024, 2), 1) . ' MB' . ($nMaxSize == $nMaxSizeLOVD? '' : ', due to restrictions on this server') . '.');
 
     } elseif ($_FILES['import']['error'] == 4 || !$_FILES['import']['size']) {
-        lovd_errorAdd('import', 'Please select a file to upload.');
+        lovd_errorAdd('import', 'Please select a non-empty file to upload.');
 
     } elseif ($_FILES['import']['size'] > $nMaxSize) {
         lovd_errorAdd('import', 'The file cannot be larger than ' . round($nMaxSize/pow(1024, 2), 1) . ' MB' . ($nMaxSize == $nMaxSizeLOVD? '' : ', due to restrictions on this server') . '.');
@@ -648,6 +747,8 @@ if (POST || $_FILES) { // || $_FILES is in use for the automatic loading of file
                 continue;
             }
 
+
+
             if (substr(ltrim($sLine, '"'), 0, 1) == '#') {
                 if (preg_match('/^#\s*([a-z_]+)\s*=\s*(.+)$/', ltrim($sLine, '"'), $aRegs)) {
                     // Import flag (setting).
@@ -670,13 +771,15 @@ if (POST || $_FILES) { // || $_FILES is in use for the automatic loading of file
                         // If we had at least one unknown column in the previous section, we will mention in the output the number of values gone lost.
                         // The column name has already been written to the output, so we should simply add command to append the number of lost values.
                         if (isset($aUnknownCols) && count($aUnknownCols)) {
-                            print('<SCRIPT type="text/javascript">' . "\n" .
-                                  '  var sMessage = $("#lovd_parser_progress_message_done").html();' . "\n");
-                            foreach ($aLostValues as $sCol => $n) {
-                                print('  sMessage = sMessage.replace(/' . preg_quote($sCol, '/') . '/, "' . $sCol . ' (lost ' . $n . ' value' . ($n == 1? '' : 's') . ')");' . "\n");
+                            if (FORMAT == 'text/html') {
+                                print('<SCRIPT type="text/javascript">' . "\n" .
+                                      '  var sMessage = $("#lovd_parser_progress_message_done").html();' . "\n");
+                                foreach ($aLostValues as $sCol => $n) {
+                                    print('  sMessage = sMessage.replace(/' . preg_quote($sCol, '/') . '/, "' . $sCol . ' (lost ' . $n . ' value' . ($n == 1? '' : 's') . ')");' . "\n");
+                                }
+                                print('  $("#lovd_parser_progress_message_done").html(sMessage);' . "\n" .
+                                      '</SCRIPT>' . "\n");
                             }
-                            print('  $("#lovd_parser_progress_message_done").html(sMessage);' . "\n" .
-                                  '</SCRIPT>');
                             $aUnknownCols = $aLostValues = array(); // 2013-10-14; 3.0-08; Reset, because it's normally reset when parsing the next section's columns, which might not be there.
                             flush();
                         }
@@ -1931,14 +2034,14 @@ if (POST || $_FILES) { // || $_FILES is in use for the automatic loading of file
 
             // If we had at least one unknown column in the previous section, we will mention in the output the number of values gone lost.
             // The column name has already been written to the output, so we should simply add command to append the number of lost values.
-            if (isset($aUnknownCols) && count($aUnknownCols)) {
+            if (isset($aUnknownCols) && count($aUnknownCols) && FORMAT == 'text/html') {
                 print('<SCRIPT type="text/javascript">' . "\n" .
                       '  var sMessage = $("#lovd_parser_progress_message_done").html();' . "\n");
                 foreach ($aLostValues as $sCol => $n) {
                     print('  sMessage = sMessage.replace(/' . preg_quote($sCol, '/') . '/, "' . $sCol . ' (lost ' . $n . ' value' . ($n == 1? '' : 's') . ')");' . "\n");
                 }
                 print('  $("#lovd_parser_progress_message_done").html(sMessage);' . "\n" .
-                      '</SCRIPT>');
+                      '</SCRIPT>' . "\n");
                 flush();
             }
         }
@@ -2014,7 +2117,11 @@ if (POST || $_FILES) { // || $_FILES is in use for the automatic loading of file
         require ROOT_PATH . 'inc-lib-actions.php';
         if (!lovd_error() && $nDataTotal) {
             define('LOG_EVENT', 'Import');
-            print('<BR>');
+            if (FORMAT == 'text/html') {
+                print('<BR>');
+            } else {
+                print("\n");
+            }
             $_BAR[] = new ProgressBar('sql', 'Applying changes...');
             $nEntry = 0;
             $bError = false;
@@ -2258,7 +2365,6 @@ if (!lovd_isCurator($_SESSION['currdb'])) {
 *///////////////////////////////////////////////////////////////////////////////
                     $_BAR[1]->setProgress(($nEntry/$nDataTotal)*100);
                 }
-
                 unset($aData); // break the reference with the last element.
 
                 // Done with all this section!
@@ -2360,18 +2466,50 @@ if (!lovd_isCurator($_SESSION['currdb'])) {
                 lovd_writeLog('Event', LOG_EVENT, 'Imported ' . $sMessage . '; ran ' . $nDone . ' queries' . (!$aGenes? '' : ' (' . ($nGenes > 100? $nGenes . ' genes' : implode(', ', $aGenes)) . ')') . (ACTION != 'autoupload_scheduled_file' || !$sFile? '' : ' (' . $sFile . ')') . '.');
                 lovd_setUpdatedDate($aGenes); // FIXME; regardless of variant status... oh, well...
 
-                if (LOVD_plus) {
-                    // Tasks for LOVD+, LOVD for diagnostics.
-                    if (ACTION == 'autoupload_scheduled_file' && $sFile) {
-                        // Remove the file from the schedule.
-                        $_DB->query('DELETE FROM ' . TABLE_SCHEDULED_IMPORTS . ' WHERE filename = ? AND in_progress = 1', array($sFile));
+                // When auto uploading, clean up.
+                if (ACTION == 'autoupload_scheduled_file' && $sFile) {
+                    // Move the file to the archive folder, including all its sibling files.
+                    if (is_writable($_INI['paths']['data_files_archive'])) { // Must be set, but still.
+                        // I'm deliberately not saving the file suffixes elsewhere, because we should support old and new suffixes.
+                        // Sort these in most specific -> least specific, that's the order in which they will be tried.
+                        $aSuffixes = array(
+                            '.total.data.lovd',
+                            '.lovd',
+                        );
+                        $sFilePrefix = $sFile;
+                        // Determine the prefix by trying all suffixes and removing those.
+                        // Once successful, we quit trying.
+                        foreach ($aSuffixes as $sSuffix) {
+                            $sFilePrefix = preg_replace('/' . preg_quote($sSuffix, '/') . '$/', '', $sFilePrefix);
+                            if ($sFilePrefix != $sFile) {
+                                // That worked!
+                                break;
+                            }
+                        }
 
-                        // Also, if we have an archive folder, move it there, including all its sibling files.
-                        if (is_writable($_INI['paths']['data_files_archive'])) {
-                            $sFilePrefix = $sFilePrefix = substr($sFile, 0, strpos($sFile . '.', '.'));
-                            // Doing this the proper PHP way, would be to open the dir, loop the files, find matching files, and then rename them one by one.
-                            // Instead, I'm doing this in a Linux-specific way, by just calling a simple mv command.
-                            @exec('mv -i ' . $_INI['paths']['data_files'] . '/' . $sFilePrefix . '.* ' . $_INI['paths']['data_files_archive'] . '/');
+                        // I could just do a "mv", but that's the Linux way, and I'd like to keep this cross-platform.
+                        // Loop through the files in the dir and find matching files.
+                        $aFilesToMove = array();
+                        $h = @opendir($_INI['paths']['data_files']);
+                        if ($h) {
+                            // Failure is silent, continue only when we have a handler.
+                            while (($sFileRead = readdir($h)) !== false) {
+                                if (substr($sFileRead, 0, strlen($sFilePrefix)) == $sFilePrefix) {
+                                    // This file is movable.
+                                    $aFilesToMove[] = $sFileRead;
+                                }
+                            }
+
+                            $nFilesMoved = 0;
+                            foreach ($aFilesToMove as $sFileToMove) {
+                                $nFilesMoved += (int) @rename($_INI['paths']['data_files'] . '/' . $sFileToMove, $_INI['paths']['data_files_archive'] . '/' . $sFileToMove);
+                            }
+
+                            // Only delete from schedule when we moved file(s) successfully, otherwise it'll be unclear that it's been processed already.
+                            if ($nFilesMoved == count($aFilesToMove)) {
+                                // Remove the file from the schedule.
+                                $_DB->query('DELETE FROM ' . TABLE_SCHEDULED_IMPORTS . ' WHERE filename = ? AND in_progress = 1', array($sFile));
+                            }
                         }
                     }
                 }
@@ -2389,12 +2527,18 @@ if (!lovd_isCurator($_SESSION['currdb'])) {
 
         if (!lovd_error() && !$nDataTotal) {
             if ($sMode == 'update')
-                lovd_showInfoTable('No entries found that can be updated via the import file.', 'stop');
+                $sMessage = 'No entries found that can be updated via the import file.';
             if ($sMode == 'insert') {
-                lovd_showInfoTable('No entries found that need to be imported in the database. Either your uploaded file contains no variants, or all entries are already in the database.', 'stop');
+                $sMessage = 'No entries found that need to be imported in the database. Either your uploaded file contains no variants, or all entries are already in the database.';
             }
-            $_T->printFooter();
-            exit;
+            lovd_showInfoTable($sMessage, 'stop');
+            if (ACTION == 'autoupload_scheduled_file') {
+                // We are to nicely return this error message, so it can be stored.
+                lovd_errorAdd('', $sMessage);
+            } else {
+                $_T->printFooter();
+                exit;
+            }
         }
     }
 
@@ -2403,6 +2547,21 @@ if (!lovd_isCurator($_SESSION['currdb'])) {
     if (in_array(ACTION, array_keys($aModes))) {
         $_POST['mode'] = ACTION;
     }
+}
+
+
+
+if (ACTION == 'autoupload_scheduled_file') {
+    // If we get here, we tried to upload a file automatically, but something failed.
+    // Display the error messages and store them in the database. Then try again.
+    $sErrors = '';
+    foreach ($_ERROR['messages'] as $sMessage) {
+        if ($sMessage) {
+            $sErrors .= (!$sErrors? '' : "\n") . html_entity_decode(strip_tags($sMessage));
+        }
+    }
+    $_DB->query('UPDATE ' . TABLE_SCHEDULED_IMPORTS . ' SET process_errors = ? WHERE filename = ?', array($sErrors, $sFile));
+    die('Errors while processing file:' . "\n" . $sErrors);
 }
 
 

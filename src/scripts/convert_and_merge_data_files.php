@@ -4,7 +4,7 @@
  * LEIDEN OPEN VARIATION DATABASE (LOVD)
  *
  * Created     : 2014-11-28
- * Modified    : 2017-06-09
+ * Modified    : 2017-11-17
  * For LOVD+   : 3.0-18
  *
  * Copyright   : 2004-2017 Leiden University Medical Center; http://www.LUMC.nl/
@@ -1110,6 +1110,7 @@ print('Running mutalyzer to predict protein change for ' . $aGenes[$aVariant['sy
 
                     // Predict RNA && Protein change.
                     // 'Intelligent' error handling.
+                    // FIXME: Implement lovd_getRNAProteinPrediction() here.
                     foreach ($aResponse['messages'] as $aError) {
                         // Pass other errors on to the users?
                         // FIXME: This is implemented as well in inc-lib-variants.php (LOVD3.0-15).
@@ -1374,10 +1375,11 @@ print('Mutalyzer returned EREF error, hg19/hg38 error?' . "\n");
         die('Error moving temp file to target: ' . $sFileDone . ".\n");
     }
 
-    // OK, so file is done, and can be scheduled now. Just auto-schedule it.
+    // OK, so file is done, and can be scheduled now. Just auto-schedule it, overwriting any possible errored entry.
+    // FIXME: This can also be done with one INSERT ON DUPLICATE KEY UPDATE query.
     if ($_DB->query('INSERT IGNORE INTO ' . TABLE_SCHEDULED_IMPORTS . ' (filename, scheduled_by, scheduled_date) VALUES (?, 0, NOW())', array(basename($sFileDone)))->rowCount()) {
         print('File scheduled for import.' . "\n");
-    } elseif ($_DB->query('UPDATE ' . TABLE_SCHEDULED_IMPORTS . ' SET scheduled_date = NOW() WHERE filename = ?', array(basename($sFileDone)))->rowCount()) {
+    } elseif ($_DB->query('UPDATE ' . TABLE_SCHEDULED_IMPORTS . ' SET in_progress = 0, scheduled_by = 0, scheduled_date = NOW(), process_errors = NULL, processed_by = NULL, processed_date = NULL WHERE filename = ?', array(basename($sFileDone)))->rowCount()) {
         print('File scheduled for import.' . "\n");
     } else {
         print('Error scheduling file for import!' . "\n");
