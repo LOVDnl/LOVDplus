@@ -49,7 +49,10 @@ if (!$_AUTH || !lovd_isAuthorized('analysisrun', $nID)) {
 
 // Now get the analysis run's data, and check the screening's status.
 // We can't do anything if the screening has been closed, so then we'll fail here.
-$sSQL = 'SELECT a.*, ar.*, s.individualid, af.has_config, GROUP_CONCAT(af.id,"|",IFNULL(af.name, "") SEPARATOR ";;")  as __filters
+// Only select the filters that have configuration.
+// We use "|" here instead of LOVD standard ";" because filter name can sometimes be empty
+//  and it will create a substring of ";;" which will be treated as filter separator.
+$sSQL = 'SELECT a.*, ar.*, s.individualid, af.has_config, GROUP_CONCAT(af.id,"|",IFNULL(af.name, "") SEPARATOR ";;")  as __filters_with_config
          FROM ' . TABLE_ANALYSES_RUN . ' AS ar
            INNER JOIN ' . TABLE_SCREENINGS . ' AS s ON (ar.screeningid = s.id)
            INNER JOIN ' . TABLE_ANALYSES . ' AS a ON (ar.analysisid = a.id)
@@ -102,18 +105,18 @@ if (ACTION == 'clone' && GET) {
 
     // Request confirmation.
     $sMessage = 'Are you sure you want to duplicate this analysis run?<BR>';
-    if (!empty($zData['__filters'])) {
+    if (!empty($zData['__filters_with_config'])) {
         // If there are filters that require extra configurations before it can be run,
         // we want to ask users if they want to copy them.
         $sMessage = 'Do you want to copy the configurations of these filters?<BR><BR>';
 
-        // $zData['__filters'] only contains filters that require further configurations before it can be run
-        $aFilters = explode(';;', $zData['__filters']);
+        // $zData['__filters_with_config'] only contains filters that require further configurations before it can be run
+        $aFilters = explode(';;', $zData['__filters_with_config']);
         foreach ($aFilters as $sConfig) {
-            // We use "|" here instead of LOVD standard ";" because
-            // filter name and has_config columns can sometimes be empty and it will create a substring of ";;"
-            // which will be treated as filter separator.
-            list($sFilterId, $sFilterName) = explode('|', $sConfig);
+            // We use "|" here instead of LOVD standard ";" because filter name can sometimes be empty
+            //  and it will create a substring of ";;" which will be treated as filter separator.
+            // Limit to 2, to make sure filter names with "|" are not split also.
+            list($sFilterId, $sFilterName) = explode('|', $sConfig, 2);
 
             $sLabel = (!empty($sFilterName)? $sFilterName : $sFilterId);
             $sMessage .= '<LABEL><INPUT type=\'checkbox\' name=\'copy_config[]\' value=\'' . $sFilterId . '\'>'. $sLabel .'</LABEL><BR>';
@@ -280,44 +283,38 @@ if (ACTION == 'delete' && POST) {
 
 if (ACTION == 'showGenes' && GET) {
     // Request confirmation.
-    // We do this in two steps, not only because we'd like the user to confirm, but also to prevent CSRF.
-
-    $_SESSION['csrf_tokens']['analysis_run_show_genes'] = md5(uniqid());
-
-
 
     $sConfig = $_DB->query('SELECT config_json FROM ' . TABLE_ANALYSES_RUN_FILTERS . ' WHERE runid = ? AND filterid = ?', array($nID, 'apply_selected_gene_panels'))->fetchColumn();
     $aConfig = json_decode($sConfig, true);
 
     $aGenePanelIDs = array_keys($aConfig['metadata']);
-    $sSelectForm = '<p>These genes were active at the time the analysis was run. These genes may differ from the current list of genes in these gene panels.</p>';
-    $sSelectForm .= '<label>Gene Panel: </label><select id=\'show-gp-genes\'>';
+    $sSelectForm  = '<P>These genes were active at the time the analysis was run. These genes may differ from the current list of genes in these gene panels.</P>' .
+                    '<LABEL>Gene Panel: </LABEL><SELECT id=\'show-gp-genes\' style=\'margin-left : 25px;\'>';
 
     $sGenes = '';
     foreach ($aGenePanelIDs as $sGpID) {
         $aGpDetails = $aConfig['metadata'][$sGpID];
-        $sGenes .= '<div class=\'genes-list\' id=\'genes-'. $sGpID .'\' style=\'display:none; overflow: scroll; max-height: 300px;\'>';
-        $sGenes .= implode(', ', $aGpDetails['genes']);
-        $sGenes .= '</div>';
-        $sSelectForm .= '<option value=\'' . $sGpID . '\'>'. $aGpDetails['name'] .'</option>';
+        $sGenes .= '<DIV class=\'genes-list\' id=\'genes-'. $sGpID .'\' style=\'display:none;\'>' .
+                   implode(', ', $aGpDetails['genes']) . '</DIV>';
+        $sSelectForm .= '<OPTION value=\'' . $sGpID . '\'>'. $aGpDetails['name'] .'</OPTION>';
     }
-    $sSelectForm .= '</select>';
+    $sSelectForm .= '</SELECT>';
 
     // Display the form, and put the right buttons in place.
-    $sFormGenes  = '<FORM id=\'analysis_run_clone_form\'><INPUT type=\'hidden\' name=\'csrf_token\' value=\'{{CSRF_TOKEN}}\'>' . $sSelectForm . '<BR><BR>' . $sGenes . '</FORM>';
-    $sFormGenes = str_replace('{{CSRF_TOKEN}}', $_SESSION['csrf_tokens']['analysis_run_show_genes'], $sFormGenes);
+    $sFormGenes = '<FORM id=\'analysis_run_clone_form\'>' . $sSelectForm . '<BR><BR>' . $sGenes . '</FORM>';
 
     print('
     $("#analysis_run_dialog").html("' . $sFormGenes . '<BR>");
 
     // Select the right buttons.
-    $("#analysis_run_dialog").dialog({title: "Gene Panels", buttons: $.extend({}, oButtonClose)});
+    $("#analysis_run_dialog").dialog({title: "Gene Panels", buttons: oButtonClose});
+    // Make sure selecting a different gene panel will show its genes, and hide the currently selected panel\'s genes.
     $("#show-gp-genes").change(function() {
         gpID = $(this).val();
         $(".genes-list").hide();
         $("#genes-" + gpID).show();
     });
-     $("#show-gp-genes").trigger("change");
+    $("#show-gp-genes").trigger("change");
     
     ');
     exit;
