@@ -101,16 +101,18 @@ var oButtonClose  = {"Close":function () { $(this).dialog("close"); }};
 
 
 if (ACTION == 'clone' && GET) {
-    // Gather information from the database whether this filter requires further configurations before it can be run.
+    // Allows cloning an analysis run, so it can be rerun.
+    // Check if this analysis has filters requiring configuration before it can be run.
+    // We do this in two steps, not only because we'd like the user to confirm, but also to prevent CSRF.
 
     // Request confirmation.
     $sMessage = 'Are you sure you want to duplicate this analysis run?<BR>';
     if (!empty($zData['__filters_with_config'])) {
         // If there are filters that require extra configurations before it can be run,
-        // we want to ask users if they want to copy them.
+        //  we want to ask users if they want to copy the settings.
         $sMessage = 'Do you want to copy the configurations of these filters?<BR><BR>';
 
-        // $zData['__filters_with_config'] only contains filters that require further configurations before it can be run
+        // $zData['__filters_with_config'] contains filters that require configuration before they can be run.
         $aFilters = explode(';;', $zData['__filters_with_config']);
         foreach ($aFilters as $sConfig) {
             // We use "|" here instead of LOVD standard ";" because filter name can sometimes be empty
@@ -119,11 +121,11 @@ if (ACTION == 'clone' && GET) {
             list($sFilterId, $sFilterName) = explode('|', $sConfig, 2);
 
             $sLabel = (!empty($sFilterName)? $sFilterName : $sFilterId);
-            $sMessage .= '<LABEL><INPUT type=\'checkbox\' name=\'copy_config[]\' value=\'' . $sFilterId . '\'>'. $sLabel .'</LABEL><BR>';
+            $sMessage .= '<LABEL><INPUT type=\'checkbox\' name=\'copy_config[]\' value=\'' . $sFilterId . '\'>' . $sLabel . '</LABEL><BR>';
         }
     }
 
-    // We do this in two steps, not only because we'd like the user to confirm, but also to prevent CSRF.
+    // Prepare CSRF token.
     $_SESSION['csrf_tokens']['analysis_run_clone'] = md5(uniqid());
     $sFormClone = str_replace(
         array('{{MESSAGE}}', '{{CSRF_TOKEN}}'),
@@ -134,7 +136,7 @@ if (ACTION == 'clone' && GET) {
     $("#analysis_run_dialog").html("' . $sFormClone . '<BR>");
 
     // Select the right buttons.
-    $("#analysis_run_dialog").dialog({title: "Duplicate Analysis Run" ,buttons: $.extend({}, oButtonFormClone, oButtonCancel)});
+    $("#analysis_run_dialog").dialog({title: "Duplicate Analysis Run", buttons: $.extend({}, oButtonFormClone, oButtonCancel)});
     ');
     exit;
 }
@@ -153,7 +155,7 @@ if (ACTION == 'clone' && POST) {
     }
 
     // Here, we also want to retrieve the configurations of each filter if they exist.
-    $zData['filters'] = $_DB->query('SELECT filterid, config_json FROM ' . TABLE_ANALYSES_RUN_FILTERS . ' WHERE runid = ? ORDER BY filter_order', array($nID))->fetchAllAssoc();
+    $zData['filters'] = $_DB->query('SELECT filterid, config_json FROM ' . TABLE_ANALYSES_RUN_FILTERS . ' WHERE runid = ? ORDER BY filter_order', array($nID))->fetchAllRow();
     $nFilters = count($zData['filters']);
 
     $_DB->beginTransaction();
@@ -163,10 +165,10 @@ if (ACTION == 'clone' && POST) {
     $nNewRunID = $_DB->lastInsertId();
 
     // Now insert filters to the newly created analysis.
+    // Collect all the names of the filters that we'll remove the descriptions of after cloning the table.
     $aRemoveFiltersConfigDescription = array();
-    foreach ($zData['filters'] as $nOrder => $aFilter) {
-        $sFilter = $aFilter['filterid'];
-        $sFilterConfig = $aFilter['config_json']; // The filter configuration from the analysis we want to copy from.
+    foreach ($zData['filters'] as $nOrder => $rFilter) {
+        list($sFilter, $sFilterConfig) = $rFilter;
         $nOrder ++; // Let order begin by 1, not 0.
 
         // If user chooses to copy the configurations of this filter from the analysis that they duplicate, then copy it over.
@@ -174,7 +176,7 @@ if (ACTION == 'clone' && POST) {
         if (!empty($_POST['copy_config']) && in_array($sFilter, $_POST['copy_config'])) {
             $sConfigToInsert = $sFilterConfig;
         } else {
-            // Easier to collect all the names of the filter descriptions that need to be removed by JS here.
+            // Have this filter's description removed by JS.
             $aRemoveFiltersConfigDescription[] = $sFilter;
         }
         $_DB->query('INSERT INTO ' . TABLE_ANALYSES_RUN_FILTERS . ' (runid, filterid, config_json, filter_order) VALUES (?, ?, ?, ?)', array($nNewRunID, $sFilter, $sConfigToInsert, $nOrder));
@@ -205,19 +207,7 @@ if (ACTION == 'clone' && POST) {
     $("#run_' . $nPaddedNewRunID . ' tr.filter_completed").removeClass("filter_completed");
     $("#run_' . $nPaddedNewRunID . ' tr.message td").html("Click to run this analysis");
     
-    // Update gene panel description to un-run state.
-    var sAction = "lovd_configureAnalysis";
-
-    // Define which JS function to run when clicking this table.
-    if ($("#run_' . $nPaddedNewRunID . '_filter_apply_selected_gene_panels").length == 0 
-        || $("#run_' . $nPaddedNewRunID . '_filter_apply_selected_gene_panels").hasClass("filter_skipped")) {
-        // If there gene panel filter is not active or is not included in this analysis.        
-        var sGenePanel = ", undefined";
-    } else {
-        var sGenePanel = "";
-    }
-    
-    $("#run_' . $nPaddedNewRunID . '").attr("onclick", sAction + "(\'' . $zData['screeningid'] . '\', \'' . $zData['analysisid'] . '\', \'' . $nPaddedNewRunID . '\', this.id" + sGenePanel + ")");
+    $("#run_' . $nPaddedNewRunID . '").attr("onclick", "lovd_configureAnalysis(\'' . $zData['screeningid'] . '\', \'' . $zData['analysisid'] . '\', \'' . $nPaddedNewRunID . '\', this.id)");
     ');
 
     // Remove all configurations descriptions for those filters whose configurations are not copied.
