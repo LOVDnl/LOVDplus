@@ -43,11 +43,11 @@ $zAnalysisRuns = $_DB->query(
              IFNULL(
                (SELECT MAX(gp2g.valid_from)
                 FROM ' . TABLE_GP2GENE_REV . ' AS gp2g
-                WHERE gp2g.genepanelid = gp.id AND gp2g.valid_from <= ar.created_date AND gp2g.valid_to > ar.created_date), "0000-00-00 00:00:00"),
+                WHERE gp2g.genepanelid = gp.id AND gp2g.valid_from <= ar.created_date AND gp2g.valid_to > ar.created_date), gp.created_date),
              IFNULL(
                (SELECT MAX(gp2g.valid_to)
                 FROM ' . TABLE_GP2GENE_REV . ' AS gp2g
-                WHERE gp2g.genepanelid = gp.id AND gp2g.valid_to < ar.created_date AND gp2g.deleted = 1), "0000-00-00 00:00:00")), ";",
+                WHERE gp2g.genepanelid = gp.id AND gp2g.valid_to < ar.created_date AND gp2g.deleted = 1), gp.created_date)), ";",
            (SELECT GROUP_CONCAT(DISTINCT gp2g.geneid SEPARATOR ",")
             FROM ' . TABLE_GP2GENE_REV . ' AS gp2g
             WHERE gp2g.genepanelid = gp.id AND gp2g.valid_from <= ar.created_date AND gp2g.valid_to > ar.created_date
@@ -71,14 +71,13 @@ $zAnalysisRuns = array_map(function ($aAnalysisRun)
         $aAnalysisRun['gene_panels'] = array_map(function ($sGenePanelData)
         {
             list($nID, $sName, $sType, $sLastModified, $sGenes) = explode(';', $sGenePanelData);
-            $aReturn = array(
+            return array(
                 'id' => $nID,
                 'name' => $sName,
                 'type' => $sType,
                 'last_modified' => $sLastModified,
                 'genes' => explode(',', $sGenes),
             );
-            return $aReturn;
         }, explode(';;', $aAnalysisRun['__gene_panels']));
     }
     $aAnalysisRun['custom_panel'] = array();
