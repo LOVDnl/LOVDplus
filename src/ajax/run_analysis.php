@@ -4,10 +4,10 @@
  * LEIDEN OPEN VARIATION DATABASE (LOVD)
  *
  * Created     : 2013-11-05
- * Modified    : 2017-10-20
+ * Modified    : 2018-03-19
  * For LOVD    : 3.0-18
  *
- * Copyright   : 2004-2017 Leiden University Medical Center; http://www.LUMC.nl/
+ * Copyright   : 2004-2018 Leiden University Medical Center; http://www.LUMC.nl/
  * Programmers : Ivo F.A.C. Fokkema <I.F.A.C.Fokkema@LUMC.nl>
  *               Juny Kesumadewi <juny.kesumadewi@unimelb.edu.au>
  *
@@ -52,20 +52,30 @@ if (empty($_REQUEST['screeningid']) || empty($_REQUEST['analysisid']) || !ctype_
 
 // Find screening data, make sure we have the right to analyze this patient.
 // MANAGER can always start an analysis, even when the individual's analysis hasn't been started by him.
-$sSQL = 'SELECT i.id, i.custom_panel';
+$sFamilyColumns = '';
 if (!empty($_INSTANCE_CONFIG['columns']['family'])) {
     foreach ($_INSTANCE_CONFIG['columns']['family'] as $sKey => $sColumn) {
         if (strpos($sColumn, 'Screening/') === 0) {
-            $sSQL .= ', s.`' . $sColumn . '`';
+            $sFamilyColumns .= ', s.`' . $sColumn . '`';
         }
     }
 }
-//$sSQL .= (!lovd_verifyInstance('mgha', false)? '' : ', s.`Screening/Mother/Sample_ID`, s.`Screening/Father/Sample_ID`');
-$sSQL .= ', GROUP_CONCAT(DISTINCT gp.id, ";", gp.name, ";", gp.type, ";", IFNULL(gp.edited_date, gp.created_date) ORDER BY gp.type DESC, gp.name ASC SEPARATOR ";;") AS __gene_panels
-         FROM ' . TABLE_INDIVIDUALS . ' AS i 
-         INNER JOIN ' . TABLE_SCREENINGS . ' AS s ON (i.id = s.individualid) 
-         LEFT OUTER JOIN ' . TABLE_IND2GP . ' AS i2gp ON (i.id = i2gp.individualid)
-         LEFT OUTER JOIN ' . TABLE_GENE_PANELS . ' AS gp ON (i2gp.genepanelid = gp.id) 
+$sSQL = 'SELECT i.id, i.custom_panel' . $sFamilyColumns . ',
+           GROUP_CONCAT(DISTINCT gp.id, ";", gp.name, ";", gp.type, ";",
+             GREATEST(
+               IFNULL(
+                 (SELECT MAX(gp2g.valid_from)
+                  FROM ' . TABLE_GP2GENE_REV . ' AS gp2g
+                  WHERE gp2g.genepanelid = gp.id), gp.created_date),
+               IFNULL(
+                 (SELECT MAX(gp2g.valid_to)
+                  FROM ' . TABLE_GP2GENE_REV . ' AS gp2g
+                  WHERE gp2g.genepanelid = gp.id AND LEFT(gp2g.valid_to, 10) != "9999-12-31" AND gp2g.deleted = 1), gp.created_date)), ";"
+             ORDER BY gp.type DESC, gp.name ASC SEPARATOR ";;") AS __gene_panels
+         FROM ' . TABLE_INDIVIDUALS . ' AS i
+           INNER JOIN ' . TABLE_SCREENINGS . ' AS s ON (i.id = s.individualid)
+           LEFT OUTER JOIN ' . TABLE_IND2GP . ' AS i2gp ON (i.id = i2gp.individualid)
+           LEFT OUTER JOIN ' . TABLE_GENE_PANELS . ' AS gp ON (i2gp.genepanelid = gp.id) 
          WHERE s.id = ? AND s.analysis_statusid < ? AND (s.analysis_statusid = ? OR s.analysis_by ' . ($_AUTH['level'] >= LEVEL_MANAGER? 'IS NOT NULL' : '= ?') . ')';
 $aSQL = array($_REQUEST['screeningid'], ANALYSIS_STATUS_CLOSED, ANALYSIS_STATUS_READY);
 if ($_AUTH['level'] < LEVEL_MANAGER) {
@@ -84,10 +94,10 @@ if (!empty($zIndividual['__gene_panels'])) {
     }
 }
 
-// move custom_panel to $zIndividual['gene_panels'] to make further processing easier.
+// Move custom_panel to $zIndividual['gene_panels'] to make further processing easier.
 if (!empty($zIndividual['custom_panel'])) {
     // Use any non-digit values as ID.
-    $zIndividual['gene_panels'][GP_TYPE_CUSTOM] = array('custom_panel' => array('name' => $zIndividual['custom_panel'], 'last_modified' => date('Y-m-d H:i:s')));
+    $zIndividual['gene_panels']['custom_panel'] = array('custom_panel' => array('name' => $zIndividual['custom_panel'], 'last_modified' => date('Y-m-d H:i:s')));
 }
 
 
@@ -95,7 +105,11 @@ if (!empty($zIndividual['custom_panel'])) {
 $zAnalysis = $zAnalysisRun = $zFilterConfig = false;
 if ($_REQUEST['runid']) {
     // Check if the run exists and retrieve any existing configurations data of each filter.
-    $zAnalysisRun = $_DB->query('SELECT ar.id, ar.analysisid, a.name, GROUP_CONCAT(arf.filterid ORDER BY arf.filter_order SEPARATOR ";") AS _filters FROM ' . TABLE_ANALYSES_RUN . ' AS ar INNER JOIN ' . TABLE_ANALYSES . ' AS a ON (ar.analysisid = a.id) INNER JOIN ' . TABLE_ANALYSES_RUN_FILTERS . ' AS arf ON (ar.id = arf.runid) WHERE ar.id = ? GROUP BY arf.runid', array($_REQUEST['runid']))->fetchAssoc();
+    $zAnalysisRun = $_DB->query('SELECT ar.id, ar.analysisid, a.name, GROUP_CONCAT(arf.filterid ORDER BY arf.filter_order SEPARATOR ";") AS _filters
+                                 FROM ' . TABLE_ANALYSES_RUN . ' AS ar
+                                   INNER JOIN ' . TABLE_ANALYSES . ' AS a ON (ar.analysisid = a.id)
+                                   INNER JOIN ' . TABLE_ANALYSES_RUN_FILTERS . ' AS arf ON (ar.id = arf.runid)
+                                 WHERE ar.id = ? GROUP BY arf.runid', array($_REQUEST['runid']))->fetchAssoc();
     if (!$zAnalysisRun) {
         die('Analysis run not recognized. If the analysis run is defined properly, this is an error in the software.');
     }
@@ -105,7 +119,7 @@ if ($_REQUEST['runid']) {
         die('This analysis has already been performed on this screening.');
     }
 
-    // Get the config_json of each filter. The json can be too big to be included in group_concat in the query that returns $zAnalysisRun query above.
+    // Get the config_json of each filter. The JSON can be too big to be included in group_concat in the query that returns $zAnalysisRun query above.
     $zFilterConfig = $_DB->query('SELECT filterid, config_json FROM ' . TABLE_ANALYSES_RUN_FILTERS . ' WHERE runid = ?', array($_REQUEST['runid']))->fetchAllGroupAssoc();
 
 } else {
@@ -125,68 +139,78 @@ if (ACTION == 'configure' && GET) {
 
     header('Content-type: text/javascript; charset=UTF-8');
 
-    $aFilters = (!empty($zAnalysisRun['_filters'])? explode(';', $zAnalysisRun['_filters']) : explode(';', $zAnalysis['_filters'])) ;
-    $sFiltersFormItems = '';
-    $sJsCanSubmit = 'true';
-    $sJsOtherFunctions = '';
+    $aFilters = (!empty($zAnalysisRun['_filters'])? explode(';', $zAnalysisRun['_filters']) : explode(';', $zAnalysis['_filters']));
+    $sFiltersFormItems = ''; // The part of the form with filter options.
+    $sJsCanSubmit  = 'true'; // String with JS checks that should evaluate to true to get form to submit.
+    $sJsOtherFunctions = ''; // String with additional JS code for the form.
 
     foreach ($aFilters as $sFilter) {
         // Get the filter configuration already stored in the database.
-        if (!empty($zFilterConfig[$sFilter])) {
-            $sConfigJson = $zFilterConfig[$sFilter]['config_json'];
-        }
         $aConfig = array();
-        if (!empty($sConfigJson)) {
-            $aConfig = json_decode($sConfigJson, true);
+        if (!empty($zFilterConfig[$sFilter]['config_json'])) {
+            $aConfig = json_decode($zFilterConfig[$sFilter]['config_json'], true);
         }
 
-        // Custom build filter configurations form case by case depending on the filter id.
+        // Custom build filter configurations form case by case depending on the filter ID.
         switch($sFilter) {
             case 'apply_selected_gene_panels':
-                // Display a notice that 'apply_selected_gene_panels' is selected for this analysis
+                // Display a notice that 'apply_selected_gene_panels' is selected for this analysis.
                 $sFiltersFormItems .= '<H4>' . $sFilter . '</H4><BR>';
 
-                //  No gene panel has been added to this individual.
-                if (empty($zIndividual['gene_panels']) && empty($zIndividual['custom_panel'] )) {
-                    $sFiltersFormItems .= '<P>There is no Gene Panel assigned to this individual. To continue running this analysis, please try one of the following options: </P>';
-                    $sFiltersFormItems .= '<UL>';
-                    $sFiltersFormItems .= '<LI>Add a gene panel to this individual, OR</LI>';
-                    $sFiltersFormItems .= '<LI>Remove the apply_selected_gene_panels filter from this analysis, OR</LI>';
-                    $sFiltersFormItems .= '<LI>Continue running this analysis without any gene panel selected.</LI>';
-                    $sFiltersFormItems .= '</UL>';
+                // No gene panel has been added to this individual.
+                if (empty($zIndividual['gene_panels']) && empty($zIndividual['custom_panel'])) {
+                    $sFiltersFormItems .= '<P>There is no Gene Panel assigned to this individual. To continue running this analysis, please try one of the following options: </P>' .
+                                          '<UL>' .
+                                            '<LI>Add a gene panel to this individual, OR</LI>' .
+                                            '<LI>Remove the apply_selected_gene_panels filter from this analysis, OR</LI>' .
+                                            '<LI>Continue running this analysis without any gene panel selected.</LI>' .
+                                          '</UL>';
                 } else {
                     // This individual has at least one gene panel or custom panel.
 
-                    // The order in which we want to display the gene panels in the form.
+                    // Define the order in which we want to display the gene panels in the form.
                     // Also set here if we want to check these checkboxes by default.
-                    $aGpOrderOfDisplay = array(GP_TYPE_GENEPANEL => true, GP_TYPE_BLACKLIST => true, GP_TYPE_MENDELIOME => false, GP_TYPE_CUSTOM => true);
+                    $aGpOrderOfDisplay = array(
+                        'gene_panel' => true,
+                        'blacklist' => true,
+                        'mendeliome' => false,
+                        'custom_panel' => true,
+                    );
                     $sFiltersFormItems .= '<DIV class=\'filter-config\' id=\'filter-config-'. $sFilter . '\'><TABLE>';
                     foreach ($aGpOrderOfDisplay as $sGpType => $bDefaultSelect) {
                         if (!empty($zIndividual['gene_panels'][$sGpType])) {
-                            $sFiltersFormItems .= '<TR><TD class=\'gpheader\' colspan=\'2\' style=\'border-top: 0px\'>' . ucfirst(str_replace('_', ' ', $sGpType)) . '</TD></TR>';
+                            $sFiltersFormItems .= '<TR><TD class=\'gpheader\' colspan=\'2\' style=\'border-top: 0px;\'>' . ucfirst(str_replace('_', ' ', $sGpType)) . '</TD></TR>';
                             foreach ($zIndividual['gene_panels'][$sGpType] as $sGpId => $aGpDetails) {
                                 $sGpName = $aGpDetails['name'];
                                 $sCheckboxToRunOldGp = '';
                                 if (!empty($aConfig['metadata'][$sGpId])) {
-                                    if ($sGpType === GP_TYPE_CUSTOM) {
+                                    if ($sGpType == 'custom_panel') {
                                         // With custom gene panel, we don't have the record of last modified date.
                                         // We just have to compare the list of genes.
                                         $aFilterConfigGenes = $aConfig['metadata'][$sGpId]['genes'];
-                                        $aCurrentCustomPanelGenes = explode(', ', $sGpName);
+                                        $aCurrentCustomPanelGenes = preg_split('/[,;]\s?/', $sGpName); // Should be a simple explode on a semicolon if the data were stored that way.
                                         sort($aFilterConfigGenes);
                                         sort($aCurrentCustomPanelGenes);
 
                                         if ($aFilterConfigGenes !== $aCurrentCustomPanelGenes) {
                                             $sGpName = 'Custom panel';
-                                            $sCheckboxToRunOldGp .= '<TR><TD></TD><TD><INPUT type=\'radio\' name=\'config[' . $sFilter . '][run_older_version][' . $sGpId . ']\' value=\'0\'> Current version: ' . implode(', ', $aCurrentCustomPanelGenes) . '</TD></TR>';
-                                            $sCheckboxToRunOldGp .= '<TR><TD></TD><TD><INPUT type=\'radio\' name=\'config[' . $sFilter . '][run_older_version][' . $sGpId . ']\' value=\'1\' checked> The custom panel we copied from: ' . implode(', ', $aFilterConfigGenes) . '</TD></TR>';
+                                            $sCheckboxToRunOldGp .= '<TR>' .
+                                                                      '<TD></TD>' .
+                                                                      '<TD><INPUT type=\'radio\' name=\'config[' . $sFilter . '][run_older_version][' . $sGpId . ']\' value=\'0\'> Current version: ' . implode(', ', $aCurrentCustomPanelGenes) . '</TD></TR>';
+                                            $sCheckboxToRunOldGp .= '<TR>' .
+                                                                      '<TD></TD>' .
+                                                                      '<TD><INPUT type=\'radio\' name=\'config[' . $sFilter . '][run_older_version][' . $sGpId . ']\' value=\'1\' checked> The custom panel we copied from: ' . implode(', ', $aFilterConfigGenes) . '</TD></TR>';
                                         }
                                     } else {
                                         $sModified = getGenePanelLastModifiedDate($sGpId);
                                         // Show options to select current version or the version we cloned from.
-                                        if ($sModified && strtotime($aConfig['metadata'][$sGpId]['last_modified']) < strtotime($sModified)) {
-                                            $sCheckboxToRunOldGp .= '<TR><TD></TD><TD><INPUT type=\'radio\' name=\'config[' . $sFilter . '][run_older_version][' . $sGpId . ']\' value=\'0\'> Current version</TD></TR>';
-                                            $sCheckboxToRunOldGp .= '<TR><TD></TD><TD><INPUT type=\'radio\' name=\'config[' . $sFilter . '][run_older_version][' . $sGpId . ']\' value=\'1\' checked> Apply the version of this gene panel as of ' . $aConfig['metadata'][$sGpId]['last_modified'] . '</TD></TR>';
+                                        if ($sModified && $aConfig['metadata'][$sGpId]['last_modified'] < $sModified) {
+                                            $sCheckboxToRunOldGp .= '<TR>' .
+                                                                      '<TD></TD>' .
+                                                                      '<TD><INPUT type=\'radio\' name=\'config[' . $sFilter . '][run_older_version][' . $sGpId . ']\' value=\'0\'> Current version</TD></TR>';
+                                            $sCheckboxToRunOldGp .= '<TR>' .
+                                                                      '<TD></TD>' .
+                                                                      '<TD><INPUT type=\'radio\' name=\'config[' . $sFilter . '][run_older_version][' . $sGpId . ']\' value=\'1\' checked> Apply the version of this gene panel as of ' . $aConfig['metadata'][$sGpId]['last_modified'] . '</TD></TR>';
                                         }
                                     }
                                 }
@@ -195,11 +219,14 @@ if (ACTION == 'configure' && GET) {
                                 $sChecked = (!$bDefaultSelect? '' : ' checked');
                                 // Check if there is already existing configurations selected.
                                 if (!empty($aConfig)) {
-                                    // If we copy configurations from another filter, then overwrite default configurations
+                                    // If we copied configurations from another analysis run,
+                                    //  then overwrite default configurations.
                                     $sChecked = (empty($aConfig['metadata'][$sGpId])? '' : 'checked');
                                 }
 
-                                $sFiltersFormItems .= '<TR><TD><INPUT type=\'checkbox\' name=\'config[' . $sFilter . '][gene_panels][' . $sGpType . '][]\' id=\'gene_panel_' . $sGpId . '\' value=\'' . $sGpId . '\'' . $sChecked . ' /></TD><TD><LABEL for=\'gene_panel_'. $sGpId .'\'>' . $sGpName . '</LABEL></TD></TR>';
+                                $sFiltersFormItems .= '<TR>' .
+                                                        '<TD><INPUT type=\'checkbox\' name=\'config[' . $sFilter . '][gene_panels][' . $sGpType . '][]\' id=\'gene_panel_' . $sGpId . '\' value=\'' . $sGpId . '\'' . $sChecked . '></TD>' .
+                                                        '<TD><LABEL for=\'gene_panel_'. $sGpId .'\'>' . $sGpName . '</LABEL></TD></TR>';
                                 $sFiltersFormItems .= $sCheckboxToRunOldGp;
                             }
                         }
@@ -208,7 +235,7 @@ if (ACTION == 'configure' && GET) {
                     $sFiltersFormItems .= '</TABLE></DIV><BR>';
                 }
 
-                // Gene panels do not have required fields at the moment.
+                // Gene panels do not have required fields at the moment, so no real validator needed.
                 $sJsOtherFunctions .= 'function isValidGenePanel() {return true;}';
                 $sJsCanSubmit .= ' && isValidGenePanel()';
 
@@ -429,7 +456,7 @@ if (ACTION == 'configure' && GET) {
     $("#configure_analysis_dialog").html("' . $sForm . '<BR>");
 
     // Select the right buttons.
-    $("#configure_analysis_dialog").dialog({title: "Configure Analysis" ,buttons: $.extend({}, oButtonFormSubmit, oButtonCancel)});
+    $("#configure_analysis_dialog").dialog({title: "Configure Analysis", buttons: $.extend({}, oButtonFormSubmit, oButtonCancel)});
     
     var sInfo = \'<SPAN id="filter-config-info"><EM>* Please fill in all required fields</EM></SPAN>\';
     if ($("#filter-config-info").length === 0) {
@@ -437,7 +464,7 @@ if (ACTION == 'configure' && GET) {
     }
 
     $("#configure_analysis_dialog").change(function() {
-        if ('. $sJsCanSubmit .') {
+        if (' . $sJsCanSubmit . ') {
             var bCanSubmit = "enable";
             $("#filter-config-info").hide();
         } else {
@@ -473,12 +500,9 @@ if (ACTION == 'configure' && POST) {
                 case 'apply_selected_gene_panels':
                     $sToday = date('Y-m-d H:i:s');
                     // Get the saved configurations in the database.
-                    if (!empty($zFilterConfig[$sFilter])) {
-                        $sConfigJson = $zFilterConfig[$sFilter]['config_json'];
-                    }
                     $aDbConfig = array();
-                    if (!empty($sConfigJson)) {
-                        $aDbConfig = json_decode($sConfigJson, true);
+                    if (!empty($zFilterConfig[$sFilter]['config_json'])) {
+                        $aDbConfig = json_decode($zFilterConfig[$sFilter]['config_json'], true);
                     }
 
                     // Configurations submitted by the users through the form.
@@ -667,6 +691,4 @@ if (ACTION == 'run') {
     // Instruct page to start running filters in sequence.
     die(AJAX_TRUE . ' ' . str_pad($nRunID, 5, '0', STR_PAD_LEFT));
 }
-
-
 ?>

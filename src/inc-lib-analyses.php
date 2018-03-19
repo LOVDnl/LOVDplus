@@ -4,10 +4,10 @@
  * LEIDEN OPEN VARIATION DATABASE (LOVD)
  *
  * Created     : 2016-05-03
- * Modified    : 2017-08-04
+ * Modified    : 2018-03-19
  * For LOVD    : 3.0-18
  *
- * Copyright   : 2004-2016 Leiden University Medical Center; http://www.LUMC.nl/
+ * Copyright   : 2004-2018 Leiden University Medical Center; http://www.LUMC.nl/
  * Programmers : Anthony Marty <anthony.marty@unimelb.edu.au>
  *               Ivo F.A.C. Fokkema <I.F.A.C.Fokkema@LUMC.nl>
  *               Juny Kesumadewi <juny.kesumadewi@unimelb.edu.au>
@@ -41,10 +41,19 @@ if (!defined('ROOT_PATH')) {
 function getGenePanelLastModifiedDate($sGpId) {
     global $_DB;
 
-    $sSQL = 'SELECT valid_from FROM ' . TABLE_GP2GENE_REV . ' WHERE genepanelid = ? ORDER BY valid_from DESC LIMIT 1';
-    $aSQL = array($sGpId);
-    $sModified = $_DB->query($sSQL, $aSQL)->fetchColumn();
-
+    $sModified = $_DB->query(
+        'SELECT
+           GREATEST(
+             IFNULL(
+               (SELECT MAX(gp2g.valid_from)
+                FROM ' . TABLE_GP2GENE_REV . ' AS gp2g
+                WHERE gp2g.genepanelid = gp.id), gp.created_date),
+             IFNULL(
+               (SELECT MAX(gp2g.valid_to)
+                FROM ' . TABLE_GP2GENE_REV . ' AS gp2g
+                WHERE gp2g.genepanelid = gp.id AND LEFT(gp2g.valid_to, 10) != "9999-12-31" AND gp2g.deleted = 1), gp.created_date))
+         FROM ' . TABLE_GENE_PANELS_REV . ' AS gp
+         WHERE id = ?', array($sGpId))->fetchColumn();
     return $sModified;
 }
 
