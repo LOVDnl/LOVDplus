@@ -60,6 +60,23 @@ $_INSTANCE_CONFIG['columns'] = array(
     'lab_id' => 'Individual/Lab_ID'
 );
 
+$_INSTANCE_CONFIG['cross_screenings'] = array(
+    'format_screening_name' => function($zScreening)
+    {
+        // This function formats the label for screenings to use in the cross screening filter.
+        // It can use any Individual or Screening column to format the label.
+        // Default is: "Individual/Lab_ID (role)".
+        global $_INSTANCE_CONFIG;
+
+        $sReturn = $zScreening[$_INSTANCE_CONFIG['columns']['lab_id']];
+        if (!empty($zScreening['role'])) {
+            $sReturn .= ' (' . $zScreening['role'] . ')';
+        }
+
+        return $sReturn;
+    }
+);
+
 $_INSTANCE_CONFIG['viewlists'] = array(
     // The screenings data listing on the individual's detailed view.
     'Screenings_for_I_VE' => array(

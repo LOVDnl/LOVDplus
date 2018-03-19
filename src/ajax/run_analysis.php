@@ -60,7 +60,7 @@ if (!empty($_INSTANCE_CONFIG['columns']['family'])) {
         }
     }
 }
-$sSQL = 'SELECT i.id, i.custom_panel' . $sFamilyColumns . ',
+$sSQL = 'SELECT i.id, i.fatherid, i.motherid, i.custom_panel' . $sFamilyColumns . ',
            GROUP_CONCAT(DISTINCT gp.id, ";", gp.name, ";", gp.type, ";",
              GREATEST(
                IFNULL(
@@ -245,41 +245,65 @@ if (ACTION == 'configure' && GET) {
                 $aGrouping = $_SETT['filter_cross_screenings']['grouping_list'];
                 $sLabIDColName = $_INSTANCE_CONFIG['columns']['lab_id'];
 
-                // Find available screenings in the database.
+                // Find available screenings in the database, which are not archived yet.
                 $sSQL = 'SELECT s.id as screeningid, s.*, i.*
-                     FROM ' . TABLE_SCREENINGS . ' AS s 
-                     JOIN ' . TABLE_INDIVIDUALS . ' AS i ON (s.individualid = i.id) 
-                     WHERE s.id != ?';
-                $aSQL = array($_REQUEST['screeningid']);
+                         FROM ' . TABLE_SCREENINGS . ' AS s 
+                         INNER JOIN ' . TABLE_INDIVIDUALS . ' AS i ON (s.individualid = i.id) 
+                         WHERE s.id != ? AND s.analysis_statusid < ?';
+                $aSQL = array($_REQUEST['screeningid'], ANALYSIS_STATUS_ARCHIVED);
                 $zScreenings = $_DB->query($sSQL, $aSQL)->fetchAllAssoc();
 
-                // Build the strings to represent screening
-                $aScreenings = array();
-                $aRelatives = array();
+                // Build the strings to represent the other screenings.
+                $aScreenings = array(); // All useful screenings in the database; ['screeningid:role_name'] => 'label';
+                $aRelatives = array();  // Relatives of current individual; ['screeningid:role_name'] => 'label';
+                // Note that we store $aRelatives separately to make sure they sort to the top of the list.
                 foreach ($zScreenings as $zScreening) {
                     $sKey = $zScreening['screeningid'] . ':';
 
-                    // Add role descriptions if sample has family relation with this screening.
-                    if (!empty($_INSTANCE_CONFIG['columns']['family'])) {
-                        // All the custom columns that this instance use to identify family relationships
+                    $sMatchedRole = '';
+                    // Try different methods of linking individuals.
+                    if ($zScreening['individualid'] == $zIndividual['id']) {
+                        // Annotate screenings from same individual.
+                        $sMatchedRole = 'same patient';
+
+                    } elseif ($zScreening['individualid'] == $zIndividual['fatherid']) {
+                        // Annotate screenings from the father using LOVD3 style fatherid field.
+                        $sMatchedRole = 'father';
+
+                    } elseif ($zScreening['individualid'] == $zIndividual['motherid']) {
+                        // Annotate screenings from the mother using LOVD3 style motherid field.
+                        $sMatchedRole = 'mother';
+
+                    } elseif (!empty($_INSTANCE_CONFIG['columns']['family'])) {
+                        // Find role descriptions if sample has family relation with this screening.
+                        // Loop all the custom columns that this instance use to identify family relationships.
                         foreach ($_INSTANCE_CONFIG['columns']['family'] as $sRole => $sColumn) {
                             if ($zScreening[$sLabIDColName] == $zIndividual[$sColumn]) {
-                                $sKey .= $sRole;
-                                $zScreening['role'] = $sRole;
-                                $aRelatives[$sKey] = '';
+                                // This individual's lab ID matches the value in
+                                //  the analyzed individual's family role column.
+                                $sMatchedRole = $sRole;
 
                                 break; // We can stop once we find one. Assuming one role per screening.
                             }
                         }
                     }
+                    if ($sMatchedRole) {
+                        $sKey .= $sMatchedRole;
+                        // Store name of role in $zScreening as well, so that
+                        //  the format_screening_name function can use it.
+                        $zScreening['role'] = $sMatchedRole;
 
-                    // Format display name of each screening.
+                        $aRelatives[$sKey] = '';
+                    }
+
+
+                    // Format display name of each screening. Default to the lab ID.
                     $sText = $zScreening[$sLabIDColName];
 
-                    // If this instance has its own format, use it.
-                    if (!empty($_INSTANCE_CONFIG['cross_screenings']['format_screening_name'])) {
-                        $zFormatScreeningName = $_INSTANCE_CONFIG['cross_screenings']['format_screening_name'];
-                        $sText = $zFormatScreeningName($zScreening);
+                    // If this instance has its own formatter, use it.
+                    if (!empty($_INSTANCE_CONFIG['cross_screenings']['format_screening_name']) &&
+                        is_callable($_INSTANCE_CONFIG['cross_screenings']['format_screening_name'])) {
+                        $sText = $_INSTANCE_CONFIG['cross_screenings']['format_screening_name']($zScreening);
                     }
 
                     $aScreenings[$sKey] = $sText;
@@ -292,13 +316,12 @@ if (ACTION == 'configure' && GET) {
                 $aScreenings = $aRelatives + $aScreenings;
 
                 // Print form.
-                $sFiltersFormItems .= '<H4>' . $sFilter . '</H4><BR>';
+                $sFiltersFormItems .= '<H4>' . $sFilter . '</H4><BR>' .
+                                      '<DIV class=\'filter-config\' id=\'filter-config-' . $sFilter . '\'>' .
+                                      '<BUTTON type=\'button\' class=\'btn-right\' id=\'btn-add-group\'>+ Add group</BUTTON>';
 
-                $sFiltersFormItems .= '<DIV class=\'filter-config\' id=\'filter-config-' . $sFilter . '\'>';
-                $sFiltersFormItems .= '<TR><TD><BUTTON type=\'button\' class=\'btn-right\' id=\'btn-add-group\'>+ Add group</BUTTON></TD></TR>';
-
-                $sValue = (empty($aConfig['description']) ? '' : "value='" . $aConfig['description'] ."'");
-                $sFiltersFormItems .= '<TABLE><TR><TD><LABEL>Description *</LABEL></TD><TD><INPUT class=\'required\' name=\'config[' . $sFilter . '][description]\' ' . $sValue . '/></TD></TR></TABLE>';
+                $sValue = (empty($aConfig['description'])? '' : 'value=\'' . $aConfig['description'] . '\'');
+                $sFiltersFormItems .= '<LABEL>Description *</LABEL> &nbsp; <INPUT class=\'required\' name=\'config[' . $sFilter . '][description]\' ' . $sValue . '>';
 
                 $sMsgSelectScreeningsFirst = 'Select variants from this screening that are *';
                 $sMsgSelectScreenings = 'Then select variants <STRONG>from the results of the above selection</STRONG> that are *';
@@ -311,43 +334,44 @@ if (ACTION == 'configure' && GET) {
                     $sFiltersFormItems .= '<DIV class=\'filter-cross-screening-group\' id=\'' . $sGroupId . '\'>';
                     $sMsg = ($i == 0? $sMsgSelectScreeningsFirst : $sMsgSelectScreenings);
 
-                    // Conditions variants of this screening against the selected group
-                    $sFiltersFormItems .= '<TABLE>';
-                    $sFiltersFormItems .= '<TR><TD colspan=\'2\'><LABEL class=\'label-info\'>' . $sMsg . '</LABEL>';
+                    // Build up form to define the conditions how variants of this screening are compared to the selected group.
+                    $sFiltersFormItems .= '<TABLE>' .
+                                          '<TR><TD colspan=\'2\'><LABEL class=\'label-info\'>' . $sMsg . '</LABEL>' .
 
-                    // First group should never be deleted.
-                    $sDisplay = ($i == 0? "style='display: none;'" : "");
-                    $sFiltersFormItems .= '<SPAN ' . $sDisplay . ' class=\'filter-cross-screening-delete-group\' data-group=\'' . $sGroupId . '\'><IMG alt=\'Remove this group\' src=\'gfx/cross.png\' /></SPAN>';
+                                          // First group should never be deleted.
+                                          '<SPAN ' . ($i == 0? 'style=\'display: none;\'' : '') . ' class=\'filter-cross-screening-delete-group\' data-group=\'' . $sGroupId . '\'>' .
+                                            '<IMG alt=\'Remove this group\' src=\'gfx/cross.png\'>' .
+                                          '</SPAN>';
 
                     // Drop down menu that provide options to find variants that exist, does not exist, homozygous, etc in the selected screenings.
-                    $sFiltersFormItems .= '</TD></TR>';
-                    $sFiltersFormItems .= '<TR><TD><SELECT class=\'required\' name=\'config[' . $sFilter . '][groups][' . $i . '][condition]\'>';
+                    $sFiltersFormItems .= '</TD></TR>' .
+                                          '<TR><TD><SELECT class=\'required\' name=\'config[' . $sFilter . '][groups][' . $i . '][condition]\'>';
                     foreach ($aConditions as $sValue => $sLabel) {
-                        $sSelected = (empty($aConfig) || $sValue != $aConfig['groups'][$i]['condition'] ? '' : "selected='selected'");
-                        $sFiltersFormItems .= '<OPTION value=\'' . $sValue . '\' '. $sSelected .' >' . $sLabel . '</OPTION>';
+                        $sSelected = (empty($aConfig) || $sValue != $aConfig['groups'][$i]['condition']? '' : " selected='selected'");
+                        $sFiltersFormItems .= '<OPTION value=\'' . $sValue . '\'' . $sSelected . '>' . $sLabel . '</OPTION>';
                     }
                     $sFiltersFormItems .= '</SELECT>';
 
                     // Drop down menu that provide options on how to group among selected screenings within a group.
                     $sFiltersFormItems .= '&nbsp;<SELECT class=\'required\' name=\'config[' . $sFilter . '][groups][' . $i . '][grouping]\'>';
                     foreach ($aGrouping as $sValue => $sLabel) {
-                        $sSelected = (empty($aConfig) || $sValue != $aConfig['groups'][$i]['grouping'] ? '' : "selected='selected'");
-                        $sFiltersFormItems .= '<OPTION value=\'' . $sValue . '\' ' . $sSelected . ' >' . $sLabel . '</OPTION>';
+                        $sSelected = (empty($aConfig) || $sValue != $aConfig['groups'][$i]['grouping']? '' : " selected='selected'");
+                        $sFiltersFormItems .= '<OPTION value=\'' . $sValue . '\'' . $sSelected . '>' . $sLabel . '</OPTION>';
                     }
-                    $sFiltersFormItems .= '</SELECT></TD></TR>';
-                    $sFiltersFormItems .= '<TR><TD colspan=\'2\'><LABEL>the following screenings *</LABEL></TD></TR>';
+                    $sFiltersFormItems .= '</SELECT></TD></TR>' .
+                                          '<TR><TD colspan=\'2\'><LABEL>the following screenings *</LABEL></TD></TR>';
 
                     // The list of available screenings in the database.
                     $sFiltersFormItems .= '<TR><TD><SELECT class=\'required\' id=\'select-screenings-' . $i . '\' name=\'config[' . $sFilter . '][groups][' . $i . '][screenings][]\' multiple=\'true\'>';
                     foreach ($aScreenings as $sScreeningID => $sText) {
-                        $sSelected = (empty($aConfig) || !in_array($sScreeningID, $aConfig['groups'][$i]['screenings'])? '' : "selected='selected'");
-                        $sFiltersFormItems .= '<OPTION value=\'' . $sScreeningID . '\' ' . $sSelected . '>' . $sText . '</OPTION>';
+                        $sSelected = (empty($aConfig) || !in_array($sScreeningID, $aConfig['groups'][$i]['screenings'])? '' : " selected='selected'");
+                        $sFiltersFormItems .= '<OPTION value=\'' . $sScreeningID . '\'' . $sSelected . '>' . $sText . '</OPTION>';
                     }
                     $sFiltersFormItems .= '</SELECT></TD></TR></TABLE></DIV>';
                 }
 
                 // End of form.
-                $sFiltersFormItems .= '</TABLE></DIV>';
+                $sFiltersFormItems .= '</DIV>';
 
                 // Javascripts to make the form more user friendly.
                 $sFiltersFormItems .= '<SCRIPT type=\'text/javascript\'>';
@@ -355,48 +379,49 @@ if (ACTION == 'configure' && GET) {
                     $sFiltersFormItems .= '$(\'#select-screenings-' . $i . '\').select2({ width: \'555px\'});';
                 }
 
+                // Function to update the form when 'Remove group' button is clicked.
+                $sFiltersFormItems .= 'var funcRemoveGroup = function() {' .
+                                        'var sGroupId = $(this).attr(\'data-group\'); $(\'#\' + sGroupId).remove();' .
+                                      '};' .
+                                      // We need to call this function for all existing groups.
+                                      '$(\'.filter-cross-screening-delete-group\').bind(\'click\', funcRemoveGroup);';
+
                 // Function to update the form when 'Add group' button is clicked.
-                $sFiltersFormItems .= 'var zFuncRemoveGroup = function() {';
-                $sFiltersFormItems .= 'var sGroupId = $(this).attr(\'data-group\'); $(\'#\' + sGroupId).remove();';
-                $sFiltersFormItems .= '};';
+                $sFiltersFormItems .= 'var numGroups = $(\'.filter-cross-screening-group\').length;' .
+                                      '$(\'#btn-add-group\').click(function() {' .
+                                        'var elemFilterConfig = $(\'#filter-config-' . $sFilter . '\');' .
+                                        // Copy the first group of html form already loaded by php.
+                                        'var elemGroup = $(\'#filter-config-' . $sFilter . '-0\').clone().attr(\'id\', \'filter-config-' . $sFilter . '-\' + numGroups);' .
+                                        // Rename select-screenings-0 to a new id.
+                                        'elemGroup.find(\'[data-group]\').attr(\'data-group\', \'filter-config-' . $sFilter . '-\' + numGroups).show();' .
+                                        'elemGroup.find(\'#select-screenings-0\').attr(\'id\', \'select-screenings-\' + numGroups);' .
+                                        // Remove the input box created by the select2 plugin.
+                                        'elemGroup.find(\'.select2\').remove();' .
+                                        // Subsequent groups have different labels.
+                                        'elemGroup.find(\'.label-info\').html(\'' . $sMsgSelectScreenings . '\');' .
+                                        // Rename 'name' attributes based on how many groups we already have.
+                                        'elemGroup.find(\'[name]\').each(function(i, e) { var oldName = $(e).attr(\'name\'); var newName = oldName.replace(\'[groups][0]\', \'[groups][\' + numGroups + \']\'); $(e).attr(\'name\', newName);});' .
+                                        // Reset values of the form in the first group that we copy from.
+                                        'elemGroup.find(\'[selected]\').each(function(i, e) { $(e).removeAttr(\'selected\'); });' .
+                                        // Append this new group into the form.
+                                        'elemFilterConfig.append(elemGroup);' .
+                                        // We need to call this again for the newly created group.
+                                        '$(\'.filter-cross-screening-delete-group\').bind(\'click\', funcRemoveGroup);' .
+                                        '$(\'#select-screenings-\' + numGroups).select2({ width: \'555px\'});' .
+                                        '$(\'#configure_analysis_dialog\').trigger(\'change\');' .
+                                        'numGroups += 1;' .
+                                      '});' .
+                                      '</SCRIPT>';
 
-                // We need to call this function for all existing groups.
-                $sFiltersFormItems .= '$(\'.filter-cross-screening-delete-group\').bind(\'click\', zFuncRemoveGroup);';
-                $sFiltersFormItems .= 'var numGroups = $(\'.filter-cross-screening-group\').length;';
-
-                $sFiltersFormItems .= '$(\'#btn-add-group\').click(function() {';
-                $sFiltersFormItems .= 'var elemFilterConfig = $(\'#filter-config-' . $sFilter . '\');';
-                // Copy the first group of html form already loaded by php.
-                $sFiltersFormItems .= 'var elemGroup = $(\'#filter-config-' . $sFilter . '-0\').clone().attr(\'id\', \'filter-config-' . $sFilter . '-\' + numGroups);';
-                // Rename select-screenings-0 to a new id.
-                $sFiltersFormItems .= 'elemGroup.find(\'[data-group]\').attr(\'data-group\', \'filter-config-' . $sFilter . '-\' + numGroups).show();';
-                $sFiltersFormItems .= 'elemGroup.find(\'#select-screenings-0\').attr(\'id\', \'select-screenings-\' + numGroups);';
-                // Remove the input box created by the select2 plugin.
-                $sFiltersFormItems .= 'elemGroup.find(\'.select2\').remove();';
-                // Subsequent groups have different labels
-                $sFiltersFormItems .= 'elemGroup.find(\'.label-info\').html(\'' . $sMsgSelectScreenings . '\');';
-                // Rename 'name' attributes based on how many groups we already have.
-                $sFiltersFormItems .= 'elemGroup.find(\'[name]\').each(function(i, e) { var oldName = $(e).attr(\'name\'); var newName = oldName.replace(\'[groups][0]\', \'[groups][\' + numGroups + \']\'); $(e).attr(\'name\', newName);});';
-                // Reset values of the form in the first group that we copy from.
-                $sFiltersFormItems .= 'elemGroup.find(\'[selected]\').each(function(i, e) { $(e).removeAttr(\'selected\'); });';
-                // Append this new group into the form.
-                $sFiltersFormItems .= 'elemFilterConfig.append(elemGroup);';
-                // We need to call this again for the newly created group.
-                $sFiltersFormItems .= '$(\'.filter-cross-screening-delete-group\').bind(\'click\', zFuncRemoveGroup);';
-                $sFiltersFormItems .= '$(\'#select-screenings-\' + numGroups).select2({ width: \'555px\'});';
-                $sFiltersFormItems .= '$(\'#configure_analysis_dialog\').trigger(\'change\');';
-                $sFiltersFormItems .= 'numGroups += 1;';
-                $sFiltersFormItems .= '});';
-
-                $sFiltersFormItems .= '</SCRIPT>';
-
-                // Here we set the logic that control whether we have all the required fields for cross screenings configuration form.
-                $sJsOtherFunctions .= 'function isValidCrossScreenings() {';
-                $sJsOtherFunctions .= 'var bValid = true;';
-                $sJsOtherFunctions .= '$(\'#filter-config-cross_screenings .required\').each(function(i, e) {';
-                $sJsOtherFunctions .= 'if (!e.value.length) {bValid = false; return;}';
-                $sJsOtherFunctions .= '});';
-                $sJsOtherFunctions .= 'return bValid;}';
+                // Here we set the logic that controls whether we have all the
+                //  required fields for the cross screenings configuration form.
+                $sJsOtherFunctions .= 'function isValidCrossScreenings() {' .
+                                        'var bValid = true;' .
+                                        '$(\'#filter-config-cross_screenings .required\').each(function(i, e) {' .
+                                          'if (!e.value.length) {bValid = false; return;}' .
+                                        '});' .
+                                        'return bValid;' .
+                                      '}';
 
                 // The 'submit' button can only be enabled if it has passed the validation of all filters.
                 $sJsCanSubmit .= ' && isValidCrossScreenings()';
@@ -416,22 +441,22 @@ if (ACTION == 'configure' && GET) {
 
     $sFormRequiredInputs = '';
     foreach ($aInputs as $sName => $sValue) {
-        $sFormRequiredInputs .= '<INPUT type=\'hidden\' name=\''. $sName .'\' value=\''. $sValue .'\' />';
+        $sFormRequiredInputs .= '<INPUT type=\'hidden\' name=\'' . $sName . '\' value=\'' . $sValue . '\'>';
     }
 
     if (empty($sFiltersFormItems)) {
-        // If no further configuration required, simply pass the minimum required inputs
-        print('$.post("' . CURRENT_PATH . '?' . ACTION . '", '. json_encode($aInputs) .' );');
+        // If no further configuration is required, simply pass the minimum required inputs.
+        print('$.post("' . CURRENT_PATH . '?' . ACTION . '", ' . json_encode($aInputs) . ');');
         exit;
     }
 
-    // If further configuration required, build modal to take the configuration inputs.
+    // If further configuration is required, build modal to take the configuration inputs.
     // Implement an CSRF protection by working with tokens.
     $_SESSION['csrf_tokens']['run_analysis_configure'] = md5(uniqid());
-    $sForm  = '<FORM id=\'configure_analysis_form\'><INPUT type=\'hidden\' name=\'csrf_token\' value=\'' . $_SESSION['csrf_tokens']['run_analysis_configure'] . '\'><BR>';
-    $sForm .= $sFiltersFormItems;
-    $sForm .= $sFormRequiredInputs;
-    $sForm .= '</FORM>';
+    $sForm  = '<FORM id=\'configure_analysis_form\'><INPUT type=\'hidden\' name=\'csrf_token\' value=\'' . $_SESSION['csrf_tokens']['run_analysis_configure'] . '\'><BR>' .
+              $sFiltersFormItems .
+              $sFormRequiredInputs .
+              '</FORM>';
 
     // If we get here, we want to show the dialog for sure.
     print('// Make sure we have and show the dialog.
