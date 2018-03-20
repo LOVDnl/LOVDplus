@@ -4,7 +4,7 @@
  * LEIDEN OPEN VARIATION DATABASE (LOVD)
  *
  * Created     : 2013-11-05
- * Modified    : 2018-03-19
+ * Modified    : 2018-03-20
  * For LOVD    : 3.0-18
  *
  * Copyright   : 2004-2018 Leiden University Medical Center; http://www.LUMC.nl/
@@ -248,7 +248,7 @@ if (ACTION == 'configure' && GET) {
                 // Find available screenings in the database, which are not archived yet.
                 $sSQL = 'SELECT s.id as screeningid, s.*, i.*
                          FROM ' . TABLE_SCREENINGS . ' AS s 
-                         INNER JOIN ' . TABLE_INDIVIDUALS . ' AS i ON (s.individualid = i.id) 
+                           INNER JOIN ' . TABLE_INDIVIDUALS . ' AS i ON (s.individualid = i.id) 
                          WHERE s.id != ? AND s.analysis_statusid < ?';
                 $aSQL = array($_REQUEST['screeningid'], ANALYSIS_STATUS_ARCHIVED);
                 $zScreenings = $_DB->query($sSQL, $aSQL)->fetchAllAssoc();
@@ -520,10 +520,9 @@ if (ACTION == 'configure' && POST) {
 
     // Data cleanup.
     if (!empty($aFormConfig)) {
-        foreach ($aFormConfig as $sFilter => $aFilterConfig) {
+        foreach (array_keys($aFormConfig) as $sFilter) {
             switch($sFilter) {
                 case 'apply_selected_gene_panels':
-                    $sToday = date('Y-m-d H:i:s');
                     // Get the saved configurations in the database.
                     $aDbConfig = array();
                     if (!empty($zFilterConfig[$sFilter]['config_json'])) {
@@ -531,7 +530,9 @@ if (ACTION == 'configure' && POST) {
                     }
 
                     // Configurations submitted by the users through the form.
-                    $aFormConfig[$sFilter]['gene_panels'] = (!empty($aFilterConfig['gene_panels']) ? $aFilterConfig['gene_panels'] : array());
+                    if (empty($aFormConfig[$sFilter]['gene_panels'])) {
+                        $aFormConfig[$sFilter]['gene_panels'] = array();
+                    }
 
                     // Remove custom_panel because we don't need it in this SQL query.
                     $aGenePanelIds = array();
@@ -542,14 +543,16 @@ if (ACTION == 'configure' && POST) {
                     }
 
                     // Now, we need to populate the metadata. There are 2 possibilities:
-                    // 1. Use the metadata from the analysis we cloned this configurations from if the user chooses to do so.
+                    // 1. Use the metadata from the analysis we cloned these
+                    //    configurations from if the user chooses to do so.
                     // 2. Use the list of genes assigned to this gene panel in the database now.
-                    $aFormConfig[$sFilter]['metadata']  = array();
+                    $aFormConfig[$sFilter]['metadata'] = array();
 
-                    // 1. If user chooses to use the older version of the gene panel
-                    // (the exact same set of genes this gene panel had when this analysis we cloned from was run)
+                    // 1. If user chooses to use the older version of the gene panel.
+                    //    (the exact same set of genes this gene panel had when this analysis we cloned from was run)
                     $aUseOlderGenePanels = array();
-                    // But, prevent notice when this setting is not sent. The notice will break the JS and make the analysis fail to run.
+                    // But, prevent notice when this setting is not sent.
+                    // The notice will break the JS and make the analysis fail to run.
                     if (!isset($aFormConfig[$sFilter]['run_older_version'])) {
                         $aFormConfig[$sFilter]['run_older_version'] = array();
                     }
@@ -564,26 +567,23 @@ if (ACTION == 'configure' && POST) {
                     // First, remove the gene panels whose data we do not need to be fetched from database.
                     $aGenePanelIds = array_values(array_diff($aGenePanelIds, $aUseOlderGenePanels));
                     if (!empty($aGenePanelIds)) {
-                        // There is a limit to GROUP_CONCAT here. If we use GROUP_CONCAT our gene list will be truncated
-                        $sSQL = 'SELECT gp2g.genepanelid, gp.name AS gp_name, gp.created_date AS last_modified, gp2g.geneid
-                             FROM ' . TABLE_GP2GENE . ' AS gp2g
-                             INNER JOIN ' . TABLE_GENE_PANELS . ' AS gp ON (gp2g.genepanelid = gp.id)
-                             WHERE gp2g.genepanelid IN (? ' . str_repeat(', ?', count($aGenePanelIds)-1) . ')';
-                        $zResult = $_DB->query($sSQL, $aGenePanelIds)->fetchAllAssoc();
+                        // Increase DB limits to allow concatenation of large number of gene IDs.
+                        $_DB->query('SET group_concat_max_len = 500000');
+                        $sSQL = 'SELECT gp.id, gp.name, gp.created_date,
+                                   GROUP_CONCAT(gp2g.geneid SEPARATOR ";") AS _genes
+                                 FROM ' . TABLE_GP2GENE . ' AS gp2g
+                                   INNER JOIN ' . TABLE_GENE_PANELS . ' AS gp ON (gp2g.genepanelid = gp.id)
+                                 WHERE gp2g.genepanelid IN (? ' . str_repeat(', ?', count($aGenePanelIds)-1) . ')
+                                 GROUP BY gp.id';
+                        $zGenePanels = $_DB->query($sSQL, $aGenePanelIds)->fetchAllAssoc();
 
                         // Populate data for each gene panel.
-                        foreach ($zResult as $aRow) {
-                            if (!isset($aFormConfig[$sFilter]['metadata'][$aRow['genepanelid']])) {
-                                // Get gene panel last modified date from revisions table
-                                $sModified = getGenePanelLastModifiedDate($aRow['genepanelid']);
-                                $aFormConfig[$sFilter]['metadata'][$aRow['genepanelid']] = array(
-                                    'last_modified' => (!empty($sModified) ? $sModified : $sToday),
-                                    'name' => $aRow['gp_name'],
-                                    'genes' => array()
-                                );
-                            }
-
-                            $aFormConfig[$sFilter]['metadata'][$aRow['genepanelid']]['genes'][] = $aRow['geneid'];
+                        foreach ($zGenePanels as $zGenePanel) {
+                            $aFormConfig[$sFilter]['metadata'][$zGenePanel['id']] = array(
+                                'last_modified' => getGenePanelLastModifiedDate($zGenePanel['id']),
+                                'name' => $zGenePanel['name'],
+                                'genes' => explode(';', $zGenePanel['_genes']),
+                            );
                         }
                     }
 
@@ -592,13 +592,14 @@ if (ACTION == 'configure' && POST) {
                     // But, we store them as an array so that it follows the same storage format of other gene panels.
                     // Let's not make assumption about what array key we use to store this one custom panel in case it is changed.
                     // So, just loop through it like any other array.
-                    if (!empty($aFormConfig[$sFilter]['gene_panels'][GP_TYPE_CUSTOM])) {
-                        foreach ($aFormConfig[$sFilter]['gene_panels'][GP_TYPE_CUSTOM] as $sGpId) {
+                    if (!empty($aFormConfig[$sFilter]['gene_panels']['custom_panel'])) {
+                        foreach ($aFormConfig[$sFilter]['gene_panels']['custom_panel'] as $sGpId) {
                             if (empty($aFormConfig[$sFilter]['run_older_version'][$sGpId])) {
                                 $aFormConfig[$sFilter]['metadata'][$sGpId] = array(
-                                    'genes' => explode(', ', $zIndividual['gene_panels'][GP_TYPE_CUSTOM][$sGpId]['name']),
-                                    'last_modified' => $sToday, // We cannot get the data of when custom panel is last modified. Fill in with current date for now.
-                                    'name' => '' // placeholder, just to keep metadata structure consistent
+                                    // Should be a simple explode on a semicolon if the data were stored that way.
+                                    'genes' => preg_split('/[,;]\s?/', $zIndividual['gene_panels']['custom_panel'][$sGpId]['name']),
+                                    'last_modified' => date('Y-m-d H:i:s'), // We cannot get the data of when custom panel is last modified. Fill in with current date for now.
+                                    'name' => '' // placeholder, just to keep metadata structure consistent.
                                 );
                             }
                         }
@@ -610,9 +611,8 @@ if (ACTION == 'configure' && POST) {
                     break;
                 case 'cross_screenings':
                     // Reset index otherwise json_encode would be converted it to object instead of array.
-                    $aFormConfig[$sFilter]['groups'] = array_values($aFilterConfig['groups']);
+                    $aFormConfig[$sFilter]['groups'] = array_values($aFormConfig[$sFilter]['groups']);
                     break;
-                default:
             }
         }
     }
@@ -620,8 +620,9 @@ if (ACTION == 'configure' && POST) {
     // Now that we know we have all our required inputs for all filters, we can pass it to 'run' to insert/update database entries
     print('
     $("#configure_analysis_dialog").dialog("close");
-    lovd_runAnalysis (\'' . $_REQUEST['screeningid'] . '\', \'' . $_REQUEST['analysisid'] . '\', \'' . $_REQUEST['runid'] . '\', \'' . $_REQUEST['elementid'] . '\', ' . json_encode($aFormConfig) . ');
+    lovd_runAnalysis(\'' . $_REQUEST['screeningid'] . '\', \'' . $_REQUEST['analysisid'] . '\', \'' . $_REQUEST['runid'] . '\', \'' . $_REQUEST['elementid'] . '\', ' . json_encode($aFormConfig) . ');
     ');
+    exit;
 }
 
 
