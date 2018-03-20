@@ -202,7 +202,7 @@ if (ACTION == 'configure' && GET) {
                                                                       '<TD><INPUT type=\'radio\' name=\'config[' . $sFilter . '][run_older_version][' . $sGpId . ']\' value=\'1\' checked> The custom panel we copied from: ' . implode(', ', $aFilterConfigGenes) . '</TD></TR>';
                                         }
                                     } else {
-                                        $sModified = getGenePanelLastModifiedDate($sGpId);
+                                        $sModified = lovd_getGenePanelLastModifiedDate($sGpId);
                                         // Show options to select current version or the version we cloned from.
                                         if ($sModified && $aConfig['metadata'][$sGpId]['last_modified'] < $sModified) {
                                             $sCheckboxToRunOldGp .= '<TR>' .
@@ -580,7 +580,7 @@ if (ACTION == 'configure' && POST) {
                         // Populate data for each gene panel.
                         foreach ($zGenePanels as $zGenePanel) {
                             $aFormConfig[$sFilter]['metadata'][$zGenePanel['id']] = array(
-                                'last_modified' => getGenePanelLastModifiedDate($zGenePanel['id']),
+                                'last_modified' => lovd_getGenePanelLastModifiedDate($zGenePanel['id']),
                                 'name' => $zGenePanel['name'],
                                 'genes' => explode(';', $zGenePanel['_genes']),
                             );

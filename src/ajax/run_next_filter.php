@@ -4,10 +4,10 @@
  * LEIDEN OPEN VARIATION DATABASE (LOVD)
  *
  * Created     : 2013-11-06
- * Modified    : 2017-05-17
+ * Modified    : 2018-03-20
  * For LOVD    : 3.0-18
  *
- * Copyright   : 2004-2017 Leiden University Medical Center; http://www.LUMC.nl/
+ * Copyright   : 2004-2018 Leiden University Medical Center; http://www.LUMC.nl/
  * Programmer  : Ivo F.A.C. Fokkema <I.F.A.C.Fokkema@LUMC.nl>
  *               Anthony Marty <anthony.marty@unimelb.edu.au>
  *               Juny Kesumadewi <juny.kesumadewi@unimelb.edu.au>
@@ -49,12 +49,11 @@ if (empty($_GET['runid']) || !ctype_digit($_GET['runid'])) {
 
 
 // Check if run exists.
-$zResult = $_DB->query('SELECT CAST(id AS UNSIGNED) AS id, screeningid FROM ' . TABLE_ANALYSES_RUN . ' WHERE id = ?', array($_GET['runid']))->fetchAssoc();
-if (!$zResult) {
+$rAnalysisRun = $_DB->query('SELECT CAST(id AS UNSIGNED), screeningid FROM ' . TABLE_ANALYSES_RUN . ' WHERE id = ?', array($_GET['runid']))->fetchRow();
+if (!$rAnalysisRun) {
     die(json_encode(array('result' => false, 'message' => 'Analysis run not recognized. If the analysis is defined properly, this is an error in the software.')));
 }
-$nRunID = $zResult['id'];
-$nScreeningID = $zResult['screeningid'];
+list($nRunID, $nScreeningID) = $rAnalysisRun;
 
 // Check if session var exists.
 if (empty($_SESSION['analyses'][$nRunID]) || empty($_SESSION['analyses'][$nRunID]['filters']) || !isset($_SESSION['analyses'][$nRunID]['IDsLeft'])) {
@@ -65,17 +64,14 @@ if (empty($_SESSION['analyses'][$nRunID]) || empty($_SESSION['analyses'][$nRunID
 
 // OK, let's start, get filter information.
 $aFilters = &$_SESSION['analyses'][$nRunID]['filters'];
-list(,$sFilter) = each($aFilters);
+$sFilter = current($aFilters);
 
 // Run filter, but only if there are variants left.
 $aVariantIDs = &$_SESSION['analyses'][$nRunID]['IDsLeft'];
 
-// Information about the selected gene panels for the apply_selected_gene_panels filter.
-$sFilterConfig = '';
-
 // Read filter configurations.
 $sConfig = $_DB->query('SELECT config_json FROM ' . TABLE_ANALYSES_RUN_FILTERS . ' WHERE runid = ? AND filterid = ?', array($nRunID, $sFilter))->fetchColumn();
-$aConfig = (empty($sConfig) ? array() : json_decode($sConfig, true));
+$aConfig = (empty($sConfig)? array() : json_decode($sConfig, true));
 
 $tStart = microtime(true);
 if ($aVariantIDs) {
@@ -300,49 +296,48 @@ if ($aVariantIDs) {
             break;
         case 'apply_selected_gene_panels':
             // Regardless of success, we need to show the selected gene panels.
-            $sFilterConfig = getSelectedFilterConfig($nRunID, 'apply_selected_gene_panels');
-            $aSelectedGenePanels = (empty($aConfig['gene_panels']) ? array() : $aConfig['gene_panels']);
+            $aSelectedGenePanels = (empty($aConfig['gene_panels'])? array() : $aConfig['gene_panels']);
 
-            // General formula: (all selected genes - blacklist genes) + custom panel genes
+            // General formula: (all selected genes - blacklist genes) + custom panel genes.
             $aGenes = array(
-                GP_TYPE_BLACKLIST => array(),
-                GP_TYPE_CUSTOM => array(),
-                'others' => array()
+                'gene_panel' => array(), // Groups gene panels and mendeliome panels.
+                'blacklist' => array(),
+                'custom_panel' => array(),
             );
 
-            // Get the list of genes from 'metadata' in the $aConfig array
+            // Get the list of genes in gene panels from 'metadata' in the $aConfig array.
             foreach ($aSelectedGenePanels as $sType => $aGpIDs) {
                 foreach ($aGpIDs as $sGpID) {
-                    $sKey = (isset($aGenes[$sType]) ? $sType : 'others');
-                    $aGenes[$sKey]  = array_merge($aGenes[$sKey], $aConfig['metadata'][$sGpID]['genes']);
+                    $sKey = (isset($aGenes[$sType])? $sType : 'gene_panel');
+                    $aGenes[$sKey] = array_merge($aGenes[$sKey], $aConfig['metadata'][$sGpID]['genes']);
                 }
             }
 
             // If no gene panels selected, then return all variants.
-            if (empty($aGenes['others']) && empty($aGenes[GP_TYPE_CUSTOM]) && empty($aGenes[GP_TYPE_BLACKLIST])) {
+            if (empty($aGenes['gene_panel']) && empty($aGenes['custom_panel']) && empty($aGenes['blacklist'])) {
                 $aVariantIDsFiltered = $aVariantIDs;
-                break; // switch case statement break
+                break; // switch case statement break.
             }
 
-            // If ONLY blacklist is selected
-            if (empty($aGenes['others']) && empty($aGenes[GP_TYPE_CUSTOM]) && !empty($aGenes[GP_TYPE_BLACKLIST])) {
+            // If ONLY blacklist is selected.
+            if (empty($aGenes['gene_panel']) && empty($aGenes['custom_panel']) && !empty($aGenes['blacklist'])) {
                 $sGeneSelection = 'NOT IN';
-                $aSelectedGenes = $aGenes[GP_TYPE_BLACKLIST];
+                $aSelectedGenes = $aGenes['blacklist'];
             } else {
-                // General formula: (all selected genes - blacklist genes) + custom panel genes
+                // General formula: (all selected genes - blacklist genes) + custom panel genes.
                 $sGeneSelection = 'IN';
-                $aSelectedGenes = array_diff($aGenes['others'], $aGenes[GP_TYPE_BLACKLIST]);
-                $aSelectedGenes = array_merge($aSelectedGenes, $aGenes[GP_TYPE_CUSTOM]);
+                $aSelectedGenes = array_diff($aGenes['gene_panel'], $aGenes['blacklist']);
+                $aSelectedGenes = array_merge($aSelectedGenes, $aGenes['custom_panel']);
             }
             
-            // (all selected genes - blacklist genes) + custom panel genes =  0
+            // (all selected genes - blacklist genes) + custom panel genes = 0.
             // We don't need to run the SQL query. Return no variants.
             if (empty($aSelectedGenes)) {
                 $aVariantIDsFiltered = array();
-                break; // switch case statement break
+                break; // switch case statement break.
             }
 
-            // all other cases, we need to run the SQL query
+            // All other cases, we need to run the SQL query.
             $sSQL = 'SELECT DISTINCT CAST(vot.id AS UNSIGNED)
                      FROM ' . TABLE_VARIANTS_ON_TRANSCRIPTS . ' AS vot
                      INNER JOIN ' . TABLE_TRANSCRIPTS . ' AS t ON (vot.transcriptid = t.id)
@@ -354,14 +349,13 @@ if ($aVariantIDs) {
 
             break;
         case 'cross_screenings':
-            $sFilterConfig = getSelectedFilterConfig($nRunID, 'cross_screenings');
             if (empty($aConfig['groups'])) {
                 die(json_encode(array('result' => false, 'message' => 'Incomplete configuration for filter \'' . $sFilter . '\'.')));
             }
 
             $aVariantIDsFiltered = $aVariantIDs;
 
-            // Loop through each group and narrow down the selected variant ids after SQL of each group is run.
+            // Loop through each group and narrow down the selected variant IDs after SQL of each group is run.
             foreach ($aConfig['groups'] as $aGroup) {
                 // There is no need to filter further if there is no variant found here.
                 if (empty($aVariantIDsFiltered)) {
@@ -380,7 +374,7 @@ if ($aVariantIDs) {
                     $aScreeningIDs[] = $aParts[0];
                 }
 
-                // IN or NOT IN the variants in the group
+                // IN or NOT IN the variants in the group.
                 switch(strtolower($aGroup['condition'])) {
                     case 'in':
                     case 'homozygous in':
@@ -397,16 +391,16 @@ if ($aVariantIDs) {
                 $sSQLVariantsInGroup = '
                   SELECT DISTINCT vog2.`VariantOnGenome/DBID`
                   FROM ' . TABLE_SCR2VAR . ' s2v2
-                  JOIN ' . TABLE_VARIANTS . ' vog2 ON (s2v2.variantid = vog2.id AND s2v2.screeningid IN (?' . str_repeat(', ?', count($aScreeningIDs)-1) . '))';
+                  INNER JOIN ' . TABLE_VARIANTS . ' vog2 ON (s2v2.variantid = vog2.id AND s2v2.screeningid IN (?' . str_repeat(', ?', count($aScreeningIDs)-1) . '))';
 
                 // Heterozygous and Homozygous queries need additional condition.
-                if (in_array(strtolower($aGroup['condition']), array ('homozygous in', 'not homozygous in'))) {
+                if (in_array(strtolower($aGroup['condition']), array('homozygous in', 'not homozygous in'))) {
                     if (lovd_verifyInstance('mgha', false)) {
                         $sSQLVariantsInGroup .= ' WHERE (vog2.`allele` = 0 AND vog2.`VariantOnGenome/Sequencing/Allele/Frequency` >= 1) OR (vog2.`allele` = 3)';
                     } else {
                         $sSQLVariantsInGroup .= ' WHERE  vog2.`allele` = 3';
                     }
-                } elseif (in_array(strtolower($aGroup['condition']), array ('heterozygous in'))) {
+                } elseif (in_array(strtolower($aGroup['condition']), array('heterozygous in'))) {
                     if (lovd_verifyInstance('mgha', false)) {
                         $sSQLVariantsInGroup .= ' WHERE (vog2.`allele` = 0 AND vog2.`VariantOnGenome/Sequencing/Allele/Frequency` < 1) OR (vog2.`allele` != 3)';
                     } else {
@@ -425,7 +419,7 @@ if ($aVariantIDs) {
                 // - We no longer need to join it with TABLE_SCR2VAR because our variants is already limited to the list in $aVariantIDsFiltered.
                 $sSQL = 'SELECT DISTINCT CAST(vog.id AS UNSIGNED)
                          FROM ' . TABLE_VARIANTS . ' vog 
-                         WHERE vog.`VariantOnGenome/DBID` ' . $sSQLCondition . '( SELECT * FROM ('. $sSQLVariantsInGroup .') AS subquery)
+                         WHERE vog.`VariantOnGenome/DBID` ' . $sSQLCondition . ' (SELECT * FROM (' . $sSQLVariantsInGroup . ') AS subquery)
                             AND vog.id IN (?' . str_repeat(', ?', count($aVariantIDsFiltered) - 1) . ')';
 
                 // If we add more queries in the future, we need to watch out for the order of the params.
@@ -494,7 +488,16 @@ array_shift($aFilters); // Will cascade into the $_SESSION variable.
 if ($aFilters) {
     // Still more to do.
     // FIXME: This script now returns JSON as well as simple return values. Standardize this.
-    die(json_encode(array('result' => true, 'sFilterID' => $sFilter, 'nVariantsLeft' => count($aVariantIDs), 'nTime' => lovd_convertSecondsToTime($nTimeSpent, 1), 'sFilterConfig' => $sFilterConfig, 'bDone' => false)));
+    die(json_encode(
+        array(
+            'result' => true,
+            'sFilterID' => $sFilter,
+            'nVariantsLeft' => count($aVariantIDs),
+            'nTime' => lovd_convertSecondsToTime($nTimeSpent, 1),
+            'sFilterConfig' => lovd_getFilterConfigHTML($nRunID, $sFilter),
+            'bDone' => false
+        )
+    ));
 } else {
     // Since we're done, save the results in the database.
     $q = $_DB->prepare('INSERT INTO ' . TABLE_ANALYSES_RUN_RESULTS . ' VALUES (?, ?)');
@@ -506,6 +509,15 @@ if ($aFilters) {
     // Now that we're done, clean up after ourselves...
     unset($_SESSION['analyses'][$nRunID]);
     // FIXME: This script now returns JSON as well as simple return values. Standardize this.
-    die(json_encode(array('result' => true, 'sFilterID' => $sFilter, 'nVariantsLeft' => $nVariants, 'nTime' => lovd_convertSecondsToTime($nTimeSpent, 1), 'sFilterConfig' => $sFilterConfig, 'bDone' => true)));
+    die(json_encode(
+        array(
+            'result' => true,
+            'sFilterID' => $sFilter,
+            'nVariantsLeft' => $nVariants,
+            'nTime' => lovd_convertSecondsToTime($nTimeSpent, 1),
+            'sFilterConfig' => lovd_getFilterConfigHTML($nRunID, $sFilter),
+            'bDone' => true
+        )
+    ));
 }
 ?>

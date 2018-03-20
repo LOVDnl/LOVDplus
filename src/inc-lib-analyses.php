@@ -38,7 +38,8 @@ if (!defined('ROOT_PATH')) {
 
 
 
-function getGenePanelLastModifiedDate($sGpId) {
+// FIXME: Resort these function as I've changed the names.
+function lovd_getGenePanelLastModifiedDate ($sGpId) {
     global $_DB;
 
     $sModified = $_DB->query(
@@ -60,7 +61,7 @@ function getGenePanelLastModifiedDate($sGpId) {
 
 
 
-function getSelectedFilterConfig ($nRunID, $sFilterID)
+function lovd_getFilterConfigHTML ($nRunID, $sFilterID)
 {
     // This function gathers the configuration of the selected filter run, and returns
     //  the text that should be printed below the filter in the analysis display.
@@ -72,7 +73,7 @@ function getSelectedFilterConfig ($nRunID, $sFilterID)
 
     switch ($sFilterID) {
         case 'apply_selected_gene_panels':
-            return getSelectedGenePanelsByRunID($aConfig, $nRunID);
+            return lovd_getGenePanelsHTMLByRunID($aConfig, $nRunID);
             break;
 
         case 'cross_screenings':
@@ -142,7 +143,7 @@ function getSelectedFilterConfig ($nRunID, $sFilterID)
 
 
 
-function getSelectedGenePanelsByRunID ($aConfig, $nRunID)
+function lovd_getGenePanelsHTMLByRunID ($aConfig, $nRunID)
 {
     // This function will construct a table of information about the selected gene panels for an analysis.
     global $_DB;

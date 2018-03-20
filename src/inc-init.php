@@ -433,12 +433,6 @@ if (LOVD_plus) {
     define('CUR_STATUS_NOT_FOR_CURATION', 90);       // A curator has determined that this variant does not require curation and no further action will be taken on this variant.
     define('CUR_STATUS_ARTEFACT', 91);               // A curator has determined that this variant does not exist as a result of a sequencing error.
 
-    // Types of gene panels accepted by the system. Use constants to avoid typo.
-    define('GP_TYPE_GENEPANEL', 'gene_panel');
-    define('GP_TYPE_BLACKLIST', 'blacklist');
-    define('GP_TYPE_MENDELIOME', 'mendeliome');
-    define('GP_TYPE_CUSTOM', 'custom_panel');
-
     $_SETT['attachment_file_types'] = array(
         'application/msword' => 'doc',
         'application/pdf' => 'pdf',

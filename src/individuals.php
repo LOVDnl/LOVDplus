@@ -412,7 +412,7 @@ if (PATH_COUNT >= 2 && ctype_digit($_PE[1]) && !ACTION && (PATH_COUNT == 2 || PA
                     }
 
                     // Check if we need to display the information for the filters used in this analysis.
-                    $sFilterConfigInfo = getSelectedFilterConfig($zAnalysis['runid'], $sFilter);
+                    $sFilterConfigInfo = lovd_getFilterConfigHTML($zAnalysis['runid'], $sFilter);
 
                     // Format the display of the filters.
                     if (isset($aFilterInfo[$sFilter]) && (!empty($aFilterInfo[$sFilter]['name']) || !empty($aFilterInfo[$sFilter]['description']))) {
