@@ -4,11 +4,11 @@
  * LEIDEN OPEN VARIATION DATABASE (LOVD)
  *
  * Created     : 2013-11-05
- * Modified    : 2017-03-08
+ * Modified    : 2018-03-20
  * For LOVD    : 3.0-18
  *
- * Copyright   : 2004-2017 Leiden University Medical Center; http://www.LUMC.nl/
- * Programmer  : Ivo F.A.C. Fokkema <I.F.A.C.Fokkema@LUMC.nl>
+ * Copyright   : 2004-2018 Leiden University Medical Center; http://www.LUMC.nl/
+ * Programmers : Ivo F.A.C. Fokkema <I.F.A.C.Fokkema@LUMC.nl>
  *               Anthony Marty <anthony.marty@unimelb.edu.au>
  *               Juny Kesumadewi <juny.kesumadewi@unimelb.edu.au>
  *
@@ -69,8 +69,20 @@ function lovd_configureAnalysis (nScreeningID, nAnalysisID, nRunID, sElementID)
 {
     // Display the modal to enter configurations for different filters.
     $.get('<?php echo lovd_getInstallURL(); ?>ajax/run_analysis.php?configure&elementid=' + escape(sElementID) + '&screeningid=' + escape(nScreeningID) + '&analysisid=' + escape(nAnalysisID) + '&runid=' + escape(nRunID),
-    function() {}).fail(function(data) {});
-
+    function (data) {
+        if (data == '0') {
+            // Failure, AJAX_FALSE.
+            alert('Screening not valid or no authorization to start a new analysis. Refreshing the page...');
+            location.reload();
+            return false;
+        } else if (data == '8') {
+            // Failure, AJAX_NO_AUTH.
+            alert('Lost your session. Please log in again.');
+        } else if (data == '9') {
+            // Failure, AJAX_DATA_ERROR.
+            alert('Error while sending data. Please try again.\nIf this error persists, please contact support.');
+        }
+    });
 }
 
 
@@ -339,5 +351,4 @@ function lovd_showAnalysisResults (nRunID)
 function lovd_showGenes (nRunID)
 {
     $.get('ajax/analysis_runs.php/' + nRunID + '?showGenes');
-    console.log(nRunID);
 }
