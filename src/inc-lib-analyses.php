@@ -95,17 +95,11 @@ function lovd_getFilterConfigHTML ($nRunID, $sFilterID)
                 }
 
                 // Find available screenings.
-                $sSQL = 'SELECT s.*, i.`' . $sLabIDColName . '`
+                $sSQL = 'SELECT s.id, s.*, i.*
                          FROM ' . TABLE_SCREENINGS . ' AS s 
-                         JOIN ' . TABLE_INDIVIDUALS . ' AS i ON (s.individualid = i.id) 
+                           INNER JOIN ' . TABLE_INDIVIDUALS . ' AS i ON (s.individualid = i.id) 
                          WHERE s.id IN (?' . str_repeat(', ?', count($aScreeningIDs)-1) . ')';
-                $aSQL = $aScreeningIDs;
-
-                $zScreenings = $_DB->query($sSQL, $aSQL)->fetchAllAssoc();
-                $aScreenings = array();
-                foreach ($zScreenings as $aScreening) {
-                    $aScreenings[$aScreening['id']] = $aScreening;
-                }
+                $aScreenings = $_DB->query($sSQL, $aScreeningIDs)->fetchAllGroupAssoc();
 
                 foreach ($aConfig['groups'] as $aGroup) {
                     if (empty($sToolTip)) {
@@ -119,8 +113,18 @@ function lovd_getFilterConfigHTML ($nRunID, $sFilterID)
                                  '<UL>';
                     foreach ($aGroup['screenings'] as $sScreening) {
                         list($nScreeningID, $sRole) = explode(':', $sScreening);
-                        $nScreeningText = (!$sRole? '' : $sRole . ': ') . $aScreenings[$nScreeningID][$sLabIDColName];
-                        $sToolTip .= '<LI>' . $nScreeningText . '</LI>';
+
+                        // Format display name of each screening. Defaults to the lab ID.
+                        $sScreeningText = $aScreenings[$nScreeningID][$sLabIDColName];
+
+                        // If this instance has its own formatter, use it.
+                        if (!empty($_INSTANCE_CONFIG['cross_screenings']['format_screening_name']) &&
+                            is_callable($_INSTANCE_CONFIG['cross_screenings']['format_screening_name'])) {
+                            $aScreenings[$nScreeningID]['role'] = $sRole; // So that the function can pick it up.
+                            $sScreeningText = $_INSTANCE_CONFIG['cross_screenings']['format_screening_name']($aScreenings[$nScreeningID]);
+                        }
+
+                        $sToolTip .= '<LI>' . $sScreeningText . '</LI>';
                     }
                     $sToolTip .= '</UL>';
                 }
@@ -208,19 +212,19 @@ function lovd_getGenePanelsHTMLByRunID ($aConfig, $nRunID)
 
                     // If there are less than 5 genes in a custom gene panel, simply display all the gene symbols.
                     $sCustomPanelDisplayText = (count($aCustomPanelGenes) <= 5? ': ' . $sCustomPanel : '(' . count($aCustomPanelGenes) . ' genes)');
-                    $sGenePanelsInfo .= '<TR onmouseover="lovd_showToolTip(\'' . htmlspecialchars($sToolTip) . '\', this, [100, -10]);"><TD>Custom panel '. $sCustomPanelDisplayText .'</TD></TR>' . "\n";
+                    $sGenePanelsInfo .= '<TR onmouseover="lovd_showToolTip(\'' . htmlspecialchars($sToolTip) . '\', this, [100, -10]);"><TD>Custom panel ' . $sCustomPanelDisplayText . '</TD></TR>' . "\n";
                     break;
                 default:
                     // Format each of the gene panel types into the info table.
                     $sDisplayText = '';
                     $nGenePanelCount = count($aGenePanelIds);
-                    $sToolTip = '<B>' . ucfirst(str_replace('_', '&nbsp;', $sType)) . ($nGenePanelCount > 1? 's' : '') . '</B>';
-                    $sToolTip .= ' <A onclick="lovd_showGenes(' . $nRunID . ')">Click for details</A><BR>';
+                    $sToolTip = '<B>' . ucfirst(str_replace('_', '&nbsp;', $sType)) . ($nGenePanelCount > 1? 's' : '') . '</B>' .
+                                ' <A onclick="lovd_showGenes(' . $nRunID . ')">Click for details</A><BR>';
 
                     foreach ($aGenePanelIds as $aGenePanelId) {
                         // Add the gene panel name to the tooltip and the text to show. We might shorten the text to show later.
                         $sGpName = (empty($aConfig['metadata'][$aGenePanelId]['name'])? $aGpNames[$aGenePanelId]['name'] : $aConfig['metadata'][$aGenePanelId]['name']);
-                        $sToolTip .=  str_replace(' ', '&nbsp;', addslashes($sGpName)) . '<BR>';
+                        $sToolTip .= str_replace(' ', '&nbsp;', addslashes($sGpName)) . '<BR>';
                         $sDisplayText .= (!$sDisplayText? '' : ', ') . $sGpName;
                     }
 

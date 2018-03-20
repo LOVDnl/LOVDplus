@@ -297,7 +297,7 @@ if (ACTION == 'configure' && GET) {
                     }
 
 
-                    // Format display name of each screening. Default to the lab ID.
+                    // Format display name of each screening. Defaults to the lab ID.
                     $sText = $zScreening[$sLabIDColName];
 
                     // If this instance has its own formatter, use it.
