@@ -634,13 +634,14 @@ if (ACTION == 'run') {
     $sCustomPanel = '';
     $aSelectedGenePanels = (empty($aConfig['apply_selected_gene_panels']['gene_panels']) ? array() : $aConfig['apply_selected_gene_panels']['gene_panels']);
 
-    // Merge gene_panel and mendeliome gene panels
-    $aGenePanels = (!empty($aSelectedGenePanels[GP_TYPE_GENEPANEL])? $aSelectedGenePanels[GP_TYPE_GENEPANEL] : array());
-    $aGenePanels = (!empty($aSelectedGenePanels[GP_TYPE_MENDELIOME])? array_merge($aGenePanels, $aSelectedGenePanels[GP_TYPE_MENDELIOME]) : $aGenePanels);
+    // Merge gene_panel and mendeliome gene panels.
+    $aGenePanels = (!empty($aSelectedGenePanels['gene_panel'])? $aSelectedGenePanels['gene_panel'] : array());
+    $aGenePanels = (!empty($aSelectedGenePanels['mendeliome'])? array_merge($aGenePanels, $aSelectedGenePanels['mendeliome']) : $aGenePanels);
 
     $sCustomPanel = '';
-    if (!empty($aSelectedGenePanels[GP_TYPE_CUSTOM]))  {
-        foreach ($aSelectedGenePanels[GP_TYPE_CUSTOM] as $sKey) {
+    if (!empty($aSelectedGenePanels['custom_panel']))  {
+        foreach ($aSelectedGenePanels['custom_panel'] as $sKey) {
+            // FIXME: It would make more sense to use a standard separator like ";".
             $sCustomPanel .= implode(', ',  $aConfig['apply_selected_gene_panels']['metadata'][$sKey]['genes']);
         }
     }
@@ -663,7 +664,7 @@ if (ACTION == 'run') {
         // Insert filters...
         $aFilters = explode(';', $zAnalysis['_filters']);
         foreach ($aFilters as $i => $sFilter) {
-            $sFilterConfig = (empty($aConfig[$sFilter]) ? NULL : json_encode($aConfig[$sFilter]));
+            $sFilterConfig = (empty($aConfig[$sFilter])? NULL : json_encode($aConfig[$sFilter]));
             $q = $_DB->query('INSERT INTO ' . TABLE_ANALYSES_RUN_FILTERS . ' (runid, filterid, config_json, filter_order) VALUES (?, ?, ?, ?)', array($nRunID, $sFilter, $sFilterConfig, ($i+1)));
             if (!$q) {
                 $_DB->rollBack();
@@ -678,7 +679,7 @@ if (ACTION == 'run') {
         // Insert into database the new configurations.
         $aFilters = explode(';', $zAnalysisRun['_filters']);
         foreach ($aFilters as $sFilter) {
-            $sFilterConfig = (empty($aConfig[$sFilter]) ? NULL : json_encode($aConfig[$sFilter]));
+            $sFilterConfig = (empty($aConfig[$sFilter])? NULL : json_encode($aConfig[$sFilter]));
             $q = $_DB->query('UPDATE ' . TABLE_ANALYSES_RUN_FILTERS . ' SET config_json = ? WHERE filterid = ? AND runid = ?', array($sFilterConfig, $sFilter, $nRunID));
             if (!$q) {
                 $_DB->rollBack();
