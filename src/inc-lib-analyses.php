@@ -38,28 +38,6 @@ if (!defined('ROOT_PATH')) {
 
 
 
-// FIXME: Resort these function as I've changed the names.
-function lovd_getGenePanelLastModifiedDate ($sGpId) {
-    global $_DB;
-
-    $sModified = $_DB->query(
-        'SELECT
-           GREATEST(
-             IFNULL(
-               (SELECT MAX(gp2g.valid_from)
-                FROM ' . TABLE_GP2GENE_REV . ' AS gp2g
-                WHERE gp2g.genepanelid = gp.id), gp.created_date),
-             IFNULL(
-               (SELECT MAX(gp2g.valid_to)
-                FROM ' . TABLE_GP2GENE_REV . ' AS gp2g
-                WHERE gp2g.genepanelid = gp.id AND LEFT(gp2g.valid_to, 10) != "9999-12-31" AND gp2g.deleted = 1), gp.created_date))
-         FROM ' . TABLE_GENE_PANELS_REV . ' AS gp
-         WHERE id = ?', array($sGpId))->fetchColumn();
-    return $sModified;
-}
-
-
-
 
 function lovd_getFilterConfigHTML ($nRunID, $sFilterID)
 {
@@ -142,6 +120,28 @@ function lovd_getFilterConfigHTML ($nRunID, $sFilterID)
     }
 }
 
+
+
+
+
+function lovd_getGenePanelLastModifiedDate ($sGpId) {
+    global $_DB;
+
+    $sModified = $_DB->query(
+        'SELECT
+           GREATEST(
+             IFNULL(
+               (SELECT MAX(gp2g.valid_from)
+                FROM ' . TABLE_GP2GENE_REV . ' AS gp2g
+                WHERE gp2g.genepanelid = gp.id), gp.created_date),
+             IFNULL(
+               (SELECT MAX(gp2g.valid_to)
+                FROM ' . TABLE_GP2GENE_REV . ' AS gp2g
+                WHERE gp2g.genepanelid = gp.id AND LEFT(gp2g.valid_to, 10) != "9999-12-31" AND gp2g.deleted = 1), gp.created_date))
+         FROM ' . TABLE_GENE_PANELS_REV . ' AS gp
+         WHERE id = ?', array($sGpId))->fetchColumn();
+    return $sModified;
+}
 
 
 
