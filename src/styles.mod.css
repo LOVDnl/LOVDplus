@@ -101,13 +101,19 @@ table.data tr.transparent50               {opacity:0.5; filter:alpha(opacity=50)
 /* Span looking like an Anchor */
 table.data span.anchor                    {cursor: pointer; color: #0000FF;}
 
-/* Headings on the gene panel selection dialog form */
-.gpheader       {font-weight : bold; text-align : center; padding-top: 10px; border-top: 1px solid #dddddd;}
+/* Styles for the analysis filter configuration dialog form */
+.gpheader       {font-weight : bold; text-align : left; padding-top: 10px;}
+.filter-config  {border: 1px solid #dddddd; padding: 5px;}
+.filter-cross-screening-group {border-top: 1px solid #dddddd;}
+.btn-right {float: right;}
 
-/* Gene panel information under the apply_selected_gene_panels filter */
-table.gpinfo               {margin-left: 10px;}
-table.gpinfo td            {font-size: 10px; color: #000000;}
-table.gpinfo tr:hover td   {background: #8aba8a;}
+/* Analysis filter configuration information under the filter */
+table.gpinfo                {width: 100%;}
+table.gpinfo td             {font-size: 10px; color: #000000;}
+table.gpinfo tr:hover td    {background: #8aba8a;}
+div.filter-config-desc td   {font-size: 10px; color: #000000;}
+div.filter-config-desc      {margin-left: 10px;}
+.filter-cross-screening-delete-group {float: right; clear: right;}
 
 /* Filter information tooltip */
 table.filterinfo td        {font-size: 11px; color: #000000;}

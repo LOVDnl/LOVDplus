@@ -947,6 +947,7 @@ $aTableSQL =
     id VARCHAR(50) NOT NULL,
     name VARCHAR(100) NOT NULL DEFAULT "",
     description TEXT,
+    has_config TINYINT(1) NULL,
     PRIMARY KEY (id))
     ' . $sSettings
 
@@ -1005,6 +1006,7 @@ $aTableSQL =
    'CREATE TABLE ' . TABLE_ANALYSES_RUN_FILTERS . ' (
     runid SMALLINT(5) UNSIGNED ZEROFILL NOT NULL,
     filterid VARCHAR(50) NOT NULL,
+    config_json TEXT NULL,
     filter_order TINYINT UNSIGNED NOT NULL,
     filtered_out MEDIUMINT UNSIGNED,
     run_time TINYINT UNSIGNED,

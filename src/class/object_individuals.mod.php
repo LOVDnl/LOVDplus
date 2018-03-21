@@ -215,6 +215,7 @@ class LOVD_IndividualMOD extends LOVD_Individual {
             $sView = 'list';
         }
 
+        $zData['parents_'] = ''; // To prevent notices.
         $zData = parent::prepareData($zData, $sView);
         if ($sView == 'list') {
             $zData['analysis_date_'] = substr($zData['analysis_date'], 0, 10);

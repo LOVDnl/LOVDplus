@@ -4,12 +4,13 @@
  * LEIDEN OPEN VARIATION DATABASE (LOVD)
  *
  * Created     : 2016-07-15
- * Modified    : 2017-03-08
+ * Modified    : 2018-03-21
  * For LOVD    : 3.0-18
  *
- * Copyright   : 2004-2017 Leiden University Medical Center; http://www.LUMC.nl/
+ * Copyright   : 2004-2018 Leiden University Medical Center; http://www.LUMC.nl/
  * Programmers : Anthony Marty <anthony.marty@unimelb.edu.au>
  *               Ivo F.A.C. Fokkema <I.F.A.C.Fokkema@LUMC.nl>
+ *               Juny Kesumadewi <juny.kesumadewi@unimelb.edu.au>
  *
  *
  * This file is part of LOVD.
@@ -40,6 +41,7 @@ $aAnalysesSQL = array(); // To prevent notices if instance name is not recognize
 // To have default analyses available directly after installing LOVD+, create a
 // list of analyses here using your instance name (alphabetically ordered).
 // Make sure your instance name is defined in the config.ini.php file.
+// FIXME: Reconstruct this a bit to let Leiden (and others) use the default filters more, so we have more default filters but without the need to redefine them.
 switch ($_INI['instance']['name']) {
     case 'leiden':
         $aAnalysesSQL =
@@ -51,36 +53,37 @@ switch ($_INI['instance']['name']) {
                   (4, 4, "Recessive (gene panel)",  "Filters for recessive variants, homozygous or compound heterozygous in patient, but not in the parents. High frequencies (> 3%) are also filtered out.", 1, 0, NOW(), NULL, NULL),
                   (5, 5, "Recessive (whole exome)", "Filters for recessive variants, homozygous or compound heterozygous in patient, but not in the parents. High frequencies (> 3%) are also filtered out.", 1, 0, NOW(), NULL, NULL),
                   (6, 6, "Imprinted genes",         "Filters for variants found in imprinted genes.", 1, 0, NOW(), NULL, NULL)',
-                'INSERT INTO ' . TABLE_ANALYSIS_FILTERS . ' (`id`, `name`, `description`) VALUES 
-                  ("apply_selected_gene_panels", "", "Select only variants that are associated with a gene that is in the selected gene panels and not within the selected blacklists."),
-                  ("chromosome_X", "", "Select only variants that are located on the X chromosome."),
-                  ("is_present_father_1", "", ""),
-                  ("is_present_father_lte_4", "", ""),
-                  ("is_present_mother_1", "", ""),
-                  ("is_present_mother_lte_4", "", ""),
-                  ("remove_by_indb_count_hc_gte_2", "", ""),
-                  ("remove_by_indb_count_ug_gte_2", "", ""),
-                  ("remove_by_function_coding_synonymous", "", "Remove all variants that are only labeled as coding-synonymous."),
-                  ("remove_by_function_utr3", "", "Remove all variants that are only mapped to the 3\' UTR."),
-                  ("remove_by_function_utr5", "", "Remove all variants that are only mapped to the 5\' UTR."),
-                  ("remove_by_function_utr_or_intronic", "", "Remove all variants that are only mapped to the UTR or introns."),
-                  ("remove_by_function_utr_or_intronic_or_synonymous", "", "Remove all variants that are only mapped to the UTR or introns, or labeled as coding-synonymous."),
-                  ("remove_by_function_utr_or_intronic_gt_20", "", "Remove all variants that are only mapped to the UTR or introns, >20 bp from the exon."),
-                  ("remove_by_quality_lte_100", "", "Remove all variants with a sequencing quality score that is less than, or equal to, 100."),
-                  ("remove_intronic_distance_gt_2", "", "Remove all variants that are only mapped to introns, >2 bp from the exon."),
-                  ("remove_intronic_distance_gt_8", "", "Remove all variants that are only mapped to introns, >8 bp from the exon."),
-                  ("remove_missense_with_phylop_lte_2.5", "", "Remove all substitutions having a PhyloP score of less than or equal to 2.5, if missense but not the wobble base, or intronic."),
-                  ("remove_not_imprinted", "", "Remove all variants within genes not in the imprinted gene list (disease ID: 931)."),
-                  ("remove_with_any_frequency_1000G", "", "Remove all variants that have a frequency 1000G."),
-                  ("remove_with_any_frequency_dbSNP", "", "Remove all variants that have a dbSNP ID."),
-                  ("remove_with_any_frequency_EVS", "", "Remove all variants that have a frequency in EVS."),
-                  ("remove_with_any_frequency_goNL", "", "Remove all variants that have a frequency in GoNL."),
-                  ("remove_with_any_frequency_gt_2", "", "Remove all variants that have a frequency higher than 2% in 1000G, GoNL or EVS."),
-                  ("remove_with_any_frequency_gt_3", "", "Remove all variants that have a frequency higher than 3% in 1000G, GoNL or EVS."),
-                  ("remove_by_indb_count_hc_gte_5", "", ""),
-                  ("remove_by_indb_count_ug_gte_5", "", ""),
-                  ("select_gatkcaller_ug_hc", "", "Select only variants called by both UG and HC."),
-                  ("select_homozygous_or_compound_heterozygous", "", "Select only homozygous variants or variants associated with a gene that currently has more than one variant left.")',
+                'INSERT INTO ' . TABLE_ANALYSIS_FILTERS . ' (`id`, `name`, `description`, `has_config`) VALUES 
+                  ("apply_selected_gene_panels", "", "Select only variants that are associated with a gene that is in the selected gene panels and not within the selected blacklists.", 1),
+                  ("chromosome_X", "", "Select only variants that are located on the X chromosome.", 0),
+                  ("cross_screenings", "Compare multiple screenings", "Select variants that satisfy the criteria configured by you, comparing several screenings.", 1),
+                  ("is_present_father_1", "", "", 0),
+                  ("is_present_father_lte_4", "", "", 0),
+                  ("is_present_mother_1", "", "", 0),
+                  ("is_present_mother_lte_4", "", "", 0),
+                  ("remove_by_indb_count_hc_gte_2", "", "", 0),
+                  ("remove_by_indb_count_ug_gte_2", "", "", 0),
+                  ("remove_by_function_coding_synonymous", "", "Remove all variants that are only labeled as coding-synonymous.", 0),
+                  ("remove_by_function_utr3", "", "Remove all variants that are only mapped to the 3\' UTR.", 0),
+                  ("remove_by_function_utr5", "", "Remove all variants that are only mapped to the 5\' UTR.", 0),
+                  ("remove_by_function_utr_or_intronic", "", "Remove all variants that are only mapped to the UTR or introns.", 0),
+                  ("remove_by_function_utr_or_intronic_or_synonymous", "", "Remove all variants that are only mapped to the UTR or introns, or labeled as coding-synonymous.", 0),
+                  ("remove_by_function_utr_or_intronic_gt_20", "", "Remove all variants that are only mapped to the UTR or introns, >20 bp from the exon.", 0),
+                  ("remove_by_quality_lte_100", "", "Remove all variants with a sequencing quality score that is less than, or equal to, 100.", 0),
+                  ("remove_intronic_distance_gt_2", "", "Remove all variants that are only mapped to introns, >2 bp from the exon.", 0),
+                  ("remove_intronic_distance_gt_8", "", "Remove all variants that are only mapped to introns, >8 bp from the exon.", 0),
+                  ("remove_missense_with_phylop_lte_2.5", "", "Remove all substitutions having a PhyloP score of less than or equal to 2.5, if missense but not the wobble base, or intronic.", 0),
+                  ("remove_not_imprinted", "", "Remove all variants within genes not in the imprinted gene list (disease ID: 931).", 0),
+                  ("remove_with_any_frequency_1000G", "", "Remove all variants that have a frequency 1000G.", 0),
+                  ("remove_with_any_frequency_dbSNP", "", "Remove all variants that have a dbSNP ID.", 0),
+                  ("remove_with_any_frequency_EVS", "", "Remove all variants that have a frequency in EVS.", 0),
+                  ("remove_with_any_frequency_goNL", "", "Remove all variants that have a frequency in GoNL.", 0),
+                  ("remove_with_any_frequency_gt_2", "", "Remove all variants that have a frequency higher than 2% in 1000G, GoNL or EVS.", 0),
+                  ("remove_with_any_frequency_gt_3", "", "Remove all variants that have a frequency higher than 3% in 1000G, GoNL or EVS.", 0),
+                  ("remove_by_indb_count_hc_gte_5", "", "", 0),
+                  ("remove_by_indb_count_ug_gte_5", "", "", 0),
+                  ("select_gatkcaller_ug_hc", "", "Select only variants called by both UG and HC.", 0),
+                  ("select_homozygous_or_compound_heterozygous", "", "Select only homozygous variants or variants associated with a gene that currently has more than one variant left.", 0)',
                 'INSERT INTO ' . TABLE_A2AF . ' (`analysisid`, `filterid`, `filter_order`) VALUES
                   (1, "apply_selected_gene_panels", 1), 
                   (1, "remove_by_quality_lte_100", 2), 
@@ -180,30 +183,31 @@ switch ($_INI['instance']['name']) {
                   (5, 5, "X-linked Recessive Trio",        "Filters for X-linked recessive variants, not found in father, not homozygous in mother.", 1, 0, NOW(), NULL, NULL), 
                   (6, 6, "Unknown Singleton Inheritance",  "Unknown Singleton Inheritance", 1, 0, NOW(), NULL, NULL), 
                   (7, 7, "X-linked Recessive Singleton",   "X-linked Recessive Singleton", 1, 0, NOW(), NULL, NULL)',
-                'INSERT INTO ' . TABLE_ANALYSIS_FILTERS . ' (`id`, `name`, `description`) VALUES 
-                  ("apply_selected_gene_panels", "Apply selected gene panels", "Include any variants that appear with the selected gene panels but not within the selected blacklists."), 
-                  ("remove_by_quality_lte_100", "Remove by quality <= 100", "Only keep variants that have a sequencing quality score that is greater than 100."), 
-                  ("remove_with_any_gmaf_exac_gt_0.1", "Remove with exac > 0.1", "Only keep variants that have a frequency of 0.1% or less in ExAC or have no value."), 
-                  ("remove_obs_count_gte_5_percent", "Remove obs count >= 5 percent", "Only keep variants that occur in less than 5% of the individuals within this LOVD+ instance."), 
-                  ("remove_deep_intronic_variants", "Remove deep intronic variants", "Only keep variants that have no VEP consequence type or don’t have intron_variant as the VEP consequence type."), 
-                  ("remove_intronic_splice_region_variants", "Remove intronic splice region variants", "Only keep variants that have no VEP consequence type or don’t have splice_region_variant&intron_variant as the VEP consequence type."), 
-                  ("remove_utr_variants", "Remove utr variants", "Only keep variants that have no VEP consequence type or don’t have 3_prime_UTR_variant or 5_prime_UTR_variant as the VEP consequence type."), 
-                  ("remove_synonymous_variants", "Remove synonymous variants", "Only keep variants that have no VEP consequence type or don’t have synonymous_variant as the VEP consequence type."), 
-                  ("remove_low_impact_variants", "Remove low impact variants", "Only keep variants that have no VEP consequence impact or have MODERATE or HIGH within the VEP consequence impact text."), 
-                  ("remove_with_any_gmaf_gt_2", "Remove with any gmaf > 2", "Only keep variants that have a frequency of 2% or less in 1000G and ExAC or have no value."), 
-                  ("remove_with_any_gmaf_1000g", "Remove with 1000G value", "Only keep variants that have no 1000G frequency."), 
-                  ("remove_with_any_gmaf_exac", "Remove with ExAC value", "Only keep variants that have no ExAC frequency."), 
-                  ("select_variants_absent_in_mother_low_conf", "Select variants absent in mother low conf", "Only keep variants that have been observed in the mother with a confidence score of 4 or less. The lower the number the higher the confidence level."), 
-                  ("select_variants_absent_in_father_low_conf", "Select variants absent in father low conf", "Only keep variants that have been observed in the father with a confidence score of 4 or less. The lower the number the higher the confidence level."), 
-                  ("select_variants_absent_in_mother_high_conf", "Select variants absent in mother high conf", "Only keep variants that have been observed in the mother with a confidence score of 1 or less. The lower the number the higher the confidence level."), 
-                  ("select_variants_absent_in_father_high_conf", "Select variants absent in father high conf", "Only keep variants that have been observed in the father with a confidence score of 1 or less. The lower the number the higher the confidence level."), 
-                  ("select_homozygous_or_potential_compound_het", "Select homozygous or potential compound het", ""), 
-                  ("select_homozygous_or_candidate_compound_het", "Select homozygous or candidate compound het", ""), 
-                  ("select_homozygous_or_confirmed_compound_het", "Select homozygous or confirmed compound het", ""), 
-                  ("select_variants_on_chr_x", "Select variants on chr x", "Only keep variants that are found within the X chromosome."), 
-                  ("remove_variants_hom_in_mother", "Remove variants hom in mother", "Only keep variants that are heterozygous in the mother.")',
+                'INSERT INTO ' . TABLE_ANALYSIS_FILTERS . ' (`id`, `name`, `description`, `has_config`) VALUES 
+                  ("apply_selected_gene_panels", "Apply selected gene panels", "Include any variants that appear with the selected gene panels but not within the selected blacklists.", 1), 
+                  ("remove_by_quality_lte_100", "Remove by quality <= 100", "Only keep variants that have a sequencing quality score that is greater than 100.", 0), 
+                  ("remove_with_any_gmaf_exac_gt_0.1", "Remove with exac > 0.1", "Only keep variants that have a frequency of 0.1% or less in ExAC or have no value.", 0), 
+                  ("remove_obs_count_gte_5_percent", "Remove obs count >= 5 percent", "Only keep variants that occur in less than 5% of the individuals within this LOVD+ instance.", 0), 
+                  ("remove_deep_intronic_variants", "Remove deep intronic variants", "Only keep variants that have no VEP consequence type or don’t have intron_variant as the VEP consequence type.", 0), 
+                  ("remove_intronic_splice_region_variants", "Remove intronic splice region variants", "Only keep variants that have no VEP consequence type or don’t have splice_region_variant&intron_variant as the VEP consequence type.", 0), 
+                  ("remove_utr_variants", "Remove utr variants", "Only keep variants that have no VEP consequence type or don’t have 3_prime_UTR_variant or 5_prime_UTR_variant as the VEP consequence type.", 0), 
+                  ("remove_synonymous_variants", "Remove synonymous variants", "Only keep variants that have no VEP consequence type or don’t have synonymous_variant as the VEP consequence type.", 0), 
+                  ("remove_low_impact_variants", "Remove low impact variants", "Only keep variants that have no VEP consequence impact or have MODERATE or HIGH within the VEP consequence impact text.", 0), 
+                  ("remove_with_any_gmaf_gt_2", "Remove with any gmaf > 2", "Only keep variants that have a frequency of 2% or less in 1000G and ExAC or have no value.", 0), 
+                  ("remove_with_any_gmaf_1000g", "Remove with 1000G value", "Only keep variants that have no 1000G frequency.", 0), 
+                  ("remove_with_any_gmaf_exac", "Remove with ExAC value", "Only keep variants that have no ExAC frequency.", 0), 
+                  ("select_variants_absent_in_mother_low_conf", "Select variants absent in mother low conf", "Only keep variants that have been observed in the mother with a confidence score of 4 or less. The lower the number the higher the confidence level.", 0), 
+                  ("select_variants_absent_in_father_low_conf", "Select variants absent in father low conf", "Only keep variants that have been observed in the father with a confidence score of 4 or less. The lower the number the higher the confidence level.", 0), 
+                  ("select_variants_absent_in_mother_high_conf", "Select variants absent in mother high conf", "Only keep variants that have been observed in the mother with a confidence score of 1 or less. The lower the number the higher the confidence level.", 0), 
+                  ("select_variants_absent_in_father_high_conf", "Select variants absent in father high conf", "Only keep variants that have been observed in the father with a confidence score of 1 or less. The lower the number the higher the confidence level.", 0), 
+                  ("select_homozygous_or_potential_compound_het", "Select homozygous or potential compound het", "", 0), 
+                  ("select_homozygous_or_candidate_compound_het", "Select homozygous or candidate compound het", "", 0), 
+                  ("select_homozygous_or_confirmed_compound_het", "Select homozygous or confirmed compound het", "", 0), 
+                  ("select_variants_on_chr_x", "Select variants on chr x", "Only keep variants that are found within the X chromosome.", 0), 
+                  ("remove_variants_hom_in_mother", "Remove variants hom in mother", "Only keep variants that are heterozygous in the mother.", 0),
+                  ("cross_screenings", "Select variants that satisfy the criteria configured in this cross screenings filter", "Select variants that satisfy the criteria configured in this cross screenings filter", 1)',
                 'INSERT INTO ' . TABLE_A2AF . ' (`analysisid`, `filterid`, `filter_order`) VALUES 
-                  (1, "apply_selected_gene_panels", 1), 
+                  (1, "apply_selected_gene_panels", 1),
                   (1, "remove_by_quality_lte_100", 2), 
                   (1, "remove_with_any_gmaf_exac_gt_0.1", 3), 
                   (1, "remove_obs_count_gte_5_percent", 4), 
@@ -287,9 +291,9 @@ switch ($_INI['instance']['name']) {
             array(
                 'INSERT INTO ' . TABLE_ANALYSES . ' (`id`, `sortid`, `name`, `description`, `version`, `created_by`, `created_date`, `edited_by`, `edited_date`) VALUES 
                   (1, 1, "Default Analysis",             "This is the default analysis installed with LOVD+. Additional analyses can be created as required.", 1, 0, NOW(), NULL, NULL)',
-                'INSERT INTO ' . TABLE_ANALYSIS_FILTERS . ' (`id`, `name`, `description`) VALUES 
-                  ("apply_selected_gene_panels", "Apply selected gene panels", "Select only variants that are associated with a gene that is in the selected gene panels and not within the selected blacklists."),
-                  ("remove_by_quality_lte_100", "Remove by quality <= 100", "Remove all variants with a sequencing quality score that is less than, or equal to, 100.")',
+                'INSERT INTO ' . TABLE_ANALYSIS_FILTERS . ' (`id`, `name`, `description`, `has_config`) VALUES 
+                  ("apply_selected_gene_panels", "Apply selected gene panels", "Select only variants that are associated with a gene that is in the selected gene panels and not within the selected blacklists.", 1),
+                  ("remove_by_quality_lte_100", "Remove by quality <= 100", "Remove all variants with a sequencing quality score that is less than, or equal to, 100.", 0)',
                 'INSERT INTO ' . TABLE_A2AF . ' (`analysisid`, `filterid`, `filter_order`) VALUES 
                   (1, "apply_selected_gene_panels", 1), 
                   (1, "remove_by_quality_lte_100", 2)',

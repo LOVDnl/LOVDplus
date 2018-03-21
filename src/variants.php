@@ -277,6 +277,9 @@ if (PATH_COUNT == 3 && $_PE[1] == 'DBID' && !empty($_GET['search_variantid']) &&
     $_DATA = new LOVD_CustomViewListMOD(array('VariantOnGenome', 'VariantOnTranscript', 'Screening', 'Individual'));
 
     $_GET['search_VariantOnGenome/DBID'] = '="' . $sDBID . '"';
+    if (isset($_INSTANCE_CONFIG['viewlists']['CustomVL_ObsCounts']['cols_to_show'])) {
+        $_DATA->setViewListCols($_INSTANCE_CONFIG['viewlists']['CustomVL_ObsCounts']['cols_to_show']);
+    }
     $_DATA->viewList('CustomVL_ObsCounts');
 
     $_T->printFooter();
@@ -301,15 +304,11 @@ if (PATH_COUNT == 3 && $_PE[1] == 'DBID' && !ACTION) {
     require ROOT_PATH . 'class/object_custom_viewlists.mod.php';
     $_DATA = new LOVD_CustomViewListMOD(array('VariantOnGenome', 'VariantOnTranscript', 'Screening', 'Individual', 'Diseases'));
     $_GET['search_VariantOnGenome/DBID'] = '="' . $sID . '"';
-    $aColsToShow = array(
-        'id_', 'vog_effect', 'allele_', 'Individual/Sample_ID', 'Individual/Clinical_indication',
-        'Screening/Library_preparation', 'Screening/Sequencing_chemistry', 'Screening/Pipeline/Run_ID',
-        'VariantOnGenome/Curation/Classification','VariantOnGenome/Sequencing/IGV', 'VariantOnGenome/Reference',
-        'VariantOnTranscript/DNA', 'VariantOnTranscript/Protein', 'gene_OMIM_', 'gene_disease_names'
-        );
-    $aColsToHide = array_diff(array_keys($_DATA->aColumnsViewList), $aColsToShow);
 
-    $_DATA->viewList('CustomVL_DBID', $aColsToHide, false, false, false);
+    if (isset($_INSTANCE_CONFIG['viewlists']['CustomVL_DBID']['cols_to_show'])) {
+        $_DATA->setViewListCols($_INSTANCE_CONFIG['viewlists']['CustomVL_DBID']['cols_to_show']);
+    }
+    $_DATA->viewList('CustomVL_DBID');
 
     $_T->printFooter();
     exit;

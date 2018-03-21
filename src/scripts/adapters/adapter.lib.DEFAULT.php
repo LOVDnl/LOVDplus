@@ -56,7 +56,34 @@ $_INSTANCE_CONFIG = array();
 //        'label' => 'Excel file'),
 //);
 
+$_INSTANCE_CONFIG['columns'] = array(
+    'lab_id' => 'Individual/Lab_ID',
+    'family' => array(
+        // Insert columns here that define a certain family role.
+        // For instance, if the Individual/MotherID column contains the Lab ID
+        //  of the mother of the current Individual, define this as:
+        // 'mother' => 'Individual/MotherID',
+        // Note that the value in the column needs to match the value of
+        //  the other Individual's column defined in the 'lab_id' setting.
+    ),
+);
 
+$_INSTANCE_CONFIG['cross_screenings'] = array(
+    'format_screening_name' => function($zScreening)
+    {
+        // This function formats the label for screenings to use in the cross screening filter.
+        // It can use any Individual or Screening column to format the label.
+        // Default is: "Individual/Lab_ID (role)".
+        global $_INSTANCE_CONFIG;
+
+        $sReturn = $zScreening[$_INSTANCE_CONFIG['columns']['lab_id']];
+        if (!empty($zScreening['role'])) {
+            $sReturn .= ' (' . $zScreening['role'] . ')';
+        }
+
+        return $sReturn;
+    }
+);
 
 $_INSTANCE_CONFIG['viewlists'] = array(
     // The screenings data listing on the individual's detailed view.

@@ -5,6 +5,14 @@
  * Programmer: Candice McGregor
  *************/
 
+$_INSTANCE_CONFIG['columns'] = array(
+    'lab_id' => 'Individual/Sample_ID',
+    'family' => array(
+        'mother' => 'Screening/Mother/Sample_ID',
+        'father' => 'Screening/Father/Sample_ID'
+    )
+);
+
 $_INSTANCE_CONFIG['viewlists']['Screenings_for_I_VE']['cols_to_show'] = array(
     // Invisible.
     'individualid',
@@ -15,6 +23,8 @@ $_INSTANCE_CONFIG['viewlists']['Screenings_for_I_VE']['cols_to_show'] = array(
     'Screening/Mother/Sample_ID',
     'Screening/Mean_coverage',
     'Screening/Library_preparation',
+    'Screening/Tag',
+    'Screening/Batch',
     'Screening/Pipeline/Run_ID',
     'variants_found_',
     'analysis_status'
@@ -26,7 +36,6 @@ $_INSTANCE_CONFIG['viewlists']['CustomVL_AnalysisRunResults_for_I_VE'] = array(
         'runid',
         'curation_statusid',
         'variantid',
-
 
         // Visible.
         'curation_status_',
@@ -41,17 +50,18 @@ $_INSTANCE_CONFIG['viewlists']['CustomVL_AnalysisRunResults_for_I_VE'] = array(
         'zygosity_', // 'VariantOnGenome/Sequencing/Allele/Frequency'
         'var_frac_', // 'VariantOnGenome/Sequencing/Depth/Alt/Fraction'
         'gene_OMIM_',
-        'gene_disease_names',
+        'gene_disease_name',
         'VariantOnTranscript/Clinical_Significance',
         'allele_',
         'VariantOnTranscript/Consequence_Impact',
         'VariantOnTranscript/Consequence_Type',
+        'VariantOnTranscript/Prediction/CADD_Raw',
         'VariantOnGenome/ExAC/Frequency/Adjusted',
         'VariantOnGenome/1000Gp3/Frequency',
-        'obs_variant',
-        'obs_var_ind_ratio',
+        'obs_genepanel',
+        'obs_var_gp_ind_ratio',
         'gene_panels',
-        'VariantOnGenome/Frequency/EVS/VEP/European_American'
+        'VariantOnGenome/Remarks'
     )
 );
 $_INSTANCE_CONFIG['viewlists']['CustomVL_ObsCounts']['cols_to_show'] = array(
@@ -77,6 +87,29 @@ $_INSTANCE_CONFIG['viewlists']['CustomVL_ObsCounts']['cols_to_show'] = array(
     'gene_OMIM_'
 );
 
+$_INSTANCE_CONFIG['viewlists']['CustomVL_DBID']['cols_to_show'] = array(
+    // Invisible.
+    'variantid',
+    'VariantOnGenome/DBID',
+
+    'id_',
+    'vog_effect',
+    'allele_',
+    'Individual/Sample_ID',
+    'Individual/Clinical_indication',
+    'Screening/Library_preparation',
+    'Screening/Sequencing_chemistry',
+    'Screening/Pipeline/Run_ID',
+    'VariantOnGenome/DNA',
+    'VariantOnGenome/Curation/Classification',
+    'VariantOnGenome/Sequencing/IGV',
+    'VariantOnGenome/Reference',
+    'VariantOnTranscript/DNA',
+    'VariantOnTranscript/Protein',
+    'gene_OMIM_',
+    'gene_disease_names'
+);
+
 
 $_INSTANCE_CONFIG['attachments'] = array(
         'igv' => array(
@@ -93,12 +126,33 @@ $_INSTANCE_CONFIG['attachments'] = array(
             'label' => 'Excel file')
 );
 
-
 $_INSTANCE_CONFIG['conversion'] = array(
     'max_annotation_error_allowed' => 20,
     'exit_on_annotation_error' => false,
     'enforce_hgnc_gene' => false,
     'check_indel_description' => false
+);
+
+$_INSTANCE_CONFIG['cross_screenings'] = array(
+    'format_screening_name' => function($zScreening) {
+        // role: Individual/Sample_ID - Individual/Affected (Screening/Pipeline/Run_ID_Screening/Batch) [Screening/Tag]
+
+        $sText = $zScreening['Individual/Sample_ID'];
+        if (!empty($zScreening['role'])) {
+            $sText = $zScreening['role'] . ': ' . $sText;
+        }
+        if (!empty($zScreening['Individual/Affected'])) {
+            $sText .= ' - ' . $zScreening['Individual/Affected'];
+        }
+        if (!empty($zScreening['Screening/Pipeline/Run_ID']) && !empty($zScreening['Screening/Batch'])) {
+            $sText .= ' (' . $zScreening['Screening/Pipeline/Run_ID'] . '_' . $zScreening['Screening/Batch'] . ') ';
+        }
+        if (!empty($zScreening['Screening/Tag'])) {
+            $sText .= ' [' . $zScreening['Screening/Tag'] . ']';
+        }
+        
+        return $sText;
+    }
 );
 
 $_INSTANCE_CONFIG['observation_counts'] = array(
@@ -129,9 +183,8 @@ $_INSTANCE_CONFIG['observation_counts'] = array(
         // if categories is empty, use default categories list
         'categories' => array(),
         'min_population_size' => 100
-    ),
+    )
 );
-
 
 class LOVD_MghaDataConverter extends LOVD_DefaultDataConverter {
 

@@ -254,64 +254,6 @@ if (PATH_COUNT >= 2 && ctype_digit($_PE[1]) && !ACTION && (PATH_COUNT == 2 || PA
 
         lovd_includeJS('inc-js-analyses.php', 1);
 
-        // The popover div for showing the gene panel selection form.
-        print('
-      <DIV id="gene_panel_selection" title="Select gene panels for analysis" style="display : none;">
-        <FORM id="gene_panel_selection_form">
-          <INPUT type="hidden" name="nScreeningID" value="">
-          <INPUT type="hidden" name="nAnalysisID" value="">
-          <INPUT type="hidden" name="nRunID" value="">
-          <INPUT type="hidden" name="sElementID" value="">
-          <TABLE border="0" cellpadding="0" cellspacing="0" width="80%" align="center">');
-
-        $sLastType = '';
-        // Add each of the gene panels assigned to this individual to the form.
-        foreach ($zData['gene_panels'] as $nKey => $aGenePanel) {
-            // Create the gene panel type header.
-            if ($sLastType == '' || $sLastType != $aGenePanel[2]) {
-                print('
-            <TR>
-              <TD class="gpheader" colspan="2" ' . ($sLastType? '' : 'style="border-top: 0px"') . '>' . ucfirst(str_replace('_', ' ', $aGenePanel[2])) . '</TD>
-            </TR>');
-            }
-            $sLastType = $aGenePanel[2];
-
-            // Add the gene panel to the form.
-            print('
-            <TR>
-              <TD><INPUT type="checkbox" name="gene_panel" id="gene_panel_' . $nKey . '" value="' . $aGenePanel[0] . '"' . ($aGenePanel[2] == 'mendeliome'? '' : ' checked') . '></TD>
-              <TD><LABEL for="gene_panel_'. $nKey .'">' . $aGenePanel[1] . '</LABEL></TD>
-            </TR>');
-        }
-
-        // Add in the custom gene panel option.
-        if ($zData['custom_panel']) {
-            print('
-            <TR>
-              <TD class="gpheader" colspan="2">Custom panel</TD>
-            </TR>
-            <TR>
-              <TD><INPUT type="checkbox" name="gene_panel" value="custom_panel" id="custom_panel" checked></TD>
-              <TD><LABEL for="custom_panel">' . $zData['custom_panel'] . '</LABEL></TD>
-            </TR>');
-        }
-
-        // Display a notice that 'apply_selected_gene_panels' is selected for this analysis,
-        //  but no gene panel has been added to this individual.
-        if (empty($zData['gene_panels']) && empty($zData['custom_panel'])) {
-            print('<P>There is no Gene Panel assigned to this individual. To continue running this analysis, please try one of the following options: </P>
-                   <UL>
-                     <LI>Add a gene panel to this individual, OR</LI>
-                     <LI>Remove the apply_selected_gene_panels filter from this analysis, OR</LI>
-                     <LI>Continue running this analysis without any gene panel selected.</LI>
-                   </UL>');
-        }
-
-        print('
-          </TABLE>
-        </FORM>
-      </DIV>' . "\n");
-
         // If we're ready to analyze, or if we are analyzing already, show analysis options.
         // Analyses will be shown in separate tabs determined by the queries below.
         $zAnalysesRun    = $_DB->query('SELECT a.id, a.name, a.version, a.description, GROUP_CONCAT(DISTINCT a2af.filterid ORDER BY a2af.filter_order ASC SEPARATOR ";") AS _filters, IFNULL(MAX(arf.run_time)>-1, 0) AS analysis_run, ar.id AS runid,   ar.modified, GROUP_CONCAT(DISTINCT arf.filterid, ";", IFNULL(arf.filtered_out, "-"), ";", IFNULL(arf.run_time, "-") ORDER BY arf.filter_order SEPARATOR ";;") AS __run_filters
@@ -430,10 +372,8 @@ if (PATH_COUNT >= 2 && ctype_digit($_PE[1]) && !ACTION && (PATH_COUNT == 2 || PA
                     $sJSAction = 'lovd_showAnalysisResults(\''. $zAnalysis['runid'] .'\')';
                 } elseif ($bHasAuthorization) {
                     // FIXME: code duplicated from analysis_runs.php when we first render analyses tables.
-                    // Can probably check for the call of lovd_popoverGenePanelSelectionForm from within lovd_runAnalysis.
-                    $sFunctionName = ($bHasGenePanelFilter? 'lovd_popoverGenePanelSelectionForm' : 'lovd_runAnalysis');
-                    $sRunID = (!$zAnalysis['runid']? '' : $zAnalysis['runid']);
-                    $sJSAction = $sFunctionName . '(\''. $nScreeningToAnalyze  .'\', \''. $zAnalysis['id'] .'\', \'' . $sRunID . '\', this.id' . ($bHasGenePanelFilter? '' : ', undefined') . ')';
+                    $sRunID = (!$zAnalysis['runid']? 0 : $zAnalysis['runid']);
+                    $sJSAction = 'lovd_configureAnalysis(\''. $nScreeningToAnalyze  .'\', \''. $zAnalysis['id'] .'\', \'' . $sRunID . '\', this.id)';
                 }
 
                 print('
@@ -471,12 +411,8 @@ if (PATH_COUNT >= 2 && ctype_digit($_PE[1]) && !ACTION && (PATH_COUNT == 2 || PA
                         }
                     }
 
-                    // Check if we need to display the information for the gene panels used in this analysis.
-                    $sGenePanelsInfo = '';
-                    if ($sFilter == 'apply_selected_gene_panels' && $bHasGenePanelFilter && $zAnalysis['analysis_run']) {
-                        // We're currently showing the gene panel filter, AND the gene panel filter was active AND this analysis has been run.
-                        $sGenePanelsInfo = getSelectedGenePanelsByRunID($zAnalysis['runid']);
-                    }
+                    // Check if we need to display the information for the filters used in this analysis.
+                    $sFilterConfigInfo = lovd_getFilterConfigHTML($zAnalysis['runid'], $sFilter);
 
                     // Format the display of the filters.
                     if (isset($aFilterInfo[$sFilter]) && (!empty($aFilterInfo[$sFilter]['name']) || !empty($aFilterInfo[$sFilter]['description']))) {
@@ -490,7 +426,7 @@ if (PATH_COUNT >= 2 && ctype_digit($_PE[1]) && !ACTION && (PATH_COUNT == 2 || PA
 
                     print('
                   <TR id="' . $sElementID . '_filter_' . preg_replace('/[^a-z0-9_]/i', '_', $sFilter) . '"' . (!$sFilterClassName ? '' : ' class="' . $sFilterClassName . '"') . ' valign="top">
-                    <TD class="filter_description">' . $sFormattedFilter . '<DIV class="filter-config-desc">' . $sGenePanelsInfo . '</DIV></TD>
+                    <TD class="filter_description">' . $sFormattedFilter . '<DIV class="filter-config-desc">' . $sFilterConfigInfo . '</DIV></TD>
                     <TD class="filter_time">' . ($nTime == '-'? '-' : lovd_convertSecondsToTime($nTime, 1)) . '</TD>
                     <TD class="filter_var_left">' . ($nTime == '-'? '-' : $nVariantsLeft) . '</TD>
                   </TR>');

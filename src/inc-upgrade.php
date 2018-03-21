@@ -85,6 +85,12 @@ if ($sCalcVersionFiles != $sCalcVersionDB) {
             'If you have a cron job set up for the auto import feature, grepping for lines starting with a colon (:), then turn off this grep from now on. Output no longer is prefixed by a colon, and grepping is no longer needed because no HTML is output by the script anymore. LOVD now defaults to text/plain output for the auto importer, so you also don\'t need to request it anymore in the URL, either. See the updated INSTALL.txt for the new suggested cron job to use.',
             'important',
         );
+        $aUpdateMessages['3.0-17o'] = array(
+            'To complete the upgrade to 3.0-17o, you <B>should</B> run a data migration script separately, that will convert the existing gene panel history of your analyses to the new format.<BR>The "migrate_gp_filters_config.php" script is located in your scripts folder. Please wait for the upgrade below to finish, then click here to run the script.',
+            'stop',
+            '100%',
+            'lovd_openWindow(\'scripts/migrate_gp_filters_config.php\')',
+        );
     }
 
     // Array of changes.
@@ -741,13 +747,32 @@ if ($sCalcVersionFiles != $sCalcVersionDB) {
                  '3.0-17j' => array(), // Placeholder for LOVD+ queries, defined below.
                  '3.0-17k' =>
                      array(
-                         'ALTER TABLE ' . TABLE_VARIANTS . ' ADD COLUMN `obscount_json` TEXT NULL AFTER `confirmation_statusid`',
+                         'SET @bExists := (SELECT COUNT(*) FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = "' . TABLE_VARIANTS . '" AND COLUMN_NAME = "obscount_json")',
+                         'SET @sSQL := IF(@bExists > 0, \'SELECT "INFO: Column already exists."\', "
+                            ALTER TABLE ' . TABLE_VARIANTS . ' ADD COLUMN `obscount_json` TEXT NULL AFTER `confirmation_statusid`")',
+                         'PREPARE Statement FROM @sSQL',
+                         'EXECUTE Statement',
                      ),
                  '3.0-17l' =>
                      array(
                          'ALTER TABLE ' . TABLE_ALLELES . ' MODIFY COLUMN name VARCHAR(50) NOT NULL',
                      ),
                  '3.0-17n' => array(), // Placeholder for LOVD+ queries, defined below.
+                 '3.0-17o' => array(
+                     'SET @bExists := (SELECT COUNT(*) FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = "' . TABLE_ANALYSES_RUN_FILTERS . '" AND COLUMN_NAME = "config_json")',
+                     'SET @sSQL := IF(@bExists > 0, \'SELECT "INFO: Column already exists."\', "
+                            ALTER TABLE ' . TABLE_ANALYSES_RUN_FILTERS . ' ADD COLUMN config_json TEXT NULL AFTER filterid")',
+                     'PREPARE Statement FROM @sSQL',
+                     'EXECUTE Statement',
+
+                     'SET @bExists := (SELECT COUNT(*) FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = "' . TABLE_ANALYSIS_FILTERS . '" AND COLUMN_NAME = "has_config")',
+                     'SET @sSQL := IF(@bExists > 0, \'SELECT "INFO: Column already exists."\', "
+                            ALTER TABLE ' . TABLE_ANALYSIS_FILTERS . ' ADD COLUMN has_config TINYINT(1) NULL AFTER `description`")',
+                     'PREPARE Statement FROM @sSQL',
+                     'EXECUTE Statement',
+
+                     'UPDATE ' . TABLE_ANALYSIS_FILTERS . ' SET has_config = 1 WHERE id = "apply_selected_gene_panels"'
+                 ),
                  '3.0-18' =>
                      array(
                          // These two will be ignored by LOVD+.
@@ -927,9 +952,7 @@ if ($sCalcVersionFiles != $sCalcVersionDB) {
         // Run LOVD+ specific queries.
         $aNewCustomCols = array('SummaryAnnotation/Curation/Interpretation', 'SummaryAnnotation/Remarks');
         $aUpdates['3.0-17f'] = array_merge(
-            $aUpdates['3.0-17f'],
-            lovd_getActivateCustomColumnQuery($aNewCustomCols)
-        );
+            $aUpdates['3.0-17f'], lovd_getActivateCustomColumnQuery($aNewCustomCols));
     }
 
     if (LOVD_plus && $sCalcVersionDB < lovd_calculateVersion('3.0-17h')) { // Improvements to the way analyses are stored and displayed.
@@ -1006,13 +1029,9 @@ if ($sCalcVersionFiles != $sCalcVersionDB) {
 
     if (LOVD_plus && $sCalcVersionDB < lovd_calculateVersion('3.0-17k') && lovd_verifyInstance('mgha')) {
         // Run LOVD+ specific queries.
-
+        $aNewCustomCols = array('Individual/Affected');
         $aUpdates['3.0-17k'] = array_merge(
-            $aUpdates['3.0-17k'],
-            array(
-                'INSERT INTO ' . TABLE_COLS . ' VALUES ("Individual/Affected", 255, 70, 0, 0, 0, "Affected", "", "Whether individual is affected by disease","Whether individual is affected by disease","VARCHAR(100)","Affected|Whether individual is affected by disease|select|1|true|false|false","Affected\r\nNot Affected\r\nUnknown", "", 0, 1, 1, 0, NOW(), NULL, NULL)'
-            )
-        );
+            $aUpdates['3.0-17k'], lovd_getActivateCustomColumnQuery($aNewCustomCols));
     }
 
     if (LOVD_plus && $sCalcVersionDB < lovd_calculateVersion('3.0-17l')) {
@@ -1030,6 +1049,29 @@ if ($sCalcVersionFiles != $sCalcVersionDB) {
             'ALTER TABLE ' . TABLE_SCHEDULED_IMPORTS . ' 
              ADD COLUMN priority TINYINT(1) UNSIGNED NOT NULL DEFAULT 0 AFTER filename,
              ADD COLUMN process_errors TEXT AFTER scheduled_date';
+    }
+
+    if (LOVD_plus && $sCalcVersionDB < lovd_calculateVersion('3.0-17o')) {
+        // Run LOVD+ specific queries.
+        if (lovd_verifyInstance('mgha')) {
+            $aNewCustomCols = array('Screening/Tag');
+            $aUpdates['3.0-17o'] = array_merge(
+                $aUpdates['3.0-17o'],
+                lovd_getActivateCustomColumnQuery($aNewCustomCols),
+                array(
+                    // MGHA's cross screening analysis filter.
+                    'INSERT IGNORE INTO ' . TABLE_ANALYSIS_FILTERS . ' VALUES ("cross_screenings", "Select variants that satisfy the criteria configured in this cross screenings filter", "Select variants that satisfy the criteria configured in this cross screenings filter", 1)',
+                )
+            );
+        } elseif (lovd_verifyInstance('leiden')) {
+            $aUpdates['3.0-17o'] = array_merge(
+                $aUpdates['3.0-17o'],
+                array(
+                    // Leiden's cross screening analysis filter.
+                    'INSERT IGNORE INTO ' . TABLE_ANALYSIS_FILTERS . ' VALUES ("cross_screenings", "Compare multiple screenings", "Select variants that satisfy the criteria configured by you, comparing several screenings.", 1)',
+                )
+            );
+        }
     }
 
 
