@@ -40,6 +40,7 @@ $aAnalysesSQL = array(); // To prevent notices if instance name is not recognize
 // To have default analyses available directly after installing LOVD+, create a
 // list of analyses here using your instance name (alphabetically ordered).
 // Make sure your instance name is defined in the config.ini.php file.
+// FIXME: Reconstruct this a bit to let Leiden (and others) use the default filters more, so we have more default filters but without the need to redefine them.
 switch ($_INI['instance']['name']) {
     case 'leiden':
         $aAnalysesSQL =
@@ -290,9 +291,9 @@ switch ($_INI['instance']['name']) {
             array(
                 'INSERT INTO ' . TABLE_ANALYSES . ' (`id`, `sortid`, `name`, `description`, `version`, `created_by`, `created_date`, `edited_by`, `edited_date`) VALUES 
                   (1, 1, "Default Analysis",             "This is the default analysis installed with LOVD+. Additional analyses can be created as required.", 1, 0, NOW(), NULL, NULL)',
-                'INSERT INTO ' . TABLE_ANALYSIS_FILTERS . ' (`id`, `name`, `description`) VALUES 
-                  ("apply_selected_gene_panels", "Apply selected gene panels", "Select only variants that are associated with a gene that is in the selected gene panels and not within the selected blacklists."),
-                  ("remove_by_quality_lte_100", "Remove by quality <= 100", "Remove all variants with a sequencing quality score that is less than, or equal to, 100.")',
+                'INSERT INTO ' . TABLE_ANALYSIS_FILTERS . ' (`id`, `name`, `description`, `has_config`) VALUES 
+                  ("apply_selected_gene_panels", "Apply selected gene panels", "Select only variants that are associated with a gene that is in the selected gene panels and not within the selected blacklists.", 1),
+                  ("remove_by_quality_lte_100", "Remove by quality <= 100", "Remove all variants with a sequencing quality score that is less than, or equal to, 100.", 0)',
                 'INSERT INTO ' . TABLE_A2AF . ' (`analysisid`, `filterid`, `filter_order`) VALUES 
                   (1, "apply_selected_gene_panels", 1), 
                   (1, "remove_by_quality_lte_100", 2)',

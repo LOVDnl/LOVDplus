@@ -57,7 +57,15 @@ $_INSTANCE_CONFIG = array();
 //);
 
 $_INSTANCE_CONFIG['columns'] = array(
-    'lab_id' => 'Individual/Lab_ID'
+    'lab_id' => 'Individual/Lab_ID',
+    'family' => array(
+        // Insert columns here that define a certain family role.
+        // For instance, if the Individual/MotherID column contains the Lab ID
+        //  of the mother of the current Individual, define this as:
+        // 'mother' => 'Individual/MotherID',
+        // Note that the value in the column needs to match the value of
+        //  the other Individual's column defined in the 'lab_id' setting.
+    ),
 );
 
 $_INSTANCE_CONFIG['cross_screenings'] = array(

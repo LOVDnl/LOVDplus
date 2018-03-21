@@ -305,7 +305,6 @@ if (PATH_COUNT == 3 && $_PE[1] == 'DBID' && !ACTION) {
     $_DATA = new LOVD_CustomViewListMOD(array('VariantOnGenome', 'VariantOnTranscript', 'Screening', 'Individual', 'Diseases'));
     $_GET['search_VariantOnGenome/DBID'] = '="' . $sID . '"';
 
-
     if (isset($_INSTANCE_CONFIG['viewlists']['CustomVL_DBID']['cols_to_show'])) {
         $_DATA->setViewListCols($_INSTANCE_CONFIG['viewlists']['CustomVL_DBID']['cols_to_show']);
     }
