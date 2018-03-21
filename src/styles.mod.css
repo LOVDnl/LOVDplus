@@ -108,6 +108,7 @@ table.data span.anchor                    {cursor: pointer; color: #0000FF;}
 .btn-right {float: right;}
 
 /* Analysis filter configuration information under the filter */
+table.gpinfo                {width: 100%;}
 table.gpinfo td             {font-size: 10px; color: #000000;}
 table.gpinfo tr:hover td    {background: #8aba8a;}
 div.filter-config-desc td   {font-size: 10px; color: #000000;}

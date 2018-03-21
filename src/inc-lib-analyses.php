@@ -107,7 +107,7 @@ function lovd_getFilterConfigHTML ($nRunID, $sFilterID)
                     $sToolTip .= '</UL>';
                 }
 
-                $sConfigText = '<TABLE><TR onmouseover="lovd_showToolTip(\'' . htmlspecialchars($sToolTip) . '\', this, [100, -10]);"><TD>' .
+                $sConfigText = '<TABLE><TR onmouseover="lovd_showToolTip(\'' . htmlspecialchars($sToolTip) . '\', this, [30, -10]);"><TD>' .
                     $aConfig['description'] .
                     '</TD></TR></TABLE>';
             }
@@ -155,6 +155,8 @@ function lovd_getGenePanelsHTMLByRunID ($aConfig, $nRunID)
     // Only need to display gene panels information if there are gene panels selected.
     $sGenePanelsInfo = '';
     if (!empty($aConfig['gene_panels'])) {
+        //    FIXME: NOTE that actually much of this data is in the REV table, so we don't *need* to cache it.
+        //    FIXME: We could just store a date and fetch the needed info (name, genes) from the REV table.
         //    Example gene panel config:
         //    It has two main fields:
         //      - gene_panels: the list of gene panels used subgrouped by gene panel type
@@ -212,7 +214,7 @@ function lovd_getGenePanelsHTMLByRunID ($aConfig, $nRunID)
 
                     // If there are less than 5 genes in a custom gene panel, simply display all the gene symbols.
                     $sCustomPanelDisplayText = (count($aCustomPanelGenes) <= 5? ': ' . $sCustomPanel : '(' . count($aCustomPanelGenes) . ' genes)');
-                    $sGenePanelsInfo .= '<TR onmouseover="lovd_showToolTip(\'' . htmlspecialchars($sToolTip) . '\', this, [100, -10]);"><TD>Custom panel ' . $sCustomPanelDisplayText . '</TD></TR>' . "\n";
+                    $sGenePanelsInfo .= '<TR onmouseover="lovd_showToolTip(\'' . htmlspecialchars($sToolTip) . '\', this, [30, -10]);"><TD>Custom panel ' . $sCustomPanelDisplayText . '</TD></TR>' . "\n";
                     break;
                 default:
                     // Format each of the gene panel types into the info table.
@@ -233,7 +235,7 @@ function lovd_getGenePanelsHTMLByRunID ($aConfig, $nRunID)
                         $sDisplayText = $nGenePanelCount . ' ' . ucfirst(str_replace('_', ' ', $sType)) . 's';
                     }
 
-                    $sGenePanelsInfo .= '<TR onmouseover="lovd_showToolTip(\'' . htmlspecialchars($sToolTip) . '\', this, [100, -10]);"><TD>' . $sDisplayText . '</TD><TD>&nbsp;</TD></TR>' . "\n";
+                    $sGenePanelsInfo .= '<TR onmouseover="lovd_showToolTip(\'' . htmlspecialchars($sToolTip) . '\', this, [30, -10]);"><TD>' . $sDisplayText . '</TD><TD>&nbsp;</TD></TR>' . "\n";
             }
         }
     }
