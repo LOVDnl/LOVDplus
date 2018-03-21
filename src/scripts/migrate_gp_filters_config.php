@@ -146,5 +146,5 @@ foreach ($zAnalysisRuns as $aAnalysisRun) {
 }
 
 print('
-Updated ' . count($zAnalysisRuns) . ' analyses run(s).
+Updated ' . count($zAnalysisRuns) . ' analysis run(s).
 ');

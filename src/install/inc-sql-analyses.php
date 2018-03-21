@@ -4,12 +4,13 @@
  * LEIDEN OPEN VARIATION DATABASE (LOVD)
  *
  * Created     : 2016-07-15
- * Modified    : 2017-08-04
+ * Modified    : 2018-03-21
  * For LOVD    : 3.0-18
  *
- * Copyright   : 2004-2017 Leiden University Medical Center; http://www.LUMC.nl/
+ * Copyright   : 2004-2018 Leiden University Medical Center; http://www.LUMC.nl/
  * Programmers : Anthony Marty <anthony.marty@unimelb.edu.au>
  *               Ivo F.A.C. Fokkema <I.F.A.C.Fokkema@LUMC.nl>
+ *               Juny Kesumadewi <juny.kesumadewi@unimelb.edu.au>
  *
  *
  * This file is part of LOVD.
@@ -207,15 +208,14 @@ switch ($_INI['instance']['name']) {
                   ("cross_screenings", "Select variants that satisfy the criteria configured in this cross screenings filter", "Select variants that satisfy the criteria configured in this cross screenings filter", 1)',
                 'INSERT INTO ' . TABLE_A2AF . ' (`analysisid`, `filterid`, `filter_order`) VALUES 
                   (1, "apply_selected_gene_panels", 1),
-                  (1, "cross_screenings", 2),
-                  (1, "remove_by_quality_lte_100", 3), 
-                  (1, "remove_with_any_gmaf_exac_gt_0.1", 4), 
-                  (1, "remove_obs_count_gte_5_percent", 5), 
-                  (1, "remove_deep_intronic_variants", 6), 
-                  (1, "remove_intronic_splice_region_variants", 7), 
-                  (1, "remove_utr_variants", 8), 
-                  (1, "remove_synonymous_variants", 9), 
-                  (1, "remove_low_impact_variants", 10),
+                  (1, "remove_by_quality_lte_100", 2), 
+                  (1, "remove_with_any_gmaf_exac_gt_0.1", 3), 
+                  (1, "remove_obs_count_gte_5_percent", 4), 
+                  (1, "remove_deep_intronic_variants", 5), 
+                  (1, "remove_intronic_splice_region_variants", 6), 
+                  (1, "remove_utr_variants", 7), 
+                  (1, "remove_synonymous_variants", 8), 
+                  (1, "remove_low_impact_variants", 9),
                   (2, "apply_selected_gene_panels", 1), 
                   (2, "remove_by_quality_lte_100", 2), 
                   (2, "remove_with_any_gmaf_gt_2", 3), 

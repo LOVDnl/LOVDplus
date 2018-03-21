@@ -4,11 +4,11 @@
  * LEIDEN OPEN VARIATION DATABASE (LOVD)
  *
  * Created     : 2016-03-22
- * Modified    : 2016-04-05
- * For LOVD    : 3.0-13
+ * Modified    : 2018-03-21
+ * For LOVD    : 3.0-18
  *
- * Copyright   : 2004-2016 Leiden University Medical Center; http://www.LUMC.nl/
- * Programmers : Ivo F.A.C. Fokkema <I.F.A.C.Fokkema@LUMC.nl>
+ * Copyright   : 2004-2018 Leiden University Medical Center; http://www.LUMC.nl/
+ * Programmer  : Ivo F.A.C. Fokkema <I.F.A.C.Fokkema@LUMC.nl>
  *
  *
  * This file is part of LOVD.
@@ -109,7 +109,7 @@ class LOVD_GenePanelGeneREV extends LOVD_GenePanelGene {
                     'legend' => array('The date the gene was last edited in this gene panel.')),
                 'valid_from' => array(
                     'view' => array('Valid From', 110),
-                    'db'   => array('gp2g.valid_from', 'ASC', true),
+                    'db'   => array('gp2g.valid_from', 'DESC', true),
                     'legend' => array('The date this version became valid.')),
                 'valid_to' => array(
                     'view' => array('Valid to', 110),
@@ -128,9 +128,9 @@ class LOVD_GenePanelGeneREV extends LOVD_GenePanelGene {
                     'db'   => array('ud.name', 'ASC', true),
                     'legend' => array('The user that deleted this gene from this gene panel.')),
             );
-        $this->sSortDefault = 'geneid';
+        $this->sSortDefault = 'valid_from';
         // And, since SortDefault can handle only one column:
-        $this->aSQLViewList['ORDER_BY'] = 'valid_from ASC, valid_to ASC';
+        $this->aSQLViewList['ORDER_BY'] = 'GREATEST(gp2g.valid_from, IF(gp2g.valid_to = "9999-12-31", gp2g.valid_from, gp2g.valid_to)) DESC, gp2g.valid_from DESC, gp2g.valid_to DESC, gp2g.geneid';
         $this->sRowLink = '';
     }
 

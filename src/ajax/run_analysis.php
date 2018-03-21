@@ -569,8 +569,7 @@ if (ACTION == 'configure' && POST) {
                     if (!empty($aGenePanelIds)) {
                         // Increase DB limits to allow concatenation of large number of gene IDs.
                         $_DB->query('SET group_concat_max_len = 500000');
-                        $sSQL = 'SELECT gp.id, gp.name, gp.created_date,
-                                   GROUP_CONCAT(gp2g.geneid SEPARATOR ";") AS _genes
+                        $sSQL = 'SELECT gp.id, gp.name, GROUP_CONCAT(gp2g.geneid SEPARATOR ";") AS _genes
                                  FROM ' . TABLE_GP2GENE . ' AS gp2g
                                    INNER JOIN ' . TABLE_GENE_PANELS . ' AS gp ON (gp2g.genepanelid = gp.id)
                                  WHERE gp2g.genepanelid IN (? ' . str_repeat(', ?', count($aGenePanelIds)-1) . ')
