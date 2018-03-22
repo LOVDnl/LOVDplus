@@ -50,7 +50,7 @@ $_INSTANCE_CONFIG['viewlists']['CustomVL_AnalysisRunResults_for_I_VE'] = array(
         'zygosity_', // 'VariantOnGenome/Sequencing/Allele/Frequency'
         'var_frac_', // 'VariantOnGenome/Sequencing/Depth/Alt/Fraction'
         'gene_OMIM_',
-        'gene_disease_name',
+        'gene_disease_names',
         'VariantOnTranscript/Clinical_Significance',
         'allele_',
         'VariantOnTranscript/Consequence_Impact',
