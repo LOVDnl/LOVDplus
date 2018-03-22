@@ -4,7 +4,7 @@
  * LEIDEN OPEN VARIATION DATABASE (LOVD)
  *
  * Created     : 2014-11-28
- * Modified    : 2018-02-22
+ * Modified    : 2018-03-22
  * For LOVD+   : 3.0-18
  *
  * Copyright   : 2004-2018 Leiden University Medical Center; http://www.LUMC.nl/
@@ -1285,14 +1285,15 @@ foreach ($aFiles as $sID) {
         }
 
         // Some reporting of where we are... as long as we're being verbose.
-        if (VERBOSITY > VERBOSITY_NONE && !($nLine % 100)) {
-            // Info lines show less frequently for low verbosity.
-            if (VERBOSITY > VERBOSITY_LOW || !($nLine % 10000)) {
-                // Info lines show less frequently for medium verbosity.
-                if (VERBOSITY > VERBOSITY_MEDIUM || !($nLine % 1000)) {
-                    lovd_printIfVerbose(VERBOSITY_LOW, '------- Line ' . $nLine . ' -------' . str_repeat(' ', 7 - strlen($nLine)) . date('Y-m-d H:i:s') . "\n");
-                }
-            }
+        // Info lines show less frequently for low and medium verbosity.
+        $aLinesToReport = array(
+            VERBOSITY_LOW => 10000,
+            VERBOSITY_MEDIUM => 1000,
+            VERBOSITY_HIGH => 100,
+            VERBOSITY_FULL => 100,
+        );
+        if (VERBOSITY > VERBOSITY_NONE && !($nLine % $aLinesToReport[VERBOSITY])) {
+            lovd_printIfVerbose(VERBOSITY_LOW, '------- Line ' . $nLine . ' -------' . str_repeat(' ', 7 - strlen($nLine)) . date('Y-m-d H:i:s') . "\n");
             flush();
         }
     }
