@@ -4,10 +4,10 @@
  * LEIDEN OPEN VARIATION DATABASE (LOVD)
  *
  * Created     : 2014-11-28
- * Modified    : 2017-12-22
+ * Modified    : 2018-03-22
  * For LOVD+   : 3.0-18
  *
- * Copyright   : 2004-2017 Leiden University Medical Center; http://www.LUMC.nl/
+ * Copyright   : 2004-2018 Leiden University Medical Center; http://www.LUMC.nl/
  * Programmers : Ivo F.A.C. Fokkema <I.F.A.C.Fokkema@LUMC.nl>
  *               Anthony Marty <anthony.marty@unimelb.edu.au>
  *               Juny Kesumadewi <juny.kesumadewi@unimelb.edu.au>
@@ -37,6 +37,15 @@ ini_set('memory_limit', '4294967296'); // Put in bytes to avoid some issues with
 session_write_close();
 set_time_limit(0);
 ignore_user_abort(true);
+
+// Define and verify settings.
+define('VERBOSITY_NONE', 0); // No output whatsoever.
+define('VERBOSITY_LOW', 3); // Low output, only the really important messages.
+define('VERBOSITY_MEDIUM', 5); // Medium output. No output if there is nothing to do. Useful for when using cron.
+define('VERBOSITY_HIGH', 7); // High output. The default.
+define('VERBOSITY_FULL', 9); // Full output, including debug statements.
+$bCron = (empty($_SERVER['REMOTE_ADDR']) && empty($_SERVER['TERM']));
+define('VERBOSITY', $_INSTANCE_CONFIG['conversion']['verbosity_' . ($bCron? 'cron' : 'other')]);
 
 
 
@@ -82,6 +91,21 @@ function mutalyzer_runMutalyzer ($variant)
     curl_setopt($ch, CURLOPT_URL, $sUrl);
 
     return curl_exec($ch);
+}
+
+function lovd_printIfVerbose ($nVerbosity, $sMessage)
+{
+    // This function only prints the given message when the current verbosity is set to a level high enough.
+
+    // If no verbosity is currently defined, just print everything.
+    if (!defined('VERBOSITY')) {
+        define('VERBOSITY', 9);
+    }
+
+    if (VERBOSITY >= $nVerbosity) {
+        print($sMessage);
+    }
+    return true;
 }
 
 
@@ -183,20 +207,22 @@ function lovd_handleAnnotationError (&$aVariant, $sErrorMsg)
     if ($fError) {
         fwrite($fError, $sLineErrorMsg);
     }
-    print($sLineErrorMsg);
+    lovd_printIfVerbose(VERBOSITY_LOW, $sLineErrorMsg);
 
     $bExitOnError = $_INSTANCE_CONFIG['conversion']['exit_on_annotation_error'];
     if ($bExitOnError) {
-        die("ERROR: Please update your data and re-run this script.\n");
+        lovd_printIfVerbose(VERBOSITY_LOW, "ERROR: Please update your data and re-run this script.\n");
+        exit;
     }
 
     // We want to stop the script if there are too many lines of data with annotations issues.
     // We want users to check their data before they continue.
     if ($nAnnotationErrors > $_INSTANCE_CONFIG['conversion']['max_annotation_error_allowed']) {
         $sFileMessage = (filesize($sFileError) === 0?'' : "Please check details of dropped annotation data in " . $sFileError . "\n");
-        die("ERROR: Script cannot continue because this file has too many lines of annotation data that this script cannot handle.\n"
+        lovd_printIfVerbose(VERBOSITY_LOW, "ERROR: Script cannot continue because this file has too many lines of annotation data that this script cannot handle.\n"
             . $nAnnotationErrors . " lines of transcripts data was dropped.\nPlease update your data and re-run this script.\n"
             . $sFileMessage);
+        exit;
     }
 
     // Otherwise, keep the VariantOnGenome data only, and add some data in Remarks.
@@ -362,11 +388,12 @@ $sAdaptersDir = $_ADAPTER->sAdapterPath;
 if (!file_exists($sAdaptersDir . 'adapter.' . $sInstanceName . '.php')) {
     $sInstanceName = 'DEFAULT';
 }
-print('> Running ' . $sInstanceName . ' adapter...' . "\n");
+lovd_printIfVerbose(VERBOSITY_HIGH, '> Running ' . $sInstanceName . ' adapter...' . "\n");
 $sCmd = 'php ' . $_ADAPTER->sAdapterPath . '/adapter.' . $sInstanceName . '.php';
 passthru($sCmd, $nAdapterResult);
 if ($nAdapterResult !== 0) {
-    die("Adapter Failed\n");
+    lovd_printIfVerbose(VERBOSITY_LOW, "Adapter Failed\n");
+    exit;
 }
 
 
@@ -374,7 +401,8 @@ if ($nAdapterResult !== 0) {
 // Loop through the files in the dir and try and find a meta and data file, that match but have no total data file.
 $h = opendir($_INI['paths']['data_files']);
 if (!$h) {
-    die('Can\'t open directory.' . "\n");
+    lovd_printIfVerbose(VERBOSITY_LOW, 'Can\'t open directory.' . "\n");
+    exit;
 }
 while (($sFile = readdir($h)) !== false) {
     if ($sFile{0} == '.') {
@@ -395,7 +423,8 @@ while (($sFile = readdir($h)) !== false) {
 
 // Die here, if we have nothing to work with.
 if (!$aFiles) {
-    die('No files found.' . "\n");
+    lovd_printIfVerbose(VERBOSITY_MEDIUM, 'No files found.' . "\n");
+    exit;
 }
 
 // Filter the list of files, to see which ones are already complete.
@@ -409,7 +438,8 @@ foreach ($aFiles as $sID => $aFileTypes) {
 
 // Die here, if we have nothing to do anymore.
 if (!$aFiles) {
-    die('No files found available for merging.' . "\n");
+    lovd_printIfVerbose(VERBOSITY_HIGH, 'No files found available for merging.' . "\n");
+    exit;
 }
 
 // Report incomplete data sets; meta data without variant data, for instance, and data sets still running (maybe split that, if this happens more often).
@@ -417,33 +447,35 @@ foreach ($aFiles as $sID => $aFileTypes) {
     if (!in_array($aSuffixes['meta'], $aFileTypes)) {
         // No meta data.
         unset($aFiles[$sID]);
-        print('Meta data missing: ' . $sID . "\n");
+        lovd_printIfVerbose(VERBOSITY_MEDIUM, 'Meta data missing: ' . $sID . "\n");
     }
     if (!in_array($aSuffixes['vep'], $aFileTypes)) {
         // No variant data.
         unset($aFiles[$sID]);
-        print('VEP data missing: ' . $sID . "\n");
+        lovd_printIfVerbose(VERBOSITY_MEDIUM, 'VEP data missing: ' . $sID . "\n");
     }
     if (in_array($aSuffixes['total.tmp'], $aFileTypes)) {
         // Already working on a merge. We count these, because we don't want too many processes in parallel.
         // FIXME: Should we check the timestamp on the file? Remove really old files, so we can continue?
         $nFilesBeingMerged ++;
         unset($aFiles[$sID]);
-        print('Already being merged: ' . $sID . "\n");
+        lovd_printIfVerbose(VERBOSITY_MEDIUM, 'Already being merged: ' . $sID . "\n");
     }
 }
 
 // Report what we have left.
 $nFiles = count($aFiles);
 if (!$nFiles) {
-    die('No files left to merge.' . "\n");
+    lovd_printIfVerbose(VERBOSITY_HIGH, 'No files left to merge.' . "\n");
+    exit;
 } else {
-    print(str_repeat('-', 60) . "\n" . $nFiles . ' patient' . ($nFiles == 1? '' : 's') . ' with data files ready to be merged.' . "\n");
+    lovd_printIfVerbose(VERBOSITY_MEDIUM, str_repeat('-', 60) . "\n" . $nFiles . ' patient' . ($nFiles == 1? '' : 's') . ' with data files ready to be merged.' . "\n");
 }
 
 // But don't run, if too many are still active...
 if ($nFilesBeingMerged >= $nMaxFilesBeingMerged) {
-    die('Too many files being merged at the same time, stopping here.' . "\n");
+    lovd_printIfVerbose(VERBOSITY_MEDIUM, 'Too many files being merged at the same time, stopping here.' . "\n");
+    exit;
 }
 
 
@@ -460,7 +492,7 @@ flush();
 @ob_end_flush(); // Can generate errors on the screen if no buffer found.
 foreach ($aFiles as $sID) {
     // Try and open the file, check the first line if it conforms to the standard, and start converting.
-    print('Working on: ' . $sID . "...\n");
+    lovd_printIfVerbose(VERBOSITY_LOW, 'Working on: ' . $sID . "...\n");
     flush();
     $sFileToConvert = $_INI['paths']['data_files'] . '/' . $sID . '.' . $aSuffixes['vep'];
     $sFileMeta = $_INI['paths']['data_files'] . '/' . $sID . '.' . $aSuffixes['meta'];
@@ -470,49 +502,28 @@ foreach ($aFiles as $sID) {
 
     $fInput = fopen($sFileToConvert, 'r');
     if ($fInput === false) {
-        die('Error opening file: ' . $sFileToConvert . ".\n");
+        lovd_printIfVerbose(VERBOSITY_LOW, 'Error opening file: ' . $sFileToConvert . ".\n");
+        exit;
     }
 
-    $sHeaders = fgets($fInput);
-    $aHeaders = explode("\t", rtrim($sHeaders, "\r\n"));
-    foreach ($_ADAPTER->getRequiredHeaderColumns() as $sColumn) {
-        if (!in_array($sColumn, $aHeaders, true)) {
-            print('Ignoring file, does not conform to format: ' . $sFileToConvert . ".\n");
-            continue 2; // Continue to try the next file.
-        }
+    // Get the meta data. Prepare creating the output file, based on the meta file.
+    // We just add the analysis_status, so the analysis can start directly after importing.
+    $aMetaData = file($sFileMeta, FILE_IGNORE_NEW_LINES);
+    if (!$aMetaData) {
+        lovd_printIfVerbose(VERBOSITY_LOW, 'Error reading out meta data file: ' . $sFileMeta . ".\n");
+        continue; // Continue to try the next file.
     }
-
-    // Start creating the output file, based on the meta file. We just add the analysis_status, so the analysis can start directly after importing.
-    $aFileMeta = file($sFileMeta, FILE_IGNORE_NEW_LINES);
-    foreach ($aFileMeta as $nLine => $sLine) {
+    foreach ($aMetaData as $nLine => $sLine) {
         if (strpos($sLine, '{{Screening/') !== false) {
-            $aFileMeta[$nLine]   .= "\t\"{{analysis_statusid}}\"";
-            $aFileMeta[$nLine+1] .= "\t\"" . ANALYSIS_STATUS_READY . '"';
+            $aMetaData[$nLine]   .= "\t\"{{analysis_statusid}}\"";
+            $aMetaData[$nLine+1] .= "\t\"" . ANALYSIS_STATUS_READY . '"';
             break;
         }
     }
-    $fOutput = @fopen($sFileTmp, 'w');
-    if (!$fOutput || !fputs($fOutput, implode("\r\n", $aFileMeta))) {
-        print('Error copying meta file to target: ' . $sFileTmp . ".\n");
-        fclose($fOutput);
-        continue; // Continue to try the next file.
-    }
-    fclose($fOutput);
-
-    $fError = @fopen($sFileError, 'w');
 
     // Isolate the used Screening ID, so we'll connect the variants to the right ID.
     // It could just be 1 always, but this is not a requirement.
     // FIXME: This is quite a lot of code, for something simple as that... Can't we do this in an easier way? More assumptions, less checks?
-    $aMetaData = file($sFileTmp, FILE_IGNORE_NEW_LINES);
-    if (!$aMetaData) {
-        print('Error reading out temporary output file: ' . $sFileTmp . ".\n");
-        unlink($sFileTmp);
-        continue; // Continue to try the next file.
-    }
-    $bParseColumns = false;
-    $nColumnIndexIDMiracle = false;
-    $nColumnIndexIDScreening = false;
     $nScreeningID = 0;
     $nMiracleID = 0;
 
@@ -522,7 +533,7 @@ foreach ($aFiles as $sID) {
     if (lovd_verifyInstance('leiden')) {
         $nMiracleID = $_ADAPTER->aMetadata['Individuals']['id_miracle'];
         if (!$nScreeningID || !$nMiracleID) {
-            print('Error while parsing meta file: Unable to find the Screening ID and/or Miracle ID.' . "\n");
+            lovd_printIfVerbose(VERBOSITY_LOW, 'Error while parsing meta file: Unable to find the Screening ID and/or Miracle ID.' . "\n");
             // Here, we won't try and remove the temp file. We need it for diagnostics, and it will save us from running into the same error over and over again.
             continue; // Continue to try the next file.
         }
@@ -530,8 +541,38 @@ foreach ($aFiles as $sID) {
 
     $_ADAPTER->setScriptVars(compact('nScreeningID', 'nMiracleID'));
     $nScreeningID = sprintf('%010d', $nScreeningID);
-    print('Isolated Screening ID: ' . $nScreeningID . "...\n");
+    lovd_printIfVerbose(VERBOSITY_FULL, 'Isolated Screening ID: ' . $nScreeningID . "...\n");
     flush();
+
+
+
+
+
+    $sHeaders = fgets($fInput);
+    $aHeaders = explode("\t", rtrim($sHeaders, "\r\n"));
+    // First line should be headers, we already read it out somewhere above here.
+    // $aHeaders = array_map('trim', $aHeaders, array_fill(0, count($aHeaders), '"')); // In case we ever need to trim off quotes.
+    $aHeaders = $_ADAPTER->cleanHeaders($aHeaders);
+    $nHeaders = count($aHeaders);
+
+    // Check for mandatory headers (needs to be run after the headers have been cleaned).
+    foreach ($_ADAPTER->getRequiredHeaderColumns() as $sColumn) {
+        if (!in_array($sColumn, $aHeaders, true)) {
+            lovd_printIfVerbose(VERBOSITY_MEDIUM, 'Ignoring file, does not conform to format: ' . $sFileToConvert . ".\n");
+            continue 2; // Continue to try the next file.
+        }
+    }
+
+    // Input headers are OK, so we can start with the output file.
+    $fOutput = @fopen($sFileTmp, 'w');
+    if (!$fOutput || !fputs($fOutput, implode("\r\n", $aMetaData))) {
+        lovd_printIfVerbose(VERBOSITY_LOW, 'Error copying meta file to target: ' . $sFileTmp . ".\n");
+        fclose($fOutput);
+        continue; // Continue to try the next file.
+    }
+    fclose($fOutput);
+
+    $fError = @fopen($sFileError, 'w');
 
 
 
@@ -553,7 +594,7 @@ foreach ($aFiles as $sID) {
     );
     $tMutalyzerCalls = 0; // Time spent doing Mutalyzer calls.
     $aData = array(); // 'chr1:1234567C>G' => array(array(genomic_data), array(transcript1), array(transcript2), ...)
-    print('Parsing file. Current time: ' . date('Y-m-d H:i:s') . ".\n");
+    lovd_printIfVerbose(VERBOSITY_LOW, 'Parsing file. Current time: ' . date('Y-m-d H:i:s') . ".\n");
     flush();
 
     $nLine = 0;
@@ -604,21 +645,10 @@ foreach ($aFiles as $sID) {
         // Reformat variant data if extra modification required by different instance of LOVD.
         $aLine = $_ADAPTER->prepareVariantData($aLine);
 
-        // If the prepareVariantData() method above determines that this variant line is not to be imported then it adds
-        //  lovd_ignore_variant to the $aLine array and sets it to something non-false.
-        // For possible values, see prepareVariantData() in the default adapter.
-        // We will process "silent" and "log" here. There will be no record within LOVD of this variant being ignored.
-        // Once we'll support "separate", we'll need to process that here, too.
-        if (!empty($aLine['lovd_ignore_variant'])) {
-            if ($aLine['lovd_ignore_variant'] != 'silent') {
-                print('Line ' . $nLine . ' is being ignored due to rules setup in the adapter library. This line will not be imported into LOVD.' . "\n");
-            }
-            continue;
-        }
-
         // Map VEP columns to LOVD columns.
+        $aColumnMappings['lovd_ignore_variant'] = 'lovd_ignore_variant'; // Make sure we take this if we have it.
         foreach ($aColumnMappings as $sVEPColumn => $sLOVDColumn) {
-            // 2015-10-28; But don't let columns overwrite each other! Problem because we have double mappings; two MAGPIE columns pointing to the same LOVD column.
+            // But don't let columns overwrite each other! We might have double mappings; two VEP columns pointing to the same LOVD column.
             if (!isset($aLine[$sVEPColumn]) && isset($aVariant[$sLOVDColumn])) {
                 // VEP column doesn't actually exist in the file, but we do already have created the column in the $aVariant array...
                 // Never mind then!
@@ -632,11 +662,29 @@ foreach ($aFiles as $sID) {
             }
         }
 
+        // Verify the GT (allele) column. VCFs might have many interesting values (mostly for multisample VCFs).
+        // This function converts the GT values to proper LOVD-style allele values.
+        // It can also instruct LOVD+ to ignore the variant (for instance, when we have a "0/0" GT).
+        // To allow this function to use all fields and to set the 'lovd_ignore_variant' field, we must pass everything.
+        $aVariant = $_ADAPTER->convertGenoTypeToAllele($aVariant);
+
+        // If the prepareVariantData() or convertGenoTypeToAllele() methods above determine that this variant line is
+        //  not to be imported then they add an 'lovd_ignore_variant' key to the $aLine/$aVariant arrays and set it to
+        //  something non-false. For possible values, see the methods in the default adapter.
+        // We will process "silent" and "log" here. There will be no record within LOVD of this variant being ignored.
+        // Once we'll support "separate", we'll need to process that here, too.
+        if (!empty($aVariant['lovd_ignore_variant'])) {
+            if ($aVariant['lovd_ignore_variant'] != 'silent') {
+                lovd_printIfVerbose(VERBOSITY_MEDIUM, 'Line ' . $nLine . ' is being ignored due to rules setup in the adapter library. This line will not be imported into LOVD.' . "\n");
+            }
+            continue;
+        }
+
         // VCF 4.2 can contain lines with an ALT allele of "*", indicating the allele is
         //  not WT at this position, but affected by an earlier mentioned variant instead.
         // Because these are not actually variants, we ignore them.
         if ($aVariant['alt'] == '*') {
-            print('Line ' . $nLine . ' is being ignored because the allele is not wild type but is affected by an earlier mentioned variant. This line will not be imported into LOVD.' . "\n");
+            lovd_printIfVerbose(VERBOSITY_HIGH, 'Line ' . $nLine . ' is being ignored because the allele is not wild type but is affected by an earlier mentioned variant. This line will not be imported into LOVD.' . "\n");
             continue;
         }
 
@@ -648,26 +696,6 @@ foreach ($aFiles as $sID) {
 
         // Now "fix" certain values.
         // First, VOG fields.
-        // Allele.
-        if (!isset($aVariant['allele'])) {
-            $aVariant['allele'] = '';
-        }
-        if ($aVariant['allele'] == '1/1') {
-            $aVariant['allele'] = 3; // Homozygous.
-        } elseif (isset($aVariant['VariantOnGenome/Sequencing/Father/VarPresent']) && isset($aVariant['VariantOnGenome/Sequencing/Mother/VarPresent'])) {
-            if ($aVariant['VariantOnGenome/Sequencing/Father/VarPresent'] >= 5 && $aVariant['VariantOnGenome/Sequencing/Mother/VarPresent'] <= 3) {
-                // From father, inferred.
-                $aVariant['allele'] = 10;
-            } elseif ($aVariant['VariantOnGenome/Sequencing/Mother/VarPresent'] >= 5 && $aVariant['VariantOnGenome/Sequencing/Father/VarPresent'] <= 3) {
-                // From mother, inferred.
-                $aVariant['allele'] = 20;
-            } else {
-                $aVariant['allele'] = 0;
-            }
-        } else {
-            $aVariant['allele'] = 0;
-        }
-
         // Chromosome.
         $aVariant['chromosome'] = substr($aVariant['chromosome'], 3); // chr1 -> 1
         // VOG/DNA and the position fields.
@@ -697,7 +725,7 @@ foreach ($aFiles as $sID) {
         // 2015-10-28; Because of the double column mappings, we ended up with values divided twice.
         // Flipping the array makes sure we get rid of double mappings.
         foreach (array_flip($aColumnMappings) as $sLOVDColumn => $sVEPColumn) {
-            if ($sVEPColumn == 'AFESP5400' || strpos($sVEPColumn, 'ALTPERC_') === 0) {
+            if ($sVEPColumn == 'AFESP5400' || $sVEPColumn == 'ALTPERC' || strpos($sVEPColumn, 'ALTPERC_') === 0) {
                 $aVariant[$sLOVDColumn] /= 100;
             }
         }
@@ -720,19 +748,19 @@ foreach ($aFiles as $sID) {
             } else {
                 // Getting all gene information from the HGNC takes a few seconds.
                 if (!empty($_INSTANCE_CONFIG['conversion']['enforce_hgnc_gene'])) {
-print('Loading gene information for ' . $aVariant['symbol'] . '...' . "\n");
+                    lovd_printIfVerbose(VERBOSITY_HIGH, 'Loading gene information for ' . $aVariant['symbol'] . '...' . "\n");
                     $aGeneInfo = lovd_getGeneInfoFromHGNC($aVariant['symbol'], true);
                     $nHGNC++;
                     if (!$aGeneInfo) {
                         // We can't gene information from the HGNC, so we can't add them.
                         // This is a major problem and we can't just continue.
 //                        die('Gene ' . $aVariant['symbol'] . ' can\'t be identified by the HGNC.' . "\n\n");
-print('Gene ' . $aVariant['symbol'] . ' can\'t be identified by the HGNC.' . "\n");
+                        lovd_printIfVerbose(VERBOSITY_LOW, 'Gene ' . $aVariant['symbol'] . ' can\'t be identified by the HGNC.' . "\n");
                     }
 
                     // Detect alias. We should store these, for next run (which will crash on a duplicate key error).
                     if ($aGeneInfo && $aVariant['symbol'] != $aGeneInfo['symbol']) {
-                        print('\'' . $aVariant['symbol'] . '\' => \'' . $aGeneInfo['symbol'] . '\',' . "\n");
+                        lovd_printIfVerbose(VERBOSITY_MEDIUM, '\'' . $aVariant['symbol'] . '\' => \'' . $aGeneInfo['symbol'] . '\',' . "\n");
                         // In fact, let's try not to die if we know we'll die.
                         // FIXME: This is duplicated code. Make it into a function, perhaps?
                         if ($aGene = $_DB->query('SELECT g.id, g.refseq_UD, g.name FROM ' . TABLE_GENES . ' AS g WHERE g.id = ?', array($aGeneInfo['symbol']))->fetchAssoc()) {
@@ -745,7 +773,7 @@ print('Gene ' . $aVariant['symbol'] . ' can\'t be identified by the HGNC.' . "\n
                         $sRefseqUD = lovd_getUDForGene($_CONF['refseq_build'], $aGeneInfo['symbol']);
                         if (!$sRefseqUD) {
 //                            die('Can\'t load UD for gene ' . $aVariant['symbol'] . '.' . "\n");
-print('Can\'t load UD for gene ' . $aGeneInfo['symbol'] . '.' . "\n");
+                            lovd_printIfVerbose(VERBOSITY_LOW, 'Can\'t load UD for gene ' . $aGeneInfo['symbol'] . '.' . "\n");
                         }
 
                         // Not getting an UD no longer kills the script, so...
@@ -754,7 +782,8 @@ print('Can\'t load UD for gene ' . $aGeneInfo['symbol'] . '.' . "\n");
                                  (id, name, chromosome, chrom_band, refseq_genomic, refseq_UD, reference, url_homepage, url_external, allow_download, allow_index_wiki, id_hgnc, id_entrez, id_omim, show_hgmd, show_genecards, show_genetests, note_index, note_listing, refseq, refseq_url, disclaimer, disclaimer_text, header, header_align, footer, footer_align, created_by, created_date, updated_by, updated_date)
                                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), ?, NOW())',
                                 array($aGeneInfo['symbol'], $aGeneInfo['name'], $aGeneInfo['chromosome'], $aGeneInfo['chrom_band'], $_SETT['human_builds'][$_CONF['refseq_build']]['ncbi_sequences'][$aGeneInfo['chromosome']], $sRefseqUD, '', '', '', 0, 0, $aGeneInfo['hgnc_id'], $aGeneInfo['entrez_id'], (!$aGeneInfo['omim_id']? NULL : $aGeneInfo['omim_id']), 0, 0, 0, '', '', '', '', 0, '', '', 0, '', 0, 0, 0))) {
-                                die('Can\'t create gene ' . $aVariant['symbol'] . '.' . "\n");
+                                lovd_printIfVerbose(VERBOSITY_LOW, 'Can\'t create gene ' . $aVariant['symbol'] . '.' . "\n");
+                                exit;
                             }
 
                             // Add the default custom columns to this gene.
@@ -762,7 +791,7 @@ print('Can\'t load UD for gene ' . $aGeneInfo['symbol'] . '.' . "\n");
 
                             // Write to log...
                             lovd_writeLog('Event', LOG_EVENT, 'Created gene information entry ' . $aGeneInfo['symbol'] . ' (' . $aGeneInfo['name'] . ')');
-                            print('Created gene ' . $aGeneInfo['symbol'] . ".\n");
+                            lovd_printIfVerbose(VERBOSITY_MEDIUM, 'Created gene ' . $aGeneInfo['symbol'] . ".\n");
                             flush();
 
                             // Store this gene.
@@ -809,7 +838,7 @@ print('Can\'t load UD for gene ' . $aGeneInfo['symbol'] . '.' . "\n");
                 } else {
                     $aTranscriptInfo = array();
                     if (!empty($_INSTANCE_CONFIG['conversion']['enforce_hgnc_gene'])) {
-print('Loading transcript information for ' . $aGenes[$aVariant['symbol']]['id'] . '...' . "\n");
+                        lovd_printIfVerbose(VERBOSITY_HIGH, 'Loading transcript information for ' . $aGenes[$aVariant['symbol']]['id'] . '...' . "\n");
                         $nSleepTime = 2;
                         // Retry Mutalyzer call several times until successful.
                         for ($i = 0; $i <= $nMutalyzerRetries; $i++) {
@@ -828,7 +857,7 @@ print('Loading transcript information for ' . $aGenes[$aVariant['symbol']]['id']
                             }
                         }
                         if ($sJSONResponse === false) {
-                            print('>>>>> Attempted to call Mutalyzer ' . $nMutalyzerRetries . ' times to getTranscriptsAndInfo and failed on line ' . $nLine . '.' . "\n");
+                            lovd_printIfVerbose(VERBOSITY_LOW, '>>>>> Attempted to call Mutalyzer ' . $nMutalyzerRetries . ' times to getTranscriptsAndInfo and failed on line ' . $nLine . '.' . "\n");
 
                         } elseif ($aResponse = json_decode($sJSONResponse, true)) {
                             // Before we had to go two layers deep; through the result, then read out the info.
@@ -838,7 +867,7 @@ print('Loading transcript information for ' . $aGenes[$aVariant['symbol']]['id']
                             if (empty($aTranscriptInfo)) {
 //                                die('Can\'t load available transcripts for gene ' . $aVariant['symbol'] . '.' . "\n");
 //print('Can\'t load available transcripts for gene ' . $aVariant['symbol'] . '.' . "\n");
-print('No available transcripts for gene ' . $aGenes[$aVariant['symbol']]['id'] . ' found.' . "\n"); // Usually this is the case. Not always an error. We might get an error, but that will show now.
+                                lovd_printIfVerbose(VERBOSITY_MEDIUM, 'No available transcripts for gene ' . $aGenes[$aVariant['symbol']]['id'] . ' found.' . "\n"); // Usually this is the case. Not always an error. We might get an error, but that will show now.
                                 $aTranscripts[$aVariant['transcriptid']] = false; // Ignore transcript.
                                 $aTranscriptInfo = array(array('id' => 'NO_TRANSCRIPTS')); // Basically, any text will do. Just stop searching for other transcripts for this gene.
                             }
@@ -865,7 +894,8 @@ print('No available transcripts for gene ' . $aGenes[$aVariant['symbol']]['id'] 
                              (id, geneid, name, id_mutalyzer, id_ncbi, id_ensembl, id_protein_ncbi, id_protein_ensembl, id_protein_uniprot, remarks, position_c_mrna_start, position_c_mrna_end, position_c_cds_end, position_g_mrna_start, position_g_mrna_end, created_date, created_by)
                             VALUES (NULL, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), ?)',
                             array($aGenes[$aVariant['symbol']]['id'], $sTranscriptName, $aTranscript['id_mutalyzer'], $aTranscript['id_ncbi'], '', $sTranscriptProtein, '', '', '', $aTranscript['cTransStart'], $aTranscript['sortableTransEnd'], $aTranscript['cCDSStop'], $aTranscript['chromTransStart'], $aTranscript['chromTransEnd'], 0))) {
-                            die('Can\'t create transcript ' . $aTranscript['id_ncbi'] . ' for gene ' . $aVariant['symbol'] . '.' . "\n");
+                            lovd_printIfVerbose(VERBOSITY_LOW, 'Can\'t create transcript ' . $aTranscript['id_ncbi'] . ' for gene ' . $aVariant['symbol'] . '.' . "\n");
+                            exit;
                         }
 
                         // Save the ID before the writeLog deletes it...
@@ -873,7 +903,7 @@ print('No available transcripts for gene ' . $aGenes[$aVariant['symbol']]['id'] 
 
                         // Write to log...
                         lovd_writeLog('Event', LOG_EVENT, 'Transcript entry successfully added to gene ' . $aGenes[$aVariant['symbol']]['id'] . ' - ' . $sTranscriptName);
-                        print('Created transcript ' . $aTranscript['id'] . ".\n");
+                        lovd_printIfVerbose(VERBOSITY_MEDIUM, 'Created transcript ' . $aTranscript['id'] . ".\n");
                         flush();
 
                         // Store in memory.
@@ -915,7 +945,7 @@ print('No available transcripts for gene ' . $aGenes[$aVariant['symbol']]['id'] 
                 // Call Mutalyzer, but first check if I did that before already.
                 if (!isset($aMappings[$aVariant['chromosome'] . ':' . $aVariant['VariantOnGenome/DNA']])) {
                     $aMappings[$aVariant['chromosome'] . ':' . $aVariant['VariantOnGenome/DNA']] = array();
-//print('Running position converter, DNA was: "' . $aVariant['VariantOnTranscript/DNA'] . '"' . "\n");
+                    lovd_printIfVerbose(VERBOSITY_FULL, 'Running position converter, DNA was: "' . $aVariant['VariantOnTranscript/DNA'] . '"' . "\n");
 
                     $nSleepTime = 2;
                     // Retry Mutalyzer call several times until successful.
@@ -936,7 +966,7 @@ print('No available transcripts for gene ' . $aGenes[$aVariant['symbol']]['id'] 
                     }
 
                     if ($sJSONResponse === false) {
-                        print('>>>>> Attempted to call Mutalyzer ' . $nMutalyzerRetries . ' times for numberConversion and failed on line ' . $nLine . '.' . "\n");
+                        lovd_printIfVerbose(VERBOSITY_LOW, '>>>>> Attempted to call Mutalyzer ' . $nMutalyzerRetries . ' times for numberConversion and failed on line ' . $nLine . '.' . "\n");
                     }
 
                     if ($sJSONResponse && $aResponse = json_decode($sJSONResponse, true)) {
@@ -1034,7 +1064,7 @@ print('No available transcripts for gene ' . $aGenes[$aVariant['symbol']]['id'] 
                     // Normally, we would implement a cache here, but we rarely run Mutalyzer, and if we do, we will not likely run it on a variant on the same transcript.
                     // So, first just check if we still don't have a Mutalyzer ID.
                     if (!empty($_INSTANCE_CONFIG['conversion']['enforce_hgnc_gene'])) {
-print('Reloading Mutalyzer ID for ' . $aTranscripts[$aVariant['transcriptid']]['id_ncbi'] . ' in ' . $aGenes[$aVariant['symbol']]['refseq_UD'] . ' (' . $aGenes[$aVariant['symbol']]['id'] . ')' . "\n");
+                        lovd_printIfVerbose(VERBOSITY_FULL, 'Reloading Mutalyzer ID for ' . $aTranscripts[$aVariant['transcriptid']]['id_ncbi'] . ' in ' . $aGenes[$aVariant['symbol']]['refseq_UD'] . ' (' . $aGenes[$aVariant['symbol']]['id'] . ')' . "\n");
                         $nSleepTime = 2;
                         // Retry Mutalyzer call several times until successful.
                         for ($i = 0; $i <= $nMutalyzerRetries; $i++) {
@@ -1053,7 +1083,7 @@ print('Reloading Mutalyzer ID for ' . $aTranscripts[$aVariant['transcriptid']]['
                             }
                         }
                         if ($sJSONResponse === false) {
-                            print('>>>>> Attempted to call Mutalyzer ' . $nMutalyzerRetries . ' times to getTranscriptsAndInfo and failed on line ' . $nLine . '.' . "\n");
+                            lovd_printIfVerbose(VERBOSITY_LOW, '>>>>> Attempted to call Mutalyzer ' . $nMutalyzerRetries . ' times to getTranscriptsAndInfo and failed on line ' . $nLine . '.' . "\n");
                         }
 
                         if ($sJSONResponse && $aResponse = json_decode($sJSONResponse, true)) {
@@ -1072,7 +1102,7 @@ print('Reloading Mutalyzer ID for ' . $aTranscripts[$aVariant['transcriptid']]['
                     }
                 }
 
-print('Running mutalyzer to predict protein change for ' . $aGenes[$aVariant['symbol']]['refseq_UD'] . '(' . $aTranscripts[$aVariant['transcriptid']]['id_ncbi'] . '):' . $aVariant['VariantOnTranscript/DNA'] . "\n");
+                lovd_printIfVerbose(VERBOSITY_MEDIUM, 'Running mutalyzer to predict protein change for ' . $aGenes[$aVariant['symbol']]['refseq_UD'] . '(' . $aTranscripts[$aVariant['transcriptid']]['id_ncbi'] . '):' . $aVariant['VariantOnTranscript/DNA'] . "\n");
                 $nSleepTime = 2;
                 // Retry Mutalyzer call several times until successful.
                 for ($i=0; $i <= $nMutalyzerRetries; $i++) {
@@ -1091,7 +1121,7 @@ print('Running mutalyzer to predict protein change for ' . $aGenes[$aVariant['sy
                     }
                 }
                 if ($sJSONResponse === false) {
-                    print('>>>>> Attempted to call Mutalyzer ' . $nMutalyzerRetries . ' times to runMutalyzer and failed on line ' . $nLine . '.' . "\n");
+                    lovd_printIfVerbose(VERBOSITY_LOW, '>>>>> Attempted to call Mutalyzer ' . $nMutalyzerRetries . ' times to runMutalyzer and failed on line ' . $nLine . '.' . "\n");
                 }
 
                 if ($sJSONResponse && $aResponse = json_decode($sJSONResponse, true)) {
@@ -1144,7 +1174,7 @@ print('Running mutalyzer to predict protein change for ' . $aGenes[$aVariant['sy
                             // This can happen, because we have UDs from hg38, but the alignment and variant calling is done on hg19... :(  Sequence can be different.
                             $aVariant['VariantOnTranscript/RNA'] = 'r.(?)';
                             $aVariant['VariantOnTranscript/Protein'] = 'p.?';
-print('Mutalyzer returned EREF error, hg19/hg38 error?' . "\n");
+                            lovd_printIfVerbose(VERBOSITY_MEDIUM, 'Mutalyzer returned EREF error, hg19/hg38 error?' . "\n");
                             // We don't break here, because if there is also a WSPLICE we rather go with that one.
                         }
                     }
@@ -1255,25 +1285,32 @@ print('Mutalyzer returned EREF error, hg19/hg38 error?' . "\n");
             $aData[$sKey][$aVariant['transcriptid']] = $aVOT;
         }
 
-        // Some reporting of where we are...
-        if (!($nLine % 100)) {
-            print('------- Line ' . $nLine . ' -------' . str_repeat(' ', 7-strlen($nLine)) . date('Y-m-d H:i:s') . "\n");
+        // Some reporting of where we are... as long as we're being verbose.
+        // Info lines show less frequently for low and medium verbosity.
+        $aLinesToReport = array(
+            VERBOSITY_LOW => 10000,
+            VERBOSITY_MEDIUM => 1000,
+            VERBOSITY_HIGH => 100,
+            VERBOSITY_FULL => 100,
+        );
+        if (VERBOSITY > VERBOSITY_NONE && !($nLine % $aLinesToReport[VERBOSITY])) {
+            lovd_printIfVerbose(VERBOSITY_LOW, '------- Line ' . $nLine . ' -------' . str_repeat(' ', 7 - strlen($nLine)) . date('Y-m-d H:i:s') . "\n");
             flush();
         }
     }
     fclose($fInput); // Close input file.
 
-    print('Done parsing file. Current time: ' . date('Y-m-d H:i:s') . ".\n");
+    lovd_printIfVerbose(VERBOSITY_MEDIUM, 'Done parsing file. Current time: ' . date('Y-m-d H:i:s') . ".\n");
     // Show the number of times HGNC and Mutalyzer were called.
-    print('Number of times HGNC called: ' . $nHGNC . ".\n" .
+    lovd_printIfVerbose(VERBOSITY_MEDIUM, 'Number of times HGNC called: ' . $nHGNC . ".\n" .
           'Number of times Mutalyzer called: ' . $nMutalyzer . ".\n" .
-          'Parsing took ' . round((time() - $dStart)/60) . ' minutes, Mutalyzer calls taking ' . round($tMutalyzerCalls/60) . ' minutes, ' . round($tMutalyzerCalls/$nMutalyzer, 2) . ' sec/call.' . "\n");
+          'Parsing took ' . round((time() - $dStart)/60) . ' minutes' . (!$nMutalyzer? '' : ', Mutalyzer calls taking ' . round($tMutalyzerCalls/60) . ' minutes, ' . round($tMutalyzerCalls/$nMutalyzer, 2) . ' sec/call') . '.' . "\n");
     foreach ($aMutalyzerCalls as $sFunction => $nCalls) {
-        print('  ' . $sFunction . ': ' . $nCalls . "\n");
+        lovd_printIfVerbose(VERBOSITY_MEDIUM, '  ' . $sFunction . ': ' . $nCalls . "\n");
     }
-    print('Number of lines with annotation error: ' . $nAnnotationErrors . ".\n");
+    lovd_printIfVerbose(VERBOSITY_MEDIUM, 'Number of lines with annotation error: ' . $nAnnotationErrors . ".\n");
     if (filesize($sFileError) > 0) {
-        print("ERROR FILE: Please check details of dropped annotation data in " . $sFileError . "\n");
+        lovd_printIfVerbose(VERBOSITY_LOW, "ERROR FILE: Please check details of dropped annotation data in " . $sFileError . "\n");
     } else {
         $sFileMessage = '';
         fclose($fError);
@@ -1282,11 +1319,11 @@ print('Mutalyzer returned EREF error, hg19/hg38 error?' . "\n");
 
     if (!$aData) {
         // No variants!
-        print('No variants found to import.' . "\n");
+        lovd_printIfVerbose(VERBOSITY_LOW, 'No variants found to import.' . "\n");
         // Here, we won't try and remove the temp file. It will save us from running into the same error over and over again.
         continue; // Try the next file.
     }
-    print('Now creating output...' . "\n");
+    lovd_printIfVerbose(VERBOSITY_HIGH, 'Now creating output...' . "\n");
 
 
 
@@ -1312,7 +1349,8 @@ print('Mutalyzer returned EREF error, hg19/hg38 error?' . "\n");
     // Start storing the data into the total data file.
     $fOutput = fopen($sFileTmp, 'a');
     if ($fOutput === false) {
-        die('Error opening file for appending: ' . $sFileTmp . ".\n");
+        lovd_printIfVerbose(VERBOSITY_LOW, 'Error opening file for appending: ' . $sFileTmp . ".\n");
+        exit;
     }
 
 
@@ -1344,7 +1382,7 @@ print('Mutalyzer returned EREF error, hg19/hg38 error?' . "\n");
     }
 
     // Show number of Variants on Genome data created.
-    print('Number of Variants On Genome rows created: ' . $nVOGs . "\n");
+    lovd_printIfVerbose(VERBOSITY_MEDIUM, 'Number of Variants On Genome rows created: ' . $nVOGs . "\n");
 
 
 
@@ -1372,7 +1410,7 @@ print('Mutalyzer returned EREF error, hg19/hg38 error?' . "\n");
     }
 
     // Show number of Variants on Transcripts data created.
-    print('Number of Variants On Transcripts rows created: ' . $nVOTs . "\n");
+    lovd_printIfVerbose(VERBOSITY_MEDIUM, 'Number of Variants On Transcripts rows created: ' . $nVOTs . "\n");
 
 
 
@@ -1392,22 +1430,23 @@ print('Mutalyzer returned EREF error, hg19/hg38 error?' . "\n");
     // Now move the tmp to the final file, and close this loop.
     if (!rename($sFileTmp, $sFileDone)) {
         // Fatal error, because we're all done actually!
-        die('Error moving temp file to target: ' . $sFileDone . ".\n");
+        lovd_printIfVerbose(VERBOSITY_LOW, 'Error moving temp file to target: ' . $sFileDone . ".\n");
+        exit;
     }
 
     // OK, so file is done, and can be scheduled now. Just auto-schedule it, overwriting any possible errored entry.
     // FIXME: This can also be done with one INSERT ON DUPLICATE KEY UPDATE query.
     if ($_DB->query('INSERT IGNORE INTO ' . TABLE_SCHEDULED_IMPORTS . ' (filename, scheduled_by, scheduled_date) VALUES (?, 0, NOW())', array(basename($sFileDone)))->rowCount()) {
-        print('File scheduled for import.' . "\n");
+        lovd_printIfVerbose(VERBOSITY_MEDIUM, 'File scheduled for import.' . "\n");
     } elseif ($_DB->query('UPDATE ' . TABLE_SCHEDULED_IMPORTS . ' SET in_progress = 0, scheduled_by = 0, scheduled_date = NOW(), process_errors = NULL, processed_by = NULL, processed_date = NULL WHERE filename = ?', array(basename($sFileDone)))->rowCount()) {
-        print('File scheduled for import.' . "\n");
+        lovd_printIfVerbose(VERBOSITY_MEDIUM, 'File rescheduled for import.' . "\n");
     } else {
-        print('Error scheduling file for import!' . "\n");
+        lovd_printIfVerbose(VERBOSITY_LOW, 'Error scheduling file for import!' . "\n");
     }
 
-    print('All done, ' . $sFileDone . ' ready for import.' . "\n" . 'Current time: ' . date('Y-m-d H:i:s') . "\n" .
+    lovd_printIfVerbose(VERBOSITY_LOW, 'All done, ' . $sFileDone . ' ready for import.' . "\n" . 'Current time: ' . date('Y-m-d H:i:s') . "\n" .
           '  Took ' . round((time() - $dStart)/60) . ' minutes.' . "\n");
-    print("\n");
+    lovd_printIfVerbose(VERBOSITY_LOW, "\n");
     break;// Keep this break in the loop, so we will only continue the loop to the next file when there is a continue;
 }
 ?>

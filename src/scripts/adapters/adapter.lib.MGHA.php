@@ -130,7 +130,9 @@ $_INSTANCE_CONFIG['conversion'] = array(
     'max_annotation_error_allowed' => 20,
     'exit_on_annotation_error' => false,
     'enforce_hgnc_gene' => false,
-    'check_indel_description' => false
+    'check_indel_description' => false,
+    'verbosity_cron' => 7, // How verbose should we be when running through cron? (default: 5; currently supported: 0,3,5,7,9)
+    'verbosity_other' => 7, // How verbose should we be otherwise? (default: 7; currently supported: 0,3,5,7,9)
 );
 
 $_INSTANCE_CONFIG['cross_screenings'] = array(
@@ -188,6 +190,34 @@ $_INSTANCE_CONFIG['observation_counts'] = array(
 
 class LOVD_MghaDataConverter extends LOVD_DefaultDataConverter {
     // Contains the overloaded functions that we want different from the default.
+
+    function cleanGenoType ($sGenoType)
+    {
+        // Returns a "cleaned" genotype (GT) field, given the VCF's GT field.
+        // VCFs can contain many different GT values that should be cleaned/simplified into fewer options.
+
+        static $aGenotypes = array(
+            './.' => '0/1', // No coverage taken as heterozygous variant.
+            './0' => '0/1', // REF + no coverage taken as heterozygous variant.
+            '0/.' => '0/1', // REF + no coverage taken as heterozygous variant.
+            '0/0' => '0/1', // REF taken as heterozygous variant.
+
+            './1' => '0/1', // ALT + no GT due to multi allelic SNP taken as heterozygous ALT.
+            '1/.' => '0/1', // ALT + no GT due to multi allelic SNP taken as heterozygous ALT.
+
+            '1/0' => '0/1', // Just making sure we only have one way to describe HET calls.
+        );
+
+        if (isset($aGenotypes[$sGenoType])) {
+            return $aGenotypes[$sGenoType];
+        } else {
+            return $sGenoType;
+        }
+    }
+
+
+
+
 
     function prepareMappings()
     {
@@ -836,7 +866,8 @@ class LOVD_MghaDataConverter extends LOVD_DefaultDataConverter {
             'REF',
             'ALT',
             'QUAL',
-            'FILTER'
+            'FILTER',
+            'Child_GT',
         );
     }
 }

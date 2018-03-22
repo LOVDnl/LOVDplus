@@ -4,10 +4,10 @@
  * LEIDEN OPEN VARIATION DATABASE (LOVD)
  *
  * Created     : 2016-09-02
- * Modified    : 2017-12-22
+ * Modified    : 2018-03-22
  * For LOVD    : 3.0-18
  *
- * Copyright   : 2004-2017 Leiden University Medical Center; http://www.LUMC.nl/
+ * Copyright   : 2004-2018 Leiden University Medical Center; http://www.LUMC.nl/
  * Programmers : Juny Kesumadewi <juny.kesumadewi@unimelb.edu.au>
  *               Ivo F.A.C. Fokkema <I.F.A.C.Fokkema@LUMC.nl>
  *
@@ -151,6 +151,8 @@ $_INSTANCE_CONFIG['conversion'] = array(
     'exit_on_annotation_error' => true, // Whether to halt on an annotation error.
     'enforce_hgnc_gene' => true, // Check for aliases, allow automatic creation of genes using the HGNC, allow automatic creation of transcripts.
     'check_indel_description' => true, // Should we check all indels using Mutalyzer? Vep usually does a bad job at them.
+    'verbosity_cron' => 5, // How verbose should we be when running through cron? (default: 5; currently supported: 0,3,5,7,9)
+    'verbosity_other' => 7, // How verbose should we be otherwise? (default: 7; currently supported: 0,3,5,7,9)
 );
 
 // This is the default configuration of the observation count feature.
@@ -238,12 +240,83 @@ class LOVD_DefaultDataConverter {
 
 
 
+    function cleanGenoType ($sGenoType)
+    {
+        // Returns a "cleaned" genotype (GT) field, given the VCF's GT field.
+        // VCFs can contain many different GT values that should be cleaned/simplified into fewer options.
+
+        static $aGenotypes = array(
+            './.' => '0/0', // No coverage taken as homozygous REF.
+            './0' => '0/0', // REF + no coverage taken as homozygous REF.
+            '0/.' => '0/0', // REF + no coverage taken as homozygous REF.
+
+            './1' => '0/1', // ALT + no GT due to multi allelic SNP taken as heterozygous ALT.
+            '1/.' => '0/1', // ALT + no GT due to multi allelic SNP taken as heterozygous ALT.
+
+            '1/0' => '0/1', // Just making sure we only have one way to describe HET calls.
+        );
+
+        if (isset($aGenotypes[$sGenoType])) {
+            return $aGenotypes[$sGenoType];
+        } else {
+            return $sGenoType;
+        }
+    }
+
+
+
+
+
     function cleanHeaders ($aHeaders)
     {
         // Return the headers, cleaned up if needed.
         // You can add code here that will clean the headers, directly after reading.
 
         return $aHeaders;
+    }
+
+
+
+
+
+    function convertGenoTypeToAllele ($aVariant)
+    {
+        // Converts the GenoType data (already stored in the 'allele' field) to an LOVD-style allele value.
+        // To stop variants from being imported, set $aVariant['lovd_ignore_variant'] to something non-false.
+        // Possible values:
+        // 'silent' - for silently ignoring the variant.
+        // 'log' - for ignoring the variant and logging the line number.
+        // 'separate' - for storing the variant in a separate screening (not implemented yet).
+        // When set to something else, 'log' is assumed.
+        // Note that when verbosity is set to low (3) or none (0), then no logging will occur.
+
+        // First verify the GT (allele) column. VCFs might have many interesting values (mostly for multisample VCFs).
+        // Clean the value a bit (will result in "0/." calls to be converted to "0/0", for instance).
+        if (!isset($aVariant['allele'])) {
+            $aVariant['allele'] = '';
+        }
+        $aVariant['allele'] = $this->cleanGenoType($aVariant['allele']);
+
+        // Then, convert the GT values to proper LOVD-style allele values.
+        switch ($aVariant['allele']) {
+            case '0/0':
+                // Homozygous REF; not a variant. Skip this line silently.
+                $aVariant['lovd_ignore_variant'] = 'silent';
+                break;
+            case '0/1':
+                // Heterozygous.
+                $aVariant['allele'] = 0;
+                break;
+            case '1/1':
+                // Homozygous.
+                $aVariant['allele'] = 3;
+                break;
+            default:
+                // Unexpected value (empty string?). Ignore the variant, log.
+                $aVariant['lovd_ignore_variant'] = 'log';
+        }
+
+        return $aVariant;
     }
 
 
@@ -299,6 +372,7 @@ class LOVD_DefaultDataConverter {
             'GIVEN_REF',
             'Allele',
             'QUAL',
+            'GT',
             'Consequence',
             'SYMBOL',
             'Feature',
@@ -437,18 +511,12 @@ class LOVD_DefaultDataConverter {
             'HGMD_reference' => 'VariantOnGenome/HGMD/Reference',
             'phyloP' => 'VariantOnGenome/Conservation_score/PhyloP',
             'scorePhastCons' => 'VariantOnGenome/Conservation_score/Phast',
-            'GT_Child' => 'allele',
-            'GT_Patient' => 'allele',
-            'GQ_Child' => 'VariantOnGenome/Sequencing/GenoType/Quality',
-            'GQ_Patient' => 'VariantOnGenome/Sequencing/GenoType/Quality',
-            'DP_Child' => 'VariantOnGenome/Sequencing/Depth/Total',
-            'DP_Patient' => 'VariantOnGenome/Sequencing/Depth/Total',
-            'DPREF_Child' => 'VariantOnGenome/Sequencing/Depth/Ref',
-            'DPREF_Patient' => 'VariantOnGenome/Sequencing/Depth/Ref',
-            'DPALT_Child' => 'VariantOnGenome/Sequencing/Depth/Alt',
-            'DPALT_Patient' => 'VariantOnGenome/Sequencing/Depth/Alt',
-            'ALTPERC_Child' => 'VariantOnGenome/Sequencing/Depth/Alt/Fraction', // Will be divided by 100 later.
-            'ALTPERC_Patient' => 'VariantOnGenome/Sequencing/Depth/Alt/Fraction', // Will be divided by 100 later.
+            'GT' => 'allele',
+            'GQ' => 'VariantOnGenome/Sequencing/GenoType/Quality',
+            'DP' => 'VariantOnGenome/Sequencing/Depth/Total',
+            'DPREF' => 'VariantOnGenome/Sequencing/Depth/Ref',
+            'DPALT' => 'VariantOnGenome/Sequencing/Depth/Alt',
+            'ALTPERC' => 'VariantOnGenome/Sequencing/Depth/Alt/Fraction', // Will be divided by 100 later.
             'GT_Father' => 'VariantOnGenome/Sequencing/Father/GenoType',
             'GQ_Father' => 'VariantOnGenome/Sequencing/Father/GenoType/Quality',
             'DP_Father' => 'VariantOnGenome/Sequencing/Father/Depth/Total',
@@ -486,6 +554,7 @@ class LOVD_DefaultDataConverter {
         // 'log' - for ignoring the variant and logging the line number.
         // 'separate' - for storing the variant in a separate screening (not implemented yet).
         // When set to something else, 'log' is assumed.
+        // Note that when verbosity is set to low (3) or none (0), then no logging will occur.
 
         return $aLine;
     }
