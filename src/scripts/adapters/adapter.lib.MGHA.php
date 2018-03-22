@@ -187,8 +187,7 @@ $_INSTANCE_CONFIG['observation_counts'] = array(
 );
 
 class LOVD_MghaDataConverter extends LOVD_DefaultDataConverter {
-
-    static $sAdapterName = 'MGHA';
+    // Contains the overloaded functions that we want different from the default.
 
     function prepareMappings()
     {
@@ -202,7 +201,7 @@ class LOVD_MghaDataConverter extends LOVD_DefaultDataConverter {
             'vog_ref' => 'VariantOnGenome/Ref',
             'ALT' => 'alt',
             'vog_alt' => 'VariantOnGenome/Alt',
-            'Existing_variation' => 'existingvariation',
+            'Existing_variation' => 'existing_variation',
             'Feature' => 'transcriptid',
             // VariantOnGenome/DNA - constructed by the lovd_getVariantDescription function later on.
             'CHROM' => 'chromosome',
@@ -421,7 +420,7 @@ class LOVD_MghaDataConverter extends LOVD_DefaultDataConverter {
 
 
 
-    function prepareVariantData(&$aLine)
+    function prepareVariantData (&$aLine)
     {
         // Processes the variant data file for MGHA.
         // Cleans up data in existing columns and splits some columns out to two columns.
@@ -769,53 +768,6 @@ class LOVD_MghaDataConverter extends LOVD_DefaultDataConverter {
 
 
 
-    function prepareGeneAliases()
-    {
-        // Prepare the $aGeneAliases array with a site specific gene alias list.
-        // The convert and merge script will provide suggested gene alias key value pairs to add to this array.
-        $aGeneAliases = array();
-        return $aGeneAliases;
-    }
-
-
-
-
-
-    function prepareGenesToIgnore()
-    {
-        // Prepare the $aGenesToIgnore array with a site specific gene list.
-        $aGenesToIgnore = array();
-        return $aGenesToIgnore;
-    }
-
-
-
-
-    
-    function prepareHeaders($aHeaders)
-    {
-        // Verify the identity of this file. Some columns are appended by the Miracle ID.
-        // Check the child's Miracle ID with that we have in the meta data file, and remove all the IDs so the headers are recognized normally.
-        foreach ($aHeaders as $key => $sHeader) {
-            if (preg_match('/(Child|Patient|Father|Mother)_(\d+)$/', $sHeader, $aRegs)) {
-                // If Child, check ID.
-                if (!empty($this->aScriptVars['nMiracleID']) && in_array($aRegs[1], array('Child', 'Patient')) && $aRegs[2] != $this->aScriptVars['nMiracleID']) {
-                    // Here, we won't try and remove the temp file. We need it for diagnostics, and it will save us from running into the same error over and over again.
-                    die('Fatal: Miracle ID of ' . $aRegs[1] . ' (' . $aRegs[2] . ') does not match that from the meta file (' . $this->aScriptVars['nMiracleID'] . ')' . "\n");
-                }
-                // Clean ID from column.
-                $aHeaders[$key] = substr($sHeader, 0, -(strlen($aRegs[2]) + 1));
-            }
-        }
-
-        return $aHeaders;
-    }
-
-
-
-
-
-
     function formatEmptyColumn($aLine, $sVEPColumn, $sLOVDColumn, $aVariant)
     {
         // Returns how we want to represent empty data in $aVariant array given a LOVD column name.
@@ -845,8 +797,8 @@ class LOVD_MghaDataConverter extends LOVD_DefaultDataConverter {
 
         // Create IGV links
         $aLinkTypes = array('bhc', 'rec');
-        if (!empty($this->aMetadata['Individual/Sample_ID']) &&
-            !empty($this->aMetadata['Screening/Pipeline/Run_ID']) &&
+        if (!empty($this->aMetadata['Individuals']['Individual/Sample_ID']) &&
+            !empty($this->aMetadata['Screenings']['Screening/Pipeline/Run_ID']) &&
             !empty($aVariant['chromosome']) &&
             !empty($aVariant['position_g_start']) &&
             !empty($aVariant['position_g_end'])
@@ -855,8 +807,8 @@ class LOVD_MghaDataConverter extends LOVD_DefaultDataConverter {
             $aLinks = array();
             foreach ($aLinkTypes as $sLinkPrefix) {
                 $aLinks[] = '{' . $sLinkPrefix . ':' .
-                            implode(':', array($this->aMetadata['Individual/Sample_ID'],
-                                               $this->aMetadata['Screening/Pipeline/Run_ID'],
+                            implode(':', array($this->aMetadata['Individuals']['Individual/Sample_ID'],
+                                               $this->aMetadata['Screenings']['Screening/Pipeline/Run_ID'],
                                                $aVariant['chromosome'],
                                                $aVariant['position_g_start'],
                                                $aVariant['position_g_end']))
@@ -872,34 +824,10 @@ class LOVD_MghaDataConverter extends LOVD_DefaultDataConverter {
 
 
 
-
-    function prepareScreeningID($aMetaData)
+    function getRequiredHeaderColumns ()
     {
-        // Returns the screening ID.
-
-        return 1;
-    }
-
-
-
-
-
-
-    function getInputFilePrefixPattern()
-    {
-        // Returns the regex pattern of the prefix of variant input file names.
-
-        return '(.+)';
-    }
-
-
-
-
-
-
-    function getRequiredHeaderColumns()
-    {
-        // Returns an array of required input variant file column headers. The order of these columns does NOT matter.
+        // Returns an array of required input variant file column headers.
+        // The order of these columns does NOT matter.
 
         return array(
             'CHROM',

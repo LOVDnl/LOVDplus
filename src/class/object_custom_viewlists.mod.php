@@ -92,12 +92,6 @@ class LOVD_CustomViewListMOD extends LOVD_CustomViewList {
             $z['custom_links'] = array();
             $z['form_type'] = explode('|', $z['form_type']);
             $z['select_options'] = explode("\r\n", $z['select_options']); // What do we use this for?
-            if (substr($z['id'], 0,19) == 'VariantOnTranscript') {
-                $z['public_view'] = explode(';', rtrim(preg_replace('/([A-Za-z0-9-]+:0;|:1)/', '', $z['public_view'] . ';'), ';'));
-            }
-            if (is_null($z['public_view'])) {
-                $z['public_view'] = array();
-            }
             $this->aColumns[$z['id']] = $z;
         }
         if ($_AUTH) {

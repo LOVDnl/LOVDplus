@@ -107,8 +107,23 @@ $_INSTANCE_CONFIG['conversion'] = array(
 
 
 class LOVD_MghaSeqDataConverter extends LOVD_DefaultDataConverter {
+    // Contains the overloaded functions that we want different from the default.
 
-    static $sAdapterName = 'MGHA_SEQ';
+    function formatEmptyColumn ($aLine, $sVEPColumn, $sLOVDColumn, $aVariant)
+    {
+        // Returns how we want to represent empty data in $aVariant array given a LOVD column name.
+        if (isset($aLine[$sVEPColumn]) && ($aLine[$sVEPColumn] === 0 || $aLine[$sVEPColumn] === '0')) {
+            $aVariant[$sLOVDColumn] = 0;
+        } else {
+            $aVariant[$sLOVDColumn] = '';
+        }
+
+        return $aVariant;
+    }
+
+
+
+
 
     function prepareMappings()
     {
@@ -455,29 +470,6 @@ class LOVD_MghaSeqDataConverter extends LOVD_DefaultDataConverter {
 
 
 
-    function prepareGeneAliases()
-    {
-        // Prepare the $aGeneAliases array with a site specific gene alias list.
-        // The convert and merge script will provide suggested gene alias key value pairs to add to this array.
-        $aGeneAliases = array();
-        return $aGeneAliases;
-    }
-
-
-
-
-
-    function prepareGenesToIgnore()
-    {
-        // Prepare the $aGenesToIgnore array with a site specific gene list.
-        $aGenesToIgnore = array();
-        return $aGenesToIgnore;
-    }
-
-
-
-
-
     function ignoreTranscript($sTranscriptId)
     {
         // Check if we want to skip importing the annotation for this transcript.
@@ -505,31 +497,10 @@ class LOVD_MghaSeqDataConverter extends LOVD_DefaultDataConverter {
 
 
 
-    function prepareScreeningID($aMetaData)
+    function getRequiredHeaderColumns ()
     {
-        // Returns the screening ID.
-
-        return 1;
-    }
-
-
-
-
-
-    function getInputFilePrefixPattern()
-    {
-        // Returns the regex pattern of the prefix of variant input file names.
-
-        return '(.+)';
-    }
-
-
-
-
-
-    function getRequiredHeaderColumns()
-    {
-        // Returns an array of required input variant file column headers. The order of these columns does NOT matter.
+        // Returns an array of required input variant file column headers.
+        // The order of these columns does NOT matter.
 
         return array(
             'CHROM',
