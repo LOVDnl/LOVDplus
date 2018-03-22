@@ -149,8 +149,8 @@ class LOVD_MghaDataConverter extends LOVD_DefaultDataConverter {
             '0/.' => '0/1', // REF + no coverage taken as heterozygous variant.
             '0/0' => '0/1', // REF taken as heterozygous variant.
 
-            './1' => '1/1', // ALT + no coverage taken as homozygous ALT.
-            '1/.' => '1/1', // ALT + no coverage taken as homozygous ALT.
+            './1' => '0/1', // ALT + no GT due to multi allelic SNP taken as heterozygous ALT.
+            '1/.' => '0/1', // ALT + no GT due to multi allelic SNP taken as heterozygous ALT.
 
             '1/0' => '0/1', // Just making sure we only have one way to describe HET calls.
         );
@@ -813,7 +813,8 @@ class LOVD_MghaDataConverter extends LOVD_DefaultDataConverter {
             'REF',
             'ALT',
             'QUAL',
-            'FILTER'
+            'FILTER',
+            'Child_GT',
         );
     }
 }

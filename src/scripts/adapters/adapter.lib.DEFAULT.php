@@ -4,7 +4,7 @@
  * LEIDEN OPEN VARIATION DATABASE (LOVD)
  *
  * Created     : 2016-09-02
- * Modified    : 2018-02-22
+ * Modified    : 2018-03-22
  * For LOVD    : 3.0-18
  *
  * Copyright   : 2004-2018 Leiden University Medical Center; http://www.LUMC.nl/
@@ -223,8 +223,8 @@ class LOVD_DefaultDataConverter {
             './0' => '0/0', // REF + no coverage taken as homozygous REF.
             '0/.' => '0/0', // REF + no coverage taken as homozygous REF.
 
-            './1' => '1/1', // ALT + no coverage taken as homozygous ALT.
-            '1/.' => '1/1', // ALT + no coverage taken as homozygous ALT.
+            './1' => '0/1', // ALT + no GT due to multi allelic SNP taken as heterozygous ALT.
+            '1/.' => '0/1', // ALT + no GT due to multi allelic SNP taken as heterozygous ALT.
 
             '1/0' => '0/1', // Just making sure we only have one way to describe HET calls.
         );
