@@ -382,6 +382,7 @@ if (ACTION == 'configure' && GET) {
                 // Function to update the form when 'Remove group' button is clicked.
                 $sFiltersFormItems .= 'var funcRemoveGroup = function() {' .
                                         'var sGroupId = $(this).attr(\'data-group\'); $(\'#\' + sGroupId).remove();' .
+                                        '$(\'#configure_analysis_dialog\').trigger(\'change\');' .
                                       '};' .
                                       // We need to call this function for all existing groups.
                                       '$(\'.filter-cross-screening-delete-group\').bind(\'click\', funcRemoveGroup);';
