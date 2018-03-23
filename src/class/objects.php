@@ -1889,7 +1889,7 @@ class LOVD_Object {
         // bFindReplace     if true, find & replace option is shown in viewlist options menu.
 
         // Views list of entries in the database, allowing search.
-        global $_DB, $_INI, $_SETT;
+        global $_AUTH, $_DB, $_INI, $_INSTANCE_CONFIG, $_SETT;
 
         if (!defined('LOG_EVENT')) {
            define('LOG_EVENT', $this->sObject . '::viewList()');
@@ -2627,7 +2627,10 @@ $sFRMenuOption
 '            ');
 OPMENU
 );
-                if (!LOVD_plus || (isset($_INI['instance']['name']) && $_INI['instance']['name'] == 'mgha')) {
+                if (!LOVD_plus
+                    || empty($_INSTANCE_CONFIG['viewlists']['restrict_downloads'])
+                    || (!empty($_INSTANCE_CONFIG['viewlists'][$sViewListID]['allow_download_from_level'])
+                        && $_INSTANCE_CONFIG['viewlists'][$sViewListID]['allow_download_from_level'] <= $_AUTH['level'])) {
                     print(<<<OPMENU
         $('#viewlistMenu_$sViewListID').append(
 '            <LI class="icon">' +

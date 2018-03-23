@@ -13,6 +13,7 @@ $_INSTANCE_CONFIG['columns'] = array(
     )
 );
 
+$_INSTANCE_CONFIG['viewlists']['restrict_downloads'] = false;
 $_INSTANCE_CONFIG['viewlists']['Screenings_for_I_VE']['cols_to_show'] = array(
     // Invisible.
     'individualid',
