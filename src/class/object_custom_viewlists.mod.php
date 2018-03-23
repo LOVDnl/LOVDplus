@@ -129,40 +129,6 @@ class LOVD_CustomViewListMOD extends LOVD_CustomViewList {
                                                 IF(vog.allele = 3, "Hom", "Het")) as zygosity_, 
                                             ROUND(vog.`VariantOnGenome/Sequencing/Depth/Alt/Fraction`, 2) as var_frac_';
                     }
-                    // Observation count columns.
-                    // Find the diseases that this individual has assigned using the analysis run ID in $_GET.
-
-                    # Check if Gene Panel Obs Count related columns are used in Analysis Results Custom Viewlist
-                    $bObsCountGpInUse = false;
-                    if (in_array('obs_genepanel', $_INSTANCE_CONFIG['viewlists']['CustomVL_AnalysisRunResults_for_I_VE']['cols_to_show'])
-                        || in_array('obs_var_gp_ind_ratio', $_INSTANCE_CONFIG['viewlists']['CustomVL_AnalysisRunResults_for_I_VE']['cols_to_show'])) {
-                        $bObsCountGpInUse = true;
-                    }
-
-                    # Check if Disease Obs Count related columns are used in Analysis Results Custom Viewlist
-                    $bObsCountDiseaseInUse = false;
-                    if (in_array('obs_disease', $_INSTANCE_CONFIG['viewlists']['CustomVL_AnalysisRunResults_for_I_VE']['cols_to_show'])
-                        || in_array('obs_var_dis_ind_ratio', $_INSTANCE_CONFIG['viewlists']['CustomVL_AnalysisRunResults_for_I_VE']['cols_to_show'])) {
-                        $bObsCountDiseaseInUse = true;
-                    }
-
-                    if (!empty($_GET['search_runid'])) {
-                        // We have selected an analyses and have to use the runid to find out the diseases this individual has.
-                        $sDiseaseIDs = (!$bObsCountDiseaseInUse ? '' : implode(',', $_DB->query('SELECT i2d.diseaseid FROM ' . TABLE_IND2DIS . ' AS i2d INNER JOIN ' . TABLE_SCREENINGS . ' AS scr ON (i2d.individualid = scr.individualid) INNER JOIN ' . TABLE_ANALYSES_RUN . ' AS ar ON (scr.id = ar.screeningid) WHERE ar.id = ?', array($_GET['search_runid']))->fetchAllColumn()));
-                        $sGenePanelIDs = (!$bObsCountGpInUse ? '' : implode(',', $_DB->query('SELECT i2gp.genepanelid FROM ' . TABLE_IND2GP . ' AS i2gp INNER JOIN ' . TABLE_SCREENINGS . ' AS scr ON (i2gp.individualid = scr.individualid) INNER JOIN ' . TABLE_ANALYSES_RUN . ' AS ar ON (scr.id = ar.screeningid) WHERE ar.id = ?', array($_GET['search_runid']))->fetchAllColumn()));
-                    } elseif (!empty($_GET['search_variantid'])) {
-                        // We are viewing the default VL that does not contain the runid but it does have some variants to find out the diseases this individual has.
-                        preg_match('/^\d+/', $_GET['search_variantid'], $aRegs); // Find the first variant ID in the list of variants.
-                        $sDiseaseIDs = (!$bObsCountDiseaseInUse ? '' : implode(',', $_DB->query('SELECT i2d.diseaseid FROM ' . TABLE_IND2DIS . ' AS i2d INNER JOIN ' . TABLE_SCREENINGS . ' AS scr ON (i2d.individualid = scr.individualid) INNER JOIN ' . TABLE_SCR2VAR . ' AS s2v ON (scr.id = s2v.screeningid) WHERE s2v.variantid = ?', array($aRegs[0]))->fetchAllColumn()));
-                        $sGenePanelIDs = (!$bObsCountGpInUse ? '' : implode(',', $_DB->query('SELECT i2gp.genepanelid FROM ' . TABLE_IND2GP . ' AS i2gp INNER JOIN ' . TABLE_SCREENINGS . ' AS scr ON (i2gp.individualid = scr.individualid) INNER JOIN ' . TABLE_SCR2VAR . ' AS s2v ON (scr.id = s2v.screeningid) WHERE s2v.variantid = ?', array($aRegs[0]))->fetchAllColumn()));
-                    } else {
-                        // There is no data we can use to find this individuals diseases.
-                        $sDiseaseIDs = '';
-                        $sGenePanelIDs = '';
-                    }
-                    // Check if we have found any diseases and set the boolean flag accordingly.
-                    $bDiseases = (bool) $sDiseaseIDs;
-                    $bGenePanels = (bool) $sGenePanelIDs;
 
                     if (!$aSQL['FROM']) {
                         // First data table in query.
@@ -197,6 +163,41 @@ class LOVD_CustomViewListMOD extends LOVD_CustomViewList {
                     if ($nKeyVOG !== false && $nKeyVOG < $nKey) {
                         $aSQL['SELECT'] .= ', COUNT(DISTINCT os.individualid) AS obs_variant';
                         $aSQL['SELECT'] .= ', (COUNT(DISTINCT os.individualid) / ' . $_DB->query('SELECT COUNT(*) FROM ' . TABLE_INDIVIDUALS)->fetchColumn() . ') AS obs_var_ind_ratio';
+
+                        // Observation count columns.
+                        // Find the diseases that this individual has assigned using the analysis run ID in $_GET.
+
+                        # Check if Gene Panel Obs Count related columns are used in Analysis Results Custom Viewlist
+                        $bObsCountGpInUse = false;
+                        if (in_array('obs_genepanel', $_INSTANCE_CONFIG['viewlists']['CustomVL_AnalysisRunResults_for_I_VE']['cols_to_show'])
+                            || in_array('obs_var_gp_ind_ratio', $_INSTANCE_CONFIG['viewlists']['CustomVL_AnalysisRunResults_for_I_VE']['cols_to_show'])) {
+                            $bObsCountGpInUse = true;
+                        }
+
+                        # Check if Disease Obs Count related columns are used in Analysis Results Custom Viewlist
+                        $bObsCountDiseaseInUse = false;
+                        if (in_array('obs_disease', $_INSTANCE_CONFIG['viewlists']['CustomVL_AnalysisRunResults_for_I_VE']['cols_to_show'])
+                            || in_array('obs_var_dis_ind_ratio', $_INSTANCE_CONFIG['viewlists']['CustomVL_AnalysisRunResults_for_I_VE']['cols_to_show'])) {
+                            $bObsCountDiseaseInUse = true;
+                        }
+
+                        if (!empty($_GET['search_runid'])) {
+                            // We have selected an analyses and have to use the runid to find out the diseases this individual has.
+                            $sDiseaseIDs = (!$bObsCountDiseaseInUse ? '' : implode(',', $_DB->query('SELECT i2d.diseaseid FROM ' . TABLE_IND2DIS . ' AS i2d INNER JOIN ' . TABLE_SCREENINGS . ' AS scr ON (i2d.individualid = scr.individualid) INNER JOIN ' . TABLE_ANALYSES_RUN . ' AS ar ON (scr.id = ar.screeningid) WHERE ar.id = ?', array($_GET['search_runid']))->fetchAllColumn()));
+                            $sGenePanelIDs = (!$bObsCountGpInUse ? '' : implode(',', $_DB->query('SELECT i2gp.genepanelid FROM ' . TABLE_IND2GP . ' AS i2gp INNER JOIN ' . TABLE_SCREENINGS . ' AS scr ON (i2gp.individualid = scr.individualid) INNER JOIN ' . TABLE_ANALYSES_RUN . ' AS ar ON (scr.id = ar.screeningid) WHERE ar.id = ?', array($_GET['search_runid']))->fetchAllColumn()));
+                        } elseif (!empty($_GET['search_variantid'])) {
+                            // We are viewing the default VL that does not contain the runid but it does have some variants to find out the diseases this individual has.
+                            preg_match('/^\d+/', $_GET['search_variantid'], $aRegs); // Find the first variant ID in the list of variants.
+                            $sDiseaseIDs = (!$bObsCountDiseaseInUse ? '' : implode(',', $_DB->query('SELECT i2d.diseaseid FROM ' . TABLE_IND2DIS . ' AS i2d INNER JOIN ' . TABLE_SCREENINGS . ' AS scr ON (i2d.individualid = scr.individualid) INNER JOIN ' . TABLE_SCR2VAR . ' AS s2v ON (scr.id = s2v.screeningid) WHERE s2v.variantid = ?', array($aRegs[0]))->fetchAllColumn()));
+                            $sGenePanelIDs = (!$bObsCountGpInUse ? '' : implode(',', $_DB->query('SELECT i2gp.genepanelid FROM ' . TABLE_IND2GP . ' AS i2gp INNER JOIN ' . TABLE_SCREENINGS . ' AS scr ON (i2gp.individualid = scr.individualid) INNER JOIN ' . TABLE_SCR2VAR . ' AS s2v ON (scr.id = s2v.screeningid) WHERE s2v.variantid = ?', array($aRegs[0]))->fetchAllColumn()));
+                        } else {
+                            // There is no data we can use to find this individuals diseases.
+                            $sDiseaseIDs = '';
+                            $sGenePanelIDs = '';
+                        }
+                        // Check if we have found any diseases and set the boolean flag accordingly.
+                        $bDiseases = (bool) $sDiseaseIDs;
+                        $bGenePanels = (bool) $sGenePanelIDs;
 
                         if ($bDiseases) {
                             // If this individual has diseases then setup the disease specific observation count columns.
