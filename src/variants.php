@@ -261,9 +261,9 @@ if (!ACTION && (empty($_PE[1]) || preg_match('/^chr[0-9A-Z]{1,2}$/', $_PE[1]))) 
 
 
 
-if (PATH_COUNT == 3 && $_PE[1] == 'DBID' && !empty($_GET['search_variantid']) && !ACTION) {
-    // URL: /variants/DBID/chr_000001?search_variantid=0000000001
-    // URL: /variants/DBID/chr_000001?search_variantid=0000000001|0000000002
+if (LOVD_plus && PATH_COUNT == 3 && $_PE[1] == 'DBID' && !empty($_GET['search_variantid']) && !ACTION) {
+    // URL: /variants/DBID/b2ee25a87b92e157a9aa7846e5ad9a08a31510d4?search_variantid=0000000001
+    // URL: /variants/DBID/b2ee25a87b92e157a9aa7846e5ad9a08a31510d4?search_variantid=0000000001|0000000002
     // View all genomic variant entries with the same DBID, but only if the correct variant ID has been given.
     // This view is used for LOVD+ to show other observations of any given variant, without just allowing any DBID to be shown.
 
@@ -291,8 +291,8 @@ if (PATH_COUNT == 3 && $_PE[1] == 'DBID' && !empty($_GET['search_variantid']) &&
 
 
 
-if (PATH_COUNT == 3 && $_PE[1] == 'DBID' && !ACTION) {
-    // URL: /variants/DBID/chr1_000001
+if (LOVD_plus && PATH_COUNT == 3 && $_PE[1] == 'DBID' && !ACTION) {
+    // URL: /variants/DBID/b2ee25a87b92e157a9aa7846e5ad9a08a31510d4
     // View all genomic variant entries with the same DBID.
 
     $sID = $_PE[2];
@@ -309,7 +309,7 @@ if (PATH_COUNT == 3 && $_PE[1] == 'DBID' && !ACTION) {
     if (isset($_INSTANCE_CONFIG['viewlists']['CustomVL_DBID']['cols_to_show'])) {
         $_DATA->setViewListCols($_INSTANCE_CONFIG['viewlists']['CustomVL_DBID']['cols_to_show']);
     }
-    $_DATA->viewList('CustomVL_DBID');
+    $_DATA->viewList('CustomVL_DBID', array('VariantOnGenome/DBID'));
 
     $_T->printFooter();
     exit;

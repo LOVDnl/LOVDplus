@@ -58,6 +58,7 @@ class LOVD_GenomeVariantMOD extends LOVD_GenomeVariant {
         // Start with the parent constructor, we'll overwrite some settings afterwards.
         parent::__construct();
 
+        // Overloading the VE to add columns on the curation status and the summary annotation record.
         // SQL code for viewing an entry.
         $this->aSQLViewEntry['SELECT']   = 'vog.*, ' .
                                            'vog.`VariantOnGenome/DBID` AS DBID, ' . // We need a copy before prepareData() messes it up.
