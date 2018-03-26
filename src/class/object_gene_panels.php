@@ -4,7 +4,7 @@
  * LEIDEN OPEN VARIATION DATABASE (LOVD)
  *
  * Created     : 2016-03-01
- * Modified    : 2018-03-21
+ * Modified    : 2018-03-26
  * For LOVD    : 3.0-18
  *
  * Copyright   : 2004-2018 Leiden University Medical Center; http://www.LUMC.nl/
@@ -80,15 +80,15 @@ class LOVD_GenePanel extends LOVD_Object {
         $this->aSQLViewEntry['GROUP_BY'] = 'gp.id';
 
         // SQL code for viewing the list of gene panels
-        $this->aSQLViewList['SELECT']   = 'gp.*, COUNT(DISTINCT i2gp.individualid) AS individuals, ' .
+        $this->aSQLViewList['SELECT']   = 'gp.*, ' .
+                                          '(SELECT COUNT(DISTINCT i2gp.individualid) FROM ' . TABLE_IND2GP . ' AS i2gp WHERE i2gp.genepanelid = gp.id) AS individuals, ' .
                                           'GROUP_CONCAT(DISTINCT IF(CASE d.symbol WHEN "-" THEN "" ELSE d.symbol END = "", d.name, d.symbol) ORDER BY (d.symbol != "" AND d.symbol != "-") DESC, d.symbol, d.name SEPARATOR ", ") AS diseases_, ' .
                                           'GROUP_CONCAT(DISTINCT CONCAT(a.name, " (v", a.version, ")") ORDER BY a.name SEPARATOR ", ") AS analyses_, ' .
-                                          'uc.name AS created_by_,' .
+                                          'uc.name AS created_by_, ' .
                                           'COUNT(DISTINCT gp2g.geneid) AS genes';
         $this->aSQLViewList['FROM']     = TABLE_GENE_PANELS . ' AS gp ' .
                                           'LEFT OUTER JOIN ' . TABLE_GP2DIS . ' AS gp2d ON (gp.id = gp2d.genepanelid) ' .
                                           'LEFT OUTER JOIN ' . TABLE_GP2GENE . ' AS gp2g ON (gp.id = gp2g.genepanelid) ' .
-                                          'LEFT OUTER JOIN ' . TABLE_IND2GP . ' i2gp ON gp.id = i2gp.genepanelid ' .
                                           'LEFT OUTER JOIN ' . TABLE_USERS . ' AS uc ON (gp.created_by = uc.id) ' .
                                           'LEFT OUTER JOIN ' . TABLE_DISEASES . ' AS d ON (gp2d.diseaseid = d.id)' .
                                           'LEFT OUTER JOIN ' . TABLE_GP2A . ' AS gp2a ON (gp.id = gp2a.genepanelid) ' .
