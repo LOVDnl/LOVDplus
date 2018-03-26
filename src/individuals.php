@@ -49,7 +49,12 @@ if (LOVD_plus && PATH_COUNT == 1 && !ACTION && !isset($_GET['search_analysis_sta
     //  all search terms in open fields must be provided in the $_GET to make sure they are kept.
     // So we must reload the individuals VL, with the filter in $_GET.
     // Hide confirmed analyses by default.
-    header('Location: ' . lovd_getInstallURL() . CURRENT_PATH . '?search_analysis_status=' . urlencode('!="Confirmed"'));
+    header('Location: ' . lovd_getInstallURL() . CURRENT_PATH . '?search_analysis_status=' . urlencode('!="Confirmed"') .
+        (empty($_GET)? '' : '&' . implode('&',
+                array_map(function ($sKey)
+                {
+                    return $sKey . '=' . urlencode($_GET[$sKey]);
+                }, array_keys($_GET)))));
     exit;
 }
 
