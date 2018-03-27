@@ -158,14 +158,6 @@ class LOVD_ObservationCounts
                  ON (s.id = s2v.screeningid AND s2v.variantid = ?)';
         $aResult = $_DB->query($sSQL, array($this->nVariantID))->fetchAssoc();
 
-        // Q: This means anyone can update as long as the screening is open. Is that intentional? There's a read-only user.
-        // A: Make it require at least LEVEL_ANALYZER. ANALYZER can also load data if THERE IS NO DATA YET, for status IN PROGRESS. Currently done in code below.
-        if ($aResult['analysis_statusid'] == ANALYSIS_STATUS_READY) {
-            return true;
-        }
-
-        // Q: This is different than the "normal" authorization used in LOVD+. Maybe standardize that?
-        // A: STANDARDIZE THIS, BUT don't allow ADMIN for STATUS WAIT CONFIRMATION.
         if ($aResult['analysis_statusid'] == ANALYSIS_STATUS_IN_PROGRESS) {
             // If the status is in progress, you either need to be owner or up, or there should be no previous observation counts.
             if ($_AUTH['level'] >= LEVEL_OWNER || !$this->loadExistingData()) {
