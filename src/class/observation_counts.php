@@ -33,6 +33,10 @@ if (!defined('ROOT_PATH')) {
     exit;
 }
 
+
+
+
+
 class LOVD_ObservationCounts
 {
     // Wrap all the logic related to generating observation counts here.
@@ -167,6 +171,142 @@ class LOVD_ObservationCounts
 
         // Every other analysis status (including CLOSED) cannot update observation count data.
         return false;
+    }
+
+
+
+
+
+    public function display ()
+    {
+        // Returns a string of html to display observation counts data.
+        global $_AUTH, $_INSTANCE_CONFIG;
+
+        $sMetadata = '';
+        $aData = $this->aData;
+        $aSettings = $_INSTANCE_CONFIG['observation_counts'];
+        $bHasPermissionToViewVariants = ($_AUTH['level'] >= LEVEL_ANALYZER);
+        $generateDataLink = ' <SPAN id="obscount-refresh"> | <A href="#" onClick="lovd_generate_obscount(\'' . $this->nVariantID . '\');return false;">Refresh Data</A></SPAN>';
+        if (!$this->canUpdateData()) {
+            $generateDataLink = '<TR><TD>Current analysis status or your user permission does not allow Observation Counts data to be updated.</TD></TR>';
+        }
+        $sDataTables = '';
+
+        if(empty($aData) && !lovd_isAuthorized('variant', $this->nVariantID)) {
+            $sMetadata = '<TR><TD>You do not have permission to generate Observation Counts for this variant.</TD></TR>';
+        } elseif (empty($aData)) {
+            $sMetadata = '<TR><TD>There is no existing Observation Counts data <SPAN id="obscount-refresh"> | <A href="#" onClick="lovd_generate_obscount(\'' . $this->nVariantID . '\');return false;">Generate Data</A></SPAN></TD></TR>';
+        } else {
+            // If there is data, loop through categories and display results.
+            foreach (array_keys($_INSTANCE_CONFIG['observation_counts']) as $sType) {
+                // Prepare settings.
+                $nDecimals = self::$nDefaultShowDecimals;
+                if (isset($_INSTANCE_CONFIG['observation_counts'][$sType]['show_decimals'])) {
+                    $nDecimals = $_INSTANCE_CONFIG['observation_counts'][$sType]['show_decimals'];
+                }
+
+                // Column definitions.
+                $sColumns = '';
+                foreach ($aSettings[$sType]['columns'] as $sLabel) {
+                    $sColumns .= '<TH>' . $sLabel . '</TH>';
+                }
+
+                switch ($sType) {
+                    // Type-specific formatting.
+                    case 'genepanel':
+                        $sCategories = '';
+                        if (!empty($aData['genepanel']['error'])) {
+                            $sColspan = ' colspan="' . count($aSettings['genepanel']['columns']) . '"';
+                            $sCategories .= '<TR><TD' . $sColspan . '>' . $aData['genepanel']['error'] . '</TD></TR>';
+                        } else {
+                            foreach ($aData['genepanel'] as $sGpId => $aGpData) {
+                                foreach ($aGpData as $sCategory => $aCategoryData) {
+                                    $sCategories .= '<TR>';
+                                    foreach ($aSettings['genepanel']['columns'] as $sKey => $sLabel) {
+                                        $sFormattedValue = $aCategoryData[$sKey];
+
+                                        if ($sKey == 'percentage') {
+                                            // Format the percentage, as per requested.
+                                            $sFormattedValue = number_format($sFormattedValue, $nDecimals);
+                                            if ($bHasPermissionToViewVariants) {
+                                                if ($aCategoryData[$sKey] > 0 && $aCategoryData[$sKey] <= self::$nMaxVariantsToEnableLink) {
+                                                    // If the total number of variants is not too big for us to generate an url.
+                                                    $sFormattedValue = '<A href="/variants/DBID/' . $this->getVogDBID() . '?search_variantid=' . implode('|', $aCategoryData['variant_ids']) . '" target="_blank">' . $sFormattedValue . '</A>';
+                                                }
+                                            }
+                                        }
+
+                                        $sCategories .= ($sCategory == 'all'? '<TH>' : '<TD>') .
+                                            $sFormattedValue .
+                                            ($sCategory == 'all'? '</TH>' : '</TD>');
+                                    }
+                                    $sCategories .= '</TR>';
+                                }
+                            }
+                        }
+                        break;
+
+                    case 'general':
+                        $sCategories = '';
+                        if (!empty($aData['general']['error'])) {
+                            $sColspan = ' colspan="' . count($aSettings['general']['columns']) . '"';
+                            $sCategories .= '<TR><TD' . $sColspan . '>' . $aData['general']['error'] . '</TD></TR>';
+                        } else {
+                            foreach ($aData['general'] as $sCategory => $aCategoryData) {
+                                // If threshold data has the greater than sign, mark the row.
+                                $sClass = '';
+                                if (strpos($aData['general'][$sCategory]['threshold'], '>') !== false) {
+                                    $sClass = ' class="above-threshold"';
+                                }
+
+                                $sCategories .= '<TR' . $sClass . '>';
+                                foreach ($aSettings['general']['columns'] as $sKey => $sLabel) {
+                                    if ($sKey == 'percentage') {
+                                        // Format the percentage, as per requested.
+                                        $sFormattedValue = number_format($aCategoryData[$sKey], $nDecimals);
+                                    } else {
+                                        $sFormattedValue = $aCategoryData[$sKey];
+                                    }
+                                    $sCategories .= '<TD>' . $sFormattedValue . '</TD>';
+                                }
+                                $sCategories .= '</TR>';
+                            }
+                        }
+                        break;
+                }
+
+                $sTable = '';
+                if (!empty($aData[$sType])) {
+                    $sTable = '
+            <TABLE id="obscount-table-' . $sType . '" width="600" class="data">
+              <TR id="obscount-header-' . $sType . '"></TR>
+              <TBODY id="obscount-data-' . $sType . '">
+                <TR>' . $sColumns . '</TR>' .
+                        $sCategories . '
+              </TBODY>
+            </TABLE>';
+                }
+
+                $sDataTables .= $sTable;
+            }
+
+            $sMetadata .= '
+              <TR id="obscount-info">
+                <TH>Data updated ' . date('d M Y h:ia', $aData['updated']) . ' | Population size was: ' . $aData['population_size'] . $generateDataLink . '</TH>
+              </TR>';
+        }
+
+        // HTML to be displayed.
+        $sTable = '
+            <TABLE width="600" class="data">
+              <TR><TH style="font-size : 13px;">Observation Counts</TH></TR>' .
+            $sMetadata . '
+              <TR id="obscount-feedback" style="display: none;">
+                <TH>Loading data...</TH>
+              </TR>
+            </TABLE>' . $sDataTables;
+
+        return $sTable;
     }
 
 
@@ -606,141 +746,5 @@ class LOVD_ObservationCounts
         }
 
         return $this->aColumns;
-    }
-
-
-
-
-
-    public function display ()
-    {
-        // Returns a string of html to display observation counts data.
-        global $_AUTH, $_INSTANCE_CONFIG;
-
-        $sMetadata = '';
-        $aData = $this->aData;
-        $aSettings = $_INSTANCE_CONFIG['observation_counts'];
-        $bHasPermissionToViewVariants = ($_AUTH['level'] >= LEVEL_ANALYZER);
-        $generateDataLink = ' <SPAN id="obscount-refresh"> | <A href="#" onClick="lovd_generate_obscount(\'' . $this->nVariantID . '\');return false;">Refresh Data</A></SPAN>';
-        if (!$this->canUpdateData()) {
-            $generateDataLink = '<TR><TD>Current analysis status or your user permission does not allow Observation Counts data to be updated.</TD></TR>';
-        }
-        $sDataTables = '';
-
-        if(empty($aData) && !lovd_isAuthorized('variant', $this->nVariantID)) {
-            $sMetadata = '<TR><TD>You do not have permission to generate Observation Counts for this variant.</TD></TR>';
-        } elseif (empty($aData)) {
-            $sMetadata = '<TR><TD>There is no existing Observation Counts data <SPAN id="obscount-refresh"> | <A href="#" onClick="lovd_generate_obscount(\'' . $this->nVariantID . '\');return false;">Generate Data</A></SPAN></TD></TR>';
-        } else {
-            // If there is data, loop through categories and display results.
-            foreach (array_keys($_INSTANCE_CONFIG['observation_counts']) as $sType) {
-                // Prepare settings.
-                $nDecimals = self::$nDefaultShowDecimals;
-                if (isset($_INSTANCE_CONFIG['observation_counts'][$sType]['show_decimals'])) {
-                    $nDecimals = $_INSTANCE_CONFIG['observation_counts'][$sType]['show_decimals'];
-                }
-
-                // Column definitions.
-                $sColumns = '';
-                foreach ($aSettings[$sType]['columns'] as $sLabel) {
-                    $sColumns .= '<TH>' . $sLabel . '</TH>';
-                }
-
-                switch ($sType) {
-                    // Type-specific formatting.
-                    case 'genepanel':
-                        $sCategories = '';
-                        if (!empty($aData['genepanel']['error'])) {
-                            $sColspan = ' colspan="' . count($aSettings['genepanel']['columns']) . '"';
-                            $sCategories .= '<TR><TD' . $sColspan . '>' . $aData['genepanel']['error'] . '</TD></TR>';
-                        } else {
-                            foreach ($aData['genepanel'] as $sGpId => $aGpData) {
-                                foreach ($aGpData as $sCategory => $aCategoryData) {
-                                    $sCategories .= '<TR>';
-                                    foreach ($aSettings['genepanel']['columns'] as $sKey => $sLabel) {
-                                        $sFormattedValue = $aCategoryData[$sKey];
-
-                                        if ($sKey == 'percentage') {
-                                            // Format the percentage, as per requested.
-                                            $sFormattedValue = number_format($sFormattedValue, $nDecimals);
-                                            if ($bHasPermissionToViewVariants) {
-                                                if ($aCategoryData[$sKey] > 0 && $aCategoryData[$sKey] <= self::$nMaxVariantsToEnableLink) {
-                                                    // If the total number of variants is not too big for us to generate an url.
-                                                    $sFormattedValue = '<A href="/variants/DBID/' . $this->getVogDBID() . '?search_variantid=' . implode('|', $aCategoryData['variant_ids']) . '" target="_blank">' . $sFormattedValue . '</A>';
-                                                }
-                                            }
-                                        }
-
-                                        $sCategories .= ($sCategory == 'all'? '<TH>' : '<TD>') .
-                                            $sFormattedValue .
-                                            ($sCategory == 'all'? '</TH>' : '</TD>');
-                                    }
-                                    $sCategories .= '</TR>';
-                                }
-                            }
-                        }
-                        break;
-
-                    case 'general':
-                        $sCategories = '';
-                        if (!empty($aData['general']['error'])) {
-                            $sColspan = ' colspan="' . count($aSettings['general']['columns']) . '"';
-                            $sCategories .= '<TR><TD' . $sColspan . '>' . $aData['general']['error'] . '</TD></TR>';
-                        } else {
-                            foreach ($aData['general'] as $sCategory => $aCategoryData) {
-                                // If threshold data has the greater than sign, mark the row.
-                                $sClass = '';
-                                if (strpos($aData['general'][$sCategory]['threshold'], '>') !== false) {
-                                    $sClass = ' class="above-threshold"';
-                                }
-
-                                $sCategories .= '<TR' . $sClass . '>';
-                                foreach ($aSettings['general']['columns'] as $sKey => $sLabel) {
-                                    if ($sKey == 'percentage') {
-                                        // Format the percentage, as per requested.
-                                        $sFormattedValue = number_format($aCategoryData[$sKey], $nDecimals);
-                                    } else {
-                                        $sFormattedValue = $aCategoryData[$sKey];
-                                    }
-                                    $sCategories .= '<TD>' . $sFormattedValue . '</TD>';
-                                }
-                                $sCategories .= '</TR>';
-                            }
-                        }
-                        break;
-                }
-
-                $sTable = '';
-                if (!empty($aData[$sType])) {
-                    $sTable = '
-            <TABLE id="obscount-table-' . $sType . '" width="600" class="data">
-              <TR id="obscount-header-' . $sType . '"></TR>
-              <TBODY id="obscount-data-' . $sType . '">
-                <TR>' . $sColumns . '</TR>' .
-                        $sCategories . '
-              </TBODY>
-            </TABLE>';
-                }
-
-                $sDataTables .= $sTable;
-            }
-
-            $sMetadata .= '
-              <TR id="obscount-info">
-                <TH>Data updated ' . date('d M Y h:ia', $aData['updated']) . ' | Population size was: ' . $aData['population_size'] . $generateDataLink . '</TH>
-              </TR>';
-        }
-
-        // HTML to be displayed.
-        $sTable = '
-            <TABLE width="600" class="data">
-              <TR><TH style="font-size : 13px;">Observation Counts</TH></TR>' .
-              $sMetadata . '
-              <TR id="obscount-feedback" style="display: none;">
-                <TH>Loading data...</TH>
-              </TR>
-            </TABLE>' . $sDataTables;
-
-        return $sTable;
     }
 }
