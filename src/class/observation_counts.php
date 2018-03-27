@@ -639,97 +639,87 @@ class LOVD_ObservationCounts
         } elseif (empty($aData)) {
             $sMetadata = '<TR><TD>There is no existing Observation Counts data <SPAN id="obscount-refresh"> | <A href="#" onClick="lovd_generate_obscount(\''. $this->nVariantID .'\');return false;">Generate Data</A></SPAN></TD></TR>';
         } else {
-            // If there is data.
-
-            // General categories table.
-            $sGeneralColumns = '';
-            foreach ($aSettings['general']['columns'] as $sKey => $sLabel) {
-                $sGeneralColumns .= '<TH>' . $sLabel . '</TH>';
-            }
-
-            $sGeneralCategories = '';
-            if (!empty($aData['general']['error'])) {
-                $sColspan = ' colspan="' . count($aSettings['general']['columns']) . '"';
-                $sGeneralCategories .= '<TR><TD'. $sColspan .'>' . $aData['general']['error'] . '</TD></TR>';
-            } else {
-                foreach ($aData['general'] as $sCategory => $aCategoryData) {
-                    // If threshold data has the greater than sign, mark the row.
-                    $sClass = '';
-                    if (strpos($aData['general'][$sCategory]['threshold'], '>') !== false) {
-                        $sClass = ' class="above-threshold"';
-                    }
-
-                    $sGeneralCategories .= '<TR' . $sClass . '>';
-                    foreach ($aSettings['general']['columns'] as $sKey => $sLabel) {
-                        $sGeneralCategories .= '<TD>' . $aCategoryData[$sKey] . '</TD>';
-                    }
-                    $sGeneralCategories .= '</TR>';
+            // If there is data, loop through categories and display results.
+            foreach (array_keys($_INSTANCE_CONFIG['observation_counts']) as $sType) {
+                // Column definitions.
+                $sColumns = '';
+                foreach ($aSettings[$sType]['columns'] as $sLabel) {
+                    $sColumns .= '<TH>' . $sLabel . '</TH>';
                 }
-            }
 
-            // Gene panel categories table.
-            $sGenepanelColumns = '';
-            foreach ($aSettings['genepanel']['columns'] as $sKey => $sLabel) {
-                $sGenepanelColumns .= '<TH>' . $sLabel . '</TH>';
-            }
+                switch ($sType) {
+                    // Type-specific formatting.
+                    case 'genepanel':
+                        $sCategories = '';
+                        if (!empty($aData['genepanel']['error'])) {
+                            $sColspan = ' colspan="' . count($aSettings['genepanel']['columns']) . '"';
+                            $sCategories .= '<TR><TD'. $sColspan .'>' . $aData['genepanel']['error'] . '</TD></TR>';
+                        } else {
+                            foreach ($aData['genepanel'] as $sGpId => $aGpData) {
+                                foreach ($aGpData as $sCategory => $aCategoryData) {
+                                    $sCategories .= '<TR>';
+                                    foreach ($aSettings['genepanel']['columns'] as $sKey => $sLabel) {
+                                        $sFormattedValue = $aCategoryData[$sKey];
 
-            $sGenepanelCategories = '';
-            if (!empty($aData['genepanel']['error'])) {
-                $sColspan = ' colspan="' . count($aSettings['genepanel']['columns']) . '"';
-                $sGenepanelCategories .= '<TR><TD'. $sColspan .'>' . $aData['genepanel']['error'] . '</TD></TR>';
-            } else {
-                foreach ($aData['genepanel'] as $sGpId => $aGpData) {
-                    foreach ($aGpData as $sCategory => $aCategoryData) {
-                        $sGenepanelCategories .= '<TR>';
-                        foreach ($aSettings['genepanel']['columns'] as $sKey => $sLabel) {
-                            $sFormattedValue = $aCategoryData[$sKey];
+                                        if ($sKey == 'percentage' && $bHasPermissionToViewVariants) {
+                                            if (count($aCategoryData[$sKey]) > 0 && count($aCategoryData[$sKey]) <= static::$MAX_VAR_TO_ENABLE_LINK) {
+                                                // If the total number of variants is not too big for us to generate an url.
+                                                $sFormattedValue = '<A href="/variants/DBID/' . $this->getVogDBID() . '?search_variantid=' . implode('|', $aCategoryData['variant_ids']) . '" target="_blank">' . $aCategoryData[$sKey] . '</A>';
+                                            }
+                                        }
 
-                            if ($sKey == 'percentage' && $bHasPermissionToViewVariants) {
-                                if (count($aCategoryData[$sKey]) > 0 && count($aCategoryData[$sKey]) <= static::$MAX_VAR_TO_ENABLE_LINK) {
-                                    // If the total number of variants is not too big for us to generate an url.
-                                    $sFormattedValue = '<A href="/variants/DBID/' . $this->getVogDBID() . '?search_variantid=' . implode('|', $aCategoryData['variant_ids']) . '" target="_blank">' . $aCategoryData[$sKey] . '</A>';
+                                        $sCategories .= ($sCategory == 'all'? '<TH>' : '<TD>') .
+                                            $sFormattedValue .
+                                            ($sCategory == 'all'? '</TH>' : '</TD>');
+                                    }
+                                    $sCategories .= '</TR>';
                                 }
                             }
-
-                            $sGenepanelCategories .= ($sCategory == 'all'? '<TH>' : '<TD>') .
-                                                     $sFormattedValue .
-                                                     ($sCategory == 'all'? '</TH>' : '</TD>');
                         }
-                        $sGenepanelCategories .= '</TR>';
-                    }
+                        break;
+
+                    case 'general':
+                        $sCategories = '';
+                        if (!empty($aData['general']['error'])) {
+                            $sColspan = ' colspan="' . count($aSettings['general']['columns']) . '"';
+                            $sCategories .= '<TR><TD'. $sColspan .'>' . $aData['general']['error'] . '</TD></TR>';
+                        } else {
+                            foreach ($aData['general'] as $sCategory => $aCategoryData) {
+                                // If threshold data has the greater than sign, mark the row.
+                                $sClass = '';
+                                if (strpos($aData['general'][$sCategory]['threshold'], '>') !== false) {
+                                    $sClass = ' class="above-threshold"';
+                                }
+
+                                $sCategories .= '<TR' . $sClass . '>';
+                                foreach ($aSettings['general']['columns'] as $sKey => $sLabel) {
+                                    $sCategories .= '<TD>' . $aCategoryData[$sKey] . '</TD>';
+                                }
+                                $sCategories .= '</TR>';
+                            }
+                        }
+                        break;
                 }
-            }
 
-            $sGenepanelTable = '';
-            if (!empty($aData['genepanel'])) {
-                $sGenepanelTable = '
-            <TABLE id="obscount-table-genepanel" width="600" class="data">
-              <TR id="obscount-header-genepanel"></TR>
-              <TBODY id="obscount-data-genepanel">
-                <TR>' . $sGenepanelColumns . '</TR>' .
-                    $sGenepanelCategories . '
+                $sTable = '';
+                if (!empty($aData[$sType])) {
+                    $sTable = '
+            <TABLE id="obscount-table-' . $sType . '" width="600" class="data">
+              <TR id="obscount-header-' . $sType . '"></TR>
+              <TBODY id="obscount-data-' . $sType . '">
+                <TR>' . $sColumns . '</TR>' .
+                        $sCategories . '
               </TBODY>
             </TABLE>';
-            }
+                }
 
-            $sGeneralTable = '';
-            if (!empty($aData['general'])) {
-                $sGeneralTable = '
-            <TABLE id="obscount-table-general" width="600" class="data">
-              <TR id="obscount-header-general"></TR>
-              <TBODY id="obscount-data-general">
-                <TR>' . $sGeneralColumns . '</TR>' .
-                    $sGeneralCategories . '
-              </TBODY>
-            </TABLE>';
+                $sDataTables .= $sTable;
             }
 
             $sMetadata .= '
               <TR id="obscount-info">
-                <TH>Data updated '. date('d M Y h:ia', $aData['updated']) .' | Population size was: ' . $aData['population_size'] . $generateDataLink . ' </TH>
+                <TH>Data updated '. date('d M Y h:ia', $aData['updated']) .' | Population size was: ' . $aData['population_size'] . $generateDataLink . '</TH>
               </TR>';
-
-            $sDataTables = $sGenepanelTable . $sGeneralTable;
         }
 
         // HTML to be displayed.
