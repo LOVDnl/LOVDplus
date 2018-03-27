@@ -1,5 +1,4 @@
 <?php
-
 /*******************************************************************************
  *
  * LEIDEN OPEN VARIATION DATABASE (LOVD)
@@ -620,13 +619,14 @@ class LOVD_ObservationCounts
 
 
 
-    public function display ($aSettings)
+    public function display ()
     {
         // Returns a string of html to display observation counts data.
-        global $_AUTH;
+        global $_AUTH, $_INSTANCE_CONFIG;
 
         $sMetadata = '';
         $aData = $this->aData;
+        $aSettings = $_INSTANCE_CONFIG['observation_counts'];
         $bHasPermissionToViewVariants = ($_AUTH['level'] >= LEVEL_MANAGER);
         $generateDataLink = ' <SPAN id="obscount-refresh"> | <A href="#" onClick="lovd_generate_obscount(\'' . $this->nVariantID . '\');return false;">Refresh Data</A></SPAN>';
         if (!$this->canUpdateData()) {

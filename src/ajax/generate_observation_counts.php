@@ -46,5 +46,5 @@ require_once ROOT_PATH . 'class/observation_counts.php';
 $zObsCount = new LOVD_ObservationCounts($nID);
 $zObsCount->buildData();
 
-print($zObsCount->display($_INSTANCE_CONFIG['observation_counts']));
+print($zObsCount->display());
 ?>

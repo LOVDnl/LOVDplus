@@ -679,7 +679,7 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && !ACTION) {
         $aData = $zObsCount->getData();
 
         print('<DIV id="observation-counts">');
-        print($zObsCount->display($_INSTANCE_CONFIG['observation_counts']));
+        print($zObsCount->display());
         print('</DIV>');
 ?>
         <SCRIPT type="text/javascript">
