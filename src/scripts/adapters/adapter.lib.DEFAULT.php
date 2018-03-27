@@ -4,7 +4,7 @@
  * LEIDEN OPEN VARIATION DATABASE (LOVD)
  *
  * Created     : 2016-09-02
- * Modified    : 2018-03-22
+ * Modified    : 2018-03-23
  * For LOVD    : 3.0-18
  *
  * Copyright   : 2004-2018 Leiden University Medical Center; http://www.LUMC.nl/
@@ -90,6 +90,10 @@ $_INSTANCE_CONFIG['cross_screenings'] = array(
 );
 
 $_INSTANCE_CONFIG['viewlists'] = array(
+    // If set to true, ViewLists are not allowed to be downloaded, except specifically
+    //  enabled as 'allow_download_from_level' in the ViewLists's settings below.
+    'restrict_downloads' => true,
+
     // The screenings data listing on the individual's detailed view.
     'Screenings_for_I_VE' => array(
         'cols_to_show' => array(
@@ -110,6 +114,8 @@ $_INSTANCE_CONFIG['viewlists'] = array(
     ),
     // The data analysis results data listing.
     'CustomVL_AnalysisRunResults_for_I_VE' => array(
+        // Even when downloading ViewLists is restricted, allow downloading from LEVEL_MANAGER.
+        'allow_download_from_level' => LEVEL_MANAGER,
         'cols_to_show' => array(
             // Select these columns for the analysis results table.
             // Note, that you also need to define the hidden columns that

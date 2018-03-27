@@ -32,6 +32,7 @@ $_INSTANCE_CONFIG['viewlists']['Screenings_for_I_VE']['cols_to_show'] = array(
     'analysis_status'
 );
 
+$_INSTANCE_CONFIG['viewlists']['CustomVL_AnalysisRunResults_for_I_VE']['allow_download_from_level'] = false;
 $_INSTANCE_CONFIG['viewlists']['CustomVL_AnalysisRunResults_for_I_VE']['cols_to_show'] = array(
     // Invisible.
     'runid',

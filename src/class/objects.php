@@ -139,6 +139,7 @@ class LOVD_Object {
 
 
 
+
     public function applyColumnFindAndReplace ($sFRFieldname, $sFRSearchValue, $sFRReplaceValue,
                                                 $aArgs, $aOptions) {
         // Perform a find and replace action for given field name (column).
@@ -365,7 +366,7 @@ class LOVD_Object {
         }
 
         // Check all fields that we receive for data type and maximum length.
-        // No longer to this through $aForm, because when importing,
+        // No longer do this through $aForm, because when importing,
         //  we do have data to check but no $aForm entry linked to it.
         foreach ($aData as $sFieldname => $sFieldvalue) {
 
@@ -666,13 +667,16 @@ class LOVD_Object {
                 $aIDs = array($sIDColumn => $ID);
             }
 
-            $nCount = $_DB->query('SELECT COUNT(*) FROM ' . constant($this->sTable) . ' WHERE ' . implode(' = ? AND ', array_keys($aIDs)) . ' = ?', array_values($aIDs))->fetchColumn();
+            $nCount = (int) $_DB->query('SELECT 1 FROM ' . constant($this->sTable) . '
+                                         WHERE ' . implode(' = ? AND ', array_keys($aIDs)) . ' = ? LIMIT 1',
+                                array_values($aIDs))->fetchColumn();
         } else {
             if ($this->nCount !== '') {
                 return $this->nCount;
             }
-            $nCount = $_DB->query('SELECT COUNT(*) FROM ' . constant($this->sTable))->fetchColumn();
-            $this->nCount = $nCount;
+            $b = $_DB->query('SELECT 1 FROM ' . constant($this->sTable) . '
+                              LIMIT 1')->fetchColumn();
+            $this->nCount = $nCount = (int) $b;
         }
         return $nCount;
     }
@@ -966,9 +970,6 @@ class LOVD_Object {
 
 
 
-
-
-
     function getSortDefault ()
     {
         return $this->sSortDefault;
@@ -1011,6 +1012,7 @@ class LOVD_Object {
         // Note: tablename may be an alias.
         return array($sTableName, $sFieldName);
     }
+
 
 
 
@@ -1315,7 +1317,6 @@ class LOVD_Object {
         // sFRSearchValue       Search string.
         // sFRReplaceValue      Replace value.
         // aOptions             F&R options (e.g. match type)
-
         global $_DB;
 
         // Try to discover the tablename and fieldname, as $sFRFieldname may be
@@ -1889,7 +1890,7 @@ class LOVD_Object {
         // bFindReplace     if true, find & replace option is shown in viewlist options menu.
 
         // Views list of entries in the database, allowing search.
-        global $_DB, $_INI, $_SETT;
+        global $_AUTH, $_DB, $_INI, $_INSTANCE_CONFIG, $_SETT;
 
         if (!defined('LOG_EVENT')) {
            define('LOG_EVENT', $this->sObject . '::viewList()');
@@ -2627,7 +2628,10 @@ $sFRMenuOption
 '            ');
 OPMENU
 );
-                if (!LOVD_plus || (isset($_INI['instance']['name']) && $_INI['instance']['name'] == 'mgha')) {
+                if (!LOVD_plus
+                    || empty($_INSTANCE_CONFIG['viewlists']['restrict_downloads'])
+                    || (!empty($_INSTANCE_CONFIG['viewlists'][$sViewListID]['allow_download_from_level'])
+                        && $_INSTANCE_CONFIG['viewlists'][$sViewListID]['allow_download_from_level'] <= $_AUTH['level'])) {
                     print(<<<OPMENU
         $('#viewlistMenu_$sViewListID').append(
 '            <LI class="icon">' +
