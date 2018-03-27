@@ -675,12 +675,11 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && !ACTION) {
     if (!empty($_INSTANCE_CONFIG['observation_counts'])) {
         print('            <BR><BR>' . "\n\n");
         require_once ROOT_PATH . 'class/observation_counts.php';
-        $aSettings = (!empty($_INSTANCE_CONFIG['observation_counts'])? $_INSTANCE_CONFIG['observation_counts'] : array());
         $zObsCount = new LOVD_ObservationCounts($nID);
         $aData = $zObsCount->getData();
 
         print('<DIV id="observation-counts">');
-        print($zObsCount->display($aSettings));
+        print($zObsCount->display($_INSTANCE_CONFIG['observation_counts']));
         print('</DIV>');
 ?>
         <SCRIPT type="text/javascript">

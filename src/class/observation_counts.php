@@ -5,10 +5,10 @@
  * LEIDEN OPEN VARIATION DATABASE (LOVD)
  *
  * Created     : 2017-01-12
- * Modified    : 2017-05-02
+ * Modified    : 2018-03-27
  * For LOVD    : 3.0-18
  *
- * Copyright   : 2004-2017 Leiden University Medical Center; http://www.LUMC.nl/
+ * Copyright   : 2004-2018 Leiden University Medical Center; http://www.LUMC.nl/
  * Programmers : Juny Kesumadewi <juny.kesumadewi@unimelb.edu.au>
  *               Ivo F.A.C. Fokkema <I.F.A.C.Fokkema@LUMC.nl>
  *
@@ -63,6 +63,12 @@ class LOVD_ObservationCounts
 
     function __construct ($nVariantID)
     {
+        global $_INSTANCE_CONFIG;
+
+        if (!isset($_INSTANCE_CONFIG['observation_counts'])) {
+            $_INSTANCE_CONFIG['observation_counts'] = array();
+        }
+
         $this->nVariantID = $nVariantID;
         $this->aIndividual = $this->initIndividualData();
         $this->aData = $this->loadExistingData();
@@ -72,13 +78,10 @@ class LOVD_ObservationCounts
 
 
 
-    public function buildData ($aSettings = array())
+    public function buildData ()
     {
         // Generate observation counts data and store it in the database in json format.
-        //
-        // $aSettings is the instance-specific observation count settings,
-        //  see the default adapter file for the format.
-        global $_DB;
+        global $_DB, $_INSTANCE_CONFIG;
 
         // Check if current analysis status as well as user's permission allow data to be generated.
         if (!$this->canUpdateData()) {
@@ -90,7 +93,7 @@ class LOVD_ObservationCounts
         $aData = array();
         $aData['population_size'] = $_DB->query(
             'SELECT COUNT(DISTINCT individualid) FROM ' . TABLE_SCREENINGS)->fetchColumn();
-        foreach ($aSettings as $sType => $aTypeSettings) {
+        foreach ($_INSTANCE_CONFIG['observation_counts'] as $sType => $aTypeSettings) {
             $this->aColumns = $this->validateColumns($sType, $aTypeSettings);
 
             // Now, generate observation counts data for each type selected in the settings.
@@ -99,8 +102,8 @@ class LOVD_ObservationCounts
                     // Generic categories have the requirement that it can only be calculated if
                     // there is a minimum number of individuals (with screenings) in the database.
                     $minPopSize = static::$DEFAULT_MIN_POP_SIZE;
-                    if (isset($aSettings['general']['min_population_size'])) {
-                        $minPopSize = $aSettings['general']['min_population_size'];
+                    if (isset($aTypeSettings['min_population_size'])) {
+                        $minPopSize = $aTypeSettings['min_population_size'];
                     }
 
                     if ($aData['population_size'] < $minPopSize) {
