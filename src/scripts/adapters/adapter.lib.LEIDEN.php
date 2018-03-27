@@ -27,6 +27,7 @@ $_INSTANCE_CONFIG['observation_counts'] = array(
             'all',
             'gender',
         ),
+        'show_decimals' => 1,
     ),
     'general' => array(
         // if columns is empty, use default columns list
@@ -39,6 +40,7 @@ $_INSTANCE_CONFIG['observation_counts'] = array(
             'all',
             'Individual/Gender',
         ),
+        'show_decimals' => 1,
         'min_population_size' => 100,
     ),
 );
