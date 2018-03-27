@@ -44,24 +44,21 @@ class LOVD_ObservationCounts
 
     protected $aData = array(); // Store the observation counts data fetched from the database or calculated by buildData.
     protected $aIndividual = array(); // Store details of the individual where this variant is found.
-    protected $nVariantID = null; // The Id of the variant we are looking into.
-
+    protected $nVariantID = null; // The ID of the variant we are looking into.
     protected $aColumns = array(); // The list of observation counts columns to be displayed for this instance.
 
     // Round calculated percentages to what amount of decimals? (0-3)
     protected static $nDefaultShowDecimals = 1;
+    // How we want to show that a category does not have sufficient data to generate observation counts.
+    protected static $sEmptyDataDisplay = '-';
+    // The maximum number of variants where we allow url to be generated to view other variants in the same category.
+    protected static $nMaxVariantsToEnableLink = 100;
+    // The minimum amount of Individuals in the database before we calculate general observation counts.
+    protected static $nDefaultMinimumPopulationSize = 100;
 
-    // We currently divide the Observation Counts data calculations into these types.
-    // They are essentially different because they have different criteria of
-    // how the data should be calculated
-    // Q: Why used and named like a constant, but not defined like one? (usage also not everywhere)
-    // A: Just use a variable.
-    public static $EMPTY_DATA_DISPLAY = '-'; // How we want to show that a category does not have sufficient data to generate observation counts.
-    public static $MAX_VAR_TO_ENABLE_LINK = 100; // The maximum number of variants where we allow url to be generated to view other variants in the same category.
 
-    // Q: Why this separately from the rest of the config?
-    // A: Just pull it into the other defaults.
-    protected static $DEFAULT_MIN_POP_SIZE = 100;
+
+
 
     function __construct ($nVariantID)
     {
@@ -103,7 +100,7 @@ class LOVD_ObservationCounts
                 case 'general':
                     // Generic categories have the requirement that it can only be calculated if
                     // there is a minimum number of individuals (with screenings) in the database.
-                    $minPopSize = static::$DEFAULT_MIN_POP_SIZE;
+                    $minPopSize = self::$nDefaultMinimumPopulationSize;
                     if (isset($aTypeSettings['min_population_size'])) {
                         $minPopSize = $aTypeSettings['min_population_size'];
                     }
@@ -336,12 +333,12 @@ class LOVD_ObservationCounts
             $aCategoryData = array(
                 'label' => $aRules['label'],
                 'value' => $aRules['value'],
-                'total_individuals' => static::$EMPTY_DATA_DISPLAY,
-                'num_affected' => static::$EMPTY_DATA_DISPLAY,
-                'num_not_affected' => static::$EMPTY_DATA_DISPLAY,
-                'num_ind_with_variant' => static::$EMPTY_DATA_DISPLAY,
-                'percentage' => static::$EMPTY_DATA_DISPLAY,
-                'threshold' => static::$EMPTY_DATA_DISPLAY,
+                'total_individuals' => self::$sEmptyDataDisplay,
+                'num_affected' => self::$sEmptyDataDisplay,
+                'num_not_affected' => self::$sEmptyDataDisplay,
+                'num_ind_with_variant' => self::$sEmptyDataDisplay,
+                'percentage' => self::$sEmptyDataDisplay,
+                'threshold' => self::$sEmptyDataDisplay,
             );
 
             // If this is the gene panel header, name it after the gene panel.
@@ -370,7 +367,7 @@ class LOVD_ObservationCounts
                         $bComplete = false;
 
                         // Indicates that this category has insufficient data.
-                        $aCategoryData['value'] = static::$EMPTY_DATA_DISPLAY;
+                        $aCategoryData['value'] = self::$sEmptyDataDisplay;
                         break;
                     }
                 }
@@ -675,7 +672,7 @@ class LOVD_ObservationCounts
                                             // Format the percentage, as per requested.
                                             $sFormattedValue = number_format($sFormattedValue, $nDecimals);
                                             if ($bHasPermissionToViewVariants) {
-                                                if ($aCategoryData[$sKey] > 0 && $aCategoryData[$sKey] <= static::$MAX_VAR_TO_ENABLE_LINK) {
+                                                if ($aCategoryData[$sKey] > 0 && $aCategoryData[$sKey] <= self::$nMaxVariantsToEnableLink) {
                                                     // If the total number of variants is not too big for us to generate an url.
                                                     $sFormattedValue = '<A href="/variants/DBID/' . $this->getVogDBID() . '?search_variantid=' . implode('|', $aCategoryData['variant_ids']) . '" target="_blank">' . $sFormattedValue . '</A>';
                                                 }
