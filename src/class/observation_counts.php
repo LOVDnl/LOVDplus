@@ -620,7 +620,7 @@ class LOVD_ObservationCounts
         $sMetadata = '';
         $aData = $this->aData;
         $aSettings = $_INSTANCE_CONFIG['observation_counts'];
-        $bHasPermissionToViewVariants = ($_AUTH['level'] >= LEVEL_MANAGER);
+        $bHasPermissionToViewVariants = ($_AUTH['level'] >= LEVEL_ANALYZER);
         $generateDataLink = ' <SPAN id="obscount-refresh"> | <A href="#" onClick="lovd_generate_obscount(\'' . $this->nVariantID . '\');return false;">Refresh Data</A></SPAN>';
         if (!$this->canUpdateData()) {
             $generateDataLink = '<TR><TD>Current analysis status or your user permission does not allow Observation Counts data to be updated.</TD></TR>';

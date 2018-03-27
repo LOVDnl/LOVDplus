@@ -272,7 +272,7 @@ if (LOVD_plus && PATH_COUNT == 3 && $_PE[1] == 'DBID' && !empty($_GET['search_va
     $_T->printHeader();
     $_T->printTitle();
 
-    lovd_requireAUTH(LEVEL_MANAGER);
+    lovd_requireAUTH(LEVEL_ANALYZER);
 
     require ROOT_PATH . 'class/object_custom_viewlists.mod.php';
     $_DATA = new LOVD_CustomViewListMOD(array('VariantOnGenome', 'VariantOnTranscript', 'Screening', 'Individual'));
@@ -300,7 +300,7 @@ if (LOVD_plus && PATH_COUNT == 3 && $_PE[1] == 'DBID' && !ACTION) {
     $_T->printHeader();
     $_T->printTitle();
 
-    lovd_requireAUTH((lovd_verifyInstance('mgha', false)? LEVEL_MANAGER : LEVEL_ANALYZER));
+    lovd_requireAUTH(LEVEL_ANALYZER);
 
     require ROOT_PATH . 'class/object_custom_viewlists.mod.php';
     $_DATA = new LOVD_CustomViewListMOD(array('VariantOnGenome', 'VariantOnTranscript', 'Screening', 'Individual', 'Diseases'));
