@@ -4,7 +4,7 @@
  * LEIDEN OPEN VARIATION DATABASE (LOVD)
  *
  * Created     : 2013-11-05
- * Modified    : 2018-03-20
+ * Modified    : 2018-03-28
  * For LOVD    : 3.0-18
  *
  * Copyright   : 2004-2018 Leiden University Medical Center; http://www.LUMC.nl/
@@ -246,10 +246,13 @@ if (ACTION == 'configure' && GET) {
                 $sLabIDColName = $_INSTANCE_CONFIG['columns']['lab_id'];
 
                 // Find available screenings in the database, which are not archived yet.
+                // Order by the LabID column and the screening ID. Note that the former has not been sanitized,
+                //  so I'm preg_replacing() it, causing an error when invalid characters exist.
                 $sSQL = 'SELECT s.id as screeningid, s.*, i.*
                          FROM ' . TABLE_SCREENINGS . ' AS s 
                            INNER JOIN ' . TABLE_INDIVIDUALS . ' AS i ON (s.individualid = i.id) 
-                         WHERE s.id != ? AND s.analysis_statusid < ?';
+                         WHERE s.id != ? AND s.analysis_statusid < ?
+                         ORDER BY `' . preg_replace('/[^A-Za-z0-9\/_-]/', '', $sLabIDColName) . '`, s.id';
                 $aSQL = array($_REQUEST['screeningid'], ANALYSIS_STATUS_ARCHIVED);
                 $zScreenings = $_DB->query($sSQL, $aSQL)->fetchAllAssoc();
 
