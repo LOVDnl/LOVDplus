@@ -92,12 +92,6 @@ class LOVD_CustomViewListMOD extends LOVD_CustomViewList {
             $z['custom_links'] = array();
             $z['form_type'] = explode('|', $z['form_type']);
             $z['select_options'] = explode("\r\n", $z['select_options']); // What do we use this for?
-            if (substr($z['id'], 0,19) == 'VariantOnTranscript') {
-                $z['public_view'] = explode(';', rtrim(preg_replace('/([A-Za-z0-9-]+:0;|:1)/', '', $z['public_view'] . ';'), ';'));
-            }
-            if (is_null($z['public_view'])) {
-                $z['public_view'] = array();
-            }
             $this->aColumns[$z['id']] = $z;
         }
         if ($_AUTH) {
@@ -130,7 +124,10 @@ class LOVD_CustomViewListMOD extends LOVD_CustomViewList {
                 case 'VariantOnGenome':
                     $aSQL['SELECT'] .= (!$aSQL['SELECT']? '' : ', ') . 'vog.*, a.name AS allele_, eg.name AS vog_effect, CONCAT(cs.id, cs.name) AS curation_status_';
                     if (lovd_verifyInstance('mgha')) {
-                        $aSQL['SELECT'] .= ', IF(vog.`VariantOnGenome/Sequencing/Allele/Frequency` < 1, "Het", "Hom") as zygosity_, ROUND(vog.`VariantOnGenome/Sequencing/Depth/Alt/Fraction`, 2) as var_frac_';
+                        $aSQL['SELECT'] .= ', IF(vog.allele = 0, 
+                                                IF(vog.`VariantOnGenome/Sequencing/Allele/Frequency` < 1, "Het", "Hom"), 
+                                                IF(vog.allele = 3, "Hom", "Het")) as zygosity_, 
+                                            ROUND(vog.`VariantOnGenome/Sequencing/Depth/Alt/Fraction`, 2) as var_frac_';
                     }
                     // Observation count columns.
                     // Find the diseases that this individual has assigned using the analysis run ID in $_GET.

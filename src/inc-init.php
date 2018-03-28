@@ -148,7 +148,7 @@ $aRequired =
 $_SETT = array(
                 'system' =>
                      array(
-                            'version' => '3.0-17n',
+                            'version' => '3.0-17o',
                           ),
                 'user_levels' =>
                      array(
@@ -489,6 +489,19 @@ if (LOVD_plus) {
             '6' => 'Drug response',
             '7' => 'histocompatibility'
         );
+    $_SETT['filter_cross_screenings'] = array(
+        'condition_list' => array(
+            'NOT IN' => 'not found in',
+            'NOT Homozygous IN' => 'not homozygous in',
+            'IN' => 'found in',
+            'Homozygous IN' => 'homozygous in',
+            'Heterozygous IN' => 'heterozygous in',
+        ),
+        'grouping_list' => array(
+            'AND' => 'all of',
+            'OR' => 'one or more of',
+        ),
+    );
 
     // Diagnostics: Added one level, and changed the submitter level's name.
     unset($_SETT['user_levels'][LEVEL_SUBMITTER]); // To make space, we need to rename it anyway.
@@ -620,9 +633,11 @@ if ($_INI['database']['driver'] == 'mysql') {
 
 
 ini_set('default_charset','UTF-8');
-mb_internal_encoding('UTF-8');
+if (function_exists('mb_internal_encoding')) {
+    mb_internal_encoding('UTF-8');
+}
 
-// Help prevent cookie theft trough JavaScript; XSS defensive line.
+// Help prevent cookie theft through JavaScript; XSS defensive line.
 // See: http://nl.php.net/manual/en/session.configuration.php#ini.session.cookie-httponly
 @ini_set('session.cookie_httponly', 1); // Available from 5.2.0.
 
@@ -642,7 +657,7 @@ if (!$_CONF) {
     define('MISSING_CONF', true);
     $_CONF =
          array(
-                'system_title' => 'LOVD 3.0 - Leiden Open Variation Database',
+                'system_title' => (LOVD_plus? 'Leiden Open Variation Database for diagnostics' : 'LOVD 3.0 - Leiden Open Variation Database'),
                 'logo_uri' => 'gfx/' . (LOVD_plus? 'LOVD_plus_logo200x50' : 'LOVD3_logo145x50') . '.jpg',
                 'lovd_read_only' => false,
               );

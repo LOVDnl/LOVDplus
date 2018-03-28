@@ -8,7 +8,7 @@
  * For LOVD    : 3.0-18
  *
  * Copyright   : 2004-2017 Leiden University Medical Center; http://www.LUMC.nl/
- * Programmer  : Ivo F.A.C. Fokkema <I.F.A.C.Fokkema@LUMC.nl>
+ * Programmers : Ivo F.A.C. Fokkema <I.F.A.C.Fokkema@LUMC.nl>
  *               Juny Kesumadewi <juny.kesumadewi@unimelb.edu.au>
  *
  *
@@ -31,10 +31,11 @@
 
 define('ROOT_PATH', '../');
 require ROOT_PATH . 'inc-init.php';
+require ROOT_PATH . 'inc-lib-analyses.php';
 header('Content-type: text/javascript; charset=UTF-8');
 
 // Check for basic format.
-if (PATH_COUNT != 3 || !ctype_digit($_PE[2]) || !in_array(ACTION, array('delete', 'clone'))) {
+if (PATH_COUNT != 3 || !ctype_digit($_PE[2]) || !in_array(ACTION, array('delete', 'clone', 'showGenes'))) {
     die('alert("Error while sending data.");');
 }
 
@@ -48,13 +49,18 @@ if (!$_AUTH || !lovd_isAuthorized('analysisrun', $nID)) {
 
 // Now get the analysis run's data, and check the screening's status.
 // We can't do anything if the screening has been closed, so then we'll fail here.
-$sSQL = 'SELECT a.*, ar.*, s.individualid
+// Only select the filters that have configuration.
+// We use "|" here instead of LOVD standard ";" because filter name can sometimes be empty
+//  and it will create a substring of ";;" which will be treated as filter separator.
+$sSQL = 'SELECT a.*, ar.*, s.individualid, af.has_config, GROUP_CONCAT(af.id,"|",IFNULL(af.name, "") SEPARATOR ";;")  as __filters_with_config
          FROM ' . TABLE_ANALYSES_RUN . ' AS ar
            INNER JOIN ' . TABLE_SCREENINGS . ' AS s ON (ar.screeningid = s.id)
            INNER JOIN ' . TABLE_ANALYSES . ' AS a ON (ar.analysisid = a.id)
-         WHERE ar.id = ? AND s.analysis_statusid < ?';
+           INNER JOIN ' . TABLE_ANALYSES_RUN_FILTERS . ' AS arf ON (arf.runid = ar.id)
+           LEFT OUTER JOIN ' . TABLE_ANALYSIS_FILTERS . ' AS af ON (arf.filterid = af.id AND af.has_config = 1)
+         WHERE ar.id = ? AND s.analysis_statusid < ?
+         GROUP BY ar.id';
 $aSQL = array($nID, ANALYSIS_STATUS_CLOSED);
-
 $zData = $_DB->query($sSQL, $aSQL)->fetchAssoc();
 if (!$zData) {
     die('alert("No such ID or not allowed!");');
@@ -77,7 +83,7 @@ if (!$("#analysis_run_dialog").hasClass("ui-dialog-content") || !$("#analysis_ru
 ');
 
 // Implement an CSRF protection by working with tokens.
-$sFormClone  = '<FORM id=\'analysis_run_clone_form\'><INPUT type=\'hidden\' name=\'csrf_token\' value=\'{{CSRF_TOKEN}}\'>Are you sure you want to duplicate this analysis run?<BR></FORM>';
+$sFormClone  = '<FORM id=\'analysis_run_clone_form\'><INPUT type=\'hidden\' name=\'csrf_token\' value=\'{{CSRF_TOKEN}}\'>{{MESSAGE}}</FORM>';
 $sFormDelete = '<FORM id=\'analysis_run_delete_form\'><INPUT type=\'hidden\' name=\'csrf_token\' value=\'{{CSRF_TOKEN}}\'>Are you sure you want to remove this analysis run? The variants will not be deleted.<BR></FORM>';
 
 // Set JS variables and objects.
@@ -95,18 +101,42 @@ var oButtonClose  = {"Close":function () { $(this).dialog("close"); }};
 
 
 if (ACTION == 'clone' && GET) {
-    // Request confirmation.
+    // Allows cloning an analysis run, so it can be rerun.
+    // Check if this analysis has filters requiring configuration before it can be run.
     // We do this in two steps, not only because we'd like the user to confirm, but also to prevent CSRF.
 
+    // Request confirmation.
+    $sMessage = 'Are you sure you want to duplicate this analysis run?<BR>';
+    if (!empty($zData['__filters_with_config'])) {
+        // If there are filters that require extra configurations before it can be run,
+        //  we want to ask users if they want to copy the settings.
+        $sMessage = 'Do you want to copy the configurations of these filters?<BR><BR>';
+
+        // $zData['__filters_with_config'] contains filters that require configuration before they can be run.
+        $aFilters = explode(';;', $zData['__filters_with_config']);
+        foreach ($aFilters as $sConfig) {
+            // We use "|" here instead of LOVD standard ";" because filter name can sometimes be empty
+            //  and it will create a substring of ";;" which will be treated as filter separator.
+            // Limit to 2, to make sure filter names with "|" are not split also.
+            list($sFilterId, $sFilterName) = explode('|', $sConfig, 2);
+
+            $sLabel = (!empty($sFilterName)? $sFilterName : $sFilterId);
+            $sMessage .= '<LABEL><INPUT type=\'checkbox\' name=\'copy_config[]\' value=\'' . $sFilterId . '\'>' . $sLabel . '</LABEL><BR>';
+        }
+    }
+
+    // Prepare CSRF token.
     $_SESSION['csrf_tokens']['analysis_run_clone'] = md5(uniqid());
-    $sFormClone = str_replace('{{CSRF_TOKEN}}', $_SESSION['csrf_tokens']['analysis_run_clone'], $sFormClone);
+    $sFormClone = str_replace(
+        array('{{MESSAGE}}', '{{CSRF_TOKEN}}'),
+        array($sMessage, $_SESSION['csrf_tokens']['analysis_run_clone']), $sFormClone);
 
     // Display the form, and put the right buttons in place.
     print('
     $("#analysis_run_dialog").html("' . $sFormClone . '<BR>");
 
     // Select the right buttons.
-    $("#analysis_run_dialog").dialog({title: "Duplicate Analysis Run" ,buttons: $.extend({}, oButtonFormClone, oButtonCancel)});
+    $("#analysis_run_dialog").dialog({title: "Duplicate Analysis Run", buttons: $.extend({}, oButtonFormClone, oButtonCancel)});
     ');
     exit;
 }
@@ -124,18 +154,32 @@ if (ACTION == 'clone' && POST) {
         die('alert("Error while sending data, possible security risk. Please reload the page, and try again.");');
     }
 
-    $zData['filters'] = $_DB->query('SELECT filterid FROM ' . TABLE_ANALYSES_RUN_FILTERS . ' WHERE runid = ? ORDER BY filter_order', array($nID))->fetchAllColumn();
+    // Here, we also want to retrieve the configurations of each filter if they exist.
+    $zData['filters'] = $_DB->query('SELECT filterid, config_json FROM ' . TABLE_ANALYSES_RUN_FILTERS . ' WHERE runid = ? ORDER BY filter_order', array($nID))->fetchAllRow();
     $nFilters = count($zData['filters']);
+
     $_DB->beginTransaction();
     // First, copy the analysis run.
     $_DB->query('INSERT INTO ' . TABLE_ANALYSES_RUN . ' (analysisid, screeningid, modified, created_by, created_date) VALUES (?, ?, ?, ?, NOW())',
         array($zData['analysisid'], $zData['screeningid'], $zData['modified'], $_AUTH['id']));
     $nNewRunID = $_DB->lastInsertId();
 
-    // Now insert filters.
-    foreach ($zData['filters'] as $nOrder => $sFilter) {
+    // Now insert filters to the newly created analysis.
+    // Collect all the names of the filters that we'll remove the descriptions of after cloning the table.
+    $aRemoveFiltersConfigDescription = array();
+    foreach ($zData['filters'] as $nOrder => $rFilter) {
+        list($sFilter, $sFilterConfig) = $rFilter;
         $nOrder ++; // Let order begin by 1, not 0.
-        $_DB->query('INSERT INTO ' . TABLE_ANALYSES_RUN_FILTERS . ' (runid, filterid, filter_order) VALUES (?, ?, ?)', array($nNewRunID, $sFilter, $nOrder));
+
+        // If user chooses to copy the configurations of this filter from the analysis that they duplicate, then copy it over.
+        $sConfigToInsert = null;
+        if (!empty($_POST['copy_config']) && in_array($sFilter, $_POST['copy_config'])) {
+            $sConfigToInsert = $sFilterConfig;
+        } else {
+            // Have this filter's description removed by JS.
+            $aRemoveFiltersConfigDescription[] = $sFilter;
+        }
+        $_DB->query('INSERT INTO ' . TABLE_ANALYSES_RUN_FILTERS . ' (runid, filterid, config_json, filter_order) VALUES (?, ?, ?, ?)', array($nNewRunID, $sFilter, $sConfigToInsert, $nOrder));
     }
 
     $nPaddedNewRunID = str_pad($nNewRunID, $_SETT['objectid_length']['analysisruns'], '0', STR_PAD_LEFT);
@@ -163,22 +207,13 @@ if (ACTION == 'clone' && POST) {
     $("#run_' . $nPaddedNewRunID . ' tr.filter_completed").removeClass("filter_completed");
     $("#run_' . $nPaddedNewRunID . ' tr.message td").html("Click to run this analysis");
     
-    // Update gene panel description to un-run state.
-    $("#run_' . $nPaddedNewRunID . '_filter_apply_selected_gene_panels div.filter-config-desc").html("");
-
-    // Define which JS function to run when clicking this table.
-    if ($("#run_' . $nPaddedNewRunID . '_filter_apply_selected_gene_panels").length == 0 
-        || $("#run_' . $nPaddedNewRunID . '_filter_apply_selected_gene_panels").hasClass("filter_skipped")) {
-        // If there gene panel filter is not active or is not included in this analysis.
-        var sAction = "lovd_runAnalysis";
-        var sGenePanel = ", undefined";
-    } else {
-        var sAction = "lovd_popoverGenePanelSelectionForm";
-        var sGenePanel = "";
-    }
-    
-    $("#run_' . $nPaddedNewRunID . '").attr("onclick", sAction + "(\'' . $zData['screeningid'] . '\', \'' . $zData['analysisid'] . '\', \'' . $nPaddedNewRunID . '\', this.id" + sGenePanel + ")");
+    $("#run_' . $nPaddedNewRunID . '").attr("onclick", "lovd_configureAnalysis(\'' . $zData['screeningid'] . '\', \'' . $zData['analysisid'] . '\', \'' . $nPaddedNewRunID . '\', this.id)");
     ');
+
+    // Remove all configurations descriptions for those filters whose configurations are not copied.
+    foreach ($aRemoveFiltersConfigDescription as $sFilter) {
+        print('$("#run_' . $nPaddedNewRunID . '_filter_' . $sFilter . ' .filter-config-desc").html("");');
+    }
     exit;
 }
 
@@ -228,6 +263,49 @@ if (ACTION == 'delete' && POST) {
     print('
     $("#analysis_run_dialog").dialog("close");
     $("#run_' . $nID . '").fadeOut(500, function () { $(this).remove(); });
+    ');
+    exit;
+}
+
+
+
+
+
+if (ACTION == 'showGenes' && GET) {
+    // Request confirmation.
+
+    $sConfig = $_DB->query('SELECT config_json FROM ' . TABLE_ANALYSES_RUN_FILTERS . ' WHERE runid = ? AND filterid = ?', array($nID, 'apply_selected_gene_panels'))->fetchColumn();
+    $aConfig = json_decode($sConfig, true);
+
+    $aGenePanelIDs = array_keys($aConfig['metadata']);
+    $sSelectForm  = '<P>These genes were active at the time the analysis was run. These genes may differ from the current list of genes in these gene panels.</P>' .
+                    '<LABEL>Gene Panel: </LABEL><SELECT id=\'show-gp-genes\' style=\'margin-left : 25px;\'>';
+
+    $sGenes = '';
+    foreach ($aGenePanelIDs as $sGpID) {
+        $aGpDetails = $aConfig['metadata'][$sGpID];
+        $sGenes .= '<DIV class=\'genes-list\' id=\'genes-'. $sGpID .'\' style=\'display:none;\'>' .
+                   implode(', ', $aGpDetails['genes']) . '</DIV>';
+        $sSelectForm .= '<OPTION value=\'' . $sGpID . '\'>'. $aGpDetails['name'] .'</OPTION>';
+    }
+    $sSelectForm .= '</SELECT>';
+
+    // Display the form, and put the right buttons in place.
+    $sFormGenes = '<FORM id=\'analysis_run_clone_form\'>' . $sSelectForm . '<BR><BR>' . $sGenes . '</FORM>';
+
+    print('
+    $("#analysis_run_dialog").html("' . $sFormGenes . '<BR>");
+
+    // Select the right buttons.
+    $("#analysis_run_dialog").dialog({title: "Gene Panels", buttons: oButtonClose});
+    // Make sure selecting a different gene panel will show its genes, and hide the currently selected panel\'s genes.
+    $("#show-gp-genes").change(function() {
+        gpID = $(this).val();
+        $(".genes-list").hide();
+        $("#genes-" + gpID).show();
+    });
+    $("#show-gp-genes").trigger("change");
+    
     ');
     exit;
 }

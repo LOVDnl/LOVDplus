@@ -4,11 +4,11 @@
  * LEIDEN OPEN VARIATION DATABASE (LOVD)
  *
  * Created     : 2013-11-05
- * Modified    : 2017-03-08
+ * Modified    : 2018-03-26
  * For LOVD    : 3.0-18
  *
- * Copyright   : 2004-2017 Leiden University Medical Center; http://www.LUMC.nl/
- * Programmer  : Ivo F.A.C. Fokkema <I.F.A.C.Fokkema@LUMC.nl>
+ * Copyright   : 2004-2018 Leiden University Medical Center; http://www.LUMC.nl/
+ * Programmers : Ivo F.A.C. Fokkema <I.F.A.C.Fokkema@LUMC.nl>
  *               Anthony Marty <anthony.marty@unimelb.edu.au>
  *               Juny Kesumadewi <juny.kesumadewi@unimelb.edu.au>
  *
@@ -36,7 +36,7 @@ header('Expires: ' . date('r', time()+(180*60)));
 require ROOT_PATH . 'inc-lib-init.php';
 
 // Find out whether or not we're using SSL.
-if (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] == 'on' && !empty($_SERVER['SSL_PROTOCOL'])) {
+if ((!empty($_SERVER['HTTP_X_FORWARDED_PROTO']) && $_SERVER['HTTP_X_FORWARDED_PROTO'] == 'https') || (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] != 'off') || !empty($_SERVER['SSL_PROTOCOL'])) {
     // We're using SSL!
     define('PROTOCOL', 'https://');
 } else {
@@ -65,11 +65,35 @@ function lovd_resetAfterFailedRun (sElementID)
 
 
 
-function lovd_runAnalysis (nScreeningID, nAnalysisID, nRunID, sElementID, aSelectedGenePanels)
+function lovd_configureAnalysis (nScreeningID, nAnalysisID, nRunID, sElementID)
 {
-    // When 'apply_selected_gene_panels' filter is NOT selected, aSelectedGenePanels is undefined.
-    if (typeof(aSelectedGenePanels) == 'undefined') {
-        aSelectedGenePanels = [];
+    // Display the modal to enter configurations for different filters.
+    $.get('<?php echo lovd_getInstallURL(); ?>ajax/run_analysis.php?configure&elementid=' + escape(sElementID) + '&screeningid=' + escape(nScreeningID) + '&analysisid=' + escape(nAnalysisID) + '&runid=' + escape(nRunID),
+    function (data) {
+        if (data == '0') {
+            // Failure, AJAX_FALSE.
+            alert('Screening not valid or no authorization to start a new analysis. Refreshing the page...');
+            location.reload();
+            return false;
+        } else if (data == '8') {
+            // Failure, AJAX_NO_AUTH.
+            alert('Lost your session. Please log in again.');
+        } else if (data == '9') {
+            // Failure, AJAX_DATA_ERROR.
+            alert('Error while sending data. Please try again.\nIf this error persists, please contact support.');
+        }
+    });
+}
+
+
+
+
+
+function lovd_runAnalysis (nScreeningID, nAnalysisID, nRunID, sElementID, aConfig)
+{
+    // When no filters are selected that have configuration, aConfig is undefined.
+    if (typeof(aConfig) == 'undefined') {
+        aConfig = '';
     }
 
     // Starts the analysis of the given screening.
@@ -80,13 +104,15 @@ function lovd_runAnalysis (nScreeningID, nAnalysisID, nRunID, sElementID, aSelec
     if (nRunID == '') {
         nRunID = 0;
     }
-    if (aSelectedGenePanels.length > 0) {
-        sGenePanels = encodeURI('&gene_panels[]=' + aSelectedGenePanels.join('&gene_panels[]='));
-    } else {
-        sGenePanels = '';
-    }
 
-    $.get('<?php echo lovd_getInstallURL(); ?>ajax/run_analysis.php?screeningid=' + escape(nScreeningID) + '&analysisid=' + escape(nAnalysisID) + '&runid=' + escape(nRunID) + sGenePanels,
+    var aData = {
+        'screeningid' : escape(nScreeningID),
+        'analysisid' : escape(nAnalysisID),
+        'runid' : escape(nRunID),
+        'config' : JSON.stringify(aConfig)
+    };
+
+    $.post('<?php echo lovd_getInstallURL(); ?>ajax/run_analysis.php?run', aData,
         function () {
             // Remove onClick handler and change class of table, to visually show that it's running.
             $('#' + sElementID)
@@ -166,9 +192,9 @@ function lovd_runNextFilter (nAnalysisID, nRunID, sElementID)
                     oTR.children('td:eq(1)').html(dataObj.nTime);
                     oTR.children('td:eq(2)').html(dataObj.nVariantsLeft);
 
-                    // Show the details of the selected gene panels under the apply_selected_gene_panels filter.
-                    if (dataObj.sGenePanelsInfo.length) {
-                        oTR.children('td:eq(0)').append(dataObj.sGenePanelsInfo);
+                    // For filters with configuration, show the details underneath the filter.
+                    if (dataObj.sFilterConfig.length) {
+                        oTR.find('div.filter-config-desc').html(dataObj.sFilterConfig);
                     }
 
                     if (!dataObj.bDone) {
@@ -189,7 +215,9 @@ function lovd_runNextFilter (nAnalysisID, nRunID, sElementID)
                     $('#run_' + nRunID).attr('onclickold', '');
                     // Fix link to modify analysis run.
                     sOnClickLink = $('#run_' + nRunID + ' img.modify').attr('onclick');
-                    $('#run_' + nRunID + ' img.modify').attr('onclick', sOnClickLink.replace('analyses/' + nAnalysisID, 'analyses/run/' + nRunID));
+                    if (sOnClickLink) {
+                        $('#run_' + nRunID + ' img.modify').attr('onclick', sOnClickLink.replace('analyses/' + nAnalysisID, 'analyses/run/' + nRunID));
+                    }
 
                     // Replace all URLs that still have the run ID '0' to use the new run ID, all in one go.
                     var sNewAnalysis = $('#run_' + nRunID).html().split('/0?').join('/' + nRunID + '?');
@@ -314,4 +342,13 @@ function lovd_showAnalysisResults (nRunID)
     $('#run_' + nRunID).parent().css('background', '#DDD');
 
     lovd_AJAX_viewListSubmit('CustomVL_AnalysisRunResults_for_I_VE');
+}
+
+
+
+
+
+function lovd_showGenes (nRunID)
+{
+    $.get('ajax/analysis_runs.php/' + nRunID + '?showGenes');
 }

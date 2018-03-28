@@ -30,6 +30,11 @@ $_SERVER = array_merge($_SERVER, array(
 require ROOT_PATH . 'inc-init.php';
 require ROOT_PATH . 'inc-lib-form.php';
 
+// Don't lock the whole LOVD while we keep this page running.
+session_write_close();
+set_time_limit(0);
+ignore_user_abort(true);
+
 // Really don't buffer anything.
 @ob_end_flush();
 

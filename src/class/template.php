@@ -506,6 +506,7 @@ function lovd_mapVariants ()
   <META name="author" content="LOVD development team, LUMC, Netherlands">
   <META name="generator" content="gPHPEdit / GIMP @ GNU/Linux (Ubuntu)">
   <BASE href="<?php echo lovd_getInstallURL(); ?>">
+  <LINK rel="stylesheet" type="text/css" href="lib/select2/select2.min.css">
   <LINK rel="stylesheet" type="text/css" href="styles.css">
   <LINK rel="stylesheet" type="text/css" href="styles.mod.css">
   <LINK rel="stylesheet" type="text/css" href="lib/jeegoocontext/style.css">
@@ -519,6 +520,7 @@ function lovd_mapVariants ()
         lovd_includeJS('lib/jQuery/jquery.min.js', 1);
         lovd_includeJS('lib/jQuery/jquery-ui.min.js', 1);
         lovd_includeJS('lib/jeegoocontext/jquery.jeegoocontext.min.js', 1);
+        lovd_includeJS('lib/select2/select2.min.js', 1);
 
         if (!$bFull) {
 ?>

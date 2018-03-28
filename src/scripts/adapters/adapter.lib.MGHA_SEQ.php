@@ -1,4 +1,24 @@
 <?php
+
+$_INSTANCE_CONFIG['columns'] = array(
+    'lab_id' => 'Individual/Sample_ID',
+    'family' => array(
+        'mother' => 'Screening/Mother/Sample_ID',
+        'father' => 'Screening/Father/Sample_ID'
+    )
+);
+
+$_INSTANCE_CONFIG['cross_screenings'] = array(
+    'format_screening_name' => function($zScreening) {
+        $sText = $zScreening['Individual/Sample_ID'];
+        if (!empty($zScreening['role'])) {
+            $sText = $zScreening['role'] . ': ' . $sText;
+        }
+
+        return $sText;
+    }
+);
+
 $_INSTANCE_CONFIG['viewlists']['Screenings_for_I_VE']['cols_to_show'] = array(
     // Invisible.
     'individualid',
@@ -12,6 +32,7 @@ $_INSTANCE_CONFIG['viewlists']['Screenings_for_I_VE']['cols_to_show'] = array(
     'analysis_status'
 );
 
+$_INSTANCE_CONFIG['viewlists']['CustomVL_AnalysisRunResults_for_I_VE']['allow_download_from_level'] = false;
 $_INSTANCE_CONFIG['viewlists']['CustomVL_AnalysisRunResults_for_I_VE']['cols_to_show'] = array(
     // Invisible.
     'runid',
@@ -82,13 +103,58 @@ $_INSTANCE_CONFIG['conversion'] = array(
     'max_annotation_error_allowed' => 20,
     'exit_on_annotation_error' => false,
     'enforce_hgnc_gene' => false,
-    'check_indel_description' => false
+    'check_indel_description' => false,
+    'verbosity_cron' => 7, // How verbose should we be when running through cron? (default: 5; currently supported: 0,3,5,7,9)
+    'verbosity_other' => 7, // How verbose should we be otherwise? (default: 7; currently supported: 0,3,5,7,9)
 );
 
 
 class LOVD_MghaSeqDataConverter extends LOVD_DefaultDataConverter {
+    // Contains the overloaded functions that we want different from the default.
 
-    static $sAdapterName = 'MGHA_SEQ';
+    function cleanGenoType ($sGenoType)
+    {
+        // Returns a "cleaned" genotype (GT) field, given the VCF's GT field.
+        // VCFs can contain many different GT values that should be cleaned/simplified into fewer options.
+
+        static $aGenotypes = array(
+            './.' => '0/1', // No coverage taken as heterozygous variant.
+            './0' => '0/1', // REF + no coverage taken as heterozygous variant.
+            '0/.' => '0/1', // REF + no coverage taken as heterozygous variant.
+            '0/0' => '0/1', // REF taken as heterozygous variant.
+
+            './1' => '0/1', // ALT + no GT due to multi allelic SNP taken as heterozygous ALT.
+            '1/.' => '0/1', // ALT + no GT due to multi allelic SNP taken as heterozygous ALT.
+
+            '1/0' => '0/1', // Just making sure we only have one way to describe HET calls.
+        );
+
+        if (isset($aGenotypes[$sGenoType])) {
+            return $aGenotypes[$sGenoType];
+        } else {
+            return $sGenoType;
+        }
+    }
+
+
+
+
+
+    function formatEmptyColumn ($aLine, $sVEPColumn, $sLOVDColumn, $aVariant)
+    {
+        // Returns how we want to represent empty data in $aVariant array given a LOVD column name.
+        if (isset($aLine[$sVEPColumn]) && ($aLine[$sVEPColumn] === 0 || $aLine[$sVEPColumn] === '0')) {
+            $aVariant[$sLOVDColumn] = 0;
+        } else {
+            $aVariant[$sLOVDColumn] = '';
+        }
+
+        return $aVariant;
+    }
+
+
+
+
 
     function prepareMappings()
     {
@@ -435,29 +501,6 @@ class LOVD_MghaSeqDataConverter extends LOVD_DefaultDataConverter {
 
 
 
-    function prepareGeneAliases()
-    {
-        // Prepare the $aGeneAliases array with a site specific gene alias list.
-        // The convert and merge script will provide suggested gene alias key value pairs to add to this array.
-        $aGeneAliases = array();
-        return $aGeneAliases;
-    }
-
-
-
-
-
-    function prepareGenesToIgnore()
-    {
-        // Prepare the $aGenesToIgnore array with a site specific gene list.
-        $aGenesToIgnore = array();
-        return $aGenesToIgnore;
-    }
-
-
-
-
-
     function ignoreTranscript($sTranscriptId)
     {
         // Check if we want to skip importing the annotation for this transcript.
@@ -485,31 +528,10 @@ class LOVD_MghaSeqDataConverter extends LOVD_DefaultDataConverter {
 
 
 
-    function prepareScreeningID($aMetaData)
+    function getRequiredHeaderColumns ()
     {
-        // Returns the screening ID.
-
-        return 1;
-    }
-
-
-
-
-
-    function getInputFilePrefixPattern()
-    {
-        // Returns the regex pattern of the prefix of variant input file names.
-
-        return '(.+)';
-    }
-
-
-
-
-
-    function getRequiredHeaderColumns()
-    {
-        // Returns an array of required input variant file column headers. The order of these columns does NOT matter.
+        // Returns an array of required input variant file column headers.
+        // The order of these columns does NOT matter.
 
         return array(
             'CHROM',

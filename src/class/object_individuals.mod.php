@@ -74,13 +74,10 @@ class LOVD_IndividualMOD extends LOVD_Individual {
                                            'GROUP_CONCAT(DISTINCT d.id SEPARATOR ";") AS _diseaseids, ' .
                                            'GROUP_CONCAT(DISTINCT d.id, ";", IF(CASE d.symbol WHEN "-" THEN "" ELSE d.symbol END = "", d.name, d.symbol), ";", d.name ORDER BY (d.symbol != "" AND d.symbol != "-") DESC, d.symbol, d.name SEPARATOR ";;") AS __diseases, ' .
                                            'GROUP_CONCAT(DISTINCT gp.id, ";", gp.name, ";", gp.type ORDER BY gp.type DESC, gp.name ASC SEPARATOR ";;") AS __gene_panels, ' .
-                                           'GROUP_CONCAT(DISTINCT s.id SEPARATOR ";") AS _screeningids, ' .
-                                           'COUNT(DISTINCT s2v.variantid) AS variants, ' .
+                                           '(SELECT COUNT(*) FROM ' . TABLE_SCR2VAR . ' AS s2v INNER JOIN ' . TABLE_SCREENINGS . ' AS s ON (s2v.screeningid = s.id) WHERE s.individualid = i.id) AS variants, ' .
                                            'uc.name AS created_by_, ' .
                                            'ue.name AS edited_by_';
         $this->aSQLViewEntry['FROM']     = TABLE_INDIVIDUALS . ' AS i ' .
-                                           'LEFT OUTER JOIN ' . TABLE_SCREENINGS . ' AS s ON (i.id = s.individualid) ' .
-                                           'LEFT OUTER JOIN ' . TABLE_SCR2VAR . ' AS s2v ON (s2v.screeningid = s.id) ' .
                                            'LEFT OUTER JOIN ' . TABLE_IND2DIS . ' AS i2d ON (i.id = i2d.individualid) ' .
                                            'LEFT OUTER JOIN ' . TABLE_DISEASES . ' AS d ON (i2d.diseaseid = d.id) ' .
                                            'LEFT OUTER JOIN ' . TABLE_IND2GP . ' AS i2gp ON (i.id = i2gp.individualid) ' .
@@ -218,6 +215,7 @@ class LOVD_IndividualMOD extends LOVD_Individual {
             $sView = 'list';
         }
 
+        $zData['parents_'] = ''; // To prevent notices.
         $zData = parent::prepareData($zData, $sView);
         if ($sView == 'list') {
             $zData['analysis_date_'] = substr($zData['analysis_date'], 0, 10);

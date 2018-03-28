@@ -4,7 +4,7 @@
  * LEIDEN OPEN VARIATION DATABASE (LOVD)
  *
  * Created     : 2017-04-07
- * Modified    : 2017-06-07
+ * Modified    : 2017-09-11
  * For LOVD    : 3.0-18
  *
  * Copyright   : 2004-2017 Leiden University Medical Center; http://www.LUMC.nl/
@@ -115,7 +115,7 @@ if (PATH_COUNT == 2 && ACTION == 'delete') {
     require ROOT_PATH . 'inc-lib-form.php';
 
     $sFileName = $_PE[1];
-    list($sObject, $nID) = preg_split('/[:-]/', $sFileName);
+    list($sObject, $nID) = preg_split('/[:_-]/', $sFileName);
 
     define('LOG_EVENT', 'AttachmentDelete');
     define('PAGE_TITLE', 'Delete attachment');
@@ -123,11 +123,12 @@ if (PATH_COUNT == 2 && ACTION == 'delete') {
     $_T->printTitle();
 
     // Analysis status should be "in progress" and $_AUTH level should be owner or higher.
-    $nAnalysisStatus = $_DB->query(
-        'SELECT s.analysis_statusid
+    list($nScreeningID, $nAnalysisStatus) = $_DB->query(
+        'SELECT s.id, s.analysis_statusid
          FROM ' . TABLE_SCREENINGS . ' AS s
          INNER JOIN ' . TABLE_SCR2VAR . ' AS s2v 
-           ON (s.id = s2v.screeningid AND s2v.variantid = ?)', array($nID))->fetchColumn();
+           ON (s.id = s2v.screeningid AND s2v.variantid = ?)', array($nID))->fetchRow();
+    $bAuthorized = lovd_isAuthorized('screening_analysis', $nScreeningID);
     if ($nAnalysisStatus != ANALYSIS_STATUS_IN_PROGRESS || $_AUTH['level'] < LEVEL_OWNER) {
         lovd_showInfoTable('You are not authorised to delete this file.', 'stop');
         $_T->printFooter();
@@ -190,7 +191,7 @@ if (PATH_COUNT == 2 && ACTION == 'delete') {
             array('', '', 'submit', 'Delete file')
         );
 
-    print('      <FORM action="' . CURRENT_PATH . '?' . ACTION . '" method="POST">' . "\n");
+    print('      <FORM action="' . CURRENT_PATH . '?' . ACTION . (isset($_GET['in_window'])? '&amp;in_window' : '') . '" method="POST">' . "\n");
     lovd_viewForm($aForm);
     print('</FORM>');
 
@@ -216,11 +217,12 @@ if (PATH_COUNT == 2 && ACTION == 'upload') {
     lovd_errorClean();
 
     // Analysis status should be "in progress" and $_AUTH level should be owner or higher.
-    $nAnalysisStatus = $_DB->query(
-        'SELECT s.analysis_statusid
+    list($nScreeningID, $nAnalysisStatus) = $_DB->query(
+        'SELECT s.id, s.analysis_statusid
          FROM ' . TABLE_SCREENINGS . ' AS s
          INNER JOIN ' . TABLE_SCR2VAR . ' AS s2v 
-           ON (s.id = s2v.screeningid AND s2v.variantid = ?)', array($nID))->fetchColumn();
+           ON (s.id = s2v.screeningid AND s2v.variantid = ?)', array($nID))->fetchRow();
+    $bAuthorized = lovd_isAuthorized('screening_analysis', $nScreeningID);
     if ($nAnalysisStatus != ANALYSIS_STATUS_IN_PROGRESS || $_AUTH['level'] < LEVEL_OWNER) {
         lovd_showInfoTable('You are not authorised to upload an attachment for this screening.', 'stop');
 
