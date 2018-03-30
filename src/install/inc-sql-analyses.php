@@ -4,7 +4,7 @@
  * LEIDEN OPEN VARIATION DATABASE (LOVD)
  *
  * Created     : 2016-07-15
- * Modified    : 2018-03-21
+ * Modified    : 2018-03-30
  * For LOVD    : 3.0-18
  *
  * Copyright   : 2004-2018 Leiden University Medical Center; http://www.LUMC.nl/
@@ -84,7 +84,8 @@ switch ($_INI['instance']['name']) {
                   ("remove_by_indb_count_hc_gte_5", "", "", 0),
                   ("remove_by_indb_count_ug_gte_5", "", "", 0),
                   ("select_gatkcaller_ug_hc", "", "Select only variants called by both UG and HC.", 0),
-                  ("select_homozygous_or_compound_heterozygous", "", "Select only homozygous variants or variants associated with a gene that currently has more than one variant left.", 0)',
+                  ("select_homozygous_or_compound_heterozygous", "", "Select only homozygous variants or variants associated with a gene that currently has more than one variant left.", 0),
+                  ("select_homozygous_or_heterozygous_not_from_one_parent", "", "Select only homozygous variants or multiple heterozygous variants associated with the same gene, not all inherited from one parent.", 0)',
                 'INSERT INTO ' . TABLE_A2AF . ' (`analysisid`, `filterid`, `filter_order`) VALUES
                   (1, "apply_selected_gene_panels", 1),
                   (1, "cross_screenings", 2),
@@ -141,7 +142,7 @@ switch ($_INI['instance']['name']) {
                   (4, "remove_by_function_utr_or_intronic", 13),
                   (4, "remove_by_function_coding_synonymous", 14),
                   (4, "remove_by_function_utr_or_intronic_or_synonymous", 15),
-                  (4, "select_homozygous_or_compound_heterozygous", 16),
+                  (4, "select_homozygous_or_heterozygous_not_from_one_parent", 16),
                   (5, "cross_screenings", 1),
                   (5, "remove_by_quality_lte_100", 2),
                   (5, "select_gatkcaller_ug_hc", 3),
@@ -158,7 +159,7 @@ switch ($_INI['instance']['name']) {
                   (5, "remove_by_function_coding_synonymous", 14),
                   (5, "remove_by_function_utr_or_intronic_or_synonymous", 15),
                   (5, "remove_missense_with_phylop_lte_2.5", 16),
-                  (5, "select_homozygous_or_compound_heterozygous", 17),
+                  (5, "select_homozygous_or_heterozygous_not_from_one_parent", 17),
                   (6, "apply_selected_gene_panels", 1),
                   (6, "cross_screenings", 2),
                   (6, "remove_by_quality_lte_100", 3),
