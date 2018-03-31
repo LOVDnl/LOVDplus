@@ -4,7 +4,7 @@
  * LEIDEN OPEN VARIATION DATABASE (LOVD)
  *
  * Created     : 2016-07-15
- * Modified    : 2018-03-30
+ * Modified    : 2018-03-31
  * For LOVD    : 3.0-18
  *
  * Copyright   : 2004-2018 Leiden University Medical Center; http://www.LUMC.nl/
@@ -75,6 +75,8 @@ switch ($_INI['instance']['name']) {
                   ("remove_intronic_distance_gt_8", "", "Remove all variants that are only mapped to introns, >8 bp from the exon.", 0),
                   ("remove_missense_with_phylop_lte_2.5", "", "Remove all substitutions having a PhyloP score of less than or equal to 2.5, if missense but not the wobble base, or intronic.", 0),
                   ("remove_not_imprinted", "", "Remove all variants within genes not in the imprinted gene list (disease ID: 931).", 0),
+                  ("remove_variants_hom_in_father", "Remove variants if homozygous in father", "Removes all variants that are found as homozygous in father.", 0),
+                  ("remove_variants_hom_in_mother", "Remove variants if homozygous in mother", "Removes all variants that are found as homozygous in mother.", 0),
                   ("remove_with_any_frequency_1000G", "", "Remove all variants that have a frequency 1000G.", 0),
                   ("remove_with_any_frequency_dbSNP", "", "Remove all variants that have a dbSNP ID.", 0),
                   ("remove_with_any_frequency_EVS", "", "Remove all variants that have a frequency in EVS.", 0),
