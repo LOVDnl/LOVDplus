@@ -4,7 +4,7 @@
  * LEIDEN OPEN VARIATION DATABASE (LOVD)
  *
  * Created     : 2013-11-06
- * Modified    : 2018-03-29
+ * Modified    : 2018-03-31
  * For LOVD    : 3.0-18
  *
  * Copyright   : 2004-2018 Leiden University Medical Center; http://www.LUMC.nl/
@@ -355,6 +355,11 @@ if ($aVariantIDs) {
 
             break;
         case 'cross_screenings':
+            if (empty($aConfig)) {
+                // No config whatsoever means the configuration was skipped, so just go on and do nothing.
+                $aVariantIDsFiltered = $aVariantIDs;
+                break;
+            }
             if (empty($aConfig['groups'])) {
                 die(json_encode(array('result' => false, 'message' => 'Incomplete configuration for filter \'' . $sFilter . '\'.')));
             }
