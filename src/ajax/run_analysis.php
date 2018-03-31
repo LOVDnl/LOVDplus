@@ -4,7 +4,7 @@
  * LEIDEN OPEN VARIATION DATABASE (LOVD)
  *
  * Created     : 2013-11-05
- * Modified    : 2018-03-28
+ * Modified    : 2018-03-31
  * For LOVD    : 3.0-18
  *
  * Copyright   : 2004-2018 Leiden University Medical Center; http://www.LUMC.nl/
@@ -419,8 +419,11 @@ if (ACTION == 'configure' && GET) {
 
                 // Here we set the logic that controls whether we have all the
                 //  required fields for the cross screenings configuration form.
-                $sJsOtherFunctions .= 'function isValidCrossScreenings() {' .
+                $sJsOtherFunctions .= 'function isValidCrossScreenings () {' .
                                         'var bValid = true;' .
+                                        // Allow submission if there is only one group and it has nothing filled in.
+                                        // This allows somebody to just submit the form without making a choice.
+                                        'if ($(\'#filter-config-cross_screenings ul li\').length == 1) { return true; } ' .
                                         '$(\'#filter-config-cross_screenings .required\').each(function(i, e) {' .
                                           'if (!e.value.length) {bValid = false; return;}' .
                                         '});' .
@@ -615,6 +618,12 @@ if (ACTION == 'configure' && POST) {
                 case 'cross_screenings':
                     // Reset index otherwise json_encode would be converted it to object instead of array.
                     $aFormConfig[$sFilter]['groups'] = array_values($aFormConfig[$sFilter]['groups']);
+
+                    // In case we don't have any data (one group only, no screenings), drop the whole config.
+                    if (count($aFormConfig[$sFilter]['groups']) == 1
+                        && empty($aFormConfig[$sFilter]['groups'][0]['screenings'])) {
+                        unset($aFormConfig[$sFilter]);
+                    }
                     break;
             }
         }
