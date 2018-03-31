@@ -4,10 +4,10 @@
  * LEIDEN OPEN VARIATION DATABASE (LOVD)
  *
  * Created     : 2017-01-12
- * Modified    : 2017-04-13
+ * Modified    : 2018-03-27
  * For LOVD    : 3.0-18
  *
- * Copyright   : 2004-2017 Leiden University Medical Center; http://www.LUMC.nl/
+ * Copyright   : 2004-2018 Leiden University Medical Center; http://www.LUMC.nl/
  * Programmers : Juny Kesumadewi <juny.kesumadewi@unimelb.edu.au>
  *               Ivo F.A.C. Fokkema <I.F.A.C.Fokkema@LUMC.nl>
  *
@@ -43,9 +43,8 @@ if (!empty($_POST['nVariantID'])) {
 }
 
 require_once ROOT_PATH . 'class/observation_counts.php';
-$aSettings = (!empty($_INSTANCE_CONFIG['observation_counts'])? $_INSTANCE_CONFIG['observation_counts'] : array());
 $zObsCount = new LOVD_ObservationCounts($nID);
-$zObsCount->buildData($aSettings);
+$zObsCount->buildData();
 
-print($zObsCount->display($aSettings));
+print($zObsCount->display());
 ?>

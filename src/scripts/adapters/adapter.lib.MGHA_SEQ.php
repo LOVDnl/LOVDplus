@@ -19,6 +19,9 @@ $_INSTANCE_CONFIG['cross_screenings'] = array(
     }
 );
 
+$_INSTANCE_CONFIG['observation_counts']['genepanel']['show_decimals'] = 0;
+$_INSTANCE_CONFIG['observation_counts']['general']['show_decimals'] = 0;
+
 $_INSTANCE_CONFIG['viewlists']['Screenings_for_I_VE']['cols_to_show'] = array(
     // Invisible.
     'individualid',
