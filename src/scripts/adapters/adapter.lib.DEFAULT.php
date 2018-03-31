@@ -190,6 +190,8 @@ $_INSTANCE_CONFIG['observation_counts'] = array(
             'gender',
             'ethnic',
         ),
+        // Round calculated percentages to what amount of decimals? (0-3)
+        'show_decimals' => 1,
     ),
 
     // If you want to display the general observation counts using the default
@@ -219,7 +221,9 @@ $_INSTANCE_CONFIG['observation_counts'] = array(
         ),
         // This is the minimal population size that is required for the
         //  general observation counts to be calculated.
-        'min_population_size' => 100
+        'min_population_size' => 100,
+        // Round calculated percentages to what amount of decimals? (0-3)
+        'show_decimals' => 1,
     ),
 );
 

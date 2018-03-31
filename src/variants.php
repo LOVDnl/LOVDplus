@@ -272,7 +272,7 @@ if (LOVD_plus && PATH_COUNT == 3 && $_PE[1] == 'DBID' && !empty($_GET['search_va
     $_T->printHeader();
     $_T->printTitle();
 
-    lovd_requireAUTH(LEVEL_MANAGER);
+    lovd_requireAUTH(LEVEL_ANALYZER);
 
     require ROOT_PATH . 'class/object_custom_viewlists.mod.php';
     $_DATA = new LOVD_CustomViewListMOD(array('VariantOnGenome', 'VariantOnTranscript', 'Screening', 'Individual'));
@@ -300,7 +300,7 @@ if (LOVD_plus && PATH_COUNT == 3 && $_PE[1] == 'DBID' && !ACTION) {
     $_T->printHeader();
     $_T->printTitle();
 
-    lovd_requireAUTH((lovd_verifyInstance('mgha', false)? LEVEL_MANAGER : LEVEL_ANALYZER));
+    lovd_requireAUTH(LEVEL_ANALYZER);
 
     require ROOT_PATH . 'class/object_custom_viewlists.mod.php';
     $_DATA = new LOVD_CustomViewListMOD(array('VariantOnGenome', 'VariantOnTranscript', 'Screening', 'Individual', 'Diseases'));
@@ -675,12 +675,11 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && !ACTION) {
     if (!empty($_INSTANCE_CONFIG['observation_counts'])) {
         print('            <BR><BR>' . "\n\n");
         require_once ROOT_PATH . 'class/observation_counts.php';
-        $aSettings = (!empty($_INSTANCE_CONFIG['observation_counts'])? $_INSTANCE_CONFIG['observation_counts'] : array());
         $zObsCount = new LOVD_ObservationCounts($nID);
         $aData = $zObsCount->getData();
 
         print('<DIV id="observation-counts">');
-        print($zObsCount->display($aSettings));
+        print($zObsCount->display());
         print('</DIV>');
 ?>
         <SCRIPT type="text/javascript">

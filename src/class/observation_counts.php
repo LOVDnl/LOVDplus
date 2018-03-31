@@ -1,14 +1,13 @@
 <?php
-
 /*******************************************************************************
  *
  * LEIDEN OPEN VARIATION DATABASE (LOVD)
  *
  * Created     : 2017-01-12
- * Modified    : 2017-05-02
+ * Modified    : 2018-03-27
  * For LOVD    : 3.0-18
  *
- * Copyright   : 2004-2017 Leiden University Medical Center; http://www.LUMC.nl/
+ * Copyright   : 2004-2018 Leiden University Medical Center; http://www.LUMC.nl/
  * Programmers : Juny Kesumadewi <juny.kesumadewi@unimelb.edu.au>
  *               Ivo F.A.C. Fokkema <I.F.A.C.Fokkema@LUMC.nl>
  *
@@ -34,6 +33,10 @@ if (!defined('ROOT_PATH')) {
     exit;
 }
 
+
+
+
+
 class LOVD_ObservationCounts
 {
     // Wrap all the logic related to generating observation counts here.
@@ -45,24 +48,30 @@ class LOVD_ObservationCounts
 
     protected $aData = array(); // Store the observation counts data fetched from the database or calculated by buildData.
     protected $aIndividual = array(); // Store details of the individual where this variant is found.
-    protected $nVariantID = null; // The Id of the variant we are looking into.
-
+    protected $nVariantID = null; // The ID of the variant we are looking into.
     protected $aColumns = array(); // The list of observation counts columns to be displayed for this instance.
 
-    // We currently divide the Observation Counts data calculations into these types.
-    // They are essentially different because they have different criteria of
-    // how the data should be calculated
-    // Q: Why used and named like a constant, but not defined like one? (usage also not everywhere)
-    // A: Just use a variable.
-    public static $EMPTY_DATA_DISPLAY = '-'; // How we want to show that a category does not have sufficient data to generate observation counts.
-    public static $MAX_VAR_TO_ENABLE_LINK = 100; // The maximum number of variants where we allow url to be generated to view other variants in the same category.
+    // Round calculated percentages to what amount of decimals? (0-3)
+    protected static $nDefaultShowDecimals = 1;
+    // How we want to show that a category does not have sufficient data to generate observation counts.
+    protected static $sEmptyDataDisplay = '-';
+    // The maximum number of variants where we allow url to be generated to view other variants in the same category.
+    protected static $nMaxVariantsToEnableLink = 100;
+    // The minimum amount of Individuals in the database before we calculate general observation counts.
+    protected static $nDefaultMinimumPopulationSize = 100;
 
-    // Q: Why this separately from the rest of the config?
-    // A: Just pull it into the other defaults.
-    protected static $DEFAULT_MIN_POP_SIZE = 100;
+
+
+
 
     function __construct ($nVariantID)
     {
+        global $_INSTANCE_CONFIG;
+
+        if (!isset($_INSTANCE_CONFIG['observation_counts'])) {
+            $_INSTANCE_CONFIG['observation_counts'] = array();
+        }
+
         $this->nVariantID = $nVariantID;
         $this->aIndividual = $this->initIndividualData();
         $this->aData = $this->loadExistingData();
@@ -72,13 +81,10 @@ class LOVD_ObservationCounts
 
 
 
-    public function buildData ($aSettings = array())
+    public function buildData ()
     {
         // Generate observation counts data and store it in the database in json format.
-        //
-        // $aSettings is the instance-specific observation count settings,
-        //  see the default adapter file for the format.
-        global $_DB;
+        global $_DB, $_INSTANCE_CONFIG;
 
         // Check if current analysis status as well as user's permission allow data to be generated.
         if (!$this->canUpdateData()) {
@@ -90,7 +96,7 @@ class LOVD_ObservationCounts
         $aData = array();
         $aData['population_size'] = $_DB->query(
             'SELECT COUNT(DISTINCT individualid) FROM ' . TABLE_SCREENINGS)->fetchColumn();
-        foreach ($aSettings as $sType => $aTypeSettings) {
+        foreach ($_INSTANCE_CONFIG['observation_counts'] as $sType => $aTypeSettings) {
             $this->aColumns = $this->validateColumns($sType, $aTypeSettings);
 
             // Now, generate observation counts data for each type selected in the settings.
@@ -98,9 +104,9 @@ class LOVD_ObservationCounts
                 case 'general':
                     // Generic categories have the requirement that it can only be calculated if
                     // there is a minimum number of individuals (with screenings) in the database.
-                    $minPopSize = static::$DEFAULT_MIN_POP_SIZE;
-                    if (isset($aSettings['general']['min_population_size'])) {
-                        $minPopSize = $aSettings['general']['min_population_size'];
+                    $minPopSize = self::$nDefaultMinimumPopulationSize;
+                    if (isset($aTypeSettings['min_population_size'])) {
+                        $minPopSize = $aTypeSettings['min_population_size'];
                     }
 
                     if ($aData['population_size'] < $minPopSize) {
@@ -156,14 +162,6 @@ class LOVD_ObservationCounts
                  ON (s.id = s2v.screeningid AND s2v.variantid = ?)';
         $aResult = $_DB->query($sSQL, array($this->nVariantID))->fetchAssoc();
 
-        // Q: This means anyone can update as long as the screening is open. Is that intentional? There's a read-only user.
-        // A: Make it require at least LEVEL_ANALYZER. ANALYZER can also load data if THERE IS NO DATA YET, for status IN PROGRESS. Currently done in code below.
-        if ($aResult['analysis_statusid'] == ANALYSIS_STATUS_READY) {
-            return true;
-        }
-
-        // Q: This is different than the "normal" authorization used in LOVD+. Maybe standardize that?
-        // A: STANDARDIZE THIS, BUT don't allow ADMIN for STATUS WAIT CONFIRMATION.
         if ($aResult['analysis_statusid'] == ANALYSIS_STATUS_IN_PROGRESS) {
             // If the status is in progress, you either need to be owner or up, or there should be no previous observation counts.
             if ($_AUTH['level'] >= LEVEL_OWNER || !$this->loadExistingData()) {
@@ -173,6 +171,142 @@ class LOVD_ObservationCounts
 
         // Every other analysis status (including CLOSED) cannot update observation count data.
         return false;
+    }
+
+
+
+
+
+    public function display ()
+    {
+        // Returns a string of html to display observation counts data.
+        global $_AUTH, $_INSTANCE_CONFIG;
+
+        $sMetadata = '';
+        $aData = $this->aData;
+        $aSettings = $_INSTANCE_CONFIG['observation_counts'];
+        $bHasPermissionToViewVariants = ($_AUTH['level'] >= LEVEL_ANALYZER);
+        $generateDataLink = ' <SPAN id="obscount-refresh"> | <A href="#" onClick="lovd_generate_obscount(\'' . $this->nVariantID . '\');return false;">Refresh Data</A></SPAN>';
+        if (!$this->canUpdateData()) {
+            $generateDataLink = '<TR><TD>Current analysis status or your user permission does not allow Observation Counts data to be updated.</TD></TR>';
+        }
+        $sDataTables = '';
+
+        if(empty($aData) && !lovd_isAuthorized('variant', $this->nVariantID)) {
+            $sMetadata = '<TR><TD>You do not have permission to generate Observation Counts for this variant.</TD></TR>';
+        } elseif (empty($aData)) {
+            $sMetadata = '<TR><TD>There is no existing Observation Counts data <SPAN id="obscount-refresh"> | <A href="#" onClick="lovd_generate_obscount(\'' . $this->nVariantID . '\');return false;">Generate Data</A></SPAN></TD></TR>';
+        } else {
+            // If there is data, loop through categories and display results.
+            foreach (array_keys($_INSTANCE_CONFIG['observation_counts']) as $sType) {
+                // Prepare settings.
+                $nDecimals = self::$nDefaultShowDecimals;
+                if (isset($_INSTANCE_CONFIG['observation_counts'][$sType]['show_decimals'])) {
+                    $nDecimals = $_INSTANCE_CONFIG['observation_counts'][$sType]['show_decimals'];
+                }
+
+                // Column definitions.
+                $sColumns = '';
+                foreach ($aSettings[$sType]['columns'] as $sLabel) {
+                    $sColumns .= '<TH>' . $sLabel . '</TH>';
+                }
+
+                switch ($sType) {
+                    // Type-specific formatting.
+                    case 'genepanel':
+                        $sCategories = '';
+                        if (!empty($aData['genepanel']['error'])) {
+                            $sColspan = ' colspan="' . count($aSettings['genepanel']['columns']) . '"';
+                            $sCategories .= '<TR><TD' . $sColspan . '>' . $aData['genepanel']['error'] . '</TD></TR>';
+                        } else {
+                            foreach ($aData['genepanel'] as $sGpId => $aGpData) {
+                                foreach ($aGpData as $sCategory => $aCategoryData) {
+                                    $sCategories .= '<TR>';
+                                    foreach ($aSettings['genepanel']['columns'] as $sKey => $sLabel) {
+                                        $sFormattedValue = $aCategoryData[$sKey];
+
+                                        if ($sKey == 'percentage') {
+                                            // Format the percentage, as per requested.
+                                            $sFormattedValue = number_format($sFormattedValue, $nDecimals);
+                                            if ($bHasPermissionToViewVariants) {
+                                                if ($aCategoryData[$sKey] > 0 && $aCategoryData[$sKey] <= self::$nMaxVariantsToEnableLink) {
+                                                    // If the total number of variants is not too big for us to generate an url.
+                                                    $sFormattedValue = '<A href="/variants/DBID/' . $this->getVogDBID() . '?search_variantid=' . implode('|', $aCategoryData['variant_ids']) . '" target="_blank">' . $sFormattedValue . '</A>';
+                                                }
+                                            }
+                                        }
+
+                                        $sCategories .= ($sCategory == 'all'? '<TH>' : '<TD>') .
+                                            $sFormattedValue .
+                                            ($sCategory == 'all'? '</TH>' : '</TD>');
+                                    }
+                                    $sCategories .= '</TR>';
+                                }
+                            }
+                        }
+                        break;
+
+                    case 'general':
+                        $sCategories = '';
+                        if (!empty($aData['general']['error'])) {
+                            $sColspan = ' colspan="' . count($aSettings['general']['columns']) . '"';
+                            $sCategories .= '<TR><TD' . $sColspan . '>' . $aData['general']['error'] . '</TD></TR>';
+                        } else {
+                            foreach ($aData['general'] as $sCategory => $aCategoryData) {
+                                // If threshold data has the greater than sign, mark the row.
+                                $sClass = '';
+                                if (strpos($aData['general'][$sCategory]['threshold'], '>') !== false) {
+                                    $sClass = ' class="above-threshold"';
+                                }
+
+                                $sCategories .= '<TR' . $sClass . '>';
+                                foreach ($aSettings['general']['columns'] as $sKey => $sLabel) {
+                                    if ($sKey == 'percentage') {
+                                        // Format the percentage, as per requested.
+                                        $sFormattedValue = number_format($aCategoryData[$sKey], $nDecimals);
+                                    } else {
+                                        $sFormattedValue = $aCategoryData[$sKey];
+                                    }
+                                    $sCategories .= '<TD>' . $sFormattedValue . '</TD>';
+                                }
+                                $sCategories .= '</TR>';
+                            }
+                        }
+                        break;
+                }
+
+                $sTable = '';
+                if (!empty($aData[$sType])) {
+                    $sTable = '
+            <TABLE id="obscount-table-' . $sType . '" width="600" class="data">
+              <TR id="obscount-header-' . $sType . '"></TR>
+              <TBODY id="obscount-data-' . $sType . '">
+                <TR>' . $sColumns . '</TR>' .
+                        $sCategories . '
+              </TBODY>
+            </TABLE>';
+                }
+
+                $sDataTables .= $sTable;
+            }
+
+            $sMetadata .= '
+              <TR id="obscount-info">
+                <TH>Data updated ' . date('d M Y h:ia', $aData['updated']) . ' | Population size was: ' . $aData['population_size'] . $generateDataLink . '</TH>
+              </TR>';
+        }
+
+        // HTML to be displayed.
+        $sTable = '
+            <TABLE width="600" class="data">
+              <TR><TH style="font-size : 13px;">Observation Counts</TH></TR>' .
+            $sMetadata . '
+              <TR id="obscount-feedback" style="display: none;">
+                <TH>Loading data...</TH>
+              </TR>
+            </TABLE>' . $sDataTables;
+
+        return $sTable;
     }
 
 
@@ -331,12 +465,12 @@ class LOVD_ObservationCounts
             $aCategoryData = array(
                 'label' => $aRules['label'],
                 'value' => $aRules['value'],
-                'total_individuals' => static::$EMPTY_DATA_DISPLAY,
-                'num_affected' => static::$EMPTY_DATA_DISPLAY,
-                'num_not_affected' => static::$EMPTY_DATA_DISPLAY,
-                'num_ind_with_variant' => static::$EMPTY_DATA_DISPLAY,
-                'percentage' => static::$EMPTY_DATA_DISPLAY,
-                'threshold' => static::$EMPTY_DATA_DISPLAY,
+                'total_individuals' => self::$sEmptyDataDisplay,
+                'num_affected' => self::$sEmptyDataDisplay,
+                'num_not_affected' => self::$sEmptyDataDisplay,
+                'num_ind_with_variant' => self::$sEmptyDataDisplay,
+                'percentage' => self::$sEmptyDataDisplay,
+                'threshold' => self::$sEmptyDataDisplay,
             );
 
             // If this is the gene panel header, name it after the gene panel.
@@ -365,7 +499,7 @@ class LOVD_ObservationCounts
                         $bComplete = false;
 
                         // Indicates that this category has insufficient data.
-                        $aCategoryData['value'] = static::$EMPTY_DATA_DISPLAY;
+                        $aCategoryData['value'] = self::$sEmptyDataDisplay;
                         break;
                     }
                 }
@@ -415,7 +549,8 @@ class LOVD_ObservationCounts
                 }
 
                 if (!empty($aCategoryData['total_individuals'])) {
-                    $aCategoryData['percentage'] = round((float)$aCategoryData['num_ind_with_variant'] / (float)$aCategoryData['total_individuals'] * 100, 0);
+                    // Calculate percentage and round to 3 decimals. The user can then choose to display it using 0-3 decimals.
+                    $aCategoryData['percentage'] = round((float)$aCategoryData['num_ind_with_variant'] / (float)$aCategoryData['total_individuals'] * 100, 3);
                     if (!empty($aRules['threshold'])) {
                         $aCategoryData['threshold'] = ($aCategoryData['percentage'] > $aRules['threshold'] ? '> ' : '<= ') . $aRules['threshold'] . ' %';
                     }
@@ -611,134 +746,5 @@ class LOVD_ObservationCounts
         }
 
         return $this->aColumns;
-    }
-
-
-
-
-
-    public function display ($aSettings)
-    {
-        // Returns a string of html to display observation counts data.
-        global $_AUTH;
-
-        $sMetadata = '';
-        $aData = $this->aData;
-        $bHasPermissionToViewVariants = ($_AUTH['level'] >= LEVEL_MANAGER);
-        $generateDataLink = ' <SPAN id="obscount-refresh"> | <A href="#" onClick="lovd_generate_obscount(\'' . $this->nVariantID . '\');return false;">Refresh Data</A></SPAN>';
-        if (!$this->canUpdateData()) {
-            $generateDataLink = '<TR><TD>Current analysis status or your user permission does not allow Observation Counts data to be updated.</TD></TR>';
-        }
-        $sDataTables = '';
-
-        if(empty($aData) && !lovd_isAuthorized('variant', $this->nVariantID)) {
-            $sMetadata = '<TR><TD>You do not have permission to generate Observation Counts for this variant.</TD></TR>';
-        } elseif (empty($aData)) {
-            $sMetadata = '<TR><TD>There is no existing Observation Counts data <SPAN id="obscount-refresh"> | <A href="#" onClick="lovd_generate_obscount(\''. $this->nVariantID .'\');return false;">Generate Data</A></SPAN></TD></TR>';
-        } else {
-            // If there is data.
-
-            // General categories table.
-            $sGeneralColumns = '';
-            foreach ($aSettings['general']['columns'] as $sKey => $sLabel) {
-                $sGeneralColumns .= '<TH>' . $sLabel . '</TH>';
-            }
-
-            $sGeneralCategories = '';
-            if (!empty($aData['general']['error'])) {
-                $sColspan = ' colspan="' . count($aSettings['general']['columns']) . '"';
-                $sGeneralCategories .= '<TR><TD'. $sColspan .'>' . $aData['general']['error'] . '</TD></TR>';
-            } else {
-                foreach ($aData['general'] as $sCategory => $aCategoryData) {
-                    // If threshold data has the greater than sign, mark the row.
-                    $sClass = '';
-                    if (strpos($aData['general'][$sCategory]['threshold'], '>') !== false) {
-                        $sClass = ' class="above-threshold"';
-                    }
-
-                    $sGeneralCategories .= '<TR' . $sClass . '>';
-                    foreach ($aSettings['general']['columns'] as $sKey => $sLabel) {
-                        $sGeneralCategories .= '<TD>' . $aCategoryData[$sKey] . '</TD>';
-                    }
-                    $sGeneralCategories .= '</TR>';
-                }
-            }
-
-            // Gene panel categories table.
-            $sGenepanelColumns = '';
-            foreach ($aSettings['genepanel']['columns'] as $sKey => $sLabel) {
-                $sGenepanelColumns .= '<TH>' . $sLabel . '</TH>';
-            }
-
-            $sGenepanelCategories = '';
-            if (!empty($aData['genepanel']['error'])) {
-                $sColspan = ' colspan="' . count($aSettings['genepanel']['columns']) . '"';
-                $sGenepanelCategories .= '<TR><TD'. $sColspan .'>' . $aData['genepanel']['error'] . '</TD></TR>';
-            } else {
-                foreach ($aData['genepanel'] as $sGpId => $aGpData) {
-                    foreach ($aGpData as $sCategory => $aCategoryData) {
-                        $sGenepanelCategories .= '<TR>';
-                        foreach ($aSettings['genepanel']['columns'] as $sKey => $sLabel) {
-                            $sFormattedValue = $aCategoryData[$sKey];
-
-                            if ($sKey == 'percentage' && $bHasPermissionToViewVariants) {
-                                if (count($aCategoryData[$sKey]) > 0 && count($aCategoryData[$sKey]) <= static::$MAX_VAR_TO_ENABLE_LINK) {
-                                    // If the total number of variants is not too big for us to generate an url.
-                                    $sFormattedValue = '<A href="/variants/DBID/' . $this->getVogDBID() . '?search_variantid=' . implode('|', $aCategoryData['variant_ids']) . '" target="_blank">' . $aCategoryData[$sKey] . '</A>';
-                                }
-                            }
-
-                            $sGenepanelCategories .= ($sCategory == 'all'? '<TH>' : '<TD>') .
-                                                     $sFormattedValue .
-                                                     ($sCategory == 'all'? '</TH>' : '</TD>');
-                        }
-                        $sGenepanelCategories .= '</TR>';
-                    }
-                }
-            }
-
-            $sGenepanelTable = '';
-            if (!empty($aData['genepanel'])) {
-                $sGenepanelTable = '
-            <TABLE id="obscount-table-genepanel" width="600" class="data">
-              <TR id="obscount-header-genepanel"></TR>
-              <TBODY id="obscount-data-genepanel">
-                <TR>' . $sGenepanelColumns . '</TR>' .
-                    $sGenepanelCategories . '
-              </TBODY>
-            </TABLE>';
-            }
-
-            $sGeneralTable = '';
-            if (!empty($aData['general'])) {
-                $sGeneralTable = '
-            <TABLE id="obscount-table-general" width="600" class="data">
-              <TR id="obscount-header-general"></TR>
-              <TBODY id="obscount-data-general">
-                <TR>' . $sGeneralColumns . '</TR>' .
-                    $sGeneralCategories . '
-              </TBODY>
-            </TABLE>';
-            }
-
-            $sMetadata .= '
-              <TR id="obscount-info">
-                <TH>Data updated '. date('d M Y h:ia', $aData['updated']) .' | Population size was: ' . $aData['population_size'] . $generateDataLink . ' </TH>
-              </TR>';
-
-            $sDataTables = $sGenepanelTable . $sGeneralTable;
-        }
-
-        // HTML to be displayed.
-        $sTable = '
-            <TABLE width="600" class="data">
-              <TR><TH style="font-size : 13px;">Observation Counts</TH></TR>' .
-              $sMetadata . '
-              <TR id="obscount-feedback" style="display: none;">
-                <TH>Loading data...</TH>
-              </TR>
-            </TABLE>' . $sDataTables;
-
-        return $sTable;
     }
 }
