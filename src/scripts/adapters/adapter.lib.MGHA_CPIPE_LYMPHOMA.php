@@ -1,8 +1,8 @@
 <?php
 /*******************************************************************************
  * CREATE MAPPINGS AND PROCESS VARIANT FILE FOR MGHA
- * Created: 2016-06-01
- * Programmer: Candice McGregor
+ * Created: 2017-06-13
+ * Programmer: Juny Kesumadewi
  *************/
 
 $_INSTANCE_CONFIG['columns'] = array(
@@ -24,7 +24,6 @@ $_INSTANCE_CONFIG['viewlists']['Screenings_for_I_VE']['cols_to_show'] = array(
     'Screening/Mother/Sample_ID',
     'Screening/Mean_coverage',
     'Screening/Library_preparation',
-    'Screening/Tag',
     'Screening/Batch',
     'Screening/Pipeline/Run_ID',
     'variants_found_',
@@ -48,8 +47,9 @@ $_INSTANCE_CONFIG['viewlists']['CustomVL_AnalysisRunResults_for_I_VE'] = array(
         'VariantOnTranscript/Protein',
         'VariantOnGenome/Sequencing/Depth/Total',
         'VariantOnGenome/Sequencing/Quality',
-        'zygosity_', // 'VariantOnGenome/Sequencing/Allele/Frequency'
+        'allele_',
         'var_frac_', // 'VariantOnGenome/Sequencing/Depth/Alt/Fraction'
+        'VariantOnGenome/dbSNP',
         'gene_OMIM_',
         'gene_disease_names',
         'VariantOnTranscript/Clinical_Significance',
@@ -188,37 +188,10 @@ $_INSTANCE_CONFIG['observation_counts'] = array(
         'min_population_size' => 100
     )
 );
+require_once  ROOT_PATH . 'scripts/adapters/adapter.lib.MGHA.php';
 
-class LOVD_MghaDataConverter extends LOVD_DefaultDataConverter {
+class LOVD_MghaCpipeLymphomaDataConverter extends LOVD_MghaDataConverter {
     // Contains the overloaded functions that we want different from the default.
-
-    function cleanGenoType ($sGenoType)
-    {
-        // Returns a "cleaned" genotype (GT) field, given the VCF's GT field.
-        // VCFs can contain many different GT values that should be cleaned/simplified into fewer options.
-
-        static $aGenotypes = array(
-            './.' => '0/1', // No coverage taken as heterozygous variant.
-            './0' => '0/1', // REF + no coverage taken as heterozygous variant.
-            '0/.' => '0/1', // REF + no coverage taken as heterozygous variant.
-            '0/0' => '0/1', // REF taken as heterozygous variant.
-
-            './1' => '0/1', // ALT + no GT due to multi allelic SNP taken as heterozygous ALT.
-            '1/.' => '0/1', // ALT + no GT due to multi allelic SNP taken as heterozygous ALT.
-
-            '1/0' => '0/1', // Just making sure we only have one way to describe HET calls.
-        );
-
-        if (isset($aGenotypes[$sGenoType])) {
-            return $aGenotypes[$sGenoType];
-        } else {
-            return $sGenoType;
-        }
-    }
-
-
-
-
 
     function prepareMappings()
     {
@@ -232,7 +205,7 @@ class LOVD_MghaDataConverter extends LOVD_DefaultDataConverter {
             'vog_ref' => 'VariantOnGenome/Ref',
             'ALT' => 'alt',
             'vog_alt' => 'VariantOnGenome/Alt',
-            'Existing_variation' => 'existing_variation',
+            'Existing_variation' => 'existingvariation',
             'Feature' => 'transcriptid',
             // VariantOnGenome/DNA - constructed by the lovd_getVariantDescription function later on.
             'CHROM' => 'chromosome',
@@ -299,8 +272,8 @@ class LOVD_MghaDataConverter extends LOVD_DefaultDataConverter {
             'ESP6500_AA_AF' => 'VariantOnGenome/Frequency/ESP6500/American',
             'ESP6500_EA_AF' => 'VariantOnGenome/Frequency/ESP6500/European_American',
 
-            'EA_MAF' => 'VariantOnGenome/Frequency/EVS/VEP/European_American',
-            'AA_MAF' => 'VariantOnGenome/Frequency/EVS/VEP/African_American',
+            'EA_AF' => 'VariantOnGenome/Frequency/EVS/VEP/European_American',
+            'AA_AF' => 'VariantOnGenome/Frequency/EVS/VEP/African_American',
 
 
             'clinvar_clnsig' => 'VariantOnTranscript/dbNSFP/ClinVar/Clinical_Significance',
@@ -387,7 +360,7 @@ class LOVD_MghaDataConverter extends LOVD_DefaultDataConverter {
             'phyloP46way_placental_rankscore' => 'VariantOnTranscript/Prediction/phyloP46way_Plac_Ranked_Score',
             'phyloP46way_primate' => 'VariantOnTranscript/Prediction/phyloP46way_Prim_Score',
             'phyloP46way_primate_rankscore' => 'VariantOnTranscript/Prediction/phyloP46way_Prim_Ranked_Score',
-            'Grantham' => 'VariantOnTranscript/Prediction/Grantham',
+//            'Grantham' => 'VariantOnTranscript/Prediction/Grantham',
             'CPIPE_BED' => 'VariantOnTranscript/Pipeline_V6_bed_file',
 
             // Child/Singleton fields.
@@ -451,7 +424,7 @@ class LOVD_MghaDataConverter extends LOVD_DefaultDataConverter {
 
 
 
-    function prepareVariantData (&$aLine)
+    function prepareVariantData(&$aLine)
     {
         // Processes the variant data file for MGHA.
         // Cleans up data in existing columns and splits some columns out to two columns.
@@ -652,28 +625,24 @@ class LOVD_MghaDataConverter extends LOVD_DefaultDataConverter {
         // Some frequency columns comes in the format of alt1:freq1&alt2:freq2.
         // We need to match the value with the corresponding value in ALT column.
         $aAltFreqColumns = array(
-            'EA_MAF',
-            'AA_MAF'
+            'EA_AF',
+            'AA_AF'
         );
 
         foreach($aAltFreqColumns as $sFreqColumn) {
-            if ($aLine[$sFreqColumn] == 'unknown' || $aLine[$sFreqColumn] == '' || $sAlt == '' || empty($sAlt) || strlen($sAlt) == 0) {
+            if ($aLine[$sFreqColumn] == 'unknown' || $aLine[$sFreqColumn] == '') {
                 $aLine[$sFreqColumn] = '';
             } else {
-                $aFreqArr = explode("&", $aLine[$sFreqColumn]);
-                $aFreqValArray = array();
-                foreach ($aFreqArr as $freqData) {
-                    if (preg_match('/^(\D+)\:(.+)$/', $freqData, $freqCalls)) {
-                        $sFreqPrefix = $freqCalls[1];
-                        if ($sFreqPrefix == $sAlt && is_numeric($freqCalls[2])){
-                            array_push($aFreqValArray, $freqCalls[2]);
-                        }
-                    }
+                $aFrequencies = explode('&', $aLine[$sFreqColumn]);
+                $nMaxFreq = '';
+                // One column can have a few entries separated by ampersand. We are getting the maximum frequency.
+                foreach ($aFrequencies as $nFreq) {
+                    $nMaxFreq = (empty($nFreq) ? $nMaxFreq : max($nFreq, $nMaxFreq));
                 }
-                // Check there are values in the array before taking max.
-                $sFreqCheck = array_filter($aFreqValArray);
-                if (!empty($sFreqCheck)){
-                    $aLine[$sFreqColumn] = max($aFreqValArray);
+
+                // Only store the frequency if it not an empty string or > 0.
+                if (!empty($nMaxFreq)) {
+                    $aLine[$sFreqColumn] = $nMaxFreq;
                 } else {
                     $aLine[$sFreqColumn] = '';
                 }
@@ -793,82 +762,5 @@ class LOVD_MghaDataConverter extends LOVD_DefaultDataConverter {
             }
         }
         return $aLine;
-    }
-
-
-
-
-
-    function formatEmptyColumn($aLine, $sVEPColumn, $sLOVDColumn, $aVariant)
-    {
-        // Returns how we want to represent empty data in $aVariant array given a LOVD column name.
-        if (isset($aLine[$sVEPColumn]) && ($aLine[$sVEPColumn] === 0 || $aLine[$sVEPColumn] === '0')) {
-            $aVariant[$sLOVDColumn] = 0;
-        } else {
-            $aVariant[$sLOVDColumn] = '';
-        }
-
-        return $aVariant;
-    }
-
-
-
-
-
-
-    function postValueAssignmentUpdate($sKey, &$aVariant, &$aData)
-    {
-        // Update $aData if there is any aggregated data that we need to update after each input line is read.
-        // 0 index in  $aData[$sKey] is where we store the VOG data
-
-        if ($aVariant['VariantOnGenome/Variant_priority'] > $aData[$sKey][0]['VariantOnGenome/Variant_priority']){
-            // update the VOG record to have the higher variant priority
-            $aData[$sKey][0]['VariantOnGenome/Variant_priority'] = $aVariant['VariantOnGenome/Variant_priority'];
-        }
-
-        // Create IGV links
-        $aLinkTypes = array('bhc', 'rec');
-        if (!empty($this->aMetadata['Individuals']['Individual/Sample_ID']) &&
-            !empty($this->aMetadata['Screenings']['Screening/Pipeline/Run_ID']) &&
-            !empty($aVariant['chromosome']) &&
-            !empty($aVariant['position_g_start']) &&
-            !empty($aVariant['position_g_end'])
-        ) {
-            $aData[$sKey][0]['VariantOnGenome/Sequencing/IGV'] = '';
-            $aLinks = array();
-            foreach ($aLinkTypes as $sLinkPrefix) {
-                $aLinks[] = '{' . $sLinkPrefix . ':' .
-                            implode(':', array($this->aMetadata['Individuals']['Individual/Sample_ID'],
-                                               $this->aMetadata['Screenings']['Screening/Pipeline/Run_ID'],
-                                               $aVariant['chromosome'],
-                                               $aVariant['position_g_start'],
-                                               $aVariant['position_g_end']))
-                            . '}';
-            }
-
-            $aVariant['VariantOnGenome/Sequencing/IGV'] = $aData[$sKey][0]['VariantOnGenome/Sequencing/IGV'] = implode(' ', $aLinks);
-        }
-
-    }
-
-
-
-
-
-    function getRequiredHeaderColumns ()
-    {
-        // Returns an array of required input variant file column headers.
-        // The order of these columns does NOT matter.
-
-        return array(
-            'CHROM',
-            'POS',
-            'ID',
-            'REF',
-            'ALT',
-            'QUAL',
-            'FILTER',
-            'Child_GT',
-        );
     }
 }
