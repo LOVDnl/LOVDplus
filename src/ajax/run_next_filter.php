@@ -149,6 +149,30 @@ if ($aVariantIDs) {
             $aVariantIDsFiltered = $_DB->query('SELECT CAST(id AS UNSIGNED) FROM ' . TABLE_VARIANTS . ' WHERE (`VariantOnGenome/Frequency/1000G/VEP` IS NULL OR `VariantOnGenome/Frequency/1000G/VEP` = 0) AND id IN (?' . str_repeat(', ?', count($aVariantIDs) - 1) . ')', $aVariantIDs, false)->fetchAllColumn();
             break;
 
+        case 'select_pharmacogenomics':
+            $aVariantIDsFiltered = $_DB->query('SELECT DISTINCT CAST(vog.id AS UNSIGNED) FROM ' . TABLE_VARIANTS . ' AS vog INNER JOIN ' . TABLE_VARIANTS_ON_TRANSCRIPTS . ' AS vot1 USING (id) INNER JOIN ' . TABLE_TRANSCRIPTS . ' AS t1 ON (vot1.transcriptid = t1.id)  
+                                                WHERE ((chromosome = "X" AND `VariantOnGenome/DNA` = "g.153760805G>C") OR (t1.geneid IN ("TP53")) OR (`VariantOnGenome/dbSNP` IN ("rs1050828", "rs1050829", "rs1045642", "rs1056892", "rs716274", "rs121434568", "rs11615", "rs3212986", "rs396991", "rs1695", "rs1801133", "rs1801394", "rs4880", "rs1042522", "rs2228001", "rs25487"))) 
+                                                AND vog.id IN (?' . str_repeat(', ?', count($aVariantIDs) - 1) . ')', $aVariantIDs, false)->fetchAllColumn();
+            break;
+
+        case 'select_pharmacogenomics_v2':
+            $aVariantIDsFiltered = $_DB->query('SELECT DISTINCT CAST(vog.id AS UNSIGNED) FROM ' . TABLE_VARIANTS . ' AS vog INNER JOIN ' . TABLE_VARIANTS_ON_TRANSCRIPTS . ' AS vot1 USING (id) INNER JOIN ' . TABLE_TRANSCRIPTS . ' AS t1 ON (vot1.transcriptid = t1.id)  
+                                                WHERE (
+                                                    (
+                                                        chromosome = "X" AND `VariantOnGenome/DNA` = "g.153760805G>C"
+                                                        OR
+                                                        `VariantOnGenome/dbSNP` IN ("rs1050828", "rs1050829", "rs1045642", "rs1056892", "rs11615", "rs3212986", "rs1695", "rs1801133", "rs1801394", "rs4880", "rs2228001", "rs1799977")
+                                                        OR
+                                                        geneid IN ("TP53")
+                                                    )
+                                                    AND
+                                                    (
+                                                        `VariantOnGenome/dbSNP` NOT IN ("rs2909430", "rs35850753", "rs9895829", "rs1042522", "rs1642785")
+                                                    )
+                                                ) 
+                                                AND vog.id IN (?' . str_repeat(', ?', count($aVariantIDs) - 1) . ')', $aVariantIDs, false)->fetchAllColumn();
+            break;
+
         // Variant with ind ratio < 0.5.
         case 'remove_obs_count_ratio_gte_50':
             $aVariantIDsFiltered = $_DB->query('SELECT DISTINCT CAST(vog.id AS UNSIGNED) FROM ' . TABLE_VARIANTS . ' AS vog LEFT JOIN ' . TABLE_VARIANTS . ' AS ovog ON (vog.`VariantOnGenome/DBID` = ovog.`VariantOnGenome/DBID`) LEFT JOIN ' . TABLE_SCR2VAR . ' AS s2v ON (ovog.id = s2v.variantid) LEFT JOIN ' . TABLE_SCREENINGS . ' AS s ON (s2v.screeningid = s.id) WHERE vog.id IN (?' . str_repeat(', ?', count($aVariantIDs) - 1) . ') GROUP BY vog.`VariantOnGenome/DBID` HAVING ((COUNT(DISTINCT s.individualid) - 1) / (SELECT COUNT(*) FROM ' . TABLE_INDIVIDUALS . ')) < 0.5', $aVariantIDs, false)->fetchAllColumn();
