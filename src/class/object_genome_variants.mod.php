@@ -72,7 +72,7 @@ class LOVD_GenomeVariantMOD extends LOVD_GenomeVariant {
                                            'curs.name AS curation_status_, ' .
                                            'cons.name AS confirmation_status_';
 
-        if (lovd_verifyInstance('mgha')) {
+        if (lovd_verifyInstance('mgha') || lovd_verifyInstance('mgha_cpipe_lymphoma')) {
             $this->aSQLViewEntry['SELECT'] .= ', ROUND(vog.`VariantOnGenome/Sequencing/Depth/Alt/Fraction`, 2) as `VariantOnGenome/Sequencing/Depth/Alt/Fraction` ' .
                 ', ROUND(vog.`VariantOnGenome/Sequencing/Father/Depth/Alt/Fraction`, 2) as `VariantOnGenome/Sequencing/Father/Depth/Alt/Fraction` ' .
                 ', ROUND(vog.`VariantOnGenome/Sequencing/Mother/Depth/Alt/Fraction`, 2) as `VariantOnGenome/Sequencing/Mother/Depth/Alt/Fraction` ';
@@ -94,7 +94,7 @@ class LOVD_GenomeVariantMOD extends LOVD_GenomeVariant {
         // List of columns and (default?) order for viewing an entry.
         $sEffectReported = 'Affects function (reported)';
         $sEffectConcluded = 'Affects function (concluded)';
-        if (lovd_verifyInstance('mgha')) {
+        if (lovd_verifyInstance('mgha') || lovd_verifyInstance('mgha_cpipe_lymphoma')) {
             $sEffectReported = 'Classification proposed';
             $sEffectConcluded = 'Classification final';
         }
@@ -178,7 +178,7 @@ class LOVD_GenomeVariantMOD extends LOVD_GenomeVariant {
 
         $sEffectReported = 'Affects function (reported)';
         $sEffectConcluded = 'Affects function (concluded)';
-        if (lovd_verifyInstance('mgha')) {
+        if (lovd_verifyInstance('mgha') || lovd_verifyInstance('mgha_cpipe_lymphoma')) {
             $sEffectReported = 'Classification proposed';
             $sEffectConcluded = 'Classification final';
         }
