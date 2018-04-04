@@ -404,7 +404,7 @@ class LOVD_GenomeVariant extends LOVD_Custom {
                     $aArgs[] = STATUS_MARKED;
                 }
                 $n = $_DB->query($sQ, $aArgs)->fetchColumn();
-                if ($n > 1) {
+                if ($n > 1 && (!LOVD_plus || !lovd_verifyInstance('mgha', false))) {
                     list($sPrefix,) = explode('_', $zData['VariantOnGenome/DBID'], 2);
                     $sLink = '<A href="' . (substr($sPrefix, 0, 3) == 'chr'? 'variants' : 'view/' . $sPrefix) . '?search_VariantOnGenome%2FDBID=%3D%22' . $zData['VariantOnGenome/DBID'] . '%22">See all ' . $n . ' reported entries</A>';
                     if (LOVD_plus) {
