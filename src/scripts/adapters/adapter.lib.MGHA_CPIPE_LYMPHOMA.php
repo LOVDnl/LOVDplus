@@ -5,6 +5,8 @@
  * Programmer: Juny Kesumadewi
  *************/
 
+require_once  ROOT_PATH . 'scripts/adapters/adapter.lib.MGHA.php';
+
 $_INSTANCE_CONFIG['columns'] = array(
     'lab_id' => 'Individual/Sample_ID',
     'family' => array(
@@ -188,7 +190,6 @@ $_INSTANCE_CONFIG['observation_counts'] = array(
         'min_population_size' => 100
     )
 );
-require_once  ROOT_PATH . 'scripts/adapters/adapter.lib.MGHA.php';
 
 class LOVD_MghaCpipeLymphomaDataConverter extends LOVD_MghaDataConverter {
     // Contains the overloaded functions that we want different from the default.
