@@ -173,7 +173,8 @@ $_INSTANCE_CONFIG['observation_counts'] = array(
             'percentage' => 'Percentage (%)'
         ),
         // if categories is empty, use default categories list
-        'categories' => array()
+        'categories' => array(),
+        'show_decimals' => 0,
     ),
 
     // If we want to display general categories observation counts using default config,
@@ -187,6 +188,7 @@ $_INSTANCE_CONFIG['observation_counts'] = array(
         ),
         // if categories is empty, use default categories list
         'categories' => array(),
+        'show_decimals' => 0,
         'min_population_size' => 100
     )
 );
