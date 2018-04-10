@@ -126,8 +126,11 @@ class LOVD_CustomViewListMOD extends LOVD_CustomViewList {
                     if (lovd_verifyInstance('mgha')) {
                         $aSQL['SELECT'] .= ', IF(vog.allele = 0, 
                                                 IF(vog.`VariantOnGenome/Sequencing/Allele/Frequency` < 1, "Het", "Hom"), 
-                                                IF(vog.allele = 3, "Hom", "Het")) as zygosity_, 
-                                            ROUND(vog.`VariantOnGenome/Sequencing/Depth/Alt/Fraction`, 2) as var_frac_';
+                                                IF(vog.allele = 3, "Hom", "Het")) as zygosity_';
+                    }
+
+                    if (lovd_verifyInstance('mgha') || lovd_verifyInstance('mgha_cpipe_lymphoma')) {
+                        $aSQL['SELECT'] .= ', ROUND(vog.`VariantOnGenome/Sequencing/Depth/Alt/Fraction`, 2) as var_frac_';
                     }
 
                     if (!$aSQL['FROM']) {
@@ -528,13 +531,18 @@ class LOVD_CustomViewListMOD extends LOVD_CustomViewList {
                         $this->aColumnsViewList = array_merge($this->aColumnsViewList, array(
                             'zygosity_' => array(
                                 'view' => array('Zygosity', 70),
-                                'db' => array('zygosity_', 'ASC', 'TEXT'),
-                            ),
+                                'db' => array('zygosity_', 'ASC', 'TEXT')
+                            ))
+                        );
+                    }
+
+                    if (lovd_verifyInstance('mgha') || lovd_verifyInstance('mgha_cpipe_lymphoma')) {
+                        $this->aColumnsViewList = array_merge($this->aColumnsViewList, array(
                             'var_frac_' => array(
                                 'view' => array('Var Frac', 70),
-                                'db' => array('var_frac_', 'ASC', 'DECIMAL'),
-                            ),
-                        ));
+                                'db' => array('var_frac_', 'ASC', 'DECIMAL')
+                            ))
+                        );
                     }
                     break;
 
