@@ -143,6 +143,18 @@ class LOVD_MghaSeqDataConverter extends LOVD_DefaultDataConverter {
 
 
 
+    function convertGenoTypeToAllele ($aVariant) {
+        if (!empty($aVariant['allele'])) {
+            return parent::convertGenoTypeToAllele();
+        }
+
+        return $aVariant;
+    }
+
+
+
+
+
     function formatEmptyColumn ($aLine, $sVEPColumn, $sLOVDColumn, $aVariant)
     {
         // Returns how we want to represent empty data in $aVariant array given a LOVD column name.
@@ -195,10 +207,7 @@ class LOVD_MghaSeqDataConverter extends LOVD_DefaultDataConverter {
             'vcf_MQRankSum' => 'VariantOnGenome/Sequencing/Mapping_Quality_Score',
             'vcf_QD' => 'VariantOnGenome/Sequencing/Quality_by_depth',
             'vcf_ReadPosRankSum' => 'VariantOnGenome/Sequencing/Read_Position_Bias_Score',
-            'GMAF' => 'VariantOnGenome/Frequency/1000G/VEP',
-            'EUR_MAF' => 'VariantOnGenome/Frequency/1000G/VEP/European',
-            'AFR_MAF' => 'VariantOnGenome/Frequency/1000G/VEP/African',
-            'AMR_MAF' => 'VariantOnGenome/Frequency/1000G/VEP/American',
+
             'AA_MAF' => 'VariantOnGenome/Frequency/EVS/VEP/African_American',
             'EA_MAF' => 'VariantOnGenome/Frequency/EVS/VEP/European_American',
 
@@ -217,7 +226,6 @@ class LOVD_MghaSeqDataConverter extends LOVD_DefaultDataConverter {
             'vcf_SOMATIC' => 'VariantOnTranscript/Somatic_Status',
             'STRAND' => 'VariantOnTranscript/DNA_Strand',
             'Feature_type' => 'VariantOnTranscript/Feature_Type',
-
 
             // Normal
             'normal:DP' => 'VariantOnGenome/Sequencing/Normal/Depth/Total',
@@ -239,7 +247,6 @@ class LOVD_MghaSeqDataConverter extends LOVD_DefaultDataConverter {
             'COSMIC_ids' => 'VariantOnGenome/COSMIC_IDs',
             'PolyPhen' => 'VariantOnTranscript/PolyPhen',
             'SIFT' => 'VariantOnTranscript/SIFT',
-            'ASN_MAF' => 'VariantOnGenome/Frequency/1000G/VEP/Asian',
             'MOTIF_SCORE_CHANGE' => 'VariantOnTranscript/TFBP/Motif_Score_Change',
 
             // Tumour
@@ -276,7 +283,7 @@ class LOVD_MghaSeqDataConverter extends LOVD_DefaultDataConverter {
 
             'normal:ADJAF' => 'VariantOnGenome/Sequencing/Normal/Allele/Alt/Frequency/Adjusted',
             'normal:AF' => 'VariantOnGenome/Sequencing/Normal/Allele/Alt/Frequency',
-           'normal:BIAS' => 'VariantOnGenome/Sequencing/Normal/Bias',
+            'normal:BIAS' => 'VariantOnGenome/Sequencing/Normal/Bias',
 
             'normal:HIAF' => 'VariantOnGenome/Sequencing/Normal/Allele/Frequency/High_Quality',
             'normal:MQ' => 'VariantOnGenome/Sequencing/Normal/Mean_Mapping_Quality',
@@ -291,6 +298,31 @@ class LOVD_MghaSeqDataConverter extends LOVD_DefaultDataConverter {
             'normal:SBF' => 'VariantOnGenome/Sequencing/Normal/Strand_Bias_Fisher_P_Value',
             'normal:SN' => 'VariantOnGenome/Sequencing/Normal/Signal_To_Noise',
             'normal:VD' => 'VariantOnGenome/Sequencing/Normal/Variant_Depth',
+
+            'vcf_seqliner_1000Gp3_AC' => 'VariantOnGenome/1000Gp3/Allele/Count',
+            'vcf_seqliner_1000Gp3_AN' => 'VariantOnGenome/1000Gp3/Allele/Total',
+            'vcf_seqliner_1000Gp3_AF' => 'VariantOnGenome/1000Gp3/Frequency',
+            'vcf_seqliner_1000Gp3_AF_AFR' => 'VariantOnGenome/1000Gp3/Frequency/African',
+            'vcf_seqliner_1000Gp3_AF_AMR' => 'VariantOnGenome/1000Gp3/Frequency/American',
+            'vcf_seqliner_1000Gp3_AF_EAS' => 'VariantOnGenome/1000Gp3/Frequency/East_Asian',
+            'vcf_seqliner_1000Gp3_AF_EUR' => 'VariantOnGenome/1000Gp3/Frequency/European',
+            'vcf_seqliner_1000Gp3_AF_SAS' => 'VariantOnGenome/1000Gp3/Frequency/South_Asian',
+
+            'vcf_seqliner_ExAC_AC_Adj' => 'VariantOnGenome/ExAC/Frequency/Allele/Count/Adjusted',
+            'vcf_seqliner_ExAC_AN_Adj' => 'VariantOnGenome/ExAC/Frequency/Allele/Total/Adjusted',
+
+            // To be calculated
+            'vcf_seqliner_ExAC_AF_AFR' => 'VariantOnGenome/ExAC/Frequency/African',
+            'vcf_seqliner_ExAC_AF_Adj' => 'VariantOnGenome/ExAC/Frequency/Adjusted',
+            'vcf_seqliner_ExAC_AF_AMR' => 'VariantOnGenome/ExAC/Frequency/American',
+            'vcf_seqliner_ExAC_AF_CONSANGUINEOUS' => 'VariantOnGenome/ExAC/Frequency/Consanguineous',
+            'vcf_seqliner_ExAC_AF_EAS' => 'VariantOnGenome/ExAC/Frequency/East_Asian',
+            'vcf_seqliner_ExAC_AF_FEMALE' => 'VariantOnGenome/ExAC/Frequency/Female',
+            'vcf_seqliner_ExAC_AF_FIN' => 'VariantOnGenome/ExAC/Frequency/Finnish',
+            'vcf_seqliner_ExAC_AF_MALE' => 'VariantOnGenome/ExAC/Frequency/Male',
+            'vcf_seqliner_ExAC_AF_NFE' => 'VariantOnGenome/ExAC/Frequency/Non_Finnish',
+            'vcf_seqliner_ExAC_AF_OTH' => 'VariantOnGenome/ExAC/Frequency/Other',
+            'vcf_seqliner_ExAC_AF_SAS' => 'VariantOnGenome/ExAC/Frequency/South_Asian',
 
             'tumour:ADJAF' => 'VariantOnGenome/Sequencing/Tumour/Allele/Alt/Frequency/Adjusted',
             'tumour:AF' => 'VariantOnGenome/Sequencing/Tumour/Allele/Alt/Frequency',
@@ -341,6 +373,8 @@ class LOVD_MghaSeqDataConverter extends LOVD_DefaultDataConverter {
             'Tumour_Seqliner_Vardict_Depth_Ref' => 'VariantOnGenome/Sequencing/Tumour/Seqliner/Vardict/Depth/Ref', // Derived from vcf_SL_T_AD_VARDICT.
             'Tumour_Seqliner_Vardict_Depth_Alt' => 'VariantOnGenome/Sequencing/Tumour/Seqliner/Vardict/Depth/Alt', // Derived from vcf_SL_T_AD_VARDICT.
 
+            'Variant_Remarks' => 'VariantOnGenome/Remarks',
+            'IGV_Link' => 'VariantOnGenome/Sequencing/IGV'
         );
 
         return $aColumnMappings;
@@ -373,6 +407,54 @@ class LOVD_MghaSeqDataConverter extends LOVD_DefaultDataConverter {
 
         global $_LINE_AGGREGATED;
 
+        // We need to calculate AF_Adj using AC_Adj and AN_Adj
+        // All population specific columns are already adjusted (only include those with DP >= 10 & GQ >= 20)
+        $aFreqColsToCalculate = array(
+            'vcf_seqliner_ExAC_' => array(
+                'Adj', // general population adjusted
+                'AFR',
+                'AMR',
+                'CONSANGUINEOUS',
+                'EAS',
+                'FEMALE',
+                'FIN',
+                'MALE',
+                'NFE',
+                'OTH',
+                'SAS'
+            ),
+
+            // Other examples if we have other frequency data in the future.
+            //'cpipe_1000Gp3_' => array(
+            //
+            //)
+        );
+
+
+        foreach ($aFreqColsToCalculate as $sPrefix => $aColsPopulation) {
+            foreach ($aColsPopulation as $sPopulation) {
+                $aLine[$sPrefix . 'AF_' . $sPopulation] = '';
+
+                // If coloumns exist, we can process them.
+                if (isset($aLine[$sPrefix . 'AN_' . $sPopulation]) && isset($aLine[$sPrefix . 'AC_' . $sPopulation])) {
+                    $sAC = $aLine[$sPrefix . 'AC_' . $sPopulation];
+                    $sAN = $aLine[$sPrefix . 'AN_' . $sPopulation];
+
+                    // If NOT numeric, we leave it as an empty string (defined above).
+                    // If numeric, initialise with 0.
+                    if (is_numeric($sAC) && is_numeric($sAN)) {
+                        $aLine[$sPrefix . 'AF_' . $sPopulation] = 0;
+
+                        // If they are not zero, then calculate frequency.
+                        if (!empty($sAC) && !empty($sAN)) {
+                            $aLine[$sPrefix . 'AF_' . $sPopulation] = (float) $sAC/ (float) $sAN;
+                        }
+                    }
+                }
+
+            }
+        }
+
         // FREQUENCIES
         // Make all bases uppercase.
         $sRef = strtoupper($aLine['REF']);
@@ -397,24 +479,11 @@ class LOVD_MghaSeqDataConverter extends LOVD_DefaultDataConverter {
 
         // Set frequency columns array, this is using the column names from the file before they are mapped to LOVD columns names.
         $aFreqColumns = array(
-            'GMAF',
-            'AFR_MAF',
-            'AMR_MAF',
-            'EUR_MAF',
             'EA_MAF',
             'AA_MAF',
-            'ASN_MAF'
-
         );
 
-        // Array of frequency columns used for variant priority calculation. The maximum frequency of all these columns is used.
-        $aFreqCalcColumns = array(
-            'GMAF',
-            'EA_MAF',
-            'ExAC_MAF'
-        );
 
-        $aFreqCalcValues = array();
 
         foreach($aFreqColumns as $sFreqColumn) {
 
@@ -446,17 +515,29 @@ class LOVD_MghaSeqDataConverter extends LOVD_DefaultDataConverter {
                     $aLine[$sFreqColumn] = '';
                 }
             }
-
-            // If column is required for calculating variant priority then add to array.
-            if(in_array($sFreqColumn,$aFreqCalcColumns)){
-                array_push($aFreqCalcValues,$aLine[$sFreqColumn]);
-            }
         }
 
+        // Array of frequency columns used for variant priority calculation. The maximum frequency of all these columns is used.
+        $aFreqCalcColumns = array(
+            'vcf_seqliner_ExAC_AF_Adj',
+            'vcf_seqliner_1000Gp3_AF'
+        );
 
+        $sMaxFreq = '';
+        foreach ($aFreqCalcColumns as $sFreqCol) {
+            if (isset($aLine[$sFreqCol])) {
 
-        // Get maximum frequency.
-        $sMaxFreq = max($aFreqCalcValues);
+                // If no value has been assigned previously, just assign the first frequency (could be '' or numeric).
+                if ($sMaxFreq === '') {
+                    $sMaxFreq = $aLine[$sFreqCol];
+                } else {
+                    if ($aLine[$sFreqCol] > $sMaxFreq) {
+                        $sMaxFreq = $aLine[$sFreqCol];
+                    }
+                }
+
+            }
+        }
 
         $_LINE_AGGREGATED['MaxFreq'] = $sMaxFreq;
 
@@ -545,5 +626,51 @@ class LOVD_MghaSeqDataConverter extends LOVD_DefaultDataConverter {
             'QUAL',
             'FILTER'
         );
+    }
+
+
+
+
+
+    function postValueAssignmentUpdate($sKey, &$aVariant, &$aData)
+    {
+        // We want to use different BAM file for different screening types.
+        $aLinkTypes = array();
+        $sScreeningType = (empty($this->aMetadata['Screening/Pipeline/Path']) ? '' : $this->aMetadata['Screening/Pipeline/Path']);
+        switch ($sScreeningType) {
+            case 'n':
+                $aLinkTypes = array('n');
+                break;
+            case 't':
+                $aLinkTypes = array('t');
+                break;
+            case 'tnc':
+            case 'tnm':
+                $aLinkTypes = array('tnm');
+                break;
+        }
+
+        // Create IGV links
+        if (!empty($this->aMetadata['Individual/Sample_ID']) &&
+            !empty($this->aMetadata['Screening/Pipeline/Run_ID']) &&
+            !empty($aVariant['chromosome']) &&
+            !empty($aVariant['position_g_start']) &&
+            !empty($aVariant['position_g_end'])
+        ) {
+            $aData[$sKey][0]['VariantOnGenome/Sequencing/IGV'] = '';
+            $aLinks = array();
+            foreach ($aLinkTypes as $sLinkPrefix) {
+                $aLinks[] = '{' . $sLinkPrefix . ':' .
+                    implode(':', array(
+                        $this->aMetadata['Individual/Sample_ID'],
+                        $this->aMetadata['Screening/Pipeline/Run_ID'],
+                        $aVariant['chromosome'],
+                        $aVariant['position_g_start'],
+                        $aVariant['position_g_end']))
+                    . '}';
+            }
+
+            $aVariant['VariantOnGenome/Sequencing/IGV'] = $aData[$sKey][0]['VariantOnGenome/Sequencing/IGV'] = implode(' ', $aLinks);
+        }
     }
 }
