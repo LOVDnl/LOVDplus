@@ -36,7 +36,7 @@ $_SERVER = array_merge($_SERVER, array(
 
 require_once ROOT_PATH . 'inc-init.php';
 require_once ROOT_PATH . 'inc-lib-genes.php';
-require_once ROOT_PATH . 'scripts/adapters/conversion_adapter.lib.MGHA_SEQ.php';
+require_once ROOT_PATH . 'scripts/adapters/adapter.lib.MGHA_SEQ.php';
 
 ini_set('memory_limit', '4294967296');
 
@@ -101,11 +101,11 @@ function getVariantFileTypes() {
     // All variant file types and their filename prefixes.
     $aFileTypes = array(
 
-        // Leave only SCREENING_TYPE_TUMOUR_NORMAL_COMBINED on for now as requested.
-        LOVD_MghaSeqDataConverter::SCREENING_TYPE_TUMOUR_NORMAL_COMBINED => 'tumour--normal_combined',
-        //LOVD_MghaSeqDataConverter::SCREENING_TYPE_TUMOUR_NORMAL_MERGED => 'tumour_normal_merged',
-        //LOVD_MghaSeqDataConverter::SCREENING_TYPE_TUMOUR => 'tumour_HAP',
-        //LOVD_MghaSeqDataConverter::SCREENING_TYPE_NORMAL => 'normal_HAP'
+        // Leave only tumour--normal_combined on for now as requested.
+        'tnc' => 'tumour--normal_combined',
+        //'tnm' => 'tumour_normal_merged',
+        //'t' => 'tumour_HAP',
+        //'n' => 'normal_HAP'
     );
 
     return $aFileTypes;
