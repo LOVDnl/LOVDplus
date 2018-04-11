@@ -4,7 +4,7 @@
  * LEIDEN OPEN VARIATION DATABASE (LOVD)
  *
  * Created     : 2014-11-28
- * Modified    : 2018-03-22
+ * Modified    : 2018-04-11
  * For LOVD+   : 3.0-18
  *
  * Copyright   : 2004-2018 Leiden University Medical Center; http://www.LUMC.nl/
@@ -1056,8 +1056,8 @@ foreach ($aFiles as $sID) {
                 // Partially intronic, or variants spanning multiple introns, or within first/last 5 bases of an intron.
                 $aVariant['VariantOnTranscript/RNA'] = 'r.spl?';
                 $aVariant['VariantOnTranscript/Protein'] = 'p.?';
-            } else {
-                // OK, too bad, we need to run Mutalyzer anyway.
+            } elseif (!$bDropTranscriptData) {
+                // OK, too bad, we need to run Mutalyzer anyway (only if we're using this VOT line).
 
                 // It sometimes happens that we don't have a id_mutalyzer value. Before, we used to create transcripts manually if we couldn't recognize them.
                 // This is now working against us, as we really need this ID now.
@@ -1218,7 +1218,7 @@ foreach ($aFiles as $sID) {
                 // Any errors related to the prediction of Exon, RNA or Protein are silently ignored.
             }
 
-            if (!$aVariant['VariantOnTranscript/RNA']) {
+            if (!$bDropTranscriptData && !$aVariant['VariantOnTranscript/RNA']) {
                 // Script dies here, because I want to know if I missed something. This happens with NR transcripts, but those were ignored anyway, right?
                 $sErrorMsg = 'Missing VariantOnTranscript/RNA. Chromosome: ' . $aVariant['chromosome'] . '. VariantOnGenome/DNA: ' . $aVariant['VariantOnGenome/DNA'] . '.';
                 $nAnnotationErrors = lovd_handleAnnotationError($aVariant, $sErrorMsg);
