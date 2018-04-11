@@ -102,8 +102,8 @@ $_INSTANCE_CONFIG['attachments'] = array(
 );
 
 $_INSTANCE_CONFIG['conversion'] = array(
-    'max_annotation_error_allowed' => 20,
-    'exit_on_annotation_error' => false,
+    'annotation_error_max_allowed' => 20,
+    'annotation_error_exits' => false,
     'annotation_error_drops_line' => true,
     'enforce_hgnc_gene' => false,
     'check_indel_description' => false,

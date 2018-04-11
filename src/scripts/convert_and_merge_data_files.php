@@ -210,7 +210,7 @@ function lovd_handleAnnotationError (&$aVariant, $sErrorMsg)
     }
     lovd_printIfVerbose(VERBOSITY_LOW, $sLineErrorMsg);
 
-    $bExitOnError = $_INSTANCE_CONFIG['conversion']['exit_on_annotation_error'];
+    $bExitOnError = $_INSTANCE_CONFIG['conversion']['annotation_error_exits'];
     if ($bExitOnError) {
         lovd_printIfVerbose(VERBOSITY_LOW, "ERROR: Please update your data and re-run this script.\n");
         exit;
@@ -218,7 +218,7 @@ function lovd_handleAnnotationError (&$aVariant, $sErrorMsg)
 
     // We want to stop the script if there are too many lines of data with annotations issues.
     // We want users to check their data before they continue.
-    if ($nAnnotationErrors > $_INSTANCE_CONFIG['conversion']['max_annotation_error_allowed']) {
+    if ($nAnnotationErrors > $_INSTANCE_CONFIG['conversion']['annotation_error_max_allowed']) {
         $sFileMessage = (filesize($sFileError) === 0? '' : 'Please check details of ' .
             ($_INSTANCE_CONFIG['conversion']['annotation_error_drops_line']? 'dropped' : 'errors in') . ' annotation data in ' . $sFileError . "\n");
         lovd_printIfVerbose(VERBOSITY_LOW, "ERROR: Script cannot continue because this file has too many lines of annotation data that this script cannot handle.\n"
