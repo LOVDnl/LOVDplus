@@ -1010,17 +1010,18 @@ foreach ($aFiles as $sID) {
                             // Getting here will trigger an error in the next block, because no valid mapping has been provided.
                         }
                     }
-
-                    if (!isset($aMappings[$aVariant['chromosome'] . ':' . $aVariant['VariantOnGenome/DNA']][$aTranscripts[$aVariant['transcriptid']]['id_ncbi']])) {
-                        // FIXME: This used to die() here. Now that it doesn't, it will cause an immense load of notices and other failures.
-                        // Leiden still dies here because of the settings, but this code needs to be fixed for you and possible future users.
-                        $sErrorMsg = 'Can\'t map variant ' . $aVariant['VariantOnGenome/DNA'] . ' (' . $aVariant['chromosome'] . ':' . $aVariant['position'] . $aVariant['ref'] . '>' . $aVariant['alt'] . ') onto transcript ' . $aTranscripts[$aVariant['transcriptid']]['id_ncbi'] . '.';
-                        $nAnnotationErrors = lovd_handleAnnotationError($aVariant, $sErrorMsg);
-                        $bDropTranscriptData = true;
-                    }
                 }
-                $aVariant['VariantOnTranscript/DNA'] = $aMappings[$aVariant['chromosome'] . ':' . $aVariant['VariantOnGenome/DNA']][$aTranscripts[$aVariant['transcriptid']]['id_ncbi']];
+
+                if (!isset($aMappings[$aVariant['chromosome'] . ':' . $aVariant['VariantOnGenome/DNA']][$aTranscripts[$aVariant['transcriptid']]['id_ncbi']])) {
+                    // Still no mapping. lovd_handleAnnotationError() below here may kill the script, or we continue.
+                    $sErrorMsg = 'Can\'t map variant ' . $aVariant['VariantOnGenome/DNA'] . ' (' . $aVariant['chromosome'] . ':' . $aVariant['position'] . $aVariant['ref'] . '>' . $aVariant['alt'] . ') onto transcript ' . $aTranscripts[$aVariant['transcriptid']]['id_ncbi'] . '.';
+                    $nAnnotationErrors = lovd_handleAnnotationError($aVariant, $sErrorMsg);
+                    $bDropTranscriptData = true;
+                } else {
+                    $aVariant['VariantOnTranscript/DNA'] = $aMappings[$aVariant['chromosome'] . ':' . $aVariant['VariantOnGenome/DNA']][$aTranscripts[$aVariant['transcriptid']]['id_ncbi']];
+                }
             }
+
             // For the position fields, there is VariantOnTranscript/Position (coming from CDS_position), but it's hardly usable. Calculate ourselves.
             list($aVariant['position_c_start'], $aVariant['position_c_start_intron'], $aVariant['position_c_end'], $aVariant['position_c_end_intron']) = array_values(lovd_getVariantPosition($aVariant['VariantOnTranscript/DNA'], $aTranscripts[$aVariant['transcriptid']]));
 
