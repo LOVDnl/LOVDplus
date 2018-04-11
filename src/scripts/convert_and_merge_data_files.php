@@ -203,7 +203,8 @@ function lovd_handleAnnotationError (&$aVariant, $sErrorMsg)
 
     $nAnnotationErrors++;
 
-    $sLineErrorMsg = "LINE " . $nLine . " - VariantOnTranscript data dropped: " . $sErrorMsg . "\n";
+    $sLineErrorMsg = 'LINE ' . $nLine . ' - VariantOnTranscript data ' .
+        ($_INSTANCE_CONFIG['conversion']['annotation_error_drops_line']? 'dropped' : 'error') . ': ' . $sErrorMsg . "\n";
     if ($fError) {
         fwrite($fError, $sLineErrorMsg);
     }
@@ -218,7 +219,8 @@ function lovd_handleAnnotationError (&$aVariant, $sErrorMsg)
     // We want to stop the script if there are too many lines of data with annotations issues.
     // We want users to check their data before they continue.
     if ($nAnnotationErrors > $_INSTANCE_CONFIG['conversion']['max_annotation_error_allowed']) {
-        $sFileMessage = (filesize($sFileError) === 0?'' : "Please check details of dropped annotation data in " . $sFileError . "\n");
+        $sFileMessage = (filesize($sFileError) === 0? '' : 'Please check details of ' .
+            ($_INSTANCE_CONFIG['conversion']['annotation_error_drops_line']? 'dropped' : 'errors in') . ' annotation data in ' . $sFileError . "\n");
         lovd_printIfVerbose(VERBOSITY_LOW, "ERROR: Script cannot continue because this file has too many lines of annotation data that this script cannot handle.\n"
             . $nAnnotationErrors . " lines of transcripts data was dropped.\nPlease update your data and re-run this script.\n"
             . $sFileMessage);
@@ -227,7 +229,7 @@ function lovd_handleAnnotationError (&$aVariant, $sErrorMsg)
 
     // Otherwise, keep the VariantOnGenome data only, and add some data in Remarks.
     if (isset($aVariant['VariantOnGenome/Remarks'])) {
-        $aVariant['VariantOnGenome/Remarks'] .= $sErrorMsg;
+        $aVariant['VariantOnGenome/Remarks'] .= (!$aVariant['VariantOnGenome/Remarks']? '' : "\n") . $sErrorMsg;
     }
 
     return $nAnnotationErrors;
@@ -1016,7 +1018,7 @@ foreach ($aFiles as $sID) {
                     // Still no mapping. lovd_handleAnnotationError() below here may kill the script, or we continue.
                     $sErrorMsg = 'Can\'t map variant ' . $aVariant['VariantOnGenome/DNA'] . ' (' . $aVariant['chromosome'] . ':' . $aVariant['position'] . $aVariant['ref'] . '>' . $aVariant['alt'] . ') onto transcript ' . $aTranscripts[$aVariant['transcriptid']]['id_ncbi'] . '.';
                     $nAnnotationErrors = lovd_handleAnnotationError($aVariant, $sErrorMsg);
-                    $bDropTranscriptData = true;
+                    $bDropTranscriptData = $_INSTANCE_CONFIG['conversion']['annotation_error_drops_line'];
                 } else {
                     $aVariant['VariantOnTranscript/DNA'] = $aMappings[$aVariant['chromosome'] . ':' . $aVariant['VariantOnGenome/DNA']][$aTranscripts[$aVariant['transcriptid']]['id_ncbi']];
                 }
@@ -1056,7 +1058,7 @@ foreach ($aFiles as $sID) {
                 // Partially intronic, or variants spanning multiple introns, or within first/last 5 bases of an intron.
                 $aVariant['VariantOnTranscript/RNA'] = 'r.spl?';
                 $aVariant['VariantOnTranscript/Protein'] = 'p.?';
-            } elseif (!$bDropTranscriptData) {
+            } elseif (!$bDropTranscriptData && $aVariant['VariantOnTranscript/DNA']) {
                 // OK, too bad, we need to run Mutalyzer anyway (only if we're using this VOT line).
 
                 // It sometimes happens that we don't have a id_mutalyzer value. Before, we used to create transcripts manually if we couldn't recognize them.
@@ -1218,11 +1220,10 @@ foreach ($aFiles as $sID) {
                 // Any errors related to the prediction of Exon, RNA or Protein are silently ignored.
             }
 
-            if (!$bDropTranscriptData && !$aVariant['VariantOnTranscript/RNA']) {
-                // Script dies here, because I want to know if I missed something. This happens with NR transcripts, but those were ignored anyway, right?
+            if (!$bDropTranscriptData && $aVariant['VariantOnTranscript/DNA'] && !$aVariant['VariantOnTranscript/RNA']) {
                 $sErrorMsg = 'Missing VariantOnTranscript/RNA. Chromosome: ' . $aVariant['chromosome'] . '. VariantOnGenome/DNA: ' . $aVariant['VariantOnGenome/DNA'] . '.';
                 $nAnnotationErrors = lovd_handleAnnotationError($aVariant, $sErrorMsg);
-                $bDropTranscriptData = true;
+                $bDropTranscriptData = $_INSTANCE_CONFIG['conversion']['annotation_error_drops_line'];
             }
         }
 

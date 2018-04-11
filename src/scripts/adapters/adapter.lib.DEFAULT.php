@@ -155,6 +155,7 @@ $_INSTANCE_CONFIG['viewlists'] = array(
 $_INSTANCE_CONFIG['conversion'] = array(
     'max_annotation_error_allowed' => 20, // Maximum number of errors with VOTs before the script dies.
     'exit_on_annotation_error' => false, // Whether to halt on an annotation error.
+    'annotation_error_drops_line' => false, // Should we discard the variant's mapping on this transcript on annotation errors?
     'enforce_hgnc_gene' => true, // Check for aliases, allow automatic creation of genes using the HGNC, allow automatic creation of transcripts.
     'check_indel_description' => true, // Should we check all indels using Mutalyzer? Vep usually does a bad job at them.
     'verbosity_cron' => 5, // How verbose should we be when running through cron? (default: 5; currently supported: 0,3,5,7,9)
