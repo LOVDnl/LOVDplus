@@ -864,10 +864,14 @@ foreach ($aFiles as $sID) {
                             // But now apparently this service just returns the string with quotes (the latter are removed by json_decode()).
                             $aTranscriptInfo = $aResponse;
 
-                            if (empty($aTranscriptInfo)) {
-//                                die('Can\'t load available transcripts for gene ' . $aVariant['symbol'] . '.' . "\n");
-//print('Can\'t load available transcripts for gene ' . $aVariant['symbol'] . '.' . "\n");
-                                lovd_printIfVerbose(VERBOSITY_MEDIUM, 'No available transcripts for gene ' . $aGenes[$aVariant['symbol']]['id'] . ' found.' . "\n"); // Usually this is the case. Not always an error. We might get an error, but that will show now.
+                            if (empty($aTranscriptInfo) || !is_array($aTranscriptInfo) || !empty($aTranscriptInfo['faultcode'])) {
+                                if (!empty($aTranscriptInfo['faultcode'])) {
+                                    // Something went wrong. Let the user know.
+                                    lovd_printIfVerbose(VERBOSITY_MEDIUM, 'Error while retrieving transcripts for gene ' . $aGenes[$aVariant['symbol']]['id'] . ' ('  . $aTranscriptInfo['faultcode'] . '): '  . $aTranscriptInfo['faultstring'] . '.' . "\n");
+                                } else {
+                                    // Usually this is the case. Not always an error.
+                                    lovd_printIfVerbose(VERBOSITY_MEDIUM, 'No available transcripts for gene ' . $aGenes[$aVariant['symbol']]['id'] . ' found.' . "\n");
+                                }
                                 $aTranscripts[$aVariant['transcriptid']] = false; // Ignore transcript.
                                 $aTranscriptInfo = array(array('id' => 'NO_TRANSCRIPTS')); // Basically, any text will do. Just stop searching for other transcripts for this gene.
                             }
@@ -997,7 +1001,7 @@ foreach ($aFiles as $sID) {
                             }
                         }
                         if ($aAlternativeVersions) {
-                            var_dump('Found alternative by searching: ', $aVariant['transcriptid'], $aAlternativeVersions);
+                            lovd_printIfVerbose(VERBOSITY_FULL, 'Found alternative by searching: ' . $aVariant['transcriptid'] . ' [' . implode(', ', $aAlternativeVersions) . ']' . "\n");
                             $aMappings[$aVariant['chromosome'] . ':' . $aVariant['VariantOnGenome/DNA']][$aTranscripts[$aVariant['transcriptid']]['id_ncbi']] = $aMappings[$aVariant['chromosome'] . ':' . $aVariant['VariantOnGenome/DNA']][$aAlternativeVersions[0]];
                         } else {
                             // This happens when VEP says we can map on a known transcript, but doesn't provide us a valid mapping,
