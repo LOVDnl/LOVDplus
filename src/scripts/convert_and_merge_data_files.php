@@ -4,7 +4,7 @@
  * LEIDEN OPEN VARIATION DATABASE (LOVD)
  *
  * Created     : 2014-11-28
- * Modified    : 2018-04-11
+ * Modified    : 2018-04-12
  * For LOVD+   : 3.0-18
  *
  * Copyright   : 2004-2018 Leiden University Medical Center; http://www.LUMC.nl/
@@ -218,7 +218,7 @@ function lovd_handleAnnotationError (&$aVariant, $sErrorMsg)
 
     // We want to stop the script if there are too many lines of data with annotations issues.
     // We want users to check their data before they continue.
-    if ($nAnnotationErrors > $_INSTANCE_CONFIG['conversion']['annotation_error_max_allowed']) {
+    if ($nAnnotationErrors >= $_INSTANCE_CONFIG['conversion']['annotation_error_max_allowed']) {
         $sFileMessage = (filesize($sFileError) === 0? '' : 'Please check details of ' .
             ($_INSTANCE_CONFIG['conversion']['annotation_error_drops_line']? 'dropped' : 'errors in') . ' annotation data in ' . $sFileError . "\n");
         lovd_printIfVerbose(VERBOSITY_LOW, "ERROR: Script cannot continue because this file has too many lines of annotation data that this script cannot handle.\n"
@@ -784,8 +784,9 @@ foreach ($aFiles as $sID) {
                                  (id, name, chromosome, chrom_band, refseq_genomic, refseq_UD, reference, url_homepage, url_external, allow_download, allow_index_wiki, id_hgnc, id_entrez, id_omim, show_hgmd, show_genecards, show_genetests, note_index, note_listing, refseq, refseq_url, disclaimer, disclaimer_text, header, header_align, footer, footer_align, created_by, created_date, updated_by, updated_date)
                                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), ?, NOW())',
                                 array($aGeneInfo['symbol'], $aGeneInfo['name'], $aGeneInfo['chromosome'], $aGeneInfo['chrom_band'], $_SETT['human_builds'][$_CONF['refseq_build']]['ncbi_sequences'][$aGeneInfo['chromosome']], $sRefseqUD, '', '', '', 0, 0, $aGeneInfo['hgnc_id'], $aGeneInfo['entrez_id'], (!$aGeneInfo['omim_id']? NULL : $aGeneInfo['omim_id']), 0, 0, 0, '', '', '', '', 0, '', '', 0, '', 0, 0, 0))) {
-                                lovd_printIfVerbose(VERBOSITY_LOW, 'Can\'t create gene ' . $aVariant['symbol'] . '.' . "\n");
-                                exit;
+                                $sMessage = 'Can\'t create gene ' . $aVariant['symbol'] . '.';
+                                lovd_printIfVerbose(VERBOSITY_LOW, $sMessage . "\n");
+                                lovd_handleAnnotationError($aVariant, $sMessage);
                             }
 
                             // Add the default custom columns to this gene.
@@ -900,8 +901,9 @@ foreach ($aFiles as $sID) {
                              (id, geneid, name, id_mutalyzer, id_ncbi, id_ensembl, id_protein_ncbi, id_protein_ensembl, id_protein_uniprot, remarks, position_c_mrna_start, position_c_mrna_end, position_c_cds_end, position_g_mrna_start, position_g_mrna_end, created_date, created_by)
                             VALUES (NULL, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), ?)',
                             array($aGenes[$aVariant['symbol']]['id'], $sTranscriptName, $aTranscript['id_mutalyzer'], $aTranscript['id_ncbi'], '', $sTranscriptProtein, '', '', '', $aTranscript['cTransStart'], $aTranscript['sortableTransEnd'], $aTranscript['cCDSStop'], $aTranscript['chromTransStart'], $aTranscript['chromTransEnd'], 0))) {
-                            lovd_printIfVerbose(VERBOSITY_LOW, 'Can\'t create transcript ' . $aTranscript['id_ncbi'] . ' for gene ' . $aVariant['symbol'] . '.' . "\n");
-                            exit;
+                            $sMessage = 'Can\'t create transcript ' . $aTranscript['id_ncbi'] . ' for gene ' . $aVariant['symbol'] . '.';
+                            lovd_printIfVerbose(VERBOSITY_LOW, $sMessage . "\n");
+                            lovd_handleAnnotationError($aVariant, $sMessage);
                         }
 
                         // Save the ID before the writeLog deletes it...
