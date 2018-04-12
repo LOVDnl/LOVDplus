@@ -948,6 +948,8 @@ foreach ($aFiles as $sID) {
                 $bCallMutalyzer = ($bCallMutalyzer || (strpos($aVariant['VariantOnTranscript/DNA'], '_') !== false));
             }
 
+            // We still need the original later.
+            $aVariant['VariantOnTranscript/DNA/VEP'] = $aVariant['VariantOnTranscript/DNA'];
             if ($bCallMutalyzer) {
                 // We don't have a DNA field from VEP, or we don't trust it (see above).
                 // Call Mutalyzer, but first check if I did that before already.
@@ -1042,7 +1044,7 @@ foreach ($aFiles as $sID) {
                 // VEP came up with something...
                 $aVariant['VariantOnTranscript/RNA'] = 'r.(?)';
                 $aVariant['VariantOnTranscript/Protein'] = substr($aVariant['VariantOnTranscript/Protein'], strpos($aVariant['VariantOnTranscript/Protein'], ':')+1); // NP_000000.1:p.Met1? -> p.Met1?
-                if ($aVariant['VariantOnTranscript/Protein'] == $aVariant['VariantOnTranscript/DNA'] . '(p.=)') {
+                if ($aVariant['VariantOnTranscript/Protein'] == $aVariant['VariantOnTranscript/DNA/VEP'] . '(p.=)') {
                     // But sometimes VEP messes up; DNA: c.4482G>A; Prot: c.4482G>A(p.=)
                     $aVariant['VariantOnTranscript/Protein'] = 'p.(=)';
                 } else {
