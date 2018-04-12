@@ -1,5 +1,7 @@
 <?php
 // Leiden specific adapter settings.
+$_INSTANCE_CONFIG['conversion']['verbosity_other'] = 9;
+
 $_INSTANCE_CONFIG['viewlists']['Screenings_for_I_VE']['cols_to_show'] = array(
     // The screenings data listing on the individual's detailed view.
     // Select these columns for the screenings listing on the individual's page.
