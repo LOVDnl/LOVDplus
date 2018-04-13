@@ -313,6 +313,20 @@ switch ($_INI['instance']['name']) {
                   (7, "remove_low_impact_variants", 10)',
             );
         break;
+    case 'mgha_cpipe_lymphoma':
+        $aAnalysesSQL =
+            array(
+                'INSERT INTO ' . TABLE_ANALYSES . ' (`id`, `sortid`, `name`, `description`, `version`, `created_by`, `created_date`, `edited_by`, `edited_date`) VALUES 
+                  (1, 1, "Default Analysis",             "This is the default analysis installed with LOVD+. Additional analyses can be created as required.", 1, 0, NOW(), NULL, NULL)',
+                'INSERT INTO ' . TABLE_ANALYSIS_FILTERS . ' (`id`, `name`, `description`, `has_config`) VALUES 
+                  ("apply_selected_gene_panels", "Apply selected gene panels", "Select only variants that are associated with a gene that is in the selected gene panels and not within the selected blacklists.", 1),
+                  ("select_pharmacogenomics_v2", "Select pharmacogenomics variants", "Select pharmacogenomics variants.", 0)',
+                'INSERT INTO ' . TABLE_A2AF . ' (`analysisid`, `filterid`, `filter_order`) VALUES 
+                  (1, "apply_selected_gene_panels", 1), 
+                  (1, "select_pharmacogenomics_v2", 2)',
+            );
+        break;
+
     default: // The default analyses that is installed with LOVD+.
         $aAnalysesSQL =
             array(

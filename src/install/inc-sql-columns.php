@@ -164,7 +164,7 @@ if (LOVD_plus) {
             ));
     }
 
-    if ($_INI['instance']['name'] == 'mgha') {
+    if ($_INI['instance']['name'] == 'mgha' || $_INI['instance']['name'] == 'mgha_cpipe_lymphoma') {
         // Site specific columns for Melbourne Genomics Health Alliance (MGHA).
         $aColSQL = array(
 

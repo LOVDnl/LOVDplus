@@ -2,7 +2,7 @@
 <?php
 
 /*******************************************************************************
- * CREATE META DATA FILES FOR MGHA SEQLINER
+ * CREATE META DATA FILES FOR MGHA
  * Created: 2016-08-29
  * Programmer: Juny Kesumadewi
  *************/
@@ -36,6 +36,8 @@ $_SERVER = array_merge($_SERVER, array(
 
 require_once ROOT_PATH . 'inc-init.php';
 require_once ROOT_PATH . 'inc-lib-genes.php';
+require_once ROOT_PATH . 'scripts/adapters/adapter.lib.MGHA_SEQ.php';
+
 ini_set('memory_limit', '4294967296');
 
 
@@ -54,15 +56,22 @@ print("> Required metadata file exists\n");
 $aAllMetadata = getMetaData($sMetaFile);
 print("> Metadata values validated\n");
 
+// Validate if we have all the required batch folders specified in the metadata.
+$aBatchFolders = validateBatchFolders($aAllMetadata);
+print("> Batch folders names validated\n");
+
 // Loop through each batch folder to be processed
-foreach($aAllMetadata as $sBatchFolderName => $aMetadata) {
+foreach($aBatchFolders as $sBatchFolderName => $aBatchData) {
     print("> Processing " . $sBatchFolderName . "\n");
 
-    // Check if all the required files exist.
-    list($sPrefix, $sBatchNumber, $sIndividualID) = validateBatchFolderName($sBatchFolderName);
+    $aMetadata = $aAllMetadata[$aBatchData['metadataKey']];
+    $sBatchNumber = $aBatchData['batchNumber'];
+    $sIndividualID = $aBatchData['sampleId'];
+    $sRunID = $aBatchData['runId'];
     $sBatchFolderPath = $_INI['paths']['data_files'] . $sBatchFolderName;
 
-    $aVariantFiles = validateVariantFiles($sBatchFolderPath, $sBatchNumber, $sIndividualID);
+    // Check if all the required tsv files exist.
+    $aVariantFiles = validateVariantFiles($sBatchFolderPath, $sIndividualID);
     print("> Required variant files exist\n");
 
     // Get database ID of the individual to be processed in this batch.
@@ -70,10 +79,10 @@ foreach($aAllMetadata as $sBatchFolderName => $aMetadata) {
 
     // Create output files
     foreach (getVariantFileTypes() as $sType => $sPrefix) {
-        createMetaFile($sType, $sBatchNumber, $sIndividualID, $aMetadata, $sIndDBID);
+        createMetaFile($sType, $sBatchNumber, $sIndividualID, $sRunID, $aMetadata, $sIndDBID);
         print("> $sType meta file created\n");
 
-        reformatVariantFile($aVariantFiles[$sIndividualID][$sType], $sType, $sBatchNumber, $sIndividualID);
+        reformatVariantFile($aVariantFiles[$sIndividualID][$sType], $sType, $sBatchNumber, $sIndividualID, $sRunID);
         print("> $sType variant file created\n");
     }
 
@@ -91,10 +100,12 @@ print("> sample metadata file archived\n");
 function getVariantFileTypes() {
     // All variant file types and their filename prefixes.
     $aFileTypes = array(
+
+        // Leave only tumour--normal_combined on for now as requested.
         'tnc' => 'tumour--normal_combined',
-        'tnm' => 'tumour_normal_merged',
-        't' => 'tumour_HAP',
-        'n' => 'normal_HAP'
+        //'tnm' => 'tumour_normal_merged',
+        //'t' => 'tumour_HAP',
+        //'n' => 'normal_HAP'
     );
 
     return $aFileTypes;
@@ -117,6 +128,7 @@ function getColumnMappings() {
         'Normal_Fastq_Files' => 'Screening/Normal/FastQ_files',
         'Notes' => 'Screening/Notes',
         'pipeline_path' => 'Screening/Pipeline/Path',
+        'pipeline_run_id' => 'Screening/Pipeline/Run_ID',
 
         'DNA_Tube_ID' => 'Screening/DNA/Tube_ID',
         'DNA_Concentration' => 'Screening/DNA/Concentration',
@@ -161,7 +173,7 @@ function getColumnMappings() {
 
 
 
-function reformatVariantFile($sVariantFile, $sType, $sBatch, $sIndividual) {
+function reformatVariantFile($sVariantFile, $sType, $sBatch, $sIndividual, $sRunId) {
     // Create a new copy of the variant file with the following changes:
     // - Remove all comment lines that start with '##'.
     // - Remove '#' from the start of header line.
@@ -169,7 +181,7 @@ function reformatVariantFile($sVariantFile, $sType, $sBatch, $sIndividual) {
 
     global $_INI;
 
-    $sNewVariantFileName = $_INI['paths']['data_files'] . $sBatch . "_" . $sIndividual . "." . $sType . '.directvep.data.lovd';
+    $sNewVariantFileName = $_INI['paths']['data_files'] . $sBatch . "_" . $sIndividual . "_" . $sRunId . "." . $sType . '.directvep.data.lovd';
     $fOutput = fopen($sNewVariantFileName, 'w');
 
     if (empty($fOutput)) {
@@ -207,12 +219,12 @@ function reformatVariantFile($sVariantFile, $sType, $sBatch, $sIndividual) {
 
 
 
-function createMetaFile($sType, $sBatch, $sIndividual, $aMetadata, $sIndDBID) {
+function createMetaFile($sType, $sBatch, $sIndividual, $sRunID, $aMetadata, $sIndDBID) {
     // Create meta file for each variant file.
 
     global $_INI;
 
-    $sNewMetaFileName = $_INI['paths']['data_files'] . $sBatch . "_" . $sIndividual . "." . $sType . '.meta.lovd';
+    $sNewMetaFileName = $_INI['paths']['data_files'] . $sBatch . "_" . $sIndividual . "_" . $sRunID . "." . $sType . '.meta.lovd';
 
     // Build 'Individual' columns.
     $aColumnsForIndividual = array (
@@ -221,14 +233,23 @@ function createMetaFile($sType, $sBatch, $sIndividual, $aMetadata, $sIndDBID) {
     );
     $aColumnsForIndividual = $aColumnsForIndividual + getCustomColumnsData('Individual/', $aMetadata);
 
+    $aBamFiles = array(
+        't' => 'tumour_merged.markdups.bam',
+        'n' => 'normal_merged.markdups.bam',
+        'tnc' => 'tumour_normal_merged.tmp.realign.recal.bam',
+        'tnm' => 'tumour_normal_merged.tmp.realign.recal.bam'
+    );
+
     // Build 'Screening' columns.
     $aColumnsForScreening = array(
         'individualid' => $sIndDBID,
         'variants_found' => '1',
         'id' => '1',
         'id_sample' => '0',
-        'Screening/Pipeline/Path' => $sType
+        'Screening/Pipeline/Path' => $sType,
+        'Screening/Pipeline/Run_ID' => $sBatch . '_' . $sRunID,
     );
+
     $aColumnsForScreening = $aColumnsForScreening + getCustomColumnsData('Screening/', $aMetadata);
 
     $sOutputData =
@@ -446,7 +467,7 @@ function getMetaData($sMetaDataFilename) {
 
         $sBatch = $aMetadata['Batch'];
         $sIndividual = $aMetadata['Sample_ID'];
-        $sKey = implode(BATCH_FOLDER_DELIMITER, array(BATCH_FOLDER_PREFIX, $sBatch, $sIndividual));
+        $sKey = implode(BATCH_FOLDER_DELIMITER, array($sBatch, $sIndividual));
         $aAllMetadata[$sKey] = $aMetadata;
     }
 
@@ -507,35 +528,62 @@ function appendMetadata($aMetadata) {
 
 
 
-function validateBatchFolderName($sBatchFolderName) {
+function validateBatchFolders($aAllMetadata)
+{
     global $_INI;
 
-    // Validate if batch folder name is in the correct format.
     $aExpectedParts = array(
         BATCH_FOLDER_PREFIX => '',
         '[BATCH NUMBER]' => 'Batch number must not contain ' . BATCH_FOLDER_DELIMITER,
-        '[INDIVIDUAL ID]' => 'Individual ID must not contain ' . BATCH_FOLDER_DELIMITER
+        '[SAMPLE ID]' => 'SAMPLE ID must not contain ' . BATCH_FOLDER_DELIMITER,
+        '[RUN ID]' => 'Run ID must not contain ' . BATCH_FOLDER_DELIMITER,
     );
 
-    $parts = explode(BATCH_FOLDER_DELIMITER, $sBatchFolderName);
-    if (count($parts) !== count($aExpectedParts)) {
+    $aBatchFolders = array();
+    $bBatchMissing = false;
+
+    foreach ($aAllMetadata as $sBatchName => $aMetadata) {
+        $sValidBatchFolderName = $_INI['paths']['data_files'] . BATCH_FOLDER_PREFIX . "_" . $sBatchName . "_*";
+        $aFoundFolders = glob($sValidBatchFolderName);
+
+        // If at least one batch in metadata is not found, we do NOT want to proceed.
+        // But, we want to print out all missing folders.
+        if (empty($aFoundFolders)) {
+            print("ERROR: batch folder " . $sValidBatchFolderName . " does not exist\n");
+            $bBatchMissing = true;
+        }
+
+        foreach ($aFoundFolders as $sBatchFolderName) {
+            // Validate if batch folder name is in the correct format.
+            $sBatchFolderName = basename($sBatchFolderName);
+            $parts = explode(BATCH_FOLDER_DELIMITER, $sBatchFolderName);
+            if (count($parts) !== count($aExpectedParts)) {
+                print("ERROR: Invalid batch folder name " . $sBatchFolderName . "\n");
+                $bBatchMissing = true;
+            } else {
+                $aBatchFolders[$sBatchFolderName] = array(
+                    'metadataKey' => $sBatchName,
+                    'batchNumber' => $parts[1],
+                    'sampleId' => $parts[2],
+                    'runId' => $parts[3],
+                );
+            }
+        }
+    }
+
+    if ($bBatchMissing) {
         print("ERROR: batch folder name must follow this pattern " . implode(BATCH_FOLDER_DELIMITER, array_keys($aExpectedParts)) . "\n");
         foreach ($aExpectedParts as $sPart => $sMessage) {
             if (!empty($sMessage)) {
                 print($sPart . ": " . $sMessage . "\n");
             }
         }
-
         exit(ERROR_MISSING_FILES);
     }
 
-    if (!file_exists($_INI['paths']['data_files'] . $sBatchFolderName)) {
-        print("ERROR: batch folder " . $_INI['paths']['data_files'] . $sBatchFolderName . " does not exist\n");
-        exit(ERROR_MISSING_FILES);
-
-    }
-
-    return $parts;
+    // Returns an array keyed by batch folder name.
+    // Each item is an array that contains the batch details.
+    return $aBatchFolders;
 }
 
 
@@ -563,7 +611,7 @@ function validateMetaDataFile($sPath) {
 
 
 
-function validateVariantFiles($sPath, $sBatch, $sIndividual) {
+function validateVariantFiles($sPath, $sIndividual) {
     // Get all the variant file names listed in getVariantFileTypes().
 
     $aVariantFiles = array();
