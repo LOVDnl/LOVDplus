@@ -4,7 +4,7 @@
  * LEIDEN OPEN VARIATION DATABASE (LOVD)
  *
  * Created     : 2013-11-05
- * Modified    : 2018-03-31
+ * Modified    : 2018-04-13
  * For LOVD    : 3.0-18
  *
  * Copyright   : 2004-2018 Leiden University Medical Center; http://www.LUMC.nl/
@@ -70,7 +70,7 @@ $sSQL = 'SELECT i.id, i.fatherid, i.motherid, i.custom_panel' . $sFamilyColumns 
                IFNULL(
                  (SELECT MAX(gp2g.valid_to)
                   FROM ' . TABLE_GP2GENE_REV . ' AS gp2g
-                  WHERE gp2g.genepanelid = gp.id AND LEFT(gp2g.valid_to, 10) != "9999-12-31" AND gp2g.deleted = 1), gp.created_date)), ";"
+                  WHERE gp2g.genepanelid = gp.id AND LEFT(gp2g.valid_to, 10) != "9999-12-31" AND gp2g.deleted = 1), gp.created_date))
              ORDER BY gp.type DESC, gp.name ASC SEPARATOR ";;") AS __gene_panels
          FROM ' . TABLE_INDIVIDUALS . ' AS i
            INNER JOIN ' . TABLE_SCREENINGS . ' AS s ON (i.id = s.individualid)
