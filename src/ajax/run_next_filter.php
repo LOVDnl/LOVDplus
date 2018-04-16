@@ -89,6 +89,7 @@ if ($aVariantIDs) {
             $aVariantIDsFiltered = $_DB->query('SELECT CAST(id AS UNSIGNED) FROM ' . TABLE_VARIANTS . ' WHERE (`VariantOnGenome/ExAC/Frequency/Adjusted` IS NULL OR `VariantOnGenome/ExAC/Frequency/Adjusted` <= 0.001) AND id IN (?' . str_repeat(', ?', count($aVariantIDs) - 1) . ')', $aVariantIDs, false)->fetchAllColumn();
             break;
         case 'remove_with_any_gmaf_1000g':
+        case 'remove_with_any_gmaf_1000gp3': // We rename it to make it clearer that this is 1000gp3. But, keep the old name for other instances already have analysis run under the old filter name.
             $aVariantIDsFiltered = $_DB->query('SELECT CAST(id AS UNSIGNED) FROM ' . TABLE_VARIANTS . ' WHERE (`VariantOnGenome/1000Gp3/Frequency` IS NULL OR `VariantOnGenome/1000Gp3/Frequency` = 0) AND id IN (?' . str_repeat(', ?', count($aVariantIDs) - 1) . ')', $aVariantIDs, false)->fetchAllColumn();
             break;
         case 'remove_with_any_gmaf_exac':
@@ -121,6 +122,9 @@ if ($aVariantIDs) {
         case 'remove_variants_hom_in_mother':
             $aVariantIDsFiltered = $_DB->query('SELECT DISTINCT CAST(id AS UNSIGNED) FROM ' . TABLE_VARIANTS . ' WHERE (`VariantOnGenome/Sequencing/Mother/GenoType` IS NULL OR `VariantOnGenome/Sequencing/Mother/GenoType` != "1/1") AND id IN (?' . str_repeat(', ?', count($aVariantIDs) - 1) . ')', $aVariantIDs, false)->fetchAllColumn();
             break;
+        case 'remove_obs_count_gte_1_percent':
+            $aVariantIDsFiltered = $_DB->query('SELECT DISTINCT CAST(vog.id AS UNSIGNED) FROM ' . TABLE_VARIANTS . ' AS vog LEFT JOIN ' . TABLE_VARIANTS . ' AS ovog ON (vog.`VariantOnGenome/DBID` = ovog.`VariantOnGenome/DBID`) LEFT JOIN ' . TABLE_SCR2VAR . ' AS s2v ON (ovog.id = s2v.variantid) LEFT JOIN ' . TABLE_SCREENINGS . ' AS s ON (s2v.screeningid = s.id) WHERE vog.id IN (?' . str_repeat(', ?', count($aVariantIDs) - 1) . ') GROUP BY vog.`VariantOnGenome/DBID` HAVING ((COUNT(DISTINCT s.individualid) - 1) / (SELECT COUNT(*) FROM ' . TABLE_INDIVIDUALS . ')) < 0.01', $aVariantIDs, false)->fetchAllColumn();
+            break;
         case 'remove_obs_count_gte_5_percent':
             $aVariantIDsFiltered = $_DB->query('SELECT DISTINCT CAST(vog.id AS UNSIGNED) FROM ' . TABLE_VARIANTS . ' AS vog LEFT JOIN ' . TABLE_VARIANTS . ' AS ovog ON (vog.`VariantOnGenome/DBID` = ovog.`VariantOnGenome/DBID`) LEFT JOIN ' . TABLE_SCR2VAR . ' AS s2v ON (ovog.id = s2v.variantid) LEFT JOIN ' . TABLE_SCREENINGS . ' AS s ON (s2v.screeningid = s.id) WHERE vog.id IN (?' . str_repeat(', ?', count($aVariantIDs) - 1) . ') GROUP BY vog.`VariantOnGenome/DBID` HAVING ((COUNT(DISTINCT s.individualid) - 1) / (SELECT COUNT(*) FROM ' . TABLE_INDIVIDUALS . ')) < 0.05', $aVariantIDs, false)->fetchAllColumn();
             break;
@@ -144,6 +148,9 @@ if ($aVariantIDs) {
         // NOTE: seqliner data does not have ExAC
         case 'remove_with_any_gmaf_evs_1000g_gt_1':
             $aVariantIDsFiltered = $_DB->query('SELECT DISTINCT CAST(id AS UNSIGNED) FROM ' . TABLE_VARIANTS . ' WHERE (`VariantOnGenome/Frequency/1000G/VEP` IS NULL OR `VariantOnGenome/Frequency/1000G/VEP` <= 0.01) AND (`VariantOnGenome/Frequency/EVS/VEP/European_American` IS NULL OR `VariantOnGenome/Frequency/EVS/VEP/European_American` <= 0.01) AND id IN (?' . str_repeat(', ?', count($aVariantIDs) - 1) . ')', $aVariantIDs, false)->fetchAllColumn();
+            break;
+        case 'remove_with_any_gmaf_evs_1000gp3_gt_1':
+            $aVariantIDsFiltered = $_DB->query('SELECT DISTINCT CAST(id AS UNSIGNED) FROM ' . TABLE_VARIANTS . ' WHERE (`VariantOnGenome/1000Gp3/Frequency` IS NULL OR `VariantOnGenome/1000Gp3/Frequency` <= 0.01) AND (`VariantOnGenome/Frequency/EVS/VEP/European_American` IS NULL OR `VariantOnGenome/Frequency/EVS/VEP/European_American` <= 0.01) AND id IN (?' . str_repeat(', ?', count($aVariantIDs) - 1) . ')', $aVariantIDs, false)->fetchAllColumn();
             break;
         case 'remove_with_any_gmaf_1000gp1':
             $aVariantIDsFiltered = $_DB->query('SELECT CAST(id AS UNSIGNED) FROM ' . TABLE_VARIANTS . ' WHERE (`VariantOnGenome/Frequency/1000G/VEP` IS NULL OR `VariantOnGenome/Frequency/1000G/VEP` = 0) AND id IN (?' . str_repeat(', ?', count($aVariantIDs) - 1) . ')', $aVariantIDs, false)->fetchAllColumn();
