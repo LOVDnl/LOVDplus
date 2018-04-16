@@ -484,8 +484,16 @@ if (PATH_COUNT >= 2 && ctype_digit($_PE[1]) && !ACTION && (PATH_COUNT == 2 || PA
         require ROOT_PATH . 'class/object_custom_viewlists.mod.php';
         // VOG needs to be first, so it groups by the VOG ID.
         $_DATA = new LOVD_CustomViewListMOD(array('VariantOnGenome', 'ObservationCounts', 'VariantOnTranscript', 'AnalysisRunResults', 'GenePanels'));
+
+        // For MGHA instances, we want to use double click to view detailed variant page. This is so that curators can copy data on the analysis results view list.
+        if (lovd_verifyInstance('mgha', false)) {
+            // Double click to open variant viewentry page.
+            $_DATA->setRowLink('CustomVL_AnalysisRunResults_for_I_VE', 'javascript:$(this).dblclick(function() {lovd_openWindow(\'' . lovd_getInstallURL() . 'variants/{{ID}}?&in_window\', \'VarVE_{{ID}}\', 1250);}); return false;');
+        } else {
+            $_DATA->setRowLink('CustomVL_AnalysisRunResults_for_I_VE', 'javascript:lovd_openWindow(\'' . lovd_getInstallURL() . 'variants/{{ID}}?&in_window#{{zData_preferred_transcriptid}}\', \'VarVE_{{ID}}\', 1250); return false;');
+        }
+
         // Define menu, to set pathogenicity flags of multiple variants in one go.
-        $_DATA->setRowLink('CustomVL_AnalysisRunResults_for_I_VE', 'javascript:lovd_openWindow(\'' . lovd_getInstallURL() . 'variants/{{ID}}?&in_window#{{zData_preferred_transcriptid}}\', \'VarVE_{{ID}}\', 1250); return false;');
         $bMenu         = true; // Show the gear-menu, with which users can mark and label variants?
         $bCurationStatus = true; // Are users allowed to set the curation status of variants? Value is ignored when $bMenu = false.
         if (!($_AUTH['level'] >= LEVEL_OWNER && $zScreening['analysis_statusid'] < ANALYSIS_STATUS_CLOSED) &&
@@ -526,6 +534,14 @@ if (PATH_COUNT >= 2 && ctype_digit($_PE[1]) && !ACTION && (PATH_COUNT == 2 || PA
         if (isset($_INSTANCE_CONFIG['viewlists']['CustomVL_AnalysisRunResults_for_I_VE']['cols_to_show'])) {
             $_DATA->setViewListCols($_INSTANCE_CONFIG['viewlists']['CustomVL_AnalysisRunResults_for_I_VE']['cols_to_show']);
         }
+
+        if (lovd_verifyInstance('mgha', false)) {
+            print('<P>');
+            lovd_showInfoTable('<STRONG>Double click</STRONG> on each row to view more information about the variant.', 'information');
+            print('</P>');
+
+        }
+
         $_DATA->viewList('CustomVL_AnalysisRunResults_for_I_VE', array(), false, false, $bMenu);
         print('
           </DIV>');
