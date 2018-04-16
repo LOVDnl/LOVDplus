@@ -465,7 +465,7 @@ class LOVD_MghaCpipeLymphomaDataConverter extends LOVD_MghaDataConverter {
             $aLine['Variant_Remarks'] .= "HGVSp: " . (!empty($aLine['HGVSp'])? $aLine['HGVSp'] : '') . "\n";
             $aLine['Variant_Remarks'] .= "Consequence: " . (!empty($aLine['Consequence'])? $aLine['Consequence'] : '')  . "\n";
             $aLine['Variant_Remarks'] .= "IMPACT: " . (!empty($aLine['IMPACT'])? $aLine['IMPACT'] : '')  . "\n";
-            $aLine['Feature'] = static::$NO_TRANSCRIPT;
+            $aLine['Feature'] = static::NO_TRANSCRIPT;
         }
 
         if (isset($aLine['CPIPE_BED'])) {
