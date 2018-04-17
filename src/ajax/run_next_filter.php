@@ -500,7 +500,21 @@ if ($aVariantIDs) {
             // Currently: two variants in the same gene is enough to trigger the compound heterozygous case, but that is of course not really correct...
             $aVariantIDsFiltered = $_DB->query('SELECT DISTINCT CAST(vog.id AS UNSIGNED) FROM ' . TABLE_VARIANTS . ' AS vog INNER JOIN ' . TABLE_VARIANTS_ON_TRANSCRIPTS . ' AS vot1 USING (id) INNER JOIN ' . TABLE_TRANSCRIPTS . ' AS t1 ON (vot1.transcriptid = t1.id) WHERE (vog.allele = 3 OR EXISTS (SELECT vot2.id FROM ' . TABLE_VARIANTS_ON_TRANSCRIPTS . ' AS vot2 INNER JOIN ' . TABLE_TRANSCRIPTS . ' AS t2 ON (vot2.transcriptid = t2.id) WHERE vot2.id != vog.id AND t1.geneid = t2.geneid AND vot2.id IN (?' . str_repeat(', ?', count($aVariantIDs) - 1) . '))) AND vog.id IN (?' . str_repeat(', ?', count($aVariantIDs) - 1) . ')', array_merge($aVariantIDs, $aVariantIDs), false)->fetchAllColumn();
             break;
-        
+
+        // Filters for Lymphoma flagship (mgha_seq instance)
+        case 'remove_no_cosmicid_intron_variant':
+            $aVariantIDsFiltered = $_DB->query('SELECT CAST(id AS UNSIGNED) FROM ' . TABLE_VARIANTS . ' WHERE ((`VariantOnGenome/COSMIC_IDs` IS NOT NULL AND `VariantOnGenome/COSMIC_IDs` != "") OR `VariantOnGenome/Consequence` != "intron_variant") AND id IN (?' . str_repeat(', ?', count($aVariantIDs) - 1) . ')', $aVariantIDs, false)->fetchAllColumn();
+            break;
+        case 'remove_no_cosmicid_5_prime_UTR_variant':
+            $aVariantIDsFiltered = $_DB->query('SELECT CAST(id AS UNSIGNED) FROM ' . TABLE_VARIANTS . ' WHERE ((`VariantOnGenome/COSMIC_IDs` IS NOT NULL AND `VariantOnGenome/COSMIC_IDs` != "") OR `VariantOnGenome/Consequence` != "5_prime_UTR_variant") AND id IN (?' . str_repeat(', ?', count($aVariantIDs) - 1) . ')', $aVariantIDs, false)->fetchAllColumn();
+            break;
+        case 'remove_no_cosmicid_3_prime_UTR_variant':
+            $aVariantIDsFiltered = $_DB->query('SELECT CAST(id AS UNSIGNED) FROM ' . TABLE_VARIANTS . ' WHERE ((`VariantOnGenome/COSMIC_IDs` IS NOT NULL AND `VariantOnGenome/COSMIC_IDs` != "") OR `VariantOnGenome/Consequence` != "3_prime_UTR_variant") AND id IN (?' . str_repeat(', ?', count($aVariantIDs) - 1) . ')', $aVariantIDs, false)->fetchAllColumn();
+            break;
+        case 'remove_no_cosmicid_synonymous_variant':
+            $aVariantIDsFiltered = $_DB->query('SELECT CAST(id AS UNSIGNED) FROM ' . TABLE_VARIANTS . ' WHERE ((`VariantOnGenome/COSMIC_IDs` IS NOT NULL AND `VariantOnGenome/COSMIC_IDs` != "") OR `VariantOnGenome/Consequence` != "synonymous_variant") AND id IN (?' . str_repeat(', ?', count($aVariantIDs) - 1) . ')', $aVariantIDs, false)->fetchAllColumn();
+            break;
+
         // Filters for Lymphoma flagship (mgha_seq instance)
         case 'remove_no_cosmicid_intron_variant_v2':
             $aVariantIDsFiltered = $_DB->query('SELECT DISTINCT CAST(id AS UNSIGNED) FROM ' . TABLE_VARIANTS . ' AS vog LEFT OUTER JOIN ' . TABLE_VARIANTS_ON_TRANSCRIPTS . ' AS vot USING (id) WHERE ((vot.`VariantOnTranscript/dbNSFP/COSMIC/ID` IS NOT NULL AND vot.`VariantOnTranscript/dbNSFP/COSMIC/ID` != "") OR vot.`VariantOnTranscript/Consequence_Type` != "intron_variant") AND vog.id IN (?' . str_repeat(', ?', count($aVariantIDs) - 1) . ')', $aVariantIDs, false)->fetchAllColumn();
