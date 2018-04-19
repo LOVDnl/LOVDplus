@@ -2,10 +2,7 @@
 
 $_INSTANCE_CONFIG['columns'] = array(
     'lab_id' => 'Individual/Sample_ID',
-    'family' => array(
-        'mother' => 'Screening/Mother/Sample_ID',
-        'father' => 'Screening/Father/Sample_ID'
-    )
+    'family' => array()
 );
 
 $_INSTANCE_CONFIG['cross_screenings'] = array(
