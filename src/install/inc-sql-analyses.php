@@ -305,6 +305,39 @@ switch ($_INI['instance']['name']) {
                   (7, "remove_low_impact_variants", 10)',
             );
         break;
+    case 'mgha_seq':
+        $aAnalysesSQL =
+            array(
+                'INSERT INTO ' . TABLE_ANALYSES . ' (`id`, `sortid`, `name`, `description`, `version`, `created_by`, `created_date`, `edited_by`, `edited_date`) VALUES 
+                  (1, 1, "Default Analysis",             "This is the default analysis installed with LOVD+. Additional analyses can be created as required.", 1, 0, NOW(), NULL, NULL)',
+                'INSERT INTO ' . TABLE_ANALYSIS_FILTERS . ' (`id`, `name`, `description`, `has_config`) VALUES 
+                  ("apply_selected_gene_panels", "Apply selected gene panels", "Select only variants that are associated with a gene that is in the selected gene panels and not within the selected blacklists.", 1),
+                  ("remove_tumour_alt_depth_lte_5", "Remove tumour alt depth <= 5", "Remove if tumour alt depth is in between 0.000001 and 5 (inclusive)", 0),
+                  ("remove_tumour_allele_freq_lte_3_percent", "Remove allele freq <= 3%", "Remove if allele frequency in between 0.0001% and 3% (inclusive)", 0),
+                  ("remove_tumour_alt_depth_lte_20_no_somatic_score", "Remove tumour alt depth <= 20 without somatic score", "Remove if tumour alt depth is in between 0.000001 and 20 (inclusive) and without somatic score", 0),
+                  ("remove_seq_qual_lte_100_no_somatic_score", "Remove seq qual <= 100", "Remove if sequencing quality is in between 0.000001 and 100 (inclusive) and without somatic score", 0),
+                  ("remove_tumour_allele_freq_lte_10_percent_no_somatic_score", "Remove tumour allele freq <= 10%", "Remove if tumour allele frequency is in between 0.0001% and 10% (inclusive) and without somatic score", 0),
+                  ("remove_with_any_gmaf_evs_1000gp3_gt_1", "Remove if both 1000gp3 and EVS EA <= 1%", "Remove if both 1000 Genome Phase 3 frequency and EVS European American frequency <= 1%", 0),
+                  ("remove_with_any_gmaf_1000gp3", "Remove 1000gp3 <= 1%", "Remove if both 1000 Genome Phase 3 frequency <= 1%", 0),
+                  ("remove_no_cosmicid_intron_variant", "Remove intron variants without COSMIC ID", "Remove intron variants without COSMIC ID", 0),
+                  ("remove_no_cosmicid_5_prime_UTR_variant", "Remove 5 Prime UTR variants without COSMIC ID", "Remove 5 Prime UTR variants without COSMIC ID", 0),
+                  ("remove_no_cosmicid_3_prime_UTR_variant", "Remove 3 Prime UTR variants without COSMIC ID", "Remove 3 Prime UTR variants without COSMIC ID", 0),
+                  ("remove_no_cosmicid_synonymous_variant", "Remove synonymous variants without COSMIC ID", "Remove synonymous variants without COSMIC ID", 0)',
+                'INSERT INTO ' . TABLE_A2AF . ' (`analysisid`, `filterid`, `filter_order`) VALUES 
+                  (1, "apply_selected_gene_panels", 1), 
+                  (1, "remove_tumour_alt_depth_lte_5", 2),
+                  (1, "remove_tumour_allele_freq_lte_3_percent", 3),
+                  (1, "remove_tumour_alt_depth_lte_20_no_somatic_score", 4),
+                  (1, "remove_seq_qual_lte_100_no_somatic_score", 5),
+                  (1, "remove_tumour_allele_freq_lte_10_percent_no_somatic_score", 6),
+                  (1, "remove_with_any_gmaf_evs_1000gp3_gt_1", 7),
+                  (1, "remove_with_any_gmaf_1000gp3", 8),
+                  (1, "remove_no_cosmicid_intron_variant", 9),
+                  (1, "remove_no_cosmicid_5_prime_UTR_variant", 10),
+                  (1, "remove_no_cosmicid_3_prime_UTR_variant", 11),
+                  (1, "remove_no_cosmicid_synonymous_variant", 12)',
+            );
+        break;
     case 'mgha_cpipe_lymphoma':
         $aAnalysesSQL =
             array(
