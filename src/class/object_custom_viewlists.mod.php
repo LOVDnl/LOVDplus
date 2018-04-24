@@ -260,7 +260,7 @@ class LOVD_CustomViewListMOD extends LOVD_CustomViewList {
                             }
                         }
                         // Security checks in this file's prepareData() need geneid to see if the column in question is set to non-public for one of the genes.
-                        $aSQL['SELECT'] .= (!$aSQL['SELECT']? '' : ', ') . 'GROUP_CONCAT(DISTINCT t.geneid SEPARATOR ";") AS symbol, GROUP_CONCAT(DISTINCT t.geneid SEPARATOR ";") AS _geneid, GROUP_CONCAT(DISTINCT IF(IFNULL(g.id_omim, 0) = 0, "", CONCAT(g.id, ";", g.id_omim)) SEPARATOR ";;") AS __gene_OMIM';
+                        $aSQL['SELECT'] .= (!$aSQL['SELECT']? '' : ', ') . 'GROUP_CONCAT(DISTINCT t.geneid SEPARATOR ";") AS _geneid, GROUP_CONCAT(DISTINCT IF(IFNULL(g.id_omim, 0) = 0, "", CONCAT(g.id, ";", g.id_omim)) SEPARATOR ";;") AS __gene_OMIM';
                         // FIXME: This pulls so much data out of the Diseases table, that we should perhaps consider making it a separate data object?
                         // Diseases are to be displayed separated by semicolons.
                         // Each disease is displayed as [SYMBOL: INHERITANCE] or if symbol does not exist [NAME: INHERITANCE]
@@ -453,7 +453,7 @@ class LOVD_CustomViewListMOD extends LOVD_CustomViewList {
                         $this->aColumnsViewList = array_merge($this->aColumnsViewList, array(
                             'symbol' => array(
                                 'view' => array('Gene', 10),
-                                'db'   => array('symbol', 'ASC', true)),
+                                'db'   => array('_geneid', 'ASC', 'TEXT')),
                             'transcript' => array(
                                 'view' => array('Transcript', 20),
                                 'db'   => array('transcript', 'ASC', true)),
@@ -703,6 +703,10 @@ class LOVD_CustomViewListMOD extends LOVD_CustomViewList {
         }
         if (isset($zData['VariantOnTranscript/DNA'])) {
             $zData['VariantOnTranscript/DNA'] = preg_replace('/ins([ACTG]{3})([ACTG]{3,})/', 'ins${1}...', $zData['VariantOnTranscript/DNA']);
+        }
+        if (isset($zData['geneid'])) {
+            // LOVD_Object::autoExplode() has unset this, putting it back since some instances want to show this.
+            $zData['symbol'] = implode(';', $zData['geneid']);
         }
         if (isset($zData['gene_OMIM'])) {
             $zData['gene_OMIM_'] = '';
