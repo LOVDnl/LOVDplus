@@ -117,12 +117,18 @@ if ($aVariantIDs) {
             $aVariantIDsFiltered = $_DB->query('SELECT DISTINCT CAST(vog.id AS UNSIGNED) FROM ' . TABLE_VARIANTS . ' AS vog INNER JOIN ' . TABLE_VARIANTS_ON_TRANSCRIPTS . ' AS vot1 USING (id) INNER JOIN ' . TABLE_TRANSCRIPTS . ' AS t1 ON (vot1.transcriptid = t1.id) WHERE (vog.allele = 3 OR EXISTS (SELECT vot2.id FROM ' . TABLE_VARIANTS_ON_TRANSCRIPTS . ' AS vot2 INNER JOIN ' . TABLE_TRANSCRIPTS . ' AS t2 ON (vot2.transcriptid = t2.id) WHERE vot2.id != vog.id AND t1.geneid = t2.geneid AND vot2.id IN (?' . str_repeat(', ?', count($aVariantIDs) - 1) . '))) AND vog.id IN (?' . str_repeat(', ?', count($aVariantIDs) - 1) . ')', array_merge($aVariantIDs, $aVariantIDs), false)->fetchAllColumn();
             break;
         case 'select_homozygous_or_candidate_compound_het':
+            // Note that this filter removes *all* heterozygous with allele = 0, even when there are multiple per gene. It leaves the paternal and maternal variants when other variants in the gene are present.
             $aVariantIDsFiltered = $_DB->query('SELECT DISTINCT CAST(vog.id AS UNSIGNED) FROM ' . TABLE_VARIANTS . ' AS vog INNER JOIN ' . TABLE_VARIANTS_ON_TRANSCRIPTS . ' AS vot1 USING (id) INNER JOIN ' . TABLE_TRANSCRIPTS . ' AS t1 ON (vot1.transcriptid = t1.id) WHERE (vog.allele = 3 OR (vog.allele = 10 AND EXISTS (SELECT vot2.id FROM ' . TABLE_VARIANTS_ON_TRANSCRIPTS . ' AS vot2 INNER JOIN ' . TABLE_TRANSCRIPTS . ' AS t2 ON (vot2.transcriptid = t2.id) INNER JOIN ' . TABLE_VARIANTS . ' as vog2 ON (vot2.id = vog2.id) WHERE vot2.id != vog.id AND t1.geneid = t2.geneid AND vog2.allele != 10 AND vot2.id IN (?' . str_repeat(', ?', count($aVariantIDs) - 1) . '))) OR (vog.allele = 20 AND EXISTS (SELECT vot3.id FROM ' . TABLE_VARIANTS_ON_TRANSCRIPTS . ' AS vot3 INNER JOIN ' . TABLE_TRANSCRIPTS . ' AS t3 ON (vot3.transcriptid = t3.id) INNER JOIN ' . TABLE_VARIANTS . ' as vog3 ON (vot3.id = vog3.id) WHERE vot3.id != vog.id AND t1.geneid = t3.geneid AND vog3.allele != 20 AND vot3.id IN (?' . str_repeat(', ?', count($aVariantIDs) - 1) . ')))) AND vog.id IN (?' . str_repeat(', ?', count($aVariantIDs) - 1) . ')', array_merge($aVariantIDs, $aVariantIDs, $aVariantIDs), false)->fetchAllColumn();
             break;
         case 'select_homozygous_or_confirmed_compound_het':
             $aVariantIDsFiltered = $_DB->query('SELECT DISTINCT CAST(vog.id AS UNSIGNED) FROM ' . TABLE_VARIANTS . ' AS vog INNER JOIN ' . TABLE_VARIANTS_ON_TRANSCRIPTS . ' AS vot1 USING (id) INNER JOIN ' . TABLE_TRANSCRIPTS . ' AS t1 ON (vot1.transcriptid = t1.id) WHERE (vog.allele = 3 OR (vog.allele = 10 AND EXISTS (SELECT vot2.id FROM ' . TABLE_VARIANTS_ON_TRANSCRIPTS . ' AS vot2 INNER JOIN ' . TABLE_TRANSCRIPTS . ' AS t2 ON (vot2.transcriptid = t2.id) INNER JOIN ' . TABLE_VARIANTS . ' as vog2 ON (vot2.id = vog2.id) WHERE vot2.id != vog.id AND t1.geneid = t2.geneid AND vog2.allele = 20 AND vot2.id IN (?' . str_repeat(', ?', count($aVariantIDs) - 1) . '))) OR (vog.allele = 20 AND EXISTS (SELECT vot3.id FROM ' . TABLE_VARIANTS_ON_TRANSCRIPTS . ' AS vot3 INNER JOIN ' . TABLE_TRANSCRIPTS . ' AS t3 ON (vot3.transcriptid = t3.id) INNER JOIN ' . TABLE_VARIANTS . ' as vog3 ON (vot3.id = vog3.id) WHERE vot3.id != vog.id AND t1.geneid = t3.geneid AND vog3.allele = 10 AND vot3.id IN (?' . str_repeat(', ?', count($aVariantIDs) - 1) . ')))) AND vog.id IN (?' . str_repeat(', ?', count($aVariantIDs) - 1) . ')', array_merge($aVariantIDs, $aVariantIDs, $aVariantIDs), false)->fetchAllColumn();
             break;
+        case 'remove_variants_hom_in_father':
+            // This filter is created for Leiden, but we'll keep it next to its MGHA counterpart.
+            $aVariantIDsFiltered = $_DB->query('SELECT DISTINCT CAST(id AS UNSIGNED) FROM ' . TABLE_VARIANTS . ' WHERE (`VariantOnGenome/Sequencing/Father/GenoType` IS NULL OR `VariantOnGenome/Sequencing/Father/GenoType` != "1/1") AND id IN (?' . str_repeat(', ?', count($aVariantIDs) - 1) . ')', $aVariantIDs, false)->fetchAllColumn();
+            break;
         case 'remove_variants_hom_in_mother':
+            // NOTE: Leiden is also using this filter. Don't change without consulting them!
             $aVariantIDsFiltered = $_DB->query('SELECT DISTINCT CAST(id AS UNSIGNED) FROM ' . TABLE_VARIANTS . ' WHERE (`VariantOnGenome/Sequencing/Mother/GenoType` IS NULL OR `VariantOnGenome/Sequencing/Mother/GenoType` != "1/1") AND id IN (?' . str_repeat(', ?', count($aVariantIDs) - 1) . ')', $aVariantIDs, false)->fetchAllColumn();
             break;
         case 'remove_obs_count_gte_1_percent':
@@ -495,10 +501,35 @@ if ($aVariantIDs) {
             $aVariantIDsFiltered = $_DB->query('SELECT CAST(id AS UNSIGNED) FROM ' . TABLE_VARIANTS . ' WHERE (`VariantOnGenome/Sequencing/GATKcaller` REGEXP "[[:<:]]UG[[:>:]]" AND `VariantOnGenome/Sequencing/GATKcaller` REGEXP "[[:<:]]HC[[:>:]]") AND id IN (?' . str_repeat(', ?', count($aVariantIDs) - 1) . ')', $aVariantIDs, false)->fetchAllColumn();
             break;
         case 'select_homozygous_or_compound_heterozygous':
-            // FIXME: Problem: Compound heterozygous check means I need the allele column.
-            // What do we do with fields where the allele is unknown (de novo?).
-            // Currently: two variants in the same gene is enough to trigger the compound heterozygous case, but that is of course not really correct...
+            // NOTE: Filter is the same as MGHA's select_homozygous_or_potential_compound_het.
+            // NOTE: This filter removes all variants that do not have a gene annotated, even if they're homozygous.
+            // This is quite a weak implementation of the compound heterozygous check; variants are kept
+            //  if they're homozygous or if at least one other variants exists in the same gene.
+            // This filter does not rely on the allele field (besides the hom/het status).
+            // If parent's GT values are known and the allele field can contain 10s and 20s (paternal/maternal alleles),
+            //  then it's recommended to use a more stringent filter:
+            //  select_homozygous_or_heterozygous_not_from_one_parent (Leiden)
+            //  select_homozygous_or_candidate_compound_het (MGHA)
+            //  select_homozygous_or_confirmed_compound_het (MGHA)
             $aVariantIDsFiltered = $_DB->query('SELECT DISTINCT CAST(vog.id AS UNSIGNED) FROM ' . TABLE_VARIANTS . ' AS vog INNER JOIN ' . TABLE_VARIANTS_ON_TRANSCRIPTS . ' AS vot1 USING (id) INNER JOIN ' . TABLE_TRANSCRIPTS . ' AS t1 ON (vot1.transcriptid = t1.id) WHERE (vog.allele = 3 OR EXISTS (SELECT vot2.id FROM ' . TABLE_VARIANTS_ON_TRANSCRIPTS . ' AS vot2 INNER JOIN ' . TABLE_TRANSCRIPTS . ' AS t2 ON (vot2.transcriptid = t2.id) WHERE vot2.id != vog.id AND t1.geneid = t2.geneid AND vot2.id IN (?' . str_repeat(', ?', count($aVariantIDs) - 1) . '))) AND vog.id IN (?' . str_repeat(', ?', count($aVariantIDs) - 1) . ')', array_merge($aVariantIDs, $aVariantIDs), false)->fetchAllColumn();
+            break;
+        case 'select_homozygous_or_heterozygous_not_from_one_parent':
+            // This filter is a new implementation of Leiden's select_homozygous_or_compound_heterozygous.
+            // This is a better implementation as it uses the allele field to check for compound heterozygozity.
+            // Also, this filter deliberately does *not* remove genomic variants without a gene annotated.
+            // Variants are kept if they're homozygous or
+            //  don't have a gene or
+            //  if they're heterozygous and
+            //    grouped by gene, are not all from one parent (allele=10/11/20/21) and
+            //    grouped by gene, are more than one.
+            // Note that among a homozygous variant, a single heterozygous variant with allele = 0, will be discarded.
+            // This filter is similar to the MGHA's select_homozygous_or_candidate_compound_het implementation,
+            //  but has a simpler query buildup, does not discard genomic variants, and does not discard all
+            //  heterozygous variants with allele = 0.
+            $_DB->query('SET group_concat_max_len = 500000'); // Wouldn't likely need anything even close to this, but oh well.
+            // We need to run an array_unique over it, because variants may be mapped to multiple genes.
+            $aVariantIDsFiltered = array_unique(explode(',',
+                $_DB->query('SELECT GROUP_CONCAT(ids) FROM (SELECT GROUP_CONCAT(DISTINCT CAST(vog.id AS UNSIGNED)) AS ids, GROUP_CONCAT(DISTINCT LEFT(vog.allele, 1) ORDER BY vog.allele) AS alleles, t.geneid FROM ' . TABLE_VARIANTS . ' AS vog LEFT OUTER JOIN ' . TABLE_VARIANTS_ON_TRANSCRIPTS . ' AS vot USING (id) LEFT OUTER JOIN ' . TABLE_TRANSCRIPTS . ' AS t ON (vot.transcriptid = t.id) WHERE vog.id IN (?' . str_repeat(', ?', count($aVariantIDs) - 1) . ') GROUP BY (vog.allele = "3"), t.geneid HAVING geneid IS NULL OR !(alleles IN ("1", "2") OR (ids NOT LIKE "%,%" AND alleles = "0")))A', $aVariantIDs, false)->fetchColumn()));
             break;
 
         // Filters for Lymphoma flagship (mgha_seq instance)

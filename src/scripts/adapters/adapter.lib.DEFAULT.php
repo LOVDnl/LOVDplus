@@ -315,7 +315,19 @@ class LOVD_DefaultDataConverter {
                 break;
             case '0/1':
                 // Heterozygous.
-                $aVariant['allele'] = 0;
+                if (!empty($aVariant['VariantOnGenome/Sequencing/Father/GenoType']) && !empty($aVariant['VariantOnGenome/Sequencing/Mother/GenoType'])) {
+                    if (strpos($aVariant['VariantOnGenome/Sequencing/Father/GenoType'], '1') !== false && strpos($aVariant['VariantOnGenome/Sequencing/Mother/GenoType'], '1') === false) {
+                        // From father, inferred.
+                        $aVariant['allele'] = 10;
+                    } elseif (strpos($aVariant['VariantOnGenome/Sequencing/Mother/GenoType'], '1') !== false && strpos($aVariant['VariantOnGenome/Sequencing/Father/GenoType'], '1') === false) {
+                        // From mother, inferred.
+                        $aVariant['allele'] = 20;
+                    } else {
+                        $aVariant['allele'] = 0;
+                    }
+                } else {
+                    $aVariant['allele'] = 0;
+                }
                 break;
             case '1/1':
                 // Homozygous.

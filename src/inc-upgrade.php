@@ -773,6 +773,7 @@ if ($sCalcVersionFiles != $sCalcVersionDB) {
 
                      'UPDATE ' . TABLE_ANALYSIS_FILTERS . ' SET has_config = 1 WHERE id = "apply_selected_gene_panels"'
                  ),
+                 '3.0-17p' => array(), // Placeholder for LOVD+ queries, defined below.
                  '3.0-18' =>
                      array(
                          // These two will be ignored by LOVD+.
@@ -1043,7 +1044,7 @@ if ($sCalcVersionFiles != $sCalcVersionDB) {
     if (LOVD_plus && $sCalcVersionDB < lovd_calculateVersion('3.0-17n')) {
         // Run LOVD+ specific queries.
         // LOVD has this table since 3.0-20b, in its current form.
-        // LOVD+ has this table since 3.0-12g, and takes LOVD's 20b improvements in 17m.
+        // LOVD+ has this table since 3.0-12g, and takes LOVD's 20b improvements in 17n.
         $aUpdates['3.0-17n'][] =
             'ALTER TABLE ' . TABLE_SCHEDULED_IMPORTS . ' 
              ADD COLUMN priority TINYINT(1) UNSIGNED NOT NULL DEFAULT 0 AFTER filename,
@@ -1070,6 +1071,15 @@ if ($sCalcVersionFiles != $sCalcVersionDB) {
                     'INSERT IGNORE INTO ' . TABLE_ANALYSIS_FILTERS . ' VALUES ("cross_screenings", "Compare multiple screenings", "Select variants that satisfy the criteria configured by you, comparing several screenings.", 1)',
                 )
             );
+        }
+    }
+
+    if (LOVD_plus) {
+        // Run LOVD+ specific queries.
+        if ($sCalcVersionDB < lovd_calculateVersion('3.0-17p')) {
+            $aUpdates['3.0-17p'][] = 'ALTER TABLE ' . TABLE_ANALYSIS_FILTERS . ' MODIFY COLUMN id VARCHAR(55) NOT NULL';
+            $aUpdates['3.0-17p'][] = 'ALTER TABLE ' . TABLE_A2AF . ' MODIFY COLUMN filterid VARCHAR(55) NOT NULL';
+            $aUpdates['3.0-17p'][] = 'ALTER TABLE ' . TABLE_ANALYSES_RUN_FILTERS . ' MODIFY COLUMN filterid VARCHAR(55) NOT NULL';
         }
     }
 
