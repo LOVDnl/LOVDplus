@@ -239,7 +239,7 @@ class LOVD_DefaultDataConverter {
     var $sAdapterPath;
     var $aScriptVars = array();
     var $aMetadata; // Contains the meta data file, parsed.
-    static $NO_TRANSCRIPT = '-----'; // Transcripts with this value will be ignored.
+    const NO_TRANSCRIPT = '-----'; // Transcripts with this value will be ignored.
 
     public function __construct ($sAdapterPath)
     {
@@ -411,7 +411,7 @@ class LOVD_DefaultDataConverter {
         // You can overload this function to define which transcripts to ignore;
         //  you can use lists, prefixes or other rules.
 
-        if ($sTranscriptID === static::$NO_TRANSCRIPT) {
+        if ($sTranscriptID === static::NO_TRANSCRIPT) {
             return true;
         }
 

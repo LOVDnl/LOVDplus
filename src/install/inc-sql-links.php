@@ -54,7 +54,7 @@ if (LOVD_plus) {
             ));
     }
 
-    if ($_INI['instance']['name'] == 'mgha') {
+    if (lovd_verifyInstance('mgha', false)) {
         $aLinkSQL = array_merge($aLinkSQL,
             array(
                 'Provenance' => 'INSERT INTO ' . TABLE_LINKS . ' VALUES (008,"Provenance","{prov:[1]}","<A href=\"' . lovd_getInstallURL() . 'uploads/[1]\" target=\"_blank\">prov</A>","Links to the provenance file for this sample.",0, NOW(), NULL, NULL)',
@@ -65,6 +65,26 @@ if (LOVD_plus) {
                 'INSERT INTO ' . TABLE_COLS2LINKS . ' VALUES ("Screening/Pipeline_files", 010)',
                 'IGV' => 'INSERT INTO ' . TABLE_LINKS . ' VALUES (011,"IGVscreenshot","{[1]-NM_[2]-[3]-[4]-IGV}","<A href=\"localhost:60151/load?file=' . lovd_getInstallURL() . 'uploads/variant_bams/[1]-NM_[2]-chr[3]-[4]-IGV.bam&locus=chr[3]:[4]&genome=hg19\" target=\"_blank\">IGV","Link to create a track for the given variant, in a running instance of IGV on the localhost.",0, NOW(), NULL, NULL)',
                 'INSERT INTO ' . TABLE_COLS2LINKS . ' VALUES ("VariantOnGenome/Sequencing/IGV", 011)',
+            ));
+    }
+
+    if (lovd_verifyInstance('mgha_seq')) {
+        $aLinkSQL = array_merge($aLinkSQL,
+            array(
+                'BAM Tumour Normal' => 'INSERT INTO ' . TABLE_LINKS . ' VALUES (012,"BAM Tumour Normal","{tnm:[1]:[2]:[3]:[4]:[5]}","<a href=\"http://localhost:60151/load?file=' . lovd_getInstallURL() . 'wwwdata/bam/[2]/[1].tumour_normal_merged.tmp.realign.recal.bam&locus=chr[3]:[4]-[5]&genome=hg19\" target=\"_blank\">BAM</a>","Link to create a track for the given variant, in a running instance of IGV on the localhost using the completed BAM from seqliner.",00001,NOW(),00001,NOW())',
+                'INSERT INTO ' . TABLE_COLS2LINKS . ' VALUES ("VariantOnGenome/Sequencing/IGV", 012)',
+                'BAM Tumour' => 'INSERT INTO ' . TABLE_LINKS . ' VALUES (013,"BAM Tumour","{t:[1]:[2]:[3]:[4]:[5]}","<a href=\"http://localhost:60151/load?file=' . lovd_getInstallURL() . 'wwwdata/bam/[2]/[1].tumour_merged.markdups.bam&locus=chr[3]:[4]-[5]&genome=hg19\" target=\"_blank\">BAM</a>","Link to create a track for the given variant, in a running instance of IGV on the localhost using the completed BAM from seqliner.",00001,NOW(),00001,NOW())',
+                'INSERT INTO ' . TABLE_COLS2LINKS . ' VALUES ("VariantOnGenome/Sequencing/IGV", 013)',
+                'BAM Normal' => 'INSERT INTO ' . TABLE_LINKS . ' VALUES (014,"BAM Normal","{n:[1]:[2]:[3]:[4]:[5]}","<a href=\"http://localhost:60151/load?file=' . lovd_getInstallURL() . 'wwwdata/bam/[2]/[1].normal_merged.markdups.bam&locus=chr[3]:[4]-[5]&genome=hg19\" target=\"_blank\">BAM</a>","Link to create a track for the given variant, in a running instance of IGV on the localhost using the completed BAM from seqliner.",00001,NOW(),00001,NOW())',
+                'INSERT INTO ' . TABLE_COLS2LINKS . ' VALUES ("VariantOnGenome/Sequencing/IGV", 014)',
+            ));
+    }
+
+    if (lovd_verifyInstance('mgha_cpipe_lymphoma')) {
+        $aLinkSQL = array_merge($aLinkSQL,
+            array(
+                'BAM' => 'INSERT INTO ' . TABLE_LINKS . ' VALUES (012,"BAM","{rec:[1]:[2]:[3]:[4]:[5]}","<a href=\"http://localhost:60151/load?file=' . lovd_getInstallURL() . 'wwwdata/bam/[2]/[1].merge.dedup.realign.recal.bam&locus=chr[3]:[4]-[5]&genome=hg19\" target=\"_blank\">BAM</a>","Link to create a track for the given variant, in a running instance of IGV on the localhost using the completed BAM from seqliner.",00001,NOW(),00001,NOW())',
+                'INSERT INTO ' . TABLE_COLS2LINKS . ' VALUES ("VariantOnGenome/Sequencing/IGV", 012)',
             ));
     }
 }

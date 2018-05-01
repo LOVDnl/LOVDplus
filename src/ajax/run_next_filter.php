@@ -89,6 +89,7 @@ if ($aVariantIDs) {
             $aVariantIDsFiltered = $_DB->query('SELECT CAST(id AS UNSIGNED) FROM ' . TABLE_VARIANTS . ' WHERE (`VariantOnGenome/ExAC/Frequency/Adjusted` IS NULL OR `VariantOnGenome/ExAC/Frequency/Adjusted` <= 0.001) AND id IN (?' . str_repeat(', ?', count($aVariantIDs) - 1) . ')', $aVariantIDs, false)->fetchAllColumn();
             break;
         case 'remove_with_any_gmaf_1000g':
+        case 'remove_with_any_gmaf_1000gp3': // We rename it to make it clearer that this is 1000gp3. But, keep the old name for other instances already have analysis run under the old filter name.
             $aVariantIDsFiltered = $_DB->query('SELECT CAST(id AS UNSIGNED) FROM ' . TABLE_VARIANTS . ' WHERE (`VariantOnGenome/1000Gp3/Frequency` IS NULL OR `VariantOnGenome/1000Gp3/Frequency` = 0) AND id IN (?' . str_repeat(', ?', count($aVariantIDs) - 1) . ')', $aVariantIDs, false)->fetchAllColumn();
             break;
         case 'remove_with_any_gmaf_exac':
@@ -105,6 +106,9 @@ if ($aVariantIDs) {
             break;
         case 'remove_synonymous_variants':
             $aVariantIDsFiltered = $_DB->query('SELECT DISTINCT CAST(vog.id AS UNSIGNED) FROM ' . TABLE_VARIANTS . ' AS vog LEFT OUTER JOIN ' . TABLE_VARIANTS_ON_TRANSCRIPTS . ' AS vot USING (id) WHERE (vot.`VariantOnTranscript/Consequence_Type` IS NULL OR vot.`VariantOnTranscript/Consequence_Type` != "synonymous_variant") AND vog.id IN (?' . str_repeat(', ?', count($aVariantIDs) - 1) . ')', $aVariantIDs, false)->fetchAllColumn();
+            break;
+        case 'remove_low_impact_not_splice':
+            $aVariantIDsFiltered = $_DB->query('SELECT DISTINCT CAST(vog.id AS UNSIGNED) FROM ' . TABLE_VARIANTS . ' AS vog LEFT OUTER JOIN ' . TABLE_VARIANTS_ON_TRANSCRIPTS . ' AS vot USING (id) WHERE (vot.`VariantOnTranscript/Consequence_Impact` IS NULL OR vot.`VariantOnTranscript/Consequence_Impact` LIKE "%MODERATE%" OR vot.`VariantOnTranscript/Consequence_Impact` LIKE "%HIGH%" OR vot.`VariantOnTranscript/Consequence_Type` LIKE "%splice_region_variant%") AND vog.id IN (?' . str_repeat(', ?', count($aVariantIDs) - 1) . ')', $aVariantIDs, false)->fetchAllColumn();
             break;
         case 'remove_low_impact_variants':
             $aVariantIDsFiltered = $_DB->query('SELECT DISTINCT CAST(vog.id AS UNSIGNED) FROM ' . TABLE_VARIANTS . ' AS vog LEFT OUTER JOIN ' . TABLE_VARIANTS_ON_TRANSCRIPTS . ' AS vot USING (id) WHERE (vot.`VariantOnTranscript/Consequence_Impact` IS NULL OR vot.`VariantOnTranscript/Consequence_Impact` LIKE "%MODERATE%" OR vot.`VariantOnTranscript/Consequence_Impact` LIKE "%HIGH%") AND vog.id IN (?' . str_repeat(', ?', count($aVariantIDs) - 1) . ')', $aVariantIDs, false)->fetchAllColumn();
@@ -126,6 +130,9 @@ if ($aVariantIDs) {
         case 'remove_variants_hom_in_mother':
             // NOTE: Leiden is also using this filter. Don't change without consulting them!
             $aVariantIDsFiltered = $_DB->query('SELECT DISTINCT CAST(id AS UNSIGNED) FROM ' . TABLE_VARIANTS . ' WHERE (`VariantOnGenome/Sequencing/Mother/GenoType` IS NULL OR `VariantOnGenome/Sequencing/Mother/GenoType` != "1/1") AND id IN (?' . str_repeat(', ?', count($aVariantIDs) - 1) . ')', $aVariantIDs, false)->fetchAllColumn();
+            break;
+        case 'remove_obs_count_gte_1_percent':
+            $aVariantIDsFiltered = $_DB->query('SELECT DISTINCT CAST(vog.id AS UNSIGNED) FROM ' . TABLE_VARIANTS . ' AS vog LEFT JOIN ' . TABLE_VARIANTS . ' AS ovog ON (vog.`VariantOnGenome/DBID` = ovog.`VariantOnGenome/DBID`) LEFT JOIN ' . TABLE_SCR2VAR . ' AS s2v ON (ovog.id = s2v.variantid) LEFT JOIN ' . TABLE_SCREENINGS . ' AS s ON (s2v.screeningid = s.id) WHERE vog.id IN (?' . str_repeat(', ?', count($aVariantIDs) - 1) . ') GROUP BY vog.`VariantOnGenome/DBID` HAVING ((COUNT(DISTINCT s.individualid) - 1) / (SELECT COUNT(*) FROM ' . TABLE_INDIVIDUALS . ')) < 0.01', $aVariantIDs, false)->fetchAllColumn();
             break;
         case 'remove_obs_count_gte_5_percent':
             $aVariantIDsFiltered = $_DB->query('SELECT DISTINCT CAST(vog.id AS UNSIGNED) FROM ' . TABLE_VARIANTS . ' AS vog LEFT JOIN ' . TABLE_VARIANTS . ' AS ovog ON (vog.`VariantOnGenome/DBID` = ovog.`VariantOnGenome/DBID`) LEFT JOIN ' . TABLE_SCR2VAR . ' AS s2v ON (ovog.id = s2v.variantid) LEFT JOIN ' . TABLE_SCREENINGS . ' AS s ON (s2v.screeningid = s.id) WHERE vog.id IN (?' . str_repeat(', ?', count($aVariantIDs) - 1) . ') GROUP BY vog.`VariantOnGenome/DBID` HAVING ((COUNT(DISTINCT s.individualid) - 1) / (SELECT COUNT(*) FROM ' . TABLE_INDIVIDUALS . ')) < 0.05', $aVariantIDs, false)->fetchAllColumn();
@@ -150,6 +157,9 @@ if ($aVariantIDs) {
         // NOTE: seqliner data does not have ExAC
         case 'remove_with_any_gmaf_evs_1000g_gt_1':
             $aVariantIDsFiltered = $_DB->query('SELECT DISTINCT CAST(id AS UNSIGNED) FROM ' . TABLE_VARIANTS . ' WHERE (`VariantOnGenome/Frequency/1000G/VEP` IS NULL OR `VariantOnGenome/Frequency/1000G/VEP` <= 0.01) AND (`VariantOnGenome/Frequency/EVS/VEP/European_American` IS NULL OR `VariantOnGenome/Frequency/EVS/VEP/European_American` <= 0.01) AND id IN (?' . str_repeat(', ?', count($aVariantIDs) - 1) . ')', $aVariantIDs, false)->fetchAllColumn();
+            break;
+        case 'remove_with_any_gmaf_evs_1000gp3_gt_1':
+            $aVariantIDsFiltered = $_DB->query('SELECT DISTINCT CAST(id AS UNSIGNED) FROM ' . TABLE_VARIANTS . ' WHERE (`VariantOnGenome/1000Gp3/Frequency` IS NULL OR `VariantOnGenome/1000Gp3/Frequency` <= 0.01) AND (`VariantOnGenome/Frequency/EVS/VEP/European_American` IS NULL OR `VariantOnGenome/Frequency/EVS/VEP/European_American` <= 0.01) AND id IN (?' . str_repeat(', ?', count($aVariantIDs) - 1) . ')', $aVariantIDs, false)->fetchAllColumn();
             break;
         case 'remove_with_any_gmaf_1000gp1':
             $aVariantIDsFiltered = $_DB->query('SELECT CAST(id AS UNSIGNED) FROM ' . TABLE_VARIANTS . ' WHERE (`VariantOnGenome/Frequency/1000G/VEP` IS NULL OR `VariantOnGenome/Frequency/1000G/VEP` = 0) AND id IN (?' . str_repeat(', ?', count($aVariantIDs) - 1) . ')', $aVariantIDs, false)->fetchAllColumn();
@@ -520,6 +530,49 @@ if ($aVariantIDs) {
             // We need to run an array_unique over it, because variants may be mapped to multiple genes.
             $aVariantIDsFiltered = array_unique(explode(',',
                 $_DB->query('SELECT GROUP_CONCAT(ids) FROM (SELECT GROUP_CONCAT(DISTINCT CAST(vog.id AS UNSIGNED)) AS ids, GROUP_CONCAT(DISTINCT LEFT(vog.allele, 1) ORDER BY vog.allele) AS alleles, t.geneid FROM ' . TABLE_VARIANTS . ' AS vog LEFT OUTER JOIN ' . TABLE_VARIANTS_ON_TRANSCRIPTS . ' AS vot USING (id) LEFT OUTER JOIN ' . TABLE_TRANSCRIPTS . ' AS t ON (vot.transcriptid = t.id) WHERE vog.id IN (?' . str_repeat(', ?', count($aVariantIDs) - 1) . ') GROUP BY (vog.allele = "3"), t.geneid HAVING geneid IS NULL OR !(alleles IN ("1", "2") OR (ids NOT LIKE "%,%" AND alleles = "0")))A', $aVariantIDs, false)->fetchColumn()));
+            break;
+
+        // Filters for Lymphoma flagship (mgha_seq instance)
+        case 'remove_no_cosmicid_intron_variant':
+            $aVariantIDsFiltered = $_DB->query('SELECT CAST(id AS UNSIGNED) FROM ' . TABLE_VARIANTS . ' WHERE ((`VariantOnGenome/COSMIC_IDs` IS NOT NULL AND `VariantOnGenome/COSMIC_IDs` != "") OR `VariantOnGenome/Consequence` != "intron_variant") AND id IN (?' . str_repeat(', ?', count($aVariantIDs) - 1) . ')', $aVariantIDs, false)->fetchAllColumn();
+            break;
+        case 'remove_no_cosmicid_5_prime_UTR_variant':
+            $aVariantIDsFiltered = $_DB->query('SELECT CAST(id AS UNSIGNED) FROM ' . TABLE_VARIANTS . ' WHERE ((`VariantOnGenome/COSMIC_IDs` IS NOT NULL AND `VariantOnGenome/COSMIC_IDs` != "") OR `VariantOnGenome/Consequence` != "5_prime_UTR_variant") AND id IN (?' . str_repeat(', ?', count($aVariantIDs) - 1) . ')', $aVariantIDs, false)->fetchAllColumn();
+            break;
+        case 'remove_no_cosmicid_3_prime_UTR_variant':
+            $aVariantIDsFiltered = $_DB->query('SELECT CAST(id AS UNSIGNED) FROM ' . TABLE_VARIANTS . ' WHERE ((`VariantOnGenome/COSMIC_IDs` IS NOT NULL AND `VariantOnGenome/COSMIC_IDs` != "") OR `VariantOnGenome/Consequence` != "3_prime_UTR_variant") AND id IN (?' . str_repeat(', ?', count($aVariantIDs) - 1) . ')', $aVariantIDs, false)->fetchAllColumn();
+            break;
+        case 'remove_no_cosmicid_synonymous_variant':
+            $aVariantIDsFiltered = $_DB->query('SELECT CAST(id AS UNSIGNED) FROM ' . TABLE_VARIANTS . ' WHERE ((`VariantOnGenome/COSMIC_IDs` IS NOT NULL AND `VariantOnGenome/COSMIC_IDs` != "") OR `VariantOnGenome/Consequence` != "synonymous_variant") AND id IN (?' . str_repeat(', ?', count($aVariantIDs) - 1) . ')', $aVariantIDs, false)->fetchAllColumn();
+            break;
+
+        // Filters for Lymphoma flagship (mgha_seq instance)
+        case 'remove_no_cosmicid_intron_variant_v2':
+            $aVariantIDsFiltered = $_DB->query('SELECT DISTINCT CAST(id AS UNSIGNED) FROM ' . TABLE_VARIANTS . ' AS vog LEFT OUTER JOIN ' . TABLE_VARIANTS_ON_TRANSCRIPTS . ' AS vot USING (id) WHERE ((vot.`VariantOnTranscript/dbNSFP/COSMIC/ID` IS NOT NULL AND vot.`VariantOnTranscript/dbNSFP/COSMIC/ID` != "") OR vot.`VariantOnTranscript/Consequence_Type` != "intron_variant") AND vog.id IN (?' . str_repeat(', ?', count($aVariantIDs) - 1) . ')', $aVariantIDs, false)->fetchAllColumn();
+            break;
+        case 'remove_no_cosmicid_5_prime_UTR_variant_v2':
+            $aVariantIDsFiltered = $_DB->query('SELECT DISTINCT CAST(id AS UNSIGNED) FROM ' . TABLE_VARIANTS . ' AS vog LEFT OUTER JOIN ' . TABLE_VARIANTS_ON_TRANSCRIPTS . ' AS vot USING (id) WHERE ((vot.`VariantOnTranscript/dbNSFP/COSMIC/ID` IS NOT NULL AND vot.`VariantOnTranscript/dbNSFP/COSMIC/ID` != "") OR vot.`VariantOnTranscript/Consequence_Type` != "5_prime_UTR_variant") AND vog.id IN (?' . str_repeat(', ?', count($aVariantIDs) - 1) . ')', $aVariantIDs, false)->fetchAllColumn();
+            break;
+        case 'remove_no_cosmicid_3_prime_UTR_variant_v2':
+            $aVariantIDsFiltered = $_DB->query('SELECT DISTINCT CAST(id AS UNSIGNED) FROM ' . TABLE_VARIANTS . ' AS vog LEFT OUTER JOIN ' . TABLE_VARIANTS_ON_TRANSCRIPTS . ' AS vot USING (id) WHERE ((vot.`VariantOnTranscript/dbNSFP/COSMIC/ID` IS NOT NULL AND vot.`VariantOnTranscript/dbNSFP/COSMIC/ID` != "") OR vot.`VariantOnTranscript/Consequence_Type` != "3_prime_UTR_variant") AND vog.id IN (?' . str_repeat(', ?', count($aVariantIDs) - 1) . ')', $aVariantIDs, false)->fetchAllColumn();
+            break;
+        case 'remove_no_cosmicid_synonymous_variant_v2':
+            $aVariantIDsFiltered = $_DB->query('SELECT DISTINCT CAST(id AS UNSIGNED) FROM ' . TABLE_VARIANTS . ' AS vog LEFT OUTER JOIN ' . TABLE_VARIANTS_ON_TRANSCRIPTS . ' AS vot USING (id) WHERE ((vot.`VariantOnTranscript/dbNSFP/COSMIC/ID` IS NOT NULL AND vot.`VariantOnTranscript/dbNSFP/COSMIC/ID` != "") OR vot.`VariantOnTranscript/Consequence_Type` != "synonymous_variant") AND vog.id IN (?' . str_repeat(', ?', count($aVariantIDs) - 1) . ')', $aVariantIDs, false)->fetchAllColumn();
+            break;
+        case 'remove_tumour_alt_depth_lte_5':
+            $aVariantIDsFiltered = $_DB->query('SELECT CAST(id AS UNSIGNED) FROM ' . TABLE_VARIANTS . ' WHERE (`VariantOnGenome/Sequencing/Tumour/BI/Depth/Alt` is NULL OR `VariantOnGenome/Sequencing/Tumour/BI/Depth/Alt` < 0.000001 OR `VariantOnGenome/Sequencing/Tumour/BI/Depth/Alt` > 5) AND id IN (?' . str_repeat(', ?', count($aVariantIDs) - 1) . ')', $aVariantIDs, false)->fetchAllColumn();
+            break;
+        case 'remove_tumour_allele_freq_lte_3_percent':
+            $aVariantIDsFiltered = $_DB->query('SELECT CAST(id AS UNSIGNED) FROM ' . TABLE_VARIANTS . ' WHERE (`VariantOnGenome/Sequencing/Tumour/BI/Allele/Frequency` IS NULL OR `VariantOnGenome/Sequencing/Tumour/BI/Allele/Frequency` < 0.000001 OR `VariantOnGenome/Sequencing/Tumour/BI/Allele/Frequency` > 0.03) AND id IN (?' . str_repeat(', ?', count($aVariantIDs) - 1) . ')', $aVariantIDs, false)->fetchAllColumn();
+            break;
+        case 'remove_tumour_alt_depth_lte_20_no_somatic_score':
+            $aVariantIDsFiltered = $_DB->query('SELECT CAST(id AS UNSIGNED) FROM ' . TABLE_VARIANTS . ' WHERE ((`VariantOnGenome/Sequencing/Somatic/Score` IS NOT NULL AND `VariantOnGenome/Sequencing/Somatic/Score` != "") OR (`VariantOnGenome/Sequencing/Tumour/BI/Depth/Alt` IS NULL OR `VariantOnGenome/Sequencing/Tumour/BI/Depth/Alt` < 0.000001 OR `VariantOnGenome/Sequencing/Tumour/BI/Depth/Alt` > 20)) AND id IN (?' . str_repeat(', ?', count($aVariantIDs) - 1) . ')', $aVariantIDs, false)->fetchAllColumn();
+            break;
+        case 'remove_seq_qual_lte_100_no_somatic_score':
+            $aVariantIDsFiltered = $_DB->query('SELECT CAST(id AS UNSIGNED) FROM ' . TABLE_VARIANTS . ' WHERE ((`VariantOnGenome/Sequencing/Somatic/Score` IS NOT NULL AND `VariantOnGenome/Sequencing/Somatic/Score` != "") OR (`VariantOnGenome/Sequencing/Quality` IS NULL OR `VariantOnGenome/Sequencing/Quality` < 0.000001 OR `VariantOnGenome/Sequencing/Quality` > 100)) AND id IN (?' . str_repeat(', ?', count($aVariantIDs) - 1) . ')', $aVariantIDs, false)->fetchAllColumn();
+            break;
+        case 'remove_tumour_allele_freq_lte_10_percent_no_somatic_score':
+            $aVariantIDsFiltered = $_DB->query('SELECT CAST(id AS UNSIGNED) FROM ' . TABLE_VARIANTS . ' WHERE ((`VariantOnGenome/Sequencing/Somatic/Score` IS NOT NULL AND `VariantOnGenome/Sequencing/Somatic/Score` != "") OR (`VariantOnGenome/Sequencing/Tumour/BI/Allele/Frequency` IS NULL OR `VariantOnGenome/Sequencing/Tumour/BI/Allele/Frequency` < 0.000001 OR `VariantOnGenome/Sequencing/Tumour/BI/Allele/Frequency` > 0.1)) AND id IN (?' . str_repeat(', ?', count($aVariantIDs) - 1) . ')', $aVariantIDs, false)->fetchAllColumn();
             break;
         default:
             // Filter not recognized... Oh, dear... We didn't define it yet?
