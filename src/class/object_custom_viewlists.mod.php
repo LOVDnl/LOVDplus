@@ -453,7 +453,7 @@ class LOVD_CustomViewListMOD extends LOVD_CustomViewList {
                         $this->aColumnsViewList = array_merge($this->aColumnsViewList, array(
                             'symbol' => array(
                                 'view' => array('Gene', 10),
-                                'db'   => array('symbol', 'ASC', 'TEXT')),
+                                'db'   => array('_geneid', 'ASC', 'TEXT')),
                             'transcript' => array(
                                 'view' => array('Transcript', 20),
                                 'db'   => array('transcript', 'ASC', 'TEXT')),
@@ -703,6 +703,10 @@ class LOVD_CustomViewListMOD extends LOVD_CustomViewList {
         }
         if (isset($zData['VariantOnTranscript/DNA'])) {
             $zData['VariantOnTranscript/DNA'] = preg_replace('/ins([ACTG]{3})([ACTG]{3,})/', 'ins${1}...', $zData['VariantOnTranscript/DNA']);
+        }
+        if (isset($zData['geneid'])) {
+            // LOVD_Object::autoExplode() has unset this, putting it back since some instances want to show this.
+            $zData['symbol'] = implode(';', $zData['geneid']);
         }
         if (isset($zData['gene_OMIM'])) {
             $zData['gene_OMIM_'] = '';
