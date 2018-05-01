@@ -4,10 +4,10 @@
  * LEIDEN OPEN VARIATION DATABASE (LOVD)
  *
  * Created     : 2013-11-07
- * Modified    : 2017-10-20
+ * Modified    : 2018-03-29
  * For LOVD    : 3.0-18
  *
- * Copyright   : 2004-2017 Leiden University Medical Center; http://www.LUMC.nl/
+ * Copyright   : 2004-2018 Leiden University Medical Center; http://www.LUMC.nl/
  * Programmers : Ivo F.A.C. Fokkema <I.F.A.C.Fokkema@LUMC.nl>
  *               Anthony Marty <anthony.marty@unimelb.edu.au>
  *               Juny Kesumadewi <juny.kesumadewi@unimelb.edu.au>
@@ -418,7 +418,7 @@ class LOVD_CustomViewListMOD extends LOVD_CustomViewList {
                                         'db'   => array('vog.`VariantOnGenome/DBID`', 'ASC', true)),
                                 'allele_' => array(
                                         'view' => array('Allele', 'ASC', true),
-                                        'db'   => array('allele_', 'ASC', true)),
+                                        'db'   => array('allele_', 'ASC', 'TEXT')),
                               ));
 
                     if (!$this->sSortDefault) {
@@ -456,10 +456,10 @@ class LOVD_CustomViewListMOD extends LOVD_CustomViewList {
                                 'db'   => array('_geneid', 'ASC', 'TEXT')),
                             'transcript' => array(
                                 'view' => array('Transcript', 20),
-                                'db'   => array('transcript', 'ASC', true)),
+                                'db'   => array('transcript', 'ASC', 'TEXT')),
                             'preferred_transcripts' => array(
                                 'view' => array('Transcript', 20),
-                                'db'   => array('preferred_transcripts', 'ASC', true)),
+                                'db'   => array('preferred_transcripts', 'ASC', 'TEXT')),
                         ));
                     }
 

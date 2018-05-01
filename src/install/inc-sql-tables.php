@@ -944,7 +944,7 @@ $aTableSQL =
 
         , 'TABLE_ANALYSIS_FILTERS' =>
     'CREATE TABLE ' . TABLE_ANALYSIS_FILTERS . ' (
-    id VARCHAR(100) NOT NULL,
+    id VARCHAR(55) NOT NULL,
     name VARCHAR(100) NOT NULL DEFAULT "",
     description TEXT,
     has_config TINYINT(1) NULL,
@@ -954,7 +954,7 @@ $aTableSQL =
         , 'TABLE_A2AF' =>
     'CREATE TABLE ' . TABLE_A2AF . ' (
     analysisid TINYINT(3) UNSIGNED ZEROFILL,
-    filterid VARCHAR(100) NOT NULL,
+    filterid VARCHAR(55) NOT NULL,
     filter_order TINYINT(3) UNSIGNED DEFAULT 1,
     PRIMARY KEY (analysisid, filterid),
     INDEX (analysisid),
@@ -1005,7 +1005,7 @@ $aTableSQL =
         , 'TABLE_ANALYSES_RUN_FILTERS' =>
    'CREATE TABLE ' . TABLE_ANALYSES_RUN_FILTERS . ' (
     runid SMALLINT(5) UNSIGNED ZEROFILL NOT NULL,
-    filterid VARCHAR(100) NOT NULL,
+    filterid VARCHAR(55) NOT NULL,
     config_json TEXT NULL,
     filter_order TINYINT UNSIGNED NOT NULL,
     filtered_out MEDIUMINT UNSIGNED,
