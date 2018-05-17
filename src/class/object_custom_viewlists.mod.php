@@ -4,10 +4,10 @@
  * LEIDEN OPEN VARIATION DATABASE (LOVD)
  *
  * Created     : 2013-11-07
- * Modified    : 2017-10-20
+ * Modified    : 2018-03-29
  * For LOVD    : 3.0-18
  *
- * Copyright   : 2004-2017 Leiden University Medical Center; http://www.LUMC.nl/
+ * Copyright   : 2004-2018 Leiden University Medical Center; http://www.LUMC.nl/
  * Programmers : Ivo F.A.C. Fokkema <I.F.A.C.Fokkema@LUMC.nl>
  *               Anthony Marty <anthony.marty@unimelb.edu.au>
  *               Juny Kesumadewi <juny.kesumadewi@unimelb.edu.au>
@@ -252,7 +252,11 @@ class LOVD_CustomViewListMOD extends LOVD_CustomViewList {
                         $sGCOrderBy = 't.geneid';
                         foreach ($this->aColumns as $sCol => $aCol) {
                             if (substr($sCol, 0, 19) == 'VariantOnTranscript') {
-                                $aSQL['SELECT'] .= (!$aSQL['SELECT']? '' : ', ') . 'GROUP_CONCAT(DISTINCT ' . ($sCol != 'VariantOnTranscript/DNA'? '`' . $sCol . '`' : 'CONCAT(t.geneid, ":", `' . $sCol . '`)') . ' ORDER BY ' . $sGCOrderBy . ' SEPARATOR ", ") AS `' . $sCol . '`';
+                                if (lovd_verifyInstance('mgha_seq')) {
+                                    $aSQL['SELECT'] .= (!$aSQL['SELECT']? '' : ', ') . 'GROUP_CONCAT(DISTINCT ' . ($sCol != 'VariantOnTranscript/DNA'? '`' . $sCol . '`' : 'CONCAT(t.id_ncbi, ":", `' . $sCol . '`)') . ' ORDER BY ' . $sGCOrderBy . ' SEPARATOR ", ") AS `' . $sCol . '`';
+                                } else {
+                                    $aSQL['SELECT'] .= (!$aSQL['SELECT']? '' : ', ') . 'GROUP_CONCAT(DISTINCT ' . ($sCol != 'VariantOnTranscript/DNA'? '`' . $sCol . '`' : 'CONCAT(t.geneid, ":", `' . $sCol . '`)') . ' ORDER BY ' . $sGCOrderBy . ' SEPARATOR ", ") AS `' . $sCol . '`';
+                                }
                             }
                         }
                         // Security checks in this file's prepareData() need geneid to see if the column in question is set to non-public for one of the genes.
@@ -414,7 +418,7 @@ class LOVD_CustomViewListMOD extends LOVD_CustomViewList {
                                         'db'   => array('vog.`VariantOnGenome/DBID`', 'ASC', true)),
                                 'allele_' => array(
                                         'view' => array('Allele', 'ASC', true),
-                                        'db'   => array('allele_', 'ASC', true)),
+                                        'db'   => array('allele_', 'ASC', 'TEXT')),
                               ));
 
                     if (!$this->sSortDefault) {
@@ -449,13 +453,13 @@ class LOVD_CustomViewListMOD extends LOVD_CustomViewList {
                         $this->aColumnsViewList = array_merge($this->aColumnsViewList, array(
                             'symbol' => array(
                                 'view' => array('Gene', 10),
-                                'db'   => array('symbol', 'ASC', true)),
+                                'db'   => array('_geneid', 'ASC', 'TEXT')),
                             'transcript' => array(
                                 'view' => array('Transcript', 20),
-                                'db'   => array('transcript', 'ASC', true)),
+                                'db'   => array('transcript', 'ASC', 'TEXT')),
                             'preferred_transcripts' => array(
                                 'view' => array('Transcript', 20),
-                                'db'   => array('preferred_transcripts', 'ASC', true)),
+                                'db'   => array('preferred_transcripts', 'ASC', 'TEXT')),
                         ));
                     }
 
@@ -699,6 +703,10 @@ class LOVD_CustomViewListMOD extends LOVD_CustomViewList {
         }
         if (isset($zData['VariantOnTranscript/DNA'])) {
             $zData['VariantOnTranscript/DNA'] = preg_replace('/ins([ACTG]{3})([ACTG]{3,})/', 'ins${1}...', $zData['VariantOnTranscript/DNA']);
+        }
+        if (isset($zData['geneid'])) {
+            // LOVD_Object::autoExplode() has unset this, putting it back since some instances want to show this.
+            $zData['symbol'] = implode(';', $zData['geneid']);
         }
         if (isset($zData['gene_OMIM'])) {
             $zData['gene_OMIM_'] = '';

@@ -148,7 +148,7 @@ $aRequired =
 $_SETT = array(
                 'system' =>
                      array(
-                            'version' => '3.0-17o',
+                            'version' => '3.0-17p',
                           ),
                 'user_levels' =>
                      array(
@@ -502,6 +502,30 @@ if (LOVD_plus) {
             'OR' => 'one or more of',
         ),
     );
+
+    if (lovd_verifyInstance('mgha_seq') || lovd_verifyInstance('mgha_cpipe_lymphoma')) {
+        $_SETT['var_effect'] = array(
+            0 => 'Not curated',
+            9 => 'Variants of strong clinical significance',
+            7 => 'Variants of potential clinical significance',
+            5 => 'VUS',
+            3 => 'Likely benign',
+            1 => 'Benign',
+        );
+
+        $_SETT['curation_status'] = array(
+            CUR_STATUS_VARIANT_OF_INTEREST => 'Variant of Interest',
+            CUR_STATUS_NOT_FOR_CURATION => 'Not for Curation',
+            CUR_STATUS_ARTEFACT => 'Artefact',
+            CUR_STATUS_LIKELY_ARTEFACT => 'Likely Artefact',
+            CUR_STATUS_FOR_CURATION => 'For Curation',
+            CUR_STATUS_REQUIRES_CONFIRMATION => 'Requires Confirmation',
+            CUR_STATUS_CONFIRMED => 'Confirmed',
+            CUR_STATUS_PROPOSED => 'Proposed Classification',
+            CUR_STATUS_CURATED_REPORTABLE => 'Curated & Reportable',
+            CUR_STATUS_CURATED_NOT_REPORTABLE => 'Curated & Not Reportable',
+        );
+    }
 
     // Diagnostics: Added one level, and changed the submitter level's name.
     unset($_SETT['user_levels'][LEVEL_SUBMITTER]); // To make space, we need to rename it anyway.

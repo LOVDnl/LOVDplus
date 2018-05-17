@@ -240,7 +240,7 @@ class LOVD_DefaultDataConverter {
     var $sAdapterPath;
     var $aScriptVars = array();
     var $aMetadata; // Contains the meta data file, parsed.
-    static $NO_TRANSCRIPT = '-----'; // Transcripts with this value will be ignored.
+    const NO_TRANSCRIPT = '-----'; // Transcripts with this value will be ignored.
 
     public function __construct ($sAdapterPath)
     {
@@ -316,7 +316,19 @@ class LOVD_DefaultDataConverter {
                 break;
             case '0/1':
                 // Heterozygous.
-                $aVariant['allele'] = 0;
+                if (!empty($aVariant['VariantOnGenome/Sequencing/Father/GenoType']) && !empty($aVariant['VariantOnGenome/Sequencing/Mother/GenoType'])) {
+                    if (strpos($aVariant['VariantOnGenome/Sequencing/Father/GenoType'], '1') !== false && strpos($aVariant['VariantOnGenome/Sequencing/Mother/GenoType'], '1') === false) {
+                        // From father, inferred.
+                        $aVariant['allele'] = 10;
+                    } elseif (strpos($aVariant['VariantOnGenome/Sequencing/Mother/GenoType'], '1') !== false && strpos($aVariant['VariantOnGenome/Sequencing/Father/GenoType'], '1') === false) {
+                        // From mother, inferred.
+                        $aVariant['allele'] = 20;
+                    } else {
+                        $aVariant['allele'] = 0;
+                    }
+                } else {
+                    $aVariant['allele'] = 0;
+                }
                 break;
             case '1/1':
                 // Homozygous.
@@ -400,7 +412,7 @@ class LOVD_DefaultDataConverter {
         // You can overload this function to define which transcripts to ignore;
         //  you can use lists, prefixes or other rules.
 
-        if ($sTranscriptID === static::$NO_TRANSCRIPT) {
+        if ($sTranscriptID === static::NO_TRANSCRIPT) {
             return true;
         }
 

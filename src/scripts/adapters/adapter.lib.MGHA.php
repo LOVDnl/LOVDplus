@@ -224,6 +224,67 @@ class LOVD_MghaDataConverter extends LOVD_DefaultDataConverter {
 
 
 
+    function convertGenoTypeToAllele ($aVariant)
+    {
+        // Converts the GenoType data (already stored in the 'allele' field) to an LOVD-style allele value.
+        // To stop variants from being imported, set $aVariant['lovd_ignore_variant'] to something non-false.
+        // Possible values:
+        // 'silent' - for silently ignoring the variant.
+        // 'log' - for ignoring the variant and logging the line number.
+        // 'separate' - for storing the variant in a separate screening (not implemented yet).
+        // When set to something else, 'log' is assumed.
+        // Note that when verbosity is set to low (3) or none (0), then no logging will occur.
+
+        // First verify the GT (allele) column. VCFs might have many interesting values (mostly for multisample VCFs).
+        // Clean the value a bit (will result in "0/." calls to be converted to "0/0", for instance).
+        if (!isset($aVariant['allele'])) {
+            $aVariant['allele'] = '';
+        }
+        $aVariant['allele'] = $this->cleanGenoType($aVariant['allele']);
+
+        // Then, convert the GT values to proper LOVD-style allele values.
+        switch ($aVariant['allele']) {
+            case '0/0':
+                // Homozygous REF; not a variant. Skip this line silently.
+                $aVariant['lovd_ignore_variant'] = 'silent';
+                break;
+            case '0/1':
+                // Heterozygous.
+                // FIXME: This is Leiden's old method of setting the paternal and maternal allele.
+                //  Right now, they use the parents GT columns. It's better that MGHA also switches to this method,
+                //  but it requires some coding changes, because default LOVD+ expects GT columns to be in the
+                //  "0/1" format and not the "C/T" format. MGHA already has some code to convert these.
+                // Discuss this with Ivo because he'd like to, by default, have LOVD+ accept nucleotide GT values, too.
+                if (isset($aVariant['VariantOnGenome/Sequencing/Father/VarPresent']) && isset($aVariant['VariantOnGenome/Sequencing/Mother/VarPresent'])) {
+                    if ($aVariant['VariantOnGenome/Sequencing/Father/VarPresent'] >= 5 && $aVariant['VariantOnGenome/Sequencing/Mother/VarPresent'] <= 3) {
+                        // From father, inferred.
+                        $aVariant['allele'] = 10;
+                    } elseif ($aVariant['VariantOnGenome/Sequencing/Mother/VarPresent'] >= 5 && $aVariant['VariantOnGenome/Sequencing/Father/VarPresent'] <= 3) {
+                        // From mother, inferred.
+                        $aVariant['allele'] = 20;
+                    } else {
+                        $aVariant['allele'] = 0;
+                    }
+                } else {
+                    $aVariant['allele'] = 0;
+                }
+                break;
+            case '1/1':
+                // Homozygous.
+                $aVariant['allele'] = 3;
+                break;
+            default:
+                // Unexpected value (empty string?). Ignore the variant, log.
+                $aVariant['lovd_ignore_variant'] = 'log';
+        }
+
+        return $aVariant;
+    }
+
+
+
+
+
     function prepareMappings()
     {
 
@@ -493,7 +554,7 @@ class LOVD_MghaDataConverter extends LOVD_DefaultDataConverter {
             $aLine['Variant_Remarks'] .= "HGVSp: " . (!empty($aLine['HGVSp'])? $aLine['HGVSp'] : '') . "\n";
             $aLine['Variant_Remarks'] .= "Consequence: " . (!empty($aLine['Consequence'])? $aLine['Consequence'] : '')  . "\n";
             $aLine['Variant_Remarks'] .= "IMPACT: " . (!empty($aLine['IMPACT'])? $aLine['IMPACT'] : '')  . "\n";
-            $aLine['Feature'] = static::$NO_TRANSCRIPT;
+            $aLine['Feature'] = static::NO_TRANSCRIPT;
         }
 
         if (isset($aLine['CPIPE_BED'])) {
