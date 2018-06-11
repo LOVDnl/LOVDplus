@@ -616,6 +616,7 @@ foreach ($aFiles as $sID) {
     $aGenes = array(); // GENE => array(<gene_info_from_database>)
     $aTranscripts = array(); // NM_000001.1 => array(<transcript_info>)
     $nHGNC = 0; // Count the number of times HGNC is called.
+    $tHGNCCalls = 0; // Time spent doing HGNC calls.
     $nMutalyzer = 0; // Count the number of times Mutalyzer is called.
     $nAnnotationErrors = 0; // Count the number of lines we cannot import.
 
@@ -763,7 +764,9 @@ foreach ($aFiles as $sID) {
                 $aGeneInfo = array();
                 if (!empty($_INSTANCE_CONFIG['conversion']['use_hgnc'])) {
                     lovd_printIfVerbose(VERBOSITY_HIGH, 'Loading gene information for ' . $aVariant['symbol'] . '...' . "\n");
+                    $tHGNCStart = microtime(true);
                     $aGeneInfo = lovd_getGeneInfoFromHGNC($aVariant['symbol'], true);
+                    $tHGNCCalls += (microtime(true) - $tHGNCStart);
                     $nHGNC++;
                     if (!$aGeneInfo) {
                         // We can't gene information from the HGNC.
@@ -1341,13 +1344,16 @@ foreach ($aFiles as $sID) {
 
     lovd_printIfVerbose(VERBOSITY_MEDIUM, 'Done parsing file. Current time: ' . date('Y-m-d H:i:s') . ".\n");
     // Show the number of times HGNC and Mutalyzer were called.
-    lovd_printIfVerbose(VERBOSITY_MEDIUM, 'Number of times HGNC called: ' . $nHGNC . ".\n" .
-          'Number of times Mutalyzer called: ' . $nMutalyzer . ".\n" .
-          'Parsing took ' . round((time() - $dStart)/60) . ' minutes' . (!$nMutalyzer? '' : ', Mutalyzer calls taking ' . round($tMutalyzerCalls/60) . ' minutes, ' . round($tMutalyzerCalls/$nMutalyzer, 2) . ' sec/call') . '.' . "\n");
+    lovd_printIfVerbose(VERBOSITY_MEDIUM,
+        'Number of times HGNC called: ' . $nHGNC . (!$nHGNC? '' :
+            ', taking ' . round($tHGNCCalls/60) . ' minutes, ' . round($tHGNCCalls/$nHGNC, 2) . ' sec/call') . ".\n" .
+        'Number of times Mutalyzer called: ' . $nMutalyzer . (!$nMutalyzer? '' :
+            ', taking ' . round($tMutalyzerCalls/60) . ' minutes, ' . round($tMutalyzerCalls/$nMutalyzer, 2) . ' sec/call') . ".\n");
     foreach ($aMutalyzerCalls as $sFunction => $nCalls) {
         lovd_printIfVerbose(VERBOSITY_MEDIUM, '  ' . $sFunction . ': ' . $nCalls . "\n");
     }
-    lovd_printIfVerbose(VERBOSITY_MEDIUM, 'Number of lines with annotation error: ' . $nAnnotationErrors . ".\n");
+    lovd_printIfVerbose(VERBOSITY_MEDIUM, 'Parsing took ' . round((time() - $dStart)/60) . ' minutes in total.' . "\n" .
+        'Number of lines with annotation error: ' . $nAnnotationErrors . ".\n");
     if (filesize($sFileError) > 0) {
         lovd_printIfVerbose(VERBOSITY_LOW, "ERROR FILE: Please check details of dropped annotation data in " . $sFileError . "\n");
     } else {
