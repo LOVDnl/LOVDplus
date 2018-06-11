@@ -611,7 +611,7 @@ foreach ($aFiles as $sID) {
     flush();
 
     $nLine = 0;
-    $sLastChromosome = '';
+    $sLastVariant = '';
     $aVOT = array();
     $aGenes = array(); // GENE => array(<gene_info_from_database>)
     $aTranscripts = array(); // NM_000001.1 => array(<transcript_info>)
@@ -699,12 +699,6 @@ foreach ($aFiles as $sID) {
             continue;
         }
 
-        // When seeing a new chromosome, reset these variables. We don't want them too big; it's useless and takes up a lot of memory.
-        if ($sLastChromosome != $aVariant['chromosome']) {
-            $sLastChromosome = $aVariant['chromosome'];
-            $aMappings = array(); // chrX:g.123456del => array(NM_000001.1 => 'c.123del', ...); // To prevent us from running numberConversion too many times.
-        }
-
         // Now "fix" certain values.
         // First, VOG fields.
         // Chromosome.
@@ -730,6 +724,12 @@ foreach ($aFiles as $sID) {
             if (!empty($aVariant[$sCol]) && $aVariant[$sCol] == 'None') {
                 $aVariant[$sCol] = '';
             }
+        }
+
+        // When seeing a new variant, reset these variables. We don't want them too big; it's useless and takes up a lot of memory.
+        if ($sLastVariant != $aVariant['chromosome'] . ':' . $aVariant['VariantOnGenome/DNA']) {
+            $sLastVariant = $aVariant['chromosome'] . ':' . $aVariant['VariantOnGenome/DNA'];
+            $aMappings = array(); // array(NM_000001.1 => 'c.123del', ...); // To prevent us from running numberConversion too many times.
         }
 
         // Some percentages we get need to be turned into decimals before it can be stored.
@@ -962,8 +962,8 @@ foreach ($aFiles as $sID) {
             if ($bCallMutalyzer) {
                 // We don't have a DNA field from VEP, or we don't trust it (see above).
                 // Call Mutalyzer, but first check if I did that before already.
-                if (!isset($aMappings[$aVariant['chromosome'] . ':' . $aVariant['VariantOnGenome/DNA']])) {
-                    $aMappings[$aVariant['chromosome'] . ':' . $aVariant['VariantOnGenome/DNA']] = array();
+                if (empty($aMappings)) {
+                    $aMappings = array();
                     lovd_printIfVerbose(VERBOSITY_FULL, 'Running position converter, DNA was: "' . $aVariant['VariantOnTranscript/DNA'] . '"' . "\n");
 
                     $nSleepTime = 2;
@@ -993,12 +993,12 @@ foreach ($aFiles as $sID) {
                         // But now apparently this service just returns the string with quotes (the latter are removed by json_decode()).
                         foreach ($aResponse as $sResponse) {
                             list($sRef, $sDNA) = explode(':', $sResponse, 2);
-                            $aMappings[$aVariant['chromosome'] . ':' . $aVariant['VariantOnGenome/DNA']][$sRef] = $sDNA;
+                            $aMappings[$sRef] = $sDNA;
                         }
                     }
                 }
 
-                if (!isset($aMappings[$aVariant['chromosome'] . ':' . $aVariant['VariantOnGenome/DNA']][$aTranscripts[$aVariant['transcriptid']]['id_ncbi']])) {
+                if (!isset($aMappings[$aTranscripts[$aVariant['transcriptid']]['id_ncbi']])) {
                     // Somehow, we can't find the transcript in the mapping info.
                     // This sometimes happens when the slice has a newer transcript than the one we have in the position converter database.
                     // This can also happen, when VEP says the variant maps, but Mutalyzer disagrees (boundaries may be different, variant may be outside of gene).
@@ -1006,18 +1006,18 @@ foreach ($aFiles as $sID) {
 
                     if ($aVariant['transcriptid'] != $aTranscripts[$aVariant['transcriptid']]['id_ncbi']) {
                         // The database has selected a different version; just copy that...
-                        $aMappings[$aVariant['chromosome'] . ':' . $aVariant['VariantOnGenome/DNA']][$aTranscripts[$aVariant['transcriptid']]['id_ncbi']] = $aMappings[$aVariant['chromosome'] . ':' . $aVariant['VariantOnGenome/DNA']][$aVariant['transcriptid']];
+                        $aMappings[$aTranscripts[$aVariant['transcriptid']]['id_ncbi']] = $aMappings[$aVariant['transcriptid']];
                     } else {
                         // Do one more attempt, finding the transcript for other versions. Just take first one you find.
                         $aAlternativeVersions = array();
-                        foreach ($aMappings[$aVariant['chromosome'] . ':' . $aVariant['VariantOnGenome/DNA']] as $sRef => $sDNA) {
+                        foreach ($aMappings as $sRef => $sDNA) {
                             if (strpos($sRef, $aLine['transcript_noversion']) === 0) {
                                 $aAlternativeVersions[] = $sRef;
                             }
                         }
                         if ($aAlternativeVersions) {
                             lovd_printIfVerbose(VERBOSITY_FULL, 'Found alternative by searching: ' . $aVariant['transcriptid'] . ' [' . implode(', ', $aAlternativeVersions) . ']' . "\n");
-                            $aMappings[$aVariant['chromosome'] . ':' . $aVariant['VariantOnGenome/DNA']][$aTranscripts[$aVariant['transcriptid']]['id_ncbi']] = $aMappings[$aVariant['chromosome'] . ':' . $aVariant['VariantOnGenome/DNA']][$aAlternativeVersions[0]];
+                            $aMappings[$aTranscripts[$aVariant['transcriptid']]['id_ncbi']] = $aMappings[$aAlternativeVersions[0]];
                         } else {
                             // This happens when VEP says we can map on a known transcript, but doesn't provide us a valid mapping,
                             // *and* Mutalyzer at the same time doesn't seem to be able to map to this transcript at all.
@@ -1027,13 +1027,13 @@ foreach ($aFiles as $sID) {
                     }
                 }
 
-                if (!isset($aMappings[$aVariant['chromosome'] . ':' . $aVariant['VariantOnGenome/DNA']][$aTranscripts[$aVariant['transcriptid']]['id_ncbi']])) {
+                if (!isset($aMappings[$aTranscripts[$aVariant['transcriptid']]['id_ncbi']])) {
                     // Still no mapping. lovd_handleAnnotationError() below here may kill the script, or we continue.
                     $sErrorMsg = 'Can\'t map variant ' . $aVariant['VariantOnGenome/DNA'] . ' (' . $aVariant['chromosome'] . ':' . $aVariant['position'] . $aVariant['ref'] . '>' . $aVariant['alt'] . ') onto transcript ' . $aTranscripts[$aVariant['transcriptid']]['id_ncbi'] . '.';
                     $nAnnotationErrors = lovd_handleAnnotationError($aVariant, $sErrorMsg);
                     $bDropTranscriptData = $_INSTANCE_CONFIG['conversion']['annotation_error_drops_line'];
                 } else {
-                    $aVariant['VariantOnTranscript/DNA'] = $aMappings[$aVariant['chromosome'] . ':' . $aVariant['VariantOnGenome/DNA']][$aTranscripts[$aVariant['transcriptid']]['id_ncbi']];
+                    $aVariant['VariantOnTranscript/DNA'] = $aMappings[$aTranscripts[$aVariant['transcriptid']]['id_ncbi']];
                 }
             }
 
