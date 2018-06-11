@@ -158,7 +158,8 @@ $_INSTANCE_CONFIG['conversion'] = array(
     'annotation_error_max_allowed' => 20, // Maximum number of errors with VOTs before the script dies anyway.
     'create_genes_and_transcripts' => true, // Allow automatic creation of genes, allow automatic creation of transcripts.
     'check_indel_description' => true, // Should we check all indels using Mutalyzer? Vep usually does a bad job at them.
-    'enforce_hgnc_gene' => true, // Check for aliases using the HGNC, enforce gene to exist in the HGNC.
+    'enforce_hgnc_gene' => true, // Enforce gene to exist in the HGNC.
+    'use_hgnc' => true, // Use the HGNC to collect gene information, and detect gene aliases.
     'verbosity_cron' => 5, // How verbose should we be when running through cron? (default: 5; currently supported: 0,3,5,7,9)
     'verbosity_other' => 7, // How verbose should we be otherwise? (default: 7; currently supported: 0,3,5,7,9)
 );

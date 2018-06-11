@@ -105,6 +105,7 @@ $_INSTANCE_CONFIG['conversion'] = array(
     'create_genes_and_transcripts' => false,
     'enforce_hgnc_gene' => false,
     'check_indel_description' => false,
+    'use_hgnc' => false,
     'verbosity_cron' => 7, // How verbose should we be when running through cron? (default: 5; currently supported: 0,3,5,7,9)
     'verbosity_other' => 7, // How verbose should we be otherwise? (default: 7; currently supported: 0,3,5,7,9)
 );
