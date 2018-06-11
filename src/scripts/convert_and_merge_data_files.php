@@ -257,6 +257,14 @@ function lovd_getVariantDescription (&$aVariant, $sRef, $sAlt)
     $sRef = strtoupper($sRef);
     $sAlt = strtoupper($sAlt);
 
+    // Clear out empty REF and ALTs. This is not allowed in the VCF specs,
+    //  but some tools create them nonetheless.
+    foreach (array('sRef', 'sAlt') as $var) {
+        if (in_array($$var, array('.', '-'))) {
+            $$var = '';
+        }
+    }
+
     // Use the right prefix for the numbering scheme.
     $sHGVSPrefix = 'g.';
     if ($aVariant['chromosome'] == 'M') {
@@ -267,8 +275,11 @@ function lovd_getVariantDescription (&$aVariant, $sRef, $sAlt)
     $aVariant['position_g_start'] = $aVariant['position'];
     $aVariant['position_g_end'] = $aVariant['position'] + strlen($sRef) - 1;
 
-    // 'Eat' letters from either end - first left, then right - to isolate the difference.
+    // Save original values before we edit them.
+    $sRefOriginal = $sRef;
     $sAltOriginal = $sAlt;
+
+    // 'Eat' letters from either end - first left, then right - to isolate the difference.
     while (strlen($sRef) > 0 && strlen($sAlt) > 0 && $sRef{0} == $sAlt{0}) {
         $sRef = substr($sRef, 1);
         $sAlt = substr($sAlt, 1);
@@ -299,8 +310,8 @@ function lovd_getVariantDescription (&$aVariant, $sRef, $sAlt)
             }
         } elseif (strlen($sAlt) > 0 && strlen($sRef) == 0) {
             // Something has been added... could be an insertion or a duplication.
-            if (substr($sAltOriginal, strrpos($sAltOriginal, $sAlt) - strlen($sAlt), strlen($sAlt)) == $sAlt) {
-                // Duplicaton.
+            if ($sRefOriginal && substr($sAltOriginal, strrpos($sAltOriginal, $sAlt) - strlen($sAlt), strlen($sAlt)) == $sAlt) {
+                // Duplicaton (not allowed when REF was empty from the start).
                 $aVariant['type'] = 'dup';
                 $aVariant['position_g_start'] -= strlen($sAlt);
                 if ($aVariant['position_g_start'] == $aVariant['position_g_end']) {
