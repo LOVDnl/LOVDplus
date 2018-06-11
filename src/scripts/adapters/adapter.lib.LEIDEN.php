@@ -159,7 +159,6 @@ class LOVD_LeidenDataConverter extends LOVD_DefaultDataConverter {
             'HDGFRP2' => 'HDGFL2',
             'HDGFRP3' => 'HDGFL3',
             'HMP19' => 'NSG2',
-            'HNRNPCP5' => 'HNRNPCL2',
             'IL8' => 'CXCL8',
             'KIAA1737' => 'CIPC',
             'KIAA1804' => 'MAP3K21',

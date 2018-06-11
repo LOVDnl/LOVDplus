@@ -156,8 +156,9 @@ $_INSTANCE_CONFIG['conversion'] = array(
     'annotation_error_drops_line' => false, // Should we discard the variant's mapping on this transcript on annotation errors?
     'annotation_error_exits' => false, // Whether to halt on the first annotation error.
     'annotation_error_max_allowed' => 20, // Maximum number of errors with VOTs before the script dies anyway.
+    'create_genes_and_transcripts' => true, // Allow automatic creation of genes, allow automatic creation of transcripts.
     'check_indel_description' => true, // Should we check all indels using Mutalyzer? Vep usually does a bad job at them.
-    'enforce_hgnc_gene' => true, // Check for aliases, allow automatic creation of genes using the HGNC, allow automatic creation of transcripts.
+    'enforce_hgnc_gene' => true, // Check for aliases using the HGNC, enforce gene to exist in the HGNC.
     'verbosity_cron' => 5, // How verbose should we be when running through cron? (default: 5; currently supported: 0,3,5,7,9)
     'verbosity_other' => 7, // How verbose should we be otherwise? (default: 7; currently supported: 0,3,5,7,9)
 );

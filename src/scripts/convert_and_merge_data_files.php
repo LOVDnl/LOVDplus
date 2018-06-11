@@ -726,12 +726,6 @@ foreach ($aFiles as $sID) {
             }
         }
 
-        // When seeing a new variant, reset these variables. We don't want them too big; it's useless and takes up a lot of memory.
-        if ($sLastVariant != $aVariant['chromosome'] . ':' . $aVariant['VariantOnGenome/DNA']) {
-            $sLastVariant = $aVariant['chromosome'] . ':' . $aVariant['VariantOnGenome/DNA'];
-            $aMappings = array(); // array(NM_000001.1 => 'c.123del', ...); // To prevent us from running numberConversion too many times.
-        }
-
         // Some percentages we get need to be turned into decimals before it can be stored.
         // 2015-10-28; Because of the double column mappings, we ended up with values divided twice.
         // Flipping the array makes sure we get rid of double mappings.
@@ -739,6 +733,12 @@ foreach ($aFiles as $sID) {
             if ($sVEPColumn == 'AFESP5400' || $sVEPColumn == 'ALTPERC' || strpos($sVEPColumn, 'ALTPERC_') === 0) {
                 $aVariant[$sLOVDColumn] /= 100;
             }
+        }
+
+        // When seeing a new variant, reset these variables. We don't want them too big; it's useless and takes up a lot of memory.
+        if ($sLastVariant != $aVariant['chromosome'] . ':' . $aVariant['VariantOnGenome/DNA']) {
+            $sLastVariant = $aVariant['chromosome'] . ':' . $aVariant['VariantOnGenome/DNA'];
+            $aMappings = array(); // array(NM_000001.1 => 'c.123del', ...); // To prevent us from running numberConversion too many times.
         }
 
         // Now, VOT fields.
