@@ -4,7 +4,7 @@
  * LEIDEN OPEN VARIATION DATABASE (LOVD)
  *
  * Created     : 2014-11-28
- * Modified    : 2018-04-12
+ * Modified    : 2018-06-11
  * For LOVD+   : 3.0-18
  *
  * Copyright   : 2004-2018 Leiden University Medical Center; http://www.LUMC.nl/
@@ -619,17 +619,15 @@ foreach ($aFiles as $sID) {
     $nMutalyzer = 0; // Count the number of times Mutalyzer is called.
     $nAnnotationErrors = 0; // Count the number of lines we cannot import.
 
-    // Get all the gene data in one database call.
+    // Get all the existing genes in one database call.
     $aResult = $_DB->query('SELECT g.id, g.refseq_UD, g.name FROM ' . TABLE_GENES . ' AS g')->fetchAllAssoc();
     foreach ($aResult as $aGene) {
         $aGenes[$aGene['id']] = array_merge($aGene, array('transcripts_in_UD' => array()));
     }
+    unset($aResult); // Clean up.
 
-    // Get all the transcripts related data in one database call.
-    $aResult = $_DB->query('SELECT id, geneid, id_mutalyzer, id_ncbi, position_c_cds_end, position_g_mrna_start, position_g_mrna_end FROM ' . TABLE_TRANSCRIPTS . ' ORDER BY id_ncbi DESC, id DESC')->fetchAllAssoc();
-    foreach ($aResult as $aTranscript) {
-        $aTranscripts[$aTranscript['id_ncbi']] = $aTranscript;
-    }
+    // Get all the existing transcript data in one database call.
+    $aTranscripts = $_DB->query('SELECT id_ncbi, id, geneid, id_mutalyzer, id_ncbi, position_c_cds_end, position_g_mrna_start, position_g_mrna_end FROM ' . TABLE_TRANSCRIPTS . ' ORDER BY id_ncbi DESC, id DESC')->fetchAllGroupAssoc();
 
 
 
