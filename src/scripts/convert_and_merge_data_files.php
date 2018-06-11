@@ -742,81 +742,100 @@ foreach ($aFiles as $sID) {
         }
 
         // Now, VOT fields.
-        // Find gene && transcript in database. When not found, try to create it. Otherwise, throw a fatal error.
+        // Find gene && transcript in database. When not found, try to create it (if requested). Otherwise, throw a fatal error.
         // Trusting the gene symbol information from VEP is by far the easiest method, and the fastest. This can fail, therefore we also created an alias list.
         // Use the alias only however, if we don't have the gene already in the gene database. We have run into problems when an incorrect alias caused problems.
-        if (!empty($_INSTANCE_CONFIG['conversion']['enforce_hgnc_gene']) && !isset($aGenes[$aVariant['symbol']]) && isset($aGeneAliases[$aVariant['symbol']])) {
+        $aVariant['symbol_vep'] = $aVariant['symbol']; // But always keep the original one.
+        if (!isset($aGenes[$aVariant['symbol']]) && isset($aGeneAliases[$aVariant['symbol']])) {
             $aVariant['symbol'] = $aGeneAliases[$aVariant['symbol']];
         }
-        // Get gene information. LOC* genes always fail here, so those we don't try.
+        // Verify gene exists, and create it if needed. LOC* genes always fail here, so those we don't try.
         if (!isset($aGenes[$aVariant['symbol']]) && !in_array($aVariant['symbol'], $aGenesToIgnore) && !preg_match('/^LOC[0-9]+$/', $aVariant['symbol'])) {
-            // First try to get this gene from the database.
+            // First try to get this gene from the database, perhaps conversions run in parallel have created it now.
             // FIXME: This is duplicated code. Make it into a function, perhaps?
             if ($aGene = $_DB->query('SELECT g.id, g.refseq_UD, g.name FROM ' . TABLE_GENES . ' AS g WHERE g.id = ?', array($aVariant['symbol']))->fetchAssoc()) {
                 // We've got it in the database.
                 $aGenes[$aVariant['symbol']] = array_merge($aGene, array('transcripts_in_UD' => array()));
 
-            } else {
+            } elseif (!empty($_INSTANCE_CONFIG['conversion']['create_genes_and_transcripts'])) {
+                // Gene doesn't exist, try to find it at the HGNC.
                 // Getting all gene information from the HGNC takes a few seconds.
-                if (!empty($_INSTANCE_CONFIG['conversion']['enforce_hgnc_gene'])) {
+                $aGeneInfo = array();
+                if (!empty($_INSTANCE_CONFIG['conversion']['use_hgnc'])) {
                     lovd_printIfVerbose(VERBOSITY_HIGH, 'Loading gene information for ' . $aVariant['symbol'] . '...' . "\n");
                     $aGeneInfo = lovd_getGeneInfoFromHGNC($aVariant['symbol'], true);
                     $nHGNC++;
                     if (!$aGeneInfo) {
-                        // We can't gene information from the HGNC, so we can't add them.
-                        // This is a major problem and we can't just continue.
-//                        die('Gene ' . $aVariant['symbol'] . ' can\'t be identified by the HGNC.' . "\n\n");
-                        lovd_printIfVerbose(VERBOSITY_LOW, 'Gene ' . $aVariant['symbol'] . ' can\'t be identified by the HGNC.' . "\n");
-                    }
+                        // We can't gene information from the HGNC.
+                        $sMessage = 'Gene ' . $aVariant['symbol'] . ' can\'t be identified by the HGNC.';
+                        lovd_printIfVerbose(VERBOSITY_LOW, $sMessage . "\n");
+                        if (!empty($_INSTANCE_CONFIG['conversion']['enforce_hgnc_gene'])) {
+                            // This is a problem, when we enforce using the HGNC.
+                            lovd_handleAnnotationError($aVariant, $sMessage);
+                        }
 
-                    // Detect alias. We should store these, for next run (which will crash on a duplicate key error).
-                    if ($aGeneInfo && $aVariant['symbol'] != $aGeneInfo['symbol']) {
+                    } elseif ($aVariant['symbol'] != $aGeneInfo['symbol']) {
+                        // Gene found, or its alias.
+                        // Detect alias, and store these for next run.
                         lovd_printIfVerbose(VERBOSITY_MEDIUM, '\'' . $aVariant['symbol'] . '\' => \'' . $aGeneInfo['symbol'] . '\',' . "\n");
-                        // In fact, let's try not to die if we know we'll die.
                         // FIXME: This is duplicated code. Make it into a function, perhaps?
                         if ($aGene = $_DB->query('SELECT g.id, g.refseq_UD, g.name FROM ' . TABLE_GENES . ' AS g WHERE g.id = ?', array($aGeneInfo['symbol']))->fetchAssoc()) {
-                            // We've got the alias already in the database.
+                            // We've got the alias already in the database; store it under the symbol we're using so that we'll find it back easily.
                             $aGenes[$aVariant['symbol']] = array_merge($aGene, array('transcripts_in_UD' => array()));
                         }
                     }
+                }
 
-                    if ($aGeneInfo && !isset($aGenes[$aVariant['symbol']])) {
-                        $sRefseqUD = lovd_getUDForGene($_CONF['refseq_build'], $aGeneInfo['symbol']);
-                        if (!$sRefseqUD) {
-//                            die('Can\'t load UD for gene ' . $aVariant['symbol'] . '.' . "\n");
-                            lovd_printIfVerbose(VERBOSITY_LOW, 'Can\'t load UD for gene ' . $aGeneInfo['symbol'] . '.' . "\n");
-                        }
-
-                        // Not getting an UD no longer kills the script, so...
-                        if ($sRefseqUD) {
-                            if (!$_DB->query('INSERT INTO ' . TABLE_GENES . '
-                                 (id, name, chromosome, chrom_band, refseq_genomic, refseq_UD, reference, url_homepage, url_external, allow_download, allow_index_wiki, id_hgnc, id_entrez, id_omim, show_hgmd, show_genecards, show_genetests, note_index, note_listing, refseq, refseq_url, disclaimer, disclaimer_text, header, header_align, footer, footer_align, created_by, created_date, updated_by, updated_date)
-                                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), ?, NOW())',
-                                array($aGeneInfo['symbol'], $aGeneInfo['name'], $aGeneInfo['chromosome'], $aGeneInfo['chrom_band'], $_SETT['human_builds'][$_CONF['refseq_build']]['ncbi_sequences'][$aGeneInfo['chromosome']], $sRefseqUD, '', '', '', 0, 0, $aGeneInfo['hgnc_id'], $aGeneInfo['entrez_id'], (!$aGeneInfo['omim_id']? NULL : $aGeneInfo['omim_id']), 0, 0, 0, '', '', '', '', 0, '', '', 0, '', 0, 0, 0))) {
-                                $sMessage = 'Can\'t create gene ' . $aVariant['symbol'] . '.';
-                                lovd_printIfVerbose(VERBOSITY_LOW, $sMessage . "\n");
-                                lovd_handleAnnotationError($aVariant, $sMessage);
-                            }
-
-                            // Add the default custom columns to this gene.
-                            lovd_addAllDefaultCustomColumns('gene', $aGeneInfo['symbol']);
-
-                            // Write to log...
-                            lovd_writeLog('Event', LOG_EVENT, 'Created gene information entry ' . $aGeneInfo['symbol'] . ' (' . $aGeneInfo['name'] . ')');
-                            lovd_printIfVerbose(VERBOSITY_MEDIUM, 'Created gene ' . $aGeneInfo['symbol'] . ".\n");
-                            flush();
-
-                            // Store this gene.
-                            $aGenes[$aVariant['symbol']] = array('id' => $aGeneInfo['symbol'], 'refseq_UD' => $sRefseqUD, 'name' => $aGeneInfo['name'], 'transcripts_in_UD' => array());
-                        }
+                // Create the gene, if the gene's possible alias isn't in the database already,
+                //  and the HGNC knows it or if we don't enforce using the HGNC.
+                if (!isset($aGenes[$aVariant['symbol']])
+                    && ($aGeneInfo || empty($_INSTANCE_CONFIG['conversion']['enforce_hgnc_gene']))) {
+                    // If we didn't find the gene in the HGNC but we're not enforcing that, prepare some data.
+                    if (!$aGeneInfo) {
+                        $aGeneInfo = array(
+                            'symbol' => $aVariant['symbol'],
+                            'name' => $aVariant['symbol'] . ' (automatically created gene)',
+                            'chromosome' => $aVariant['chromosome'],
+                            'chrom_band' => '',
+                            'hgnc_id' => NULL,
+                            'entrez_id' => NULL,
+                            'omim_id' => NULL,
+                        );
                     }
+
+                    // Create the gene, with whatever info we have.
+                    if (!$_DB->query('INSERT INTO ' . TABLE_GENES . '
+                         (id, name, chromosome, chrom_band, refseq_genomic, refseq_UD, reference, url_homepage, url_external, allow_download, allow_index_wiki, id_hgnc, id_entrez, id_omim, show_hgmd, show_genecards, show_genetests, note_index, note_listing, refseq, refseq_url, disclaimer, disclaimer_text, header, header_align, footer, footer_align, created_by, created_date, updated_by, updated_date)
+                        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), ?, NOW())',
+                        array($aGeneInfo['symbol'], $aGeneInfo['name'], $aGeneInfo['chromosome'], $aGeneInfo['chrom_band'], $_SETT['human_builds'][$_CONF['refseq_build']]['ncbi_sequences'][$aGeneInfo['chromosome']], '', '', '', '', 0, 0, $aGeneInfo['hgnc_id'], $aGeneInfo['entrez_id'], (!$aGeneInfo['omim_id']? NULL : $aGeneInfo['omim_id']), 0, 0, 0, '', '', '', '', 0, '', '', 0, '', 0, 0, 0))
+                    ) {
+                        $sMessage = 'Can\'t create gene ' . $aVariant['symbol'] . '.';
+                        lovd_printIfVerbose(VERBOSITY_LOW, $sMessage . "\n");
+                        lovd_handleAnnotationError($aVariant, $sMessage);
+                    }
+
+                    // Add the default custom columns to this gene.
+                    lovd_addAllDefaultCustomColumns('gene', $aGeneInfo['symbol']);
+
+                    // Write to log...
+                    lovd_writeLog('Event', LOG_EVENT, 'Created gene information entry ' . $aGeneInfo['symbol'] . ' (' . $aGeneInfo['name'] . ')');
+                    lovd_printIfVerbose(VERBOSITY_MEDIUM, 'Created gene ' . $aGeneInfo['symbol'] . ".\n");
+                    flush();
+
+                    // Store this gene, again under the original symbol, so we can easily find it back.
+                    $aGenes[$aVariant['symbol']] = array('id' => $aGeneInfo['symbol'], 'refseq_UD' => '', 'name' => $aGeneInfo['name'], 'transcripts_in_UD' => array());
                 }
             }
         }
+        // We created the gene if possible, but we might still not have it.
+        // $aVariant['symbol_vep']      // How we received the symbol from VEP.
+        // $aVariant['symbol']          // In case we had a hard coded alias stored, we have it here.
+        // $aGenes[$aVariant['symbol']] // In case the HGNC knows an alias, that's here. This is what's in the database.
 
 
 
         // Store transcript ID without version, we'll use it plenty of times.
+        // FIXME: Using 'transcriptid' for the NCBI ID is confusing. Better map it to 'id_ncbi'? (check everywhere)
         $aLine['transcript_noversion'] = substr($aVariant['transcriptid'], 0, strpos($aVariant['transcriptid'] . '.', '.')+1);
         if (!isset($aGenes[$aVariant['symbol']]) || !$aGenes[$aVariant['symbol']]) {
             // We really couldn't do anything with this gene (now, or last time).
@@ -1153,6 +1172,7 @@ foreach ($aFiles as $sID) {
                     // Predict RNA && Protein change.
                     // 'Intelligent' error handling.
                     // FIXME: Implement lovd_getRNAProteinPrediction() here.
+                    // LOVD3's version is CURL-ready and uses JSON.
                     foreach ($aResponse['messages'] as $aError) {
                         // Pass other errors on to the users?
                         // FIXME: This is implemented as well in inc-lib-variants.php (LOVD3.0-15).
