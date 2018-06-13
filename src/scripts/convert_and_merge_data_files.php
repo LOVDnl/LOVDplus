@@ -639,7 +639,7 @@ foreach ($aFiles as $sID) {
     while ($sLine = fgets($fInput)) {
         $nLine ++;
         $bDropTranscriptData = false;
-        if (!trim($sLine)) {
+        if (!trim($sLine) || substr(ltrim($sLine), 0, 1) == '#') {
             continue;
         }
 
@@ -750,8 +750,10 @@ foreach ($aFiles as $sID) {
         if (!isset($aGenes[$aVariant['symbol']]) && isset($aGeneAliases[$aVariant['symbol']])) {
             $aVariant['symbol'] = $aGeneAliases[$aVariant['symbol']];
         }
-        // Verify gene exists, and create it if needed. LOC* genes always fail here, so those we don't try.
-        if (!isset($aGenes[$aVariant['symbol']]) && !in_array($aVariant['symbol'], $aGenesToIgnore) && !preg_match('/^LOC[0-9]+$/', $aVariant['symbol'])) {
+        // Verify gene exists, and create it if needed.
+        // LOC* genes always fail here, so those we don't try unless we don't care about the HGNC.
+        if (!isset($aGenes[$aVariant['symbol']]) && !in_array($aVariant['symbol'], $aGenesToIgnore)
+            && (!preg_match('/^LOC[0-9]+$/', $aVariant['symbol']) || empty($_INSTANCE_CONFIG['conversion']['use_hgnc']) || empty($_INSTANCE_CONFIG['conversion']['enforce_hgnc_gene']))) {
             // First try to get this gene from the database, perhaps conversions run in parallel have created it now.
             // FIXME: This is duplicated code. Make it into a function, perhaps?
             if ($aGene = $_DB->query('SELECT g.id, g.refseq_UD, g.name FROM ' . TABLE_GENES . ' AS g WHERE g.id = ?', array($aVariant['symbol']))->fetchAssoc()) {
@@ -773,7 +775,7 @@ foreach ($aFiles as $sID) {
                         $sMessage = 'Gene ' . $aVariant['symbol'] . ' can\'t be identified by the HGNC.';
                         lovd_printIfVerbose(VERBOSITY_LOW, $sMessage . "\n");
                         if (!empty($_INSTANCE_CONFIG['conversion']['enforce_hgnc_gene'])) {
-                            // This is a problem, when we enforce using the HGNC.
+                            // This is a problem, only when we enforce using the HGNC.
                             lovd_handleAnnotationError($aVariant, $sMessage);
                         }
 
