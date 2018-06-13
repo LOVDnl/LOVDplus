@@ -4,7 +4,7 @@
  * LEIDEN OPEN VARIATION DATABASE (LOVD)
  *
  * Created     : 2014-11-28
- * Modified    : 2018-03-22
+ * Modified    : 2018-04-12
  * For LOVD+   : 3.0-18
  *
  * Copyright   : 2004-2018 Leiden University Medical Center; http://www.LUMC.nl/
@@ -203,13 +203,14 @@ function lovd_handleAnnotationError (&$aVariant, $sErrorMsg)
 
     $nAnnotationErrors++;
 
-    $sLineErrorMsg = "LINE " . $nLine . " - VariantOnTranscript data dropped: " . $sErrorMsg . "\n";
+    $sLineErrorMsg = 'LINE ' . $nLine . ' - VariantOnTranscript data ' .
+        ($_INSTANCE_CONFIG['conversion']['annotation_error_drops_line']? 'dropped' : 'error') . ': ' . $sErrorMsg . "\n";
     if ($fError) {
         fwrite($fError, $sLineErrorMsg);
     }
     lovd_printIfVerbose(VERBOSITY_LOW, $sLineErrorMsg);
 
-    $bExitOnError = $_INSTANCE_CONFIG['conversion']['exit_on_annotation_error'];
+    $bExitOnError = $_INSTANCE_CONFIG['conversion']['annotation_error_exits'];
     if ($bExitOnError) {
         lovd_printIfVerbose(VERBOSITY_LOW, "ERROR: Please update your data and re-run this script.\n");
         exit;
@@ -217,8 +218,9 @@ function lovd_handleAnnotationError (&$aVariant, $sErrorMsg)
 
     // We want to stop the script if there are too many lines of data with annotations issues.
     // We want users to check their data before they continue.
-    if ($nAnnotationErrors > $_INSTANCE_CONFIG['conversion']['max_annotation_error_allowed']) {
-        $sFileMessage = (filesize($sFileError) === 0?'' : "Please check details of dropped annotation data in " . $sFileError . "\n");
+    if ($nAnnotationErrors >= $_INSTANCE_CONFIG['conversion']['annotation_error_max_allowed']) {
+        $sFileMessage = (filesize($sFileError) === 0? '' : 'Please check details of ' .
+            ($_INSTANCE_CONFIG['conversion']['annotation_error_drops_line']? 'dropped' : 'errors in') . ' annotation data in ' . $sFileError . "\n");
         lovd_printIfVerbose(VERBOSITY_LOW, "ERROR: Script cannot continue because this file has too many lines of annotation data that this script cannot handle.\n"
             . $nAnnotationErrors . " lines of transcripts data was dropped.\nPlease update your data and re-run this script.\n"
             . $sFileMessage);
@@ -227,7 +229,7 @@ function lovd_handleAnnotationError (&$aVariant, $sErrorMsg)
 
     // Otherwise, keep the VariantOnGenome data only, and add some data in Remarks.
     if (isset($aVariant['VariantOnGenome/Remarks'])) {
-        $aVariant['VariantOnGenome/Remarks'] .= $sErrorMsg;
+        $aVariant['VariantOnGenome/Remarks'] .= (!$aVariant['VariantOnGenome/Remarks']? '' : "\n") . $sErrorMsg;
     }
 
     return $nAnnotationErrors;
@@ -782,8 +784,9 @@ foreach ($aFiles as $sID) {
                                  (id, name, chromosome, chrom_band, refseq_genomic, refseq_UD, reference, url_homepage, url_external, allow_download, allow_index_wiki, id_hgnc, id_entrez, id_omim, show_hgmd, show_genecards, show_genetests, note_index, note_listing, refseq, refseq_url, disclaimer, disclaimer_text, header, header_align, footer, footer_align, created_by, created_date, updated_by, updated_date)
                                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), ?, NOW())',
                                 array($aGeneInfo['symbol'], $aGeneInfo['name'], $aGeneInfo['chromosome'], $aGeneInfo['chrom_band'], $_SETT['human_builds'][$_CONF['refseq_build']]['ncbi_sequences'][$aGeneInfo['chromosome']], $sRefseqUD, '', '', '', 0, 0, $aGeneInfo['hgnc_id'], $aGeneInfo['entrez_id'], (!$aGeneInfo['omim_id']? NULL : $aGeneInfo['omim_id']), 0, 0, 0, '', '', '', '', 0, '', '', 0, '', 0, 0, 0))) {
-                                lovd_printIfVerbose(VERBOSITY_LOW, 'Can\'t create gene ' . $aVariant['symbol'] . '.' . "\n");
-                                exit;
+                                $sMessage = 'Can\'t create gene ' . $aVariant['symbol'] . '.';
+                                lovd_printIfVerbose(VERBOSITY_LOW, $sMessage . "\n");
+                                lovd_handleAnnotationError($aVariant, $sMessage);
                             }
 
                             // Add the default custom columns to this gene.
@@ -864,10 +867,14 @@ foreach ($aFiles as $sID) {
                             // But now apparently this service just returns the string with quotes (the latter are removed by json_decode()).
                             $aTranscriptInfo = $aResponse;
 
-                            if (empty($aTranscriptInfo)) {
-//                                die('Can\'t load available transcripts for gene ' . $aVariant['symbol'] . '.' . "\n");
-//print('Can\'t load available transcripts for gene ' . $aVariant['symbol'] . '.' . "\n");
-                                lovd_printIfVerbose(VERBOSITY_MEDIUM, 'No available transcripts for gene ' . $aGenes[$aVariant['symbol']]['id'] . ' found.' . "\n"); // Usually this is the case. Not always an error. We might get an error, but that will show now.
+                            if (empty($aTranscriptInfo) || !is_array($aTranscriptInfo) || !empty($aTranscriptInfo['faultcode'])) {
+                                if (!empty($aTranscriptInfo['faultcode'])) {
+                                    // Something went wrong. Let the user know.
+                                    lovd_printIfVerbose(VERBOSITY_MEDIUM, 'Error while retrieving transcripts for gene ' . $aGenes[$aVariant['symbol']]['id'] . ' ('  . $aTranscriptInfo['faultcode'] . '): '  . $aTranscriptInfo['faultstring'] . '.' . "\n");
+                                } else {
+                                    // Usually this is the case. Not always an error.
+                                    lovd_printIfVerbose(VERBOSITY_MEDIUM, 'No available transcripts for gene ' . $aGenes[$aVariant['symbol']]['id'] . ' found.' . "\n");
+                                }
                                 $aTranscripts[$aVariant['transcriptid']] = false; // Ignore transcript.
                                 $aTranscriptInfo = array(array('id' => 'NO_TRANSCRIPTS')); // Basically, any text will do. Just stop searching for other transcripts for this gene.
                             }
@@ -894,8 +901,9 @@ foreach ($aFiles as $sID) {
                              (id, geneid, name, id_mutalyzer, id_ncbi, id_ensembl, id_protein_ncbi, id_protein_ensembl, id_protein_uniprot, remarks, position_c_mrna_start, position_c_mrna_end, position_c_cds_end, position_g_mrna_start, position_g_mrna_end, created_date, created_by)
                             VALUES (NULL, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), ?)',
                             array($aGenes[$aVariant['symbol']]['id'], $sTranscriptName, $aTranscript['id_mutalyzer'], $aTranscript['id_ncbi'], '', $sTranscriptProtein, '', '', '', $aTranscript['cTransStart'], $aTranscript['sortableTransEnd'], $aTranscript['cCDSStop'], $aTranscript['chromTransStart'], $aTranscript['chromTransEnd'], 0))) {
-                            lovd_printIfVerbose(VERBOSITY_LOW, 'Can\'t create transcript ' . $aTranscript['id_ncbi'] . ' for gene ' . $aVariant['symbol'] . '.' . "\n");
-                            exit;
+                            $sMessage = 'Can\'t create transcript ' . $aTranscript['id_ncbi'] . ' for gene ' . $aVariant['symbol'] . '.';
+                            lovd_printIfVerbose(VERBOSITY_LOW, $sMessage . "\n");
+                            lovd_handleAnnotationError($aVariant, $sMessage);
                         }
 
                         // Save the ID before the writeLog deletes it...
@@ -940,6 +948,8 @@ foreach ($aFiles as $sID) {
                 $bCallMutalyzer = ($bCallMutalyzer || (strpos($aVariant['VariantOnTranscript/DNA'], '_') !== false));
             }
 
+            // We still need the original later.
+            $aVariant['VariantOnTranscript/DNA/VEP'] = $aVariant['VariantOnTranscript/DNA'];
             if ($bCallMutalyzer) {
                 // We don't have a DNA field from VEP, or we don't trust it (see above).
                 // Call Mutalyzer, but first check if I did that before already.
@@ -997,7 +1007,7 @@ foreach ($aFiles as $sID) {
                             }
                         }
                         if ($aAlternativeVersions) {
-                            var_dump('Found alternative by searching: ', $aVariant['transcriptid'], $aAlternativeVersions);
+                            lovd_printIfVerbose(VERBOSITY_FULL, 'Found alternative by searching: ' . $aVariant['transcriptid'] . ' [' . implode(', ', $aAlternativeVersions) . ']' . "\n");
                             $aMappings[$aVariant['chromosome'] . ':' . $aVariant['VariantOnGenome/DNA']][$aTranscripts[$aVariant['transcriptid']]['id_ncbi']] = $aMappings[$aVariant['chromosome'] . ':' . $aVariant['VariantOnGenome/DNA']][$aAlternativeVersions[0]];
                         } else {
                             // This happens when VEP says we can map on a known transcript, but doesn't provide us a valid mapping,
@@ -1006,17 +1016,18 @@ foreach ($aFiles as $sID) {
                             // Getting here will trigger an error in the next block, because no valid mapping has been provided.
                         }
                     }
-
-                    if (!isset($aMappings[$aVariant['chromosome'] . ':' . $aVariant['VariantOnGenome/DNA']][$aTranscripts[$aVariant['transcriptid']]['id_ncbi']])) {
-                        // FIXME: This used to die() here. Now that it doesn't, it will cause an immense load of notices and other failures.
-                        // Leiden still dies here because of the settings, but this code needs to be fixed for you and possible future users.
-                        $sErrorMsg = 'Can\'t map variant ' . $aVariant['VariantOnGenome/DNA'] . ' (' . $aVariant['chromosome'] . ':' . $aVariant['position'] . $aVariant['ref'] . '>' . $aVariant['alt'] . ') onto transcript ' . $aTranscripts[$aVariant['transcriptid']]['id_ncbi'] . '.';
-                        $nAnnotationErrors = lovd_handleAnnotationError($aVariant, $sErrorMsg);
-                        $bDropTranscriptData = true;
-                    }
                 }
-                $aVariant['VariantOnTranscript/DNA'] = $aMappings[$aVariant['chromosome'] . ':' . $aVariant['VariantOnGenome/DNA']][$aTranscripts[$aVariant['transcriptid']]['id_ncbi']];
+
+                if (!isset($aMappings[$aVariant['chromosome'] . ':' . $aVariant['VariantOnGenome/DNA']][$aTranscripts[$aVariant['transcriptid']]['id_ncbi']])) {
+                    // Still no mapping. lovd_handleAnnotationError() below here may kill the script, or we continue.
+                    $sErrorMsg = 'Can\'t map variant ' . $aVariant['VariantOnGenome/DNA'] . ' (' . $aVariant['chromosome'] . ':' . $aVariant['position'] . $aVariant['ref'] . '>' . $aVariant['alt'] . ') onto transcript ' . $aTranscripts[$aVariant['transcriptid']]['id_ncbi'] . '.';
+                    $nAnnotationErrors = lovd_handleAnnotationError($aVariant, $sErrorMsg);
+                    $bDropTranscriptData = $_INSTANCE_CONFIG['conversion']['annotation_error_drops_line'];
+                } else {
+                    $aVariant['VariantOnTranscript/DNA'] = $aMappings[$aVariant['chromosome'] . ':' . $aVariant['VariantOnGenome/DNA']][$aTranscripts[$aVariant['transcriptid']]['id_ncbi']];
+                }
             }
+
             // For the position fields, there is VariantOnTranscript/Position (coming from CDS_position), but it's hardly usable. Calculate ourselves.
             list($aVariant['position_c_start'], $aVariant['position_c_start_intron'], $aVariant['position_c_end'], $aVariant['position_c_end_intron']) = array_values(lovd_getVariantPosition($aVariant['VariantOnTranscript/DNA'], $aTranscripts[$aVariant['transcriptid']]));
 
@@ -1033,7 +1044,7 @@ foreach ($aFiles as $sID) {
                 // VEP came up with something...
                 $aVariant['VariantOnTranscript/RNA'] = 'r.(?)';
                 $aVariant['VariantOnTranscript/Protein'] = substr($aVariant['VariantOnTranscript/Protein'], strpos($aVariant['VariantOnTranscript/Protein'], ':')+1); // NP_000000.1:p.Met1? -> p.Met1?
-                if ($aVariant['VariantOnTranscript/Protein'] == $aVariant['VariantOnTranscript/DNA'] . '(p.=)') {
+                if ($aVariant['VariantOnTranscript/Protein'] == $aVariant['VariantOnTranscript/DNA/VEP'] . '(p.=)') {
                     // But sometimes VEP messes up; DNA: c.4482G>A; Prot: c.4482G>A(p.=)
                     $aVariant['VariantOnTranscript/Protein'] = 'p.(=)';
                 } else {
@@ -1051,8 +1062,8 @@ foreach ($aFiles as $sID) {
                 // Partially intronic, or variants spanning multiple introns, or within first/last 5 bases of an intron.
                 $aVariant['VariantOnTranscript/RNA'] = 'r.spl?';
                 $aVariant['VariantOnTranscript/Protein'] = 'p.?';
-            } else {
-                // OK, too bad, we need to run Mutalyzer anyway.
+            } elseif (!$bDropTranscriptData && $aVariant['VariantOnTranscript/DNA']) {
+                // OK, too bad, we need to run Mutalyzer anyway (only if we're using this VOT line).
 
                 // It sometimes happens that we don't have a id_mutalyzer value. Before, we used to create transcripts manually if we couldn't recognize them.
                 // This is now working against us, as we really need this ID now.
@@ -1213,11 +1224,10 @@ foreach ($aFiles as $sID) {
                 // Any errors related to the prediction of Exon, RNA or Protein are silently ignored.
             }
 
-            if (!$aVariant['VariantOnTranscript/RNA']) {
-                // Script dies here, because I want to know if I missed something. This happens with NR transcripts, but those were ignored anyway, right?
+            if (!$bDropTranscriptData && $aVariant['VariantOnTranscript/DNA'] && !$aVariant['VariantOnTranscript/RNA']) {
                 $sErrorMsg = 'Missing VariantOnTranscript/RNA. Chromosome: ' . $aVariant['chromosome'] . '. VariantOnGenome/DNA: ' . $aVariant['VariantOnGenome/DNA'] . '.';
                 $nAnnotationErrors = lovd_handleAnnotationError($aVariant, $sErrorMsg);
-                $bDropTranscriptData = true;
+                $bDropTranscriptData = $_INSTANCE_CONFIG['conversion']['annotation_error_drops_line'];
             }
         }
 

@@ -1,5 +1,7 @@
 <?php
 // Leiden specific adapter settings.
+$_INSTANCE_CONFIG['conversion']['verbosity_other'] = 9;
+
 $_INSTANCE_CONFIG['viewlists']['Screenings_for_I_VE']['cols_to_show'] = array(
     // The screenings data listing on the individual's detailed view.
     // Select these columns for the screenings listing on the individual's page.
@@ -209,6 +211,45 @@ class LOVD_LeidenDataConverter extends LOVD_DefaultDataConverter {
             'PTCHD2' => 'DISP3',
             'PRAMEF23' => 'PRAMEF5',
             'HNRNPCP5' => 'HNRNPCL2',
+
+            // Added 2018-04-12, expire 2019-04-12.
+            'C10orf137' => 'EDRF1',
+            'C11orf93' => 'COLCA2',
+            'C12orf52' => 'RITA1',
+            'C13orf45' => 'LMO7DN',
+            'C19orf82' => 'ZNF561-AS1',
+            'C1orf63' => 'RSRP1',
+            'C20orf201' => 'LKAAEAR1',
+            'C2orf62' => 'CATIP',
+            'C3orf37' => 'HMCES',
+            'C3orf43' => 'SMCO1',
+            'C3orf83' => 'MKRN2OS',
+            'C6orf70' => 'ERMARD',
+            'C7orf41' => 'MTURN',
+            'C9orf123' => 'DMAC1',
+            'CCDC111' => 'PRIMPOL',
+            'CNIH' => 'CNIH1',
+            'CXorf48' => 'CT55',
+            'CXorf61' => 'CT83',
+            'CXXC11' => 'RTP5',
+            'GPER' => 'GPER1',
+            'KIAA1704' => 'GPALPP1',
+            'KIAA1984' => 'CCDC183',
+            'MST4' => 'STK26',
+            'PHF15' => 'JADE2',
+            'PHF16' => 'JADE3',
+            'PLAC1L' => 'OOSP2',
+            'PNMA6C' => 'PNMA6A',
+            'PRAC' => 'PRAC1',
+            'SCXB' => 'SCX',
+            'SELRC1' => 'COA7',
+            'SGK196' => 'POMK',
+            'SMCR7' => 'MIEF2',
+            'SPANXB2' => 'SPANXB1',
+            'SPATA31A2' => 'SPATA31A1',
+            'UQCC' => 'UQCC1',
+            'WTH3DI' => 'RAB6D',
+            'ZFP112' => 'ZNF112',
         );
     }
 }

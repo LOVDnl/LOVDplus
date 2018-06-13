@@ -76,12 +76,13 @@ if (ACTION == 'schedule' && PATH_COUNT == 1) {
                                     ORDER BY (sf.processed_date IS NOT NULL) DESC, sf.priority DESC, sf.processed_date, sf.scheduled_date, sf.filename')
                            ->fetchAllGroupAssoc();
 
-    // [0/1] indicates processed no/yes.
+    // [0/1] indicates processed no/yes. [-1] is for file still to be converted.
     // Files in format [filename] = sort_code (unscheduled(0|1), reverse_priority(0-9), processed_date, scheduled_date, file_timestamp).
     // NOTE: If you change the sort code, be sure to update this comment, the code that builds it, the code the fills in the orphaned database entries, and the scheduling part.
     $aFiles = array(
-        array(),
-        array(),
+         0 => array(),
+         1 => array(),
+        -1 => array(),
     );
 
     // Read out directory and store files in the correct array.
@@ -120,6 +121,33 @@ if (ACTION == 'schedule' && PATH_COUNT == 1) {
             $aFiles[$bProcessed][$sFile] = $sSorting;
 
             $nFilesSchedulable += (int) !$bScheduled;
+
+        } elseif (LOVD_plus && preg_match('/.directvep.data.lovd$/', $sFile, $aRegs)) {
+            // FIXME: Don't hardcode this (above), but make it a setting. Look up what VEP usually calls its files.
+            // FIXME: When you fix that, also check the code below that predicts the other filenames for this file.
+            // Data files still to be converted (LOVD+ only).
+            // Remove the ones that have a total file, resulting in a list of files
+            //  that still need to be converted or are currently being converted.
+            $sTotalFile = str_replace('directvep', 'total', $sFile);
+            $sTotalTmpFile = str_replace('lovd', 'tmp', $sTotalFile);
+            // Check if total file already exists. Try to not hit the disk.
+            if (isset($aFiles[0][$sTotalFile]) || isset($aFiles[1][$sTotalFile])
+                || file_exists($_INI['paths']['data_files'] . '/' . $sTotalFile)) {
+                // Total file already exists, discard.
+                continue;
+            }
+
+            // File should still be converted, or is being converted. Store to show.
+            // FIXME: Properly rewrite this when the LOVD3 code that has
+            //  an improved sorting function is merged with this LOVD+ code.
+            // FIXME: Dump info on tmp table in the array, now we're checking it twice.
+            $bTotalTmpFileExists = file_exists($_INI['paths']['data_files'] . '/' . $sTotalTmpFile);
+            $aFiles[-1][$sFile] =
+                (int) !$bTotalTmpFileExists . ',' .
+                '9,' .
+                (!$bTotalTmpFileExists? '0000-00-00 00:00:00' : date('Y-m-d H:i:s', filemtime($_INI['paths']['data_files'] . '/' . $sTotalTmpFile))) . ',' .
+                ',' . // We don't have a "scheduled date".
+                date('Y-m-d H:i:s', filemtime($_INI['paths']['data_files'] . '/' . $sFile));
         }
     }
 
@@ -135,7 +163,7 @@ if (ACTION == 'schedule' && PATH_COUNT == 1) {
         }
     }
 
-    if (!$zScheduledFiles && !$aFiles[0] && !$aFiles[1]) {
+    if (!$zScheduledFiles && !$aFiles[0] && !$aFiles[1] && !$aFiles[-1]) {
         // No files found, and nothing scheduled!
         lovd_showInfoTable('No files found, and nothing scheduled!<BR>Please check the documentation to see how to import LOVD files directly from the server.', 'information');
         $_T->printFooter();
@@ -180,6 +208,7 @@ if (ACTION == 'schedule' && PATH_COUNT == 1) {
     // Sort the file list (the DB list is already sorted).
     asort($aFiles[0]); // Sort data files, keeping indices.
     asort($aFiles[1]); // Sort data files, keeping indices.
+    asort($aFiles[-1]); // Sort data files, keeping indices.
     $nFilesTotal = count($aFiles[0]) + count($aFiles[1]);
 
     lovd_showInfoTable($nFilesSchedulable . ' file' . ($nFilesSchedulable == 1? '' : 's') . ' unscheduled, ' . $nFilesTotal . ' file' . ($nFilesTotal == 1? '' : 's') . ' in total.', 'information');
@@ -196,11 +225,19 @@ if (ACTION == 'schedule' && PATH_COUNT == 1) {
       <FORM action="' . CURRENT_PATH . '?' . ACTION . '" method="post">
         <TABLE border="0" cellpadding="10" cellspacing="0">
           <TR valign="top">' . "\n");
-    foreach (array(1, 0) as $i) {
+    foreach (array(1, 0, -1) as $i) {
+        // Show the files still to be converted only for LOVD+.
+        if (!LOVD_plus && $i == -1) {
+            continue;
+        }
+        $bProcessed = ($i == 1);
+        $bConverted = ($i != -1);
+
         print('            <TD>
-              <TABLE border="0" cellpadding="10" cellspacing="1" width="' . ($i? '350' : '450') . '" class="data" style="font-size : 13px;">
+              <TABLE border="0" cellpadding="10" cellspacing="1" width="' . (!$bConverted || $bProcessed? '350' : '450') . '" class="data" style="font-size : 13px;">
                 <TR>
-                  <TH' . ($i? '' : '></TH><TH') . ' class="S16">' . ($i? 'Files already processed' : 'Files to be processed') . '</TH></TR>');
+                  <TH' . (!$bConverted || $bProcessed? '' : '></TH><TH') . ' class="S16">' .
+            ($bProcessed == 1? 'Files already processed' : ($bConverted? 'Files to be processed' : 'Files to be converted')) . '</TH></TR>');
         foreach ($aFiles[$i] as $sFile => $sSortString) {
             list($bUnscheduled, $nReversePriority, $sProcessedDate, $sScheduledDate, $sFileModified) = explode(',', $sSortString);
             // Scheduled that no longer exist, have the name of the file as their modification date.
@@ -229,14 +266,27 @@ if (ACTION == 'schedule' && PATH_COUNT == 1) {
             $nAgeInDays = floor(($tNow - strtotime($sFileModified))/(60*60*24));
             // Build the link for actions for already scheduled files.
             $sAjaxActions = 'onclick="$.get(\'ajax/import_scheduler.php/' . urlencode($sFile) . '?view\').fail(function(){alert(\'Error retrieving actions, please try again later.\');}); return false;"';
-            if ($i) {
+            if ($bProcessed) {
                 // Already processed.
                 $bError = !empty($zScheduledFiles[$sFile]['process_errors']);
                 $bProcessing = ($zScheduledFiles[$sFile]['in_progress'] && !$bError);
 
                 print("\n" .
                       '                <TR class="' . ($bError? 'colRed' : 'del') . '" ' . $sAjaxActions . '>');
+            } elseif (!$bConverted) {
+                // Files to be converted.
+                $sErrorFile = $_INI['paths']['data_files'] . '/' . str_replace('directvep.data.lovd', 'error', $sFile);
+                $bError = (file_exists($sErrorFile) && filesize($sErrorFile) > 0);
+                $aErrors = (!$bError? array() : file($sErrorFile, FILE_IGNORE_NEW_LINES));
+                $bProcessing = ($bScheduled // Processing if total tmp file exists, and ...
+                    && (!$aErrors // (there are no errors, or ...
+                        || (!$_INSTANCE_CONFIG['conversion']['annotation_error_exits'] // there are errors but LOVD+ won't stop on the first error, and ...
+                            && count($aErrors) < $_INSTANCE_CONFIG['conversion']['annotation_error_max_allowed']))); // we didn't reach the maximum of errors yet).
+
+                print("\n" .
+                      '                <TR class="' . ($bProcessing? 'del' : 'data') . ($bError? ' colRed' : '') . '">');
             } else {
+                // Converted but not already processed files.
                 $bError = false;
                 $bProcessing = false;
                 if ($bScheduled) {
@@ -251,18 +301,21 @@ if (ACTION == 'schedule' && PATH_COUNT == 1) {
                   <TD width="30" style="text-align : center;"><INPUT type="checkbox" name="files_to_schedule[]" value="' . $sFile . '" style="display : none;"><IMG src="gfx/check.png" alt="Import" width="16" height="16" style="display : none;"></TD>');
                 }
             }
-            $sInformationHTML = ($bUnscheduled? '' : '
+            $sInformationHTML = ($bUnscheduled || !$bConverted? '' : '
                     <IMG src="gfx/lovd_form_information.png" alt="Information" width="16" height="16" title="' . ($sFile == $sFileDisplayName? '' : $sFile . ' - ') . 'Scheduled ' . $zScheduledFiles[$sFile]['scheduled_date'] . ' by ' . $zScheduledFiles[$sFile]['scheduled_by_name'] . '" style="float : right;">');
             $sPriorityHTML = (!$nPriority? '' : '
                     <IMG src="gfx/lovd_form_warning.png" alt="Priority" width="16" height="16" title="Priority import: ' . $_SETT['import_priorities'][$nPriority] . '" style="float : right;">');
             $sProcessingHTML = (!$bProcessing? '' : '
-                    <IMG src="gfx/menu_clock.png" alt="Processing ..." width="16" height="16" title="Processing started ' . $zScheduledFiles[$sFile]['processed_date'] . '" style="float : right;">');
+                    <IMG src="gfx/menu_clock.png" alt="Processing ..." width="16" height="16" title="' .
+                ($bConverted? 'Processing' : 'Conversion') . ' started ' . $sProcessedDate . '" style="float : right;">');
             $sErrorsHTML = (!$bError? '' : '
-                    <IMG src="gfx/cross.png" alt="Errors while processing" width="16" height="16" title="Errors while processing:' . "\n" . htmlspecialchars($zScheduledFiles[$sFile]['process_errors']) . '" style="float : right;">');
+                    <IMG src="gfx/cross.png" alt="Errors while processing" width="16" height="16" title="Errors while processing:' . "\n" .
+                ($bProcessed? htmlspecialchars($zScheduledFiles[$sFile]['process_errors']) :
+                    htmlspecialchars(implode("\n", $aErrors))). '" style="float : right;">');
             print('
                   <TD>' . $sInformationHTML . $sPriorityHTML . $sProcessingHTML . $sErrorsHTML . '
                     <B>' . $sFileDisplayName . '</B><BR>
-                    <SPAN class="S11">' . ($bFileLost? 'File not found' : $sFileModified . ' - ' . ($bAPI? 'Submitted' : (LOVD_plus? 'Converted' : 'Created')) . ' ' . $nAgeInDays . ' day' . ($nAgeInDays == 1? '' : 's') . ' ago') . '</SPAN>
+                    <SPAN class="S11">' . ($bFileLost? 'File not found' : $sFileModified . ' - ' . ($bAPI? 'Submitted' : (LOVD_plus && $bConverted? 'Converted' : 'Created')) . ' ' . $nAgeInDays . ' day' . ($nAgeInDays == 1? '' : 's') . ' ago') . '</SPAN>
                   </TD></TR>');
         }
         print('</TABLE></TD>' . "\n");
