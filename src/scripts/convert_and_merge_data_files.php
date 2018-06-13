@@ -623,7 +623,7 @@ foreach ($aFiles as $sID) {
     // Get all the existing genes in one database call.
     $aResult = $_DB->query('SELECT g.id, g.refseq_UD, g.name FROM ' . TABLE_GENES . ' AS g')->fetchAllAssoc();
     foreach ($aResult as $aGene) {
-        $aGenes[$aGene['id']] = array_merge($aGene, array('transcripts_in_UD' => array()));
+        $aGenes[$aGene['id']] = array_merge($aGene, array('transcripts_in_NC' => array()));
     }
     unset($aResult); // Clean up.
 
@@ -758,7 +758,7 @@ foreach ($aFiles as $sID) {
             // FIXME: This is duplicated code. Make it into a function, perhaps?
             if ($aGene = $_DB->query('SELECT g.id, g.refseq_UD, g.name FROM ' . TABLE_GENES . ' AS g WHERE g.id = ?', array($aVariant['symbol']))->fetchAssoc()) {
                 // We've got it in the database.
-                $aGenes[$aVariant['symbol']] = array_merge($aGene, array('transcripts_in_UD' => array()));
+                $aGenes[$aVariant['symbol']] = array_merge($aGene, array('transcripts_in_NC' => array()));
 
             } elseif (!empty($_INSTANCE_CONFIG['conversion']['create_genes_and_transcripts'])) {
                 // Gene doesn't exist, try to find it at the HGNC.
@@ -786,7 +786,7 @@ foreach ($aFiles as $sID) {
                         // FIXME: This is duplicated code. Make it into a function, perhaps?
                         if ($aGene = $_DB->query('SELECT g.id, g.refseq_UD, g.name FROM ' . TABLE_GENES . ' AS g WHERE g.id = ?', array($aGeneInfo['symbol']))->fetchAssoc()) {
                             // We've got the alias already in the database; store it under the symbol we're using so that we'll find it back easily.
-                            $aGenes[$aVariant['symbol']] = array_merge($aGene, array('transcripts_in_UD' => array()));
+                            $aGenes[$aVariant['symbol']] = array_merge($aGene, array('transcripts_in_NC' => array()));
                         }
                     }
                 }
@@ -828,14 +828,14 @@ foreach ($aFiles as $sID) {
                     flush();
 
                     // Store this gene, again under the original symbol, so we can easily find it back.
-                    $aGenes[$aVariant['symbol']] = array('id' => $aGeneInfo['symbol'], 'refseq_UD' => '', 'name' => $aGeneInfo['name'], 'transcripts_in_UD' => array());
+                    $aGenes[$aVariant['symbol']] = array('id' => $aGeneInfo['symbol'], 'refseq_UD' => '', 'name' => $aGeneInfo['name'], 'transcripts_in_NC' => array());
                 }
             }
         }
         // We created the gene if possible, but we might still not have it.
-        // $aVariant['symbol_vep']      // How we received the symbol from VEP.
-        // $aVariant['symbol']          // In case we had a hard coded alias stored, we have it here.
-        // $aGenes[$aVariant['symbol']] // In case the HGNC knows an alias, that's here. This is what's in the database.
+        // $aVariant['symbol_vep']            // How we received the symbol from VEP.
+        // $aVariant['symbol']                // In case we had a hard coded alias stored, we have it here.
+        // $aGenes[$aVariant['symbol']]['id'] // In case the HGNC knows an alias, that's here. This is what's in the database.
 
 
 
@@ -848,40 +848,36 @@ foreach ($aFiles as $sID) {
 
         } elseif (!empty($aVariant['transcriptid']) && !isset($aTranscripts[$aVariant['transcriptid']])) {
             // Gene found, transcript given but not yet seen before. Get transcript information.
-
-            // Genes are now accepted as well without an UD. But we can't search for transcripts if we don't have an UD.
-            // See if we have one; if not, try and create it.
-            if (!$aGenes[$aVariant['symbol']]['refseq_UD']) {
-                $sRefseqUD = lovd_getUDForGene($_CONF['refseq_build'], $aVariant['symbol']);
-                if ($sRefseqUD) {
-                    $aGenes[$aVariant['symbol']]['refseq_UD'] = $sRefseqUD;
-                    // And prevent us from having this issue again.
-                    $_DB->query('UPDATE ' . TABLE_GENES . ' SET refseq_UD = ? WHERE id = ?',
-                        array($sRefseqUD, $aVariant['symbol']));
-                }
-            }
-
-            // Then try to get this transcript from the database, ignoring (but preferring) version.
+            // We could loop through $aTranscripts to look for the NCBI ID with a different version, but since a
+            //  different process might have created this transcript and therefore we prefer checking the database,
+            //  we might as well rely on that completely.
+            // Try to get this transcript from the database, ignoring (but preferring) version.
+            // When not having a match on the version, we prefer the transcript most recently created.
             if ($aTranscript = $_DB->query('SELECT id, geneid, id_mutalyzer, id_ncbi, position_c_cds_end, position_g_mrna_start, position_g_mrna_end FROM ' . TABLE_TRANSCRIPTS . ' WHERE id_ncbi LIKE ? ORDER BY (id_ncbi = ?) DESC, id DESC LIMIT 1', array($aLine['transcript_noversion'] . '%', $aVariant['transcriptid']))->fetchAssoc()) {
                 // We've got it in the database.
                 $aTranscripts[$aVariant['transcriptid']] = $aTranscript;
 
-            } elseif ($aGenes[$aVariant['symbol']]['refseq_UD']) {
+            } elseif (!empty($_INSTANCE_CONFIG['conversion']['create_genes_and_transcripts'])) {
                 // To prevent us from having to check the available transcripts all the time, we store the available transcripts, but only insert those we need.
-                if ($aGenes[$aVariant['symbol']]['transcripts_in_UD']) {
-                    $aTranscriptInfo = $aGenes[$aVariant['symbol']]['transcripts_in_UD'];
+                if ($aGenes[$aVariant['symbol']]['transcripts_in_NC']) {
+                    $aTranscriptInfo = $aGenes[$aVariant['symbol']]['transcripts_in_NC'];
 
                 } else {
                     $aTranscriptInfo = array();
-                    if (!empty($_INSTANCE_CONFIG['conversion']['enforce_hgnc_gene'])) {
-                        lovd_printIfVerbose(VERBOSITY_HIGH, 'Loading transcript information for ' . $aGenes[$aVariant['symbol']]['id'] . '...' . "\n");
-                        $nSleepTime = 2;
+                    lovd_printIfVerbose(VERBOSITY_HIGH, 'Loading transcript information for ' . $aGenes[$aVariant['symbol']]['id'] . '...' . "\n");
+                    $nSleepTime = 2;
+                    // Since we're using the NC as a source now, try multiple gene symbols to use.
+                    // Genes can change, and we're not 100% sure about which gene symbol is in the NC.
+                    // Start with the one we have in the database, then our alias, then the VEP one.
+                    // (note that we could retrieve the entire chromosome's list of transcripts, but that'll be slow)
+                    $aGenesToTry = array_unique(array($aGenes[$aVariant['symbol']]['id'], $aVariant['symbol'], $aVariant['symbol_vep']));
+                    foreach ($aGenesToTry as $sGeneToTry) {
                         // Retry Mutalyzer call several times until successful.
+                        $sJSONResponse = false;
                         for ($i = 0; $i <= $nMutalyzerRetries; $i++) {
-                            $aMutalyzerCalls['getTranscriptsAndInfo'] ++;
+                            $aMutalyzerCalls['getTranscriptsAndInfo']++;
                             $tMutalyzerStart = microtime(true);
-//                            $sJSONResponse = file_get_contents('https://mutalyzer.nl/json/getTranscriptsAndInfo?genomicReference=' . $aGenes[$aVariant['symbol']]['refseq_UD'] . '&geneName=' . $aGenes[$aVariant['symbol']]['id']);
-                            $sJSONResponse = mutalyzer_getTranscriptsAndInfo($aGenes[$aVariant['symbol']]['refseq_UD'], $aGenes[$aVariant['symbol']]['id']);
+                            $sJSONResponse = mutalyzer_getTranscriptsAndInfo($_SETT['human_builds'][$_CONF['refseq_build']]['ncbi_sequences'][$aVariant['chromosome']], $sGeneToTry);
                             $tMutalyzerCalls += (microtime(true) - $tMutalyzerStart);
                             $nMutalyzer++;
                             if ($sJSONResponse === false) {
@@ -903,19 +899,22 @@ foreach ($aFiles as $sID) {
                             if (empty($aTranscriptInfo) || !is_array($aTranscriptInfo) || !empty($aTranscriptInfo['faultcode'])) {
                                 if (!empty($aTranscriptInfo['faultcode'])) {
                                     // Something went wrong. Let the user know.
-                                    lovd_printIfVerbose(VERBOSITY_MEDIUM, 'Error while retrieving transcripts for gene ' . $aGenes[$aVariant['symbol']]['id'] . ' ('  . $aTranscriptInfo['faultcode'] . '): '  . $aTranscriptInfo['faultstring'] . '.' . "\n");
+                                    lovd_printIfVerbose(VERBOSITY_MEDIUM, 'Error while retrieving transcripts for gene ' . $aGenes[$aVariant['symbol']]['id'] . ' (' . $aTranscriptInfo['faultcode'] . '): ' . $aTranscriptInfo['faultstring'] . '.' . "\n");
                                 } else {
                                     // Usually this is the case. Not always an error.
                                     lovd_printIfVerbose(VERBOSITY_MEDIUM, 'No available transcripts for gene ' . $aGenes[$aVariant['symbol']]['id'] . ' found.' . "\n");
                                 }
                                 $aTranscripts[$aVariant['transcriptid']] = false; // Ignore transcript.
                                 $aTranscriptInfo = array(array('id' => 'NO_TRANSCRIPTS')); // Basically, any text will do. Just stop searching for other transcripts for this gene.
+                            } else {
+                                // Found transcripts. Don't look for any other gene. Use the $aTranscriptInfo that we have.
+                                break;
                             }
                         }
                     }
 
                     // Store for next time.
-                    $aGenes[$aVariant['symbol']]['transcripts_in_UD'] = $aTranscriptInfo;
+                    $aGenes[$aVariant['symbol']]['transcripts_in_NC'] = $aTranscriptInfo;
                 }
 
                 // Loop transcript options, add the one we need.
@@ -924,10 +923,19 @@ foreach ($aFiles as $sID) {
                     if (substr($aTranscript['id'], 0, strpos($aTranscript['id'] . '.', '.')+1) == $aLine['transcript_noversion']) {
                         // Store in database, prepare values.
                         $sTranscriptName = str_replace($aGenes[$aVariant['symbol']]['name'] . ', ', '', $aTranscript['product']);
+                        // 2018-06-13; The getTranscriptsAndInfo() feature on NCs has a bug that the product field is empty.
+                        if (!$sTranscriptName) {
+                            $sTranscriptName = $aTranscript['id'];
+                        }
                         $aTranscript['id_mutalyzer'] = str_replace($aGenes[$aVariant['symbol']]['id'] . '_v', '', $aTranscript['name']);
                         $aTranscript['id_ncbi'] = $aTranscript['id'];
                         $sTranscriptProtein = (!isset($aTranscript['proteinTranscript']['id'])? '' : $aTranscript['proteinTranscript']['id']);
                         $aTranscript['position_c_cds_end'] = $aTranscript['cCDSStop']; // To calculate VOT variant position, if in 3'UTR.
+                        // 2018-06-13; The getTranscriptsAndInfo() feature on NCs has a bug that chrom* fields are not available.
+                        if (!isset($aTranscript['chromTransStart']) || !isset($aTranscript['chromTransEnd'])) {
+                            $aTranscript['chromTransStart'] = $aTranscript['gTransStart'];
+                            $aTranscript['chromTransEnd'] = $aTranscript['gTransEnd'];
+                        }
 
                         // Add transcript to gene.
                         if (!$_DB->query('INSERT INTO ' . TABLE_TRANSCRIPTS . '
@@ -1030,6 +1038,7 @@ foreach ($aFiles as $sID) {
 
                     if ($aVariant['transcriptid'] != $aTranscripts[$aVariant['transcriptid']]['id_ncbi']) {
                         // The database has selected a different version; just copy that...
+                        // FIXME: This will trigger a notice when the transcript passed by VEP is not present in Mutalyzer's mapping info.
                         $aMappings[$aTranscripts[$aVariant['transcriptid']]['id_ncbi']] = $aMappings[$aVariant['transcriptid']];
                     } else {
                         // Do one more attempt, finding the transcript for other versions. Just take first one you find.
