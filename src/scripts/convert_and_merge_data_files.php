@@ -4,7 +4,7 @@
  * LEIDEN OPEN VARIATION DATABASE (LOVD)
  *
  * Created     : 2014-11-28
- * Modified    : 2018-06-11
+ * Modified    : 2018-06-14
  * For LOVD+   : 3.0-18
  *
  * Copyright   : 2004-2018 Leiden University Medical Center; http://www.LUMC.nl/
@@ -966,9 +966,12 @@ foreach ($aFiles as $sID) {
                 }
             }
         }
+        // We created the transcript if possible, but we might still not have it.
+        // $aVariant['transcriptid']                           // How we received the transcript from VEP.
+        // $aTranscripts[$aVariant['transcriptid']]['id_ncbi'] // The NCBI ID of the transcript in the database (can be different version).
 
         // Now check, if we managed to get the transcript ID. If not, then we'll have to continue without it.
-        if (empty($aVariant['transcriptid']) || $_ADAPTER->ignoreTranscript($aVariant['transcriptid']) || !isset($aTranscripts[$aVariant['transcriptid']]) || !$aTranscripts[$aVariant['transcriptid']]) {
+        if (empty($aVariant['transcriptid']) || $_ADAPTER->ignoreTranscript($aVariant['transcriptid']) || empty($aTranscripts[$aVariant['transcriptid']])) {
             // When the transcript still doesn't exist, or it evaluates to false (we don't have it, we can't get it), then skip it.
             $aVariant['transcriptid'] = '';
         } else {
@@ -1000,10 +1003,10 @@ foreach ($aFiles as $sID) {
 
                     $nSleepTime = 2;
                     // Retry Mutalyzer call several times until successful.
+                    $sJSONResponse = false;
                     for ($i=0; $i <= $nMutalyzerRetries; $i++) {
                         $aMutalyzerCalls['numberConversion'] ++;
                         $tMutalyzerStart = microtime(true);
-//                        $sJSONResponse = file_get_contents('https://mutalyzer.nl/json/numberConversion?build=' . $_CONF['refseq_build'] . '&variant=' . $_SETT['human_builds'][$_CONF['refseq_build']]['ncbi_sequences'][$aVariant['chromosome']] . ':' . $aVariant['VariantOnGenome/DNA']);
                         $sJSONResponse = mutalyzer_numberConversion($_CONF['refseq_build'], $_SETT['human_builds'][$_CONF['refseq_build']]['ncbi_sequences'][$aVariant['chromosome']] . ':' . $aVariant['VariantOnGenome/DNA']);
                         $tMutalyzerCalls += (microtime(true) - $tMutalyzerStart);
                         $nMutalyzer++;
@@ -1030,43 +1033,44 @@ foreach ($aFiles as $sID) {
                     }
                 }
 
-                if (!isset($aMappings[$aTranscripts[$aVariant['transcriptid']]['id_ncbi']])) {
+                // Find mapping of variant on the currently handled transcript.
+                if (isset($aMappings[$aTranscripts[$aVariant['transcriptid']]['id_ncbi']])) {
+                    // Successfully mapped on the transcript version that we have in the database.
+                    $aVariant['VariantOnTranscript/DNA'] = $aMappings[$aTranscripts[$aVariant['transcriptid']]['id_ncbi']];
+                } elseif (isset($aMappings[$aVariant['transcriptid']])) {
+                    // Successfully mapped on the transcript version received by VEP.
+                    $aVariant['VariantOnTranscript/DNA'] = $aMappings[$aVariant['transcriptid']];
+                } else {
                     // Somehow, we can't find the transcript in the mapping info.
-                    // This sometimes happens when the slice has a newer transcript than the one we have in the position converter database.
-                    // This can also happen, when VEP says the variant maps, but Mutalyzer disagrees (boundaries may be different, variant may be outside of gene).
-                    // Try the version we actually requested.
-
-                    if ($aVariant['transcriptid'] != $aTranscripts[$aVariant['transcriptid']]['id_ncbi']) {
-                        // The database has selected a different version; just copy that...
-                        // FIXME: This will trigger a notice when the transcript passed by VEP is not present in Mutalyzer's mapping info.
-                        $aMappings[$aTranscripts[$aVariant['transcriptid']]['id_ncbi']] = $aMappings[$aVariant['transcriptid']];
-                    } else {
-                        // Do one more attempt, finding the transcript for other versions. Just take first one you find.
-                        $aAlternativeVersions = array();
-                        foreach ($aMappings as $sRef => $sDNA) {
-                            if (strpos($sRef, $aLine['transcript_noversion']) === 0) {
-                                $aAlternativeVersions[] = $sRef;
-                            }
-                        }
-                        if ($aAlternativeVersions) {
-                            lovd_printIfVerbose(VERBOSITY_FULL, 'Found alternative by searching: ' . $aVariant['transcriptid'] . ' [' . implode(', ', $aAlternativeVersions) . ']' . "\n");
-                            $aMappings[$aTranscripts[$aVariant['transcriptid']]['id_ncbi']] = $aMappings[$aAlternativeVersions[0]];
-                        } else {
-                            // This happens when VEP says we can map on a known transcript, but doesn't provide us a valid mapping,
-                            // *and* Mutalyzer at the same time doesn't seem to be able to map to this transcript at all.
-                            // This happens sometimes with variants outside of genes, that VEP apparently considers close enough.
-                            // Getting here will trigger an error in the next block, because no valid mapping has been provided.
+                    // This can only happen either when the NC has a different transcript than the one we have in the
+                    //  position converter database and also VEP has a different transcript version,
+                    //  or when VEP says the variant maps, but Mutalyzer disagrees (variant may be outside of gene).
+                    // Do one more attempt, finding the transcript for other versions. Just take first one you find.
+                    $aAlternativeVersions = array();
+                    foreach ($aMappings as $sRef => $sDNA) {
+                        if (strpos($sRef, $aLine['transcript_noversion']) === 0) {
+                            $aAlternativeVersions[] = $sRef;
                         }
                     }
-                }
+                    if ($aAlternativeVersions) {
+                        lovd_printIfVerbose(VERBOSITY_FULL, 'Found alternative by searching: ' . $aVariant['transcriptid'] . ' [' . implode(', ', $aAlternativeVersions) . ']' . "\n");
+                        $aVariant['VariantOnTranscript/DNA'] = $aMappings[$aAlternativeVersions[0]];
+                    } else {
+                        // This happens when VEP says we can map on a known transcript, but doesn't provide us a valid mapping,
+                        // *and* Mutalyzer at the same time doesn't seem to be able to map to this transcript at all.
+                        // This happens sometimes with variants outside of genes, that VEP apparently considers close enough.
 
-                if (!isset($aMappings[$aTranscripts[$aVariant['transcriptid']]['id_ncbi']])) {
-                    // Still no mapping. lovd_handleAnnotationError() below here may kill the script, or we continue.
-                    $sErrorMsg = 'Can\'t map variant ' . $aVariant['VariantOnGenome/DNA'] . ' (' . $aVariant['chromosome'] . ':' . $aVariant['position'] . $aVariant['ref'] . '>' . $aVariant['alt'] . ') onto transcript ' . $aTranscripts[$aVariant['transcriptid']]['id_ncbi'] . '.';
-                    $nAnnotationErrors = lovd_handleAnnotationError($aVariant, $sErrorMsg);
-                    $bDropTranscriptData = $_INSTANCE_CONFIG['conversion']['annotation_error_drops_line'];
-                } else {
-                    $aVariant['VariantOnTranscript/DNA'] = $aMappings[$aTranscripts[$aVariant['transcriptid']]['id_ncbi']];
+                        // Still no mapping. If we did have DNA from VEP, we'll just accept that. Otherwise, we call it an error.
+                        $sErrorMsg = 'Can\'t map variant ' . $aVariant['VariantOnGenome/DNA'] . ' (' . $aVariant['chromosome'] . ':' . $aVariant['position'] . $aVariant['ref'] . '>' . $aVariant['alt'] . ') onto transcript ' . $aTranscripts[$aVariant['transcriptid']]['id_ncbi'] . '.';
+                        if ($aVariant['VariantOnTranscript/DNA']) {
+                            $sErrorMsg .= "\n" .
+                                          'Falling back to VEP\'s DNA description!' . "\n";
+                            lovd_printIfVerbose(VERBOSITY_FULL, $sErrorMsg);
+                        } else {
+                            $nAnnotationErrors = lovd_handleAnnotationError($aVariant, $sErrorMsg);
+                            $bDropTranscriptData = $_INSTANCE_CONFIG['conversion']['annotation_error_drops_line'];
+                        }
+                    }
                 }
             }
 
