@@ -621,14 +621,14 @@ foreach ($aFiles as $sID) {
     $nAnnotationErrors = 0; // Count the number of lines we cannot import.
 
     // Get all the existing genes in one database call.
-    $aResult = $_DB->query('SELECT g.id, g.refseq_UD, g.name FROM ' . TABLE_GENES . ' AS g')->fetchAllAssoc();
+    $aResult = $_DB->query('SELECT g.id, g.name FROM ' . TABLE_GENES . ' AS g')->fetchAllAssoc();
     foreach ($aResult as $aGene) {
         $aGenes[$aGene['id']] = array_merge($aGene, array('transcripts_in_NC' => array()));
     }
     unset($aResult); // Clean up.
 
     // Get all the existing transcript data in one database call.
-    $aTranscripts = $_DB->query('SELECT id_ncbi, id, geneid, id_mutalyzer, id_ncbi, position_c_cds_end, position_g_mrna_start, position_g_mrna_end FROM ' . TABLE_TRANSCRIPTS . ' ORDER BY id_ncbi DESC, id DESC')->fetchAllGroupAssoc();
+    $aTranscripts = $_DB->query('SELECT id_ncbi, id, geneid, id_ncbi, position_c_cds_end, position_g_mrna_start, position_g_mrna_end FROM ' . TABLE_TRANSCRIPTS . ' ORDER BY id_ncbi DESC, id DESC')->fetchAllGroupAssoc();
 
 
 
@@ -756,7 +756,7 @@ foreach ($aFiles as $sID) {
             && (!preg_match('/^LOC[0-9]+$/', $aVariant['symbol']) || empty($_INSTANCE_CONFIG['conversion']['use_hgnc']) || empty($_INSTANCE_CONFIG['conversion']['enforce_hgnc_gene']))) {
             // First try to get this gene from the database, perhaps conversions run in parallel have created it now.
             // FIXME: This is duplicated code. Make it into a function, perhaps?
-            if ($aGene = $_DB->query('SELECT g.id, g.refseq_UD, g.name FROM ' . TABLE_GENES . ' AS g WHERE g.id = ?', array($aVariant['symbol']))->fetchAssoc()) {
+            if ($aGene = $_DB->query('SELECT g.id, g.name FROM ' . TABLE_GENES . ' AS g WHERE g.id = ?', array($aVariant['symbol']))->fetchAssoc()) {
                 // We've got it in the database.
                 $aGenes[$aVariant['symbol']] = array_merge($aGene, array('transcripts_in_NC' => array()));
 
@@ -784,7 +784,7 @@ foreach ($aFiles as $sID) {
                         // Detect alias, and store these for next run.
                         lovd_printIfVerbose(VERBOSITY_MEDIUM, '\'' . $aVariant['symbol'] . '\' => \'' . $aGeneInfo['symbol'] . '\',' . "\n");
                         // FIXME: This is duplicated code. Make it into a function, perhaps?
-                        if ($aGene = $_DB->query('SELECT g.id, g.refseq_UD, g.name FROM ' . TABLE_GENES . ' AS g WHERE g.id = ?', array($aGeneInfo['symbol']))->fetchAssoc()) {
+                        if ($aGene = $_DB->query('SELECT g.id, g.name FROM ' . TABLE_GENES . ' AS g WHERE g.id = ?', array($aGeneInfo['symbol']))->fetchAssoc()) {
                             // We've got the alias already in the database; store it under the symbol we're using so that we'll find it back easily.
                             $aGenes[$aVariant['symbol']] = array_merge($aGene, array('transcripts_in_NC' => array()));
                         }
@@ -828,7 +828,7 @@ foreach ($aFiles as $sID) {
                     flush();
 
                     // Store this gene, again under the original symbol, so we can easily find it back.
-                    $aGenes[$aVariant['symbol']] = array('id' => $aGeneInfo['symbol'], 'refseq_UD' => '', 'name' => $aGeneInfo['name'], 'transcripts_in_NC' => array());
+                    $aGenes[$aVariant['symbol']] = array('id' => $aGeneInfo['symbol'], 'name' => $aGeneInfo['name'], 'transcripts_in_NC' => array());
                 }
             }
         }
@@ -853,7 +853,7 @@ foreach ($aFiles as $sID) {
             //  we might as well rely on that completely.
             // Try to get this transcript from the database, ignoring (but preferring) version.
             // When not having a match on the version, we prefer the transcript most recently created.
-            if ($aTranscript = $_DB->query('SELECT id, geneid, id_mutalyzer, id_ncbi, position_c_cds_end, position_g_mrna_start, position_g_mrna_end FROM ' . TABLE_TRANSCRIPTS . ' WHERE id_ncbi LIKE ? ORDER BY (id_ncbi = ?) DESC, id DESC LIMIT 1', array($aLine['transcript_noversion'] . '%', $aVariant['transcriptid']))->fetchAssoc()) {
+            if ($aTranscript = $_DB->query('SELECT id, geneid, id_ncbi, position_c_cds_end, position_g_mrna_start, position_g_mrna_end FROM ' . TABLE_TRANSCRIPTS . ' WHERE id_ncbi LIKE ? ORDER BY (id_ncbi = ?) DESC, id DESC LIMIT 1', array($aLine['transcript_noversion'] . '%', $aVariant['transcriptid']))->fetchAssoc()) {
                 // We've got it in the database.
                 $aTranscripts[$aVariant['transcriptid']] = $aTranscript;
 
@@ -927,7 +927,6 @@ foreach ($aFiles as $sID) {
                         if (!$sTranscriptName) {
                             $sTranscriptName = $aTranscript['id'];
                         }
-                        $aTranscript['id_mutalyzer'] = str_replace($aGenes[$aVariant['symbol']]['id'] . '_v', '', $aTranscript['name']);
                         $aTranscript['id_ncbi'] = $aTranscript['id'];
                         $sTranscriptProtein = (!isset($aTranscript['proteinTranscript']['id'])? '' : $aTranscript['proteinTranscript']['id']);
                         $aTranscript['position_c_cds_end'] = $aTranscript['cCDSStop']; // To calculate VOT variant position, if in 3'UTR.
@@ -939,9 +938,9 @@ foreach ($aFiles as $sID) {
 
                         // Add transcript to gene.
                         if (!$_DB->query('INSERT INTO ' . TABLE_TRANSCRIPTS . '
-                             (id, geneid, name, id_mutalyzer, id_ncbi, id_ensembl, id_protein_ncbi, id_protein_ensembl, id_protein_uniprot, remarks, position_c_mrna_start, position_c_mrna_end, position_c_cds_end, position_g_mrna_start, position_g_mrna_end, created_date, created_by)
-                            VALUES (NULL, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), ?)',
-                            array($aGenes[$aVariant['symbol']]['id'], $sTranscriptName, $aTranscript['id_mutalyzer'], $aTranscript['id_ncbi'], '', $sTranscriptProtein, '', '', '', $aTranscript['cTransStart'], $aTranscript['sortableTransEnd'], $aTranscript['cCDSStop'], $aTranscript['chromTransStart'], $aTranscript['chromTransEnd'], 0))) {
+                             (id, geneid, name, id_ncbi, id_ensembl, id_protein_ncbi, id_protein_ensembl, id_protein_uniprot, remarks, position_c_mrna_start, position_c_mrna_end, position_c_cds_end, position_g_mrna_start, position_g_mrna_end, created_date, created_by)
+                            VALUES (NULL, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), ?)',
+                            array($aGenes[$aVariant['symbol']]['id'], $sTranscriptName, $aTranscript['id_ncbi'], '', $sTranscriptProtein, '', '', '', $aTranscript['cTransStart'], $aTranscript['sortableTransEnd'], $aTranscript['cCDSStop'], $aTranscript['chromTransStart'], $aTranscript['chromTransEnd'], 0))) {
                             $sMessage = 'Can\'t create transcript ' . $aTranscript['id_ncbi'] . ' for gene ' . $aVariant['symbol'] . '.';
                             lovd_printIfVerbose(VERBOSITY_LOW, $sMessage . "\n");
                             lovd_handleAnnotationError($aVariant, $sMessage);
@@ -1061,7 +1060,7 @@ foreach ($aFiles as $sID) {
                         // This happens sometimes with variants outside of genes, that VEP apparently considers close enough.
 
                         // Still no mapping. If we did have DNA from VEP, we'll just accept that. Otherwise, we call it an error.
-                        $sErrorMsg = 'Can\'t map variant ' . $aVariant['VariantOnGenome/DNA'] . ' (' . $aVariant['chromosome'] . ':' . $aVariant['position'] . $aVariant['ref'] . '>' . $aVariant['alt'] . ') onto transcript ' . $aTranscripts[$aVariant['transcriptid']]['id_ncbi'] . '.';
+                        $sErrorMsg = 'Can\'t map variant ' . $aVariant['VariantOnGenome/DNA'] . ' (' . $aVariant['chromosome'] . ':' . $aVariant['position'] . $aVariant['ref'] . '>' . $aVariant['alt'] . ') onto transcript ' . $aLine['transcript_noversion'] . '*.';
                         if ($aVariant['VariantOnTranscript/DNA']) {
                             $sErrorMsg .= "\n" .
                                           'Falling back to VEP\'s DNA description!' . "\n";
