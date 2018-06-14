@@ -1233,6 +1233,8 @@ foreach ($aFiles as $sID) {
                 $aVariant[$sField] = str_replace('ins' . $aRegs[1], 'ins(' . strlen($aRegs[1]) . ')', $aVariant[$sField]);
             }
         }
+        // Don't put this in the output file.
+        unset($aVariant['VariantOnTranscript/DNA/VEP']);
 
         // For the protein field, protein descriptions >100 characters can be shortened.
         $sField = 'VariantOnTranscript/Protein';
