@@ -87,7 +87,7 @@ function mutalyzer_runMutalyzer ($variant)
 {
     global $ch;
 
-    $sUrl = 'https://mutalyzer.nl/json/runMutalyzer?variant=' . $variant;
+    $sUrl = 'https://mutalyzer.nl/json/runMutalyzerLight?variant=' . $variant;
     curl_setopt($ch, CURLOPT_URL, $sUrl);
 
     return curl_exec($ch);
@@ -1084,7 +1084,7 @@ foreach ($aFiles as $sID) {
             // VariantOnTranscript/RNA && VariantOnTranscript/Protein.
             // Try to do as much as possible by ourselves.
             $aVariant['VariantOnTranscript/RNA'] = '';
-            // convert p(.%3D) to p(.=)
+            // Convert VEP's (p.%3D) to (p.=).
             $aVariant['VariantOnTranscript/Protein'] = urldecode($aVariant['VariantOnTranscript/Protein']);
             if ($aVariant['VariantOnTranscript/Protein']) {
                 // VEP came up with something...
@@ -1110,63 +1110,14 @@ foreach ($aFiles as $sID) {
                 $aVariant['VariantOnTranscript/Protein'] = 'p.?';
             } elseif (!$bDropTranscriptData && $aVariant['VariantOnTranscript/DNA']) {
                 // OK, too bad, we need to run Mutalyzer anyway (only if we're using this VOT line).
-
-                // It sometimes happens that we don't have a id_mutalyzer value. Before, we used to create transcripts manually if we couldn't recognize them.
-                // This is now working against us, as we really need this ID now.
-                if ($aTranscripts[$aVariant['transcriptid']]['id_mutalyzer'] == '000') {
-                    // FIXME: This can in principle be removed. There is still just one use
-                    //  of id_mutalyzer in this code, and it's not even done correctly.
-                    //  (search for id_mutalyzer in this code for more info)
-                    //  Once that has been removed/fixed, we can remove id_mutalyzer everywhere, and remove this whole block of code.
-                    // Normally, we would implement a cache here, but we rarely run Mutalyzer, and if we do, we will not likely run it on a variant on the same transcript.
-                    // So, first just check if we still don't have a Mutalyzer ID.
-                    if (!empty($_INSTANCE_CONFIG['conversion']['enforce_hgnc_gene'])) {
-                        lovd_printIfVerbose(VERBOSITY_FULL, 'Reloading Mutalyzer ID for ' . $aTranscripts[$aVariant['transcriptid']]['id_ncbi'] . ' in ' . $aGenes[$aVariant['symbol']]['refseq_UD'] . ' (' . $aGenes[$aVariant['symbol']]['id'] . ')' . "\n");
-                        $nSleepTime = 2;
-                        // Retry Mutalyzer call several times until successful.
-                        for ($i = 0; $i <= $nMutalyzerRetries; $i++) {
-                            $aMutalyzerCalls['getTranscriptsAndInfo'] ++;
-                            $tMutalyzerStart = microtime(true);
-                            // $sJSONResponse = file_get_contents('https://mutalyzer.nl/json/getTranscriptsAndInfo?genomicReference=' . rawurlencode($aGenes[$aVariant['symbol']]['refseq_UD']) . '&geneName=' . rawurlencode($aGenes[$aVariant['symbol']]['id']));
-                            $sJSONResponse = mutalyzer_getTranscriptsAndInfo(rawurlencode($aGenes[$aVariant['symbol']]['refseq_UD']), rawurlencode($aGenes[$aVariant['symbol']]['id']));
-                            $tMutalyzerCalls += (microtime(true) - $tMutalyzerStart);
-                            $nMutalyzer++;
-                            if ($sJSONResponse === false) {
-                                // The Mutalyzer call has failed.
-                                sleep($nSleepTime); // Sleep for some time.
-                                $nSleepTime = $nSleepTime * 2; // Double the amount of time that we sleep each time.
-                            } else {
-                                break;
-                            }
-                        }
-                        if ($sJSONResponse === false) {
-                            lovd_printIfVerbose(VERBOSITY_LOW, '>>>>> Attempted to call Mutalyzer ' . $nMutalyzerRetries . ' times to getTranscriptsAndInfo and failed on line ' . $nLine . '.' . "\n");
-                        }
-
-                        if ($sJSONResponse && $aResponse = json_decode($sJSONResponse, true)) {
-                            // Loop transcripts, find the one in question, then isolate Mutalyzer ID.
-                            foreach ($aResponse as $aTranscript) {
-                                if ($aTranscript['id'] == $aTranscripts[$aVariant['transcriptid']]['id_ncbi'] && $aTranscript['name']) {
-                                    $sMutalyzerID = str_replace($aGenes[$aVariant['symbol']]['id'] . '_v', '', $aTranscript['name']);
-
-                                    // Store locally, then store in database.
-                                    $aTranscripts[$aVariant['transcriptid']]['id_mutalyzer'] = $sMutalyzerID;
-                                    $_DB->query('UPDATE ' . TABLE_TRANSCRIPTS . ' SET id_mutalyzer = ? WHERE id_ncbi = ?', array($sMutalyzerID, $aTranscript['id']));
-                                    break;
-                                }
-                            }
-                        }
-                    }
-                }
-
-                lovd_printIfVerbose(VERBOSITY_MEDIUM, 'Running mutalyzer to predict protein change for ' . $aGenes[$aVariant['symbol']]['refseq_UD'] . '(' . $aTranscripts[$aVariant['transcriptid']]['id_ncbi'] . '):' . $aVariant['VariantOnTranscript/DNA'] . "\n");
+                lovd_printIfVerbose(VERBOSITY_MEDIUM, 'Running mutalyzer to predict protein change for ' . $_SETT['human_builds'][$_CONF['refseq_build']]['ncbi_sequences'][$aVariant['chromosome']] . ':' . $aVariant['VariantOnGenome/DNA'] . "\n");
                 $nSleepTime = 2;
                 // Retry Mutalyzer call several times until successful.
+                $sJSONResponse = false;
                 for ($i=0; $i <= $nMutalyzerRetries; $i++) {
                     $aMutalyzerCalls['runMutalyzer'] ++;
                     $tMutalyzerStart = microtime(true);
-                    // $sJSONResponse = file_get_contents('https://mutalyzer.nl/json/runMutalyzer?variant=' . rawurlencode($aGenes[$aVariant['symbol']]['refseq_UD'] . '(' . $aGenes[$aVariant['symbol']]['id'] . '_v' . $aTranscripts[$aVariant['transcriptid']]['id_mutalyzer'] . '):' . $aVariant['VariantOnTranscript/DNA']));
-                    $sJSONResponse = mutalyzer_runMutalyzer(rawurlencode($aGenes[$aLine['SYMBOL']]['refseq_UD'] . '(' . $aTranscripts[$aVariant['transcriptid']]['id_ncbi'] . '):' . $aVariant['VariantOnTranscript/DNA']));
+                    $sJSONResponse = mutalyzer_runMutalyzer(rawurlencode($_SETT['human_builds'][$_CONF['refseq_build']]['ncbi_sequences'][$aVariant['chromosome']] . ':' . $aVariant['VariantOnGenome/DNA']));
                     $tMutalyzerCalls += (microtime(true) - $tMutalyzerStart);
                     $nMutalyzer++;
                     if ($sJSONResponse === false) {
@@ -1182,11 +1133,6 @@ foreach ($aFiles as $sID) {
                 }
 
                 if ($sJSONResponse && $aResponse = json_decode($sJSONResponse, true)) {
-                    if (!isset($aResponse['proteinDescriptions'])) {
-                        // Not sure if this can happen using JSON.
-                        $aResponse['proteinDescriptions'] = array();
-                    }
-
                     // Predict RNA && Protein change.
                     // 'Intelligent' error handling.
                     // FIXME: Implement lovd_getRNAProteinPrediction() here.
@@ -1236,24 +1182,28 @@ foreach ($aFiles as $sID) {
                             // We don't break here, because if there is also a WSPLICE we rather go with that one.
                         }
                     }
-                    if (!$aVariant['VariantOnTranscript/Protein'] && !empty($aResponse['proteinDescriptions'])) {
-                        foreach ($aResponse['proteinDescriptions'] as $sVariantOnProtein) {
-                            // FIXME: This is the last usage of id_mutalyzer in this code, and it's not even correct.
-                            //  We know we can't count on id_mutalyzer to be correct, so in lovd_getRNAProteinPrediction()
-                            //  we have implemented a proper matching technique for the correct protein description.
-                            //  However, that function is not compatible with the CURL method used here to connect to Mutalyzer.
-                            //  Steps to follow:
-                            //  1) Make lovd_getRNAProteinPrediction() work on the JSON, not SOAP methods.
-                            //  2) Make lovd_getRNAProteinPrediction() work with CURL, if present. Probably,
-                            //     the CURL methods needs to be improved a little, because globalling a
-                            //     variable called $ch is not such a great idea. If this leaves the
-                            //     CURL function for runMutalyzer unused, remove it.
-                            //  3) Implement that function here, instead of this duplicated code.
-                            //  4) Remove code block that loads the id_mutalyzer if we don't have it.
-                            //  5) Remove other usages of id_mutalyzer.
-                            if (($nPos = strpos($sVariantOnProtein, $aGenes[$aVariant['symbol']]['id'] . '_i' . $aTranscripts[$aVariant['transcriptid']]['id_mutalyzer'] . '):p.')) !== false) {
-                                // FIXME: Since this code is the same as the code used in the variant mapper (2x), better make a function out of it.
-                                $aVariant['VariantOnTranscript/Protein'] = substr($sVariantOnProtein, $nPos + strlen($aGenes[$aVariant['symbol']]['id'] . '_i' . $aTranscripts[$aVariant['transcriptid']]['id_mutalyzer'] . '):'));
+
+                    // Find protein prediction in mutalyzer output.
+                    if (!$aVariant['VariantOnTranscript/Protein'] && !empty($aResponse['legend']) && !empty($aResponse['proteinDescriptions'])) {
+                        $sMutProteinName = null;
+
+                        // Loop over legend records to find transcript name (v-number).
+                        foreach ($aResponse['legend'] as $aRecord) {
+                            if (isset($aRecord['id']) && $aRecord['id'] == $aTranscripts[$aVariant['transcriptid']]['id_ncbi'] &&
+                                substr($aRecord['name'], -4, 1) == 'v') {
+                                // Generate protein isoform name (i-number) from transcript name (v-number).
+                                $sMutProteinName = str_replace('_v', '_i', $aRecord['name']);
+                                break;
+                            }
+                        }
+
+                        if (isset($sMutProteinName)) {
+                            // Select protein description based on protein isoform (i-number).
+                            $sProteinDescriptions = implode('|', $aResponse['proteinDescriptions']);
+                            preg_match('/N(?:C|G)_\d{6,}\.\d{1,2}\(' . preg_quote($sMutProteinName) .
+                                '\):(p\..+?)(\||$)/', $sProteinDescriptions, $aProteinMatches);
+                            if (isset($aProteinMatches[2])) {
+                                $aVariant['VariantOnTranscript/Protein'] = $aProteinMatches[2];
                                 if ($aVariant['VariantOnTranscript/Protein'] == 'p.?') {
                                     $aVariant['VariantOnTranscript/RNA'] = 'r.?';
                                 } elseif ($aVariant['VariantOnTranscript/Protein'] == 'p.(=)') {
@@ -1263,7 +1213,6 @@ foreach ($aFiles as $sID) {
                                     // RNA will default to r.(?).
                                     $aVariant['VariantOnTranscript/RNA'] = 'r.(?)';
                                 }
-                                break;
                             }
                         }
                     }
