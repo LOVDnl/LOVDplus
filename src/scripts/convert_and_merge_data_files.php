@@ -805,7 +805,7 @@ foreach ($aFiles as $sID) {
                     } elseif (!empty($aGenesHGNC[$aGeneInfo['hgnc_id']])) {
                         // Gene already found in the database under a different symbol.
                         // We already checked the HGNC ID received from VEP, but we apparently didn't catch it there.
-                        $aVariant['symbol'] = $aGenesHGNC[$aVariant['id_hgnc']];
+                        $aVariant['symbol'] = $aGenesHGNC[$aGeneInfo['hgnc_id']];
                         lovd_printIfVerbose(VERBOSITY_MEDIUM, 'Gene stored as \'' . $aVariant['symbol'] . '\' is given to us as \'' . $aVariant['symbol_vep'] . '\'; using our gene symbol.' . "\n");
                         // Store this for the next line.
                         $aGeneAliases[$aVariant['symbol_vep']] = $aVariant['symbol'];
