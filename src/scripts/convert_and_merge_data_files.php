@@ -4,7 +4,7 @@
  * LEIDEN OPEN VARIATION DATABASE (LOVD)
  *
  * Created     : 2014-11-28
- * Modified    : 2018-06-14
+ * Modified    : 2018-06-19
  * For LOVD+   : 3.0-18
  *
  * Copyright   : 2004-2018 Leiden University Medical Center; http://www.LUMC.nl/
@@ -614,6 +614,7 @@ foreach ($aFiles as $sID) {
     $sLastVariant = '';
     $aVOT = array();
     $aGenes = array(); // GENE => array(<gene_info_from_database>)
+    $aGenesHGNC = array(); // HGNC ID => GENE (used only if we're receiving HGNC IDs).
     $aTranscripts = array(); // NM_000001.1 => array(<transcript_info>)
     $nHGNC = 0; // Count the number of times HGNC is called.
     $tHGNCCalls = 0; // Time spent doing HGNC calls.
@@ -621,11 +622,17 @@ foreach ($aFiles as $sID) {
     $nAnnotationErrors = 0; // Count the number of lines we cannot import.
 
     // Get all the existing genes in one database call.
-    $aResult = $_DB->query('SELECT g.id, g.name FROM ' . TABLE_GENES . ' AS g')->fetchAllAssoc();
+    $aResult = $_DB->query('SELECT id, name FROM ' . TABLE_GENES)->fetchAllAssoc();
     foreach ($aResult as $aGene) {
         $aGenes[$aGene['id']] = array_merge($aGene, array('transcripts_in_NC' => array()));
     }
     unset($aResult); // Clean up.
+
+    // If we're receiving the HGNC ID, we'll collect all genes for their HGNC IDs as well. This will be used to help
+    //  LOVD+ to handle changed gene symbols.
+    if (in_array('id_hgnc', $_ADAPTER->prepareMappings())) {
+        $aGenesHGNC = $_DB->query('SELECT id_hgnc, id FROM ' . TABLE_GENES . ' WHERE id_hgnc IS NOT NULL')->fetchAllCombine();
+    }
 
     // Get all the existing transcript data in one database call.
     $aTranscripts = $_DB->query('SELECT id_ncbi, id, geneid, id_ncbi, position_c_cds_end, position_g_mrna_start, position_g_mrna_end FROM ' . TABLE_TRANSCRIPTS . ' ORDER BY id_ncbi DESC, id DESC')->fetchAllGroupAssoc();
@@ -747,8 +754,14 @@ foreach ($aFiles as $sID) {
         // Trusting the gene symbol information from VEP is by far the easiest method, and the fastest. This can fail, therefore we also created an alias list.
         // Use the alias only however, if we don't have the gene already in the gene database. We have run into problems when an incorrect alias caused problems.
         $aVariant['symbol_vep'] = $aVariant['symbol']; // But always keep the original one.
-        if (!isset($aGenes[$aVariant['symbol']]) && isset($aGeneAliases[$aVariant['symbol']])) {
-            $aVariant['symbol'] = $aGeneAliases[$aVariant['symbol']];
+        if (!isset($aGenes[$aVariant['symbol']])) {
+            if (isset($aGeneAliases[$aVariant['symbol']])) {
+                $aVariant['symbol'] = $aGeneAliases[$aVariant['symbol']];
+            } elseif (!empty($aVariant['id_hgnc']) && isset($aGenesHGNC[$aVariant['id_hgnc']])) {
+                // VEP has a newer gene symbol. Better warn about this.
+                $aVariant['symbol'] = $aGenesHGNC[$aVariant['id_hgnc']];
+                lovd_printIfVerbose(VERBOSITY_MEDIUM, 'Gene stored as \'' . $aVariant['symbol'] . '\' is given to us as \'' . $aVariant['symbol_vep'] . '\'; using our gene symbol.' . "\n");
+            }
         }
         // Verify gene exists, and create it if needed.
         // LOC* genes always fail here, so those we don't try unless we don't care about the HGNC.

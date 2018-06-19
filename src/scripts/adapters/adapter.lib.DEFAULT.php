@@ -4,7 +4,7 @@
  * LEIDEN OPEN VARIATION DATABASE (LOVD)
  *
  * Created     : 2016-09-02
- * Modified    : 2018-03-23
+ * Modified    : 2018-06-19
  * For LOVD    : 3.0-18
  *
  * Copyright   : 2004-2018 Leiden University Medical Center; http://www.LUMC.nl/
@@ -556,6 +556,7 @@ class LOVD_DefaultDataConverter {
 
             // Mappings for fields used to process other fields but not imported into the database.
             'SYMBOL' => 'symbol',
+            'HGNC_ID' => 'id_hgnc',
             'REF' => 'ref',
             'ALT' => 'alt',
             'Existing_variation' => 'existing_variation'
