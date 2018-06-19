@@ -793,7 +793,7 @@ foreach ($aFiles as $sID) {
                         }
 
                     } elseif ($aVariant['symbol'] != $aGeneInfo['symbol']) {
-                        // Gene found, or its alias.
+                        // Gene found, under a different symbol.
                         // Detect alias, and store these for next run.
                         lovd_printIfVerbose(VERBOSITY_MEDIUM, '\'' . $aVariant['symbol'] . '\' => \'' . $aGeneInfo['symbol'] . '\',' . "\n");
                         // FIXME: This is duplicated code. Make it into a function, perhaps?
@@ -801,6 +801,14 @@ foreach ($aFiles as $sID) {
                             // We've got the alias already in the database; store it under the symbol we're using so that we'll find it back easily.
                             $aGenes[$aVariant['symbol']] = array_merge($aGene, array('transcripts_in_NC' => array()));
                         }
+
+                    } elseif (!empty($aGenesHGNC[$aGeneInfo['hgnc_id']])) {
+                        // Gene already found in the database under a different symbol.
+                        // We already checked the HGNC ID received from VEP, but we apparently didn't catch it there.
+                        $aVariant['symbol'] = $aGenesHGNC[$aVariant['id_hgnc']];
+                        lovd_printIfVerbose(VERBOSITY_MEDIUM, 'Gene stored as \'' . $aVariant['symbol'] . '\' is given to us as \'' . $aVariant['symbol_vep'] . '\'; using our gene symbol.' . "\n");
+                        // Store this for the next line.
+                        $aGeneAliases[$aVariant['symbol_vep']] = $aVariant['symbol'];
                     }
                 }
 
