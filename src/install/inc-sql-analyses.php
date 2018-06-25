@@ -4,7 +4,7 @@
  * LEIDEN OPEN VARIATION DATABASE (LOVD)
  *
  * Created     : 2016-07-15
- * Modified    : 2018-03-31
+ * Modified    : 2018-06-25
  * For LOVD    : 3.0-18
  *
  * Copyright   : 2004-2018 Leiden University Medical Center; http://www.LUMC.nl/
@@ -51,7 +51,7 @@ switch ($_INI['instance']['name']) {
                   (2, 2, "Gene panel",              "Filters for coding or splice site variants within the gene panel.", 2, 0, NOW(), NULL, NULL),
                   (3, 3, "X-linked recessive",      "Filters for X-linked recessive variants, not found in father, not homozygous in mother. High frequencies (> 3%) are also filtered out.", 2, 0, NOW(), NULL, NULL),
                   (4, 4, "Recessive (gene panel)",  "Filters for recessive variants, homozygous or compound heterozygous in patient, but not in the parents. High frequencies (> 3%) are also filtered out.", 2, 0, NOW(), NULL, NULL),
-                  (5, 5, "Recessive (whole exome)", "Filters for recessive variants, homozygous or compound heterozygous in patient, but not in the parents. High frequencies (> 3%) are also filtered out.", 2, 0, NOW(), NULL, NULL),
+                  (5, 5, "Recessive (whole exome)", "Filters for recessive variants, homozygous or compound heterozygous in patient, but not in the parents. High frequencies (> 3%) are also filtered out, and the gene black list is applied.", 2, 0, NOW(), NULL, NULL),
                   (6, 6, "Imprinted genes",         "Filters for variants found in imprinted genes.", 2, 0, NOW(), NULL, NULL),
                   (7, 7, "Mosaic",                  "Filters for mosaic variants.", 2, 0, NOW(), NULL, NULL)',
                 'INSERT INTO ' . TABLE_ANALYSIS_FILTERS . ' (`id`, `name`, `description`, `has_config`) VALUES 
@@ -71,6 +71,7 @@ switch ($_INI['instance']['name']) {
                   ("remove_by_function_utr_or_intronic_or_synonymous", "", "Remove all variants that are only mapped to the UTR or introns, or labeled as coding-synonymous.", 0),
                   ("remove_by_function_utr_or_intronic_gt_20", "", "Remove all variants that are only mapped to the UTR or introns, >20 bp from the exon.", 0),
                   ("remove_by_quality_lte_100", "", "Remove all variants with a sequencing quality score that is less than, or equal to, 100.", 0),
+                  ("remove_in_gene_blacklist", "Apply gene blacklist", "Remove all variants mapped to only genes in the system\'s blacklist(s).", 1),
                   ("remove_intronic_distance_gt_2", "", "Remove all variants that are only mapped to introns, >2 bp from the exon.", 0),
                   ("remove_intronic_distance_gt_8", "", "Remove all variants that are only mapped to introns, >8 bp from the exon.", 0),
                   ("remove_missense_with_phylop_lte_2.5", "", "Remove all substitutions having a PhyloP score of less than or equal to 2.5, if missense but not the wobble base, or intronic.", 0),
@@ -167,6 +168,7 @@ switch ($_INI['instance']['name']) {
                   (5, "remove_by_function_utr_or_intronic_or_synonymous", 17),
                   (5, "remove_missense_with_phylop_lte_2.5", 18),
                   (5, "select_homozygous_or_heterozygous_not_from_one_parent", 19),
+                  (5, "remove_in_gene_blacklist", 20),
                   (6, "apply_selected_gene_panels", 1),
                   (6, "cross_screenings", 2),
                   (6, "remove_by_quality_lte_100", 3),
