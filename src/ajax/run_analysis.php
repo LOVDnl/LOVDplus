@@ -4,7 +4,7 @@
  * LEIDEN OPEN VARIATION DATABASE (LOVD)
  *
  * Created     : 2013-11-05
- * Modified    : 2018-04-13
+ * Modified    : 2018-06-26
  * For LOVD    : 3.0-18
  *
  * Copyright   : 2004-2018 Leiden University Medical Center; http://www.LUMC.nl/
@@ -143,6 +143,7 @@ if (ACTION == 'configure' && GET) {
     $sFiltersFormItems = ''; // The part of the form with filter options.
     $sJsCanSubmit  = 'true'; // String with JS checks that should evaluate to true to get form to submit.
     $sJsOtherFunctions = ''; // String with additional JS code for the form.
+    $aHiddenOptions = array(); // A list of hidden options that should be sent, not necessarily triggering the form.
 
     foreach ($aFilters as $sFilter) {
         // Get the filter configuration already stored in the database.
@@ -434,27 +435,92 @@ if (ACTION == 'configure' && GET) {
                 $sJsCanSubmit .= ' && isValidCrossScreenings()';
 
                 break;
+            case 'remove_in_gene_blacklist':
+                // We'll only display something when we have to!
+                if (empty($zIndividual['gene_panels']) || empty($zIndividual['gene_panels']['blacklist'])) {
+                    // No black list assigned to this individual. Check all blacklists from the database.
+                    // If one blacklist is found, run that one. If multiple are found, ask. If none are found, complain.
+                    $zBlackLists = $_DB->query('SELECT id, name FROM ' . TABLE_GENE_PANELS . ' WHERE type = ? ORDER BY id', array('blacklist'))->fetchAllCombine();
+
+                    if (!$zBlackLists) {
+                        // No blacklists in the database. Complain.
+                        $sFiltersFormItems .= '<P>There is no Blacklist configured. This filter will not remove any variants unless you create at least one Blacklist.</P>';
+                    } elseif (count($zBlackLists) == 1) {
+                        // One blacklist configured. Just use that one. Store in hidden variable that will be sent automatically without the need for a form.
+                        $aHiddenOptions['config[' . $sFilter . '][blacklists][]'] = array_keys($zBlackLists);
+                    } else {
+                        // No blacklist assigned, and multiple in the database. Ask user!
+                        $sFiltersFormItems .= '<H4>' . $sFilter . '</H4><BR>' .
+                                              '<DIV class=\'filter-config\' id=\'filter-config-'. $sFilter . '\'><TABLE>' .
+                                              '<TR><TD class=\'gpheader\' colspan=\'2\' style=\'border-top: 0px;\'>Blacklist</TD></TR>';
+                        foreach ($zBlackLists as $sGpId => $sGpName) {
+                            $sCheckboxToRunOldGp = '';
+                            if (!empty($aConfig['metadata'][$sGpId])) {
+                                $sModified = lovd_getGenePanelLastModifiedDate($sGpId);
+                                // Show options to select current version or the version we cloned from.
+                                if ($sModified && $aConfig['metadata'][$sGpId]['last_modified'] < $sModified) {
+                                    $sCheckboxToRunOldGp .= '<TR>' .
+                                        '<TD></TD>' .
+                                        '<TD><INPUT type=\'radio\' name=\'config[' . $sFilter . '][run_older_version][' . $sGpId . ']\' value=\'0\'> Current version</TD></TR>';
+                                    $sCheckboxToRunOldGp .= '<TR>' .
+                                        '<TD></TD>' .
+                                        '<TD><INPUT type=\'radio\' name=\'config[' . $sFilter . '][run_older_version][' . $sGpId . ']\' value=\'1\' checked> Apply the version of this blacklist as of ' . $aConfig['metadata'][$sGpId]['last_modified'] . '</TD></TR>';
+                                }
+                            }
+
+                            // By default, do we want to pre-select this gene panel.
+                            $sChecked = ' checked';
+                            // Check if there is already existing configurations selected.
+                            if (!empty($aConfig)) {
+                                // If we copied configurations from another analysis run,
+                                //  then overwrite default configurations.
+                                $sChecked = (empty($aConfig['metadata'][$sGpId])? '' : ' checked');
+                            }
+
+                            $sFiltersFormItems .= '<TR>' .
+                                '<TD><INPUT type=\'checkbox\' name=\'config[' . $sFilter . '][blacklists][]\' id=\'gene_panel_' . $sGpId . '\' value=\'' . $sGpId . '\'' . $sChecked . '></TD>' .
+                                '<TD><LABEL for=\'gene_panel_'. $sGpId .'\'>' . $sGpName . '</LABEL></TD></TR>' .
+                                $sCheckboxToRunOldGp;
+                        }
+
+                        $sFiltersFormItems .= '</TABLE></DIV><BR>';
+                    }
+
+                } else {
+                    // Individual has one or more configured. Just take those.
+                    $aHiddenOptions['config[' . $sFilter . '][blacklists][]'] = array_keys($zIndividual['gene_panels']['blacklist']);
+                }
+
+                break;
             default:
         }
     }
 
     // Non filter specific inputs.
-    $aInputs = array(
-        'analysisid' => $_REQUEST['analysisid'],
-        'screeningid' => $_REQUEST['screeningid'],
-        'runid' => $_REQUEST['runid'],
-        'elementid' => $_REQUEST['elementid']
+    $aInputs = array_merge(
+        array(
+            'analysisid' => $_REQUEST['analysisid'],
+            'screeningid' => $_REQUEST['screeningid'],
+            'runid' => $_REQUEST['runid'],
+            'elementid' => $_REQUEST['elementid']
+        ),
+        $aHiddenOptions
     );
-
-    $sFormRequiredInputs = '';
-    foreach ($aInputs as $sName => $sValue) {
-        $sFormRequiredInputs .= '<INPUT type=\'hidden\' name=\'' . $sName . '\' value=\'' . $sValue . '\'>';
-    }
 
     if (empty($sFiltersFormItems)) {
         // If no further configuration is required, simply pass the minimum required inputs.
         print('$.post("' . CURRENT_PATH . '?' . ACTION . '", ' . json_encode($aInputs) . ');');
         exit;
+    }
+
+    $sFormRequiredInputs = '';
+    foreach ($aInputs as $sName => $aValues) {
+        if (!is_array($aValues)) {
+            $aValues = array($aValues);
+        }
+        foreach ($aValues as $sValue) {
+            $sFormRequiredInputs .= '<INPUT type=\'hidden\' name=\'' . $sName . '\' value=\'' . $sValue . '\'>';
+        }
     }
 
     // If further configuration is required, build modal to take the configuration inputs.
