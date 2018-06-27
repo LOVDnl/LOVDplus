@@ -4,7 +4,7 @@
  * LEIDEN OPEN VARIATION DATABASE (LOVD)
  *
  * Created     : 2013-11-05
- * Modified    : 2018-06-26
+ * Modified    : 2018-06-27
  * For LOVD    : 3.0-18
  *
  * Copyright   : 2004-2018 Leiden University Medical Center; http://www.LUMC.nl/
@@ -496,6 +496,11 @@ if (ACTION == 'configure' && GET) {
         }
     }
 
+    // Implement an CSRF protection by working with tokens.
+    $_SESSION['csrf_tokens']['run_analysis_configure'] = md5(uniqid());
+    // Send this always, because we might have a configuration in the $aHiddenOptions.
+    $aHiddenOptions['csrf_token'] = $_SESSION['csrf_tokens']['run_analysis_configure'];
+
     // Non filter specific inputs.
     $aInputs = array_merge(
         array(
@@ -524,9 +529,7 @@ if (ACTION == 'configure' && GET) {
     }
 
     // If further configuration is required, build modal to take the configuration inputs.
-    // Implement an CSRF protection by working with tokens.
-    $_SESSION['csrf_tokens']['run_analysis_configure'] = md5(uniqid());
-    $sForm  = '<FORM id=\'configure_analysis_form\'><INPUT type=\'hidden\' name=\'csrf_token\' value=\'' . $_SESSION['csrf_tokens']['run_analysis_configure'] . '\'><BR>' .
+    $sForm  = '<FORM id=\'configure_analysis_form\'>' .
               $sFiltersFormItems .
               $sFormRequiredInputs .
               '</FORM>';
@@ -630,7 +633,7 @@ if (ACTION == 'configure' && POST) {
                         $aFormConfig[$sFilter]['run_older_version'] = array();
                     }
                     foreach ($aFormConfig[$sFilter]['run_older_version'] as $sGpId => $bUseOlderVersion) {
-                        if (!empty($aFormConfig[$sFilter]['run_older_version'][$sGpId])) {
+                        if ($bUseOlderVersion) {
                             $aFormConfig[$sFilter]['metadata'][$sGpId] = $aDbConfig['metadata'][$sGpId];
                             $aUseOlderGenePanels[] = $sGpId;
                         }
@@ -681,6 +684,7 @@ if (ACTION == 'configure' && POST) {
                     unset($aFormConfig[$sFilter]['run_older_version']);
 
                     break;
+
                 case 'cross_screenings':
                     // Reset index otherwise json_encode would be converted it to object instead of array.
                     $aFormConfig[$sFilter]['groups'] = array_values($aFormConfig[$sFilter]['groups']);
@@ -690,6 +694,68 @@ if (ACTION == 'configure' && POST) {
                         && empty($aFormConfig[$sFilter]['groups'][0]['screenings'])) {
                         unset($aFormConfig[$sFilter]);
                     }
+                    break;
+
+                case 'remove_in_gene_blacklist':
+                    // Get the saved configurations in the database.
+                    $aDbConfig = array();
+                    if (!empty($zFilterConfig[$sFilter]['config_json'])) {
+                        $aDbConfig = json_decode($zFilterConfig[$sFilter]['config_json'], true);
+                    }
+
+                    // Configurations submitted by the users through the form.
+                    if (empty($aFormConfig[$sFilter]['blacklists'])) {
+                        $aFormConfig[$sFilter]['blacklists'] = array();
+                    }
+                    $aGenePanelIds = $aFormConfig[$sFilter]['blacklists'];
+
+                    // Now, we need to populate the metadata. There are 2 possibilities:
+                    // 1. Use the metadata from the analysis we cloned these
+                    //    configurations from if the user chooses to do so.
+                    // 2. Use the list of genes assigned to this gene panel in the database now.
+                    $aFormConfig[$sFilter]['metadata'] = array();
+
+                    // 1. If user chooses to use the older version of the gene panel.
+                    //    (the exact same set of genes this gene panel had when this analysis we cloned from was run)
+                    $aUseOlderGenePanels = array();
+                    // But, prevent notice when this setting is not sent.
+                    // The notice will break the JS and make the analysis fail to run.
+                    if (!isset($aFormConfig[$sFilter]['run_older_version'])) {
+                        $aFormConfig[$sFilter]['run_older_version'] = array();
+                    }
+                    foreach ($aFormConfig[$sFilter]['run_older_version'] as $sGpId => $bUseOlderVersion) {
+                        if ($bUseOlderVersion) {
+                            $aFormConfig[$sFilter]['metadata'][$sGpId] = $aDbConfig['metadata'][$sGpId];
+                            $aUseOlderGenePanels[] = $sGpId;
+                        }
+                    }
+
+                    // 2. Use the list of genes assigned to this gene panel in the database now.
+                    // First, remove the gene panels whose data we do not need to be fetched from database.
+                    $aGenePanelIds = array_values(array_diff($aGenePanelIds, $aUseOlderGenePanels));
+                    if (!empty($aGenePanelIds)) {
+                        // Increase DB limits to allow concatenation of large number of gene IDs.
+                        $_DB->query('SET group_concat_max_len = 500000');
+                        $sSQL = 'SELECT gp.id, gp.name, GROUP_CONCAT(gp2g.geneid SEPARATOR ";") AS _genes
+                                 FROM ' . TABLE_GP2GENE . ' AS gp2g
+                                   INNER JOIN ' . TABLE_GENE_PANELS . ' AS gp ON (gp2g.genepanelid = gp.id)
+                                 WHERE gp2g.genepanelid IN (? ' . str_repeat(', ?', count($aGenePanelIds)-1) . ')
+                                 GROUP BY gp.id';
+                        $zGenePanels = $_DB->query($sSQL, $aGenePanelIds)->fetchAllAssoc();
+
+                        // Populate data for each gene panel.
+                        foreach ($zGenePanels as $zGenePanel) {
+                            $aFormConfig[$sFilter]['metadata'][$zGenePanel['id']] = array(
+                                'last_modified' => lovd_getGenePanelLastModifiedDate($zGenePanel['id']),
+                                'name' => $zGenePanel['name'],
+                                'genes' => explode(';', $zGenePanel['_genes']),
+                            );
+                        }
+                    }
+
+                    // We don't need to save this in the json.
+                    unset($aFormConfig[$sFilter]['run_older_version']);
+
                     break;
             }
         }
