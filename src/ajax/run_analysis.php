@@ -437,19 +437,34 @@ if (ACTION == 'configure' && GET) {
                 break;
             case 'remove_in_gene_blacklist':
                 // We'll only display something when we have to!
-                if (empty($zIndividual['gene_panels']) || empty($zIndividual['gene_panels']['blacklist'])) {
-                    // No black list assigned to this individual. Check all blacklists from the database.
+                // We'll show the form when the individual doesn't have any assigned and the database has plural, OR
+                //  when we have a configuration already, and (one of) the chosen panels has/have been updated.
+
+                // If we have blacklists configured already, check if they've changed.
+                $bModified = false;
+                if (!empty($aConfig['metadata'])) {
+                    foreach (array_keys($aConfig['metadata']) as $nGpId) {
+                        $sModified = lovd_getGenePanelLastModifiedDate($nGpId);
+                        if ($sModified && $aConfig['metadata'][$nGpId]['last_modified'] < $sModified) {
+                            $bModified = true;
+                            break;
+                        }
+                    }
+                }
+
+                if (empty($zIndividual['gene_panels']) || empty($zIndividual['gene_panels']['blacklist']) || $bModified) {
+                    // No black list assigned to this individual, or something changed. Check all blacklists from the database.
                     // If one blacklist is found, run that one. If multiple are found, ask. If none are found, complain.
                     $zBlackLists = $_DB->query('SELECT id, name FROM ' . TABLE_GENE_PANELS . ' WHERE type = ? ORDER BY id', array('blacklist'))->fetchAllCombine();
 
                     if (!$zBlackLists) {
                         // No blacklists in the database. Complain.
                         $sFiltersFormItems .= '<P>There is no Blacklist configured. This filter will not remove any variants unless you create at least one Blacklist.</P>';
-                    } elseif (count($zBlackLists) == 1) {
+                    } elseif (count($zBlackLists) == 1 && !$bModified) {
                         // One blacklist configured. Just use that one. Store in hidden variable that will be sent automatically without the need for a form.
                         $aHiddenOptions['config[' . $sFilter . '][blacklists][]'] = array_keys($zBlackLists);
                     } else {
-                        // No blacklist assigned, and multiple in the database. Ask user!
+                        // No blacklist assigned, and multiple in the database. Or, something changed. Ask user!
                         $sFiltersFormItems .= '<H4>' . $sFilter . '</H4><BR>' .
                                               '<DIV class=\'filter-config\' id=\'filter-config-'. $sFilter . '\'><TABLE>' .
                                               '<TR><TD class=\'gpheader\' colspan=\'2\' style=\'border-top: 0px;\'>Blacklist</TD></TR>';

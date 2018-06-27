@@ -4,7 +4,7 @@
  * LEIDEN OPEN VARIATION DATABASE (LOVD)
  *
  * Created     : 2016-05-03
- * Modified    : 2018-03-19
+ * Modified    : 2018-06-27
  * For LOVD    : 3.0-18
  *
  * Copyright   : 2004-2018 Leiden University Medical Center; http://www.LUMC.nl/
@@ -124,10 +124,16 @@ function lovd_getFilterConfigHTML ($nRunID, $sFilterID)
 
 
 
-function lovd_getGenePanelLastModifiedDate ($sGpId) {
+function lovd_getGenePanelLastModifiedDate ($nGpId) {
     global $_DB;
 
-    $sModified = $_DB->query(
+    static $aModified = array();
+
+    if (isset($aModified[$nGpId])) {
+        return $aModified[$nGpId];
+    }
+
+    $aModified[$nGpId] = $_DB->query(
         'SELECT
            GREATEST(
              IFNULL(
@@ -139,8 +145,8 @@ function lovd_getGenePanelLastModifiedDate ($sGpId) {
                 FROM ' . TABLE_GP2GENE_REV . ' AS gp2g
                 WHERE gp2g.genepanelid = gp.id AND LEFT(gp2g.valid_to, 10) != "9999-12-31" AND gp2g.deleted = 1), gp.created_date))
          FROM ' . TABLE_GENE_PANELS_REV . ' AS gp
-         WHERE id = ?', array($sGpId))->fetchColumn();
-    return $sModified;
+         WHERE id = ?', array($nGpId))->fetchColumn();
+    return $aModified[$nGpId];
 }
 
 
