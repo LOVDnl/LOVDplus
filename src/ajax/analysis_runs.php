@@ -4,10 +4,10 @@
  * LEIDEN OPEN VARIATION DATABASE (LOVD)
  *
  * Created     : 2017-02-13
- * Modified    : 2017-02-17
+ * Modified    : 2018-06-28
  * For LOVD    : 3.0-18
  *
- * Copyright   : 2004-2017 Leiden University Medical Center; http://www.LUMC.nl/
+ * Copyright   : 2004-2018 Leiden University Medical Center; http://www.LUMC.nl/
  * Programmers : Ivo F.A.C. Fokkema <I.F.A.C.Fokkema@LUMC.nl>
  *               Juny Kesumadewi <juny.kesumadewi@unimelb.edu.au>
  *
@@ -274,7 +274,8 @@ if (ACTION == 'delete' && POST) {
 if (ACTION == 'showGenes' && GET) {
     // Request confirmation.
 
-    $sConfig = $_DB->query('SELECT config_json FROM ' . TABLE_ANALYSES_RUN_FILTERS . ' WHERE runid = ? AND filterid = ?', array($nID, 'apply_selected_gene_panels'))->fetchColumn();
+    $sConfig = $_DB->query('SELECT config_json FROM ' . TABLE_ANALYSES_RUN_FILTERS . ' WHERE runid = ? AND filterid IN (?, ?)',
+        array($nID, 'apply_selected_gene_panels', 'remove_in_gene_blacklist'))->fetchColumn();
     $aConfig = json_decode($sConfig, true);
 
     $aGenePanelIDs = array_keys($aConfig['metadata']);

@@ -4,7 +4,7 @@
  * LEIDEN OPEN VARIATION DATABASE (LOVD)
  *
  * Created     : 2013-11-05
- * Modified    : 2018-04-13
+ * Modified    : 2018-06-27
  * For LOVD    : 3.0-18
  *
  * Copyright   : 2004-2018 Leiden University Medical Center; http://www.LUMC.nl/
@@ -143,6 +143,7 @@ if (ACTION == 'configure' && GET) {
     $sFiltersFormItems = ''; // The part of the form with filter options.
     $sJsCanSubmit  = 'true'; // String with JS checks that should evaluate to true to get form to submit.
     $sJsOtherFunctions = ''; // String with additional JS code for the form.
+    $aHiddenOptions = array(); // A list of hidden options that should be sent, not necessarily triggering the form.
 
     foreach ($aFilters as $sFilter) {
         // Get the filter configuration already stored in the database.
@@ -434,22 +435,97 @@ if (ACTION == 'configure' && GET) {
                 $sJsCanSubmit .= ' && isValidCrossScreenings()';
 
                 break;
+            case 'remove_in_gene_blacklist':
+                // We'll only display something when we have to!
+                // We'll show the form when the individual doesn't have any assigned and the database has plural, OR
+                //  when we have a configuration already, and (one of) the chosen panels has/have been updated.
+
+                // If we have blacklists configured already, check if they've changed.
+                $bModified = false;
+                if (!empty($aConfig['metadata'])) {
+                    foreach (array_keys($aConfig['metadata']) as $nGpId) {
+                        $sModified = lovd_getGenePanelLastModifiedDate($nGpId);
+                        if ($sModified && $aConfig['metadata'][$nGpId]['last_modified'] < $sModified) {
+                            $bModified = true;
+                            break;
+                        }
+                    }
+                }
+
+                if (empty($zIndividual['gene_panels']) || empty($zIndividual['gene_panels']['blacklist']) || $bModified) {
+                    // No black list assigned to this individual, or something changed. Check all blacklists from the database.
+                    // If one blacklist is found, run that one. If multiple are found, ask. If none are found, complain.
+                    $zBlackLists = $_DB->query('SELECT id, name FROM ' . TABLE_GENE_PANELS . ' WHERE type = ? ORDER BY id', array('blacklist'))->fetchAllCombine();
+
+                    if (!$zBlackLists) {
+                        // No blacklists in the database. Complain.
+                        $sFiltersFormItems .= '<P>There is no Blacklist configured. This filter will not remove any variants unless you create at least one Blacklist.</P>';
+                    } elseif (count($zBlackLists) == 1 && !$bModified) {
+                        // One blacklist configured. Just use that one. Store in hidden variable that will be sent automatically without the need for a form.
+                        $aHiddenOptions['config[' . $sFilter . '][blacklists][]'] = array_keys($zBlackLists);
+                    } else {
+                        // No blacklist assigned, and multiple in the database. Or, something changed. Ask user!
+                        $sFiltersFormItems .= '<H4>' . $sFilter . '</H4><BR>' .
+                                              '<DIV class=\'filter-config\' id=\'filter-config-'. $sFilter . '\'><TABLE>' .
+                                              '<TR><TD class=\'gpheader\' colspan=\'2\' style=\'border-top: 0px;\'>Blacklist</TD></TR>';
+                        foreach ($zBlackLists as $sGpId => $sGpName) {
+                            $sCheckboxToRunOldGp = '';
+                            if (!empty($aConfig['metadata'][$sGpId])) {
+                                $sModified = lovd_getGenePanelLastModifiedDate($sGpId);
+                                // Show options to select current version or the version we cloned from.
+                                if ($sModified && $aConfig['metadata'][$sGpId]['last_modified'] < $sModified) {
+                                    $sCheckboxToRunOldGp .= '<TR>' .
+                                        '<TD></TD>' .
+                                        '<TD><INPUT type=\'radio\' name=\'config[' . $sFilter . '][run_older_version][' . $sGpId . ']\' value=\'0\'> Current version</TD></TR>';
+                                    $sCheckboxToRunOldGp .= '<TR>' .
+                                        '<TD></TD>' .
+                                        '<TD><INPUT type=\'radio\' name=\'config[' . $sFilter . '][run_older_version][' . $sGpId . ']\' value=\'1\' checked> Apply the version of this blacklist as of ' . $aConfig['metadata'][$sGpId]['last_modified'] . '</TD></TR>';
+                                }
+                            }
+
+                            // By default, do we want to pre-select this gene panel.
+                            $sChecked = ' checked';
+                            // Check if there is already existing configurations selected.
+                            if (!empty($aConfig)) {
+                                // If we copied configurations from another analysis run,
+                                //  then overwrite default configurations.
+                                $sChecked = (empty($aConfig['metadata'][$sGpId])? '' : ' checked');
+                            }
+
+                            $sFiltersFormItems .= '<TR>' .
+                                '<TD><INPUT type=\'checkbox\' name=\'config[' . $sFilter . '][blacklists][]\' id=\'gene_panel_' . $sGpId . '\' value=\'' . $sGpId . '\'' . $sChecked . '></TD>' .
+                                '<TD><LABEL for=\'gene_panel_'. $sGpId .'\'>' . $sGpName . '</LABEL></TD></TR>' .
+                                $sCheckboxToRunOldGp;
+                        }
+
+                        $sFiltersFormItems .= '</TABLE></DIV><BR>';
+                    }
+
+                } else {
+                    // Individual has one or more configured. Just take those.
+                    $aHiddenOptions['config[' . $sFilter . '][blacklists][]'] = array_keys($zIndividual['gene_panels']['blacklist']);
+                }
+
+                break;
             default:
         }
     }
 
-    // Non filter specific inputs.
-    $aInputs = array(
-        'analysisid' => $_REQUEST['analysisid'],
-        'screeningid' => $_REQUEST['screeningid'],
-        'runid' => $_REQUEST['runid'],
-        'elementid' => $_REQUEST['elementid']
-    );
+    // Implement an CSRF protection by working with tokens.
+    $_SESSION['csrf_tokens']['run_analysis_configure'] = md5(uniqid());
+    // Send this always, because we might have a configuration in the $aHiddenOptions.
+    $aHiddenOptions['csrf_token'] = $_SESSION['csrf_tokens']['run_analysis_configure'];
 
-    $sFormRequiredInputs = '';
-    foreach ($aInputs as $sName => $sValue) {
-        $sFormRequiredInputs .= '<INPUT type=\'hidden\' name=\'' . $sName . '\' value=\'' . $sValue . '\'>';
-    }
+    // Non filter specific inputs.
+    $aInputs = array_merge(
+        array(
+            'analysisid' => $_REQUEST['analysisid'],
+            'screeningid' => $_REQUEST['screeningid'],
+            'runid' => $_REQUEST['runid'],
+            'elementid' => $_REQUEST['elementid']
+        ),
+        $aHiddenOptions
+    );
 
     if (empty($sFiltersFormItems)) {
         // If no further configuration is required, simply pass the minimum required inputs.
@@ -457,10 +533,18 @@ if (ACTION == 'configure' && GET) {
         exit;
     }
 
+    $sFormRequiredInputs = '';
+    foreach ($aInputs as $sName => $aValues) {
+        if (!is_array($aValues)) {
+            $aValues = array($aValues);
+        }
+        foreach ($aValues as $sValue) {
+            $sFormRequiredInputs .= '<INPUT type=\'hidden\' name=\'' . $sName . '\' value=\'' . $sValue . '\'>';
+        }
+    }
+
     // If further configuration is required, build modal to take the configuration inputs.
-    // Implement an CSRF protection by working with tokens.
-    $_SESSION['csrf_tokens']['run_analysis_configure'] = md5(uniqid());
-    $sForm  = '<FORM id=\'configure_analysis_form\'><INPUT type=\'hidden\' name=\'csrf_token\' value=\'' . $_SESSION['csrf_tokens']['run_analysis_configure'] . '\'><BR>' .
+    $sForm  = '<FORM id=\'configure_analysis_form\'>' .
               $sFiltersFormItems .
               $sFormRequiredInputs .
               '</FORM>';
@@ -564,7 +648,7 @@ if (ACTION == 'configure' && POST) {
                         $aFormConfig[$sFilter]['run_older_version'] = array();
                     }
                     foreach ($aFormConfig[$sFilter]['run_older_version'] as $sGpId => $bUseOlderVersion) {
-                        if (!empty($aFormConfig[$sFilter]['run_older_version'][$sGpId])) {
+                        if ($bUseOlderVersion) {
                             $aFormConfig[$sFilter]['metadata'][$sGpId] = $aDbConfig['metadata'][$sGpId];
                             $aUseOlderGenePanels[] = $sGpId;
                         }
@@ -615,6 +699,7 @@ if (ACTION == 'configure' && POST) {
                     unset($aFormConfig[$sFilter]['run_older_version']);
 
                     break;
+
                 case 'cross_screenings':
                     // Reset index otherwise json_encode would be converted it to object instead of array.
                     $aFormConfig[$sFilter]['groups'] = array_values($aFormConfig[$sFilter]['groups']);
@@ -624,6 +709,68 @@ if (ACTION == 'configure' && POST) {
                         && empty($aFormConfig[$sFilter]['groups'][0]['screenings'])) {
                         unset($aFormConfig[$sFilter]);
                     }
+                    break;
+
+                case 'remove_in_gene_blacklist':
+                    // Get the saved configurations in the database.
+                    $aDbConfig = array();
+                    if (!empty($zFilterConfig[$sFilter]['config_json'])) {
+                        $aDbConfig = json_decode($zFilterConfig[$sFilter]['config_json'], true);
+                    }
+
+                    // Configurations submitted by the users through the form.
+                    if (empty($aFormConfig[$sFilter]['blacklists'])) {
+                        $aFormConfig[$sFilter]['blacklists'] = array();
+                    }
+                    $aGenePanelIds = $aFormConfig[$sFilter]['blacklists'];
+
+                    // Now, we need to populate the metadata. There are 2 possibilities:
+                    // 1. Use the metadata from the analysis we cloned these
+                    //    configurations from if the user chooses to do so.
+                    // 2. Use the list of genes assigned to this gene panel in the database now.
+                    $aFormConfig[$sFilter]['metadata'] = array();
+
+                    // 1. If user chooses to use the older version of the gene panel.
+                    //    (the exact same set of genes this gene panel had when this analysis we cloned from was run)
+                    $aUseOlderGenePanels = array();
+                    // But, prevent notice when this setting is not sent.
+                    // The notice will break the JS and make the analysis fail to run.
+                    if (!isset($aFormConfig[$sFilter]['run_older_version'])) {
+                        $aFormConfig[$sFilter]['run_older_version'] = array();
+                    }
+                    foreach ($aFormConfig[$sFilter]['run_older_version'] as $sGpId => $bUseOlderVersion) {
+                        if ($bUseOlderVersion) {
+                            $aFormConfig[$sFilter]['metadata'][$sGpId] = $aDbConfig['metadata'][$sGpId];
+                            $aUseOlderGenePanels[] = $sGpId;
+                        }
+                    }
+
+                    // 2. Use the list of genes assigned to this gene panel in the database now.
+                    // First, remove the gene panels whose data we do not need to be fetched from database.
+                    $aGenePanelIds = array_values(array_diff($aGenePanelIds, $aUseOlderGenePanels));
+                    if (!empty($aGenePanelIds)) {
+                        // Increase DB limits to allow concatenation of large number of gene IDs.
+                        $_DB->query('SET group_concat_max_len = 500000');
+                        $sSQL = 'SELECT gp.id, gp.name, GROUP_CONCAT(gp2g.geneid SEPARATOR ";") AS _genes
+                                 FROM ' . TABLE_GP2GENE . ' AS gp2g
+                                   INNER JOIN ' . TABLE_GENE_PANELS . ' AS gp ON (gp2g.genepanelid = gp.id)
+                                 WHERE gp2g.genepanelid IN (? ' . str_repeat(', ?', count($aGenePanelIds)-1) . ')
+                                 GROUP BY gp.id';
+                        $zGenePanels = $_DB->query($sSQL, $aGenePanelIds)->fetchAllAssoc();
+
+                        // Populate data for each gene panel.
+                        foreach ($zGenePanels as $zGenePanel) {
+                            $aFormConfig[$sFilter]['metadata'][$zGenePanel['id']] = array(
+                                'last_modified' => lovd_getGenePanelLastModifiedDate($zGenePanel['id']),
+                                'name' => $zGenePanel['name'],
+                                'genes' => explode(';', $zGenePanel['_genes']),
+                            );
+                        }
+                    }
+
+                    // We don't need to save this in the json.
+                    unset($aFormConfig[$sFilter]['run_older_version']);
+
                     break;
             }
         }
