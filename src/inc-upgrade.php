@@ -1084,7 +1084,7 @@ if ($sCalcVersionFiles != $sCalcVersionDB) {
         }
         if ($sCalcVersionDB < lovd_calculateVersion('3.0-17q') && lovd_verifyInstance('leiden')) {
             $aUpdates['3.0-17q'][] = 'INSERT INTO ' . TABLE_ANALYSIS_FILTERS . ' (`id`, `name`, `description`, `has_config`) VALUES ("remove_in_gene_blacklist", "Apply gene blacklist", "Remove all variants mapped to only genes in the system\'s blacklist(s).", 1) ON DUPLICATE KEY UPDATE name = "Apply gene blacklist", description = "Remove all variants mapped to only genes in the system\'s blacklist(s).", has_config = 1';
-            $aUpdates['3.0-17q'][] = 'SET @nID := (SELECT id FROM lovd_KG_analyses WHERE name = "Recessive (whole exome)" ORDER BY version DESC LIMIT 1)';
+            $aUpdates['3.0-17q'][] = 'SET @nID := (SELECT id FROM ' . TABLE_ANALYSES . ' WHERE name = "Recessive (whole exome)" ORDER BY version DESC LIMIT 1)';
             $aUpdates['3.0-17q'][] = 'INSERT IGNORE INTO ' . TABLE_A2AF . ' (`analysisid`, `filterid`, `filter_order`) VALUES (@nID, "remove_in_gene_blacklist", 20)';
             $aUpdates['3.0-17q'][] = 'UPDATE ' . TABLE_ANALYSES . ' SET description = "Filters for recessive variants, homozygous or compound heterozygous in patient, but not in the parents. High frequencies (> 3%) are also filtered out, and the gene black list is applied.", edited_by = 0, edited_date = NOW() WHERE name = "Recessive (whole exome)" AND version = 2';
         }
