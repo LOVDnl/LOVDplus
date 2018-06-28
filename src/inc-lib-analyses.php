@@ -4,7 +4,7 @@
  * LEIDEN OPEN VARIATION DATABASE (LOVD)
  *
  * Created     : 2016-05-03
- * Modified    : 2018-06-27
+ * Modified    : 2018-06-28
  * For LOVD    : 3.0-18
  *
  * Copyright   : 2004-2018 Leiden University Medical Center; http://www.LUMC.nl/
@@ -115,6 +115,10 @@ function lovd_getFilterConfigHTML ($nRunID, $sFilterID)
             return $sConfigText;
             break;
 
+        case 'remove_in_gene_blacklist':
+            return lovd_getGenePanelsHTMLByRunID($aConfig, $nRunID);
+            break;
+
         default:
             return '';
     }
@@ -157,6 +161,16 @@ function lovd_getGenePanelsHTMLByRunID ($aConfig, $nRunID)
 {
     // This function will construct a table of information about the selected gene panels for an analysis.
     global $_DB;
+
+    // This function also handles the blacklist filter.
+    // The old blacklist filter had no config.
+    if (!$aConfig) {
+        return '';
+    }
+    if (empty($aConfig['gene_panels']) && isset($aConfig['blacklists'])) {
+        // This is the blacklist filter. Convert it for this function.
+        $aConfig['gene_panels']['blacklist'] = $aConfig['blacklists'];
+    }
 
     // Only need to display gene panels information if there are gene panels selected.
     $sGenePanelsInfo = '';
@@ -227,7 +241,7 @@ function lovd_getGenePanelsHTMLByRunID ($aConfig, $nRunID)
                     $sDisplayText = '';
                     $nGenePanelCount = count($aGenePanelIds);
                     $sToolTip = '<B>' . ucfirst(str_replace('_', '&nbsp;', $sType)) . ($nGenePanelCount > 1? 's' : '') . '</B>' .
-                                ' <A onclick="lovd_showGenes(' . $nRunID . ')">Click for details</A><BR>';
+                                ' <A onclick="lovd_showGenes(\\\'' . $nRunID . '\\\')">Click for details</A><BR>';
 
                     foreach ($aGenePanelIds as $aGenePanelId) {
                         // Add the gene panel name to the tooltip and the text to show. We might shorten the text to show later.
