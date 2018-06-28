@@ -4,7 +4,7 @@
  * LEIDEN OPEN VARIATION DATABASE (LOVD)
  *
  * Created     : 2013-11-06
- * Modified    : 2018-03-31
+ * Modified    : 2018-06-27
  * For LOVD    : 3.0-18
  *
  * Copyright   : 2004-2018 Leiden University Medical Center; http://www.LUMC.nl/
@@ -260,44 +260,30 @@ if ($aVariantIDs) {
             $aVariantIDsFiltered = $_DB->query('SELECT CAST(id AS UNSIGNED) FROM ' . TABLE_VARIANTS . ' WHERE `VariantOnGenome/Sequencing/Quality` > 100 AND id IN (?' . str_repeat(', ?', count($aVariantIDs) - 1) . ')', $aVariantIDs, false)->fetchAllColumn();
             break;
         case 'remove_in_gene_blacklist':
-            // The blacklist could be looked up, but since the name can change and we know the ID, we'll just use that.
-            $nDiseaseID = 918;
-            // This query, including the preparation of the arguments, takes <0.1 second. The problem is the fetchAllColumn() which takes 2 minutes.
-            //   Limit on 1000 entries max: 2.5s.
-            // Problem is directly related to number of results IN COMBINATION WITH the arguments to send.
-            $aVariantIDsFiltered = $_DB->query('SELECT DISTINCT CAST(vog.id AS UNSIGNED) FROM ' . TABLE_VARIANTS . ' AS vog LEFT OUTER JOIN ' . TABLE_VARIANTS_ON_TRANSCRIPTS . ' AS vot USING (id) LEFT OUTER JOIN ' . TABLE_TRANSCRIPTS . ' AS t ON (vot.transcriptid = t.id) WHERE (t.geneid IS NULL OR NOT EXISTS (SELECT 1 FROM ' . TABLE_GEN2DIS . ' AS g2d WHERE g2d.diseaseid = ? AND g2d.geneid = t.geneid)) AND vog.id IN (?' . str_repeat(', ?', count($aVariantIDs) - 1) . ')', array_merge(array($nDiseaseID), $aVariantIDs), false)->fetchAllColumn();
-            break;
+            // Implement the blacklists passed on to this filter.
+            // Regardless of success, we need to show the selected blacklists.
+            $aSelectedGenePanels = (empty($aConfig['blacklists'])? array() : $aConfig['blacklists']);
 
-
-
-            // FIXME
-            // The following few lines contain testing code, that should be removed once we have solved the problem with fetchAll() not handling the number of results while a large number of arguments are sent.
-            $tStart = microtime(true);
-            $q = $_DB->prepare('SELECT SQL_NO_CACHE DISTINCT vog.id FROM lovd_KG_variants AS vog LEFT OUTER JOIN lovd_KG_variants_on_transcripts AS vot USING (id) LEFT OUTER JOIN lovd_KG_transcripts AS t ON (vot.transcriptid = t.id) LEFT OUTER JOIN lovd_KG_genes2diseases AS g2d USING (geneid) WHERE (g2d.diseaseid IS NULL OR !(g2d.diseaseid = 918)) LIMIT 50000');
-            $q->execute($aVariantIDs);
-            //$q->execute();
-            var_dump(round(microtime(true) - $tStart, 5));
-            $tStart = microtime(true);
-            //$aVariantIDsFiltered = $q->fetchAllColumn();
-            $aVariantIDsFiltered = $q->fetchAll(PDO::FETCH_COLUMN, 0);
-            var_dump(round(microtime(true) - $tStart, 5));
-
-            print('<BR>');
-            mysql_connect('localhost', 'lovd', 'lovd_pw');
-            mysql_select_db('lovd3_diagnostics');
-            $tStart = microtime(true);
-            $q = mysql_query('SELECT SQL_NO_CACHE DISTINCT vog.id FROM lovd_KG_variants AS vog LEFT OUTER JOIN lovd_KG_variants_on_transcripts AS vot USING (id) LEFT OUTER JOIN lovd_KG_transcripts AS t ON (vot.transcriptid = t.id) LEFT OUTER JOIN lovd_KG_genes2diseases AS g2d USING (geneid) WHERE (g2d.diseaseid IS NULL OR !(g2d.diseaseid = 918)) LIMIT 50000');
-            var_dump(round(microtime(true) - $tStart, 5));
-            $tStart = microtime(true);
-            $aVariantIDsFiltered = array();
-            while ($r = mysql_fetch_row($q)) {
-                $aVariantIDsFiltered[] = $r[0];
+            $aGenes = array();
+            foreach ($aSelectedGenePanels as $nGpID) {
+                $aGenes = array_merge($aGenes, $aConfig['metadata'][$nGpID]['genes']);
             }
-            var_dump(round(microtime(true) - $tStart, 5));
-            exit;
-            // FIXME
 
+            // If no genes selected, then return all variants.
+            if (empty($aGenes)) {
+                $aVariantIDsFiltered = $aVariantIDs;
+                break; // switch case statement break.
+            }
 
+            // Don't drop VOGs without a gene.
+            $sSQL = 'SELECT DISTINCT CAST(vog.id AS UNSIGNED)
+                     FROM ' . TABLE_VARIANTS . ' AS vog
+                     LEFT OUTER JOIN ' . TABLE_VARIANTS_ON_TRANSCRIPTS . ' AS vot USING (id)
+                     LEFT OUTER JOIN ' . TABLE_TRANSCRIPTS . ' AS t ON (vot.transcriptid = t.id)
+                     WHERE (t.geneid IS NULL OR t.geneid NOT IN (?' . str_repeat(', ?', count($aGenes)-1) . '))
+                        AND vog.id IN (? ' . str_repeat(', ?', count($aVariantIDs) - 1) . ')';
+            $aSQL = array_merge($aGenes, $aVariantIDs);
+            $aVariantIDsFiltered = $_DB->query($sSQL, $aSQL, false)->fetchAllColumn();
 
             break;
         case 'remove_intronic_distance_gt_2':
@@ -324,7 +310,7 @@ if ($aVariantIDs) {
             // NOTE: THIS FILTER HAS BEEN DISABLED IN FAVOR OF THE apply_selected_gene_panels FILTER.
             // IT IS KEPT JUST SO THAT THE OLD ANALYSES DON'T BREAK, BUT IT SHOULDN'T FILTER ANYMORE.
             // Should you wish to re-enable it, remove the "false &&" from the if() below.
-            
+
             // First, fetch disease ID from current individual. We will get the current individual by querying the database using the first variant.
             $aDiseaseIDs = $_DB->query('SELECT i2d.diseaseid FROM ' . TABLE_IND2DIS . ' AS i2d INNER JOIN ' . TABLE_SCREENINGS . ' AS s USING (individualid) INNER JOIN ' . TABLE_SCR2VAR . ' AS s2v ON (s.id = s2v.screeningid) WHERE s2v.variantid = ?', array($aVariantIDs[0]))->fetchAllColumn();
             if (false && $aDiseaseIDs) {
@@ -369,7 +355,7 @@ if ($aVariantIDs) {
                 $aSelectedGenes = array_diff($aGenes['gene_panel'], $aGenes['blacklist']);
                 $aSelectedGenes = array_merge($aSelectedGenes, $aGenes['custom_panel']);
             }
-            
+
             // (all selected genes - blacklist genes) + custom panel genes = 0.
             // We don't need to run the SQL query. Return no variants.
             if (empty($aSelectedGenes)) {
