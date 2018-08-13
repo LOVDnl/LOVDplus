@@ -4,7 +4,7 @@
  * LEIDEN OPEN VARIATION DATABASE (LOVD)
  *
  * Created     : 2014-11-28
- * Modified    : 2018-06-19
+ * Modified    : 2018-08-13
  * For LOVD+   : 3.0-18
  *
  * Copyright   : 2004-2018 Leiden University Medical Center; http://www.LUMC.nl/
@@ -571,7 +571,7 @@ foreach ($aFiles as $sID) {
     // Check for mandatory headers (needs to be run after the headers have been cleaned).
     foreach ($_ADAPTER->getRequiredHeaderColumns() as $sColumn) {
         if (!in_array($sColumn, $aHeaders, true)) {
-            lovd_printIfVerbose(VERBOSITY_MEDIUM, 'Ignoring file, does not conform to format: ' . $sFileToConvert . ".\n");
+            lovd_printIfVerbose(VERBOSITY_MEDIUM, 'Ignoring file, does not conform to format: ' . $sFileToConvert . '. Missing column: ' . $sColumn . ".\n");
             continue 2; // Continue to try the next file.
         }
     }
