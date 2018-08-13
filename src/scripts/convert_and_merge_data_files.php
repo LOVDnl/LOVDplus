@@ -65,9 +65,9 @@ if (!empty($_CONF['proxy_username']) && !empty($_CONF['proxy_password'])) {
 
 function mutalyzer_getTranscriptsAndInfo ($ref, $gene)
 {
-    global $ch;
+    global $ch, $_CONF;
 
-    $sUrl = 'https://mutalyzer.nl/json/getTranscriptsAndInfo?genomicReference=' . $ref . '&geneName=' . $gene;
+    $sUrl = str_replace('/services', '', $_CONF['mutalyzer_soap_url']) . '/json/getTranscriptsAndInfo?genomicReference=' . $ref . '&geneName=' . $gene;
     curl_setopt($ch, CURLOPT_URL, $sUrl);
 
     return curl_exec($ch);
@@ -75,9 +75,9 @@ function mutalyzer_getTranscriptsAndInfo ($ref, $gene)
 
 function mutalyzer_numberConversion ($build, $variant)
 {
-    global $ch;
+    global $ch, $_CONF;
 
-    $sUrl = 'https://mutalyzer.nl/json/numberConversion?build=' . $build . '&variant=' . $variant;
+    $sUrl = str_replace('/services', '', $_CONF['mutalyzer_soap_url']) . '/json/numberConversion?build=' . $build . '&variant=' . $variant;
     curl_setopt($ch, CURLOPT_URL, $sUrl);
 
     return curl_exec($ch);
@@ -85,9 +85,9 @@ function mutalyzer_numberConversion ($build, $variant)
 
 function mutalyzer_runMutalyzer ($variant)
 {
-    global $ch;
+    global $ch, $_CONF;
 
-    $sUrl = 'https://mutalyzer.nl/json/runMutalyzerLight?variant=' . $variant;
+    $sUrl = str_replace('/services', '', $_CONF['mutalyzer_soap_url']) . '/json/runMutalyzerLight?variant=' . $variant;
     curl_setopt($ch, CURLOPT_URL, $sUrl);
 
     return curl_exec($ch);
