@@ -154,9 +154,6 @@ $aColumnsForVOG = array(
     'owned_by',
     'statusid',
     'created_by',
-    'created_date',
-    'edited_by',
-    'edited_date',
     'VariantOnGenome/DBID',
 );
 // These columns will be taken out of $aVariant and stored as the VOT data.
@@ -178,7 +175,6 @@ $aDefaultValues = array(
 //    'owned_by' => 0, // '0' is not a valid value, because "LOVD" is removed from the selection list. When left empty, it will default to the user running LOVD, though.
     'statusid' => STATUS_HIDDEN,
     'created_by' => 0,
-    'created_date' => date('Y-m-d H:i:s'),
 );
 
 
