@@ -1179,8 +1179,10 @@ foreach ($aFiles as $sID) {
                 // VEP came up with something...
                 $aVariant['VariantOnTranscript/RNA'] = 'r.(?)';
                 $aVariant['VariantOnTranscript/Protein'] = substr($aVariant['VariantOnTranscript/Protein'], strpos($aVariant['VariantOnTranscript/Protein'], ':')+1); // NP_000000.1:p.Met1? -> p.Met1?
-                if ($aVariant['VariantOnTranscript/Protein'] == $aVariant['VariantOnTranscript/DNA/VEP'] . '(p.=)') {
-                    // But sometimes VEP messes up; DNA: c.4482G>A; Prot: c.4482G>A(p.=)
+                if ($aVariant['VariantOnTranscript/Protein'] == $aVariant['VariantOnTranscript/DNA/VEP'] . '(p.=)'
+                    || preg_match('/^p\.([A-Z][a-z]{2})+([0-9]+)=$/', $aVariant['VariantOnTranscript/Protein'])) {
+                    // But sometimes VEP messes up; DNA: c.4482G>A; Prot: c.4482G>A(p.=) or
+                    //  Prot: p.ValSerThrAspHisAlaThrSerLeuProValThrIleProSerAlaAla1225=
                     $aVariant['VariantOnTranscript/Protein'] = 'p.(=)';
                 } else {
                     $aVariant['VariantOnTranscript/Protein'] = str_replace('p.', 'p.(', $aVariant['VariantOnTranscript/Protein'] . ')');
