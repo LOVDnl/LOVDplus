@@ -612,19 +612,13 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && !ACTION) {
     }
     lovd_showJGNavigation($aNavigation, 'Variants');
 
-    // Table to display the number of variant instances with the same DB-ID for each final classification.
-    $sSQLCount = 'SELECT SUBSTRING(effectid, -1, 1) AS classification_final, COUNT(effectid) AS count 
-                  FROM ' . TABLE_VARIANTS .
-                ' WHERE `VariantOnGenome/DBID` = ?
-                  GROUP BY SUBSTRING(effectid, -1, 1)';
-    $aClassificationsCount = $_DB->query($sSQLCount, array($zData['DBID']))->fetchAllCombine();
-
     print('
           </TD>
           <TD valign="top" id="summary_annotation_view_entry" style="padding-left: 10px;">' . "\n\n\n");
     // RIGHT COLUMN on the variant view entry.
 
     // Load the variant data so as we can search by the DBID.
+    $sDBID = $zData['DBID'];
     if ($zData['summaryannotationid']) {
         $sSummaryAnnotationsID = $zData['summaryannotationid'];
         // Checks if there is an existing summary annotation record.
@@ -646,25 +640,38 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && !ACTION) {
               '              <TR>' . "\n" .
               '                <TH colspan="2">Summary annotations</TH>' . "\n" .
               '              </TR>' . "\n" .
-              '              <TR class="pointer" onclick="window.location.href=\'' . lovd_getInstallURL() . 'summary_annotations/' . $zData['DBID'] . '?create&redirect_to=' . $nID . (isset($_GET['in_window'])? '&in_window' : '') . '\';">' . "\n" .
+              '              <TR class="pointer" onclick="window.location.href=\'' . lovd_getInstallURL() . 'summary_annotations/' . $sDBID . '?create&redirect_to=' . $nID . (isset($_GET['in_window'])? '&in_window' : '') . '\';">' . "\n" .
               '                <TD align="center" width="40"><IMG src="gfx/lovd_variants_create.png" alt="Summary annotations" width="32" height="32"></TD>' . "\n" .
               '                <TD>Annotations that may be applicable to any instance of a particular variant can be stored in a summary annotation record. Click here to create a summary annotation record for this variant.</TD>' . "\n" .
               '              </TR>' . "\n" .
               '            </TABLE><BR>' . "\n\n");
     }
 
+    // Table to display the number of variant instances with the same DB-ID for each final classification.
+    $sSQLCount = 'SELECT
+                    LEFT(e.id, 1) AS id,
+                    (SELECT COUNT(*) FROM ' . TABLE_VARIANTS . ' AS vog WHERE vog.`VariantOnGenome/DBID` = ? AND LEFT(vog.effectid, 1) = LEFT(e.id, 1)) AS reported,
+                    (SELECT COUNT(*) FROM ' . TABLE_VARIANTS . ' AS vog WHERE vog.`VariantOnGenome/DBID` = ? AND RIGHT(vog.effectid, 1) = LEFT(e.id, 1)) AS concluded
+                  FROM ' . TABLE_EFFECT . ' AS e GROUP BY LEFT(e.id, 1)';
+    $aClassificationsCount = $_DB->query($sSQLCount, array($sDBID, $sDBID))->fetchAllGroupAssoc();
+
     print('            <BR>
             <TABLE width="600" class="data">
               <TR>
-                <TH>Final Classification</TH>
-                <TH>Occurrences</TH>
+                <TH>Classification</TH>
+                <TH>As reported classification</TH>
+                <TH>As final classification</TH>
               </TR>');
     // We want to always print the classification rows in the same order as stored in $_SETT.
     foreach ($_SETT['var_effect'] as $sClassificationID => $sClassification) {
         print('
               <TR>
-                <TD>'. $sClassification . '</TD>
-                <TD>'. (isset($aClassificationsCount[$sClassificationID])? $aClassificationsCount[$sClassificationID] : 0) . '</TD>
+                <TD>'. $sClassification . '</TD>');
+        foreach (array('reported', 'concluded') as $sType) {
+            print('
+                <TD>' . $aClassificationsCount[$sClassificationID][$sType] . '</TD>');
+        }
+        print('
               </TR>');
     }
     print('</TABLE>' . "\n\n");
