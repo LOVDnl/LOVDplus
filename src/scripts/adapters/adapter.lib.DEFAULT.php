@@ -4,7 +4,7 @@
  * LEIDEN OPEN VARIATION DATABASE (LOVD)
  *
  * Created     : 2016-09-02
- * Modified    : 2018-03-23
+ * Modified    : 2018-06-19
  * For LOVD    : 3.0-18
  *
  * Copyright   : 2004-2018 Leiden University Medical Center; http://www.LUMC.nl/
@@ -156,8 +156,10 @@ $_INSTANCE_CONFIG['conversion'] = array(
     'annotation_error_drops_line' => false, // Should we discard the variant's mapping on this transcript on annotation errors?
     'annotation_error_exits' => false, // Whether to halt on the first annotation error.
     'annotation_error_max_allowed' => 20, // Maximum number of errors with VOTs before the script dies anyway.
+    'create_genes_and_transcripts' => true, // Allow automatic creation of genes, allow automatic creation of transcripts.
     'check_indel_description' => true, // Should we check all indels using Mutalyzer? Vep usually does a bad job at them.
-    'enforce_hgnc_gene' => true, // Check for aliases, allow automatic creation of genes using the HGNC, allow automatic creation of transcripts.
+    'enforce_hgnc_gene' => true, // Enforce gene to exist in the HGNC (requires use_hgnc = true).
+    'use_hgnc' => true, // Use the HGNC to collect gene information, and detect gene aliases (requires create_genes_and_transcripts = true).
     'verbosity_cron' => 5, // How verbose should we be when running through cron? (default: 5; currently supported: 0,3,5,7,9)
     'verbosity_other' => 7, // How verbose should we be otherwise? (default: 7; currently supported: 0,3,5,7,9)
 );
@@ -554,6 +556,7 @@ class LOVD_DefaultDataConverter {
 
             // Mappings for fields used to process other fields but not imported into the database.
             'SYMBOL' => 'symbol',
+            'HGNC_ID' => 'id_hgnc',
             'REF' => 'ref',
             'ALT' => 'alt',
             'Existing_variation' => 'existing_variation'

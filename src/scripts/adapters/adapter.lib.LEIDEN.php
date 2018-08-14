@@ -139,67 +139,6 @@ class LOVD_LeidenDataConverter extends LOVD_DefaultDataConverter {
 
         return array(
             // This list needs to be replaced now and then.
-            // These below have been added 2017-07-27. Expire 2018-07-27.
-            'AQPEP' => 'LVRN',
-            'C10orf112' => 'MALRD1',
-            'C11orf34' => 'PLET1',
-            'C19orf69' => 'ERICH4',
-            'C4orf40' => 'PRR27',
-            'C5orf50' => 'SMIM23',
-            'C8orf47' => 'ERICH5',
-            'C9orf169' => 'CYSRT1',
-            'C9orf173' => 'STPG3',
-            'C9orf37' => 'ARRDC1-AS1',
-            'DOM3Z' => 'DXO',
-            'FAM203A' => 'HGH1',
-            'FAM25B' => 'FAM25BP',
-            'FAM5C' => 'BRINP3',
-            'FOLR4' => 'IZUMO1R',
-            'GTDC2' => 'POMGNT2',
-            'HDGFRP2' => 'HDGFL2',
-            'HDGFRP3' => 'HDGFL3',
-            'HMP19' => 'NSG2',
-            'HNRNPCP5' => 'HNRNPCL2',
-            'IL8' => 'CXCL8',
-            'KIAA1737' => 'CIPC',
-            'KIAA1804' => 'MAP3K21',
-            'KIAA1967' => 'CCAR2',
-            'LIMS3L' => 'LIMS4',
-            'LINC00984' => 'INAFM2',
-            'LPPR1' => 'PLPPR1',
-            'LPPR2' => 'PLPPR2',
-            'LPPR3' => 'PLPPR3',
-            'LPPR4' => 'PLPPR4',
-            'LPPR5' => 'PLPPR5',
-            'LSMD1' => 'NAA38',
-            'METTL21D' => 'VCPKMT',
-            'MKI67IP' => 'NIFK',
-            'MNF1' => 'UQCC2',
-            'NAPRT1' => 'NAPRT',
-            'NARR' => 'RAB34',
-            'NEURL' => 'NEURL1',
-            'NIM1' => 'NIM1K',
-            'PAPL' => 'ACP7',
-            'PCDP1' => 'CFAP221',
-            'PHF17' => 'JADE1',
-            'PPIAL4B' => 'PPIAL4A',
-            'PRMT10' => 'PRMT9',
-            'REXO1L1' => 'REXO1L1P',
-            'SCXA' => 'SCX',
-            'SELK' => 'SELENOK',
-            'SELM' => 'SELENOM',
-            'SELO' => 'SELENOO',
-            'SELT' => 'SELENOT',
-            'SELV' => 'SELENOV',
-            'SEP15' => 'SELENOF',
-            'SGK110' => 'SBK3',
-            'SGK223' => 'PRAG1',
-            'SMCR7L' => 'MIEF1',
-            'TCEB3CL' => 'ELOA3B',
-            'YES' => 'YES1',
-            'ZAK' => 'MAP3K20',
-            // These above have been added 2017-07-27. Expire 2018-07-27.
-
             // Added 2018-02-20, expire 2019-02-20.
             'CPSF3L' => 'INTS11',
             'GLTPD1' => 'CPTP',
@@ -212,7 +151,7 @@ class LOVD_LeidenDataConverter extends LOVD_DefaultDataConverter {
             'PRAMEF23' => 'PRAMEF5',
             'HNRNPCP5' => 'HNRNPCL2',
 
-            // Added 2018-04-12, expire 2019-04-12.
+            // Added 2018-08-14, expire 2019-08-14.
             'C10orf137' => 'EDRF1',
             'C11orf93' => 'COLCA2',
             'C12orf52' => 'RITA1',
@@ -224,6 +163,7 @@ class LOVD_LeidenDataConverter extends LOVD_DefaultDataConverter {
             'C3orf37' => 'HMCES',
             'C3orf43' => 'SMCO1',
             'C3orf83' => 'MKRN2OS',
+            'C6orf229' => 'ARMH2',
             'C6orf70' => 'ERMARD',
             'C7orf41' => 'MTURN',
             'C9orf123' => 'DMAC1',
@@ -235,12 +175,15 @@ class LOVD_LeidenDataConverter extends LOVD_DefaultDataConverter {
             'GPER' => 'GPER1',
             'KIAA1704' => 'GPALPP1',
             'KIAA1984' => 'CCDC183',
+            'LINC01660' => 'FAM230J',
+            'LINC01662' => 'FAM230E',
             'MST4' => 'STK26',
             'PHF15' => 'JADE2',
             'PHF16' => 'JADE3',
             'PLAC1L' => 'OOSP2',
             'PNMA6C' => 'PNMA6A',
             'PRAC' => 'PRAC1',
+            'RPS17L' => 'RPS17',
             'SCXB' => 'SCX',
             'SELRC1' => 'COA7',
             'SGK196' => 'POMK',
@@ -250,6 +193,43 @@ class LOVD_LeidenDataConverter extends LOVD_DefaultDataConverter {
             'UQCC' => 'UQCC1',
             'WTH3DI' => 'RAB6D',
             'ZFP112' => 'ZNF112',
+        );
+    }
+
+
+
+
+
+    function prepareGenesToIgnore ()
+    {
+        // Return an array of gene symbols of genes you wish to ignore.
+        // These could be genes that you know can't be imported/created in LOVD,
+        //  or genes whose annotation you wish to ignore for a different reason.
+        // Example:
+        // return array(
+        //     'FLJ12825',
+        //     'FLJ27354',
+        //     'FLJ37453',
+        // );
+
+        return array(
+            // Added 2018-08-14, expire 2019-08-14.
+            'CRHR1-IT1-CRHR1',
+            'CYP3A7-CYP3AP1',
+            'FLJ22184',
+            'FLJ44313',
+            'FLJ45513',
+            'GS1-259H13.2',
+            'HGC6.3',
+            'MAGEA10-MAGEA5',
+            'OVOS2',
+            'OVOS',
+            'PHOSPHO2-KLHL23',
+            'SGK494',
+            'TARP',
+            'THEG5',
+            'TNFAIP8L2-SCNM1',
+            'ZNF664-RFLNA',
         );
     }
 }
