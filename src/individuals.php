@@ -488,9 +488,9 @@ if (PATH_COUNT >= 2 && ctype_digit($_PE[1]) && !ACTION && (PATH_COUNT == 2 || PA
         // For MGHA instances, we want to use double click to view detailed variant page. This is so that curators can copy data on the analysis results view list.
         if (lovd_verifyInstance('mgha', false)) {
             // Double click to open variant viewentry page.
-            $_DATA->setRowLink('CustomVL_AnalysisRunResults_for_I_VE', 'javascript:$(this).dblclick(function() {lovd_openWindow(\'' . lovd_getInstallURL() . 'variants/{{ID}}?&in_window\', \'VarVE_{{ID}}\', 1250);}); return false;');
+            $_DATA->setRowLink('CustomVL_AnalysisRunResults_for_I_VE', 'javascript:$(this).dblclick(function() {lovd_openWindow(\'' . lovd_getInstallURL() . 'variants/{{ID}}?&in_window\', \'VarVE_{{ID}}\', 1270);}); return false;');
         } else {
-            $_DATA->setRowLink('CustomVL_AnalysisRunResults_for_I_VE', 'javascript:lovd_openWindow(\'' . lovd_getInstallURL() . 'variants/{{ID}}?&in_window#{{zData_preferred_transcriptid}}\', \'VarVE_{{ID}}\', 1250); return false;');
+            $_DATA->setRowLink('CustomVL_AnalysisRunResults_for_I_VE', 'javascript:lovd_openWindow(\'' . lovd_getInstallURL() . 'variants/{{ID}}?&in_window#{{zData_preferred_transcriptid}}\', \'VarVE_{{ID}}\', 1270); return false;');
         }
 
         // Define menu, to set pathogenicity flags of multiple variants in one go.
