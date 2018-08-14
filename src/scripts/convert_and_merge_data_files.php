@@ -4,7 +4,7 @@
  * LEIDEN OPEN VARIATION DATABASE (LOVD)
  *
  * Created     : 2014-11-28
- * Modified    : 2018-08-13
+ * Modified    : 2018-08-14
  * For LOVD+   : 3.0-18
  *
  * Copyright   : 2004-2018 Leiden University Medical Center; http://www.LUMC.nl/
@@ -1078,7 +1078,11 @@ foreach ($aFiles as $sID) {
                         //  or differences between the position converter database versus de NC-based database.
 
                         // Still no mapping. If we did have DNA from VEP, we'll just accept that. Otherwise, we call it an error.
-                        $sErrorMsg = 'Can\'t map variant ' . $_SETT['human_builds'][$_CONF['refseq_build']]['ncbi_sequences'][$aVariant['chromosome']] . ':' . $aVariant['VariantOnGenome/DNA'] . ' (' . $aVariant['chromosome'] . ':' . $aVariant['position'] . $aVariant['ref'] . '>' . $aVariant['alt'] . ') onto transcript ' . $aLine['transcript_noversion'] . '*.';
+                        $sErrorMsg = 'Can\'t map variant ' .
+                            $_SETT['human_builds'][$_CONF['refseq_build']]['ncbi_sequences'][$aVariant['chromosome']] .
+                            ':' . $aVariant['VariantOnGenome/DNA'] .
+                            ' (' . $aVariant['chromosome'] . ':' . $aVariant['position'] . $aVariant['ref'] . '>' . $aVariant['alt'] . ') ' .
+                            'onto transcript ' . $aLine['transcript_noversion'] . '*.';
                         if ($aVariant['VariantOnTranscript/DNA']) {
                             $sErrorMsg .= "\n" .
                                           'Falling back to VEP\'s DNA description!' . "\n";
@@ -1197,7 +1201,11 @@ foreach ($aFiles as $sID) {
                 $aVariant['VariantOnTranscript/Protein'] = 'p.?';
             } elseif (!$bDropTranscriptData && $aVariant['VariantOnTranscript/DNA']) {
                 // OK, too bad, we need to run Mutalyzer anyway (only if we're using this VOT line).
-                lovd_printIfVerbose(VERBOSITY_MEDIUM, 'Running mutalyzer to predict protein change for ' . $_SETT['human_builds'][$_CONF['refseq_build']]['ncbi_sequences'][$aVariant['chromosome']] . ':' . $aVariant['VariantOnGenome/DNA'] . ' (' . $aVariant['chromosome'] . ':' . $aVariant['position'] . $aVariant['ref'] . '>' . $aVariant['alt'] . ")\n");
+                lovd_printIfVerbose(VERBOSITY_MEDIUM, 'Running mutalyzer to predict protein change for ' .
+                    $_SETT['human_builds'][$_CONF['refseq_build']]['ncbi_sequences'][$aVariant['chromosome']] .
+                    ':' . $aVariant['VariantOnGenome/DNA'] .
+                    ' (' . $aVariant['chromosome'] . ':' . $aVariant['position'] . $aVariant['ref'] . '>' . $aVariant['alt'] .
+                    ' @ ' . $aVariant['transcriptid'] . ")\n");
                 $nSleepTime = 2;
                 // Retry Mutalyzer call several times until successful.
                 $sJSONResponse = false;
@@ -1308,7 +1316,11 @@ foreach ($aFiles as $sID) {
             }
 
             if (!$bDropTranscriptData && $aVariant['VariantOnTranscript/DNA'] && !$aVariant['VariantOnTranscript/RNA']) {
-                $sErrorMsg = 'Missing VariantOnTranscript/RNA. Chromosome: ' . $aVariant['chromosome'] . '. VariantOnGenome/DNA: ' . $aVariant['VariantOnGenome/DNA'] . '.';
+                $sErrorMsg = 'Missing VariantOnTranscript/RNA for ' .
+                    $_SETT['human_builds'][$_CONF['refseq_build']]['ncbi_sequences'][$aVariant['chromosome']] .
+                    ':' . $aVariant['VariantOnGenome/DNA'] .
+                    ' (' . $aVariant['chromosome'] . ':' . $aVariant['position'] . $aVariant['ref'] . '>' . $aVariant['alt'] .
+                    ' @ ' . $aVariant['transcriptid'] . ').';
                 $nAnnotationErrors = lovd_handleAnnotationError($aVariant, $sErrorMsg);
                 $bDropTranscriptData = $_INSTANCE_CONFIG['conversion']['annotation_error_drops_line'];
             }
