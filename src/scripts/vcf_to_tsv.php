@@ -38,7 +38,8 @@
  *
  *************/
 
-// FIXME: DEAL WITH COMBINED ALTs!!!!!!!!!
+// FIXME: ALSO HANDLE THE GTs!!!
+// FIXME: Add a return value if any warnings have occurred.
 
 // Command line only.
 if (isset($_SERVER['HTTP_HOST'])) {
@@ -89,6 +90,32 @@ define('VERBOSITY_FULL', 9); // Full output, including debug statements.
 $bCron = (empty($_SERVER['REMOTE_ADDR']) && empty($_SERVER['TERM']));
 // FIXME: Make this a setting from the library? If so, make it optional, we prefer being standalone.
 define('VERBOSITY', ($bCron? 5 : 7));
+
+
+
+
+
+function lovd_ltrimCommonChars ($aStrings)
+{
+    // ltrim()s all strings in $aStrings if they have a common left character. Returns the resulting array.
+    // Assumes it receives at least two strings. Assumes the array has numerical indices, starting with 0.
+    $n = count($aStrings);
+    while (true) {
+        $s = substr($aStrings[0], 0, 1);
+        if ($s === false) {
+            return $aStrings;
+        }
+        for ($i = 1; $i < $n; $i ++) {
+            if (substr($aStrings[$i], 0, 1) != $s) {
+                return $aStrings;
+            }
+        }
+
+        // If we're here, all characters match.
+        $aStrings = array_map('strval',
+            array_map('substr', $aStrings, array_fill(0, $n, 1)));
+    }
+}
 
 
 
@@ -261,7 +288,7 @@ $sAnnotationTag = key($_CONFIG['annotation_fields']); // What to look for in the
 
 // Start outputting the file.
 // Print the headers that we already saw (might not be all).
-//print(implode("\n", $aHeaders) . "\n"); //////////////////////////////////////////////////////////////////////// FIXME
+print(implode("\n", $aHeaders) . "\n");
 unset($aHeaders);
 $bData = false; // Are we parsing data yet?
 $aVCFFields = array(); // VCF fields in this VCF file (including samples, hopefully).
@@ -352,6 +379,9 @@ while ($sLine = fgets($fInput)) {
 
     $aLine = array_combine($aVCFFields, $aLine);
 
+    $aALTs = explode(',', $aLine['ALT']);
+    $nALTs = count($aALTs);
+
     // Now populate the annotation fields, and the format fields.
     $nPosAnnotation = strpos(';' . $aLine['INFO'], ';' . $sAnnotationTag . '=');
     if ($nPosAnnotation === false) {
@@ -361,11 +391,14 @@ while ($sLine = fgets($fInput)) {
 
         // Just print the VOG data, and continue to the next line.
         // Yes, we won't print enough tabs here, but it's OK. The conversion script can handle that.
-        foreach ($aVOGFields as $nKey => $sHeader) {
-            print((!$nKey? '' : "\t") .
-                $aLine[$sHeader]);
+        foreach ($aALTs as $sALT) {
+            $aLine['ALT'] = $sALT;
+            foreach ($aVOGFields as $nKey => $sHeader) {
+                print((!$nKey? '' : "\t") .
+                    $aLine[$sHeader]);
+            }
+            print("\n");
         }
-        print("\n");
 
     } else {
         // Now cut out just the annotation and discard any other info that might be there.
@@ -390,7 +423,13 @@ while ($sLine = fgets($fInput)) {
             $aFormatValues[$sSample] = array_combine($aFormatFields, $aSampleValues);
         }
 
-        // Now loop the transcript mappings, and print the data lines.
+        // VEP shortens the Allele in the annotation, so we need to do the same (VEP v93).
+        // Their shortening is based on REF, too. ALTs "A,AT" only get shortened to "-,T" if REF starts with "A".
+        // In principle, we could assume that when having just one ALT allele, VEP will only provide info for this one.
+        $aALTsCleaned = array_slice(lovd_ltrimCommonChars(array_merge(array($aLine['REF']), $aALTs)), 1);
+        $aVOTsPerAllele = array(); // Sort the annotation per the ALT allele.
+
+        // Now loop the transcript mappings.
         foreach ($aVOTs as $sVOT) {
             $aVOT = explode($_CONFIG['annotation_ids'][$sAnnotationTag], $sVOT);
             if (count($aVOT) != count($_CONFIG['annotation_fields'][$sAnnotationTag])) {
@@ -402,24 +441,41 @@ while ($sLine = fgets($fInput)) {
                 $aVOT = array_pad($aVOT, count($_CONFIG['annotation_fields'][$sAnnotationTag]), '');
             }
             $aVOT = array_combine($_CONFIG['annotation_fields'][$sAnnotationTag], $aVOT);
+            $aVOT['__allele__'] = (isset($aVOT['Allele'])? trim($aVOT['Allele'], '-') : '');
 
-            // Print the data line.
-            // VCF data.
-            foreach ($aVOGFields as $nKey => $sHeader) {
-                print((!$nKey? '' : "\t") .
-                    $aLine[$sHeader]);
+            // Check with allele this line belongs to.
+            if (!in_array($aVOT['__allele__'], $aALTsCleaned)) {
+                lovd_printIfVerbose(VERBOSITY_MEDIUM,
+                    'Warning: Line ' . $nLine . ' contains annotation for Allele = "' . $aVOT['__allele__'] . '", which cannot be mapped to one of ("' . implode('", "', $aALTsCleaned) . '").' . "\n");
+                continue;
             }
-            // Annotation data.
-            foreach ($_CONFIG['annotation_fields'][$sAnnotationTag] as $sHeader) {
-                print("\t" . (!isset($aVOT[$sHeader])? '' : $aVOT[$sHeader]));
-            }
-            // Sample data.
-            foreach ($aFormatValues as $aSampleValues) {
-                foreach ($aFormatFields as $sHeader) {
-                    print("\t" . (!isset($aSampleValues[$sHeader])? '' : $aSampleValues[$sHeader]));
+
+            $aVOTsPerAllele[$aVOT['__allele__']][] = $aVOT;
+        }
+
+        // Now print the data.
+        foreach ($aALTs as $nKeyALT => $sALT) {
+            $aLine['ALT'] = $sALT;
+
+            foreach ($aVOTsPerAllele[$aALTsCleaned[$nKeyALT]] as $aVOT) {
+                // Print the data line.
+                // VCF data.
+                foreach ($aVOGFields as $nKey => $sHeader) {
+                    print((!$nKey? '' : "\t") .
+                        $aLine[$sHeader]);
                 }
+                // Annotation data.
+                foreach ($_CONFIG['annotation_fields'][$sAnnotationTag] as $sHeader) {
+                    print("\t" . (!isset($aVOT[$sHeader])? '' : $aVOT[$sHeader]));
+                }
+                // Sample data.
+                foreach ($aFormatValues as $aSampleValues) {
+                    foreach ($aFormatFields as $sHeader) {
+                        print("\t" . (!isset($aSampleValues[$sHeader])? '' : $aSampleValues[$sHeader]));
+                    }
+                }
+                print("\n");
             }
-            print("\n");
         }
     }
 
