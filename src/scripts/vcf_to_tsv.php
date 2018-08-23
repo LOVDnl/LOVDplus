@@ -313,6 +313,15 @@ if (empty($_CONFIG['annotation_fields'])) {
 }
 $sAnnotationTag = key($_CONFIG['annotation_fields']); // What to look for in the INFO fields.
 
+// We'll create some columns, too.
+if (in_array('AD', $_CONFIG['format_fields'])) {
+    foreach (array('DP', 'DPREF', 'DPALT') as $sField) {
+        if (!in_array($sField, $_CONFIG['format_fields'])) {
+            $_CONFIG['format_fields'][] = $sField;
+        }
+    }
+}
+
 
 
 
@@ -454,6 +463,21 @@ while ($sLine = fgets($fInput)) {
                 // Handle special cases.
                 if (isset($aSampleValues['GT'])) {
                     $aFormatValues[$sALT][$sSample]['GT'] = lovd_cleanGenoType($aSampleValues['GT'], $nKeyALT);
+                }
+            }
+            // Handle Allelic Depths.
+            if (isset($aSampleValues['AD'])) {
+                $aADs = explode(',', $aSampleValues['AD']);
+                // Fill in total depth, depth of REF and ALT depths, based on the AD field.
+                // We don't overwrite the DP, as it may include reads with alleles that aren't mentioned here.
+                if (!isset($aFormatValues[$sALT][$sSample]['DP'])) {
+                    $aFormatValues[$sALT][$sSample]['DP'] = array_sum($aADs);
+                }
+                if (!isset($aFormatValues[$sALT][$sSample]['DPREF'])) {
+                    $aFormatValues[$sALT][$sSample]['DPREF'] = $aADs[0];
+                }
+                if (!isset($aFormatValues[$sALT][$sSample]['DPALT'])) {
+                    $aFormatValues[$sALT][$sSample]['DPALT'] = $aADs[$nKeyALT+1];
                 }
             }
         }
