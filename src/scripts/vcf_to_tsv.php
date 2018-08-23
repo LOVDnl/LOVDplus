@@ -38,7 +38,7 @@
  *
  *************/
 
-// FIXME: ALSO HANDLE THE GTs and related values (AD, PL)!!!
+// FIXME: ALSO HANDLE THE GT related values (AD (create DP, DPREF, DPALT), PL)!!!
 // FIXME: Add a return value if any warnings have occurred.
 
 // Command line only.
@@ -90,6 +90,36 @@ define('VERBOSITY_FULL', 9); // Full output, including debug statements.
 $bCron = (empty($_SERVER['REMOTE_ADDR']) && empty($_SERVER['TERM']));
 // FIXME: Make this a setting from the library? If so, make it optional, we prefer being standalone.
 define('VERBOSITY', ($bCron? 5 : 7));
+
+
+
+
+
+function lovd_cleanGenoType ($sGenoType, $nKeyALT)
+{
+    // Cleans the GenoType field (GT) depending on which ALT allele we're seeing now.
+    // For instance, a compound heterozygous call (1/2) should be split in a 1/0 and 0/1 call.
+    static $aAlleles = array('nAllele1', 'nAllele2');
+
+    if (preg_match('/^(\d+)(\/|\|)(\d+)$/', $sGenoType, $aRegs)) {
+        list(,$nAllele1, $sSeparator, $nAllele2) = $aRegs;
+        foreach ($aAlleles as $sAlleleVar) {
+            if ($$sAlleleVar !== '0') {
+                // ALT call.
+                if ($$sAlleleVar == (string) ($nKeyALT+1)) {
+                    // The ALT we're handling.
+                    $$sAlleleVar = '1';
+                } else {
+                    // Not this ALT.
+                    $$sAlleleVar = '.';
+                }
+            }
+        }
+        $sGenoType = $nAllele1 . $sSeparator . $nAllele2;
+    }
+
+    return $sGenoType;
+}
 
 
 
@@ -178,6 +208,7 @@ if (!is_file($sFile)) {
 
 // Check headers. If we don't find annotation, we'll reject the file. Make sure we don't create any output yet.
 $aHeaders = array(); // To temporarily store the headers to not have to parse them twice.
+$nAnnotationFields = 0;
 $nLine = 0;
 $fInput = fopen($sFile, 'r');
 if ($fInput === false) {
@@ -413,7 +444,19 @@ while ($sLine = fgets($fInput)) {
             // If it contains more fields than the field listing, feel free to fail completely.
             $aSampleValues = array_pad($aSampleValues, count($aFormatFields), '');
         }
-        $aFormatValues[$sSample] = array_combine($aFormatFields, $aSampleValues);
+
+        $aSampleValues = array_combine($aFormatFields, $aSampleValues);
+
+        // The FORMAT fields also sometimes depend on the ALTs.
+        foreach ($aALTs as $nKeyALT => $sALT) {
+            $aFormatValues[$sALT][$sSample] = $aSampleValues;
+            if ($nALTs > 1) {
+                // Handle special cases.
+                if (isset($aSampleValues['GT'])) {
+                    $aFormatValues[$sALT][$sSample]['GT'] = lovd_cleanGenoType($aSampleValues['GT'], $nKeyALT);
+                }
+            }
+        }
     }
 
     // VEP shortens the Allele in the annotation, so we need to do the same (VEP v93).
@@ -470,7 +513,7 @@ while ($sLine = fgets($fInput)) {
                 print("\t" . (!isset($aVOT[$sHeader])? '' : $aVOT[$sHeader]));
             }
             // Sample data.
-            foreach ($aFormatValues as $aSampleValues) {
+            foreach ($aFormatValues[$sALT] as $aSampleValues) {
                 foreach ($aFormatFields as $sHeader) {
                     print("\t" . (!isset($aSampleValues[$sHeader])? '' : $aSampleValues[$sHeader]));
                 }
