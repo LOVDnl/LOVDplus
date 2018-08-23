@@ -14,7 +14,7 @@
  *               are various tools to do this, but these either can't be shipped
  *               with LOVD+ due to license issues, or they're not standalone.
  *
- * Changelog   : 0.1    2018-08-22
+ * Changelog   : 0.1    2018-08-23
  *               Initial release.
  *
  * Copyright   : 2004-2018 Leiden University Medical Center; http://www.LUMC.nl/
@@ -37,9 +37,6 @@
  * along with LOVD+. If not, see <http://www.gnu.org/licenses/>.
  *
  *************/
-
-// FIXME: ALSO HANDLE THE GT related values (AD (create DP, DPREF, DPALT), PL)!!!
-// FIXME: Add a return value if any warnings have occurred.
 
 // Command line only.
 if (isset($_SERVER['HTTP_HOST'])) {
@@ -71,16 +68,17 @@ $_CONFIG = array(
 // See http://tldp.org/LDP/abs/html/exitcodes.html for recommendations, in particular:
 // "[I propose] restricting user-defined exit codes to the range 64 - 113 (...), to conform with the C/C++ standard."
 define('EXIT_OK', 0);
-define('EXIT_ERROR_INSUFFICIENT_ARGS', 64);
-define('EXIT_ERROR_INPUT_NOT_A_FILE', 65);
-define('EXIT_ERROR_INPUT_UNREADABLE', 66);
-define('EXIT_ERROR_INPUT_CANT_OPEN', 67);
-define('EXIT_ERROR_TAG_NOT_FOUND', 68);
-define('EXIT_ERROR_TAG_FOUND_DOUBLE', 69);
-define('EXIT_ERROR_TAG_UNPARSABLE', 70);
-define('EXIT_ERROR_HEADER_FIELDS_NOT_FOUND', 71);
-define('EXIT_ERROR_HEADER_FIELDS_INCORRECT', 72);
-define('EXIT_ERROR_DATA_FIELD_COUNT_INCORRECT', 73);
+define('EXIT_WARNINGS_OCCURRED', 64);
+define('EXIT_ERROR_INSUFFICIENT_ARGS', 65);
+define('EXIT_ERROR_INPUT_NOT_A_FILE', 66);
+define('EXIT_ERROR_INPUT_UNREADABLE', 67);
+define('EXIT_ERROR_INPUT_CANT_OPEN', 68);
+define('EXIT_ERROR_TAG_NOT_FOUND', 69);
+define('EXIT_ERROR_TAG_FOUND_DOUBLE', 70);
+define('EXIT_ERROR_TAG_UNPARSABLE', 71);
+define('EXIT_ERROR_HEADER_FIELDS_NOT_FOUND', 72);
+define('EXIT_ERROR_HEADER_FIELDS_INCORRECT', 73);
+define('EXIT_ERROR_DATA_FIELD_COUNT_INCORRECT', 74);
 
 define('VERBOSITY_NONE', 0); // No output whatsoever.
 define('VERBOSITY_LOW', 3); // Low output, only the really important messages.
@@ -176,6 +174,7 @@ $aArgs = $_SERVER['argv'];
 $nArgs = $_SERVER['argc'];
 $sScriptName = array_shift($aArgs);
 $nArgs --;
+$bWarningsOcurred = false;
 
 // We need at least one argument, the file to convert.
 // FIXME: If we'll ever support more arguments, adapt this if().
@@ -255,6 +254,7 @@ while ($sLine = fgets($fInput)) {
             // This header doesn't contain an ID... Eh?
             lovd_printIfVerbose(VERBOSITY_HIGH,
                 'Warning: Found ' . $sHeaderType . ' header without ID. Got:' . "\n" . $sLine . "\n");
+            $bWarningsOcurred = true;
             continue;
         }
         $sHeaderID = $aRegs[2][$nKeyID];
@@ -279,6 +279,7 @@ while ($sLine = fgets($fInput)) {
                 // This annotation header doesn't contain a Description... Eh?
                 lovd_printIfVerbose(VERBOSITY_HIGH,
                     'Warning: Found ' . $sHeaderID . ' annotation INFO header without Description. Got:' . "\n" . $sLine . "\n");
+                $bWarningsOcurred = true;
                 continue;
             }
 
@@ -292,6 +293,7 @@ while ($sLine = fgets($fInput)) {
             if (strlen($sDescription) < 2 || strlen($sFields) < 2) {
                 lovd_printIfVerbose(VERBOSITY_HIGH,
                     'Warning: Found ' . $sHeaderID . ' annotation INFO header without any fields in the description? Got:' . "\n" . $sLine . "\n");
+                $bWarningsOcurred = true;
                 continue;
             }
             // Report. If there is a dot, also report first sentence.
@@ -428,6 +430,7 @@ while ($sLine = fgets($fInput)) {
         // Annotation not found. Don't die.
         lovd_printIfVerbose(VERBOSITY_MEDIUM,
             'Warning: Line ' . $nLine . ' does not contain any annotation. Looking for ' . $sAnnotationTag . ' in the INFO field.' . "\n");
+        $bWarningsOcurred = true;
         $aVOTs = array(
             '', // Just empty data.
         );
@@ -449,6 +452,7 @@ while ($sLine = fgets($fInput)) {
             // Eh? Different number of sample fields found than defined in the FORMAT value?
             lovd_printIfVerbose(VERBOSITY_MEDIUM,
                 'Warning: Line ' . $nLine . ' does not contain correct number of FORMAT fields. Looking for ' . count($aFormatFields) . ' fields, found ' . count($aSampleValues) . ".\n");
+            $bWarningsOcurred = true;
             // Not sure if this ever happens, but let's try to pad the data we received.
             // If it contains more fields than the field listing, feel free to fail completely.
             $aSampleValues = array_pad($aSampleValues, count($aFormatFields), '');
@@ -498,6 +502,7 @@ while ($sLine = fgets($fInput)) {
             if ($nPosAnnotation !== false) {
                 lovd_printIfVerbose(VERBOSITY_MEDIUM,
                     'Warning: Line ' . $nLine . ' does not contain correct number of annotation fields. Looking for ' . $nAnnotationFields . ' fields, found ' . count($aVOT) . ".\n");
+                $bWarningsOcurred = true;
             }
             // Not sure if this ever happens, but let's try to pad the data we received.
             // If it contains more fields than the header, feel free to fail completely.
@@ -510,6 +515,7 @@ while ($sLine = fgets($fInput)) {
         if (!in_array($aVOT['__allele__'], $aALTsCleaned) && $nPosAnnotation !== false) {
             lovd_printIfVerbose(VERBOSITY_MEDIUM,
                 'Warning: Line ' . $nLine . ' contains annotation for Allele = "' . $aVOT['__allele__'] . '", which cannot be mapped to one of ("' . implode('", "', $aALTsCleaned) . '").' . "\n");
+            $bWarningsOcurred = true;
             continue;
         }
 
@@ -551,4 +557,6 @@ while ($sLine = fgets($fInput)) {
             '------- Line ' . str_repeat(' ', 6 - strlen($nLine)) . $nLine . ' ------- ' . date('Y-m-d H:i:s') . "\n");
     }
 }
+
+die($bWarningsOcurred? EXIT_WARNINGS_OCCURRED : EXIT_OK);
 ?>
