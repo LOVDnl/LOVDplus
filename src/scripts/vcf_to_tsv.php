@@ -5,7 +5,7 @@
  * LEIDEN OPEN VARIATION DATABASE FOR DIAGNOSTICS (LOVD+)
  *
  * Created     : 2018-08-17
- * Modified    : 2018-08-22
+ * Modified    : 2018-08-23
  * Version     : 0.1
  * For LOVD+   : 3.0-18
  *
@@ -38,7 +38,7 @@
  *
  *************/
 
-// FIXME: ALSO HANDLE THE GTs!!!
+// FIXME: ALSO HANDLE THE GTs and related values (AD, PL)!!!
 // FIXME: Add a return value if any warnings have occurred.
 
 // Command line only.
@@ -256,7 +256,7 @@ while ($sLine = fgets($fInput)) {
             // Isolate the last word from the Description. This should be the list of fields.
             $sFields = trim(strrchr(' ' . $sDescription, ' '));
             $_CONFIG['annotation_fields'][$sHeaderID] = explode($_CONFIG['annotation_ids'][$sHeaderID], $sFields);
-            $nFields = count($_CONFIG['annotation_fields'][$sHeaderID]);
+            $nAnnotationFields = count($_CONFIG['annotation_fields'][$sHeaderID]);
             // Is it enough, do we think so?
             if (strlen($sDescription) < 2 || strlen($sFields) < 2) {
                 lovd_printIfVerbose(VERBOSITY_HIGH,
@@ -265,7 +265,7 @@ while ($sLine = fgets($fInput)) {
             }
             // Report. If there is a dot, also report first sentence.
             lovd_printIfVerbose(VERBOSITY_FULL,
-                'Info: Found ' . $sHeaderID . ' annotation INFO header with ' . $nFields . ' field' . ($nFields == 1? '' : 's') .
+                'Info: Found ' . $sHeaderID . ' annotation INFO header with ' . $nAnnotationFields . ' field' . ($nAnnotationFields == 1? '' : 's') .
                 (strpos($sDescription, '.') === false? '.' : ': ' . substr($sDescription, 0, strpos($sDescription, '.')+1)) . "\n");
 
             // If we get here, we're done. Stop looking now.
@@ -388,17 +388,9 @@ while ($sLine = fgets($fInput)) {
         // Annotation not found. Don't die.
         lovd_printIfVerbose(VERBOSITY_MEDIUM,
             'Warning: Line ' . $nLine . ' does not contain any annotation. Looking for ' . $sAnnotationTag . ' in the INFO field.' . "\n");
-
-        // Just print the VOG data, and continue to the next line.
-        // Yes, we won't print enough tabs here, but it's OK. The conversion script can handle that.
-        foreach ($aALTs as $sALT) {
-            $aLine['ALT'] = $sALT;
-            foreach ($aVOGFields as $nKey => $sHeader) {
-                print((!$nKey? '' : "\t") .
-                    $aLine[$sHeader]);
-            }
-            print("\n");
-        }
+        $aVOTs = array(
+            '', // Just empty data.
+        );
 
     } else {
         // Now cut out just the annotation and discard any other info that might be there.
@@ -406,76 +398,84 @@ while ($sLine = fgets($fInput)) {
         //   But I don't think we need everything (will require more header parsing) and substr() with strpos() will probably be much faster.
         $sAnnotation = substr($aLine['INFO'], ($nPosAnnotation + 4), strpos($aLine['INFO'] . ';', ';', $nPosAnnotation) - ($nPosAnnotation + 4));
         $aVOTs = explode(',', $sAnnotation);
+    }
 
-        // Handle the FORMAT column.
-        $aFormatFields = explode(':', $aLine['FORMAT']);
-        $aFormatValues = array();
-        foreach ($aSamples as $sSample) {
-            $aSampleValues = explode(':', $aLine[$sSample]);
-            if (count($aSampleValues) != count($aFormatFields)) {
-                // Eh? Different number of sample fields found than defined in the FORMAT value?
+    // Handle the FORMAT column.
+    $aFormatFields = explode(':', $aLine['FORMAT']);
+    $aFormatValues = array();
+    foreach ($aSamples as $sSample) {
+        $aSampleValues = explode(':', $aLine[$sSample]);
+        if (count($aSampleValues) != count($aFormatFields)) {
+            // Eh? Different number of sample fields found than defined in the FORMAT value?
+            lovd_printIfVerbose(VERBOSITY_MEDIUM,
+                'Warning: Line ' . $nLine . ' does not contain correct number of FORMAT fields. Looking for ' . count($aFormatFields) . ' fields, found ' . count($aSampleValues) . ".\n");
+            // Not sure if this ever happens, but let's try to pad the data we received.
+            // If it contains more fields than the field listing, feel free to fail completely.
+            $aSampleValues = array_pad($aSampleValues, count($aFormatFields), '');
+        }
+        $aFormatValues[$sSample] = array_combine($aFormatFields, $aSampleValues);
+    }
+
+    // VEP shortens the Allele in the annotation, so we need to do the same (VEP v93).
+    // Their shortening is based on REF, too. ALTs "A,AT" only get shortened to "-,T" if REF starts with "A".
+    // In principle, we could assume that when having just one ALT allele, VEP will only provide info for this one.
+    $aALTsCleaned = array_slice(lovd_ltrimCommonChars(array_merge(array($aLine['REF']), $aALTs)), 1);
+    $aVOTsPerAllele = array(); // Sort the annotation per the ALT allele.
+
+    // Now loop the transcript mappings.
+    foreach ($aVOTs as $sVOT) {
+        $aVOT = explode($_CONFIG['annotation_ids'][$sAnnotationTag], $sVOT);
+        if (count($aVOT) != $nAnnotationFields) {
+            // Eh? Different number of annotation fields found than defined in the VCF header?
+            // Don't print the warning if we already warned about not having annotation at all.
+            if ($nPosAnnotation !== false) {
                 lovd_printIfVerbose(VERBOSITY_MEDIUM,
-                    'Warning: Line ' . $nLine . ' does not contain correct number of FORMAT fields. Looking for ' . count($aFormatFields) . ' fields, found ' . count($aSampleValues) . ".\n");
-                // Not sure if this ever happens, but let's try to pad the data we received.
-                // If it contains more fields than the field listing, feel free to fail completely.
-                $aSampleValues = array_pad($aSampleValues, count($aFormatFields), '');
+                    'Warning: Line ' . $nLine . ' does not contain correct number of annotation fields. Looking for ' . $nAnnotationFields . ' fields, found ' . count($aVOT) . ".\n");
             }
-            $aFormatValues[$sSample] = array_combine($aFormatFields, $aSampleValues);
+            // Not sure if this ever happens, but let's try to pad the data we received.
+            // If it contains more fields than the header, feel free to fail completely.
+            $aVOT = array_pad($aVOT, $nAnnotationFields, '');
+        }
+        $aVOT = array_combine($_CONFIG['annotation_fields'][$sAnnotationTag], $aVOT);
+        $aVOT['__allele__'] = (isset($aVOT['Allele'])? trim($aVOT['Allele'], '-') : '');
+
+        // Check with allele this line belongs to.
+        if (!in_array($aVOT['__allele__'], $aALTsCleaned) && $nPosAnnotation !== false) {
+            lovd_printIfVerbose(VERBOSITY_MEDIUM,
+                'Warning: Line ' . $nLine . ' contains annotation for Allele = "' . $aVOT['__allele__'] . '", which cannot be mapped to one of ("' . implode('", "', $aALTsCleaned) . '").' . "\n");
+            continue;
         }
 
-        // VEP shortens the Allele in the annotation, so we need to do the same (VEP v93).
-        // Their shortening is based on REF, too. ALTs "A,AT" only get shortened to "-,T" if REF starts with "A".
-        // In principle, we could assume that when having just one ALT allele, VEP will only provide info for this one.
-        $aALTsCleaned = array_slice(lovd_ltrimCommonChars(array_merge(array($aLine['REF']), $aALTs)), 1);
-        $aVOTsPerAllele = array(); // Sort the annotation per the ALT allele.
+        $aVOTsPerAllele[$aVOT['__allele__']][] = $aVOT;
+    }
 
-        // Now loop the transcript mappings.
-        foreach ($aVOTs as $sVOT) {
-            $aVOT = explode($_CONFIG['annotation_ids'][$sAnnotationTag], $sVOT);
-            if (count($aVOT) != count($_CONFIG['annotation_fields'][$sAnnotationTag])) {
-                // Eh? Different number of annotation fields found than defined in the VCF header?
-                lovd_printIfVerbose(VERBOSITY_MEDIUM,
-                    'Warning: Line ' . $nLine . ' does not contain correct number of annotation fields. Looking for ' . count($_CONFIG['annotation_fields'][$sAnnotationTag]) . ' fields, found ' . count($aVOT) . ".\n");
-                // Not sure if this ever happens, but let's try to pad the data we received.
-                // If it contains more fields than the header, feel free to fail completely.
-                $aVOT = array_pad($aVOT, count($_CONFIG['annotation_fields'][$sAnnotationTag]), '');
-            }
-            $aVOT = array_combine($_CONFIG['annotation_fields'][$sAnnotationTag], $aVOT);
-            $aVOT['__allele__'] = (isset($aVOT['Allele'])? trim($aVOT['Allele'], '-') : '');
+    // Now print the data.
+    foreach ($aALTs as $nKeyALT => $sALT) {
+        $aLine['ALT'] = $sALT;
 
-            // Check with allele this line belongs to.
-            if (!in_array($aVOT['__allele__'], $aALTsCleaned)) {
-                lovd_printIfVerbose(VERBOSITY_MEDIUM,
-                    'Warning: Line ' . $nLine . ' contains annotation for Allele = "' . $aVOT['__allele__'] . '", which cannot be mapped to one of ("' . implode('", "', $aALTsCleaned) . '").' . "\n");
-                continue;
-            }
-
-            $aVOTsPerAllele[$aVOT['__allele__']][] = $aVOT;
+        // It is possible that there is no VOT data for this ALT. Still, we want to print some data.
+        if (!isset($aVOTsPerAllele[$aALTsCleaned[$nKeyALT]])) {
+            $aVOTsPerAllele[$aALTsCleaned[$nKeyALT]] = array(array());
         }
 
-        // Now print the data.
-        foreach ($aALTs as $nKeyALT => $sALT) {
-            $aLine['ALT'] = $sALT;
-
-            foreach ($aVOTsPerAllele[$aALTsCleaned[$nKeyALT]] as $aVOT) {
-                // Print the data line.
-                // VCF data.
-                foreach ($aVOGFields as $nKey => $sHeader) {
-                    print((!$nKey? '' : "\t") .
-                        $aLine[$sHeader]);
-                }
-                // Annotation data.
-                foreach ($_CONFIG['annotation_fields'][$sAnnotationTag] as $sHeader) {
-                    print("\t" . (!isset($aVOT[$sHeader])? '' : $aVOT[$sHeader]));
-                }
-                // Sample data.
-                foreach ($aFormatValues as $aSampleValues) {
-                    foreach ($aFormatFields as $sHeader) {
-                        print("\t" . (!isset($aSampleValues[$sHeader])? '' : $aSampleValues[$sHeader]));
-                    }
-                }
-                print("\n");
+        foreach ($aVOTsPerAllele[$aALTsCleaned[$nKeyALT]] as $aVOT) {
+            // Print the data line.
+            // VCF data.
+            foreach ($aVOGFields as $nKey => $sHeader) {
+                print((!$nKey? '' : "\t") .
+                    $aLine[$sHeader]);
             }
+            // Annotation data.
+            foreach ($_CONFIG['annotation_fields'][$sAnnotationTag] as $sHeader) {
+                print("\t" . (!isset($aVOT[$sHeader])? '' : $aVOT[$sHeader]));
+            }
+            // Sample data.
+            foreach ($aFormatValues as $aSampleValues) {
+                foreach ($aFormatFields as $sHeader) {
+                    print("\t" . (!isset($aSampleValues[$sHeader])? '' : $aSampleValues[$sHeader]));
+                }
+            }
+            print("\n");
         }
     }
 
