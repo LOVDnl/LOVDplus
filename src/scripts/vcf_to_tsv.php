@@ -514,7 +514,7 @@ while ($sLine = fgets($fInput)) {
             }
             // Sample data.
             foreach ($aFormatValues[$sALT] as $aSampleValues) {
-                foreach ($aFormatFields as $sHeader) {
+                foreach ($_CONFIG['format_fields'] as $sHeader) {
                     print("\t" . (!isset($aSampleValues[$sHeader])? '' : $aSampleValues[$sHeader]));
                 }
             }
