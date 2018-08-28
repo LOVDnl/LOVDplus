@@ -44,6 +44,7 @@ if (isset($_SERVER['HTTP_HOST'])) {
 }
 
 // NOTE: The INFO field will be *dropped* except for the annotated data.
+
 // Default settings.
 $_CONFIG = array(
     'version' => '0.1',
@@ -206,7 +207,6 @@ if (!is_file($sFile)) {
 }
 
 // Check headers. If we don't find annotation, we'll reject the file. Make sure we don't create any output yet.
-$aHeaders = array(); // To temporarily store the headers to not have to parse them twice.
 $nAnnotationFields = 0;
 $nLine = 0;
 $fInput = fopen($sFile, 'r');
@@ -229,9 +229,6 @@ while ($sLine = fgets($fInput)) {
         // Read too far, no good.
         break;
     }
-
-    // Add to headers.
-    $aHeaders[] = $sLine;
 
     // We're not going to be super strict about things. If we find the annotation header, we're already cool.
     if (preg_match('/^##(INFO|FORMAT)=<.*>$/', $sLine, $aRegs)) {
@@ -329,9 +326,6 @@ if (in_array('AD', $_CONFIG['format_fields'])) {
 
 
 // Start outputting the file.
-// Print the headers that we already saw (might not be all).
-print(implode("\n", $aHeaders) . "\n");
-unset($aHeaders);
 $bData = false; // Are we parsing data yet?
 $aVCFFields = array(); // VCF fields in this VCF file (including samples, hopefully).
 $nVCFFields = 0; // Number of fields in this VCF file.
@@ -348,7 +342,6 @@ while ($sLine = fgets($fInput)) {
     }
     if (substr($sLine, 0, 2) == '##') {
         // Just more headers.
-        print($sLine . "\n");
         continue;
     }
 
