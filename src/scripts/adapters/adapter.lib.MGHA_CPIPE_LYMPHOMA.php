@@ -130,6 +130,10 @@ $_INSTANCE_CONFIG['attachments'] = array(
 );
 
 $_INSTANCE_CONFIG['conversion'] = array(
+    'suffixes' => array(
+        'meta' => 'meta.lovd',
+        'vep' => 'directvep.data.lovd',
+    ),
     'annotation_error_max_allowed' => 20,
     'annotation_error_exits' => false,
     'annotation_error_drops_line' => false,
@@ -158,7 +162,7 @@ $_INSTANCE_CONFIG['cross_screenings'] = array(
         if (!empty($zScreening['Screening/Tag'])) {
             $sText .= ' [' . $zScreening['Screening/Tag'] . ']';
         }
-        
+
         return $sText;
     }
 );

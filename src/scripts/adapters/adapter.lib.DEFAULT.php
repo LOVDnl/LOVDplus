@@ -153,6 +153,10 @@ $_INSTANCE_CONFIG['viewlists'] = array(
 );
 
 $_INSTANCE_CONFIG['conversion'] = array(
+    'suffixes' => array(
+        'meta' => 'meta.lovd',
+        'vep' => 'vep.data.lovd',
+    ),
     'annotation_error_drops_line' => false, // Should we discard the variant's mapping on this transcript on annotation errors?
     'annotation_error_exits' => false, // Whether to halt on the first annotation error.
     'annotation_error_max_allowed' => 20, // Maximum number of errors with VOTs before the script dies anyway.

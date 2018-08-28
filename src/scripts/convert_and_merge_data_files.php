@@ -22,7 +22,7 @@ $_GET['format'] = 'text/plain';
 // To prevent notices when running inc-init.php.
 $_SERVER = array_merge($_SERVER, array(
     'HTTP_HOST' => 'localhost',
-    'REQUEST_URI' => 'scripts/convert_and_merge_data_files.php',
+    'REQUEST_URI' => __FILE__,
     'QUERY_STRING' => '',
     'REQUEST_METHOD' => 'GET',
 ));
@@ -116,8 +116,8 @@ function lovd_printIfVerbose ($nVerbosity, $sMessage)
 
 // Define the array of suffixes for the files names expected.
 $aSuffixes = array(
-    'meta' => 'meta.lovd',
-    'vep' => 'directvep.data.lovd',
+    'meta' => (empty($_INSTANCE_CONFIG['conversion']['suffixes']['meta'])? 'meta.lovd' : $_INSTANCE_CONFIG['conversion']['suffixes']['meta']),
+    'vep' => (empty($_INSTANCE_CONFIG['conversion']['suffixes']['meta'])? 'vep.data.lovd' : $_INSTANCE_CONFIG['conversion']['suffixes']['vep']),
     'total.tmp' => 'total.data.tmp',
     'total' => 'total.data.lovd',
     'error' => 'error',
