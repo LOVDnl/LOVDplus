@@ -4,12 +4,12 @@
  * LEIDEN OPEN VARIATION DATABASE (LOVD)
  *
  * Created     : 2009-10-19
- * Modified    : 2016-10-14
+ * Modified    : 2018-08-28
  * For LOVD    : 3.0-18
  *
- * Copyright   : 2004-2016 Leiden University Medical Center; http://www.LUMC.nl/
- * Programmers : Ing. Ivo F.A.C. Fokkema <I.F.A.C.Fokkema@LUMC.nl>
- *               Ing. Ivar C. Lugtenburg <I.C.Lugtenburg@LUMC.nl>
+ * Copyright   : 2004-2018 Leiden University Medical Center; http://www.LUMC.nl/
+ * Programmers : Ivo F.A.C. Fokkema <I.F.A.C.Fokkema@LUMC.nl>
+ *               Ivar C. Lugtenburg <I.C.Lugtenburg@LUMC.nl>
  *               M. Kroon <m.kroon@lumc.nl>
  *
  *
@@ -512,6 +512,54 @@ function lovd_getExternalSource ($sSource, $nID = false, $bHTML = false)
     }
 
     return false;
+}
+
+
+
+
+
+function lovd_getFilesFromDir ($sPath = '', $sPrefix = '', $aSuffixes = array())
+{
+    // Reads out the given path (defaults to the root path), collects all files and sorts them by the prefix.
+    // Returns an array with prefixes and their suffixes in a sub array.
+    // $aFiles =
+    //     array(
+    //         prefix =>
+    //             array(
+    //                 suffix,
+    //                 suffix,
+    //             ),
+    //     );
+
+    $sPath = ($sPath?: ROOT_PATH);
+    $sPrefix = ($sPrefix?: '.+');
+    if (!is_array($aSuffixes) || !$aSuffixes) {
+        $aSuffixes = array('.+');
+    }
+
+    $aFiles = array();
+    // Loop through the files in the dir and try and find a meta and data file, that match but have no total data file.
+    $h = opendir($sPath);
+    if (!$h) {
+        return false;
+    }
+    while (($sFile = readdir($h)) !== false) {
+        if ($sFile{0} == '.') {
+            // Current dir, parent dir, and hidden files.
+            continue;
+        }
+        if (preg_match('/^(' . $sPrefix . ')\.(' . implode('|', array_values($aSuffixes)) . ')$/', $sFile, $aRegs)) {
+            //             1                                               2
+            // Files matching the pattern.
+            list(, $sFilePrefix, $sFileType) = $aRegs;
+            if (!isset($aFiles[$sFilePrefix])) {
+                $aFiles[$sFilePrefix] = array();
+            }
+            $aFiles[$sFilePrefix][] = $sFileType;
+        }
+    }
+
+    return $aFiles;
 }
 
 

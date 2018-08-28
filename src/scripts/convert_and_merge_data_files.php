@@ -39,11 +39,6 @@ set_time_limit(0);
 ignore_user_abort(true);
 
 // Define and verify settings.
-define('VERBOSITY_NONE', 0); // No output whatsoever.
-define('VERBOSITY_LOW', 3); // Low output, only the really important messages.
-define('VERBOSITY_MEDIUM', 5); // Medium output. No output if there is nothing to do. Useful for when using cron.
-define('VERBOSITY_HIGH', 7); // High output. The default.
-define('VERBOSITY_FULL', 9); // Full output, including debug statements.
 $bCron = (empty($_SERVER['REMOTE_ADDR']) && empty($_SERVER['TERM']));
 define('VERBOSITY', $_INSTANCE_CONFIG['conversion']['verbosity_' . ($bCron? 'cron' : 'other')]);
 
@@ -91,21 +86,6 @@ function mutalyzer_runMutalyzer ($variant)
     curl_setopt($ch, CURLOPT_URL, $sUrl);
 
     return curl_exec($ch);
-}
-
-function lovd_printIfVerbose ($nVerbosity, $sMessage)
-{
-    // This function only prints the given message when the current verbosity is set to a level high enough.
-
-    // If no verbosity is currently defined, just print everything.
-    if (!defined('VERBOSITY')) {
-        define('VERBOSITY', 9);
-    }
-
-    if (VERBOSITY >= $nVerbosity) {
-        print($sMessage);
-    }
-    return true;
 }
 
 
@@ -408,26 +388,14 @@ if ($nAdapterResult !== 0) {
 
 
 // Loop through the files in the dir and try and find a meta and data file, that match but have no total data file.
-$h = opendir($_INI['paths']['data_files']);
-if (!$h) {
+$aFiles = lovd_getFilesFromDir(
+    $_INI['paths']['data_files'],
+    $_ADAPTER->getInputFilePrefixPattern(),
+    array_map('preg_quote', array_values($aSuffixes))
+);
+if ($aFiles === false) {
     lovd_printIfVerbose(VERBOSITY_LOW, 'Can\'t open directory.' . "\n");
     exit;
-}
-while (($sFile = readdir($h)) !== false) {
-    if ($sFile{0} == '.') {
-        // Current dir, parent dir, and hidden files.
-        continue;
-    }
-
-    if (preg_match('/^('. $_ADAPTER->getInputFilePrefixPattern() .')\.(' . implode('|', array_map('preg_quote', array_values($aSuffixes))) . ')$/', $sFile, $aRegs)) {
-        //             1                                               2
-        // Files we need to merge.
-        list(, $sID, $sFileType) = $aRegs;
-        if (!isset($aFiles[$sID])) {
-            $aFiles[$sID] = array();
-        }
-        $aFiles[$sID][] = $sFileType;
-    }
 }
 
 // Die here, if we have nothing to work with.

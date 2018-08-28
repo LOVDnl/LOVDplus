@@ -238,6 +238,32 @@ $_INSTANCE_CONFIG['observation_counts'] = array(
 
 
 
+// Define settings, if not defined before.
+@define('VERBOSITY_NONE', 0); // No output whatsoever.
+@define('VERBOSITY_LOW', 3); // Low output, only the really important messages.
+@define('VERBOSITY_MEDIUM', 5); // Medium output. No output if there is nothing to do. Useful for when using cron.
+@define('VERBOSITY_HIGH', 7); // High output. The default.
+@define('VERBOSITY_FULL', 9); // Full output, including debug statements.
+
+function lovd_printIfVerbose ($nVerbosity, $sMessage)
+{
+    // This function only prints the given message when the current verbosity is set to a level high enough.
+
+    // If no verbosity is currently defined, just print everything.
+    if (!defined('VERBOSITY')) {
+        define('VERBOSITY', 9);
+    }
+
+    if (VERBOSITY >= $nVerbosity) {
+        print($sMessage);
+    }
+    return true;
+}
+
+
+
+
+
 // FIXME: This class should not be mixed with the above settings, I reckon? Split it?
 // FIXME: Some methods are never overloaded and aren't meant to be, better put those elsewhere to prevent confusion.
 class LOVD_DefaultDataConverter {
