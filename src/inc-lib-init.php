@@ -538,7 +538,9 @@ function lovd_getGeneList ()
 function lovd_getInstallURL ($bFull = true)
 {
     // Returns URL that can be used in URLs or redirects.
-    return (!$bFull? '' : PROTOCOL . $_SERVER['HTTP_HOST']) . lovd_cleanDirName(dirname($_SERVER['SCRIPT_NAME']) . '/' . ROOT_PATH);
+    // ROOT_PATH can be relative or absolute.
+    return (!$bFull? '' : PROTOCOL . $_SERVER['HTTP_HOST']) .
+        lovd_cleanDirName(substr(ROOT_PATH, 0, 1) == '/'? ROOT_PATH : dirname($_SERVER['SCRIPT_NAME']) . '/' . ROOT_PATH);
 }
 
 
