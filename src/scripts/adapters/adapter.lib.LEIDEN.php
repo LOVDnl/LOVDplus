@@ -1,6 +1,7 @@
 <?php
 // Leiden specific adapter settings.
 $_INSTANCE_CONFIG['conversion']['suffixes']['vep'] = 'directvep.data.lovd';
+$_INSTANCE_CONFIG['conversion']['create_meta_file_if_missing'] = false;
 $_INSTANCE_CONFIG['conversion']['verbosity_other'] = 9;
 
 $_INSTANCE_CONFIG['viewlists']['Screenings_for_I_VE']['cols_to_show'] = array(

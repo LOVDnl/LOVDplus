@@ -95,13 +95,7 @@ function mutalyzer_runMutalyzer ($variant)
 // This script will be called from localhost by a cron job.
 
 // Define the array of suffixes for the files names expected.
-$aSuffixes = array(
-    'meta' => (empty($_INSTANCE_CONFIG['conversion']['suffixes']['meta'])? 'meta.lovd' : $_INSTANCE_CONFIG['conversion']['suffixes']['meta']),
-    'vep' => (empty($_INSTANCE_CONFIG['conversion']['suffixes']['meta'])? 'vep.data.lovd' : $_INSTANCE_CONFIG['conversion']['suffixes']['vep']),
-    'total.tmp' => 'total.data.tmp',
-    'total' => 'total.data.lovd',
-    'error' => 'error',
-);
+$aSuffixes = $_INSTANCE_CONFIG['conversion']['suffixes'];
 
 // Define list of genes to ignore, because they can't be found by the HGNC.
 // LOC* genes are always ignored, because they never work (HGNC doesn't know them).
