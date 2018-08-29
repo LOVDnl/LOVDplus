@@ -463,15 +463,15 @@ define('LOG_EVENT', 'ConvertVEPToLOVD');
 require ROOT_PATH . 'inc-lib-actions.php';
 flush();
 @ob_end_flush(); // Can generate errors on the screen if no buffer found.
-foreach ($aFiles as $sID) {
+foreach ($aFiles as $sFileID) {
     // Try and open the file, check the first line if it conforms to the standard, and start converting.
-    lovd_printIfVerbose(VERBOSITY_LOW, 'Working on: ' . $sID . "...\n");
+    lovd_printIfVerbose(VERBOSITY_LOW, 'Working on: ' . $sFileID . "...\n");
     flush();
-    $sFileToConvert = $_INI['paths']['data_files'] . '/' . $sID . '.' . $aSuffixes['vep'];
-    $sFileMeta = $_INI['paths']['data_files'] . '/' . $sID . '.' . $aSuffixes['meta'];
-    $sFileTmp = $_INI['paths']['data_files'] . '/' . $sID . '.' . $aSuffixes['total.tmp'];
-    $sFileDone = $_INI['paths']['data_files'] . '/' . $sID . '.' . $aSuffixes['total'];
-    $sFileError = $_INI['paths']['data_files'] . '/' . $sID . '.' . $aSuffixes['error'];
+    $sFileToConvert = $_INI['paths']['data_files'] . '/' . $sFileID . '.' . $aSuffixes['vep'];
+    $sFileMeta = $_INI['paths']['data_files'] . '/' . $sFileID . '.' . $aSuffixes['meta'];
+    $sFileTmp = $_INI['paths']['data_files'] . '/' . $sFileID . '.' . $aSuffixes['total.tmp'];
+    $sFileDone = $_INI['paths']['data_files'] . '/' . $sFileID . '.' . $aSuffixes['total'];
+    $sFileError = $_INI['paths']['data_files'] . '/' . $sFileID . '.' . $aSuffixes['error'];
 
     $fInput = fopen($sFileToConvert, 'r');
     if ($fInput === false) {
@@ -523,7 +523,7 @@ foreach ($aFiles as $sID) {
 
     $sHeaders = fgets($fInput);
     $aHeaders = explode("\t", rtrim($sHeaders, "\r\n"));
-    // First line should be headers, we already read it out somewhere above here.
+    // First line should be headers.
     // $aHeaders = array_map('trim', $aHeaders, array_fill(0, count($aHeaders), '"')); // In case we ever need to trim off quotes.
     $aHeaders = $_ADAPTER->cleanHeaders($aHeaders);
     $nHeaders = count($aHeaders);
@@ -550,13 +550,6 @@ foreach ($aFiles as $sID) {
 
 
 
-
-    // Now open and parse the file for real, appending to the temporary file.
-    // It's usually a big file, and we don't want to use too much memory... so using fgets().
-    // First line should be headers, we already read it out somewhere above here.
-    // $aHeaders = array_map('trim', $aHeaders, array_fill(0, count($aHeaders), '"')); // In case we ever need to trim off quotes.
-    $aHeaders = $_ADAPTER->cleanHeaders($aHeaders);
-    $nHeaders = count($aHeaders);
 
     // Now start parsing the file, reading it out line by line, building up the variant data in $aData.
     $dStart = time();
@@ -590,7 +583,7 @@ foreach ($aFiles as $sID) {
 
     // If we're receiving the HGNC ID, we'll collect all genes for their HGNC IDs as well. This will be used to help
     //  LOVD+ to handle changed gene symbols.
-    if (in_array('id_hgnc', $_ADAPTER->prepareMappings())) {
+    if (in_array('id_hgnc', $aColumnMappings)) {
         $aGenesHGNC = $_DB->query('SELECT id_hgnc, id FROM ' . TABLE_GENES . ' WHERE id_hgnc IS NOT NULL')->fetchAllCombine();
     }
 
@@ -603,6 +596,7 @@ foreach ($aFiles as $sID) {
     // We don't need it, perhaps just store it in the object from the start then?
     $_ADAPTER->setScriptVars(compact('aGenes', 'aTranscripts'));
 
+    // It's usually a big file, and we don't want to use too much memory... so using fgets().
     while ($sLine = fgets($fInput)) {
         $nLine ++;
         $bDropTranscriptData = false;
@@ -674,11 +668,11 @@ foreach ($aFiles as $sID) {
         // VOG/DNA and the position fields.
         lovd_getVariantDescription($aVariant, $aVariant['ref'], $aVariant['alt']);
         // dbSNP.
-        if ($aVariant['VariantOnGenome/dbSNP'] && strpos($aVariant['VariantOnGenome/dbSNP'], ';') !== false) {
+        if (!empty($aVariant['VariantOnGenome/dbSNP']) && strpos($aVariant['VariantOnGenome/dbSNP'], ';') !== false) {
             // Sometimes we get two dbSNP IDs. Store the first one, only.
             $aDbSNP = explode(';', $aVariant['VariantOnGenome/dbSNP']);
             $aVariant['VariantOnGenome/dbSNP'] = $aDbSNP[0];
-        } elseif (!$aVariant['VariantOnGenome/dbSNP'] && !empty($aVariant['existing_variation']) && $aVariant['existing_variation'] != 'unknown') {
+        } elseif (empty($aVariant['VariantOnGenome/dbSNP']) && !empty($aVariant['existing_variation']) && $aVariant['existing_variation'] != 'unknown') {
             $aIDs = explode('&', $aVariant['existing_variation']);
             foreach ($aIDs as $sID) {
                 if (substr($sID, 0, 2) == 'rs') {
@@ -694,12 +688,31 @@ foreach ($aFiles as $sID) {
             }
         }
 
-        // Some percentages we get need to be turned into decimals before it can be stored.
-        // 2015-10-28; Because of the double column mappings, we ended up with values divided twice.
-        // Flipping the array makes sure we get rid of double mappings.
-        foreach (array_flip($aColumnMappings) as $sLOVDColumn => $sVEPColumn) {
-            if ($sVEPColumn == 'AFESP5400' || $sVEPColumn == 'ALTPERC' || strpos($sVEPColumn, 'ALTPERC_') === 0) {
-                $aVariant[$sLOVDColumn] /= 100;
+        if (lovd_verifyInstance('leiden')) {
+            // Some percentages we get need to be turned into decimals before it can be stored.
+            // 2015-10-28; Because of the double column mappings, we ended up with values divided twice.
+            // Flipping the array makes sure we get rid of double mappings.
+            foreach (array_flip($aColumnMappings) as $sLOVDColumn => $sVEPColumn) {
+                if ($sVEPColumn == 'AFESP5400' || $sVEPColumn == 'ALTPERC' || strpos($sVEPColumn, 'ALTPERC_') === 0) {
+                    $aVariant[$sLOVDColumn] /= 100;
+                }
+            }
+        } else {
+            // Calculate ALTPERC cols, if we can.
+            foreach (array('', '/Father', '/Mother') as $sColPart) {
+                if (isset($aVariant['VariantOnGenome/Sequencing' . $sColPart . '/Depth/Alt/Fraction'])
+                    && $aVariant['VariantOnGenome/Sequencing' . $sColPart . '/Depth/Alt/Fraction'] === ''
+                    && isset($aVariant['VariantOnGenome/Sequencing' . $sColPart . '/Depth/Ref'])
+                    && isset($aVariant['VariantOnGenome/Sequencing' . $sColPart . '/Depth/Alt'])) {
+                    // Calculate the ALT fraction, that can not fail even if there are no reads.
+                    $aVariant['VariantOnGenome/Sequencing' . $sColPart . '/Depth/Alt/Fraction'] =
+                        round(
+                            $aVariant['VariantOnGenome/Sequencing' . $sColPart . '/Depth/Alt']
+                            / ($aVariant['VariantOnGenome/Sequencing' . $sColPart . '/Depth/Ref']
+                                + $aVariant['VariantOnGenome/Sequencing' . $sColPart . '/Depth/Alt']
+                                + 0.0000000001)
+                            , 3);
+                }
             }
         }
 
@@ -1127,7 +1140,7 @@ foreach ($aFiles as $sID) {
                 }
             }
 
-            // For the position fields, there is VariantOnTranscript/Position (coming from CDS_position), but it's hardly usable. Calculate ourselves.
+            // For the position fields, VEP can generate data (CDS_position), but it's hardly usable. Calculate ourselves.
             list($aVariant['position_c_start'], $aVariant['position_c_start_intron'], $aVariant['position_c_end'], $aVariant['position_c_end_intron']) = array_values(lovd_getVariantPosition($aVariant['VariantOnTranscript/DNA'], $aTranscripts[$aVariant['transcriptid']]));
 
             // VariantOnTranscript/Position is an integer column; so just copy the c_start.
