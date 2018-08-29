@@ -325,6 +325,37 @@ class LOVD_DefaultDataConverter {
         // Return the headers, cleaned up if needed.
         // You can add code here that will clean the headers, directly after reading.
 
+        // Analyze headers, find samples, identify parents.
+        $aSamples = array();
+        foreach ($aHeaders as $sHeader) {
+            // Find sample.GT headers.
+            if (substr($sHeader, -3) == '.GT') {
+                $aSamples[substr($sHeader, 0, -3)] = '';
+            }
+        }
+        $nSamples = count($aSamples);
+        if ($nSamples > 1) {
+            // More than one individual. Currently, LOVD+ supports single individual and trio data.
+            if ($nSamples != 3) {
+                // Unsupported number of samples.
+                die('Fatal: Unsupported number of samples. LOVD+ currently supports single individual and trio (3 sample) data. Found ' . $nSamples . ' samples.' . "\n");
+            }
+
+            // FIXME: Until we have some way of configuring this, we'll assume the file provided the samples in the order Child, Father, Mother (simple alphabetical order).
+            list(, $sFather, $sMother) = array_keys($aSamples);
+            $aSamples[$sFather] = 'Father_';
+            $aSamples[$sMother] = 'Mother_';
+        }
+
+        // Rename the headers.
+        foreach ($aHeaders as $nKey => $sHeader) {
+            if (preg_match('/^(' . implode('|', array_map('preg_quote', array_keys($aSamples))) . ')\./', $sHeader, $aRegs)) {
+                // Sample header.
+                $sSample = $aRegs[1];
+                $aHeaders[$nKey] = str_replace($sSample . '.', $aSamples[$sSample], $sHeader);
+            }
+        }
+
         return $aHeaders;
     }
 
@@ -416,7 +447,7 @@ class LOVD_DefaultDataConverter {
     {
         // Returns the regex pattern of the prefix of variant input file names.
         // The prefix is often the sample ID or individual ID, and can be formatted to your liking.
-        // Data files must be named "prefix.suffix", using the suffixes as defined in the conversion script.
+        // Data files must be named "prefix.suffix", using the suffixes as defined in the conversion's settings array.
 
         // If using sub patterns, make sure they are not counted, like so:
         //  (?:subpattern)
@@ -433,14 +464,15 @@ class LOVD_DefaultDataConverter {
         // The order of these columns does NOT matter.
 
         return array(
-            'Location',
-            'GIVEN_REF',
-            'Allele',
+            '#CHROM',
+            'POS',
+            'REF',
+            'ALT',
             'QUAL',
-            'GT',
             'Consequence',
             'SYMBOL',
             'Feature',
+            'GT',
         );
     }
 
