@@ -4,7 +4,7 @@
  * LEIDEN OPEN VARIATION DATABASE (LOVD)
  *
  * Created     : 2014-11-28
- * Modified    : 2018-08-14
+ * Modified    : 2018-08-29
  * For LOVD+   : 3.0-18
  *
  * Copyright   : 2004-2018 Leiden University Medical Center; http://www.LUMC.nl/
@@ -374,7 +374,9 @@ if (!file_exists($sAdaptersDir . 'adapter.' . $sInstanceName . '.php')) {
 lovd_printIfVerbose(VERBOSITY_HIGH, '> Running ' . $sInstanceName . ' adapter...' . "\n");
 $sCmd = 'php ' . $_ADAPTER->sAdapterPath . '/adapter.' . $sInstanceName . '.php';
 passthru($sCmd, $nAdapterResult);
-if ($nAdapterResult !== 0) {
+if ($nAdapterResult == EXIT_WARNINGS_OCCURRED) {
+    lovd_printIfVerbose(VERBOSITY_LOW, "Adapter completed with warnings.\n");
+} elseif ($nAdapterResult !== EXIT_OK) {
     lovd_printIfVerbose(VERBOSITY_LOW, "Adapter Failed\n");
     exit;
 }

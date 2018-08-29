@@ -249,6 +249,12 @@ $_INSTANCE_CONFIG['observation_counts'] = array(
 @define('VERBOSITY_HIGH', 7); // High output. The default.
 @define('VERBOSITY_FULL', 9); // Full output, including debug statements.
 
+// Exit codes.
+// See http://tldp.org/LDP/abs/html/exitcodes.html for recommendations, in particular:
+// "[I propose] restricting user-defined exit codes to the range 64 - 113 (...), to conform with the C/C++ standard."
+define('EXIT_OK', 0);
+define('EXIT_WARNINGS_OCCURRED', 64);
+
 function lovd_printIfVerbose ($nVerbosity, $sMessage)
 {
     // This function only prints the given message when the current verbosity is set to a level high enough.
