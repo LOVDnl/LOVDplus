@@ -5,7 +5,7 @@
  * LEIDEN OPEN VARIATION DATABASE FOR DIAGNOSTICS (LOVD+)
  *
  * Created     : 2018-08-17
- * Modified    : 2018-08-23
+ * Modified    : 2018-08-30
  * Version     : 0.1
  * For LOVD+   : 3.0-18
  *
@@ -62,6 +62,15 @@ $_CONFIG = array(
         'QUAL',
         'FILTER',
         'INFO',
+    ),
+    'filtering' => array( // These settings will remove annotation under certain conditions.
+        // FIXME: Should we make this configurable? Or a more general filter, to prevent a certain field to be empty?
+        'no_gene' => true, // Remove annotation when gene is missing.
+    ),
+    'filtering_options' => array(
+        'no_gene' => array(
+            'field' => 'SYMBOL',
+        ),
     ),
 );
 
@@ -189,6 +198,9 @@ if (!$nArgs || $nArgs > 1) {
 // First argument should be the file to convert.
 $sFile = array_shift($aArgs);
 $nArgs --;
+
+// Verify settings.
+$bFiltersEnabled = in_array(true, $_CONFIG['filtering']);
 
 
 
@@ -513,6 +525,22 @@ while ($sLine = fgets($fInput)) {
         }
 
         $aVOTsPerAllele[$aVOT['__allele__']][] = $aVOT;
+    }
+
+    // Filter the data, if we have something to filter.
+    if ($bFiltersEnabled) {
+        // Loop data again, for filtering annotation.
+        // We'll only drop annotation when other lines are still present.
+        foreach ($aVOTsPerAllele as $sAllele => $aVOTs) {
+            if ($_CONFIG['filtering']['no_gene']) {
+                foreach ($aVOTs as $nKey => $aVOT) {
+                    if (empty($aVOT[$_CONFIG['filtering_options']['no_gene']['field']])) {
+                        // Drop the VOT.
+                        unset($aVOTsPerAllele[$sAllele][$nKey]);
+                    }
+                }
+            }
+        }
     }
 
     // Now print the data.
