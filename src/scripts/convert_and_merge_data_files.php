@@ -4,7 +4,7 @@
  * LEIDEN OPEN VARIATION DATABASE (LOVD)
  *
  * Created     : 2014-11-28
- * Modified    : 2018-08-29
+ * Modified    : 2018-08-30
  * For LOVD+   : 3.0-18
  *
  * Copyright   : 2004-2018 Leiden University Medical Center; http://www.LUMC.nl/
@@ -738,7 +738,7 @@ foreach ($aFiles as $sFileID) {
         }
         // Verify gene exists, and create it if needed.
         // LOC* genes always fail here, so those we don't try unless we don't care about the HGNC.
-        if (!isset($aGenes[$aVariant['symbol']]) && !in_array($aVariant['symbol'], $aGenesToIgnore)
+        if (!empty($aVariant['symbol']) && !isset($aGenes[$aVariant['symbol']]) && !in_array($aVariant['symbol'], $aGenesToIgnore)
             && (!preg_match('/^LOC[0-9]+$/', $aVariant['symbol']) || empty($_INSTANCE_CONFIG['conversion']['use_hgnc']) || empty($_INSTANCE_CONFIG['conversion']['enforce_hgnc_gene']))) {
             // First try to get this gene from the database, perhaps conversions run in parallel have created it now.
             // FIXME: This is duplicated code. Make it into a function, perhaps?
@@ -836,7 +836,7 @@ foreach ($aFiles as $sFileID) {
         // Store transcript ID without version, we'll use it plenty of times.
         // FIXME: Using 'transcriptid' for the NCBI ID is confusing. Better map it to 'id_ncbi'? (check everywhere)
         $aLine['transcript_noversion'] = substr($aVariant['transcriptid'], 0, strpos($aVariant['transcriptid'] . '.', '.')+1);
-        if (!isset($aGenes[$aVariant['symbol']]) || !$aGenes[$aVariant['symbol']]) {
+        if (empty($aVariant['symbol']) || !isset($aGenes[$aVariant['symbol']]) || !$aGenes[$aVariant['symbol']]) {
             // We really couldn't do anything with this gene (now, or last time).
             $aGenes[$aVariant['symbol']] = false;
 
