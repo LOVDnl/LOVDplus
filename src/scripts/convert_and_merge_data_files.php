@@ -1070,7 +1070,7 @@ foreach ($aFiles as $sFileID) {
                             //  developments, Mutalyzer's position converter database diverged from the maintained database.
 
                             // FIXME: This is a lot of repeated code again. Better clean it up.
-                            lovd_printIfVerbose(VERBOSITY_MEDIUM, 'Attempting to fall back to Mutalyzer\'s name checker instead!' . "\n");
+                            lovd_printIfVerbose(VERBOSITY_MEDIUM, 'Mutalyzer\'s position converter doesn\'t know transcript, falling back to the name checker instead!' . "\n");
                             $nSleepTime = 2;
                             // Retry Mutalyzer call several times until successful.
                             $sJSONResponse = false;
@@ -1164,6 +1164,10 @@ foreach ($aFiles as $sFileID) {
                 } else {
                     $aVariant['VariantOnTranscript/Protein'] = str_replace('p.', 'p.(', $aVariant['VariantOnTranscript/Protein'] . ')');
                 }
+            } elseif (in_array(substr($aTranscripts[$aVariant['transcriptid']]['id_ncbi'], 0, 2), array('NR', 'XR'))) {
+                // Non coding transcript, no wonder we didn't get a protein field.
+                $aVariant['VariantOnTranscript/RNA'] = 'r.(?)';
+                $aVariant['VariantOnTranscript/Protein'] = '-';
             } elseif (($aVariant['position_c_start'] < 0 && $aVariant['position_c_end'] < 0)
                 || ($aVariant['position_c_start'] > $aTranscripts[$aVariant['transcriptid']]['position_c_cds_end'] && $aVariant['position_c_end'] > $aTranscripts[$aVariant['transcriptid']]['position_c_cds_end'])
                 || ($aVariant['position_c_start_intron'] && $aVariant['position_c_end_intron'] && min(abs($aVariant['position_c_start_intron']), abs($aVariant['position_c_end_intron'])) > 5
