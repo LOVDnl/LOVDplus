@@ -418,13 +418,17 @@ class LOVD_DefaultDataConverter {
             return true;
         }
 
-        // Here, set any prefixes of transcripts that you'd like ignored, like 'NR_'.
-        $aTranscriptsPrefixToIgnore = array(
-            // 'NR_',
+        // Here, set any patterns of transcripts that you'd like ignored, like '^NR_'.
+        $aTranscriptPatternsToIgnore = array(
+            // '^ENS',
+            '_dupl',
+            // '^NR_',
+            // '^XM_',
+            // '^XR_',
         );
 
-        foreach ($aTranscriptsPrefixToIgnore as $sPrefix) {
-            if (strpos($sTranscriptID, $sPrefix) === 0) {
+        foreach ($aTranscriptPatternsToIgnore as $sPattern) {
+            if (preg_match('/' . $sPattern . '/', $sTranscriptID)) {
                 return true;
             }
         }
