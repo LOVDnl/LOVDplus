@@ -2,6 +2,7 @@
 // Leiden specific adapter settings.
 $_INSTANCE_CONFIG['conversion']['suffixes']['vep'] = 'directvep.data.lovd';
 $_INSTANCE_CONFIG['conversion']['create_meta_file_if_missing'] = false;
+$_INSTANCE_CONFIG['conversion']['enforce_hgnc_gene'] = false;
 $_INSTANCE_CONFIG['conversion']['verbosity_other'] = 9;
 
 $_INSTANCE_CONFIG['viewlists']['Screenings_for_I_VE']['cols_to_show'] = array(
@@ -120,16 +121,6 @@ class LOVD_LeidenDataConverter extends LOVD_DefaultDataConverter {
 
 
 
-    function ignoreTranscript ($sTranscriptID)
-    {
-        // Leiden's LOVD+ doesn't ignore transcripts, their pipeline decides.
-        return false;
-    }
-
-
-
-
-
     function prepareGeneAliases ()
     {
         // Return an array of gene aliases, with the gene symbol as given by VEP
@@ -195,43 +186,6 @@ class LOVD_LeidenDataConverter extends LOVD_DefaultDataConverter {
             'UQCC' => 'UQCC1',
             'WTH3DI' => 'RAB6D',
             'ZFP112' => 'ZNF112',
-        );
-    }
-
-
-
-
-
-    function prepareGenesToIgnore ()
-    {
-        // Return an array of gene symbols of genes you wish to ignore.
-        // These could be genes that you know can't be imported/created in LOVD,
-        //  or genes whose annotation you wish to ignore for a different reason.
-        // Example:
-        // return array(
-        //     'FLJ12825',
-        //     'FLJ27354',
-        //     'FLJ37453',
-        // );
-
-        return array(
-            // Added 2018-08-14, expire 2019-08-14.
-            'CRHR1-IT1-CRHR1',
-            'CYP3A7-CYP3AP1',
-            'FLJ22184',
-            'FLJ44313',
-            'FLJ45513',
-            'GS1-259H13.2',
-            'HGC6.3',
-            'MAGEA10-MAGEA5',
-            'OVOS2',
-            'OVOS',
-            'PHOSPHO2-KLHL23',
-            'SGK494',
-            'TARP',
-            'THEG5',
-            'TNFAIP8L2-SCNM1',
-            'ZNF664-RFLNA',
         );
     }
 
