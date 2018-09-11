@@ -528,6 +528,7 @@ class LOVD_MghaDataConverter extends LOVD_DefaultDataConverter {
 
     function prepareVariantData (&$aLine)
     {
+        global $_INSTANCE_CONFIG;
         // Processes the variant data file for MGHA.
         // Cleans up data in existing columns and splits some columns out to two columns.
 
@@ -549,10 +550,20 @@ class LOVD_MghaDataConverter extends LOVD_DefaultDataConverter {
             $bDropTranscript = true;
         } elseif (!empty($aLine['SYMBOL']) && empty($this->aScriptVars['aGenes'][$aLine['SYMBOL']])) {
             $aLine['Variant_Remarks'] = "UNKNOWN GENE\n";
-            $bDropTranscript = true;
+            if (!$_INSTANCE_CONFIG['conversion']['create_genes_and_transcripts']) {
+                // IFokkema: Unfortunately, the MGHA adapter applies this filter in a bad location for the conversion
+                //   script, as it hasn't had the chance yet to try and create the gene or transcript. It would be good
+                //   to move this code downstream, perhaps generalizing it as the feature could be of use to others.
+                $bDropTranscript = true;
+            }
         } elseif (!empty($aLine['Feature']) && empty($this->aScriptVars['aTranscripts'][$aLine['Feature']])) {
             $aLine['Variant_Remarks'] = "UNKNOWN TRANSCRIPT\n";
-            $bDropTranscript = true;
+            if (!$_INSTANCE_CONFIG['conversion']['create_genes_and_transcripts']) {
+                // IFokkema: Unfortunately, the MGHA adapter applies this filter in a bad location for the conversion
+                //   script, as it hasn't had the chance yet to try and create the gene or transcript. It would be good
+                //   to move this code downstream, perhaps generalizing it as the feature could be of use to others.
+                $bDropTranscript = true;
+            }
         } elseif (!empty($aLine['HGVSc']) && strpos($aLine['HGVSc'], '*-') !== false) {
             $aLine['Variant_Remarks'] = "UNKNOWN CCHANGE NOMENCLATURE\n";
             $bDropTranscript = true;
