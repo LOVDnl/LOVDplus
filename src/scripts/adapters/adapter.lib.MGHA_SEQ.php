@@ -162,16 +162,14 @@ class LOVD_MghaSeqDataConverter extends LOVD_DefaultDataConverter {
 
 
 
-    function formatEmptyColumn ($aLine, $sVEPColumn, $sLOVDColumn, $aVariant)
+    function formatEmptyColumn ($aLine, $sVEPColumn)
     {
         // Returns how we want to represent empty data in $aVariant array given a LOVD column name.
         if (isset($aLine[$sVEPColumn]) && ($aLine[$sVEPColumn] === 0 || $aLine[$sVEPColumn] === '0')) {
-            $aVariant[$sLOVDColumn] = 0;
+            return 0;
         } else {
-            $aVariant[$sLOVDColumn] = '';
+            return '';
         }
-
-        return $aVariant;
     }
 
 

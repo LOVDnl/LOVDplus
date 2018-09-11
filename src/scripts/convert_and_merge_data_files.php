@@ -4,7 +4,7 @@
  * LEIDEN OPEN VARIATION DATABASE (LOVD)
  *
  * Created     : 2014-11-28
- * Modified    : 2018-09-10
+ * Modified    : 2018-09-11
  * For LOVD+   : 3.0-18
  *
  * Copyright   : 2004-2018 Leiden University Medical Center; http://www.LUMC.nl/
@@ -629,7 +629,7 @@ foreach ($aFiles as $sFileID) {
             }
 
             if (empty($aLine[$sVEPColumn]) || $aLine[$sVEPColumn] == 'unknown' || $aLine[$sVEPColumn] == '.') {
-                $aVariant = $_ADAPTER->formatEmptyColumn($aLine, $sVEPColumn, $sLOVDColumn, $aVariant);
+                $aVariant[$sLOVDColumn] = $_ADAPTER->formatEmptyColumn($aLine, $sVEPColumn);
             } else {
                 $aVariant[$sLOVDColumn] = $aLine[$sVEPColumn];
             }
@@ -1063,14 +1063,14 @@ foreach ($aFiles as $sFileID) {
                         if ($aVariant['VariantOnTranscript/DNA']) {
                             $sErrorMsg .= "\n" .
                                           'Falling back to VEP\'s DNA description!' . "\n";
-                            lovd_printIfVerbose(VERBOSITY_MEDIUM, $sErrorMsg);
+                            lovd_printIfVerbose(VERBOSITY_FULL, $sErrorMsg);
                         } else {
                             // We have one more solution - call the name checker and try to find the mapping there.
                             // This is a very slow procedure and will hopefully not be used often, but due to recent
                             //  developments, Mutalyzer's position converter database diverged from the maintained database.
 
                             // FIXME: This is a lot of repeated code again. Better clean it up.
-                            lovd_printIfVerbose(VERBOSITY_MEDIUM, 'Mutalyzer\'s position converter doesn\'t know transcript, falling back to the name checker instead!' . "\n");
+                            lovd_printIfVerbose(VERBOSITY_FULL, 'Mutalyzer\'s position converter doesn\'t know transcript, falling back to the name checker instead!' . "\n");
                             $nSleepTime = 2;
                             // Retry Mutalyzer call several times until successful.
                             $sJSONResponse = false;

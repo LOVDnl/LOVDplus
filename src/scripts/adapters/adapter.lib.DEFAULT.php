@@ -162,7 +162,7 @@ $_INSTANCE_CONFIG['conversion'] = array(
     ),
     'annotation_error_drops_line' => false, // Should we discard the variant's mapping on this transcript on annotation errors?
     'annotation_error_exits' => false, // Whether to halt on the first annotation error.
-    'annotation_error_max_allowed' => 20, // Maximum number of errors with VOTs before the script dies anyway.
+    'annotation_error_max_allowed' => 50, // Maximum number of errors with VOTs before the script dies anyway.
     'create_genes_and_transcripts' => true, // Allow automatic creation of genes, allow automatic creation of transcripts.
     'create_meta_file_if_missing' => true, // Should LOVD+ just create a meta file with default settings if it's missing?
     'check_indel_description' => true, // Should we check all indels using Mutalyzer? Vep usually does a bad job at them.
@@ -419,7 +419,7 @@ class LOVD_DefaultDataConverter {
 
 
 
-    function formatEmptyColumn ($aLine, $sVEPColumn, $sLOVDColumn, $aVariant)
+    function formatEmptyColumn ($aLine, $sVEPColumn)
     {
         // Returns how we want to represent empty data in the $aVariant array.
         // Fields that evaluate true with empty() or set to "." or "unknown" are sent here.
@@ -429,14 +429,12 @@ class LOVD_DefaultDataConverter {
 
         /*
         if (isset($aLine[$sVEPColumn]) && ($aLine[$sVEPColumn] === 0 || $aLine[$sVEPColumn] === '0')) {
-            $aVariant[$sLOVDColumn] = 0;
+            return 0;
         } else {
-            $aVariant[$sLOVDColumn] = '';
+            return '';
         }
         */
-        $aVariant[$sLOVDColumn] = '';
-
-        return $aVariant;
+        return '';
     }
 
 
@@ -492,7 +490,7 @@ class LOVD_DefaultDataConverter {
 
         // Here, set any patterns of transcripts that you'd like ignored, like '^NR_'.
         $aTranscriptPatternsToIgnore = array(
-            // '^ENS',
+            '^ENS',
             '_dupl',
             // '^NR_',
             // '^XM_',
