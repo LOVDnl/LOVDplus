@@ -1285,8 +1285,8 @@ foreach ($aFiles as $sFileID) {
                             $sProteinDescriptions = implode('|', $aResponse['proteinDescriptions']);
                             preg_match('/N(?:C|G)_\d{6,}\.\d{1,2}\(' . preg_quote($sMutProteinName) .
                                 '\):(p\..+?)(\||$)/', $sProteinDescriptions, $aProteinMatches);
-                            if (isset($aProteinMatches[2])) {
-                                $aVariant['VariantOnTranscript/Protein'] = $aProteinMatches[2];
+                            if (isset($aProteinMatches[1])) {
+                                $aVariant['VariantOnTranscript/Protein'] = $aProteinMatches[1];
                                 if ($aVariant['VariantOnTranscript/Protein'] == 'p.?') {
                                     $aVariant['VariantOnTranscript/RNA'] = 'r.?';
                                 } elseif ($aVariant['VariantOnTranscript/Protein'] == 'p.(=)') {
