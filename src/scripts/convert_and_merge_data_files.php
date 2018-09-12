@@ -688,6 +688,13 @@ foreach ($aFiles as $sFileID) {
             }
         }
 
+        // Cleaning and translating VEPs consequences, but only if mapped to the GVS column.
+        if (!empty($aLine['Consequence']) && isset($aColumnMappings['Consequence'])
+            && $aColumnMappings['Consequence'] == 'VariantOnTranscript/GVS/Function') {
+            $aVariant['VariantOnTranscript/GVS/Function'] =
+                $_ADAPTER->translateVEPConsequencesToGVS($aVariant['VariantOnTranscript/GVS/Function']);
+        }
+
         if (lovd_verifyInstance('leiden')) {
             // Some percentages we get need to be turned into decimals before it can be stored.
             // 2015-10-28; Because of the double column mappings, we ended up with values divided twice.
