@@ -4,7 +4,7 @@
  * LEIDEN OPEN VARIATION DATABASE (LOVD)
  *
  * Created     : 2014-11-28
- * Modified    : 2018-09-11
+ * Modified    : 2018-09-13
  * For LOVD+   : 3.0-18
  *
  * Copyright   : 2004-2018 Leiden University Medical Center; http://www.LUMC.nl/
@@ -112,6 +112,12 @@ $aGeneAliases = $_ADAPTER->prepareGeneAliases();
 
 // Define list of columns that we are recognizing.
 $aColumnMappings = $_ADAPTER->prepareMappings();
+$aFrequencyColumns = array(); // Which columns handle frequencies and need to be checked for non-float values?
+foreach ($aColumnMappings as $sCol) {
+    if (strpos($sCol, '/Frequency') !== false) {
+        $aFrequencyColumns[] = $sCol;
+    }
+}
 
 // These columns will be taken out of $aVariant and stored as the VOG data.
 // This array is also used to build the LOVD file.
@@ -693,6 +699,15 @@ foreach ($aFiles as $sFileID) {
             && $aColumnMappings['Consequence'] == 'VariantOnTranscript/GVS/Function') {
             $aVariant['VariantOnTranscript/GVS/Function'] =
                 $_ADAPTER->translateVEPConsequencesToGVS($aVariant['VariantOnTranscript/GVS/Function']);
+        }
+
+        // Fix "4.944e-05"-like notations in frequency fields.
+        foreach ($aFrequencyColumns as $sFrequencyColumn) {
+            if (!empty($aVariant[$sFrequencyColumn])
+                && is_numeric($aVariant[$sFrequencyColumn])
+                && strpos($aVariant[$sFrequencyColumn], 'e-') !== false) {
+                $aVariant[$sFrequencyColumn] = number_format($aVariant[$sFrequencyColumn], 5);
+            }
         }
 
         if (lovd_verifyInstance('leiden')) {
