@@ -1284,33 +1284,49 @@ foreach ($aFiles as $sFileID) {
 
                     // Find protein prediction in mutalyzer output.
                     if (!$aVariant['VariantOnTranscript/Protein'] && !empty($aResponse['legend']) && !empty($aResponse['proteinDescriptions'])) {
-                        $sMutProteinName = null;
+                        // Store the *versions* of the wanted transcript. Only versions, so it sorts nicely.
+                        // Store the transcript names (v-numbers) that we find.
+                        $aMutalyzerMappings = array(); // array("1" => PRAMEF22_v001).
 
                         // Loop over legend records to find transcript name (v-number).
+                        // Mutalyzer can provide both the wanted transcript and other versions here,
+                        //  sometimes both at the same time, e.g. with NC_000001.10:g.13183634G>A.
                         foreach ($aResponse['legend'] as $aRecord) {
-                            if (isset($aRecord['id']) && $aRecord['id'] == $aTranscripts[$aVariant['transcriptid']]['id_ncbi'] &&
-                                substr($aRecord['name'], -4, 1) == 'v') {
-                                // Generate protein isoform name (i-number) from transcript name (v-number).
-                                $sMutProteinName = str_replace('_v', '_i', $aRecord['name']);
-                                break;
+                            if (isset($aRecord['id']) && strpos($aRecord['id'], $aLine['transcript_noversion']) === 0
+                                && substr($aRecord['name'], -4, 1) == 'v') {
+                                $aMutalyzerMappings[substr($aRecord['id'], strlen($aLine['transcript_noversion']))] = $aRecord['name'];
                             }
                         }
+                        // Sort the found transcripts on their version, descending.
+                        krsort($aMutalyzerMappings);
+                        $sTranscriptName = '';
 
-                        if (isset($sMutProteinName)) {
+                        // First check if we have the exact right version for it.
+                        if (isset($aMutalyzerMappings[substr(strrchr($aVariant['transcriptid'], '.'), 1)])) {
+                            $sTranscriptName = $aMutalyzerMappings[substr($aVariant['transcriptid'], strlen($aLine['transcript_noversion']))];
+                        } else {
+                            $sTranscriptName = current($aMutalyzerMappings);
+                        }
+
+                        if ($sTranscriptName) {
+                            // Generate protein isoform name (i-number) from transcript name (v-number).
+                            $sProteinName = str_replace('_v', '_i', $sTranscriptName);
+
                             // Select protein description based on protein isoform (i-number).
-                            $sProteinDescriptions = implode('|', $aResponse['proteinDescriptions']);
-                            preg_match('/N(?:C|G)_\d{6,}\.\d{1,2}\(' . preg_quote($sMutProteinName) .
-                                '\):(p\..+?)(\||$)/', $sProteinDescriptions, $aProteinMatches);
-                            if (isset($aProteinMatches[1])) {
-                                $aVariant['VariantOnTranscript/Protein'] = $aProteinMatches[1];
-                                if ($aVariant['VariantOnTranscript/Protein'] == 'p.?') {
-                                    $aVariant['VariantOnTranscript/RNA'] = 'r.?';
-                                } elseif ($aVariant['VariantOnTranscript/Protein'] == 'p.(=)') {
-                                    // FIXME: Not correct in case of substitutions e.g. in the third position of the codon, not leading to a protein change.
-                                    $aVariant['VariantOnTranscript/RNA'] = 'r.(=)';
-                                } else {
-                                    // RNA will default to r.(?).
-                                    $aVariant['VariantOnTranscript/RNA'] = 'r.(?)';
+                            foreach ($aResponse['proteinDescriptions'] as $sMutalyzerMapping) {
+                                if (strpos($sMutalyzerMapping, $_SETT['human_builds'][$_CONF['refseq_build']]['ncbi_sequences'][$aVariant['chromosome']] . '(' . $sProteinName . '):') === 0) {
+                                    // Match on i-number in given mappings.
+                                    $aVariant['VariantOnTranscript/Protein'] = substr(strchr($sMutalyzerMapping, ':'), 1);
+                                    if ($aVariant['VariantOnTranscript/Protein'] == 'p.?') {
+                                        $aVariant['VariantOnTranscript/RNA'] = 'r.?';
+                                    } elseif ($aVariant['VariantOnTranscript/Protein'] == 'p.(=)') {
+                                        // FIXME: Not correct in case of substitutions e.g. in the third position of the codon, not leading to a protein change.
+                                        $aVariant['VariantOnTranscript/RNA'] = 'r.(=)';
+                                    } else {
+                                        // RNA will default to r.(?).
+                                        $aVariant['VariantOnTranscript/RNA'] = 'r.(?)';
+                                    }
+                                    break;
                                 }
                             }
                         }
