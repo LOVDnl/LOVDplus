@@ -760,7 +760,8 @@ foreach ($aFiles as $sFileID) {
         }
         // Verify gene exists, and create it if needed.
         // LOC* genes always fail here, so those we don't try unless we don't care about the HGNC.
-        if (!empty($aVariant['symbol']) && !isset($aGenes[$aVariant['symbol']]) && !in_array($aVariant['symbol'], $aGenesToIgnore)
+        // Also, don't do anything if we're ignoring the transcript - what good will it do?
+        if (!empty($aVariant['symbol']) && !isset($aGenes[$aVariant['symbol']]) && !in_array($aVariant['symbol'], $aGenesToIgnore) && !$_ADAPTER->ignoreTranscript($aVariant['transcriptid'])
             && (!preg_match('/^LOC[0-9]+$/', $aVariant['symbol']) || empty($_INSTANCE_CONFIG['conversion']['use_hgnc']) || empty($_INSTANCE_CONFIG['conversion']['enforce_hgnc_gene']))) {
             // First try to get this gene from the database, perhaps conversions run in parallel have created it now.
             // FIXME: This is duplicated code. Make it into a function, perhaps?

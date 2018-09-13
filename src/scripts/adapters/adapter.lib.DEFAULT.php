@@ -4,7 +4,7 @@
  * LEIDEN OPEN VARIATION DATABASE (LOVD)
  *
  * Created     : 2016-09-02
- * Modified    : 2018-09-12
+ * Modified    : 2018-09-13
  * For LOVD    : 3.0-18
  *
  * Copyright   : 2004-2018 Leiden University Medical Center; http://www.LUMC.nl/
@@ -490,11 +490,13 @@ class LOVD_DefaultDataConverter {
 
         // Here, set any patterns of transcripts that you'd like ignored, like '^NR_'.
         $aTranscriptPatternsToIgnore = array(
-            '^ENS',
-            '_dupl',
-            // '^NR_',
-            // '^XM_',
-            // '^XR_',
+            '^[0-9]$', // Numeric transcripts for transfer RNAs, source unknown.
+            '_dupl',   // VEP produces duplicated transcripts.
+            '^ENS',    // Ensembl transcripts, that we don't support.
+            '^NC_',    // More strange transfer RNA transcripts in the format NC_000001.10:TRNAE-UUC:u_t_1.
+            // '^NR_',    // Non-coding transcripts, otherwise perfectly valid.
+            // '^XM_',    // Computer-predicted coding transcripts, yet to be validated to actually exist.
+            // '^XR_',    // Computer-predicted non-coding transcripts, yet to be validates to actually exist.
         );
 
         foreach ($aTranscriptPatternsToIgnore as $sPattern) {
