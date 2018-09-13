@@ -5,8 +5,8 @@
  * LEIDEN OPEN VARIATION DATABASE FOR DIAGNOSTICS (LOVD+)
  *
  * Created     : 2018-08-17
- * Modified    : 2018-08-30
- * Version     : 0.1
+ * Modified    : 2018-09-13
+ * Version     : 0.2
  * For LOVD+   : 3.0-18
  *
  * Purpose     : Takes (VEP) annotated VCF files and converts them to tab-
@@ -14,7 +14,9 @@
  *               are various tools to do this, but these either can't be shipped
  *               with LOVD+ due to license issues, or they're not standalone.
  *
- * Changelog   : 0.1    2018-08-23
+ * Changelog   : 0.2    2018-09-13
+ *               Added filter for frequency, which is enabled by default.
+ *               0.1    2018-08-23
  *               Initial release.
  *
  * Copyright   : 2004-2018 Leiden University Medical Center; http://www.LUMC.nl/
@@ -47,7 +49,7 @@ if (isset($_SERVER['HTTP_HOST'])) {
 
 // Default settings.
 $_CONFIG = array(
-    'version' => '0.1',
+    'version' => '0.2',
     'annotation_ids' => array(
         'CSQ' => '|', // VEP (at least until v93) uses 'CSQ' for the annotation, and splits fields on '|'.
     ),
@@ -63,13 +65,37 @@ $_CONFIG = array(
         'FILTER',
         'INFO',
     ),
-    'filtering' => array( // These settings will remove annotation under certain conditions.
-        // FIXME: Should we make this configurable? Or a more general filter, to prevent a certain field to be empty?
+    'filtering' => array(
+        // These settings will remove annotation or variants under certain conditions.
+        // Set to false if you wish to disable this filter.
         'no_gene' => true, // Remove annotation when gene is missing.
+        'frequency' => true, // Remove variant when frequency is above a certain threshold.
     ),
     'filtering_options' => array(
         'no_gene' => array(
             'field' => 'SYMBOL',
+        ),
+        'frequency' => array(
+            'fields' => array(
+                'AF',
+                'AFR_AF',
+                'AMR_AF',
+                'EAS_AF',
+                'EUR_AF',
+                'SAS_AF',
+                'AA_AF',
+                'EA_AF',
+                'gnomAD_AF',
+                'gnomAD_AFR_AF',
+                'gnomAD_AMR_AF',
+                'gnomAD_ASJ_AF',
+                'gnomAD_EAS_AF',
+                'gnomAD_FIN_AF',
+                'gnomAD_NFE_AF',
+                'gnomAD_OTH_AF',
+                'gnomAD_SAS_AF',
+            ),
+            'max_value' => 0.05, // Variants with frequency > 5% will be dropped.
         ),
     ),
 );
@@ -530,13 +556,28 @@ while ($sLine = fgets($fInput)) {
     // Filter the data, if we have something to filter.
     if ($bFiltersEnabled) {
         // Loop data again, for filtering annotation.
-        // We'll only drop annotation when other lines are still present.
-        foreach ($aVOTsPerAllele as $sAllele => $aVOTs) {
-            if ($_CONFIG['filtering']['no_gene']) {
-                foreach ($aVOTs as $nKey => $aVOT) {
+        foreach ($aVOTsPerAllele as $sKeyAllele => $aVOTs) {
+            foreach ($aVOTs as $nKey => $aVOT) {
+                // Frequency filter.
+                if ($_CONFIG['filtering']['frequency']) {
+                    foreach ($_CONFIG['filtering_options']['frequency']['fields'] as $sField) {
+                        if (!empty($aVOT[$sField])) {
+                            if ((float) $aVOT[$sField] > $_CONFIG['filtering_options']['frequency']['max_value']) {
+                                // Drop the entire allele.
+                                unset($aVOTsPerAllele[$sKeyAllele]);
+                                $nKeyAllele = array_search($sKeyAllele, $aALTsCleaned);
+                                unset($aALTs[$nKeyAllele]);
+                                continue 3; // Next allele.
+                            }
+                        }
+                    }
+                }
+
+                // No_gene filter; we'll drop the annotation, when there is no gene.
+                if ($_CONFIG['filtering']['no_gene']) {
                     if (empty($aVOT[$_CONFIG['filtering_options']['no_gene']['field']])) {
                         // Drop the VOT.
-                        unset($aVOTsPerAllele[$sAllele][$nKey]);
+                        unset($aVOTsPerAllele[$sKeyAllele][$nKey]);
                     }
                 }
             }
