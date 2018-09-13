@@ -16,6 +16,7 @@
  *
  * Changelog   : 0.2    2018-09-13
  *               Added filter for frequency, which is enabled by default.
+ *               Also, print active filters to the screen.
  *               0.1    2018-08-23
  *               Initial release.
  *
@@ -73,9 +74,11 @@ $_CONFIG = array(
     ),
     'filtering_options' => array(
         'no_gene' => array(
+            'description' => 'Removes annotation when the gene field is empty.',
             'field' => 'SYMBOL',
         ),
         'frequency' => array(
+            'description' => 'Removes the allele when one of the frequency fields is above the threshold.',
             'fields' => array(
                 'AF',
                 'AFR_AF',
@@ -371,6 +374,19 @@ $nMandatoryVCFFields = count($_CONFIG['VCF_fields']);
 $aVOGFields = array_slice($_CONFIG['VCF_fields'], 0, $nMandatoryVCFFields - 1); // VCF fields specific for the VOG.
 $aHeadersToPrint = array();
 $aSamples = array();
+
+if ($bFiltersEnabled) {
+    lovd_printIfVerbose(VERBOSITY_MEDIUM,
+        'Active filter(s):' . "\n" .
+        implode("\n",
+            array_map(function ($sFilter) {
+                global $_CONFIG;
+                if (!empty($_CONFIG['filtering'][$sFilter])) {
+                    return '  ' . $sFilter . ': ' . json_encode($_CONFIG['filtering_options'][$sFilter]);
+                }
+                return '';
+            }, array_keys($_CONFIG['filtering']))) . "\n");
+}
 
 while ($sLine = fgets($fInput)) {
     $nLine++;
