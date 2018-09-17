@@ -257,13 +257,13 @@ print('          </TD>' . "\n" .
 // Newly installed? Flash create gene link.
 if (isset($_GET['newly_installed'])) {
     print('      <SCRIPT type="text/javascript">' . "\n" .
-          '        <!--' . "\n" .
-          '        varTR = document.getElementById(\'setupRight\').getElementsByTagName(\'tr\')[1];' . "\n");
+          '        varTR = ' . (LOVD_plus?
+            '$("img[src=\'gfx/lovd_clock.png\']").parent().parent()[0];' :
+            'document.getElementById(\'setupRight\').getElementsByTagName(\'tr\')[1];') . "\n");
     for ($i = 0; $i < 30; $i ++) {
         print('        setTimeout("varTR.style.background=\'#' . ($i%2? 'F0F3FF' : 'C8DCFA') . '\'", ' . ($i * 1000) . ');' . "\n");
     }
-    print('        setTimeout("varTR.style.background=\'\'", ' . ($i * 1000) . ');' . "\n");
-    print('        // -->' . "\n" .
+    print('        setTimeout("varTR.style.background=\'\'", ' . ($i * 1000) . ');' . "\n" .
           '      </SCRIPT>' . "\n\n");
 }
 
