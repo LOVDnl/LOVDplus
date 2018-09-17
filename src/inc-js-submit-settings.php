@@ -61,8 +61,8 @@ function lovd_checkForm () {
             // ... but is now changed!
             sMessage = 'Are you really sure you want to change the database URL? This may have serious consequences!\nIf this URL is not correct, links generated to this LOVD, for instance in emails sent by the system, will cease to function. Please make sure you configure a correct and lasting URL!\n\nPress "Cancel" to return to the form, or "OK" to ignore this warning.';
         }
-    } else if (document.forms[0].location_url.value == '') {
-        // Wasn't filled in before, and now still isn't.
+    } else if (document.forms[0].location_url.value == '' && <?php echo (LOVD_plus? 'false' : 'true'); ?>) {
+        // Wasn't filled in before, and now still isn't. // We don't care of this is LOVD+.
         sMessage = 'Are you sure you don\'t want to select a database url?\nPress "Cancel" to return to the form to fill in an URL, or "OK" to ignore this warning.';
     }
 

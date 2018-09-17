@@ -152,9 +152,18 @@ class LOVD_SystemSetting extends LOVD_Object {
             lovd_errorAdd('use_ssl', 'You\'ve selected to force the use of SSL, but SSL is not currently activated for this session. To force SSL, I must be sure it\'s possible to approach LOVD through an SSL connection (use <A href="https://' . $_SERVER['HTTP_HOST'] . $_SERVER['PHP_SELF'] . ($_SERVER['QUERY_STRING']? '?' . str_replace('&sent=true', '', $_SERVER['QUERY_STRING']) : '') . '" target="_blank">https://</A> instead of http://).');
         }
 
+        // Prevent notices.
         $_POST['api_feed_history'] = 0;
         $_POST['allow_count_hidden_entries'] = 0;
         $_POST['use_versioning'] = 0;
+
+        if (LOVD_plus) {
+            $_POST['logo_uri'] = 'LOVD_plus_logo200x50';
+            $_POST['send_stats'] = 0;
+            $_POST['include_in_listing'] = 0;
+            $_POST['allow_submitter_registration'] = 0;
+            $_POST['allow_submitter_mods'] = 0;
+        }
 
         // XSS attack prevention. Deny input of HTML.
         lovd_checkXSS();
@@ -214,7 +223,7 @@ class LOVD_SystemSetting extends LOVD_Object {
                         'hr',
                         'skip',
                         'skip',
-                        array('', '', 'print', '<B>Customize LOVD</B>'),
+                        array('', '', 'print', '<B>Customize LOVD</B>'), // Don't edit, we're parsing for this.
                         array('', '', 'note', 'Here you can customize the way LOVD looks. We will add more options here later.'),
                         'hr',
                         array('System logo', 'If you wish to have your custom logo on the top left of every page instead of the default LOVD logo, enter the path to the image here, relative to the LOVD installation path.', 'text', 'logo_uri', 40),
@@ -222,7 +231,7 @@ class LOVD_SystemSetting extends LOVD_Object {
                         'hr',
                         'skip',
                         'skip',
-                        array('', '', 'print', '<B>Global LOVD statistics</B>'),
+                        array('', '', 'print', '<B>Global LOVD statistics</B>'), // Don't edit, we're parsing for this.
                         array('', '', 'note', 'The following settings apply to the kind of information your LOVD install sends to the development team to gather statistics about global LOVD usage.'),
                         'hr',
                         array('Send statistics?', 'This sends <I>anonymous</I> statistics about the number of submitters, genes, individuals and variants in your installation of LOVD.', 'checkbox', 'send_stats'),
@@ -254,6 +263,29 @@ class LOVD_SystemSetting extends LOVD_Object {
         // Remove features that are anyway currently not developed yet. They can confuse users.
         unset($this->aFormData['feed_history'], $this->aFormData['count_hidden_data'], $this->aFormData['use_versioning']);
 
+        // Remove features currently unavailable for LOVD+ (or that we choose not to support).
+        foreach ($this->aFormData as $nKey => $aFormEntry) {
+            // Unset whole ranges of options, easier to do like this than to name all of the options.
+            if (isset($this->aFormData[$nKey]) && is_array($aFormEntry)
+                && strpos($aFormEntry[3], '<B>Customize LOVD</B>') !== false) {
+                unset($this->aFormData[$nKey], $this->aFormData[$nKey+1], $this->aFormData[$nKey+2],
+                    $this->aFormData[$nKey+3], $this->aFormData[$nKey+4], $this->aFormData[$nKey+5],
+                    $this->aFormData[$nKey+6], $this->aFormData[$nKey+7]);
+                continue;
+
+            } elseif (isset($this->aFormData[$nKey]) && is_array($aFormEntry)
+                && strpos($aFormEntry[3], '<B>Global LOVD statistics</B>') !== false) {
+                unset($this->aFormData[$nKey], $this->aFormData[$nKey+1], $this->aFormData[$nKey+2],
+                    $this->aFormData[$nKey+3], $this->aFormData[$nKey+4], $this->aFormData[$nKey+5],
+                    $this->aFormData[$nKey+6], $this->aFormData[$nKey+7]);
+                continue;
+
+            } elseif (isset($this->aFormData[$nKey]) && is_array($aFormEntry)
+                && in_array($aFormEntry[3], array('allow_submitter_registration', 'allow_submitter_mods'))) {
+                unset($this->aFormData[$nKey]);
+            }
+        }
+
         return parent::getForm();
     }
 
@@ -268,10 +300,10 @@ class LOVD_SystemSetting extends LOVD_Object {
         $_POST['api_feed_history'] = 3;
         $_POST['logo_uri'] = 'gfx/' . (LOVD_plus? 'LOVD_plus_logo200x50' : 'LOVD3_logo145x50') . '.jpg';
         $_POST['mutalyzer_soap_url'] = 'https://mutalyzer.nl/services';
-        $_POST['send_stats'] = 1;
-        $_POST['include_in_listing'] = 1;
+        $_POST['send_stats'] = (int) (!LOVD_plus);
+        $_POST['include_in_listing'] = (int) (!LOVD_plus);
         $_POST['allow_submitter_registration'] = (int) (!LOVD_plus);
-        $_POST['allow_submitter_mods'] = 1;
+        $_POST['allow_submitter_mods'] = (int) (!LOVD_plus);
         if (!SSL) {
             $_POST['use_ssl'] = 0;
         } else {
