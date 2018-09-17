@@ -139,7 +139,7 @@ class LOVD_SystemSetting extends LOVD_Object {
             }
         } else {
             // FIXME; this is probably not the best way of doing this...
-            $_POST['logo_uri'] = 'gfx/' . (LOVD_plus? 'LOVD_plus_logo200x50' : 'LOVD3_logo145x50') . '.jpg';
+            $_POST['logo_uri'] = 'gfx/LOVD' . (LOVD_plus? '_plus' : '3') . '_logo145x50.jpg';
         }
 
         // FIXME; Like above, not the best solution, but gets the job done for now.
@@ -158,7 +158,7 @@ class LOVD_SystemSetting extends LOVD_Object {
         $_POST['use_versioning'] = 0;
 
         if (LOVD_plus) {
-            $_POST['logo_uri'] = 'LOVD_plus_logo200x50';
+            $_POST['logo_uri'] = 'LOVD_plus_logo145x50';
             $_POST['send_stats'] = 0;
             $_POST['include_in_listing'] = 0;
             $_POST['allow_submitter_registration'] = 0;
@@ -298,7 +298,7 @@ class LOVD_SystemSetting extends LOVD_Object {
         $_POST['location_url'] = ($_SERVER['HTTP_HOST'] == 'localhost' || lovd_matchIPRange($_SERVER['HTTP_HOST'])? '' : lovd_getInstallURL());
         $_POST['refseq_build'] = 'hg38';
         $_POST['api_feed_history'] = 3;
-        $_POST['logo_uri'] = 'gfx/' . (LOVD_plus? 'LOVD_plus_logo200x50' : 'LOVD3_logo145x50') . '.jpg';
+        $_POST['logo_uri'] = 'gfx/LOVD' . (LOVD_plus? '_plus' : '3') . '_logo145x50.jpg';
         $_POST['mutalyzer_soap_url'] = 'https://mutalyzer.nl/services';
         $_POST['send_stats'] = (int) (!LOVD_plus);
         $_POST['include_in_listing'] = (int) (!LOVD_plus);

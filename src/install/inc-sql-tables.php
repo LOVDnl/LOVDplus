@@ -711,7 +711,7 @@ $aTableSQL =
     proxy_port SMALLINT(5) UNSIGNED,
     proxy_username VARCHAR(255) NOT NULL,
     proxy_password VARCHAR(255) NOT NULL,
-    logo_uri VARCHAR(100) NOT NULL DEFAULT "gfx/' . (LOVD_plus? 'LOVD_plus_logo200x50' : 'LOVD3_logo145x50') . '.jpg",
+    logo_uri VARCHAR(100) NOT NULL DEFAULT "gfx/LOVD' . (LOVD_plus? '_plus' : '3') . '_logo145x50.jpg",
     mutalyzer_soap_url VARCHAR(100) NOT NULL DEFAULT "https://mutalyzer.nl/services",
     omim_apikey VARCHAR(40) NOT NULL,
     send_stats BOOLEAN NOT NULL,
