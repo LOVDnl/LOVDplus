@@ -821,11 +821,11 @@ function lovd_FRCleanup (sViewListID, bSubmitVL, afterSubmitCallback)
     // Clear the find & replace options form.
     var FRoptions = $('#viewlistFRFormContainer_' + sViewListID);
     FRoptions.find('input[type=text]').val('');
-    FRoptions.find('input[type=checkbox]').removeAttr('checked');
+    FRoptions.find('input[type=checkbox]').prop('checked', false);
     var radioButtons = FRoptions.find('input[type=radio]');
-    radioButtons.removeAttr('checked');
+    radioButtons.prop('checked', false);
     // Check the first radio button (as default value)
-    radioButtons.first().attr('checked', true);
+    radioButtons.first().prop('checked', true);
 
     // Hide F&R options form.
     $(FRoptions).hide();

@@ -45,6 +45,7 @@ if (LOVD_plus) {
 
 
 if (ACTION == 'schedule' && PATH_COUNT == 1) {
+    // URL: /import?schedule
     // Schedule files for import.
     define('LOG_EVENT', 'ImportSchedule');
     define('PAGE_TITLE', 'Schedule files for import');
@@ -297,7 +298,7 @@ if (ACTION == 'schedule' && PATH_COUNT == 1) {
                 } else {
                     // Not imported yet, can be scheduled.
                     print("\n" .
-                          '                <TR class="data" style="cursor : pointer;" onclick="if ($(this).find(\':checkbox\').prop(\'checked\')) { $(this).find(\':checkbox\').attr(\'checked\', false); $(this).find(\'img\').hide(); $(this).removeClass(\'colGreen\'); } else { $(this).find(\':checkbox\').attr(\'checked\', true);  $(this).find(\'img\').show(); $(this).addClass(\'colGreen\'); }">
+                          '                <TR class="data" style="cursor : pointer;" onclick="if ($(this).find(\':checkbox\').prop(\'checked\')) { $(this).find(\':checkbox\').prop(\'checked\', false); $(this).find(\'img\').hide(); $(this).removeClass(\'colGreen\'); } else { $(this).find(\':checkbox\').prop(\'checked\', true);  $(this).find(\'img\').show(); $(this).addClass(\'colGreen\'); }">
                   <TD width="30" style="text-align : center;"><INPUT type="checkbox" name="files_to_schedule[]" value="' . $sFile . '" style="display : none;"><IMG src="gfx/check.png" alt="Import" width="16" height="16" style="display : none;"></TD>');
                 }
             }
@@ -333,6 +334,7 @@ if (ACTION == 'schedule' && PATH_COUNT == 1) {
 
 
 if (ACTION == 'autoupload_scheduled_file' && PATH_COUNT == 1) {
+    // URL: /import?autoupload_scheduled_file
     // This URL forces FORMAT to be text/plain.
     // All unneeded output will be prevented.
     define('FORMAT_ALLOW_TEXTPLAIN', true); // To allow automatic data loading.

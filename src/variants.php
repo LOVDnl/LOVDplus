@@ -1231,10 +1231,10 @@ if (PATH_COUNT == 1 && ACTION == 'create') {
             var oNextElement = oBeginTranscript.next();
             while (oNextElement.children().size() > 1) {
                 // More than one TD, so it is an input field.
-                if ($(this).attr('checked')) {
-                    oNextElement.find(">:last-child").find(">:first-child").attr('disabled', true).siblings('button:first').hide();
+                if ($(this).prop('checked')) {
+                    oNextElement.find(">:last-child").find(">:first-child").prop('disabled', true).siblings('button:first').hide();
                 } else {
-                    oNextElement.find(">:last-child").find(">:first-child").removeAttr('disabled');
+                    oNextElement.find(">:last-child").find(">:first-child").prop('disabled', false);
                 }
                 oNextElement = oNextElement.next();
             }
@@ -1263,8 +1263,8 @@ if (PATH_COUNT == 1 && ACTION == 'create') {
 
     foreach ($_POST as $key => $val) {
         if (substr($key, 0, 7) == 'ignore_') {
-            // First check the checkbox. Then the event first triggers the click and THEN changes the checked state. Recheck the checkbox.
-            echo '$( \'input[name="ignore_' . substr($key, 7, $_SETT['objectid_length']['transcripts']) . '"]\' ).attr(\'checked\', true).trigger(\'click\').attr(\'checked\', true);' . "\n";
+            // First uncheck the checkbox (just to be certain). Then trigger the click, which changes the checked state.
+            echo '$( \'input[name="ignore_' . substr($key, 7, $_SETT['objectid_length']['transcripts']) . '"]\' ).prop(\'checked\', false).trigger(\'click\');' . "\n";
         }
     }
 

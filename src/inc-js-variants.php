@@ -345,7 +345,7 @@ function lovd_getProteinChange (oElement)
                 } else if (aData === '<?php echo AJAX_DATA_ERROR; ?>') {
                     alert('Invalid input, or input missing.');
                 }
-                if (!oThisProtein.attr('disabled')) {
+                if (!oThisProtein.prop('disabled')) {
                     $(oThisProtein).siblings('img:first').attr({
                         src: 'gfx/cross.png',
                         onclick: '',
@@ -380,7 +380,7 @@ function lovd_getProteinChange (oElement)
                         sErrorMessages +=  '<B>' + index + ':</B> ' + aData['error'][index];
                         firstError = false;
                     }
-                    if (!oThisProtein.attr('disabled')) {
+                    if (!oThisProtein.prop('disabled')) {
                         $(oThisDNA).attr('class', 'err');
                         $(oThisDNA).siblings('img:first').attr({
                             src: 'gfx/lovd_form_warning.png',
@@ -412,7 +412,7 @@ function lovd_getProteinChange (oElement)
                             sErrorMessages +=  '<B>' + index + ':</B> ' + aData['warning'][index];
                             firstWarning = false;
                         }
-                        if (!oThisProtein.attr('disabled')) {
+                        if (!oThisProtein.prop('disabled')) {
                             $(oThisDNA).attr('class', 'warn');
                             $(oThisDNA).siblings('img:first').attr({
                                 src: 'gfx/lovd_form_information.png',

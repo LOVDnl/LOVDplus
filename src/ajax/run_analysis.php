@@ -407,7 +407,7 @@ if (ACTION == 'configure' && GET) {
                                         // Rename 'name' attributes based on how many groups we already have.
                                         'elemGroup.find(\'[name]\').each(function(i, e) { var oldName = $(e).attr(\'name\'); var newName = oldName.replace(\'[groups][0]\', \'[groups][\' + numGroups + \']\'); $(e).attr(\'name\', newName);});' .
                                         // Reset values of the form in the first group that we copy from.
-                                        'elemGroup.find(\'[selected]\').each(function(i, e) { $(e).removeAttr(\'selected\'); });' .
+                                        'elemGroup.find(\'[selected]\').each(function(i, e) { $(e).prop(\'selected\', false); });' .
                                         // Append this new group into the form.
                                         'elemFilterConfig.append(elemGroup);' .
                                         // We need to call this again for the newly created group.
