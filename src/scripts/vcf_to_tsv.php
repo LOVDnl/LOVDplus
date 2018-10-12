@@ -17,6 +17,7 @@
  * Changelog   : 0.3    2018-10-12
  *               Fixed bug in allele trimming; lovd_ltrimCommonChars() should
  *               actually only be used once, and should not be looped.
+ *               Also, added the transcript_prefix filter.
  *               0.2    2018-09-13
  *               Added filter for frequency, which is enabled by default.
  *               Also, print active filters to the screen.
@@ -74,6 +75,7 @@ $_CONFIG = array(
         // Set to false if you wish to disable this filter.
         'no_gene' => true, // Remove annotation when gene is missing.
         'frequency' => true, // Remove variant when frequency is above a certain threshold.
+        'transcript_prefix' => true, // Remove annotation based on certain transcript prefixes.
     ),
     'filtering_options' => array(
         'no_gene' => array(
@@ -102,6 +104,15 @@ $_CONFIG = array(
                 'gnomAD_SAS_AF',
             ),
             'max_value' => 0.05, // Variants with frequency > 5% will be dropped.
+        ),
+        'transcript_prefix' => array(
+            'description' => 'Removes annotation based on certain transcript prefixes.',
+            'field' => 'Feature',
+            'values' => array(
+                'ENS',
+                'NR_',
+                'XR_',
+            )
         ),
     ),
 );
@@ -600,6 +611,20 @@ while ($sLine = fgets($fInput)) {
                     if (empty($aVOT[$_CONFIG['filtering_options']['no_gene']['field']])) {
                         // Drop the VOT.
                         unset($aVOTsPerAllele[$sKeyAllele][$nKey]);
+                        continue; // Next VOT.
+                    }
+                }
+
+                // Transcript filter; we'll drop the annotation with mappings on certain transcripts.
+                if ($_CONFIG['filtering']['transcript_prefix']) {
+                    if (!empty($aVOT[$_CONFIG['filtering_options']['transcript_prefix']['field']])) {
+                        foreach ($_CONFIG['filtering_options']['transcript_prefix']['values'] as $sPrefix) {
+                            if (strpos($aVOT[$_CONFIG['filtering_options']['transcript_prefix']['field']], $sPrefix) === 0) {
+                                // Drop the VOT.
+                                unset($aVOTsPerAllele[$sKeyAllele][$nKey]);
+                                continue 2; // Next VOT.
+                            }
+                        }
                     }
                 }
             }
