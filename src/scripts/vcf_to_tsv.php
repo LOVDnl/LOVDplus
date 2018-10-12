@@ -5,8 +5,8 @@
  * LEIDEN OPEN VARIATION DATABASE FOR DIAGNOSTICS (LOVD+)
  *
  * Created     : 2018-08-17
- * Modified    : 2018-09-13
- * Version     : 0.2
+ * Modified    : 2018-10-12
+ * Version     : 0.3
  * For LOVD+   : 3.0-18
  *
  * Purpose     : Takes (VEP) annotated VCF files and converts them to tab-
@@ -14,7 +14,10 @@
  *               are various tools to do this, but these either can't be shipped
  *               with LOVD+ due to license issues, or they're not standalone.
  *
- * Changelog   : 0.2    2018-09-13
+ * Changelog   : 0.3    2018-10-12
+ *               Fixed bug in allele trimming; lovd_ltrimCommonChars() should
+ *               actually only be used once, and should not be looped.
+ *               0.2    2018-09-13
  *               Added filter for frequency, which is enabled by default.
  *               Also, print active filters to the screen.
  *               0.1    2018-08-23
@@ -50,7 +53,7 @@ if (isset($_SERVER['HTTP_HOST'])) {
 
 // Default settings.
 $_CONFIG = array(
-    'version' => '0.2',
+    'version' => '0.3',
     'annotation_ids' => array(
         'CSQ' => '|', // VEP (at least until v93) uses 'CSQ' for the annotation, and splits fields on '|'.
     ),
@@ -162,12 +165,12 @@ function lovd_cleanGenoType ($sGenoType, $nKeyALT)
 
 
 
-function lovd_ltrimCommonChars ($aStrings)
+function lovd_ltrimCommonChars ($aStrings, $nMaxCharsTrimmed = 1)
 {
     // ltrim()s all strings in $aStrings if they have a common left character. Returns the resulting array.
     // Assumes it receives at least two strings. Assumes the array has numerical indices, starting with 0.
     $n = count($aStrings);
-    while (true) {
+    for ($nCharsTrimmed = 0; $nCharsTrimmed < $nMaxCharsTrimmed; $nCharsTrimmed ++) {
         $s = substr($aStrings[0], 0, 1);
         if ($s === false) {
             return $aStrings;
@@ -182,6 +185,9 @@ function lovd_ltrimCommonChars ($aStrings)
         $aStrings = array_map('strval',
             array_map('substr', $aStrings, array_fill(0, $n, 1)));
     }
+
+    // Got here when we're not longer allowed to trim further.
+    return $aStrings;
 }
 
 
