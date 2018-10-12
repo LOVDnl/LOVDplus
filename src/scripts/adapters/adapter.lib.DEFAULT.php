@@ -4,7 +4,7 @@
  * LEIDEN OPEN VARIATION DATABASE (LOVD)
  *
  * Created     : 2016-09-02
- * Modified    : 2018-09-13
+ * Modified    : 2018-10-12
  * For LOVD    : 3.0-18
  *
  * Copyright   : 2004-2018 Leiden University Medical Center; http://www.LUMC.nl/
@@ -736,6 +736,7 @@ class LOVD_DefaultDataConverter {
         // downstream_gene_variant
         // upstream_gene_variant
         // non_coding_transcript_variant
+        // NMD_transcript_variant     - we remove this, it just complicates things.
         // intron_variant
         // non_coding_transcript_exon_variant
         // 3_prime_UTR_variant
@@ -814,12 +815,14 @@ class LOVD_DefaultDataConverter {
         // However, we can not create an extensive list of possible combinations, still sometimes we just want certain
         //  values to take preference.
         static $aValuesToClean = array(
+            '&NMD_transcript_variant' => '', // Variant in a transcript that is the target of NMD. Uh, OK.
             'start_lost&start_retained_variant' => 'start_retained_variant', // Start not actually lost.
             'stop_lost&stop_retained_variant' => 'stop_retained_variant', // Stop not actually lost.
             '&coding_sequence_variant&intron_variant' => '', // Will also report to be on a splice site.
             'splice_donor_variant&intron_variant' => 'splice_donor_variant', // Will just affect the splicing.
             'splice_acceptor_variant&intron_variant' => 'splice_acceptor_variant', // Will just affect the splicing.
-            'incomplete_terminal_codon_variant' => 'stop_retained_variant', // This one is unclear.
+            'incomplete_terminal_codon_variant&' => '', // This one is unclear. Used nowhere near the terminal codon.
+            'coding_sequence_variant&intron_variant' => 'intron_variant', // This exact combo used inside introns only.
         );
 
         foreach ($aValuesToClean as $sKey => $sVal) {
@@ -834,8 +837,8 @@ class LOVD_DefaultDataConverter {
             'start_lost' => 'start-lost',
             'stop_gained' => 'stop-gained',
             'stop_lost' => 'stop-lost',
-            'coding_sequence_variant&3_prime_UTR_variant' => 'codingComplex', // vep2lovd defined this, not seen myself.
-            'coding_sequence_variant&5_prime_UTR_variant' => 'codingComplex', // vep2lovd defined this, not seen myself.
+            'coding_sequence_variant&3_prime_UTR_variant' => 'codingComplex', // vep2lovd defined this, only found in ENSG.
+            'coding_sequence_variant&5_prime_UTR_variant' => 'codingComplex', // vep2lovd defined this, only found in ENSG.
             '5_prime_UTR_variant' => 'utr-5',
             '3_prime_UTR_variant' => 'utr-3',
             'upstream_gene_variant' => 'utr-5',
@@ -848,6 +851,7 @@ class LOVD_DefaultDataConverter {
             'splice_region_variant&intron_variant&non_coding_transcript_variant' => 'non-coding-intron-near-splice',
             'splice_region_variant&non_coding_transcript_variant' => 'non-coding-intron-near-splice', // Not necessarily intronic.
             'splice_region_variant&non_coding_transcript_exon_variant' => 'non-coding-exon-near-splice',
+            'non_coding_transcript_exon_variant&intron_variant' => 'non-coding-exon-near-splice', // Strange that the splice variant isn't mentioned.
             'intron_variant&non_coding_transcript_variant' => 'intron', // Or, if we'll create it, non-coding-intron.
             'non_coding_transcript_exon_variant' => 'non-coding-exon',
             'splice_donor_variant' => 'splice-5',
@@ -855,12 +859,12 @@ class LOVD_DefaultDataConverter {
             'splice_region_variant&start_retained_variant' => 'coding-synonymous-near-splice',
             'splice_region_variant&stop_retained_variant' => 'coding-synonymous-near-splice',
             'splice_region_variant&synonymous_variant' => 'coding-synonymous-near-splice',
-            '_retained_variant' => 'coding-synonymous',
             'frameshift_variant&splice_region_variant' => 'frameshift-near-splice',
             'missense_variant&splice_region_variant' => 'missense-near-splice',
             'splice_region_variant&intron_variant' => 'splice',
             'splice_region_variant' => 'coding-near-splice',
             'frameshift_variant' => 'frameshift',
+            '_retained_variant' => 'coding-synonymous',
             'protein_altering_variant' => 'coding',
             'inframe_deletion' => 'coding',
             'inframe_insertion' => 'coding',
