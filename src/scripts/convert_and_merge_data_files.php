@@ -4,7 +4,7 @@
  * LEIDEN OPEN VARIATION DATABASE (LOVD)
  *
  * Created     : 2014-11-28
- * Modified    : 2018-09-13
+ * Modified    : 2018-10-12
  * For LOVD+   : 3.0-18
  *
  * Copyright   : 2004-2018 Leiden University Medical Center; http://www.LUMC.nl/
@@ -581,11 +581,7 @@ foreach ($aFiles as $sFileID) {
     $nAnnotationErrors = 0; // Count the number of lines we cannot import.
 
     // Get all the existing genes in one database call.
-    $aResult = $_DB->query('SELECT id, name FROM ' . TABLE_GENES)->fetchAllAssoc();
-    foreach ($aResult as $aGene) {
-        $aGenes[$aGene['id']] = array_merge($aGene, array('transcripts_in_NC' => array()));
-    }
-    unset($aResult); // Clean up.
+    $aGenes = $_DB->query('SELECT id, id, name FROM ' . TABLE_GENES . ' LIMIT 10')->fetchAllGroupAssoc();
 
     // If we're receiving the HGNC ID, we'll collect all genes for their HGNC IDs as well. This will be used to help
     //  LOVD+ to handle changed gene symbols.
@@ -767,7 +763,7 @@ foreach ($aFiles as $sFileID) {
             // FIXME: This is duplicated code. Make it into a function, perhaps?
             if ($aGene = $_DB->query('SELECT g.id, g.name FROM ' . TABLE_GENES . ' AS g WHERE g.id = ?', array($aVariant['symbol']))->fetchAssoc()) {
                 // We've got it in the database.
-                $aGenes[$aVariant['symbol']] = array_merge($aGene, array('transcripts_in_NC' => array()));
+                $aGenes[$aVariant['symbol']] = $aGene;
 
             } elseif (!empty($_INSTANCE_CONFIG['conversion']['create_genes_and_transcripts'])) {
                 // Gene doesn't exist, try to find it at the HGNC.
@@ -803,7 +799,7 @@ foreach ($aFiles as $sFileID) {
                         // FIXME: This is duplicated code. Make it into a function, perhaps?
                         if ($aGene = $_DB->query('SELECT g.id, g.name FROM ' . TABLE_GENES . ' AS g WHERE g.id = ?', array($aGeneInfo['symbol']))->fetchAssoc()) {
                             // We've got the alias already in the database; store it under the symbol we're using so that we'll find it back easily.
-                            $aGenes[$aVariant['symbol']] = array_merge($aGene, array('transcripts_in_NC' => array()));
+                            $aGenes[$aVariant['symbol']] = $aGene;
                         }
                     }
                 }
@@ -845,7 +841,7 @@ foreach ($aFiles as $sFileID) {
                     flush();
 
                     // Store this gene, again under the original symbol, so we can easily find it back.
-                    $aGenes[$aVariant['symbol']] = array('id' => $aGeneInfo['symbol'], 'name' => $aGeneInfo['name'], 'transcripts_in_NC' => array());
+                    $aGenes[$aVariant['symbol']] = array('id' => $aGeneInfo['symbol'], 'name' => $aGeneInfo['name']);
                 }
             }
         }
@@ -876,7 +872,7 @@ foreach ($aFiles as $sFileID) {
 
             } elseif (!empty($_INSTANCE_CONFIG['conversion']['create_genes_and_transcripts'])) {
                 // To prevent us from having to check the available transcripts all the time, we store the available transcripts, but only insert those we need.
-                if ($aGenes[$aVariant['symbol']]['transcripts_in_NC']) {
+                if (isset($aGenes[$aVariant['symbol']]['transcripts_in_NC'])) {
                     $aTranscriptInfo = $aGenes[$aVariant['symbol']]['transcripts_in_NC'];
 
                 } else {
