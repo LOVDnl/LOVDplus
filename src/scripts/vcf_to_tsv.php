@@ -18,6 +18,9 @@
  *               Fixed bug in allele trimming; lovd_ltrimCommonChars() should
  *               actually only be used once, and should not be looped.
  *               Also, added the transcript_prefix filter.
+ *               Finally, added a filter to remove an allele when there was no
+ *               annotation left. This was the (silent) default, and now it's
+ *               configurable.
  *               0.2    2018-09-13
  *               Added filter for frequency, which is enabled by default.
  *               Also, print active filters to the screen.
@@ -76,6 +79,7 @@ $_CONFIG = array(
         'no_gene' => true, // Remove annotation when gene is missing.
         'frequency' => true, // Remove variant when frequency is above a certain threshold.
         'transcript_prefix' => true, // Remove annotation based on certain transcript prefixes.
+        'unannotated_alleles' => true, // Remove alleles who have lost their annotation by other filters.
     ),
     'filtering_options' => array(
         'no_gene' => array(
@@ -113,6 +117,9 @@ $_CONFIG = array(
                 'NR_',
                 'XR_',
             )
+        ),
+        'unannotated_alleles' => array(
+            'description' => 'Removes alleles who have lost their annotation by other filters.',
         ),
     ),
 );
@@ -628,6 +635,13 @@ while ($sLine = fgets($fInput)) {
                     }
                 }
             }
+
+            if ($_CONFIG['filtering']['unannotated_alleles'] && !$aVOTsPerAllele[$sKeyAllele]) {
+                // Drop the entire allele.
+                unset($aVOTsPerAllele[$sKeyAllele]);
+                $nKeyAllele = array_search($sKeyAllele, $aALTsCleaned);
+                unset($aALTs[$nKeyAllele]);
+            }
         }
     }
 
@@ -636,7 +650,7 @@ while ($sLine = fgets($fInput)) {
         $aLine['ALT'] = $sALT;
 
         // It is possible that there is no VOT data for this ALT. Still, we want to print some data.
-        if (!isset($aVOTsPerAllele[$aALTsCleaned[$nKeyALT]])) {
+        if (empty($aVOTsPerAllele[$aALTsCleaned[$nKeyALT]])) {
             $aVOTsPerAllele[$aALTsCleaned[$nKeyALT]] = array(array());
         }
 
