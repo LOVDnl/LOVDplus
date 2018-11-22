@@ -1960,10 +1960,14 @@ class LOVD_Object {
         if (in_array($aOrder[0], array('chromosome','VariantOnGenome/DNA'))) {
             // 2014-03-07; 3.0-10; We need to find the table alias of the VOG or genes table, because otherwise MySQL fails here ('chromosome' is ambiguous) if both are joined.
             // 2014-04-28; 3.0-10; Prefer the genes table, since it joins to VOG as well, but may not have results which messes up the order.
+            // 2018-11-22; LOVD+ 3.0-18; Override, we have overviews of VOGs that sometimes don't have genes, link to the first table instead!
             $sAlias = '';
-            if (preg_match('/' . TABLE_GENES . ' AS ([a-z]+)/i', $this->aSQLViewList['FROM'], $aRegs)) {
+            // Determine the first table, link to that.
+            $nPosGenes = strpos($this->aSQLViewList['FROM'], TABLE_GENES . ' ');
+            $nPosVOG   = strpos($this->aSQLViewList['FROM'], TABLE_VARIANTS . ' ');
+            if (($nPosVOG === false || $nPosGenes < $nPosVOG) && preg_match('/' . TABLE_GENES . ' AS ([a-z]+)/i', $this->aSQLViewList['FROM'], $aRegs)) {
                 $sAlias = $aRegs[1];
-            } elseif (preg_match('/' . TABLE_VARIANTS . ' AS ([a-z]+)/i', $this->aSQLViewList['FROM'], $aRegs)) {
+            } elseif (($nPosGenes === false || $nPosVOG < $nPosGenes) && preg_match('/' . TABLE_VARIANTS . ' AS ([a-z]+)/i', $this->aSQLViewList['FROM'], $aRegs)) {
                 $sAlias = $aRegs[1];
             }
             $this->aSQLViewList['FROM'] .= ' LEFT OUTER JOIN ' . TABLE_CHROMOSOMES . ' AS chr ON (' . (!$sAlias? '' : $sAlias . '.') . 'chromosome = chr.name)';
