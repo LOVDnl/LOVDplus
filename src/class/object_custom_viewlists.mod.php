@@ -4,7 +4,7 @@
  * LEIDEN OPEN VARIATION DATABASE (LOVD)
  *
  * Created     : 2013-11-07
- * Modified    : 2018-03-29
+ * Modified    : 2018-11-22
  * For LOVD    : 3.0-18
  *
  * Copyright   : 2004-2018 Leiden University Medical Center; http://www.LUMC.nl/
@@ -117,7 +117,7 @@ class LOVD_CustomViewListMOD extends LOVD_CustomViewList {
                             $aSQL['GROUP_BY'] = 'vog.id'; // Necessary for GROUP_CONCAT().
                         }
                     } elseif ($nKeyVOG !== false && $nKeyVOG < $nKey) { // Adding the analysis run results later.
-                        $aSQL['FROM'] .= ' LEFT JOIN ' . TABLE_ANALYSES_RUN_RESULTS . ' AS arr ON (arr.variantid = vog.id)';
+                        $aSQL['FROM'] .= ' LEFT OUTER JOIN ' . TABLE_ANALYSES_RUN_RESULTS . ' AS arr ON (arr.variantid = vog.id)';
                     }
                     break;
 
@@ -143,7 +143,7 @@ class LOVD_CustomViewListMOD extends LOVD_CustomViewList {
                         $aSQL['GROUP_BY'] = 'vog.id'; // Necessary for GROUP_CONCAT(), such as in Screening.
                         $aSQL['ORDER_BY'] = 'vog.chromosome ASC, vog.position_g_start';
                     } else {
-                        $aSQL['FROM'] .= ' LEFT JOIN ' . TABLE_VARIANTS . ' AS vog ON (';
+                        $aSQL['FROM'] .= ' LEFT OUTER JOIN ' . TABLE_VARIANTS . ' AS vog ON (';
                         $nKeyARR = array_search('AnalysisRunResults', $aObjects);
                         $nKeyVOT = array_search('VariantOnTranscript', $aObjects);
                         if ($nKeyARR !== false && $nKeyARR < $nKey) {
@@ -274,11 +274,11 @@ class LOVD_CustomViewListMOD extends LOVD_CustomViewList {
                                                FROM ' . TABLE_GEN2DIS . ' g2d INNER JOIN ' . TABLE_DISEASES . ' d ON (g2d.diseaseid = d.id)
                                                WHERE g2d.geneid = g.id)
                                                AS gene_disease_names';
-                        $aSQL['FROM'] .= ' LEFT JOIN ' . TABLE_VARIANTS_ON_TRANSCRIPTS . ' AS vot ON (';
+                        $aSQL['FROM'] .= ' LEFT OUTER JOIN ' . TABLE_VARIANTS_ON_TRANSCRIPTS . ' AS vot ON (';
                         // Earlier, VOG was used, join to that.
                         $aSQL['FROM'] .= 'vog.id = vot.id)';
                         // Join to transcripts for the NM number, but also to genes to show the gene's OMIM ID.
-                        $aSQL['FROM'] .= ' LEFT JOIN ' . TABLE_TRANSCRIPTS . ' AS t ON (vot.transcriptid = t.id) LEFT JOIN ' . TABLE_GENES . ' AS g ON (t.geneid = g.id)';
+                        $aSQL['FROM'] .= ' LEFT OUTER JOIN ' . TABLE_TRANSCRIPTS . ' AS t ON (vot.transcriptid = t.id) LEFT OUTER JOIN ' . TABLE_GENES . ' AS g ON (t.geneid = g.id)';
                         // We have no fallback, so we'll easily detect an error if we messed up somewhere.
 
                     }
@@ -291,7 +291,7 @@ class LOVD_CustomViewListMOD extends LOVD_CustomViewList {
                         // First data table in query.
                         $aSQL['FROM'] = TABLE_INDIVIDUALS . ' AS i';
                     } elseif ($nKeyScreening !== false && $nKeyScreening < $nKey) {
-                        $aSQL['FROM'] .= ' LEFT JOIN ' . TABLE_INDIVIDUALS . ' AS i ON (s.individualid = i.id)';
+                        $aSQL['FROM'] .= ' LEFT OUTER JOIN ' . TABLE_INDIVIDUALS . ' AS i ON (s.individualid = i.id)';
                     }
                     break;
 
@@ -301,10 +301,10 @@ class LOVD_CustomViewListMOD extends LOVD_CustomViewList {
                     if (!$aSQL['FROM']) {
                         // First data table in query.
                         $aSQL['FROM'] = TABLE_SCR2VAR . ' AS s2v
-                                        LEFT JOIN ' . TABLE_SCREENINGS . ' AS s ON (vog.id = s2v.screeningid)';
+                                        LEFT OUTER JOIN ' . TABLE_SCREENINGS . ' AS s ON (vog.id = s2v.screeningid)';
                     } elseif ($nKeyVOG !== false && $nKeyVOG < $nKey) {
-                        $aSQL['FROM'] .= ' LEFT JOIN ' . TABLE_SCR2VAR . ' AS s2v ON (vog.id = s2v.variantid)
-                                           LEFT JOIN ' . TABLE_SCREENINGS . ' AS s ON (s.id = s2v.screeningid)';
+                        $aSQL['FROM'] .= ' LEFT OUTER JOIN ' . TABLE_SCR2VAR . ' AS s2v ON (vog.id = s2v.variantid)
+                                           LEFT OUTER JOIN ' . TABLE_SCREENINGS . ' AS s ON (s.id = s2v.screeningid)';
                     }
                     break;
 
