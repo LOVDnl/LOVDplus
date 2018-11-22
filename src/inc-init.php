@@ -896,7 +896,7 @@ if (!defined('NOT_INSTALLED')) {
 
     if (!in_array(lovd_getProjectFile(), array('/check_update.php'))) {
         // Load gene data.
-        if (!empty($_SESSION['currdb'])) {
+        if (!LOVD_plus && !empty($_SESSION['currdb'])) {
             $_SETT['currdb'] = @$_DB->query('SELECT * FROM ' . TABLE_GENES . ' WHERE id = ?', array($_SESSION['currdb']))->fetchAssoc();
             if (!$_SETT['currdb']) {
                 $_SESSION['currdb'] = false;
