@@ -4,10 +4,10 @@
  * LEIDEN OPEN VARIATION DATABASE (LOVD)
  *
  * Created     : 2016-03-01
- * Modified    : 2017-03-08
+ * Modified    : 2018-11-22
  * For LOVD    : 3.0-18
  *
- * Copyright   : 2004-2017 Leiden University Medical Center; http://www.LUMC.nl/
+ * Copyright   : 2004-2018 Leiden University Medical Center; http://www.LUMC.nl/
  * Programmers : Anthony Marty <anthony.marty@unimelb.edu.au>
  *               Ivo F.A.C. Fokkema <I.F.A.C.Fokkema@LUMC.nl>
  *               John-Paul Plazzer <johnpaul.plazzer@gmail.com>
@@ -928,7 +928,7 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && ACTION == 'manage_genes') {
               <TH>Inheritance</TH>
               <TH>PMID</TH>
               <TH>Remarks</TH>
-              ' . (!$bRemovableGenes? '' : '<TH width="30">&nbsp;</TH>') . '</TR></THEAD>
+              <TH width="30">&nbsp;</TH></TR></THEAD>
           <TBODY>');
     // Now loop the items in the order given.
     foreach ($aGenes as $sID => $aGene) {
@@ -941,7 +941,7 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && ACTION == 'manage_genes') {
               <TD><SELECT name="inheritances[]">' . str_replace('"' . $aGene['inheritance'] . '">', '"' . $aGene['inheritance'] . '" selected>', $sInheritanceOptions) . '</SELECT></TD>
               <TD><INPUT type="text" name="pmids[]" value="' . $aGene['pmid'] . '" size="10"></TD>
               <TD><INPUT type="text" name="remarkses[]" value="' . $aGene['remarks'] . '" size="40"></TD>
-              ' . (!$bRemovableGenes? '' : '<TD width="30" align="right"><A href="#" onclick="lovd_removeGene(\'' . $sViewListID . '\', \'' . $sID . '\'); return false;"><IMG src="gfx/mark_0.png" alt="Remove" width="11" height="11" border="0"></A></TD>') . '</TR>');
+              <TD width="30" align="right">' . (!$bRemovableGenes? '' : '<A href="#" onclick="lovd_removeGene(\'' . $sViewListID . '\', \'' . $sID . '\'); return false;"><IMG src="gfx/mark_0.png" alt="Remove" width="11" height="11" border="0"></A>') . '</TD></TR>');
     }
     print('
           </TBODY></TABLE></DIV><BR>' . "\n");
