@@ -87,6 +87,16 @@ class LOVD_CustomViewList extends LOVD_Object {
                       'SELECT c.id, sc.width, c.head_column, c.description_legend_short, c.description_legend_full, c.mysql_type, c.form_type, c.select_options, sc.col_order, CONCAT(sc.geneid, ":", sc.public_view) AS public_view FROM ' . TABLE_COLS . ' AS c INNER JOIN ' . TABLE_SHARED_COLS . ' AS sc ON (c.id = sc.colid) WHERE sc.geneid = ? ' .
                       ($_AUTH['level'] >= LEVEL_COLLABORATOR? '' : 'AND sc.public_view = 1 ')) .
                     'ORDER BY col_order';
+        if (LOVD_plus) {
+            // In LOVD_plus, the shared cols table is empty and the public_view field is used to set if a custom column will be displayed in a VL or not.
+            // So, in LOVD_plus we need to check for ALL USERS if a custom column has public_view flag turned on or not.
+            $sSQL = 'SELECT c.id, c.width, c.head_column, c.description_legend_short, c.description_legend_full, c.mysql_type, c.form_type, c.select_options, c.col_order, c.public_view FROM ' . TABLE_ACTIVE_COLS . ' AS ac INNER JOIN ' . TABLE_COLS . ' AS c ON (c.id = ac.colid) ' .
+                    'WHERE c.public_view = 1 AND (c.id LIKE ?' . str_repeat(' OR c.id LIKE ?', count($aObjects)-1) . ') ' .
+                    'GROUP BY c.id ' .
+                    'ORDER BY col_order';
+            // And then we don't need this.
+            $sGene = '';
+        }
         $aSQL = array();
         foreach ($aObjects as $sObject) {
             $aSQL[] = $sObject . '/%';
