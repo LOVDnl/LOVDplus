@@ -4,10 +4,10 @@
  * LEIDEN OPEN VARIATION DATABASE (LOVD)
  *
  * Created     : 2016-04-12
- * Modified    : 2017-02-10
+ * Modified    : 2018-11-26
  * For LOVD    : 3.0-18
  *
- * Copyright   : 2004-2017 Leiden University Medical Center; http://www.LUMC.nl/
+ * Copyright   : 2004-2018 Leiden University Medical Center; http://www.LUMC.nl/
  * Programmers : Anthony Marty <anthony.marty@unimelb.edu.au>
  *               Ivo F.A.C. Fokkema <I.F.A.C.Fokkema@LUMC.nl>
  *
@@ -127,9 +127,14 @@ class LOVD_SummaryAnnotation extends LOVD_Custom {
             $this->buildForm(),
             array(
                 'skip',
-                array('Enter your password for authorization', '', 'password', 'password', 20)
+  'password' => array('Enter your password for authorization', '', 'password', 'password', 20),
             )
         );
+
+        if (ACTION == 'create') {
+            // When creating, unset the password field.
+            unset($this->aFormData['password']);
+        }
 
         return parent::getForm();
     }

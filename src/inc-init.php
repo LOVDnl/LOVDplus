@@ -183,6 +183,17 @@ $_SETT = array(
                             3 => 'Likely benign',
                             1 => 'Benign',
                           ),
+                'var_effect_short' =>
+                    array(
+                        0 => '.',   // Not classified
+                        1 => '-',   // Does not affect function
+                        3 => '-?',  // Probably does not affect function
+                        5 => '?',   // Effect unknown
+                        6 => '#',   // Variant affects function but was not associated with any known disease phenotype
+                        7 => '+?',  // Probably affects function
+                        8 => '+*',  // Variant affects function but was not associated with this individual's disease phenotype
+                        9 => '+',   // Affects function
+                    ),
                 'var_effect_default' => '00',
                 'diseases_inheritance' =>
                     array(

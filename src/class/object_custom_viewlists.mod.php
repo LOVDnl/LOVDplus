@@ -122,7 +122,12 @@ class LOVD_CustomViewListMOD extends LOVD_CustomViewList {
                     break;
 
                 case 'VariantOnGenome':
-                    $aSQL['SELECT'] .= (!$aSQL['SELECT']? '' : ', ') . 'vog.*, a.name AS allele_, eg.name AS vog_effect, CONCAT(cs.id, cs.name) AS curation_status_';
+                    $aSQL['SELECT'] .= (!$aSQL['SELECT']? '' : ', ') . 'vog.*, a.name AS allele_, CONCAT(eg.name, IF(ISNULL(sa.effectid), "", CONCAT(" (", CASE sa.effectid';
+                    // This is quite annoying. I can't join the SAR's effect into something that will display a proper value, as there is no table with one value.
+                    foreach ($_SETT['var_effect_short'] as $nID => $sValue) {
+                        $aSQL['SELECT'] .= ' WHEN "' . $nID . '" THEN "' . $sValue . '"';
+                    }
+                    $aSQL['SELECT'] .= ' ELSE "" END, ")"))) AS vog_effect, CONCAT(cs.id, cs.name) AS curation_status_';
                     if (lovd_verifyInstance('mgha')) {
                         $aSQL['SELECT'] .= ', IF(vog.allele = 0, 
                                                 IF(vog.`VariantOnGenome/Sequencing/Allele/Frequency` < 1, "Het", "Hom"), 
@@ -158,6 +163,7 @@ class LOVD_CustomViewListMOD extends LOVD_CustomViewList {
 
                     $aSQL['FROM'] .= ' LEFT OUTER JOIN ' . TABLE_ALLELES . ' AS a ON (vog.allele = a.id)';
                     $aSQL['FROM'] .= ' LEFT OUTER JOIN ' . TABLE_EFFECT . ' AS eg ON (vog.effectid = eg.id)';
+                    $aSQL['FROM'] .= ' LEFT OUTER JOIN ' . TABLE_SUMMARY_ANNOTATIONS . ' AS sa ON (vog.`VariantOnGenome/DBID` = sa.id)';
                     $aSQL['FROM'] .= ' LEFT OUTER JOIN ' . TABLE_CURATION_STATUS . ' AS cs ON (vog.curation_statusid = cs.id)';
                     break;
 
@@ -660,6 +666,11 @@ class LOVD_CustomViewListMOD extends LOVD_CustomViewList {
 
         // Makes sure it's an array and htmlspecialchars() all the values.
         $zData = parent::prepareData($zData, $sView);
+
+        // The SAR effect could be included in the Effect column.
+        if (isset($zData['vog_effect'])) {
+            $zData['vog_effect'] = preg_replace('/(\(.{1,2}\))$/', '<B style="float:right;">$1</B>', $zData['vog_effect']);
+        }
 
         // Coloring...
         if (!empty($zData['VariantOnTranscript/GVS/Function'])) {

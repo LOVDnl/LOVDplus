@@ -5,10 +5,6 @@ Task list in SharePoint:
 https://teamwerk.lumc.nl/sites/LOVD_plus/Lists/Tasks/Current%20tasks.aspx
 
 2016-11-08
-\item[$\circ$] KG: Wants the new GoNL frequency *next to* the old one. So will need to import the new one, too. Sander
-      will tell me what the column will be called. Then adapt conversion, and have new column created. Better on top of
-      old build, so testing will be swift. All filters need to use the NEW column, and drop the old column. This
-      means old runs repeated will have more results, yes.
 \item[$\circ$] KG: Is it logged in LOVD+, who makes the export for Miracle?
 
 
@@ -24,16 +20,6 @@ https://teamwerk.lumc.nl/sites/LOVD_plus/Lists/Tasks/Current%20tasks.aspx
       primers will be a fast process. So LOVD will send (some) data to Prinia, wait, then take the Prinia output
       together with more info if needed for Miracle, and send that to Miracle. If this fails anywhere, it's OK for LOVD
       to start over the entire process.
-\item[$\circ$] Peter van het Hoff zou meer moeten weten over Jenkins, omdat hij dit veel gebruikt. Niet in combi met
-      Selenium, waarschijnlijk. Bowo kent Jenkins ook goed.
-\item[$\circ$] Stuur Sander files en/of varianten die verkeerde VEP output genereren, de prot met lange data.
-
-
-
-2016-10-11
-\item[$\circ$] Diseases VE is really, really, really slow. Not sure if it's the VE or the VL on the page. Either way,
-      after the upgrade to the latest LOVD version, we should check if it's still so slow.
-\item[$\circ$] Don't filter transcripts in LOVD, keep filtering in one spot.
 
 
 
@@ -45,29 +31,6 @@ https://teamwerk.lumc.nl/sites/LOVD_plus/Lists/Tasks/Current%20tasks.aspx
       transcript configured, will the transcript be passed to the pipleine. LOVD will also use this transcript that has
       been configured to decide which one will be sent to Miracle. Write this down, send to Sander, then to group. What
       we will write is for the official decision.
-
-
-
-2016-06-07
-\item[$\circ$] Also allow for whitespace between the genes in the custom panel.
-\item[$\circ$] Add a button on the analysis table, to re-run this analysis.
-
-
-
-2016-06-01
-\item[$\circ$] Create an issue in GitLab for duplicating an analysis. Put a new icon on the analysis table to do that.
-      Page reloads (just like after modifying an analysis), and the copied analysis (not the results are copied, just
-      the analysis with its filters) can be run again, with different gene panel settings. Anthony to look at
-      implementing this feature.
-\item[$\circ$] Ivo will check queries for observation counts and check how these would be optimized when not using the
-      DBID field.
-\item[$\circ$] Ivo also checks if we can then easily still get from the variant to the summary annotation record.
-
-
-
-2016-05-10
-\item[$\circ$] KG: What was again the issue about gene symbols being mismatched/old? Mutalyzer involved as well? Can we
-      use HGNC IDs instead?
 
 
 
@@ -99,21 +62,10 @@ https://teamwerk.lumc.nl/sites/LOVD_plus/Lists/Tasks/Current%20tasks.aspx
 
 
 2016-01-12
-\item[$\circ$] KG: It should be possible to do a new analysis, with a new gene panel. This has to be recorded in
-      Miracle. Normally, this exports a file to Magpie, and they run the pipeline, running panel-specific filters, etc.
-      Maybe we can standardize this, so that we can use the same variants? Or maybe (didn't ask) they need to store
-      panel-specific effects? Either way, Magpie still needs to run because it generates reports.
-\item[$\circ$] KG: We also don't want data to be loaded into Varda again.
 \item[$\circ$] KG: Miracle needs some code back from the primerdesign software, that indicates what type of analysis has
       been done. This is new. So we need to put those codes in LOVD, so that LOVD can somehow generate these values in
       the output towards the primerdesign software, which will pass it on to Miracle. I don't know the values, neither
       does Adri. We'll check when this thing starts, I guess.
-
-
-
-2015-12-22
-\item[$\circ$] Jeroen: Hoe het terughalen van de gedumpte varianten te implementeren, is afhankelijk van wat ze willen.
-      Is het om te zien wat ze zagen, is het om de run opnieuw te doen, etc?
 
 
 
@@ -122,83 +74,13 @@ https://teamwerk.lumc.nl/sites/LOVD_plus/Lists/Tasks/Current%20tasks.aspx
 
 
 
-2015-11-24
-\item[$\circ$] About the VEP changing gene symbols; it would be better if we could identify these using the VEP data,
-      but what about using the HGNC IDs from the VEP files, if available? That would release the link between VEP and
-      us, which means we can rename whenever we want.
-
-
-
 2015-11-10
 \item[$\circ$] Disallow modifications of disease panels in PROD. Better in code?
-\item[$\circ$] Scheduler/Importer: Already imported this file? Skip it and remove from list...
 
 
 
 2015-09-15
 \item[$\circ$] KG: Misschien is VOT/Position not even needed? Check in code...
-\item[$\circ$] KG: Miracle ID is used for too many things. This needs to change. It will be come an analysis ID. But
-      each analysis still has one disease, one gene panel and one data file, so we can keep using the Individual data
-      type for that. Just allow multiple ZIS numbers, if we run into the Miracle ID problem again, we can just remove
-      that check there \& then.
-
-
-
-2015-05-26
-\item[$\circ$] KG: Conversie script moet exon veld op gaan slaan, daarna moet primer export \emph{dichtstbijzijnde}
-      exon ontvangen, dus (position\_intron < 0), dan exon ++.
-
-
-
-2015-04-28
-\item[$\circ$] Aanpassen recessief filter is belangrijkst. Dit kost ze nu het meeste tijd.
-\item[$\circ$] Afsluiten analyse: Miracle ID naar Sander, zodat data gearchiveerd kan worden. Overleg met hem, hoe we
-      dit automatisch gaan doen. Afsluiten dus ook belangrijk.
-Als convert script nieuw gen aan maakt, komen de standaard cols er dan ook bij?
-
-
-
-// Recessief filter:
-On Fri, 2015-04-24 at 13:37 +0200, Santen, G.W.E. (KG) wrote:
-> Sounds good to me.
->
-> We moeten wel even beslissen hoe je het doet in de twijfelgevallen.
-> Even uitgaande van een heterzygote variant bij het kind, zijn er de volgende opties
->
-> Ouder 1 / Ouder 2
-> 1-2 / 3-6 : Allel van ouder 2
-> 1-2 / 1-2 : Onbekend (de novo?)
-> 5-6 / 1-3 : Allel van ouder 1
-> 3-4 / 3-4: Onbekend (kan van beide komen)
->
-> Als je nog tegen onduidelijkheden aanloopt dan hoor ik het wel.
-
-Ik denk dat de resend bedoeld was om de cijfers te fixen, maar er zit
-nog steeds een raar verschil in:
-
-1-2 / 3-6 : Allel van ouder 2
-5-6 / 1-3 : Allel van ouder 1
-
-Wat moeten die waardes worden?
-
-1-2 / 1-2 : Onbekend (de novo?)
-
-Ik stel voor om die dan de novo te noemen, ja.
-
-3-4 / 3-4: Onbekend (kan van beide komen)
-
-Ik zal daar allel op "unknown" zetten.
-
-We filteren dan dus alleen varianten weg die duidelijk als de novo zijn
-aangegeven. Heteryzogoten met een waarde van 3 minimaal in een van beide
-kolommen worden dan gemarkeerd als inherited... goed?
-
-
-
-// 2015-04-14
-\item[$\circ$] KG: Exon nummer moet ingevoerd worden in export. Mag tijdens export, hoeft niet opgeslagen te worden. Nog
-      onduidelijk waar exon 1 zit: ATG of echte exon 1? Ivonne zoekt dit uit. EERST gaat Sander checken of VEP dit kan
-      (ja, dat kan, maar dan moet ik het dus opslaan).
 
 
 
@@ -206,27 +88,13 @@ kolommen worden dan gemarkeerd als inherited... goed?
 
 
 
-Nadat je een analyse runt in IE, verschijnt het delete knopje niet.
-// Meerdere analyses tegelijkertijd runnen, zou dat moeten kunnen?
-
-
-
 Check all code for mappingInfo calls, and sort transcript position fields if genomic var was given (map_variants.php en variants.php (veel calls)
-Bij aanmaken meer genen, denk aan custom cols die geactiveerd moeten worden!!!
 
 Het zou mooi zijn als het in het gefilterde variantenscherm te zien zou zijn wanneer er een opmerking is ingevuld bij de betreffende variant, bijvoorbeeld middels een icoontje.
 
 Prioriteiten lijst
 ==================
 - Pathogene varianten altijd tonen.
-- Allele veld (van wie overgeërfd) invullen tijdens import op basis van juiste
-  data (niet meer heel belangrijk).
-  - Misschien is het nog wel zinvol om toch wat allelinformatie toe te voegen bij het importeren.
-    Ik zou dan voor de volgende regels gaan, gebruik makend van de ISPRESENT_kolommen
-    - als genotype kind 1/1 dan homozygous, dus both (dit is eventueel nog te verfijnen: als een van de ouders een 1/2 heeft en de ALTPERC van het kind <80, dan zal-ie toch wel gewoon heterozygoot zijn)
-    - als genotype kind 0/1
-      - default unknown
-      - als een van de ouders 5 of 6, en de ander 1,2 of 3, dan toekennen aan het allel van de 5/6 ouder.
 - Validatie scripts (Selenium)
 
 Extra:
@@ -237,10 +105,8 @@ Extra:
 
 // 2014-03-18
 // MappingInfo fix overal in map_variants.php aanpassen.
-// Analyse gerund, geen kruis zichtbaar tot reload.
 
 // Zoek veld ingevuld? Kleurtje er in. JS?
-// Aanpassen analyse run? isAuthorized zou dit moeten afhandelen. Nu even snel gezet op manager of hoger.
 // reCAPTCHA uitzetten? Niet nodig voor KG, maar als het systeem ooit uitgegeven wordt en online komt te staan, dan weer wel...
 
 SSL op server?
@@ -248,17 +114,6 @@ Verandering aan variants.php (isset() toegevoegd) zodat niet-seattleseq files ku
 
 // Validatie. Hoe gaan we dit doen. Selenium scripts schrijven
 voor import van standaard input files en analyse. Output moet altijd hetzelfde zijn.
-
-// Opschonen:
-Alles van afgesloten analyses wat op 55 staat mag weg, de rest laten staan (wel en niet pathogeen). // Hoe status var
-in andere pat? Aparte col, aantal keer gerapporteerd, of aantal keer gecalled? 2 cols?
-
-Filteren:
-  Hoe voorkom je dat er meerdere filters per keer worden geladen? OnClick wordt al van de huidige verwijderd, maar ook van de rest af halen?
-    Alhoewel... is het erg, als dit gebeurt? Vanwege het locken van de sessie data wordt de request niet eens afgehandeld, dus je klikt je suf.
-
-Importeren moet ook het allele veld goed krijgen. Ik heb dat nodig voor het recessieve filter.
-  Probeer het nu met queries in de database te doen, en check wat je over hebt.
 
 
 
@@ -269,9 +124,6 @@ SSL?
 Project 2Do file:
 ONTWIKKELING SYSTEEM
 ================================================================================
-- Analyses definieren
-    Filters: Recessief.
-
 - Interface wijzigingen
   + Pathogene varianten verschijnen dan als resultaat in alle analyses, ongeacht
     of ze er eerder door die filters waren uitgefilterd. Ze zouden in dat geval

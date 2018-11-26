@@ -87,6 +87,16 @@ class LOVD_CustomViewList extends LOVD_Object {
                       'SELECT c.id, sc.width, c.head_column, c.description_legend_short, c.description_legend_full, c.mysql_type, c.form_type, c.select_options, sc.col_order, CONCAT(sc.geneid, ":", sc.public_view) AS public_view FROM ' . TABLE_COLS . ' AS c INNER JOIN ' . TABLE_SHARED_COLS . ' AS sc ON (c.id = sc.colid) WHERE sc.geneid = ? ' .
                       ($_AUTH['level'] >= LEVEL_COLLABORATOR? '' : 'AND sc.public_view = 1 ')) .
                     'ORDER BY col_order';
+        if (LOVD_plus) {
+            // In LOVD_plus, the shared cols table is empty and the public_view field is used to set if a custom column will be displayed in a VL or not.
+            // So, in LOVD_plus we need to check for ALL USERS if a custom column has public_view flag turned on or not.
+            $sSQL = 'SELECT c.id, c.width, c.head_column, c.description_legend_short, c.description_legend_full, c.mysql_type, c.form_type, c.select_options, c.col_order, c.public_view FROM ' . TABLE_ACTIVE_COLS . ' AS ac INNER JOIN ' . TABLE_COLS . ' AS c ON (c.id = ac.colid) ' .
+                    'WHERE c.public_view = 1 AND (c.id LIKE ?' . str_repeat(' OR c.id LIKE ?', count($aObjects)-1) . ') ' .
+                    'GROUP BY c.id ' .
+                    'ORDER BY col_order';
+            // And then we don't need this.
+            $sGene = '';
+        }
         $aSQL = array();
         foreach ($aObjects as $sObject) {
             $aSQL[] = $sObject . '/%';
@@ -203,7 +213,8 @@ class LOVD_CustomViewList extends LOVD_Object {
                     break;
 
                 case 'VariantOnGenome':
-                    $aSQL['SELECT'] .= (!$aSQL['SELECT']? '' : ', ') . 'vog.id AS vogid, vog.chromosome, a.name AS allele_' . (!in_array('VariantOnTranscript', $aObjects)? ', eg.name AS vog_effect' : '') .
+                    $bLoadVOGEffect = (LOVD_plus || !in_array('VariantOnTranscript', $aObjects)); // LOVD+ always needs the VOG effect.
+                    $aSQL['SELECT'] .= (!$aSQL['SELECT']? '' : ', ') . 'vog.id AS vogid, vog.chromosome, a.name AS allele_' . (!$bLoadVOGEffect? '' : ', eg.name AS vog_effect') .
                                        (in_array('Individual', $aObjects) || in_array('VariantOnTranscriptUnique', $aObjects)? '' : ', uo.name AS owned_by_, CONCAT_WS(";", uo.id, uo.name, uo.email, uo.institute, uo.department, IFNULL(uo.countryid, "")) AS _owner') . (in_array('VariantOnTranscriptUnique', $aObjects)? '' : ', dsg.id AS var_statusid, dsg.name AS var_status') . $sCustomCols;
                     $nKeyVOTUnique = array_search('VariantOnTranscriptUnique', $aObjects);
                     if (!$bSetRowID) {
@@ -240,7 +251,7 @@ class LOVD_CustomViewList extends LOVD_Object {
                         // We have no fallback, so we'll easily detect an error if we messed up somewhere.
                     }
                     $aSQL['FROM'] .= ' LEFT OUTER JOIN ' . TABLE_ALLELES . ' AS a ON (vog.allele = a.id)';
-                    if (!in_array('VariantOnTranscript', $aObjects)) {
+                    if ($bLoadVOGEffect) {
                         $aSQL['FROM'] .= ' LEFT OUTER JOIN ' . TABLE_EFFECT . ' AS eg ON (vog.effectid = eg.id)';
                     }
                     if (!in_array('Individual', $aObjects)) {
@@ -258,7 +269,8 @@ class LOVD_CustomViewList extends LOVD_Object {
                     break;
 
                 case 'VariantOnTranscript':
-                    $aSQL['SELECT'] .= (!$aSQL['SELECT']? '' : ', ') . 'vot.id AS votid, vot.transcriptid, vot.position_c_start, vot.position_c_start_intron, vot.position_c_end, vot.position_c_end_intron, et.name as vot_effect' . $sCustomCols;
+                    $bLoadVOTEffect = (!LOVD_plus); // LOVD+ never uses this.
+                    $aSQL['SELECT'] .= (!$aSQL['SELECT']? '' : ', ') . 'vot.id AS votid, vot.transcriptid, vot.position_c_start, vot.position_c_start_intron, vot.position_c_end, vot.position_c_end_intron' . (!$bLoadVOTEffect? '' : ', et.name as vot_effect') . $sCustomCols;
                     $nKeyVOG = array_search('VariantOnGenome', $aObjects);
                     if (!$bSetRowID) {
                         $aSQL['SELECT'] .= ', vot.id AS row_id';
@@ -302,7 +314,9 @@ class LOVD_CustomViewList extends LOVD_Object {
                         }
                         // We have no fallback, so we'll easily detect an error if we messed up somewhere.
                     }
-                    $aSQL['FROM'] .= ' LEFT OUTER JOIN ' . TABLE_EFFECT . ' AS et ON (vot.effectid = et.id)';
+                    if ($bLoadVOTEffect) {
+                        $aSQL['FROM'] .= ' LEFT OUTER JOIN ' . TABLE_EFFECT . ' AS et ON (vot.effectid = et.id)';
+                    }
                     break;
 
                 case 'VariantOnTranscriptUnique':
@@ -546,7 +560,7 @@ class LOVD_CustomViewList extends LOVD_Object {
                                             'The variant\'s effect on a protein\'s function, in the format Reported/Curator concluded; \'+\' indicating the variant affects function, \'+?\' probably affects function, \'-\' does not affect function, \'-?\' probably does not affect function, \'?\' effect unknown, \'.\' effect not classified.')),
 
                          ));
-                    if (in_array('VariantOnTranscript', $aObjects) || in_array('VariantOnTranscriptUnique', $aObjects)) {
+                    if (empty($bLoadVOGEffect)) {
                         unset($this->aColumnsViewList['vog_effect']);
                     }
                     if (!$this->sSortDefault) {
@@ -592,6 +606,9 @@ class LOVD_CustomViewList extends LOVD_Object {
                     // FIXME: Perhaps it would be better to always show this column with VOT, but then hide it in all views that don't need it.
                     if (array_search('Scr2Var', $aObjects) === false) {
                         unset($this->aColumnsViewList['genes']);
+                    }
+                    if (empty($bLoadVOTEffect)) {
+                        unset($this->aColumnsViewList['vot_effect']);
                     }
                     if (!$this->sSortDefault) {
                         // First data table in view.
