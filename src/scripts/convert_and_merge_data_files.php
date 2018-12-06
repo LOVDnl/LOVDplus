@@ -759,6 +759,8 @@ foreach ($aFiles as $sFileID) {
                 // VEP has a newer gene symbol. Better warn about this.
                 $aVariant['symbol'] = $aGenesHGNC[$aVariant['id_hgnc']];
                 lovd_printIfVerbose(VERBOSITY_MEDIUM, 'Gene stored as \'' . $aVariant['symbol'] . '\' is given to us as \'' . $aVariant['symbol_vep'] . '\'; using our gene symbol.' . "\n");
+                // Store this for the next line.
+                $aGeneAliases[$aVariant['symbol_vep']] = $aVariant['symbol'];
             }
         }
         // Verify gene exists, and create it if needed.
