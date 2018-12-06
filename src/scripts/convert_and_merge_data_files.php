@@ -723,6 +723,13 @@ foreach ($aFiles as $sFileID) {
                     && isset($aVariant['VariantOnGenome/Sequencing' . $sColPart . '/Depth/Ref'])
                     && isset($aVariant['VariantOnGenome/Sequencing' . $sColPart . '/Depth/Alt'])) {
                     // Calculate the ALT fraction, that can not fail even if there are no reads.
+                    // Still, to prevent warnings, we'll have to init these values to 0 if missing.
+                    if ($aVariant['VariantOnGenome/Sequencing' . $sColPart . '/Depth/Ref'] === '') {
+                        $aVariant['VariantOnGenome/Sequencing' . $sColPart . '/Depth/Ref'] = 0;
+                    }
+                    if ($aVariant['VariantOnGenome/Sequencing' . $sColPart . '/Depth/Alt'] === '') {
+                        $aVariant['VariantOnGenome/Sequencing' . $sColPart . '/Depth/Alt'] = 0;
+                    }
                     $aVariant['VariantOnGenome/Sequencing' . $sColPart . '/Depth/Alt/Fraction'] =
                         round(
                             $aVariant['VariantOnGenome/Sequencing' . $sColPart . '/Depth/Alt']
