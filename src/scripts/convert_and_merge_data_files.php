@@ -4,7 +4,7 @@
  * LEIDEN OPEN VARIATION DATABASE (LOVD)
  *
  * Created     : 2014-11-28
- * Modified    : 2018-10-12
+ * Modified    : 2018-12-06
  * For LOVD+   : 3.0-18
  *
  * Copyright   : 2004-2018 Leiden University Medical Center; http://www.LUMC.nl/
@@ -581,7 +581,7 @@ foreach ($aFiles as $sFileID) {
     $nAnnotationErrors = 0; // Count the number of lines we cannot import.
 
     // Get all the existing genes in one database call.
-    $aGenes = $_DB->query('SELECT id, id, name FROM ' . TABLE_GENES . ' LIMIT 10')->fetchAllGroupAssoc();
+    $aGenes = $_DB->query('SELECT id, id, name FROM ' . TABLE_GENES)->fetchAllGroupAssoc();
 
     // If we're receiving the HGNC ID, we'll collect all genes for their HGNC IDs as well. This will be used to help
     //  LOVD+ to handle changed gene symbols.
@@ -766,8 +766,8 @@ foreach ($aFiles as $sFileID) {
                 $aGenes[$aVariant['symbol']] = $aGene;
 
             } elseif (!empty($_INSTANCE_CONFIG['conversion']['create_genes_and_transcripts'])) {
-                // Gene doesn't exist, try to find it at the HGNC.
-                // Getting all gene information from the HGNC takes a few seconds.
+                // Gene doesn't exist, and we're configured to create genes.
+                // Try to find it at the HGNC. Getting all gene information from the HGNC takes a few seconds.
                 $aGeneInfo = array();
                 if (!empty($_INSTANCE_CONFIG['conversion']['use_hgnc'])) {
                     lovd_printIfVerbose(VERBOSITY_HIGH, 'Loading gene information for ' . $aVariant['symbol'] . '...' . "\n");
@@ -776,7 +776,7 @@ foreach ($aFiles as $sFileID) {
                     $tHGNCCalls += (microtime(true) - $tHGNCStart);
                     $nHGNC++;
                     if (!$aGeneInfo) {
-                        // We can't gene information from the HGNC.
+                        // We couldn't find the gene at the HGNC.
                         $sMessage = 'Gene ' . $aVariant['symbol'] . ' can\'t be identified by the HGNC.';
                         lovd_printIfVerbose(VERBOSITY_LOW, $sMessage . "\n");
                         if (!empty($_INSTANCE_CONFIG['conversion']['enforce_hgnc_gene'])) {
