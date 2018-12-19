@@ -1,5 +1,7 @@
 <?php
 // Leiden specific adapter settings.
+$_INSTANCE_CONFIG['conversion']['suffixes']['vep'] = 'directvep.data.lovd';
+$_INSTANCE_CONFIG['conversion']['create_meta_file_if_missing'] = false;
 $_INSTANCE_CONFIG['conversion']['enforce_hgnc_gene'] = false;
 $_INSTANCE_CONFIG['conversion']['verbosity_other'] = 9;
 
@@ -185,5 +187,82 @@ class LOVD_LeidenDataConverter extends LOVD_DefaultDataConverter {
             'WTH3DI' => 'RAB6D',
             'ZFP112' => 'ZNF112',
         );
+    }
+
+
+
+
+
+    // FIXME: This function does not have a clearly matching name.
+    function prepareMappings ()
+    {
+        // Returns an array that map VEP columns to LOVD columns.
+
+        $aColumnMappings = array(
+            'chromosome' => 'chromosome',
+            'position' => 'position', // lovd_getVariantDescription() needs this.
+            'QUAL' => 'VariantOnGenome/Sequencing/Quality',
+            'FILTERvcf' => 'VariantOnGenome/Sequencing/Filter',
+            'GATKCaller' => 'VariantOnGenome/Sequencing/GATKcaller',
+            'Feature' => 'transcriptid',
+            'GVS' => 'VariantOnTranscript/GVS/Function',
+            'CDS_position' => 'VariantOnTranscript/Position',
+            'HGVSc' => 'VariantOnTranscript/DNA',
+            'HGVSp' => 'VariantOnTranscript/Protein',
+            'Grantham' => 'VariantOnTranscript/Prediction/Grantham',
+            'INDB_COUNT_UG' => 'VariantOnGenome/InhouseDB/Count/UG',
+            'INDB_COUNT_HC' => 'VariantOnGenome/InhouseDB/Count/HC',
+            'GLOBAL_VN' => 'VariantOnGenome/InhouseDB/Position/Global/Samples_w_coverage',
+            'GLOBAL_VF_HET' => 'VariantOnGenome/InhouseDB/Count/Global/Heterozygotes',
+            'GLOBAL_VF_HOM' => 'VariantOnGenome/InhouseDB/Count/Global/Homozygotes',
+            'WITHIN_PANEL_VN' => 'VariantOnGenome/InhouseDB/Position/InPanel/Samples_w_coverage',
+            'WITHIN_PANEL_VF_HET' => 'VariantOnGenome/InhouseDB/Count/InPanel/Heterozygotes',
+            'WITHIN_PANEL_VF_HOM' => 'VariantOnGenome/InhouseDB/Count/InPanel/Homozygotes',
+            'OUTSIDE_PANEL_VN' => 'VariantOnGenome/InhouseDB/Position/OutOfPanel/Samples_w_coverage',
+            'OUTSIDE_PANEL_VF_HET' => 'VariantOnGenome/InhouseDB/Count/OutOfPanel/Heterozygotes',
+            'OUTSIDE_PANEL_VF_HOM' => 'VariantOnGenome/InhouseDB/Count/OutOfPanel/Homozygotes',
+            'AF1000G' => 'VariantOnGenome/Frequency/1000G',
+            'rsID' => 'VariantOnGenome/dbSNP',
+            'AFESP5400' => 'VariantOnGenome/Frequency/EVS', // Will be divided by 100 later.
+            'CALC_GONL_AF' => 'VariantOnGenome/Frequency/GoNL',
+            'AFGONL' => 'VariantOnGenome/Frequency/GoNL_old',
+            'EXAC_AF' => 'VariantOnGenome/Frequency/ExAC',
+            'MutationTaster_pred' => 'VariantOnTranscript/Prediction/MutationTaster',
+            'MutationTaster_score' => 'VariantOnTranscript/Prediction/MutationTaster/Score',
+            'Polyphen2_HDIV_score' => 'VariantOnTranscript/PolyPhen/HDIV',
+            'Polyphen2_HVAR_score' => 'VariantOnTranscript/PolyPhen/HVAR',
+            'SIFT_score' => 'VariantOnTranscript/Prediction/SIFT',
+            'CADD_raw' => 'VariantOnGenome/CADD/Raw',
+            'CADD_phred' => 'VariantOnGenome/CADD/Phred',
+            'HGMD_association' => 'VariantOnGenome/HGMD/Association',
+            'HGMD_reference' => 'VariantOnGenome/HGMD/Reference',
+            'phyloP' => 'VariantOnGenome/Conservation_score/PhyloP',
+            'scorePhastCons' => 'VariantOnGenome/Conservation_score/Phast',
+            'GT' => 'allele',
+            'GQ' => 'VariantOnGenome/Sequencing/GenoType/Quality',
+            'DP' => 'VariantOnGenome/Sequencing/Depth/Total',
+            'DPREF' => 'VariantOnGenome/Sequencing/Depth/Ref',
+            'DPALT' => 'VariantOnGenome/Sequencing/Depth/Alt',
+            'ALTPERC' => 'VariantOnGenome/Sequencing/Depth/Alt/Fraction', // Will be divided by 100 later.
+            'GT_Father' => 'VariantOnGenome/Sequencing/Father/GenoType',
+            'GQ_Father' => 'VariantOnGenome/Sequencing/Father/GenoType/Quality',
+            'DP_Father' => 'VariantOnGenome/Sequencing/Father/Depth/Total',
+            'ALTPERC_Father' => 'VariantOnGenome/Sequencing/Father/Depth/Alt/Fraction', // Will be divided by 100 later.
+            'ISPRESENT_Father' => 'VariantOnGenome/Sequencing/Father/VarPresent',
+            'GT_Mother' => 'VariantOnGenome/Sequencing/Mother/GenoType',
+            'GQ_Mother' => 'VariantOnGenome/Sequencing/Mother/GenoType/Quality',
+            'DP_Mother' => 'VariantOnGenome/Sequencing/Mother/Depth/Total',
+            'ALTPERC_Mother' => 'VariantOnGenome/Sequencing/Mother/Depth/Alt/Fraction', // Will be divided by 100 later.
+            'ISPRESENT_Mother' => 'VariantOnGenome/Sequencing/Mother/VarPresent',
+
+            // Mappings for fields used to process other fields but not imported into the database.
+            'SYMBOL' => 'symbol',
+            'HGNC_ID' => 'id_hgnc',
+            'REF' => 'ref',
+            'ALT' => 'alt',
+            'Existing_variation' => 'existing_variation'
+        );
+
+        return $aColumnMappings;
     }
 }

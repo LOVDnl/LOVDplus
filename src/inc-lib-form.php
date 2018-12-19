@@ -1023,7 +1023,7 @@ function lovd_viewForm ($a,
 
                 // Select all link.
                 if ($bMultiple && $bSelectAll) {
-                    print('&nbsp;<A href="#" onclick="$(this.previousSibling.previousSibling).children().each(function(){$(this).attr(\'selected\', true);}); $(this.previousSibling.previousSibling).change(); return false">Select&nbsp;all</A>');
+                    print('&nbsp;<A href="#" onclick="$(this.previousSibling.previousSibling).children().each(function(){$(this).prop(\'selected\', true);}); $(this.previousSibling.previousSibling).change(); return false">Select&nbsp;all</A>');
                 }
 
                 print($sDataSuffix);

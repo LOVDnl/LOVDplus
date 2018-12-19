@@ -128,10 +128,18 @@ $_INSTANCE_CONFIG['attachments'] = array(
 );
 
 $_INSTANCE_CONFIG['conversion'] = array(
+    'suffixes' => array(
+        'meta' => 'meta.lovd',
+        'vep' => 'directvep.data.lovd',
+        'total.tmp' => 'total.data.tmp',
+        'total' => 'total.data.lovd',
+        'error' => 'error',
+    ),
     'annotation_error_max_allowed' => 20,
     'annotation_error_exits' => false,
     'annotation_error_drops_line' => false,
     'create_genes_and_transcripts' => false,
+    'create_meta_file_if_missing' => false,
     'enforce_hgnc_gene' => false,
     'check_indel_description' => false,
     'use_hgnc' => false,
@@ -156,7 +164,7 @@ $_INSTANCE_CONFIG['cross_screenings'] = array(
         if (!empty($zScreening['Screening/Tag'])) {
             $sText .= ' [' . $zScreening['Screening/Tag'] . ']';
         }
-        
+
         return $sText;
     }
 );
@@ -520,6 +528,7 @@ class LOVD_MghaDataConverter extends LOVD_DefaultDataConverter {
 
     function prepareVariantData (&$aLine)
     {
+        global $_INSTANCE_CONFIG;
         // Processes the variant data file for MGHA.
         // Cleans up data in existing columns and splits some columns out to two columns.
 
@@ -541,10 +550,20 @@ class LOVD_MghaDataConverter extends LOVD_DefaultDataConverter {
             $bDropTranscript = true;
         } elseif (!empty($aLine['SYMBOL']) && empty($this->aScriptVars['aGenes'][$aLine['SYMBOL']])) {
             $aLine['Variant_Remarks'] = "UNKNOWN GENE\n";
-            $bDropTranscript = true;
+            if (!$_INSTANCE_CONFIG['conversion']['create_genes_and_transcripts']) {
+                // IFokkema: Unfortunately, the MGHA adapter applies this filter in a bad location for the conversion
+                //   script, as it hasn't had the chance yet to try and create the gene or transcript. It would be good
+                //   to move this code downstream, perhaps generalizing it as the feature could be of use to others.
+                $bDropTranscript = true;
+            }
         } elseif (!empty($aLine['Feature']) && empty($this->aScriptVars['aTranscripts'][$aLine['Feature']])) {
             $aLine['Variant_Remarks'] = "UNKNOWN TRANSCRIPT\n";
-            $bDropTranscript = true;
+            if (!$_INSTANCE_CONFIG['conversion']['create_genes_and_transcripts']) {
+                // IFokkema: Unfortunately, the MGHA adapter applies this filter in a bad location for the conversion
+                //   script, as it hasn't had the chance yet to try and create the gene or transcript. It would be good
+                //   to move this code downstream, perhaps generalizing it as the feature could be of use to others.
+                $bDropTranscript = true;
+            }
         } elseif (!empty($aLine['HGVSc']) && strpos($aLine['HGVSc'], '*-') !== false) {
             $aLine['Variant_Remarks'] = "UNKNOWN CCHANGE NOMENCLATURE\n";
             $bDropTranscript = true;
@@ -724,7 +743,7 @@ class LOVD_MghaDataConverter extends LOVD_DefaultDataConverter {
         );
 
         foreach($aAltFreqColumns as $sFreqColumn) {
-            if ($aLine[$sFreqColumn] == 'unknown' || $aLine[$sFreqColumn] == '' || $sAlt == '' || empty($sAlt) || strlen($sAlt) == 0) {
+            if (!isset($aLine[$sFreqColumn]) || $aLine[$sFreqColumn] == 'unknown' || $aLine[$sFreqColumn] == '' || $sAlt == '' || empty($sAlt) || strlen($sAlt) == 0) {
                 $aLine[$sFreqColumn] = '';
             } else {
                 $aFreqArr = explode("&", $aLine[$sFreqColumn]);
@@ -866,16 +885,14 @@ class LOVD_MghaDataConverter extends LOVD_DefaultDataConverter {
 
 
 
-    function formatEmptyColumn($aLine, $sVEPColumn, $sLOVDColumn, $aVariant)
+    function formatEmptyColumn($aLine, $sVEPColumn)
     {
         // Returns how we want to represent empty data in $aVariant array given a LOVD column name.
         if (isset($aLine[$sVEPColumn]) && ($aLine[$sVEPColumn] === 0 || $aLine[$sVEPColumn] === '0')) {
-            $aVariant[$sLOVDColumn] = 0;
+            return 0;
         } else {
-            $aVariant[$sLOVDColumn] = '';
+            return '';
         }
-
-        return $aVariant;
     }
 
 

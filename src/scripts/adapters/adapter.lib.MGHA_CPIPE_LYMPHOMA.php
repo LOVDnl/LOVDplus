@@ -130,10 +130,18 @@ $_INSTANCE_CONFIG['attachments'] = array(
 );
 
 $_INSTANCE_CONFIG['conversion'] = array(
+    'suffixes' => array(
+        'meta' => 'meta.lovd',
+        'vep' => 'directvep.data.lovd',
+        'total.tmp' => 'total.data.tmp',
+        'total' => 'total.data.lovd',
+        'error' => 'error',
+    ),
     'annotation_error_max_allowed' => 20,
     'annotation_error_exits' => false,
     'annotation_error_drops_line' => false,
     'create_genes_and_transcripts' => false,
+    'create_meta_file_if_missing' => false,
     'enforce_hgnc_gene' => false,
     'check_indel_description' => false,
     'use_hgnc' => false,
@@ -158,7 +166,7 @@ $_INSTANCE_CONFIG['cross_screenings'] = array(
         if (!empty($zScreening['Screening/Tag'])) {
             $sText .= ' [' . $zScreening['Screening/Tag'] . ']';
         }
-        
+
         return $sText;
     }
 );

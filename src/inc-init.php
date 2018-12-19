@@ -693,7 +693,7 @@ if (!$_CONF) {
     $_CONF =
          array(
                 'system_title' => (LOVD_plus? 'Leiden Open Variation Database for diagnostics' : 'LOVD 3.0 - Leiden Open Variation Database'),
-                'logo_uri' => 'gfx/' . (LOVD_plus? 'LOVD_plus_logo200x50' : 'LOVD3_logo145x50') . '.jpg',
+                'logo_uri' => 'gfx/LOVD' . (LOVD_plus? '_plus' : '3') . '_logo145x50.jpg',
                 'lovd_read_only' => false,
               );
 }

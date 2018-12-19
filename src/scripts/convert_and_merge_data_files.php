@@ -4,7 +4,7 @@
  * LEIDEN OPEN VARIATION DATABASE (LOVD)
  *
  * Created     : 2014-11-28
- * Modified    : 2018-08-14
+ * Modified    : 2018-12-06
  * For LOVD+   : 3.0-18
  *
  * Copyright   : 2004-2018 Leiden University Medical Center; http://www.LUMC.nl/
@@ -22,7 +22,7 @@ $_GET['format'] = 'text/plain';
 // To prevent notices when running inc-init.php.
 $_SERVER = array_merge($_SERVER, array(
     'HTTP_HOST' => 'localhost',
-    'REQUEST_URI' => 'scripts/convert_and_merge_data_files.php',
+    'REQUEST_URI' => __FILE__,
     'QUERY_STRING' => '',
     'REQUEST_METHOD' => 'GET',
 ));
@@ -39,11 +39,6 @@ set_time_limit(0);
 ignore_user_abort(true);
 
 // Define and verify settings.
-define('VERBOSITY_NONE', 0); // No output whatsoever.
-define('VERBOSITY_LOW', 3); // Low output, only the really important messages.
-define('VERBOSITY_MEDIUM', 5); // Medium output. No output if there is nothing to do. Useful for when using cron.
-define('VERBOSITY_HIGH', 7); // High output. The default.
-define('VERBOSITY_FULL', 9); // Full output, including debug statements.
 $bCron = (empty($_SERVER['REMOTE_ADDR']) && empty($_SERVER['TERM']));
 define('VERBOSITY', $_INSTANCE_CONFIG['conversion']['verbosity_' . ($bCron? 'cron' : 'other')]);
 
@@ -93,21 +88,6 @@ function mutalyzer_runMutalyzer ($variant)
     return curl_exec($ch);
 }
 
-function lovd_printIfVerbose ($nVerbosity, $sMessage)
-{
-    // This function only prints the given message when the current verbosity is set to a level high enough.
-
-    // If no verbosity is currently defined, just print everything.
-    if (!defined('VERBOSITY')) {
-        define('VERBOSITY', 9);
-    }
-
-    if (VERBOSITY >= $nVerbosity) {
-        print($sMessage);
-    }
-    return true;
-}
-
 
 
 
@@ -115,13 +95,7 @@ function lovd_printIfVerbose ($nVerbosity, $sMessage)
 // This script will be called from localhost by a cron job.
 
 // Define the array of suffixes for the files names expected.
-$aSuffixes = array(
-    'meta' => 'meta.lovd',
-    'vep' => 'directvep.data.lovd',
-    'total.tmp' => 'total.data.tmp',
-    'total' => 'total.data.lovd',
-    'error' => 'error',
-);
+$aSuffixes = $_INSTANCE_CONFIG['conversion']['suffixes'];
 
 // Define list of genes to ignore, because they can't be found by the HGNC.
 // LOC* genes are always ignored, because they never work (HGNC doesn't know them).
@@ -138,6 +112,12 @@ $aGeneAliases = $_ADAPTER->prepareGeneAliases();
 
 // Define list of columns that we are recognizing.
 $aColumnMappings = $_ADAPTER->prepareMappings();
+$aFrequencyColumns = array(); // Which columns handle frequencies and need to be checked for non-float values?
+foreach ($aColumnMappings as $sCol) {
+    if (strpos($sCol, '/Frequency') !== false) {
+        $aFrequencyColumns[] = $sCol;
+    }
+}
 
 // These columns will be taken out of $aVariant and stored as the VOG data.
 // This array is also used to build the LOVD file.
@@ -400,7 +380,9 @@ if (!file_exists($sAdaptersDir . 'adapter.' . $sInstanceName . '.php')) {
 lovd_printIfVerbose(VERBOSITY_HIGH, '> Running ' . $sInstanceName . ' adapter...' . "\n");
 $sCmd = 'php ' . $_ADAPTER->sAdapterPath . '/adapter.' . $sInstanceName . '.php';
 passthru($sCmd, $nAdapterResult);
-if ($nAdapterResult !== 0) {
+if ($nAdapterResult == EXIT_WARNINGS_OCCURRED) {
+    lovd_printIfVerbose(VERBOSITY_LOW, "Adapter completed with warnings.\n");
+} elseif ($nAdapterResult !== EXIT_OK) {
     lovd_printIfVerbose(VERBOSITY_LOW, "Adapter Failed\n");
     exit;
 }
@@ -408,26 +390,14 @@ if ($nAdapterResult !== 0) {
 
 
 // Loop through the files in the dir and try and find a meta and data file, that match but have no total data file.
-$h = opendir($_INI['paths']['data_files']);
-if (!$h) {
+$aFiles = lovd_getFilesFromDir(
+    $_INI['paths']['data_files'],
+    $_ADAPTER->getInputFilePrefixPattern(),
+    array_map('preg_quote', array_values($aSuffixes))
+);
+if ($aFiles === false) {
     lovd_printIfVerbose(VERBOSITY_LOW, 'Can\'t open directory.' . "\n");
     exit;
-}
-while (($sFile = readdir($h)) !== false) {
-    if ($sFile{0} == '.') {
-        // Current dir, parent dir, and hidden files.
-        continue;
-    }
-
-    if (preg_match('/^('. $_ADAPTER->getInputFilePrefixPattern() .')\.(' . implode('|', array_map('preg_quote', array_values($aSuffixes))) . ')$/', $sFile, $aRegs)) {
-        //             1                                               2
-        // Files we need to merge.
-        list(, $sID, $sFileType) = $aRegs;
-        if (!isset($aFiles[$sID])) {
-            $aFiles[$sID] = array();
-        }
-        $aFiles[$sID][] = $sFileType;
-    }
 }
 
 // Die here, if we have nothing to work with.
@@ -499,15 +469,15 @@ define('LOG_EVENT', 'ConvertVEPToLOVD');
 require ROOT_PATH . 'inc-lib-actions.php';
 flush();
 @ob_end_flush(); // Can generate errors on the screen if no buffer found.
-foreach ($aFiles as $sID) {
+foreach ($aFiles as $sFileID) {
     // Try and open the file, check the first line if it conforms to the standard, and start converting.
-    lovd_printIfVerbose(VERBOSITY_LOW, 'Working on: ' . $sID . "...\n");
+    lovd_printIfVerbose(VERBOSITY_LOW, 'Working on: ' . $sFileID . "...\n");
     flush();
-    $sFileToConvert = $_INI['paths']['data_files'] . '/' . $sID . '.' . $aSuffixes['vep'];
-    $sFileMeta = $_INI['paths']['data_files'] . '/' . $sID . '.' . $aSuffixes['meta'];
-    $sFileTmp = $_INI['paths']['data_files'] . '/' . $sID . '.' . $aSuffixes['total.tmp'];
-    $sFileDone = $_INI['paths']['data_files'] . '/' . $sID . '.' . $aSuffixes['total'];
-    $sFileError = $_INI['paths']['data_files'] . '/' . $sID . '.' . $aSuffixes['error'];
+    $sFileToConvert = $_INI['paths']['data_files'] . '/' . $sFileID . '.' . $aSuffixes['vep'];
+    $sFileMeta = $_INI['paths']['data_files'] . '/' . $sFileID . '.' . $aSuffixes['meta'];
+    $sFileTmp = $_INI['paths']['data_files'] . '/' . $sFileID . '.' . $aSuffixes['total.tmp'];
+    $sFileDone = $_INI['paths']['data_files'] . '/' . $sFileID . '.' . $aSuffixes['total'];
+    $sFileError = $_INI['paths']['data_files'] . '/' . $sFileID . '.' . $aSuffixes['error'];
 
     $fInput = fopen($sFileToConvert, 'r');
     if ($fInput === false) {
@@ -559,7 +529,7 @@ foreach ($aFiles as $sID) {
 
     $sHeaders = fgets($fInput);
     $aHeaders = explode("\t", rtrim($sHeaders, "\r\n"));
-    // First line should be headers, we already read it out somewhere above here.
+    // First line should be headers.
     // $aHeaders = array_map('trim', $aHeaders, array_fill(0, count($aHeaders), '"')); // In case we ever need to trim off quotes.
     $aHeaders = $_ADAPTER->cleanHeaders($aHeaders);
     $nHeaders = count($aHeaders);
@@ -587,13 +557,6 @@ foreach ($aFiles as $sID) {
 
 
 
-    // Now open and parse the file for real, appending to the temporary file.
-    // It's usually a big file, and we don't want to use too much memory... so using fgets().
-    // First line should be headers, we already read it out somewhere above here.
-    // $aHeaders = array_map('trim', $aHeaders, array_fill(0, count($aHeaders), '"')); // In case we ever need to trim off quotes.
-    $aHeaders = $_ADAPTER->cleanHeaders($aHeaders);
-    $nHeaders = count($aHeaders);
-
     // Now start parsing the file, reading it out line by line, building up the variant data in $aData.
     $dStart = time();
     $aMutalyzerCalls = array(
@@ -618,15 +581,11 @@ foreach ($aFiles as $sID) {
     $nAnnotationErrors = 0; // Count the number of lines we cannot import.
 
     // Get all the existing genes in one database call.
-    $aResult = $_DB->query('SELECT id, name FROM ' . TABLE_GENES)->fetchAllAssoc();
-    foreach ($aResult as $aGene) {
-        $aGenes[$aGene['id']] = array_merge($aGene, array('transcripts_in_NC' => array()));
-    }
-    unset($aResult); // Clean up.
+    $aGenes = $_DB->query('SELECT id, id, name FROM ' . TABLE_GENES)->fetchAllGroupAssoc();
 
     // If we're receiving the HGNC ID, we'll collect all genes for their HGNC IDs as well. This will be used to help
     //  LOVD+ to handle changed gene symbols.
-    if (in_array('id_hgnc', $_ADAPTER->prepareMappings())) {
+    if (in_array('id_hgnc', $aColumnMappings)) {
         $aGenesHGNC = $_DB->query('SELECT id_hgnc, id FROM ' . TABLE_GENES . ' WHERE id_hgnc IS NOT NULL')->fetchAllCombine();
     }
 
@@ -639,6 +598,7 @@ foreach ($aFiles as $sID) {
     // We don't need it, perhaps just store it in the object from the start then?
     $_ADAPTER->setScriptVars(compact('aGenes', 'aTranscripts'));
 
+    // It's usually a big file, and we don't want to use too much memory... so using fgets().
     while ($sLine = fgets($fInput)) {
         $nLine ++;
         $bDropTranscriptData = false;
@@ -671,7 +631,7 @@ foreach ($aFiles as $sID) {
             }
 
             if (empty($aLine[$sVEPColumn]) || $aLine[$sVEPColumn] == 'unknown' || $aLine[$sVEPColumn] == '.') {
-                $aVariant = $_ADAPTER->formatEmptyColumn($aLine, $sVEPColumn, $sLOVDColumn, $aVariant);
+                $aVariant[$sLOVDColumn] = $_ADAPTER->formatEmptyColumn($aLine, $sVEPColumn);
             } else {
                 $aVariant[$sLOVDColumn] = $aLine[$sVEPColumn];
             }
@@ -710,11 +670,11 @@ foreach ($aFiles as $sID) {
         // VOG/DNA and the position fields.
         lovd_getVariantDescription($aVariant, $aVariant['ref'], $aVariant['alt']);
         // dbSNP.
-        if ($aVariant['VariantOnGenome/dbSNP'] && strpos($aVariant['VariantOnGenome/dbSNP'], ';') !== false) {
+        if (!empty($aVariant['VariantOnGenome/dbSNP']) && strpos($aVariant['VariantOnGenome/dbSNP'], ';') !== false) {
             // Sometimes we get two dbSNP IDs. Store the first one, only.
             $aDbSNP = explode(';', $aVariant['VariantOnGenome/dbSNP']);
             $aVariant['VariantOnGenome/dbSNP'] = $aDbSNP[0];
-        } elseif (!$aVariant['VariantOnGenome/dbSNP'] && !empty($aVariant['existing_variation']) && $aVariant['existing_variation'] != 'unknown') {
+        } elseif (empty($aVariant['VariantOnGenome/dbSNP']) && !empty($aVariant['existing_variation']) && $aVariant['existing_variation'] != 'unknown') {
             $aIDs = explode('&', $aVariant['existing_variation']);
             foreach ($aIDs as $sID) {
                 if (substr($sID, 0, 2) == 'rs') {
@@ -730,12 +690,54 @@ foreach ($aFiles as $sID) {
             }
         }
 
-        // Some percentages we get need to be turned into decimals before it can be stored.
-        // 2015-10-28; Because of the double column mappings, we ended up with values divided twice.
-        // Flipping the array makes sure we get rid of double mappings.
-        foreach (array_flip($aColumnMappings) as $sLOVDColumn => $sVEPColumn) {
-            if ($sVEPColumn == 'AFESP5400' || $sVEPColumn == 'ALTPERC' || strpos($sVEPColumn, 'ALTPERC_') === 0) {
-                $aVariant[$sLOVDColumn] /= 100;
+        // Cleaning and translating VEPs consequences, but only if mapped to the GVS column.
+        if (!empty($aLine['Consequence']) && isset($aColumnMappings['Consequence'])
+            && $aColumnMappings['Consequence'] == 'VariantOnTranscript/GVS/Function') {
+            $aVariant['VariantOnTranscript/GVS/Function'] =
+                $_ADAPTER->translateVEPConsequencesToGVS($aVariant['VariantOnTranscript/GVS/Function']);
+        }
+
+        // Fix "4.944e-05"-like notations in frequency fields.
+        foreach ($aFrequencyColumns as $sFrequencyColumn) {
+            if (!empty($aVariant[$sFrequencyColumn])
+                && is_numeric($aVariant[$sFrequencyColumn])
+                && strpos($aVariant[$sFrequencyColumn], 'e-') !== false) {
+                $aVariant[$sFrequencyColumn] = number_format($aVariant[$sFrequencyColumn], 5);
+            }
+        }
+
+        if (lovd_verifyInstance('leiden')) {
+            // Some percentages we get need to be turned into decimals before it can be stored.
+            // 2015-10-28; Because of the double column mappings, we ended up with values divided twice.
+            // Flipping the array makes sure we get rid of double mappings.
+            foreach (array_flip($aColumnMappings) as $sLOVDColumn => $sVEPColumn) {
+                if ($sVEPColumn == 'AFESP5400' || $sVEPColumn == 'ALTPERC' || strpos($sVEPColumn, 'ALTPERC_') === 0) {
+                    $aVariant[$sLOVDColumn] /= 100;
+                }
+            }
+        } else {
+            // Calculate ALTPERC cols, if we can.
+            foreach (array('', '/Father', '/Mother') as $sColPart) {
+                if (isset($aVariant['VariantOnGenome/Sequencing' . $sColPart . '/Depth/Alt/Fraction'])
+                    && $aVariant['VariantOnGenome/Sequencing' . $sColPart . '/Depth/Alt/Fraction'] === ''
+                    && isset($aVariant['VariantOnGenome/Sequencing' . $sColPart . '/Depth/Ref'])
+                    && isset($aVariant['VariantOnGenome/Sequencing' . $sColPart . '/Depth/Alt'])) {
+                    // Calculate the ALT fraction, that can not fail even if there are no reads.
+                    // Still, to prevent warnings, we'll have to init these values to 0 if missing.
+                    if ($aVariant['VariantOnGenome/Sequencing' . $sColPart . '/Depth/Ref'] === '') {
+                        $aVariant['VariantOnGenome/Sequencing' . $sColPart . '/Depth/Ref'] = 0;
+                    }
+                    if ($aVariant['VariantOnGenome/Sequencing' . $sColPart . '/Depth/Alt'] === '') {
+                        $aVariant['VariantOnGenome/Sequencing' . $sColPart . '/Depth/Alt'] = 0;
+                    }
+                    $aVariant['VariantOnGenome/Sequencing' . $sColPart . '/Depth/Alt/Fraction'] =
+                        round(
+                            $aVariant['VariantOnGenome/Sequencing' . $sColPart . '/Depth/Alt']
+                            / ($aVariant['VariantOnGenome/Sequencing' . $sColPart . '/Depth/Ref']
+                                + $aVariant['VariantOnGenome/Sequencing' . $sColPart . '/Depth/Alt']
+                                + 0.0000000001)
+                            , 3);
+                }
             }
         }
 
@@ -757,21 +759,24 @@ foreach ($aFiles as $sID) {
                 // VEP has a newer gene symbol. Better warn about this.
                 $aVariant['symbol'] = $aGenesHGNC[$aVariant['id_hgnc']];
                 lovd_printIfVerbose(VERBOSITY_MEDIUM, 'Gene stored as \'' . $aVariant['symbol'] . '\' is given to us as \'' . $aVariant['symbol_vep'] . '\'; using our gene symbol.' . "\n");
+                // Store this for the next line.
+                $aGeneAliases[$aVariant['symbol_vep']] = $aVariant['symbol'];
             }
         }
         // Verify gene exists, and create it if needed.
         // LOC* genes always fail here, so those we don't try unless we don't care about the HGNC.
-        if (!isset($aGenes[$aVariant['symbol']]) && !in_array($aVariant['symbol'], $aGenesToIgnore)
+        // Also, don't do anything if we're ignoring the transcript - what good will it do?
+        if (!empty($aVariant['symbol']) && !isset($aGenes[$aVariant['symbol']]) && !in_array($aVariant['symbol'], $aGenesToIgnore) && !$_ADAPTER->ignoreTranscript($aVariant['transcriptid'])
             && (!preg_match('/^LOC[0-9]+$/', $aVariant['symbol']) || empty($_INSTANCE_CONFIG['conversion']['use_hgnc']) || empty($_INSTANCE_CONFIG['conversion']['enforce_hgnc_gene']))) {
             // First try to get this gene from the database, perhaps conversions run in parallel have created it now.
             // FIXME: This is duplicated code. Make it into a function, perhaps?
             if ($aGene = $_DB->query('SELECT g.id, g.name FROM ' . TABLE_GENES . ' AS g WHERE g.id = ?', array($aVariant['symbol']))->fetchAssoc()) {
                 // We've got it in the database.
-                $aGenes[$aVariant['symbol']] = array_merge($aGene, array('transcripts_in_NC' => array()));
+                $aGenes[$aVariant['symbol']] = $aGene;
 
             } elseif (!empty($_INSTANCE_CONFIG['conversion']['create_genes_and_transcripts'])) {
-                // Gene doesn't exist, try to find it at the HGNC.
-                // Getting all gene information from the HGNC takes a few seconds.
+                // Gene doesn't exist, and we're configured to create genes.
+                // Try to find it at the HGNC. Getting all gene information from the HGNC takes a few seconds.
                 $aGeneInfo = array();
                 if (!empty($_INSTANCE_CONFIG['conversion']['use_hgnc'])) {
                     lovd_printIfVerbose(VERBOSITY_HIGH, 'Loading gene information for ' . $aVariant['symbol'] . '...' . "\n");
@@ -780,22 +785,12 @@ foreach ($aFiles as $sID) {
                     $tHGNCCalls += (microtime(true) - $tHGNCStart);
                     $nHGNC++;
                     if (!$aGeneInfo) {
-                        // We can't gene information from the HGNC.
+                        // We couldn't find the gene at the HGNC.
                         $sMessage = 'Gene ' . $aVariant['symbol'] . ' can\'t be identified by the HGNC.';
                         lovd_printIfVerbose(VERBOSITY_LOW, $sMessage . "\n");
                         if (!empty($_INSTANCE_CONFIG['conversion']['enforce_hgnc_gene'])) {
                             // This is a problem, only when we enforce using the HGNC.
                             lovd_handleAnnotationError($aVariant, $sMessage);
-                        }
-
-                    } elseif ($aVariant['symbol'] != $aGeneInfo['symbol']) {
-                        // Gene found, under a different symbol.
-                        // Detect alias, and store these for next run.
-                        lovd_printIfVerbose(VERBOSITY_MEDIUM, '\'' . $aVariant['symbol'] . '\' => \'' . $aGeneInfo['symbol'] . '\',' . "\n");
-                        // FIXME: This is duplicated code. Make it into a function, perhaps?
-                        if ($aGene = $_DB->query('SELECT g.id, g.name FROM ' . TABLE_GENES . ' AS g WHERE g.id = ?', array($aGeneInfo['symbol']))->fetchAssoc()) {
-                            // We've got the alias already in the database; store it under the symbol we're using so that we'll find it back easily.
-                            $aGenes[$aVariant['symbol']] = array_merge($aGene, array('transcripts_in_NC' => array()));
                         }
 
                     } elseif (!empty($aGenesHGNC[$aGeneInfo['hgnc_id']])) {
@@ -805,6 +800,16 @@ foreach ($aFiles as $sID) {
                         lovd_printIfVerbose(VERBOSITY_MEDIUM, 'Gene stored as \'' . $aVariant['symbol'] . '\' is given to us as \'' . $aVariant['symbol_vep'] . '\'; using our gene symbol.' . "\n");
                         // Store this for the next line.
                         $aGeneAliases[$aVariant['symbol_vep']] = $aVariant['symbol'];
+
+                    } elseif ($aVariant['symbol'] != $aGeneInfo['symbol']) {
+                        // Gene found, under a different symbol.
+                        // Detect alias, and store these for next run.
+                        lovd_printIfVerbose(VERBOSITY_MEDIUM, '\'' . $aVariant['symbol'] . '\' => \'' . $aGeneInfo['symbol'] . '\',' . "\n");
+                        // FIXME: This is duplicated code. Make it into a function, perhaps?
+                        if ($aGene = $_DB->query('SELECT g.id, g.name FROM ' . TABLE_GENES . ' AS g WHERE g.id = ?', array($aGeneInfo['symbol']))->fetchAssoc()) {
+                            // We've got the alias already in the database; store it under the symbol we're using so that we'll find it back easily.
+                            $aGenes[$aVariant['symbol']] = $aGene;
+                        }
                     }
                 }
 
@@ -845,7 +850,7 @@ foreach ($aFiles as $sID) {
                     flush();
 
                     // Store this gene, again under the original symbol, so we can easily find it back.
-                    $aGenes[$aVariant['symbol']] = array('id' => $aGeneInfo['symbol'], 'name' => $aGeneInfo['name'], 'transcripts_in_NC' => array());
+                    $aGenes[$aVariant['symbol']] = array('id' => $aGeneInfo['symbol'], 'name' => $aGeneInfo['name']);
                 }
             }
         }
@@ -859,7 +864,7 @@ foreach ($aFiles as $sID) {
         // Store transcript ID without version, we'll use it plenty of times.
         // FIXME: Using 'transcriptid' for the NCBI ID is confusing. Better map it to 'id_ncbi'? (check everywhere)
         $aLine['transcript_noversion'] = substr($aVariant['transcriptid'], 0, strpos($aVariant['transcriptid'] . '.', '.')+1);
-        if (!isset($aGenes[$aVariant['symbol']]) || !$aGenes[$aVariant['symbol']]) {
+        if (empty($aVariant['symbol']) || !isset($aGenes[$aVariant['symbol']]) || !$aGenes[$aVariant['symbol']]) {
             // We really couldn't do anything with this gene (now, or last time).
             $aGenes[$aVariant['symbol']] = false;
 
@@ -876,7 +881,7 @@ foreach ($aFiles as $sID) {
 
             } elseif (!empty($_INSTANCE_CONFIG['conversion']['create_genes_and_transcripts'])) {
                 // To prevent us from having to check the available transcripts all the time, we store the available transcripts, but only insert those we need.
-                if ($aGenes[$aVariant['symbol']]['transcripts_in_NC']) {
+                if (isset($aGenes[$aVariant['symbol']]['transcripts_in_NC'])) {
                     $aTranscriptInfo = $aGenes[$aVariant['symbol']]['transcripts_in_NC'];
 
                 } else {
@@ -1086,14 +1091,14 @@ foreach ($aFiles as $sID) {
                         if ($aVariant['VariantOnTranscript/DNA']) {
                             $sErrorMsg .= "\n" .
                                           'Falling back to VEP\'s DNA description!' . "\n";
-                            lovd_printIfVerbose(VERBOSITY_MEDIUM, $sErrorMsg);
+                            lovd_printIfVerbose(VERBOSITY_FULL, $sErrorMsg);
                         } else {
                             // We have one more solution - call the name checker and try to find the mapping there.
                             // This is a very slow procedure and will hopefully not be used often, but due to recent
                             //  developments, Mutalyzer's position converter database diverged from the maintained database.
 
                             // FIXME: This is a lot of repeated code again. Better clean it up.
-                            lovd_printIfVerbose(VERBOSITY_MEDIUM, 'Attempting to fall back to Mutalyzer\'s name checker instead!' . "\n");
+                            lovd_printIfVerbose(VERBOSITY_FULL, 'Mutalyzer\'s position converter doesn\'t know transcript, falling back to the name checker instead!' . "\n");
                             $nSleepTime = 2;
                             // Retry Mutalyzer call several times until successful.
                             $sJSONResponse = false;
@@ -1163,7 +1168,7 @@ foreach ($aFiles as $sID) {
                 }
             }
 
-            // For the position fields, there is VariantOnTranscript/Position (coming from CDS_position), but it's hardly usable. Calculate ourselves.
+            // For the position fields, VEP can generate data (CDS_position), but it's hardly usable. Calculate ourselves.
             list($aVariant['position_c_start'], $aVariant['position_c_start_intron'], $aVariant['position_c_end'], $aVariant['position_c_end_intron']) = array_values(lovd_getVariantPosition($aVariant['VariantOnTranscript/DNA'], $aTranscripts[$aVariant['transcriptid']]));
 
             // VariantOnTranscript/Position is an integer column; so just copy the c_start.
@@ -1187,6 +1192,10 @@ foreach ($aFiles as $sID) {
                 } else {
                     $aVariant['VariantOnTranscript/Protein'] = str_replace('p.', 'p.(', $aVariant['VariantOnTranscript/Protein'] . ')');
                 }
+            } elseif (in_array(substr($aTranscripts[$aVariant['transcriptid']]['id_ncbi'], 0, 2), array('NR', 'XR'))) {
+                // Non coding transcript, no wonder we didn't get a protein field.
+                $aVariant['VariantOnTranscript/RNA'] = 'r.(?)';
+                $aVariant['VariantOnTranscript/Protein'] = '-';
             } elseif (($aVariant['position_c_start'] < 0 && $aVariant['position_c_end'] < 0)
                 || ($aVariant['position_c_start'] > $aTranscripts[$aVariant['transcriptid']]['position_c_cds_end'] && $aVariant['position_c_end'] > $aTranscripts[$aVariant['transcriptid']]['position_c_cds_end'])
                 || ($aVariant['position_c_start_intron'] && $aVariant['position_c_end_intron'] && min(abs($aVariant['position_c_start_intron']), abs($aVariant['position_c_end_intron'])) > 5

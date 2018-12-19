@@ -4,7 +4,7 @@
  * LEIDEN OPEN VARIATION DATABASE (LOVD)
  *
  * Created     : 2016-09-02
- * Modified    : 2018-06-19
+ * Modified    : 2018-10-12
  * For LOVD    : 3.0-18
  *
  * Copyright   : 2004-2018 Leiden University Medical Center; http://www.LUMC.nl/
@@ -153,10 +153,18 @@ $_INSTANCE_CONFIG['viewlists'] = array(
 );
 
 $_INSTANCE_CONFIG['conversion'] = array(
+    'suffixes' => array(
+        'meta' => 'meta.lovd',
+        'vep' => 'vep.data.lovd',
+        'total.tmp' => 'total.data.tmp',
+        'total' => 'total.data.lovd',
+        'error' => 'error',
+    ),
     'annotation_error_drops_line' => false, // Should we discard the variant's mapping on this transcript on annotation errors?
     'annotation_error_exits' => false, // Whether to halt on the first annotation error.
-    'annotation_error_max_allowed' => 20, // Maximum number of errors with VOTs before the script dies anyway.
+    'annotation_error_max_allowed' => 50, // Maximum number of errors with VOTs before the script dies anyway.
     'create_genes_and_transcripts' => true, // Allow automatic creation of genes, allow automatic creation of transcripts.
+    'create_meta_file_if_missing' => true, // Should LOVD+ just create a meta file with default settings if it's missing?
     'check_indel_description' => true, // Should we check all indels using Mutalyzer? Vep usually does a bad job at them.
     'enforce_hgnc_gene' => true, // Enforce gene to exist in the HGNC (requires use_hgnc = true).
     'use_hgnc' => true, // Use the HGNC to collect gene information, and detect gene aliases (requires create_genes_and_transcripts = true).
@@ -234,6 +242,38 @@ $_INSTANCE_CONFIG['observation_counts'] = array(
 
 
 
+// Define settings, if not defined before.
+@define('VERBOSITY_NONE', 0); // No output whatsoever.
+@define('VERBOSITY_LOW', 3); // Low output, only the really important messages.
+@define('VERBOSITY_MEDIUM', 5); // Medium output. No output if there is nothing to do. Useful for when using cron.
+@define('VERBOSITY_HIGH', 7); // High output. The default.
+@define('VERBOSITY_FULL', 9); // Full output, including debug statements.
+
+// Exit codes.
+// See http://tldp.org/LDP/abs/html/exitcodes.html for recommendations, in particular:
+// "[I propose] restricting user-defined exit codes to the range 64 - 113 (...), to conform with the C/C++ standard."
+define('EXIT_OK', 0);
+define('EXIT_WARNINGS_OCCURRED', 64);
+
+function lovd_printIfVerbose ($nVerbosity, $sMessage)
+{
+    // This function only prints the given message when the current verbosity is set to a level high enough.
+
+    // If no verbosity is currently defined, just print everything.
+    if (!defined('VERBOSITY')) {
+        define('VERBOSITY', 9);
+    }
+
+    if (VERBOSITY >= $nVerbosity) {
+        print($sMessage);
+    }
+    return true;
+}
+
+
+
+
+
 // FIXME: This class should not be mixed with the above settings, I reckon? Split it?
 // FIXME: Some methods are never overloaded and aren't meant to be, better put those elsewhere to prevent confusion.
 class LOVD_DefaultDataConverter {
@@ -284,6 +324,37 @@ class LOVD_DefaultDataConverter {
     {
         // Return the headers, cleaned up if needed.
         // You can add code here that will clean the headers, directly after reading.
+
+        // Analyze headers, find samples, identify parents.
+        $aSamples = array();
+        foreach ($aHeaders as $sHeader) {
+            // Find sample.GT headers.
+            if (substr($sHeader, -3) == '.GT') {
+                $aSamples[substr($sHeader, 0, -3)] = '';
+            }
+        }
+        $nSamples = count($aSamples);
+        if ($nSamples > 1) {
+            // More than one individual. Currently, LOVD+ supports single individual and trio data.
+            if ($nSamples != 3) {
+                // Unsupported number of samples.
+                die('Fatal: Unsupported number of samples. LOVD+ currently supports single individual and trio (3 sample) data. Found ' . $nSamples . ' samples.' . "\n");
+            }
+
+            // FIXME: Until we have some way of configuring this, we'll assume the file provided the samples in the order Child, Father, Mother (simple alphabetical order).
+            list(, $sFather, $sMother) = array_keys($aSamples);
+            $aSamples[$sFather] = 'Father_';
+            $aSamples[$sMother] = 'Mother_';
+        }
+
+        // Rename the headers.
+        foreach ($aHeaders as $nKey => $sHeader) {
+            if (preg_match('/^(' . implode('|', array_map('preg_quote', array_keys($aSamples))) . ')\./', $sHeader, $aRegs)) {
+                // Sample header.
+                $sSample = $aRegs[1];
+                $aHeaders[$nKey] = str_replace($sSample . '.', $aSamples[$sSample], $sHeader);
+            }
+        }
 
         return $aHeaders;
     }
@@ -348,7 +419,7 @@ class LOVD_DefaultDataConverter {
 
 
 
-    function formatEmptyColumn ($aLine, $sVEPColumn, $sLOVDColumn, $aVariant)
+    function formatEmptyColumn ($aLine, $sVEPColumn)
     {
         // Returns how we want to represent empty data in the $aVariant array.
         // Fields that evaluate true with empty() or set to "." or "unknown" are sent here.
@@ -358,14 +429,12 @@ class LOVD_DefaultDataConverter {
 
         /*
         if (isset($aLine[$sVEPColumn]) && ($aLine[$sVEPColumn] === 0 || $aLine[$sVEPColumn] === '0')) {
-            $aVariant[$sLOVDColumn] = 0;
+            return 0;
         } else {
-            $aVariant[$sLOVDColumn] = '';
+            return '';
         }
         */
-        $aVariant[$sLOVDColumn] = '';
-
-        return $aVariant;
+        return '';
     }
 
 
@@ -376,7 +445,7 @@ class LOVD_DefaultDataConverter {
     {
         // Returns the regex pattern of the prefix of variant input file names.
         // The prefix is often the sample ID or individual ID, and can be formatted to your liking.
-        // Data files must be named "prefix.suffix", using the suffixes as defined in the conversion script.
+        // Data files must be named "prefix.suffix", using the suffixes as defined in the conversion's settings array.
 
         // If using sub patterns, make sure they are not counted, like so:
         //  (?:subpattern)
@@ -393,14 +462,15 @@ class LOVD_DefaultDataConverter {
         // The order of these columns does NOT matter.
 
         return array(
-            'Location',
-            'GIVEN_REF',
-            'Allele',
+            '#CHROM',
+            'POS',
+            'REF',
+            'ALT',
             'QUAL',
-            'GT',
             'Consequence',
             'SYMBOL',
             'Feature',
+            'GT',
         );
     }
 
@@ -420,11 +490,13 @@ class LOVD_DefaultDataConverter {
 
         // Here, set any patterns of transcripts that you'd like ignored, like '^NR_'.
         $aTranscriptPatternsToIgnore = array(
-            // '^ENS',
-            '_dupl',
-            // '^NR_',
-            // '^XM_',
-            // '^XR_',
+            '^[0-9]$', // Numeric transcripts for transfer RNAs, source unknown.
+            '_dupl',   // VEP produces duplicated transcripts.
+            '^ENS',    // Ensembl transcripts, that we don't support.
+            '^NC_',    // More strange transfer RNA transcripts in the format NC_000001.10:TRNAE-UUC:u_t_1.
+            // '^NR_',    // Non-coding transcripts, otherwise perfectly valid.
+            // '^XM_',    // Computer-predicted coding transcripts, yet to be validated to actually exist.
+            // '^XR_',    // Computer-predicted non-coding transcripts, yet to be validates to actually exist.
         );
 
         foreach ($aTranscriptPatternsToIgnore as $sPattern) {
@@ -493,77 +565,54 @@ class LOVD_DefaultDataConverter {
 
 
 
-    // FIXME: This is Leiden-specific code, put it in the Leiden adapter and make a proper default.
     // FIXME: This function does not have a clearly matching name.
     function prepareMappings ()
     {
         // Returns an array that map VEP columns to LOVD columns.
 
         $aColumnMappings = array(
-            'chromosome' => 'chromosome',
-            'position' => 'position', // lovd_getVariantDescription() needs this.
+            '#CHROM' => 'chromosome',
+            'POS' => 'position', // lovd_getVariantDescription() needs this.
+            'REF' => 'ref',      // lovd_getVariantDescription() needs this.
+            'ALT' => 'alt',      // lovd_getVariantDescription() needs this.
             'QUAL' => 'VariantOnGenome/Sequencing/Quality',
-            'FILTERvcf' => 'VariantOnGenome/Sequencing/Filter',
-            'GATKCaller' => 'VariantOnGenome/Sequencing/GATKcaller',
+            'FILTER' => 'VariantOnGenome/Sequencing/Filter',
+            'Consequence' => 'VariantOnTranscript/GVS/Function', // FIXME: Translation of values needed.
+            'SYMBOL' => 'symbol',
             'Feature' => 'transcriptid',
-            'GVS' => 'VariantOnTranscript/GVS/Function',
-            'CDS_position' => 'VariantOnTranscript/Position',
-//    'PolyPhen' => 'VariantOnTranscript/PolyPhen', // We don't use this anymore.
             'HGVSc' => 'VariantOnTranscript/DNA',
             'HGVSp' => 'VariantOnTranscript/Protein',
-            'Grantham' => 'VariantOnTranscript/Prediction/Grantham',
-            'INDB_COUNT_UG' => 'VariantOnGenome/InhouseDB/Count/UG',
-            'INDB_COUNT_HC' => 'VariantOnGenome/InhouseDB/Count/HC',
-            'GLOBAL_VN' => 'VariantOnGenome/InhouseDB/Position/Global/Samples_w_coverage',
-            'GLOBAL_VF_HET' => 'VariantOnGenome/InhouseDB/Count/Global/Heterozygotes',
-            'GLOBAL_VF_HOM' => 'VariantOnGenome/InhouseDB/Count/Global/Homozygotes',
-            'WITHIN_PANEL_VN' => 'VariantOnGenome/InhouseDB/Position/InPanel/Samples_w_coverage',
-            'WITHIN_PANEL_VF_HET' => 'VariantOnGenome/InhouseDB/Count/InPanel/Heterozygotes',
-            'WITHIN_PANEL_VF_HOM' => 'VariantOnGenome/InhouseDB/Count/InPanel/Homozygotes',
-            'OUTSIDE_PANEL_VN' => 'VariantOnGenome/InhouseDB/Position/OutOfPanel/Samples_w_coverage',
-            'OUTSIDE_PANEL_VF_HET' => 'VariantOnGenome/InhouseDB/Count/OutOfPanel/Heterozygotes',
-            'OUTSIDE_PANEL_VF_HOM' => 'VariantOnGenome/InhouseDB/Count/OutOfPanel/Homozygotes',
-            'AF1000G' => 'VariantOnGenome/Frequency/1000G',
-            'rsID' => 'VariantOnGenome/dbSNP',
-            'AFESP5400' => 'VariantOnGenome/Frequency/EVS', // Will be divided by 100 later.
-            'CALC_GONL_AF' => 'VariantOnGenome/Frequency/GoNL',
-            'AFGONL' => 'VariantOnGenome/Frequency/GoNL_old',
-            'EXAC_AF' => 'VariantOnGenome/Frequency/ExAC',
-            'MutationTaster_pred' => 'VariantOnTranscript/Prediction/MutationTaster',
-            'MutationTaster_score' => 'VariantOnTranscript/Prediction/MutationTaster/Score',
-            'Polyphen2_HDIV_score' => 'VariantOnTranscript/PolyPhen/HDIV',
-            'Polyphen2_HVAR_score' => 'VariantOnTranscript/PolyPhen/HVAR',
-            'SIFT_score' => 'VariantOnTranscript/Prediction/SIFT',
-            'CADD_raw' => 'VariantOnGenome/CADD/Raw',
-            'CADD_phred' => 'VariantOnGenome/CADD/Phred',
-            'HGMD_association' => 'VariantOnGenome/HGMD/Association',
-            'HGMD_reference' => 'VariantOnGenome/HGMD/Reference',
-            'phyloP' => 'VariantOnGenome/Conservation_score/PhyloP',
-            'scorePhastCons' => 'VariantOnGenome/Conservation_score/Phast',
-            'GT' => 'allele',
-            'GQ' => 'VariantOnGenome/Sequencing/GenoType/Quality',
+            'Existing_variation' => 'existing_variation', // This is where we'll find the dbSNP data.
+            'dbSNP' => 'VariantOnGenome/dbSNP', // VEP doesn't have this. We'll fill it in, in case we find it.
+            'HGNC_ID' => 'id_hgnc',
+            'SIFT' => 'VariantOnTranscript/Prediction/SIFT',
+            'PolyPhen' => 'VariantOnTranscript/PolyPhen', // FIXME: CHECK.
+            'AF' => 'VariantOnGenome/Frequency', // FIXME: CHECK.
+            'gnomAD_AF' => 'VariantOnGenome/Frequency/GnomAD', // FIXME: Not defined yet.
+            'PUBMED' => 'VariantOnGenome/Reference', // FIXME: Translation of values needed.
             'DP' => 'VariantOnGenome/Sequencing/Depth/Total',
+            'GQ' => 'VariantOnGenome/Sequencing/GenoType/Quality',
+            'GT' => 'allele',
+
             'DPREF' => 'VariantOnGenome/Sequencing/Depth/Ref',
             'DPALT' => 'VariantOnGenome/Sequencing/Depth/Alt',
-            'ALTPERC' => 'VariantOnGenome/Sequencing/Depth/Alt/Fraction', // Will be divided by 100 later.
-            'GT_Father' => 'VariantOnGenome/Sequencing/Father/GenoType',
-            'GQ_Father' => 'VariantOnGenome/Sequencing/Father/GenoType/Quality',
-            'DP_Father' => 'VariantOnGenome/Sequencing/Father/Depth/Total',
-            'ALTPERC_Father' => 'VariantOnGenome/Sequencing/Father/Depth/Alt/Fraction', // Will be divided by 100 later.
-            'ISPRESENT_Father' => 'VariantOnGenome/Sequencing/Father/VarPresent',
-            'GT_Mother' => 'VariantOnGenome/Sequencing/Mother/GenoType',
-            'GQ_Mother' => 'VariantOnGenome/Sequencing/Mother/GenoType/Quality',
-            'DP_Mother' => 'VariantOnGenome/Sequencing/Mother/Depth/Total',
-            'ALTPERC_Mother' => 'VariantOnGenome/Sequencing/Mother/Depth/Alt/Fraction', // Will be divided by 100 later.
-            'ISPRESENT_Mother' => 'VariantOnGenome/Sequencing/Mother/VarPresent',
-//    'distanceToSplice' => 'VariantOnTranscript/Distance_to_splice_site',
+            'ALTPERC' => 'VariantOnGenome/Sequencing/Depth/Alt/Fraction', // VEP doesn't have this, we will calculate.
 
-            // Mappings for fields used to process other fields but not imported into the database.
-            'SYMBOL' => 'symbol',
-            'HGNC_ID' => 'id_hgnc',
-            'REF' => 'ref',
-            'ALT' => 'alt',
-            'Existing_variation' => 'existing_variation'
+            'Father_DP' => 'VariantOnGenome/Sequencing/Father/Depth/Total',
+            'Father_GQ' => 'VariantOnGenome/Sequencing/Father/GenoType/Quality',
+            'Father_GT' => 'VariantOnGenome/Sequencing/Father/GenoType',
+            // These two don't exist but can be used to fill in VariantOnGenome/Sequencing/Father/Depth/Alt/Fraction.
+            'Father_DPREF' => 'VariantOnGenome/Sequencing/Father/Depth/Ref',
+            'Father_DPALT' => 'VariantOnGenome/Sequencing/Father/Depth/Alt',
+            'Father_ALTPERC' => 'VariantOnGenome/Sequencing/Father/Depth/Alt/Fraction',
+
+            'Mother_DP' => 'VariantOnGenome/Sequencing/Mother/Depth/Total',
+            'Mother_GQ' => 'VariantOnGenome/Sequencing/Mother/GenoType/Quality',
+            'Mother_GT' => 'VariantOnGenome/Sequencing/Mother/GenoType',
+            // These two don't exist but can be used to fill in VariantOnGenome/Sequencing/Mother/Depth/Alt/Fraction.
+            'Mother_DPREF' => 'VariantOnGenome/Sequencing/Mother/Depth/Ref',
+            'Mother_DPALT' => 'VariantOnGenome/Sequencing/Mother/Depth/Alt',
+            'Mother_ALTPERC' => 'VariantOnGenome/Sequencing/Mother/Depth/Alt/Fraction',
         );
 
         return $aColumnMappings;
@@ -663,5 +712,178 @@ class LOVD_DefaultDataConverter {
 
         // Newly set vars overwrites existing vars.
         $this->aScriptVars = $aVars + $this->aScriptVars;
+    }
+
+
+
+
+
+    function translateVEPConsequencesToGVS ($sVEPConsequences)
+    {
+        // This function translates the VEP consequence values to the corresponding GVS value(s).
+        // Because of historical reasons, LOVD+ uses the GVS values internally, for filtering and variant coloring.
+        // VEP uses a long list of features, that need to be translated into the GVS values.
+        // FIXME: VEPs consequences are based on SO and therefore, probably more consistent, constant, and better.
+        // FIXME:    However, then they'll need to be cleaned still, as VEP provides multiple effects per variant.
+
+        // VEP values:
+        // https://www.ensembl.org/info/genome/variation/prediction/predicted_data.html        (based on SO, so better?)
+        // ===========
+        // MODIFIERS:
+        // intergenic_variant
+        // TF_binding_site_variant    - not encountered yet
+        // TFBS_ablation              - not encountered yet
+        // downstream_gene_variant
+        // upstream_gene_variant
+        // non_coding_transcript_variant
+        // NMD_transcript_variant     - we remove this, it just complicates things.
+        // intron_variant
+        // non_coding_transcript_exon_variant
+        // 3_prime_UTR_variant
+        // 5_prime_UTR_variant
+        // coding_sequence_variant
+
+        // LOW IMPACT:
+        // synonymous_variant
+        // stop_retained_variant
+        // start_retained_variant
+        // incomplete_terminal_codon_variant
+        // splice_region_variant
+
+        // MODERATE IMPACT:
+        // regulatory_region_ablation - not encountered yet
+        // protein_altering_variant
+        // missense_variant
+        // inframe_deletion
+        // inframe_insertion
+
+        // HIGH IMPACT:
+        // transcript_amplification   - not encountered yet
+        // start_lost
+        // stop_lost
+        // frameshift_variant
+        // stop_gained
+        // splice_donor_variant
+        // splice_acceptor_variant
+        // transcript_ablation        - not encountered yet
+
+        // GVS values:
+        // http://snp.gs.washington.edu/SeattleSeqAnnotation151/HelpInputFiles.jsp     (has slightly different list now)
+        // ===========
+        // intergenic
+        // near-gene-5 (nowadays: upstream-gene)
+        // utr-5
+        // start-lost (CREATED THIS OURSELVES)
+        // coding (nowadays: coding-unknown?)
+        // coding-near-splice (nowadays: coding-unknown-near-splice?)
+        // coding-synonymous (nowadays: synonymous)
+        // coding-synonymous-near-splice (nowadays: synonymous-near-splice)
+        // codingComplex (nowadays no longer exists?)
+        // codingComplex-near-splice (nowadays no longer exists?)
+        // frameshift (nowadays no longer exists?)
+        // frameshift-near-splice (nowadays no longer exists?)
+        // missense
+        // missense-near-splice
+        // splice-5 (nowadays: splice-donor)
+        // splice (nowadays: intron-near-splice)
+        // intron
+        // splice-3 (nowadays: splice-acceptor)
+        // stop-gained
+        // stop-gained-near-splice
+        // stop-lost
+        // stop-lost-near-splice
+        // utr-3
+        // near-gene-3 (nowadays: downstream-gene)
+        // non-coding-exon
+        // non-coding-exon-near-splice
+        // non-coding-intron-near-splice (CREATE THIS OURSELVES)
+
+        // This function loops quite a lot, and it would be more efficient if we'd store the results of the output.
+        // Caching it will prevent lots of lookups, especially in big files.
+        static $aCache = array();
+        if (isset($aCache[$sVEPConsequences])) {
+            return $aCache[$sVEPConsequences];
+        }
+        $sConsequences = $sVEPConsequences; // Because we'll edit it.
+
+
+
+        // To make it easier on ourselves, we will trust that the VEP consequences are *sorted*.
+        // The output seems to always have a certain order. We rely on this order to look up the specific combination
+        //  of values. This makes this code a lot easier, as we don't need to pull the terms apart and make lots of
+        //  loops to find the right terms and combinations of terms.
+        // However, we can not create an extensive list of possible combinations, still sometimes we just want certain
+        //  values to take preference.
+        static $aValuesToClean = array(
+            '&NMD_transcript_variant' => '', // Variant in a transcript that is the target of NMD. Uh, OK.
+            'start_lost&start_retained_variant' => 'start_retained_variant', // Start not actually lost.
+            'stop_lost&stop_retained_variant' => 'stop_retained_variant', // Stop not actually lost.
+            '&coding_sequence_variant&intron_variant' => '', // Will also report to be on a splice site.
+            'splice_donor_variant&intron_variant' => 'splice_donor_variant', // Will just affect the splicing.
+            'splice_acceptor_variant&intron_variant' => 'splice_acceptor_variant', // Will just affect the splicing.
+            'incomplete_terminal_codon_variant&' => '', // This one is unclear. Used nowhere near the terminal codon.
+            'coding_sequence_variant&intron_variant' => 'intron_variant', // This exact combo used inside introns only.
+        );
+
+        foreach ($aValuesToClean as $sKey => $sVal) {
+            // Just keep replacing, it's simplest.
+            $sConsequences = str_replace($sKey, $sVal, $sConsequences);
+        }
+
+
+
+        // Array of values that gain preference over any other values included.
+        static $aMappings = array(
+            'start_lost' => 'start-lost',
+            'stop_gained' => 'stop-gained',
+            'stop_lost' => 'stop-lost',
+            'coding_sequence_variant&3_prime_UTR_variant' => 'codingComplex', // vep2lovd defined this, only found in ENSG.
+            'coding_sequence_variant&5_prime_UTR_variant' => 'codingComplex', // vep2lovd defined this, only found in ENSG.
+            '5_prime_UTR_variant' => 'utr-5',
+            '3_prime_UTR_variant' => 'utr-3',
+            'upstream_gene_variant' => 'utr-5',
+            'downstream_gene_variant' => 'utr-3',
+            'intergenic_variant' => 'intergenic',
+            'splice_donor_variant&non_coding_transcript_variant' => 'non-coding-intron-near-splice', // Not really consistent with coding transcripts.
+            'splice_donor_variant&non_coding_transcript_exon_variant' => 'non-coding-exon-near-splice', // Not really consistent with coding transcripts.
+            'splice_acceptor_variant&non_coding_transcript_variant' => 'non-coding-intron-near-splice', // Not really consistent with coding transcripts.
+            'splice_acceptor_variant&non_coding_transcript_exon_variant' => 'non-coding-exon-near-splice', // Not really consistent with coding transcripts.
+            'splice_region_variant&intron_variant&non_coding_transcript_variant' => 'non-coding-intron-near-splice',
+            'splice_region_variant&non_coding_transcript_variant' => 'non-coding-intron-near-splice', // Not necessarily intronic.
+            'splice_region_variant&non_coding_transcript_exon_variant' => 'non-coding-exon-near-splice',
+            'non_coding_transcript_exon_variant&intron_variant' => 'non-coding-exon-near-splice', // Strange that the splice variant isn't mentioned.
+            'intron_variant&non_coding_transcript_variant' => 'intron', // Or, if we'll create it, non-coding-intron.
+            'non_coding_transcript_exon_variant' => 'non-coding-exon',
+            'splice_donor_variant' => 'splice-5',
+            'splice_acceptor_variant' => 'splice-3',
+            'splice_region_variant&start_retained_variant' => 'coding-synonymous-near-splice',
+            'splice_region_variant&stop_retained_variant' => 'coding-synonymous-near-splice',
+            'splice_region_variant&synonymous_variant' => 'coding-synonymous-near-splice',
+            'frameshift_variant&splice_region_variant' => 'frameshift-near-splice',
+            'missense_variant&splice_region_variant' => 'missense-near-splice',
+            'splice_region_variant&intron_variant' => 'splice',
+            'splice_region_variant' => 'coding-near-splice',
+            'frameshift_variant' => 'frameshift',
+            '_retained_variant' => 'coding-synonymous',
+            'protein_altering_variant' => 'coding',
+            'inframe_deletion' => 'coding',
+            'inframe_insertion' => 'coding',
+            'missense_variant' => 'missense',
+            'coding_sequence_variant' => 'coding',
+            'synonymous_variant' => 'coding-synonymous',
+            'intron_variant' => 'intron',
+        );
+
+        foreach ($aMappings as $sKey => $sVal) {
+            if (strpos($sConsequences, $sKey) !== false) {
+                // Found it, return it, don't continue looping.
+                $aCache[$sVEPConsequences] = $sVal;
+                return $sVal;
+            }
+        }
+
+        // If all of this has failed, just return what we got.
+        $aCache[$sVEPConsequences] = $sConsequences;
+        return $sConsequences; // Might be edited a bit.
     }
 }
