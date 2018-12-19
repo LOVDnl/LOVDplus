@@ -81,15 +81,17 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && in_array(ACTION, array('downloadT
         exit;
     }
 
-    // Fetch Miracle ID, we need that for matching the variants with the individual.
-    $nMiracleID = $_DB->query('SELECT id_miracle FROM ' . TABLE_INDIVIDUALS . ' AS i INNER JOIN ' . TABLE_SCREENINGS . ' AS s ON (i.id = s.individualid) WHERE s.id = ?', array($nID))->fetchColumn();
+    // Fetch Lab ID, we need that for matching the variants with the individual.
+    $sLabID = $_DB->query('SELECT ' . (lovd_verifyInstance('leiden')? 'id_miracle' : '`Individual/Lab_ID`') . '
+                           FROM ' . TABLE_INDIVIDUALS . ' AS i INNER JOIN ' . TABLE_SCREENINGS . ' AS s ON (i.id = s.individualid)
+                           WHERE s.id = ?', array($nID))->fetchColumn();
 
     // Load the gene panel(s), for the header.
     // NOTE: We could fetch this earlier, and at the same time change the variant query to not join to the IND2GP table, but oh, well.
     $aGenePanels = $_DB->query('SELECT gp.id, gp.name, IFNULL(gp.edited_date, gp.created_date) AS edited_date, COUNT(gp2g.geneid) AS genes FROM ' . TABLE_GENE_PANELS . ' AS gp INNER JOIN ' . TABLE_IND2GP . ' AS i2gp ON (gp.id = i2gp.genepanelid) INNER JOIN ' . TABLE_SCREENINGS . ' AS s USING (individualid) LEFT OUTER JOIN ' . TABLE_GP2GENE . ' AS gp2g ON (gp.id = gp2g.genepanelid) WHERE s.id = ? GROUP BY gp.id HAVING genes > 0', array($nID))->fetchAllAssoc();
 
     $sPath = rtrim($_INI['paths']['confirm_variants'], '/') . '/';
-    $sFile = 'LOVD_VariantsToBeConfirmed_' . $nMiracleID . '_' . date('Y-m-d_H.i.s') . '.txt';
+    $sFile = 'LOVD_VariantsToBeConfirmed_' . $sLabID . '_' . date('Y-m-d_H.i.s') . '.txt';
     header('Content-type: text/plain; charset=UTF-8');
     if (ACTION == 'downloadToBeConfirmed') {
         header('Content-Disposition: attachment; filename="' . $sFile . '"');
@@ -98,9 +100,13 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && in_array(ACTION, array('downloadT
         // Collect the file's contents, so we can write it to disk.
         ob_start();
     }
-    print('# id_miracle = ' . $nMiracleID . "\r\n");
+    print('# ' . (lovd_verifyInstance('leiden')? 'id_miracle' : 'lab_id') . ' = ' . $sLabID . "\r\n");
     foreach ($aGenePanels as $aGenePanel) {
         print('# active_gene_panel = (' . $aGenePanel['id'] . ', ' . $aGenePanel['name'] . ', ' . $aGenePanel['edited_date'] . ', ' . $aGenePanel['genes'] . ' genes)' . "\r\n");
+    }
+    if (!lovd_verifyInstance('leiden')) {
+        // Not in use outside of Leiden.
+        unset($aVariants[0]['VariantOnGenome/Genetic_origin']);
     }
     print('"{{' . implode('}}"' . "\t" . '"{{', array_keys($aVariants[0])) . '}}"' . "\r\n");
 
@@ -121,12 +127,16 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && in_array(ACTION, array('downloadT
             default:
                 $aVariant['allele'] = 'Heterozygous';
         }
-        if (in_array($aVariant['is_present_father'], array(1, 2)) && in_array($aVariant['is_present_mother'], array(1, 2))) {
-            $aVariant['VariantOnGenome/Genetic_origin'] = 'De novo';
-        } elseif ($aVariant['is_present_father'] >= 5 || $aVariant['is_present_mother'] >= 5) {
-            $aVariant['VariantOnGenome/Genetic_origin'] = 'Germline (inherited)';
+        if (!lovd_verifyInstance('leiden')) {
+            unset($aVariant['VariantOnGenome/Genetic_origin']);
         } else {
-            $aVariant['VariantOnGenome/Genetic_origin'] = 'Unknown';
+            if (in_array($aVariant['is_present_father'], array(1, 2)) && in_array($aVariant['is_present_mother'], array(1, 2))) {
+                $aVariant['VariantOnGenome/Genetic_origin'] = 'De novo';
+            } elseif ($aVariant['is_present_father'] >= 5 || $aVariant['is_present_mother'] >= 5) {
+                $aVariant['VariantOnGenome/Genetic_origin'] = 'Germline (inherited)';
+            } else {
+                $aVariant['VariantOnGenome/Genetic_origin'] = 'Unknown';
+            }
         }
         print('"' . implode('"' . "\t" . '"', $aVariant) . "\"\r\n");
     }
