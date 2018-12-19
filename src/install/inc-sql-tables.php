@@ -299,10 +299,8 @@ $aTableSQL =
     created_date DATETIME NOT NULL,
     edited_by SMALLINT(5) UNSIGNED ZEROFILL,
     edited_date DATETIME,
-    custom_panel TEXT NOT NULL,
 
-    id_miracle BIGINT UNSIGNED,
-    id_zis MEDIUMINT UNSIGNED,
+    custom_panel TEXT NOT NULL,
 
     PRIMARY KEY (id),
     INDEX (fatherid),
@@ -365,9 +363,11 @@ $aTableSQL =
     average_frequency FLOAT UNSIGNED,
     owned_by SMALLINT(5) UNSIGNED ZEROFILL,
     statusid TINYINT(1) UNSIGNED,
+
     curation_statusid TINYINT(2) UNSIGNED NULL,
     confirmation_statusid TINYINT(1) UNSIGNED NULL,
     obscount_json TEXT NULL,
+
     created_by SMALLINT(5) UNSIGNED ZEROFILL,
     created_date DATETIME NOT NULL,
     edited_by SMALLINT(5) UNSIGNED ZEROFILL,
@@ -379,8 +379,10 @@ $aTableSQL =
     INDEX (average_frequency),
     INDEX (owned_by),
     INDEX (statusid),
+
     INDEX (curation_statusid),
     INDEX (confirmation_statusid),
+
     INDEX (created_by),
     INDEX (edited_by),
     CONSTRAINT ' . TABLE_VARIANTS . '_fk_allele FOREIGN KEY (allele) REFERENCES ' . TABLE_ALLELES . ' (id) ON UPDATE CASCADE,
@@ -388,8 +390,10 @@ $aTableSQL =
     CONSTRAINT ' . TABLE_VARIANTS . '_fk_chromosome FOREIGN KEY (chromosome) REFERENCES ' . TABLE_CHROMOSOMES . ' (name) ON DELETE SET NULL ON UPDATE CASCADE,
     CONSTRAINT ' . TABLE_VARIANTS . '_fk_owned_by FOREIGN KEY (owned_by) REFERENCES ' . TABLE_USERS . ' (id) ON DELETE SET NULL ON UPDATE CASCADE,
     CONSTRAINT ' . TABLE_VARIANTS . '_fk_statusid FOREIGN KEY (statusid) REFERENCES ' . TABLE_DATA_STATUS . ' (id) ON DELETE SET NULL ON UPDATE CASCADE,
+
     CONSTRAINT ' . TABLE_VARIANTS . '_fk_curation_statusid FOREIGN KEY (curation_statusid) REFERENCES ' . TABLE_CURATION_STATUS . ' (id) ON DELETE SET NULL ON UPDATE CASCADE,
     CONSTRAINT ' . TABLE_VARIANTS . '_fk_confirmation_statusid FOREIGN KEY (confirmation_statusid) REFERENCES ' . TABLE_CONFIRMATION_STATUS . ' (id) ON DELETE SET NULL ON UPDATE CASCADE,
+
     CONSTRAINT ' . TABLE_VARIANTS . '_fk_created_by FOREIGN KEY (created_by) REFERENCES ' . TABLE_USERS . ' (id) ON DELETE SET NULL ON UPDATE CASCADE,
     CONSTRAINT ' . TABLE_VARIANTS . '_fk_edited_by FOREIGN KEY (edited_by) REFERENCES ' . TABLE_USERS . ' (id) ON DELETE SET NULL ON UPDATE CASCADE)
     ' . $sSettings
@@ -419,7 +423,7 @@ $aTableSQL =
 //    INDEX (statusid),
 //    INDEX (edited_by),
 //    INDEX (deleted_by),
-//    CONSTRAINT ' . TABLE_VARIANTS . '_fk_effectid FOREIGN KEY (effectid) REFERENCES ' . TABLE_ALLELES . ' (id) ON DELETE SET NULL ON UPDATE CASCADE,
+//    CONSTRAINT ' . TABLE_VARIANTS . '_fk_effectid FOREIGN KEY (effectid) REFERENCES ' . TABLE_EFFECT . ' (id) ON DELETE SET NULL ON UPDATE CASCADE,
 //    CONSTRAINT ' . TABLE_VARIANTS . '_fk_owned_by FOREIGN KEY (owned_by) REFERENCES ' . TABLE_USERS . ' (id) ON DELETE SET NULL ON UPDATE CASCADE,
 //    CONSTRAINT ' . TABLE_VARIANTS . '_fk_statusid FOREIGN KEY (statusid) REFERENCES ' . TABLE_DATA_STATUS . ' (id) ON DELETE SET NULL ON UPDATE CASCADE,
 //    CONSTRAINT ' . TABLE_VARIANTS . '_fk_edited_by FOREIGN KEY (edited_by) REFERENCES ' . TABLE_USERS . ' (id) ON DELETE SET NULL ON UPDATE CASCADE,
@@ -462,7 +466,7 @@ $aTableSQL =
 //    INDEX (position_c_start, position_c_start_intron, position_c_end, position_c_end_intron),
 //    CONSTRAINT ' . TABLE_VARIANTS_ON_TRANSCRIPTS . '_fk_id FOREIGN KEY (id) REFERENCES ' . TABLE_VARIANTS . ' (id) ON DELETE CASCADE ON UPDATE CASCADE,
 //    CONSTRAINT ' . TABLE_VARIANTS_ON_TRANSCRIPTS . '_fk_transcriptid FOREIGN KEY (transcriptid) REFERENCES ' . TABLE_TRANSCRIPTS . ' (id) ON DELETE CASCADE ON UPDATE CASCADE,
-//    CONSTRAINT ' . TABLE_VARIANTS_ON_TRANSCRIPTS . '_fk_effectid FOREIGN KEY (effectid) REFERENCES ' . TABLE_ALLELES . ' (id) ON DELETE SET NULL ON UPDATE CASCADE)
+//    CONSTRAINT ' . TABLE_VARIANTS_ON_TRANSCRIPTS . '_fk_effectid FOREIGN KEY (effectid) REFERENCES ' . TABLE_EFFECT . ' (id) ON DELETE SET NULL ON UPDATE CASCADE)
 //    ' . $sSettings
 
          , 'TABLE_PHENOTYPES' =>
@@ -520,7 +524,6 @@ $aTableSQL =
    'CREATE TABLE ' . TABLE_SCREENINGS . ' (
     id INT(10) UNSIGNED ZEROFILL NOT NULL AUTO_INCREMENT,
     individualid MEDIUMINT(8) UNSIGNED ZEROFILL NOT NULL,
-    id_sample MEDIUMINT(8) UNSIGNED NOT NULL,
     variants_found BOOLEAN NOT NULL DEFAULT 1,
     owned_by SMALLINT(5) UNSIGNED ZEROFILL,
     created_by SMALLINT(5) UNSIGNED ZEROFILL,
