@@ -4,10 +4,10 @@
  * LEIDEN OPEN VARIATION DATABASE (LOVD)
  *
  * Created     : 2014-01-03
- * Modified    : 2017-03-14
+ * Modified    : 2018-12-19
  * For LOVD    : 3.0-18
  *
- * Copyright   : 2004-2017 Leiden University Medical Center; http://www.LUMC.nl/
+ * Copyright   : 2004-2018 Leiden University Medical Center; http://www.LUMC.nl/
  * Programmer  : Ivo F.A.C. Fokkema <I.F.A.C.Fokkema@LUMC.nl>
  *
  *
@@ -219,11 +219,18 @@ class LOVD_ScreeningMOD extends LOVD_Screening {
                 $zData['analysis_status'] .= ' (<A href="individuals/' . $zData['individualid'] . '/analyze/' . $zData['id'] . '?close">' . $sClose . '</A>)';
             }
         }
-        if ($_INI['instance']['name'] == 'leiden') {
+        if (lovd_verifyInstance('mgha', false)) {
+            // Just do a separate query for the variants to be confirmed (instead of modifying the VE query).
+            $zData['variants_to_be_confirmed_'] = $_DB->query('SELECT COUNT(*) FROM ' . TABLE_VARIANTS . ' AS vog INNER JOIN ' . TABLE_SCR2VAR . ' AS s2v ON (vog.id = s2v.variantid) WHERE vog.curation_statusid = ? AND s2v.screeningid = ?', array(CUR_STATUS_REQUIRES_CONFIRMATION, $zData['id']))->fetchColumn();
+        } else {
             // Just do a separate query for the variants to be confirmed (instead of modifying the VE query).
             $zData['variants_to_be_confirmed_'] = $_DB->query('SELECT COUNT(*) FROM ' . TABLE_VARIANTS . ' AS vog INNER JOIN ' . TABLE_SCR2VAR . ' AS s2v ON (vog.id = s2v.variantid) WHERE vog.curation_statusid IN (?, ?) AND s2v.screeningid = ?', array(CUR_STATUS_VARIANT_OF_INTEREST, CUR_STATUS_REQUIRES_CONFIRMATION, $zData['id']))->fetchColumn();
             if ($zData['variants_to_be_confirmed_']) {
                 $zData['variants_to_be_confirmed_'] .= ' (<A href="screenings/' . $zData['id'] . '?downloadToBeConfirmed">download</A>)';
+            }
+        }
+        if ($_INI['instance']['name'] == 'leiden') {
+            if ($zData['variants_to_be_confirmed_']) {
                 if (($_AUTH['level'] >= LEVEL_OWNER && $zData['analysis_statusid'] < ANALYSIS_STATUS_CLOSED) ||
                     ($_AUTH['level'] >= LEVEL_MANAGER && $zData['analysis_statusid'] < ANALYSIS_STATUS_WAIT_CONFIRMATION)
                 ) {
@@ -231,8 +238,6 @@ class LOVD_ScreeningMOD extends LOVD_Screening {
                     $zData['variants_to_be_confirmed_'] .= ' (<A id="export_variants" href="#" onclick="$.get(\'screenings/' . $zData['id'] . '?exportToBeConfirmed\',function(sResponse){if(sResponse.substring(0,1)==\'1\'){alert(\'Successfully exported \'+sResponse.substring(2)+\' lines of variant data.\');$(\'#export_variants\').replaceWith($(\'#export_variants\').html());}else{alert(\'Error while exporting file:\n\'+sResponse);}}).error(function(){alert(\'Error while exporting file.\');});return false;">export to Miracle</A>)';
                 }
             }
-        } else {
-            $zData['variants_to_be_confirmed_'] = $_DB->query('SELECT COUNT(*) FROM ' . TABLE_VARIANTS . ' AS vog INNER JOIN ' . TABLE_SCR2VAR . ' AS s2v ON (vog.id = s2v.variantid) WHERE vog.curation_statusid = ? AND s2v.screeningid = ?', array(CUR_STATUS_REQUIRES_CONFIRMATION, $zData['id']))->fetchColumn();
         }
 
         $zData['curation_progress_'] = $_DB->query('SELECT COUNT(*) FROM ' . TABLE_VARIANTS . ' AS vog INNER JOIN ' . TABLE_SCR2VAR . ' AS s2v ON (vog.id = s2v.variantid) WHERE vog.curation_statusid >= ? AND vog.curation_statusid != ? AND s2v.screeningid = ?', array(CUR_STATUS_CURATED_REPORTABLE, CUR_STATUS_NOT_FOR_CURATION, $zData['id']))->fetchColumn() . ' of ' . $_DB->query('SELECT COUNT(*) FROM ' . TABLE_VARIANTS . ' AS vog INNER JOIN ' . TABLE_SCR2VAR . ' AS s2v ON (vog.id = s2v.variantid) WHERE vog.curation_statusid IS NOT NULL AND vog.curation_statusid != ? AND s2v.screeningid = ?', array(CUR_STATUS_NOT_FOR_CURATION, $zData['id']))->fetchColumn() . ' variants curated';
