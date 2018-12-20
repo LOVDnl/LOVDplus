@@ -4,7 +4,7 @@
  * LEIDEN OPEN VARIATION DATABASE (LOVD)
  *
  * Created     : 2016-09-02
- * Modified    : 2018-10-12
+ * Modified    : 2018-12-20
  * For LOVD    : 3.0-18
  *
  * Copyright   : 2004-2018 Leiden University Medical Center; http://www.LUMC.nl/
@@ -102,7 +102,7 @@ $_INSTANCE_CONFIG['viewlists'] = array(
             //  are to be active, since LOVD+ might be filtering on them.
             // You can change the order of columns to any order you like.
             'id',
-            'individualid',
+            'individualid', // Hidden, but needed for search.
             'curation_progress_',
             'variants_found_',
             'analysis_status',
@@ -128,12 +128,8 @@ $_INSTANCE_CONFIG['viewlists'] = array(
             'chromosome',
             'allele_',
             'VariantOnGenome/DNA',
-            'VariantOnGenome/Alamut',
-            'VariantOnGenome/Conservation_score/PhyloP',
-            'VariantOnGenome/HGMD/Association',
             'VariantOnGenome/Sequencing/Depth/Alt/Fraction',
             'VariantOnGenome/Sequencing/Quality',
-            'VariantOnGenome/Sequencing/GATKcaller',
             'obs_variant',
             'obs_var_ind_ratio',
             'obs_disease',
@@ -328,7 +324,7 @@ class LOVD_DefaultDataConverter {
         // Analyze headers, find samples, identify parents.
         $aSamples = array();
         foreach ($aHeaders as $sHeader) {
-            // Find sample.GT headers.
+            // Find sample.GT headers, and store sample names.
             if (substr($sHeader, -3) == '.GT') {
                 $aSamples[substr($sHeader, 0, -3)] = '';
             }
@@ -577,7 +573,7 @@ class LOVD_DefaultDataConverter {
             'ALT' => 'alt',      // lovd_getVariantDescription() needs this.
             'QUAL' => 'VariantOnGenome/Sequencing/Quality',
             'FILTER' => 'VariantOnGenome/Sequencing/Filter',
-            'Consequence' => 'VariantOnTranscript/GVS/Function', // FIXME: Translation of values needed.
+            'Consequence' => 'VariantOnTranscript/GVS/Function', // Will be translated.
             'SYMBOL' => 'symbol',
             'Feature' => 'transcriptid',
             'HGVSc' => 'VariantOnTranscript/DNA',
@@ -586,8 +582,8 @@ class LOVD_DefaultDataConverter {
             'dbSNP' => 'VariantOnGenome/dbSNP', // VEP doesn't have this. We'll fill it in, in case we find it.
             'HGNC_ID' => 'id_hgnc',
             'SIFT' => 'VariantOnTranscript/Prediction/SIFT',
-            'PolyPhen' => 'VariantOnTranscript/PolyPhen', // FIXME: CHECK.
-            'AF' => 'VariantOnGenome/Frequency', // FIXME: CHECK.
+            'PolyPhen' => 'VariantOnTranscript/PolyPhen',
+            'AF' => 'VariantOnGenome/Frequency/1000G',
             'gnomAD_AF' => 'VariantOnGenome/Frequency/GnomAD', // FIXME: Not defined yet.
             'PUBMED' => 'VariantOnGenome/Reference', // FIXME: Translation of values needed.
             'DP' => 'VariantOnGenome/Sequencing/Depth/Total',
