@@ -38,27 +38,23 @@
 // Default settings.
 $_INSTANCE_CONFIG = array();
 
-// If you wish to allow for attachment uploads, enable this code.
+// This allows for attachment uploads. If you do not want this feature, disable this code.
 // These are some example default file types and settings.
 // FIXME: Allow for one file type to be linked to multiple objects.
-/*
 $_INSTANCE_CONFIG['attachments'] = array(
-    'igv' => array(
+    'screenshot' => array(
         'linked_to' => 'variant',
-        'label' => 'IGV screenshot'),
-    'ucsc' => array(
-        'linked_to' => 'summary_annotation',  // This file is stored using the Summary Annotation Record DBID.
-        'label' => 'UCSC screenshot (Summary Annotation)'),
-    'confirmation' => array(
+        'label' => 'Screenshot'),
+    'sa_screenshot' => array(
+        'linked_to' => 'summary_annotation', // This file is stored using the Summary Annotation Record DBID.
+        'label' => 'Screenshot (Summary Annotation)'),
+    'document' => array(
         'linked_to' => 'variant',
-        'label' => 'Confirmation screenshot'),
-    'workfile' => array(
-        'linked_to' => 'variant',
-        'label' => 'Excel file'),
+        'label' => 'Document'),
+    'sa_document' => array(
+        'linked_to' => 'summary_annotation', // This file is stored using the Summary Annotation Record DBID.
+        'label' => 'Document (Summary Annotation)'),
 );
-*/
-
-
 
 $_INSTANCE_CONFIG['columns'] = array(
     'lab_id' => 'Individual/Lab_ID',

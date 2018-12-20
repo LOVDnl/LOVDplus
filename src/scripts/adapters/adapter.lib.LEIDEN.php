@@ -1,5 +1,6 @@
 <?php
 // Leiden specific adapter settings.
+$_INSTANCE_CONFIG['attachments'] = false;
 $_INSTANCE_CONFIG['conversion']['suffixes']['vep'] = 'directvep.data.lovd';
 $_INSTANCE_CONFIG['conversion']['create_meta_file_if_missing'] = false;
 $_INSTANCE_CONFIG['conversion']['enforce_hgnc_gene'] = false;
