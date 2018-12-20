@@ -132,14 +132,12 @@ $aRequired =
                 'PHP_functions' =>
                      array(
                             'mb_detect_encoding',
-                            'xml_parser_create', // We could also look for libxml constants?
                             'openssl_seal',      // We could also look for openssl constants?
                             'curl_init',
                             'mime_content_type', // For the attachment uploads.
                           ),
                 'PHP_classes' =>
                      array(
-                            'SoapClient',
                           ),
                 'MySQL' => '4.1.2',
               );
