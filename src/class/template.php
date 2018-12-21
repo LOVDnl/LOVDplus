@@ -246,6 +246,7 @@ class LOVD_Template {
             if (!$_AUTH || $_AUTH['level'] <= LEVEL_ANALYZER) {
                 unset($this->aMenu['diseases'], $this->aMenu['diseases_']);
             }
+            unset($this->aMenu['docs']);
         } else {
             // Remove menu items for non-LOVD+.
             unset($this->aMenu['gene_panels']);

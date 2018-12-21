@@ -775,6 +775,7 @@ if ($sCalcVersionFiles != $sCalcVersionDB) {
                  ),
                  '3.0-17p' => array(), // Placeholder for LOVD+ queries, defined below.
                  '3.0-17q' => array(), // Placeholder for LOVD+ queries, defined below.
+                 '3.0-17r' => array(), // Plenty of changes to default table structure and columns, but not documented. Leiden LOVD+ should not be updated, and existing ones will not care if they have redundant columns or non-default column settings.
                  '3.0-18' =>
                      array(
                          // These two will be ignored by LOVD+.

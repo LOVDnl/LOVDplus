@@ -46,159 +46,6 @@ if ($_AUTH) {
 
 
 
-// DIAGNOSTICS: AUTO LOAD VARIANT FILES.
-// Autoload is random string, just an extra requirement, since we're giving away Manager authorization here...
-if (PATH_COUNT == 2 && $_PE[1] == 'upload' && ACTION == 'create' && isset($_GET['autoload']) && $_GET['autoload'] == 'auth9hj9@U' && FORMAT == 'text/plain') {
-    // This script will be called from localhost, and the output will be parsed.
-    // That is the easiest I think, because then at this point I don't need to
-    // change the HTML output to something else. All output that should go
-    // directly through the parser, should be prepended with a colon (:).
-    define('FORMAT_ALLOW_TEXTPLAIN', true); // To allow automatic data loading.
-
-    // First, check if the database is free, and not currently uploading anything.
-    // The upload does not put a permanent lock that we could detect. By monitoring the database, we will sometimes find a lock active:
-    // show open tables where `In_use` > 0;
-    //+-------------------+---------------------------------+--------+-------------+
-    //| Database          | Table                           | In_use | Name_locked |
-    //+-------------------+---------------------------------+--------+-------------+
-    //| lovd3_diagnostics | lovd_KG_variants_on_transcripts |      1 |           0 |
-    //| lovd3_diagnostics | lovd_KG_transcripts             |      1 |           0 |
-    //| lovd3_diagnostics | lovd_KG_variants                |      1 |           0 |
-    //+-------------------+---------------------------------+--------+-------------+
-    //or
-    //+-------------------+------------------+--------+-------------+
-    //| Database          | Table            | In_use | Name_locked |
-    //+-------------------+------------------+--------+-------------+
-    //| lovd3_diagnostics | lovd_KG_variants |      1 |           0 |
-    //+-------------------+------------------+--------+-------------+
-    //or, unfortunately,
-    //Empty set (0.00 sec)
-    // So instead, we will monitor all connections. If a different connection exists, we will wait for a bit, and check again.
-    // If still that connection persists, we will do nothing, since this server is dedicated anyway...
-    $nMaxSecondsToWait = 120;
-    $nConnectionID = $_DB->query('SELECT CONNECTION_ID()')->fetchColumn();
-    for ($i = 0; $i < $nMaxSecondsToWait; $i ++) {
-        $aConnections = $_DB->query('SHOW FULL PROCESSLIST')->fetchAllAssoc();
-        $nConnections = count($aConnections);
-        if ($nConnections == 1) {
-            // Just me, we can continue.
-            break;
-        } elseif ($nConnections > 2) {
-            // Too many connections; me and at least two others. Quit here.
-            die(':Too many currently open connections to database: ' . ($nConnections - 1) . ".\n");
-        }
-
-        // Let's have a look at that other connection. This code is written assuming we have two connections here (as defined in the code above).
-        $nKey = ($aConnections[0]['Id'] == $nConnectionID? 1 : 0);
-        $aConnection = $aConnections[$nKey];
-        // Only if that other connection sleeps, we'll check again in a second. Otherwise, we conclude the database is busy, and we die.
-        if ($aConnection['Command'] != 'Sleep' && $aConnection['State'] !== '' && $aConnection['Info']) {
-            // This thing seems busy. This might mean there's a current import, so in the future, we might want to die silently here.
-            // But for now, let's see what we see.
-            die(':Currently active concurrent connection to database, stopping:' . "\n:" . implode('|', $aConnection) . "\n");
-        }
-        //print(':Currently active concurrent connection is sleeping???:' . "\n:" . implode('|', $aConnection) . "\n");
-        sleep(1);
-    }
-    if ($i > 0) {
-        print(':Waited ' . $i . ' seconds for sleeping connection, now continuing.' . "\n");
-    }
-
-    // Then, get list of screenings, with Miracle IDs, that still need to get their variant data uploaded.
-    $aScreenings = $_DB->query('SELECT i.id_miracle, s.id FROM ' . TABLE_INDIVIDUALS . ' AS i INNER JOIN ' . TABLE_SCREENINGS . ' AS s ON (i.id = s.individualid) LEFT OUTER JOIN ' . TABLE_SCR2VAR . ' AS s2v ON (s.id = s2v.screeningid) WHERE s2v.variantid IS NULL')->fetchAllCombine();
-    // Nothing to do? Bye...
-    if (!$aScreenings) {
-        exit;
-    }
-
-    // Loop through the files in the dir and try and find IDs... It's stupid, but we have to open them all...
-    $h = @opendir($_INI['paths']['data_files']);
-    if (!$h) {
-        die(':Can\'t open directory.' . "\n");
-    }
-
-    while (($sFile = readdir($h)) !== false) {
-        if ($sFile{0} == '.' || in_array($sFile, array('ingeladen', 'new')) || preg_match('/^(hiseq2.+|(Child|Patient)_\d+\.(magpie_report\.pdf|meta\.lovd|(direct)?vep\.data\.lovd))$/', $sFile)) {
-            // Current dir, parent dir, hidden files, and files we know to ignore.
-            continue;
-        }
-        if (!preg_match('/^(?:Child|Patient)_(\d+).data.lovd$/', $sFile, $aRegs)) {
-            // Any non-matching file.
-            print(':Ignoring file, does not conform to file name format: ' . $sFile . ".\n");
-            continue;
-        }
-
-        // We need (int) because sometimes they prepend the number with zeros...
-        $nMiracleID = (int) $aRegs[1];
-
-        // Check if this Miracle ID has an open submission. Don't bother checking the file, when there's no submission to dump the contents in.
-        if (!isset($aScreenings[$nMiracleID])) {
-            // Silently continue...
-            continue;
-        }
-
-        // Try and open the file, check the first line if it conforms to the standard, and send on to import.
-        $sFileToUpload = $_INI['paths']['data_files'] . '/' . $sFile;
-        $f = @fopen($sFileToUpload, 'r');
-        if ($f === false) {
-            die(':Error opening file: ' . $sFile . ".\n");
-        }
-        $sHeader = fgets($f, 29);
-        if ($sHeader != "#chromosome\tposition\tREF\tALT") {
-            // Not a fatal error, because otherwise we will never import anything...
-            print(':Ignoring file, does not conform to format: ' . $sFile . ".\n");
-            continue;
-        }
-        fclose($f);
-
-        // OK, call for upload of this file.
-        $_GET['type'] = 'SeattleSeq';
-        $_GET['target'] = $aScreenings[$nMiracleID];
-
-        // Load necessary authorisation.
-        $_AUTH = $_DB->query('SELECT * FROM ' . TABLE_USERS . ' WHERE id = 0')->fetchAssoc();
-        $_AUTH['curates']      = array();
-        $_AUTH['collaborates'] = array();
-        $_AUTH['level'] = LEVEL_MANAGER; // To pass the authorization check downstream.
-
-        // Fake the POSTing of a file.
-        $_POST = array_merge($_POST,
-            array(
-                'variant_file' => $sFileToUpload,
-                'hg_build' => $_CONF['refseq_build'],
-                'dbSNP_column' => '1',
-                'autocreate' => '',
-                'owned_by' => $_AUTH['id'],
-                'statusid' => STATUS_OK,
-                'submit' => 'Upload SeattleSeq file',
-            ));
-        $_FILES =
-            array(
-                'variant_file' =>
-                    array(
-                        'name' => $sFile,
-                        'tmp_name' => $sFileToUpload,
-                        'size' => filesize($sFileToUpload),
-                        'error' => 0,
-                    )
-            );
-        break;
-    }
-
-    // We succeeded, when we've got LOVD authorization. Otherwise, apparently there's nothing to upload.
-    if ($_AUTH && (int) $_AUTH['id'] === 0) {
-        print(':Preparing to upload ' . $sFileToUpload . ' into screening ' . $aScreenings[$nMiracleID] . ".\n" .
-              ':Current time: ' . date('Y-m-d H:i:s') . ".\n");
-    } else {
-        // Silently die...
-        exit;
-    }
-}
-
-
-
-
-
 if (!ACTION && !empty($_GET['select_db'])) {
     // Old way of linking to LOVD2s.
     if (!empty($_GET['trackid']) && substr_count($_GET['trackid'], ':')) {
@@ -1343,60 +1190,6 @@ if (PATH_COUNT == 2 && $_PE[1] == 'upload' && ACTION == 'create') {
 
 
 
-    // Define list of columns from SeattleSeq format that we are recognizing.
-    $aSeattleSeqCols =
-     array(
-        'ALTPERC_Child' => 'VariantOnGenome/Sequencing/Depth/Alt/Fraction',
-        'ALTPERC_Patient' => 'VariantOnGenome/Sequencing/Depth/Alt/Fraction', // Dumb, but simple hack.
-        'CADD_raw' => 'VariantOnGenome/CADD/Raw',
-        'CADD_phred' => 'VariantOnGenome/CADD/Phred',
-        'distanceToSplice' => 'VariantOnTranscript/Distance_to_splice_site',
-        'DP_Child' => 'VariantOnGenome/Sequencing/Depth/Total',
-        'DP_Patient' => 'VariantOnGenome/Sequencing/Depth/Total', // Dumb, but simple hack.
-        'DPALT_Child' => 'VariantOnGenome/Sequencing/Depth/Alt',
-        'DPALT_Patient' => 'VariantOnGenome/Sequencing/Depth/Alt', // Dumb, but simple hack.
-        'DPREF_Child' => 'VariantOnGenome/Sequencing/Depth/Ref',
-        'DPREF_Patient' => 'VariantOnGenome/Sequencing/Depth/Ref', // Dumb, but simple hack.
-        'FILTERvcf' => 'VariantOnGenome/Sequencing/Filter',
-        'functionGVS' => 'VariantOnTranscript/GVS/Function',
-        'GATKCaller' => 'VariantOnGenome/Sequencing/GATKcaller',
-        'GT_Father' => 'VariantOnGenome/Sequencing/Father/GenoType',
-        'GT_Mother' => 'VariantOnGenome/Sequencing/Mother/GenoType',
-        'INDB_COUNT_HC' => 'VariantOnGenome/InhouseDB/Count/HC',
-        'INDB_COUNT_UG' => 'VariantOnGenome/InhouseDB/Count/UG',
-        'QUAL' => 'VariantOnGenome/Sequencing/Quality',
-        'scorePhastCons' => 'VariantOnGenome/Conservation_score/Phast',
-//        'FAM_UNAFFECTED_genotype_father' => 'VariantOnGenome/Sequencing/Father/Genotype',
-        'DP_Father' => 'VariantOnGenome/Sequencing/Father/Depth/Total',
-//        'FAM_UNAFFECTED_genotype_mother' => 'VariantOnGenome/Sequencing/Mother/Genotype',
-        'DP_Mother' => 'VariantOnGenome/Sequencing/Mother/Depth/Total',
-        'ISPRESENT_Father' => 'VariantOnGenome/Sequencing/Father/VarPresent',
-        'ALTPERC_Father' => 'VariantOnGenome/Sequencing/Father/Depth/Alt/Fraction',
-        'ISPRESENT_Mother' => 'VariantOnGenome/Sequencing/Mother/VarPresent',
-        'ALTPERC_Mother' => 'VariantOnGenome/Sequencing/Mother/Depth/Alt/Fraction',
-        'phyloP' => 'VariantOnGenome/Conservation_score/PhyloP',
-        'AF1000G' => 'VariantOnGenome/Frequency/1000G',
-        'AFGONL' => 'VariantOnGenome/Frequency/GoNL',
-        'AFESP5400' => 'VariantOnGenome/Frequency/EVS',
-        'Polyphen2_HDIV_score' => 'VariantOnTranscript/PolyPhen/HDIV',
-        'Polyphen2_HVAR_score' => 'VariantOnTranscript/PolyPhen/HVAR',
-        'SIFT_score' => 'VariantOnTranscript/Prediction/SIFT',
-        'HGMD_association' => 'VariantOnGenome/HGMD/Association',
-        'HGMD_reference' => 'VariantOnGenome/HGMD/Reference',
-        'MutationTaster_pred' => 'VariantOnTranscript/Prediction/MutationTaster',
-        'MutationTaster_score' => 'VariantOnTranscript/Prediction/MutationTaster/Score',
-        'granthamScore' => 'VariantOnTranscript/Prediction/Grantham',
-//        '' => '',
-//        '' => '',
-        // In use by old code.
-        'cDNAPosition' => 'VariantOnTranscript/Position',
-        'polyPhen' => 'VariantOnTranscript/PolyPhen',
-        );
-
-
-
-
-
     function lovd_getVCFLine ($fInput)
     {
         // This function reads and returns one line in $fInput.
@@ -1438,7 +1231,6 @@ if (PATH_COUNT == 2 && $_PE[1] == 'upload' && ACTION == 'create') {
         }
         if (!isset($sLine)) {
             $sLine = '';
-            $bFirstLineRead = true; // Will tell us to "hack" the parser and fake the '#' in front of the header line.
         }
 
         do {
@@ -1453,17 +1245,6 @@ if (PATH_COUNT == 2 && $_PE[1] == 'upload' && ACTION == 'create') {
                 $nParsedBytes += strlen($sNextLine);
             } while ($sNextLine !== false && !trim($sNextLine));
 
-            // Create hack for KG pipeline file.
-            if (!empty($bFirstLineRead)) {
-                if (preg_match('/^#[^ ]/', $sNextLine)) {
-                    // KG-style '#chromosome' header.
-                    $sNextLine = '# ' . substr($sNextLine, 1);
-                } else {
-                    $sNextLine = '# ' . $sNextLine;
-                }
-                $bFirstLineRead = false;
-            }
-
             // If we don't have a header line yet, we keep reading lines until we've got one. Then we enter the if() below.
             if (empty($aHeaders) && $sNextLine && substr($sNextLine, 0, 2) != '# ') {
                 // We moved past the header line with $sNextLine, so the header was the previous line. $sLine has it.
@@ -1474,22 +1255,6 @@ if (PATH_COUNT == 2 && $_PE[1] == 'upload' && ACTION == 'create') {
                 }
                 $aHeaders = explode("\t", ltrim(rtrim($sLine, "\r\n"), '# '));
                 $aHeaders = array_map('trim', $aHeaders, array_fill(0, count($aHeaders), '"'));
-
-                // Diagnostics: Very once more the identity of this file. Some columns are appended by the Miracle ID.
-                // Check the child's Miracle ID with that we have in the database, and remove all the IDs so the headers are recognized normally.
-                global $_DB;
-                $nMiracleID = $_DB->query('SELECT i.id_miracle FROM ' . TABLE_INDIVIDUALS . ' AS i INNER JOIN ' . TABLE_SCREENINGS . ' AS s ON (i.id = s.individualid) WHERE s.id = ?', array($_GET['target']))->fetchColumn();
-
-                foreach ($aHeaders as $key => $sHeader) {
-                    if (preg_match('/(Child|Patient|Father|Mother)_(\d+)$/', $sHeader, $aRegs)) {
-                        // If Child, check ID.
-                        if ($nMiracleID && in_array($aRegs[1], array('Child', 'Patient')) && $aRegs[2] != $nMiracleID) {
-                            die('Fatal: Miracle ID of ' . $aRegs[1] . ' (' . $aRegs[2] . ') does not match that from the database (' . $nMiracleID . ')' . "\n");
-                        }
-                        // Clean ID from column.
-                        $aHeaders[$key] = substr($sHeader, 0, -(strlen($aRegs[2])+1));
-                    }
-                }
             }
 
             // If we do have a header line, we keep reading lines until we move to the next variant.
@@ -1500,25 +1265,14 @@ if (PATH_COUNT == 2 && $_PE[1] == 'upload' && ACTION == 'create') {
                     // Its initial data comes from $sLine (which is the previously-read line; usually even from the previous call to this function).
                     // This is because we always read one line 'too much'; we only know $sNextLine is not part of the current variant once we've already read it.
                     $aLine = array_combine($aHeaders, explode("\t", rtrim($sLine, "\r\n")));
-                    // KG data has quotes.
-                    foreach ($aLine as $key => $val) {
-                        $aLine[$key] = trim($val, '"');
-                    }
 
-                    foreach (array('accession', 'functionGVS', 'functionDBSNP', 'aminoAcids', 'proteinPosition', 'cDNAPosition', 'polyPhen', 'Polyphen2_HDIV_score', 'Polyphen2_HVAR_score', 'granthamScore', 'proteinSequence', 'distanceToSplice', 'SIFT_score', 'MutationTaster_pred', 'MutationTaster_score') as $sKey) {
-                        // FIXME: You should base this partially on $aSeattleSeqCols.
+                    foreach (array('accession', 'functionGVS', 'functionDBSNP', 'aminoAcids', 'proteinPosition', 'cDNAPosition', 'polyPhen', 'granthamScore', 'proteinSequence', 'distanceToSplice') as $sKey) {
                         // Making arrays of some transcript-specific columns.
 
                         if (!isset($aLine[$sKey])) {
                             // cDNAPosition, polyPhen, granthamScore, proteinSequence and distanceToSplice are optional columns so we should check for their existence.
                             continue;
                         }
-
-                        // DIAGNOSTICS: PolyPhen cols have combined values... take the maximum, says Gijs 2014-05-16.
-                        if (in_array($sKey, array('Polyphen2_HDIV_score', 'Polyphen2_HVAR_score')) && strpos($aLine[$sKey], ';')) {
-                            $aLine[$sKey] = max(explode(';', $aLine[$sKey]));
-                        }
-
                         $aLine[$sKey] = array($aLine[$sKey]);
                     }
                 }
@@ -1537,10 +1291,6 @@ if (PATH_COUNT == 2 && $_PE[1] == 'upload' && ACTION == 'create') {
                     // The variant in $aNextLine is the same as $aLine, but on another transcript. Add the transcript-specific values.
                     foreach ($aLine as $sKey => &$value) {
                         if (is_array($value)) {
-                            // DIAGNOSTICS: PolyPhen cols have combined values... take the maximum, says Gijs 2014-05-16.
-                            if (in_array($sKey, array('Polyphen2_HDIV_score', 'Polyphen2_HVAR_score')) && strpos($aNextLine[$sKey], ';')) {
-                                $aNextLine[$sKey] = max(explode(';', $aNextLine[$sKey]));
-                            }
                             $value[] = $aNextLine[$sKey];
                         }
                     }
@@ -1570,8 +1320,7 @@ if (PATH_COUNT == 2 && $_PE[1] == 'upload' && ACTION == 'create') {
         // Returns the given variant as a string, like it was in the SeattleSeq file.
         // This is used to be able to print a SeattleSeq line to the user in case a variant can't be imported.
 
-        foreach (array('accession', 'functionGVS', 'functionDBSNP', 'aminoAcids', 'proteinPosition', 'cDNAPosition', 'polyPhen', 'Polyphen2_HDIV_score', 'Polyphen2_HVAR_score', 'granthamScore', 'proteinSequence', 'distanceToSplice', 'SIFT_score', 'MutationTaster_pred', 'MutationTaster_score') as $sKey) {
-            // FIXME: You should base this partially on $aSeattleSeqCols.
+        foreach (array('accession', 'functionGVS', 'functionDBSNP', 'aminoAcids', 'proteinPosition', 'cDNAPosition', 'polyPhen', 'granthamScore', 'proteinSequence', 'distanceToSplice') as $sKey) {
             // Getting the selected index from the transcript-dependent fields.
 
             if (!isset($aVariant[$sKey])) {
@@ -1579,17 +1328,6 @@ if (PATH_COUNT == 2 && $_PE[1] == 'upload' && ACTION == 'create') {
                 continue;
             }
             $aVariant[$sKey] = $aVariant[$sKey][$nTranscriptIndex];
-        }
-
-        // KG: More array values we need to reset to string? FIXME: We could also extend the col list above, or just remove it and scan $aVariants completely with the code below.
-        foreach ($aVariant as $key => $val) {
-            if (is_array($val)) {
-                if (!$val) {
-                    $aVariant[$key] = '';
-                } else {
-                    $aVariant[$key] = $aVariant[$sKey][$nTranscriptIndex];
-                }
-            }
         }
 
         return implode("\t", $aVariant);
@@ -1677,7 +1415,7 @@ if (PATH_COUNT == 2 && $_PE[1] == 'upload' && ACTION == 'create') {
 
 
     // If dbSNP custom links are active, find out which columns in TABLE_VARIANTS accept them.
-    $aDbSNPColumns = $_DB->query('SELECT ac.colid FROM ' . TABLE_ACTIVE_COLS . ' AS ac JOIN ' . TABLE_COLS2LINKS . ' USING (colid) JOIN ' . TABLE_LINKS . ' ON (linkid = id) WHERE name = "DbSNP" AND ac.colid LIKE "VariantOnGenome/%" AND ac.colid NOT IN ("VariantOnGenome/DBID", "VariantOnGenome/DNA")')->fetchAllColumn();
+    $aDbSNPColumns = $_DB->query('SELECT ac.colid FROM ' . TABLE_ACTIVE_COLS . ' AS ac INNER JOIN ' . TABLE_COLS2LINKS . ' AS c2l USING (colid) INNER JOIN ' . TABLE_LINKS . ' AS l ON (c2l.linkid = l.id) WHERE l.name = "DbSNP" AND ac.colid LIKE "VariantOnGenome/%" AND ac.colid NOT IN ("VariantOnGenome/DBID", "VariantOnGenome/DNA")')->fetchAllColumn();
     // FIXME: dbSNP will be included twice this way.
     if ($sDbSNPColumn = $_DB->query('SELECT colid FROM ' . TABLE_ACTIVE_COLS . ' WHERE colid = "VariantOnGenome/dbSNP"')->fetchColumn()) {
         // The dbSNP special column is active, allow to insert dbSNP links in there.
@@ -1685,7 +1423,7 @@ if (PATH_COUNT == 2 && $_PE[1] == 'upload' && ACTION == 'create') {
     }
     array_unshift($aDbSNPColumns, 'Don\'t import dbSNP links');
 
-    if (POST || $_FILES) { // || $_FILES is in use for the automatic loading of files.
+    if (POST) {
         // The form has been submitted. Detect any errors in the file upload.
         if (empty($_FILES['variant_file']) || ($_FILES['variant_file']['error'] > 0 && $_FILES['variant_file']['error'] < 4)) {
             lovd_errorAdd('', 'There was a problem with the file transfer. Please try again. The file cannot be larger than ' . round($nMaxSize/pow(1024, 2), 1) . ' MB' . ($nMaxSize == $nMaxSizeLOVD? '' : ', due to restrictions on this server') . '.');
@@ -1741,7 +1479,6 @@ if (PATH_COUNT == 2 && $_PE[1] == 'upload' && ACTION == 'create') {
             session_write_close();
 
             $_DB->beginTransaction();
-            $_DB->query('SET foreign_key_checks=0');
 
 
 
@@ -1932,13 +1669,11 @@ if (PATH_COUNT == 2 && $_PE[1] == 'upload' && ACTION == 'create') {
                 // Check which VOG columns are available.
                 $aVOGColumnsAvailable = $_DB->query('SELECT colid FROM ' . TABLE_ACTIVE_COLS . ' WHERE colid LIKE "VariantOnGenome%"')->fetchAllColumn();
 
-                // ... And gather all VOT columns names, so we can check which ones are standard.
-                $aVOTCols = array();
-                foreach ($aSeattleSeqCols as $sColID) {
-                    if (strpos($sColID, 'VariantOnTranscript') === 0) {
-                        $aVOTCols[] = $sColID;
-                    }
-                }
+                // Define the list of VariantOnTranscript columns once and for all.
+                $aVOTCols = array('VariantOnTranscript/Distance_to_splice_site',
+                                  'VariantOnTranscript/GVS/Function',
+                                  'VariantOnTranscript/PolyPhen',
+                                  'VariantOnTranscript/Position');
 
                 // We also need to get a list of standard VariantOnTranscript columns.
                 $aColsStandard = $_DB->query('SELECT id FROM ' . TABLE_COLS . ' WHERE standard = 1 AND id IN("' . implode('", "', $aVOTCols) . '")')->fetchAllColumn();
@@ -1989,21 +1724,8 @@ if (PATH_COUNT == 2 && $_PE[1] == 'upload' && ACTION == 'create') {
                         'created_date' => $aUploadData['upload_date'],
                         );
 
-                    // Load VOG columns mapped to SeattleSeq output cols.
-                    foreach ($aSeattleSeqCols as $sSeattleSeqCol => $sColID) {
-                        if (in_array($sColID, $aVOGColumnsAvailable) && isset($aVariant[$sSeattleSeqCol]) && !in_array($aVariant[$sSeattleSeqCol], array('NA', 'unknown', 'none'))) {
-                            $Val = $aVariant[$sSeattleSeqCol];
-                            switch ($sSeattleSeqCol) {
-                                case 'ALTPERC_Child':
-                                case 'ALTPERC_Patient':
-                                case 'ALTPERC_Father':
-                                case 'ALTPERC_Mother':
-                                case 'AFESP5400':
-                                    $Val /= 100; // Percentage to fraction.
-                                    break;
-                            }
-                            $aFieldsVariantOnGenome[0][$sColID] = $Val;
-                        }
+                    if (in_array('VariantOnGenome/Conservation_score/GERP', $aVOGColumnsAvailable) && !in_array($aVariant['consScoreGERP'], array('NA', 'unknown', 'none'))) {
+                        $aFieldsVariantOnGenome[0]['VariantOnGenome/Conservation_score/GERP'] = $aVariant['consScoreGERP'];
                     }
 
                     if ($_POST['dbSNP_column'] > 0 && preg_match('/\d+/', $aVariant['rsID'], $aDbSNP) && $aDbSNP[0] != '0') {
@@ -2541,11 +2263,19 @@ if (PATH_COUNT == 2 && $_PE[1] == 'upload' && ACTION == 'create') {
                                                     'VariantOnTranscript/DNA' => substr($sVariantOnTranscript, strpos($sVariantOnTranscript, ':') + 1),
                                                     'VariantOnTranscript/Protein' => $sProteinChange);
 
-                                                // Load VOT columns mapped to SeattleSeq output cols.
-                                                foreach ($aSeattleSeqCols as $sSeattleSeqCol => $sColID) {
-                                                    if (in_array($sColID, $aGenesChecked[$sSymbol]['columns']) && isset($aVariant[$sSeattleSeqCol]) && !in_array($aVariant[$sSeattleSeqCol][$i], array('NA', 'unknown', 'none'))) {
-                                                        $aFieldsVariantOnTranscript[$j][$sAccession][$sColID] = $aVariant[$sSeattleSeqCol][$i];
-                                                    }
+                                                if (in_array('VariantOnTranscript/GVS/Function', $aGenesChecked[$sSymbol]['columns'])) {
+                                                    $aFieldsVariantOnTranscript[$j][$sAccession]['VariantOnTranscript/GVS/Function'] = $aVariant['functionGVS'][$i];
+                                                }
+
+                                                // cDNAPosition, polyPhen and distanceToSplice are optional columns so we should check for their existance too.
+                                                if (isset($aVariant['cDNAPosition']) && in_array('VariantOnTranscript/Position', $aGenesChecked[$sSymbol]['columns'])) {
+                                                    $aFieldsVariantOnTranscript[$j][$sAccession]['VariantOnTranscript/Position'] = $aVariant['cDNAPosition'][$i];
+                                                }
+                                                if (isset($aVariant['polyPhen']) && in_array('VariantOnTranscript/PolyPhen', $aGenesChecked[$sSymbol]['columns'])) {
+                                                    $aFieldsVariantOnTranscript[$j][$sAccession]['VariantOnTranscript/PolyPhen'] = $aVariant['polyPhen'][$i];
+                                                }
+                                                if (isset($aVariant['distanceToSplice']) && in_array('VariantOnTranscript/Distance_to_splice_site', $aGenesChecked[$sSymbol]['columns'])) {
+                                                    $aFieldsVariantOnTranscript[$j][$sAccession]['VariantOnTranscript/Distance_to_splice_site'] = $aVariant['distanceToSplice'][$i];
                                                 }
 
                                                 // lovd_fetchDBID needs some VariantOnTranscript information too.
@@ -2624,7 +2354,6 @@ if (PATH_COUNT == 2 && $_PE[1] == 'upload' && ACTION == 'create') {
                     }
                 }
 
-                $_DB->query('SET foreign_key_checks=1');
                 if ($_POST['statusid'] >= STATUS_MARKED) {
                     $_BAR->setMessage('Setting last updated dates for affected genes...');
                     lovd_setUpdatedDate(array_keys($aGenesChecked));
@@ -2695,11 +2424,6 @@ if (PATH_COUNT == 2 && $_PE[1] == 'upload' && ACTION == 'create') {
                 }
             }
 
-            // DIAGNOSTICS: Now that we've uploaded the file, update the individual's status, so he can be analyzed.
-            if ($aUploadData['num_variants']) {
-                // But only with at least one successful variant uploaded.
-                $_DB->query('UPDATE ' . TABLE_INDIVIDUALS . ' SET analysis_statusid = ? WHERE id = (SELECT individualid FROM ' . TABLE_SCREENINGS . ' WHERE id = ?) AND analysis_statusid = ?', array(ANALYSIS_STATUS_READY, $_POST['screeningid'], ANALYSIS_STATUS_WAIT));
-            }
 
             // Log it!
             lovd_writeLog('Event', LOG_EVENT, 'Imported ' . $aUploadData['num_variants'] . ' variants from ' . $aUploadData['file_type'] . ' file ' . $aUploadData['file_name']);
@@ -2718,7 +2442,7 @@ if (PATH_COUNT == 2 && $_PE[1] == 'upload' && ACTION == 'create') {
             $_POST['dbSNP_column'] = $nReferenceColumn;
         }
         $_POST['allow_mapping'] = 1;
-        //$_POST['autocreate'] = 'gt';
+        $_POST['autocreate'] = 'gt';
         $_POST['genotype_field'] = 'pl';
     }
 
@@ -2839,22 +2563,6 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && in_array(ACTION, array('edit', 'p
         lovd_requireAUTH(LEVEL_CURATOR);
     } else {
         lovd_requireAUTH(LEVEL_OWNER);
-    }
-
-    $bAuthorized = ($_AUTH && $_AUTH['level'] >= LEVEL_OWNER);
-    // However, for LOVD+, depending on the status of the screening, we might not have the rights to edit the variant.
-    if (LOVD_plus && $bAuthorized) {
-        $zScreenings = $_DB->query('SELECT s.* FROM ' . TABLE_SCREENINGS . ' AS s INNER JOIN ' . TABLE_SCR2VAR . ' AS s2v ON (s.id = s2v.screeningid) WHERE s2v.variantid = ? GROUP BY s.id', array($nID))->fetchAllAssoc();
-        if ($zScreenings &&
-            !($_AUTH['level'] >= LEVEL_OWNER && $zScreenings[0]['analysis_statusid'] < ANALYSIS_STATUS_CLOSED) &&
-            !($_AUTH['level'] >= LEVEL_MANAGER && $zScreenings[0]['analysis_statusid'] < ANALYSIS_STATUS_WAIT_CONFIRMATION) &&
-            !($_AUTH['level'] >= LEVEL_ADMIN && $zScreenings[0]['analysis_statusid'] < ANALYSIS_STATUS_CONFIRMED)) {
-            $_T->printHeader();
-            $_T->printTitle();
-            lovd_showInfoTable('This analysis has been closed. It\'s not possible to edit this variant.', 'stop');
-            $_T->printFooter();
-            exit;
-        }
     }
 
     $aGenes = $_DB->query('SELECT DISTINCT t.geneid FROM ' . TABLE_VARIANTS_ON_TRANSCRIPTS . ' AS vot LEFT OUTER JOIN ' . TABLE_TRANSCRIPTS . ' AS t ON (vot.transcriptid = t.id) WHERE vot.id = ?', array($nID))->fetchAllColumn();

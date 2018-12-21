@@ -4,14 +4,17 @@
  * LEIDEN OPEN VARIATION DATABASE FOR DIAGNOSTICS (LOVD+)
  *
  * Created     : 2018-08-16
- * Modified    : 2018-08-29
- * Version     : 0.1
+ * Modified    : 2018-12-19
+ * Version     : 0.2
  * For LOVD+   : 3.0-18
  *
  * Purpose     : Prepares the conversion script; runs the VEP2TSV converter to
  *               create data files, and creates meta data files if needed.
  *
- * Changelog   : 0.1    2018-08-28
+ * Changelog   : 0.2    2018-12-19
+ *               No longer create the id_sample column in the Meta data files,
+ *               we've dropped this column.
+ *               0.1    2018-08-28
  *               Initial release.
  *
  * Copyright   : 2004-2018 Leiden University Medical Center; http://www.LUMC.nl/
@@ -145,7 +148,6 @@ if (!empty($_INSTANCE_CONFIG['conversion']['create_meta_file_if_missing'])) {
                 'Screenings' => array(
                     'id' => 1,
                     'individualid' => 1,
-                    'id_sample' => 1, // FIXME: Don't we want to get rid of this?
                     'variants_found' => 1,
                     'Screening/Technique' => '?',
                     'Screening/Template' => 'DNA',

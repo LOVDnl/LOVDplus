@@ -192,11 +192,16 @@ print('          </TD>' . "\n" .
 
 $aItems =
     array(
-            'Gene databases' =>
-                 array(
-                        array('genes?create', 'lovd_genes_create.png', 'Create new gene database', 'Create a new gene database.'),
-                        array('genes', 'lovd_genes_view.png', 'View all gene databases', 'Manage configured gene databases.'),
-                      ),
+        'Gene panels' =>
+            array(
+                array('gene_panels?create', 'lovd_genes_create.png', 'Create new gene panel', 'Create a new gene panel.'),
+                array('gene_panels', 'lovd_genes_view.png', 'View all gene panels', 'Manage configured gene panels.'),
+            ),
+        'Gene databases' =>
+            array(
+                array('genes?create', 'lovd_genes_create.png', 'Create new gene database', 'Create a new gene database.'),
+                array('genes', 'lovd_genes_view.png', 'View all gene databases', 'Manage configured gene databases.'),
+            ),
             'Transcripts' =>
                  array(
                         array('transcripts?create', 'lovd_transcripts_create.png', 'Create new transcript', 'Create a new transcript.'),
@@ -233,6 +238,11 @@ print('            <TABLE border="0" cellpadding="2" cellspacing="0" class="setu
 */
           );
 
+if (LOVD_plus) {
+    unset($aItems['Gene databases'], $aItems['Transcripts'], $aItems['Individuals'], $aItems['Variants']);
+} else {
+    unset($aItems['Gene panels']);
+}
 
 foreach ($aItems as $sTitle => $aLinks) {
     print('            <TABLE border="0" cellpadding="2" cellspacing="0" class="setup" width="100%">' . "\n" .
@@ -257,9 +267,7 @@ print('          </TD>' . "\n" .
 // Newly installed? Flash create gene link.
 if (isset($_GET['newly_installed'])) {
     print('      <SCRIPT type="text/javascript">' . "\n" .
-          '        varTR = ' . (LOVD_plus?
-            '$("img[src=\'gfx/lovd_clock.png\']").parent().parent()[0];' :
-            'document.getElementById(\'setupRight\').getElementsByTagName(\'tr\')[1];') . "\n");
+          '        varTR = document.getElementById(\'setupRight\').getElementsByTagName(\'tr\')[1];' . "\n");
     for ($i = 0; $i < 30; $i ++) {
         print('        setTimeout("varTR.style.background=\'#' . ($i%2? 'F0F3FF' : 'C8DCFA') . '\'", ' . ($i * 1000) . ');' . "\n");
     }

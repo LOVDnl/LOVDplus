@@ -1,24 +1,71 @@
 <?php
 // Leiden specific adapter settings.
+$_INSTANCE_CONFIG['attachments'] = false;
 $_INSTANCE_CONFIG['conversion']['suffixes']['vep'] = 'directvep.data.lovd';
 $_INSTANCE_CONFIG['conversion']['create_meta_file_if_missing'] = false;
 $_INSTANCE_CONFIG['conversion']['enforce_hgnc_gene'] = false;
 $_INSTANCE_CONFIG['conversion']['verbosity_other'] = 9;
 
-$_INSTANCE_CONFIG['viewlists']['Screenings_for_I_VE']['cols_to_show'] = array(
+$_INSTANCE_CONFIG['viewlists'] = array(
+    // If set to true, ViewLists are not allowed to be downloaded, except specifically
+    //  enabled as 'allow_download_from_level' in the ViewLists's settings below.
+    'restrict_downloads' => true,
+
     // The screenings data listing on the individual's detailed view.
-    // Select these columns for the screenings listing on the individual's page.
-    // Note, that you also need to define the hidden columns that
-    //  are to be active, since LOVD+ might be filtering on them.
-    // You can change the order of columns to any order you like.
-    'id',
-    'individualid', // Hidden, but needed for search.
-    'Screening/Panel_coverage/Fraction',
-    'Screening/Father/Panel_coverage/Fraction',
-    'Screening/Mother/Panel_coverage/Fraction',
-    'curation_progress_',
-    'variants_found_',
-    'analysis_status',
+    'Screenings_for_I_VE' => array(
+        'cols_to_show' => array(
+            // Select these columns for the screenings listing on the individual's page.
+            // Note, that you also need to define the hidden columns that
+            //  are to be active, since LOVD+ might be filtering on them.
+            // You can change the order of columns to any order you like.
+            'id',
+            'individualid', // Hidden, but needed for search.
+            'Screening/Panel_coverage/Fraction',
+            'Screening/Father/Panel_coverage/Fraction',
+            'Screening/Mother/Panel_coverage/Fraction',
+            'curation_progress_',
+            'variants_found_',
+            'analysis_status',
+        )
+    ),
+    // The data analysis results data listing.
+    'CustomVL_AnalysisRunResults_for_I_VE' => array(
+        // Even when downloading ViewLists is restricted, allow downloading from LEVEL_MANAGER.
+        'allow_download_from_level' => LEVEL_MANAGER,
+        'cols_to_show' => array(
+            // Select these columns for the analysis results table.
+            // Note, that you also need to define the hidden columns that
+            //  are to be active, since LOVD+ might be filtering on them.
+            // By default, these columns are sorted by object type, but you can change the order to any order you like.
+            'curation_status_',
+            'curation_statusid',
+            'variantid',
+            'vog_effect',
+            'chromosome',
+            'allele_',
+            'VariantOnGenome/DNA',
+            'VariantOnGenome/Alamut',
+            'VariantOnGenome/Conservation_score/PhyloP',
+            'VariantOnGenome/HGMD/Association',
+            'VariantOnGenome/Sequencing/Depth/Alt/Fraction',
+            'VariantOnGenome/Sequencing/Quality',
+            'VariantOnGenome/Sequencing/GATKcaller',
+            'obs_variant',
+            'obs_var_ind_ratio',
+            'obs_disease',
+            'obs_var_dis_ind_ratio',
+
+            'gene_disease_names',
+            'VariantOnTranscript/DNA',
+            'VariantOnTranscript/Protein',
+            'VariantOnTranscript/GVS/Function',
+            'gene_OMIM_',
+
+            'runid',
+
+            'gene_panels',
+        )
+    )
 );
 
 $_INSTANCE_CONFIG['observation_counts'] = array(
