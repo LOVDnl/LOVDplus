@@ -1422,12 +1422,17 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && ACTION == 'edit_panels') {
                                      UNION
                                     (SELECT CAST(id AS CHAR), name, type FROM ' . TABLE_GENE_PANELS . ')
                                      ORDER BY type DESC, name')->fetchAllCombine();
-    $nGenePanels = count($aGenePanelsForm);
+    $nGenePanels = count($aGenePanelsForm); // Also contains the gene panel groups!
     foreach ($aGenePanelsForm as $nID => $sGenePanel) {
         $aGenePanelsForm[$nID] = lovd_shortenString($sGenePanel, 75);
     }
     $nGPFieldSize = ($nGenePanels < 20? $nGenePanels : 20);
-    if (!$nGenePanels) {
+    // Obviously I could check if $nGenePanels is 3 here, but in case I ever forget to change that
+    //  if I would change the structure of the option list, this would be better.
+    if (!array_filter($aGenePanelsForm,
+        function ($sKey) {
+            return ctype_digit((string) $sKey);
+        }, ARRAY_FILTER_USE_KEY)) {
         $aGenePanelsForm = array('' => 'No gene panel entries available');
         $nGPFieldSize = 1;
     }
