@@ -59,7 +59,12 @@ class LOVD_PDO extends PDO {
                 // Still needs check though, in case two PDO connections are opened.
                 define('MYSQL_ATTR_INIT_COMMAND', 1002);
             }
-            $aOptions = array(MYSQL_ATTR_INIT_COMMAND => 'SET NAMES utf8, SQL_MODE = REPLACE(@@SQL_MODE, "NO_ZERO_DATE", "")', PDO::MYSQL_ATTR_USE_BUFFERED_QUERY => TRUE);
+            $aOptions = array(
+                // ONLY_FULL_GROUP_BY can later be enabled again, when all queries have been checked and fixed.
+                // STRICT_TRANS_TABLES can later be enabled again, when all columns have proper defaults.
+                MYSQL_ATTR_INIT_COMMAND => 'SET NAMES utf8, SQL_MODE = REPLACE(REPLACE(REPLACE(@@SQL_MODE, "NO_ZERO_DATE", ""), "ONLY_FULL_GROUP_BY", ""), "STRICT_TRANS_TABLES", "")',
+                PDO::MYSQL_ATTR_USE_BUFFERED_QUERY => TRUE,
+            );
         }
         try {
             parent::__construct($sDSN, $sUsername, $sPassword, $aOptions);
