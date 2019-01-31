@@ -1353,6 +1353,7 @@ foreach ($aFiles as $sFileID) {
 
         // DNA fields and protein field can be super long with long inserts.
         // For the DNA fields, shorten insAAAAAA to ins(6), for DNA descriptions >100 characters.
+        // FIXME: Better make this dependent on the field length; there are LOVDs out there that allow more data, and they should get it.
         foreach (array('VariantOnGenome/DNA', 'VariantOnTranscript/DNA') as $sField) {
             if (isset($aVariant[$sField]) && strlen($aVariant[$sField]) > 100 && preg_match('/ins([ACTG]+)$/', $aVariant[$sField], $aRegs)) {
                 $aVariant[$sField] = str_replace('ins' . $aRegs[1], 'ins(' . strlen($aRegs[1]) . ')', $aVariant[$sField]);
@@ -1362,6 +1363,7 @@ foreach ($aFiles as $sFileID) {
         unset($aVariant['VariantOnTranscript/DNA/VEP']);
 
         // For the protein field, protein descriptions >100 characters can be shortened.
+        // FIXME: Better make this dependent on the field length; there are LOVDs out there that allow more data, and they should get it.
         $sField = 'VariantOnTranscript/Protein';
         if (isset($aVariant[$sField]) && strlen($aVariant[$sField]) > 100) {
             // For the protein field, shorten insArgArgArg to ins(3), for protein descriptions >100 characters.

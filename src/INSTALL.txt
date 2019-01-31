@@ -77,7 +77,7 @@ Then, for any user with write access to the data directory insert the following
 cronjob to facilitate automatic conversion of meta and data files into LOVD+
 import files:
 
-0 * * * * php -f /path_to_LOVD/scripts/convert_and_merge_data_files.php
+*/15 * * * * php -f /path_to_LOVD/scripts/convert_and_merge_data_files.php
 
 Make sure the directory in which `php` resides, is in the PATH environment
 variable. Feel free to change the time settings.
@@ -107,20 +107,17 @@ for a while.
 
 QUESTIONS?
 ==========
-If you have any questions, please see our website: www.LOVD.nl
-For the FAQ, see www.LOVD.nl/3.0/faq
+If you have any questions, please see our website: www.LOVD.nl/plus
+For the FAQ, see www.LOVD.nl/plus/faq
 
 
 LOVD DEVELOPMENT TEAM
 =====================
 The LOVD development team currently consists of:
 Ivo Fokkema
-Mark Kroon
 
 And is supported by:
 Johan den Dunnen
-Jeroen Laros
-Martijn Vermaat
 Julia López Hernández
 
 All from the Leiden University Medical Center, Leiden, Netherlands.

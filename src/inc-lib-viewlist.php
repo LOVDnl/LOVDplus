@@ -50,7 +50,12 @@ function lovd_formatSearchExpression ($sExpression, $sColumnType)
     if ($sColumnType == 'DATETIME') {
         $sExpression = preg_replace('/ (\d)/', "{{SPACE}}$1", trim($sExpression));
     } else {
-        $sExpression = preg_replace_callback('/("[^"]+")/', create_function('$aRegs', 'return str_replace(\' \', \'{{SPACE}}\', $aRegs[1]);'), trim($sExpression));
+        $sExpression = preg_replace_callback(
+            '/("[^"]+")/',
+            function ($aRegs)
+            {
+                return str_replace(' ', '{{SPACE}}', $aRegs[1]);
+            }, trim($sExpression));
     }
     $aANDExpressions = explode(' ', $sExpression);
     $nANDLength = count($aANDExpressions);

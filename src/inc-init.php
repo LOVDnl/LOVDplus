@@ -63,7 +63,7 @@ if ($_SERVER['HTTP_HOST'] == 'localhost') {
 if ((!empty($_SERVER['HTTP_X_FORWARDED_PROTO']) && $_SERVER['HTTP_X_FORWARDED_PROTO'] == 'https') || (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] != 'off') || !empty($_SERVER['SSL_PROTOCOL'])) {
     // We're using SSL!
     define('SSL', true);
-    define('SSL_PROTOCOL', $_SERVER['SSL_PROTOCOL']);
+    define('SSL_PROTOCOL', (!isset($_SERVER['SSL_PROTOCOL'])? '' : $_SERVER['SSL_PROTOCOL']));
     define('PROTOCOL', 'https://');
 } else {
     define('SSL', false);
