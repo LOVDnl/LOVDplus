@@ -41,7 +41,7 @@ if (!$_AUTH) {
 $_DB->query('UPDATE ' . TABLE_USERS . ' SET phpsessid = "" WHERE id = ?', array($_AUTH['id']), false);
 $nSec = time() - strtotime($_AUTH['last_login']);
 $sCurrDB = $_SESSION['currdb']; // Temp storage.
-$aMapping = $_SESSION['mapping']; // Temp storage.
+$aMapping = (!isset($_SESSION['mapping'])? array() : $_SESSION['mapping']); // Temp storage.
 $_SESSION = array(); // Delete variables both from $_SESSION and from session file.
 if (isset($_COOKIE[session_name()])) {
     setcookie(session_name(), '', time() - 172800); // 'Delete' the cookie.
