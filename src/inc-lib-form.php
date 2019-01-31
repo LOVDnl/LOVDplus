@@ -219,7 +219,7 @@ function lovd_error ()
     // Tells the program whether or not we've had an error.
     global $_ERROR;
 
-    return (count($_ERROR['messages']) > 1);
+    return (isset($_ERROR['messages']) && count($_ERROR['messages']) > 1);
 }
 
 
@@ -284,7 +284,7 @@ function lovd_errorPrint ()
     // Prints error variable.
     global $_ERROR;
 
-    if (count($_ERROR['messages']) > 1) {
+    if (isset($_ERROR['messages']) && count($_ERROR['messages']) > 1) {
         unset($_ERROR['messages'][0]);
         if (FORMAT == 'text/html') {
             print('      <DIV class="err">' . "\n" .
