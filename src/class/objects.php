@@ -1417,7 +1417,12 @@ class LOVD_Object {
                 if ($sColType == 'DATETIME') {
                     $sSearch = preg_replace('/ (\d)/', "{{SPACE}}$1", trim($aRequest['search_' . $sColumn]));
                 } else {
-                    $sSearch = preg_replace_callback('/("[^"]*")/', create_function('$aRegs', 'return str_replace(\' \', \'{{SPACE}}\', $aRegs[1]);'), trim($aRequest['search_' . $sColumn]));
+                    $sSearch = preg_replace_callback(
+                        '/("[^"]*")/',
+                        function ($aRegs)
+                        {
+                            return str_replace(' ', '{{SPACE}}', $aRegs[1]);
+                        }, trim($aRequest['search_' . $sColumn]));
                 }
                 $aWords = explode(' ', $sSearch);
                 foreach ($aWords as $sWord) {
