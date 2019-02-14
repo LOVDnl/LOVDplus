@@ -4,10 +4,10 @@
  * LEIDEN OPEN VARIATION DATABASE (LOVD)
  *
  * Created     : 2013-11-07
- * Modified    : 2018-11-22
+ * Modified    : 2019-02-14
  * For LOVD    : 3.0-18
  *
- * Copyright   : 2004-2018 Leiden University Medical Center; http://www.LUMC.nl/
+ * Copyright   : 2004-2019 Leiden University Medical Center; http://www.LUMC.nl/
  * Programmers : Ivo F.A.C. Fokkema <I.F.A.C.Fokkema@LUMC.nl>
  *               Anthony Marty <anthony.marty@unimelb.edu.au>
  *               Juny Kesumadewi <juny.kesumadewi@unimelb.edu.au>
@@ -617,7 +617,9 @@ class LOVD_CustomViewListMOD extends LOVD_CustomViewList {
             'VariantOnGenome/Alamut' => array('view' => array('Alamut', 60)),
             'VariantOnGenome/Conservation_score/PhyloP' => array('view' => array('PhyloP', 60)),
             'VariantOnGenome/HGMD/Association' => array('view' => array('HGMD', 50)),
-            'VariantOnGenome/Sequencing/Depth/Alt/Fraction' => array('view' => array('RD Alt (%)', 90)),
+            'VariantOnGenome/Sequencing/Depth/Alt/Fraction' => array('view' => array('RD Alt (%)', 80)),
+            'VariantOnGenome/Sequencing/Father/Depth/Alt/Fraction' => array('view' => array('Father (%)', 80)),
+            'VariantOnGenome/Sequencing/Mother/Depth/Alt/Fraction' => array('view' => array('Mother (%)', 80)),
             'VariantOnGenome/Sequencing/Quality' => array('view' => array('Seq. Q.', 60)),
             'VariantOnTranscript/DNA' => array('view' => array('DNA change (cDNA)', 100)),
             'VariantOnTranscript/Protein' => array('view' => array('Protein', 100)),

@@ -4,10 +4,10 @@
  * LEIDEN OPEN VARIATION DATABASE (LOVD)
  *
  * Created     : 2013-11-27
- * Modified    : 2017-10-20
+ * Modified    : 2019-02-14
  * For LOVD    : 3.0-18
  *
- * Copyright   : 2004-2017 Leiden University Medical Center; http://www.LUMC.nl/
+ * Copyright   : 2004-2019 Leiden University Medical Center; http://www.LUMC.nl/
  * Programmer  : Ivo F.A.C. Fokkema <I.F.A.C.Fokkema@LUMC.nl>
  *
  *
@@ -34,6 +34,7 @@ require ROOT_PATH . 'inc-init.php';
 // Set the variant effect value for selected variants from a ViewList.
 if (!empty($_GET['id']) && $_AUTH && ACTION !== false && isset($_SETT['var_effect'][ACTION])) {
     // The easiest thing to do is just run the query, and just dump the result.
+    $bConcluded = (!empty($_GET['type']) && $_GET['type'] == 'concluded'); // Edit reported (false) or concluded (true) variant effect?
     if ($_GET['id'] == 'selected') {
         $aIDs = array_values($_SESSION['viewlists']['CustomVL_AnalysisRunResults_for_I_VE']['checked']);
         if (!$aIDs) {
@@ -69,7 +70,9 @@ if (!empty($_GET['id']) && $_AUTH && ACTION !== false && isset($_SETT['var_effec
     }
 
     $nSwitched = 0;
-    $q = $_DB->query('UPDATE ' . TABLE_VARIANTS . ' SET effectid = CAST(CONCAT(?, RIGHT(effectid, 1)) AS UNSIGNED) WHERE id IN (?' . str_repeat(', ?', count($aIDs) - 1) . ')', array_merge(array(ACTION), $aIDs), false);
+    $q = $_DB->query('UPDATE ' . TABLE_VARIANTS . ' SET effectid = CAST(CONCAT' .
+        ($bConcluded == false? '(?, RIGHT(effectid, 1))' : '(LEFT(effectid, 1), ?)') .
+        ' AS UNSIGNED) WHERE id IN (?' . str_repeat(', ?', count($aIDs) - 1) . ')', array_merge(array(ACTION), $aIDs), false);
     if ($q) {
         $nSwitched = $q->rowCount();
         if ($_GET['id'] == 'selected') {
