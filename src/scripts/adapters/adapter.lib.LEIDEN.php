@@ -47,13 +47,16 @@ $_INSTANCE_CONFIG['viewlists'] = array(
             'VariantOnGenome/Alamut',
             'VariantOnGenome/Conservation_score/PhyloP',
             'VariantOnGenome/HGMD/Association',
-            'VariantOnGenome/Sequencing/Depth/Alt/Fraction',
             'VariantOnGenome/Sequencing/Quality',
             'VariantOnGenome/Sequencing/GATKcaller',
             'obs_variant',
             'obs_var_ind_ratio',
             'obs_disease',
             'obs_var_dis_ind_ratio',
+
+            'VariantOnGenome/Sequencing/Depth/Alt/Fraction',
+            'VariantOnGenome/Sequencing/Father/Depth/Alt/Fraction',
+            'VariantOnGenome/Sequencing/Mother/Depth/Alt/Fraction',
 
             'gene_disease_names',
             'VariantOnTranscript/DNA',
