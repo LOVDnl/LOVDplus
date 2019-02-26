@@ -4,7 +4,7 @@
  * LEIDEN OPEN VARIATION DATABASE (LOVD)
  *
  * Created     : 2016-03-01
- * Modified    : 2018-11-22
+ * Modified    : 2019-02-26
  * For LOVD    : 3.0-18
  *
  * Copyright   : 2004-2018 Leiden University Medical Center; http://www.LUMC.nl/
@@ -653,7 +653,9 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && ACTION == 'manage_genes') {
         exit;
     }
     define('PAGE_TITLE', 'Manage genes for gene panel: ' . htmlspecialchars($zData['name']));
-    $aSelectedGenes = array();
+    $aSelectedGenes = array(); // Genes mass-imported from other sources (gene statistics or the modal window).
+    $aKnownGeneSymbols = array(); // For the modal window: Known gene symbols.
+    $aUnknownGeneSymbols = array(); // For the modal window: Unknown gene symbols.
     if (!empty($_GET['select_genes_from']) && (empty($_SESSION['viewlists'][$_GET['select_genes_from']]['checked']) || count($_SESSION['viewlists'][$_GET['select_genes_from']]['checked']) == 0)) {
         // A viewlistid has been specified with the intention of adding selected genes in that viewlistid but there are no selected genes or the viewlistid is incorrect.
         $_T->printHeader();
@@ -668,7 +670,38 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && ACTION == 'manage_genes') {
 
     require ROOT_PATH . 'inc-lib-form.php';
 
-    if (POST) {
+    if (POST && !empty($_POST['hidden_genes_list'])) {
+        // This form has been sent with genes pasted into the modal window. Process them, don't run normal checks.
+
+        // Handle lists separated by new lines, spaces, commas and semicolons.
+        // Trim the whitespace, remove duplicates and remove empty array elements.
+        $aGeneSymbols = array_filter(array_unique(array_map('trim', preg_split('/(\s|[,;])+/', $_POST['hidden_genes_list']))));
+
+        // Check if there are any genes left after cleaning up the gene symbol string.
+        if (count($aGeneSymbols) > 0) {
+            // Load the genes and alternative names into an array.
+            $aGenesInLOVD = $_DB->query('SELECT UPPER(id), id FROM ' . TABLE_GENES)->fetchAllCombine();
+            // Loop through all the gene symbols in the array and check them for any errors.
+            foreach ($aGeneSymbols as $sGeneSymbol) {
+                $sGeneSymbolUpper = strtoupper($sGeneSymbol);
+                // Check to see if this gene symbol has been found within the database.
+                if (isset($aGenesInLOVD[$sGeneSymbolUpper])) {
+                    // A correct gene symbol was found, so lets use that to remove any case issues.
+                    $aKnownGeneSymbols[] = $aGenesInLOVD[$sGeneSymbolUpper];
+                } else {
+                    // This gene symbol was not found in the database.
+                    $aUnknownGeneSymbols[] = $sGeneSymbol;
+                }
+            }
+        }
+
+        // If no gene symbols got rejected, just fill them in.
+        if ($aKnownGeneSymbols && !$aUnknownGeneSymbols) {
+            // Just in case, don't overwrite anything if we have something in $aSelectedGenes.
+            $aSelectedGenes = array_merge($aSelectedGenes, $aKnownGeneSymbols);
+        }
+
+    } elseif (POST) {
         lovd_errorClean();
 
         // Preventing notices...
@@ -859,24 +892,24 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && ACTION == 'manage_genes') {
         while ($z = $qGenes->fetchAssoc()) {
             $aGenes[$z['geneid']] = $z;
         }
+    }
 
-        if ($aSelectedGenes) {
-            // Prepend the selected genes from the viewlist. Build an array of these selected genes.
-            $qGenes = $_DB->query(
-                'SELECT g.id AS geneid, g.id AS name, null AS transcriptid, "" AS inheritance, null AS pmid, "" AS remarks, IFNULL(CONCAT("<OPTION value=\"\">-- select --</OPTION>", GROUP_CONCAT(CONCAT("<OPTION value=\"", t.id, "\">", t.id_ncbi, "</OPTION>") ORDER BY t.id_ncbi SEPARATOR "")), "<OPTION value=\"\">-- no transcripts available --</OPTION>") AS transcripts_HTML, 1 AS vlgene
+    if ($aSelectedGenes) {
+        // Prepend the selected genes from the viewlist. Build an array of these selected genes.
+        $qGenes = $_DB->query(
+            'SELECT g.id AS geneid, g.id AS name, null AS transcriptid, "" AS inheritance, null AS pmid, "" AS remarks, IFNULL(CONCAT("<OPTION value=\"\">-- select --</OPTION>", GROUP_CONCAT(CONCAT("<OPTION value=\"", t.id, "\">", t.id_ncbi, "</OPTION>") ORDER BY t.id_ncbi SEPARATOR "")), "<OPTION value=\"\">-- no transcripts available --</OPTION>") AS transcripts_HTML, 1 AS vlgene
              FROM ' . TABLE_GENES . ' AS g LEFT OUTER JOIN ' . TABLE_TRANSCRIPTS . ' AS t ON (g.id = t.geneid)
              WHERE g.id IN (?' . str_repeat(', ?', count($aSelectedGenes)-1) . ') GROUP BY g.id ORDER BY g.id', array_values($aSelectedGenes));
-            while ($z = $qGenes->fetchAssoc()) {
-                if (empty($aGenes[$z['geneid']])) {
-                    // If this gene is already in the gene panel then do not overwrite the gene data in the array.
-                    $aVLGenes[$z['geneid']] = $z;
-                }
-                // TODO AM Do we want to notify the user that this gene already existed within the gene panel?
+        while ($z = $qGenes->fetchAssoc()) {
+            if (empty($aGenes[$z['geneid']])) {
+                // If this gene is already in the gene panel then do not overwrite the gene data in the array.
+                $aVLGenes[$z['geneid']] = $z;
             }
-            if (!empty($aVLGenes) && count($aVLGenes) > 0) {
-                // Merge these genes to the start of the existing genes.
-                $aGenes = array_merge($aVLGenes, $aGenes);
-            }
+            // TODO AM Do we want to notify the user that this gene already existed within the gene panel?
+        }
+        if (!empty($aVLGenes) && count($aVLGenes) > 0) {
+            // Merge these genes to the start of the existing genes.
+            $aGenes = array_merge($aVLGenes, $aGenes);
         }
     }
 
@@ -889,7 +922,49 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && ACTION == 'manage_genes') {
     // So after some 200 genes, the negative selection filter will fail.
     require ROOT_PATH . 'class/object_genes.php';
     $_DATA = new LOVD_Gene();
-    lovd_showInfoTable('The following genes are configured in this LOVD. Click on one to add it to this gene panel.', 'information', 950);
+
+
+
+    lovd_showInfoTable('The following genes are configured in this LOVD. Click on one to add it to this gene panel.<BR><B>Click on this box to quickly add multiple genes to this gene panel.</B>', 'information', 950,
+        'javascript:$(\'#div_dialog_genes_list\').dialog({draggable:false,resizable:false,minWidth:600,show:\'fade\',closeOnEscape:true,hide:\'fade\',modal:true,buttons:{\'Verify\':function () { $(\'#hidden_genes_list\').val($(\'#genes_list\').val()); $(\'#form_manage_genes\').submit(); },\'Cancel\':function () { $(this).dialog(\'close\'); }}});');
+
+    if (true) {
+        // We either have no genes yet, or we have sent them, but there was a problem.
+        print('
+      <DIV id=\'div_dialog_genes_list\' title=\'Add list of genes to this gene panel\' style="display: none;">
+        Please fill in your list of gene symbols; one per line or separated by commas, semicolons or spaces. Then, press &quot;Verify&quot; to check them.<BR>
+        
+          <TEXTAREA rows="5" cols="60" name="genes_list" id="genes_list">' . htmlentities(implode(', ', $aKnownGeneSymbols)) . '</TEXTAREA><BR><BR>
+          ' . (!$aUnknownGeneSymbols? '' :
+            '<B style="color: red;">The following gene' . (count($aUnknownGeneSymbols) == 1? ' is' : 's are') . ' are not (yet) present in LOVD+:</B><BR>' .
+            implode(', ', $aUnknownGeneSymbols) . '<BR><BR>' .
+            'LOVD+ normally creates genes automatically when processing input files, so in general this means that no input files have been seen yet with data in ' . (count($aUnknownGeneSymbols) == 1? 'this gene' : 'these genes') . '. ' .
+            'It is also possible that genes have been created using a different symbol.<BR>' .
+            'Feel free to edit the list above if needed and click &quot;Verify&quot; to try again.') . '
+          
+        </DIV>' . "\n\n");
+        if ($aUnknownGeneSymbols) {
+            // Open the dialog already.
+            print('
+      <SCRIPT type="text/javascript">
+        $("#div_dialog_genes_list").dialog({draggable:false,resizable:false,minWidth:600,show:"fade",closeOnEscape:true,hide:"fade",modal:true,buttons:{"Verify":function () { $("#hidden_genes_list").val($("#genes_list").val()); $("#form_manage_genes").submit(); },"Cancel":function () { $(this).dialog("close"); }}});
+      </SCRIPT>' . "\n\n");
+        }
+    }
+    if ($aKnownGeneSymbols && !$aUnknownGeneSymbols) {
+        // Genes symbols have been processed correctly.
+        print('
+      <DIV id=\'div_dialog_genes_list_confirm\' title=\'Gene' . (count($aKnownGeneSymbols) == 1? '' : 's') . ' successfully added\' style="display: none;">
+        Please check the settings, fill in your password at the bottom of the page and press &quot;Save gene panel&quot; to save the changes.
+      </DIV>
+      <SCRIPT type="text/javascript">
+        $("#div_dialog_genes_list_confirm").dialog({draggable:false,resizable:false,minWidth:600,show:"fade",closeOnEscape:true,hide:"fade",modal:true,buttons:{"Close":function () { $(this).dialog("close"); }}});
+        $("#genes_list").val(""); // Empty form.
+      </SCRIPT>' . "\n\n");
+    }
+
+
+
     $_GET['page_size'] = 10;
     $sViewListID = 'GenePanels_ManageGenes'; // Create known viewListID for the JS functions().
     $_DATA->setRowLink($sViewListID, 'javascript:lovd_addGene(\'{{ViewListID}}\', \'{{ID}}\', \'{{zData_transcripts_HTML}}\'); return false;');
@@ -918,7 +993,8 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && ACTION == 'manage_genes') {
     }
     // Form & table.
     print('
-      <FORM action="' . CURRENT_PATH . '?' . ACTION . '" method="post">
+      <FORM action="' . CURRENT_PATH . '?' . ACTION . '" method="post" id="form_manage_genes">
+        <INPUT type="hidden" name="hidden_genes_list" id="hidden_genes_list" value="">
         <DIV style="width : 950px; height : 250px; overflow : auto;">
         <TABLE id="gene_list" class="data" border="0" cellpadding="0" cellspacing="1" width="900">
           <THEAD>
