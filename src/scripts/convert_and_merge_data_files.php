@@ -4,10 +4,10 @@
  * LEIDEN OPEN VARIATION DATABASE (LOVD)
  *
  * Created     : 2014-11-28
- * Modified    : 2018-12-06
+ * Modified    : 2019-02-26
  * For LOVD+   : 3.0-18
  *
- * Copyright   : 2004-2018 Leiden University Medical Center; http://www.LUMC.nl/
+ * Copyright   : 2004-2019 Leiden University Medical Center; http://www.LUMC.nl/
  * Programmers : Ivo F.A.C. Fokkema <I.F.A.C.Fokkema@LUMC.nl>
  *               Anthony Marty <anthony.marty@unimelb.edu.au>
  *               Juny Kesumadewi <juny.kesumadewi@unimelb.edu.au>
@@ -995,7 +995,7 @@ foreach ($aFiles as $sFileID) {
         if (empty($aVariant['transcriptid']) || $_ADAPTER->ignoreTranscript($aVariant['transcriptid']) || empty($aTranscripts[$aVariant['transcriptid']])) {
             // When the transcript still doesn't exist, or it evaluates to false (we don't have it, we can't get it), then skip it.
             $aVariant['transcriptid'] = '';
-        } else {
+        } else { // We'll handle this transcript.
             // Handle the rest of the VOT columns.
             // First, take off the transcript name, so we can easily check for a del/ins checking for an underscore.
             $aVariant['VariantOnTranscript/DNA'] = substr($aVariant['VariantOnTranscript/DNA'], strpos($aVariant['VariantOnTranscript/DNA'], ':')+1); // NM_000000.1:c.1del -> c.1del
@@ -1348,6 +1348,20 @@ foreach ($aFiles as $sFileID) {
                     ' @ ' . $aVariant['transcriptid'] . ').';
                 $nAnnotationErrors = lovd_handleAnnotationError($aVariant, $sErrorMsg);
                 $bDropTranscriptData = $_INSTANCE_CONFIG['conversion']['annotation_error_drops_line'];
+            }
+
+            if (!$bDropTranscriptData) {
+                // OK, so we're not dropping the line. But we may not have DNA, RNA or Protein.
+                // So we'll need to make sure LOVD+ can actually import the data, then!
+                if (!$aVariant['VariantOnTranscript/DNA']) {
+                    $aVariant['VariantOnTranscript/DNA'] = 'c.?';
+                }
+                if (!$aVariant['VariantOnTranscript/RNA']) {
+                    $aVariant['VariantOnTranscript/RNA'] = 'r.(?)';
+                }
+                if (!$aVariant['VariantOnTranscript/Protein']) {
+                    $aVariant['VariantOnTranscript/Protein'] = 'p.(?)';
+                }
             }
         }
 
