@@ -247,6 +247,11 @@ class LOVD_Template {
                 unset($this->aMenu['diseases'], $this->aMenu['diseases_']);
             }
             unset($this->aMenu['docs']);
+
+            // Gene statistics is really just for MGHA.
+            if (!lovd_verifyInstance('mgha', false)) {
+                unset($this->aMenu['genes_']['/gene_statistics']);
+            }
         } else {
             // Remove menu items for non-LOVD+.
             unset($this->aMenu['gene_panels']);
