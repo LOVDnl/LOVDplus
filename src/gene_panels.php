@@ -925,7 +925,7 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && ACTION == 'manage_genes') {
 
 
 
-    lovd_showInfoTable('The following genes are configured in this LOVD. Click on one to add it to this gene panel.<BR><B>Click on this box to quickly add multiple genes to this gene panel.</B>', 'information', 950,
+    lovd_showInfoTable('The following genes are configured in this LOVD+. Click on one to add it to this gene panel.<BR><B>Click on this box to quickly add multiple genes to this gene panel.</B>', 'information', 950,
         'javascript:$(\'#div_dialog_genes_list\').dialog({draggable:false,resizable:false,minWidth:600,show:\'fade\',closeOnEscape:true,hide:\'fade\',modal:true,buttons:{\'Verify\':function () { $(\'#hidden_genes_list\').val($(\'#genes_list\').val()); $(\'#form_manage_genes\').submit(); },\'Cancel\':function () { $(this).dialog(\'close\'); }}});');
 
     if (true) {
