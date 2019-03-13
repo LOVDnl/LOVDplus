@@ -37,7 +37,7 @@ if ($_AUTH) {
     require ROOT_PATH . 'inc-upgrade.php';
 }
 
-define('PAGE_TITLE', 'LOVD Setup');
+define('PAGE_TITLE', 'LOVD' . (LOVD_plus? '+' : '') . ' Setup');
 $_T->printHeader();
 $_T->printTitle();
 
@@ -106,10 +106,10 @@ print('          </TD>' . "\n" .
 
 $aItems =
      array(
-            'General LOVD Setup' =>
+            'General LOVD' . (LOVD_plus? '+' : '') . ' Setup' =>
                  array(
-                        array('settings?edit', 'lovd_settings.png', 'LOVD System settings', 'View and change LOVD System settings, including settings on statistics, security and the legend.'),
-         'uninstall' => array('uninstall', 'lovd_warning.png', 'Uninstall LOVD', 'Uninstall LOVD.'),
+                        array('settings?edit', 'lovd_settings.png', 'LOVD' . (LOVD_plus? '+' : '') . ' System settings', 'View and change LOVD' . (LOVD_plus? '+' : '') . ' System settings, including settings on statistics, security and the legend.'),
+         'uninstall' => array('uninstall', 'lovd_warning.png', 'Uninstall LOVD' . (LOVD_plus? '+' : '') . '', 'Uninstall LOVD' . (LOVD_plus? '+' : '') . '.'),
                       ),
             'Authorized users' =>
                  array(
@@ -120,7 +120,7 @@ $aItems =
                  array(
                         array('columns?create', 'lovd_columns_create.png', 'Create new custom data column', 'Create new custom data column.'),
                         array('columns', 'lovd_columns_view.png', 'Browse all custom data columns', 'Browse all custom data columns already available to enable or disable them, or view or edit their settings.'),
-          'download' => array('download/columns', 'lovd_save.png', 'Download all LOVD custom columns', 'Download all LOVD custom columns in the LOVD import format.'),
+          'download' => array('download/columns', 'lovd_save.png', 'Download all LOVD' . (LOVD_plus? '+' : '') . ' custom columns', 'Download all LOVD' . (LOVD_plus? '+' : '') . ' custom columns in the LOVD import format.'),
 /*
       '              <TR class="pointer" onclick="window.location.href=\'' . lovd_getInstallURL() . 'setup_columns_global_import.php\';">' . "\n" .
       '                <TD align="center" width="40"><IMG src="gfx/lovd_columns_import.png" alt="Import new LOVD custom columns" width="32" height="32"></TD>' . "\n" .
@@ -152,7 +152,7 @@ print('            <TABLE border="0" cellpadding="2" cellspacing="0" class="setu
                  array(
           'download' => array('download/all', 'lovd_save.png', 'Download all data', 'Download all data in LOVD import format (custom columns, genes, transcripts, diseases, individuals, phenotypes, screenings &amp; variants).'),
                         array('import', 'lovd_import.png', 'Import data', 'Import data using the LOVD import format (custom columns, diseases, individuals, phenotypes, screenings &amp; variants).'),
-          'schedule' => array('import?schedule', 'lovd_clock.png', 'Schedule data for import', 'Schedule data files to be imported into LOVD.'),
+          'schedule' => array('import?schedule', 'lovd_clock.png', 'Schedule data for import', 'Schedule data files to be imported into LOVD' . (LOVD_plus? '+' : '') . '.'),
                       ),
             'System logs' =>
                  array(
@@ -161,7 +161,7 @@ print('            <TABLE border="0" cellpadding="2" cellspacing="0" class="setu
           );
 // Remove uninstall.
 if ($_CONF['lock_uninstall'] || $_AUTH['level'] < LEVEL_ADMIN) {
-    unset($aItems['General LOVD Setup']['uninstall']);
+    unset($aItems['General LOVD' . (LOVD_plus? '+' : '') . ' Setup']['uninstall']);
 }
 if (LOVD_plus) {
     unset($aItems['Custom data columns']['download']);
@@ -224,7 +224,7 @@ $aItems =
                       ),
             'Announcements' =>
                  array(
-                        array('announcements?create', 'lovd_announcements_create.png', 'Create new announcement', 'Create a new announcement, optionally making LOVD read-only.'),
+                        array('announcements?create', 'lovd_announcements_create.png', 'Create new announcement', 'Create a new announcement, optionally making LOVD' . (LOVD_plus? '+' : '') . ' read-only.'),
                         array('announcements', 'lovd_information.png', 'View all announcements', 'Manage system announcements.'),
                       ),
 /*

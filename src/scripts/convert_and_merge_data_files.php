@@ -4,7 +4,7 @@
  * LEIDEN OPEN VARIATION DATABASE (LOVD)
  *
  * Created     : 2014-11-28
- * Modified    : 2019-02-26
+ * Modified    : 2019-03-13
  * For LOVD+   : 3.0-18
  *
  * Copyright   : 2004-2019 Leiden University Medical Center; http://www.LUMC.nl/
@@ -197,8 +197,8 @@ function lovd_handleAnnotationError (&$aVariant, $sErrorMsg)
     if ($nAnnotationErrors >= $_INSTANCE_CONFIG['conversion']['annotation_error_max_allowed']) {
         $sFileMessage = (filesize($sFileError) === 0? '' : 'Please check details of ' .
             ($_INSTANCE_CONFIG['conversion']['annotation_error_drops_line']? 'dropped' : 'errors in') . ' annotation data in ' . $sFileError . "\n");
-        lovd_printIfVerbose(VERBOSITY_LOW, "ERROR: Script cannot continue because this file has too many lines of annotation data that this script cannot handle.\n"
-            . $nAnnotationErrors . " lines of transcripts data was dropped.\nPlease update your data and re-run this script.\n"
+        lovd_printIfVerbose(VERBOSITY_LOW, "ERROR: Script stops here because this file has reached the currently set limit of lines of annotation data that this script cannot handle.\n"
+            . $nAnnotationErrors . " lines of transcript data was dropped.\nPlease update your data and re-run this script, or alternatively, see the documentation on how to increase the annotation_error_max_allowed limit.\n"
             . $sFileMessage);
         exit;
     }
