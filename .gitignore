@@ -1,8 +1,9 @@
 .idea
-doc/tex/manual.aux
-doc/tex/manual.log
-doc/tex/manual.out
-doc/tex/manual.toc
+doc/tex/*.aux
+doc/tex/*.log
+doc/tex/*.out
+doc/tex/*.pdf
+doc/tex/*.toc
 src/_sett
 src/refseq
 src/config.ini.php
