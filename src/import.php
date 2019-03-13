@@ -89,7 +89,9 @@ if (ACTION == 'schedule' && PATH_COUNT == 1) {
     // Read out directory and store files in the correct array.
     $nFilesSchedulable = 0; // Keeping track of how many files on disk are not scheduled yet.
     while (($sFile = readdir($h)) !== false) {
-        if (preg_match('/(^LOVD_API_submission.+|.total.data).lovd$/', $sFile, $aRegs)) {
+        if (preg_match('/(^LOVD_API_submission.+\.lovd' .
+            (!LOVD_plus? '' :
+                '|' . preg_quote($_INSTANCE_CONFIG['conversion']['suffixes']['total'], '/')) . ')$/', $sFile, $aRegs)) {
             // This should be an importable file.
             $bScheduled = isset($zScheduledFiles[$sFile]);
             if ($bScheduled) {
@@ -123,14 +125,14 @@ if (ACTION == 'schedule' && PATH_COUNT == 1) {
 
             $nFilesSchedulable += (int) !$bScheduled;
 
-        } elseif (LOVD_plus && preg_match('/.directvep.data.lovd$/', $sFile, $aRegs)) {
-            // FIXME: Don't hardcode this (above), but make it a setting. Look up what VEP usually calls its files.
-            // FIXME: When you fix that, also check the code below that predicts the other filenames for this file.
+        } elseif (LOVD_plus && preg_match('/' . preg_quote($_INSTANCE_CONFIG['conversion']['suffixes']['vep'], '/') . '$/', $sFile, $aRegs)) {
             // Data files still to be converted (LOVD+ only).
             // Remove the ones that have a total file, resulting in a list of files
             //  that still need to be converted or are currently being converted.
-            $sTotalFile = str_replace('directvep', 'total', $sFile);
-            $sTotalTmpFile = str_replace('lovd', 'tmp', $sTotalFile);
+            $sTotalFile = str_replace($_INSTANCE_CONFIG['conversion']['suffixes']['vep'],
+                $_INSTANCE_CONFIG['conversion']['suffixes']['total'], $sFile);
+            $sTotalTmpFile = str_replace($_INSTANCE_CONFIG['conversion']['suffixes']['total'],
+                $_INSTANCE_CONFIG['conversion']['suffixes']['total.tmp'], $sTotalFile);
             // Check if total file already exists. Try to not hit the disk.
             if (isset($aFiles[0][$sTotalFile]) || isset($aFiles[1][$sTotalFile])
                 || file_exists($_INI['paths']['data_files'] . '/' . $sTotalFile)) {
@@ -274,9 +276,9 @@ if (ACTION == 'schedule' && PATH_COUNT == 1) {
 
                 print("\n" .
                       '                <TR class="' . ($bError? 'colRed' : 'del') . '" ' . $sAjaxActions . '>');
-            } elseif (!$bConverted) {
+            } elseif (LOVD_plus && !$bConverted) {
                 // Files to be converted.
-                $sErrorFile = $_INI['paths']['data_files'] . '/' . str_replace('directvep.data.lovd', 'error', $sFile);
+                $sErrorFile = $_INI['paths']['data_files'] . '/' . str_replace($_INSTANCE_CONFIG['conversion']['suffixes']['vep'], $_INSTANCE_CONFIG['conversion']['suffixes']['error'], $sFile);
                 $bError = (file_exists($sErrorFile) && filesize($sErrorFile) > 0);
                 $aErrors = (!$bError? array() : file($sErrorFile, FILE_IGNORE_NEW_LINES));
                 $bProcessing = ($bScheduled // Processing if total tmp file exists, and ...
@@ -319,10 +321,13 @@ if (ACTION == 'schedule' && PATH_COUNT == 1) {
                     <SPAN class="S11">' . ($bFileLost? 'File not found' : $sFileModified . ' - ' . ($bAPI? 'Submitted' : (LOVD_plus && $bConverted? 'Converted' : 'Created')) . ' ' . $nAgeInDays . ' day' . ($nAgeInDays == 1? '' : 's') . ' ago') . '</SPAN>
                   </TD></TR>');
         }
-        print('</TABLE></TD>' . "\n");
+        print('</TABLE><BR>' .
+            (!(!$bProcessed && $bConverted)? '' : '
+              <INPUT type="submit" value="Schedule for import &raquo;">') . '
+            </TD>' . "\n");
     }
-    print('            <TD width="50">
-              <INPUT type="submit" value="Schedule for import &raquo;"></TD></TR></TABLE>
+    print('          </TR>
+        </TABLE>
       </FORM>' . "\n\n");
 
     $_T->printFooter();
@@ -470,7 +475,7 @@ $aExcludedTypes =
     );
 
 // Calculate maximum uploadable file size.
-$nMaxSizeLOVD = 100*1024*1024; // 100MB LOVD limit.
+$nMaxSizeLOVD = (!LOVD_plus? 100 : 250)*1024*1024; // 100MB LOVD limit, 250MB for LOVD+.
 $nMaxSize = min(
     $nMaxSizeLOVD,
     lovd_convertIniValueToBytes(ini_get('upload_max_filesize')),
@@ -2527,10 +2532,14 @@ if (!lovd_isCurator($_SESSION['currdb'])) {
                     if (is_writable($_INI['paths']['data_files_archive'])) { // Must be set, but still.
                         // I'm deliberately not saving the file suffixes elsewhere, because we should support old and new suffixes.
                         // Sort these in most specific -> least specific, that's the order in which they will be tried.
-                        $aSuffixes = array(
-                            '.total.data.lovd',
-                            '.lovd',
-                        );
+                        if (LOVD_plus) {
+                            $aSuffixes = array_values($_INSTANCE_CONFIG['conversion']['suffixes']);
+                        } else {
+                            $aSuffixes = array(
+                                '.total.data.lovd',
+                                '.lovd',
+                            );
+                        }
                         $sFilePrefix = $sFile;
                         // Determine the prefix by trying all suffixes and removing those.
                         // Once successful, we quit trying.

@@ -806,7 +806,7 @@ $aTableSQL =
     description VARCHAR(255) NOT NULL,
     type VARCHAR(20) NOT NULL,
     remarks TEXT NOT NULL,
-    pmid_mandatory BOOLEAN NOT NULL DEFAULT 1,
+    pmid_mandatory BOOLEAN NOT NULL DEFAULT 0,
     created_by SMALLINT(5) UNSIGNED ZEROFILL,
     created_date DATETIME NOT NULL,
     edited_by SMALLINT(5) UNSIGNED ZEROFILL,

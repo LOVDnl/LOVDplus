@@ -4,7 +4,7 @@
  * LEIDEN OPEN VARIATION DATABASE (LOVD)
  *
  * Created     : 2013-11-07
- * Modified    : 2019-02-14
+ * Modified    : 2019-03-13
  * For LOVD    : 3.0-18
  *
  * Copyright   : 2004-2019 Leiden University Medical Center; http://www.LUMC.nl/
@@ -423,7 +423,7 @@ class LOVD_CustomViewListMOD extends LOVD_CustomViewList {
                                         'view' => false,
                                         'db'   => array('vog.`VariantOnGenome/DBID`', 'ASC', true)),
                                 'allele_' => array(
-                                        'view' => array('Allele', 'ASC', true),
+                                        'view' => array('Allele', 120),
                                         'db'   => array('allele_', 'ASC', 'TEXT')),
                               ));
 

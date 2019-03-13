@@ -4,7 +4,7 @@
  * LEIDEN OPEN VARIATION DATABASE (LOVD)
  *
  * Created     : 2016-07-15
- * Modified    : 2019-02-14
+ * Modified    : 2019-03-13
  * For LOVD    : 3.0-18
  *
  * Copyright   : 2004-2019 Leiden University Medical Center; http://www.LUMC.nl/
@@ -88,7 +88,7 @@ switch ($_INI['instance']['name']) {
                   ("remove_with_any_frequency_gt_3", "Remove variants with frequency > 3 % ", "Remove all variants that have any frequency higher than 3 %.", 0),
                   ("select_gatkcaller_ug_hc", "Select called by both UG and HC", "Select only variants called by both UG and HC.", 0),
                   ("select_homozygous_or_compound_heterozygous", "Select homozygous or possibly compound heterozygous", "Select only homozygous variants or variants associated with a gene that currently has more than one variant left.", 0),
-                  ("select_homozygous_or_heterozygous_not_from_one_parent", "Select homozygous or heterozygous variants not from one parent", "Select only homozygous variants or multiple heterozygous variants associated with the same gene, not all inherited from one parent.", 0)\',
+                  ("select_homozygous_or_heterozygous_not_from_one_parent", "Select homozygous or heterozygous variants not from one parent", "Select only homozygous variants or multiple heterozygous variants associated with the same gene, not all inherited from one parent.", 0)',
                 'INSERT INTO ' . TABLE_A2AF . ' (`analysisid`, `filterid`, `filter_order`) VALUES
                   (1, "apply_selected_gene_panels", 1),
                   (1, "cross_screenings", 2),
