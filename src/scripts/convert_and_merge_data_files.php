@@ -28,10 +28,11 @@ $_SERVER = array_merge($_SERVER, array(
 ));
 require ROOT_PATH . 'inc-init.php';
 require ROOT_PATH . 'inc-lib-genes.php';
-// 128MB was not enough for a 100MB file. We're already no longer using file(), now we're using fgets().
-// But still, loading all the gene and transcript data, uses too much memory. After some 18000 lines, the thing dies.
-// Setting to 4GB, but still maybe we'll run into problems.
-ini_set('memory_limit', '4294967296'); // Put in bytes to avoid some issues with some environments.
+// This script is optimized for speed, not memory usage. As such, it can use quite a lot of memory, but it's as fast as
+// we can make it. Loading all the gene and transcript data uses quite a lot of memory. An top of that, if the input
+// file is very large (unfiltered VCFs, for instance), this script can halt without warning.
+// The memory limit is currently set to 4GB, but this may not work for unfiltered VCF files.
+ini_set('memory_limit', '4294967296'); // 4GB in bytes to avoid some issues with some environments.
 
 // But we don't care about your session (in fact, it locks the whole LOVD if we keep this page running).
 session_write_close();
@@ -41,6 +42,7 @@ ignore_user_abort(true);
 // Define and verify settings.
 $bCron = (empty($_SERVER['REMOTE_ADDR']) && empty($_SERVER['TERM']));
 define('VERBOSITY', $_INSTANCE_CONFIG['conversion']['verbosity_' . ($bCron? 'cron' : 'other')]);
+$nMemoryMax = lovd_convertIniValueToBytes(ini_get('memory_limit'));
 
 
 
@@ -402,7 +404,7 @@ if ($aFiles === false) {
 
 // Die here, if we have nothing to work with.
 if (!$aFiles) {
-    lovd_printIfVerbose(VERBOSITY_MEDIUM, 'No files found.' . "\n");
+    lovd_printIfVerbose(VERBOSITY_HIGH, 'No files found.' . "\n");
     exit;
 }
 
@@ -448,7 +450,7 @@ if (!$nFiles) {
     lovd_printIfVerbose(VERBOSITY_HIGH, 'No files left to merge.' . "\n");
     exit;
 } else {
-    lovd_printIfVerbose(VERBOSITY_MEDIUM, str_repeat('-', 60) . "\n" . $nFiles . ' patient' . ($nFiles == 1? '' : 's') . ' with data files ready to be merged.' . "\n");
+    lovd_printIfVerbose(VERBOSITY_MEDIUM, str_repeat('-', 70) . "\n" . $nFiles . ' patient' . ($nFiles == 1? '' : 's') . ' with data files ready to be merged.' . "\n");
 }
 
 // But don't run, if too many are still active...
@@ -1442,13 +1444,18 @@ foreach ($aFiles as $sFileID) {
             VERBOSITY_FULL => 100,
         );
         if (VERBOSITY > VERBOSITY_NONE && !($nLine % $aLinesToReport[VERBOSITY])) {
-            lovd_printIfVerbose(VERBOSITY_LOW, '------- Line ' . $nLine . ' -------' . str_repeat(' ', 7 - strlen($nLine)) . date('Y-m-d H:i:s') . "\n");
+            // Calculate memory usage, too.
+            $nMemory = memory_get_usage(true);
+            $sMemory = lovd_convertBytesToHRSize($nMemory) . '/' . lovd_convertBytesToHRSize($nMemoryMax) .
+                ' (' . round($nMemory*100/$nMemoryMax) . '%)';
+            lovd_printIfVerbose(VERBOSITY_LOW, '------- Line ' . $nLine . ' -------' . str_repeat(' ', 7 - strlen($nLine)) . date('Y-m-d H:i:s') .
+                ' Mem: ' . $sMemory . "\n");
             flush();
         }
     }
     fclose($fInput); // Close input file.
 
-    lovd_printIfVerbose(VERBOSITY_MEDIUM, 'Done parsing file. Current time: ' . date('Y-m-d H:i:s') . ".\n");
+    lovd_printIfVerbose(VERBOSITY_MEDIUM, str_repeat('-', 70) . "\n" . 'Done parsing file. Current time: ' . date('Y-m-d H:i:s') . ".\n");
     // Show the number of times HGNC and Mutalyzer were called.
     lovd_printIfVerbose(VERBOSITY_MEDIUM,
         'Number of times HGNC called: ' . $nHGNC . (!$nHGNC? '' :

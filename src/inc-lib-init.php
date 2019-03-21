@@ -142,6 +142,37 @@ function lovd_cleanDirName ($s)
 
 
 
+function lovd_convertBytesToHRSize ($nValue)
+{
+    // This function takes integers and converts it to sizes like "128M".
+
+    if (!ctype_digit($nValue)) {
+        return false;
+    }
+
+    $aSizes = array(
+        ' bytes', 'K', 'M', 'G', 'T', 'P',
+    );
+    $nKey = 0; // bytes.
+
+    while ($nValue >= 1024 && $nKey < count($aSizes)) {
+        $nValue /= 1024;
+        $nKey ++;
+    }
+
+    // Precision makes no sense with three digits.
+    if ($nValue >= 100 || !$nKey) {
+        // Return an integer.
+        return round($nValue) . $aSizes[$nKey];
+    } else {
+        return number_format($nValue, 1) . $aSizes[$nKey];
+    }
+}
+
+
+
+
+
 function lovd_convertIniValueToBytes ($sValue)
 {
     // This function takes output from PHP's ini_get() function like "128M" or
@@ -185,7 +216,7 @@ function lovd_convertSecondsToTime ($sValue, $nDecimals = 0)
             's' => array(60, 'm'),
             'm' => array(60, 'h'),
             'h' => array(24, 'd'),
-            'd' => array(265, 'y'),
+            'd' => array(365, 'y'),
         );
 
     foreach ($aConversion as $sUnit => $aConvert) {
