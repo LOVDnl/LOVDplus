@@ -4,7 +4,7 @@
  * LEIDEN OPEN VARIATION DATABASE (LOVD)
  *
  * Created     : 2014-11-28
- * Modified    : 2019-03-13
+ * Modified    : 2019-06-17
  * For LOVD+   : 3.0-18
  *
  * Copyright   : 2004-2019 Leiden University Medical Center; http://www.LUMC.nl/
@@ -511,11 +511,16 @@ foreach ($aFiles as $sFileID) {
     $_ADAPTER->readMetadata($aMetaData);
     $nScreeningID = $_ADAPTER->aMetadata['Screenings']['id'];
 
+    if (!$nScreeningID) {
+        // Malformed meta data file? We need the screening ID to continue.
+        lovd_printIfVerbose(VERBOSITY_LOW, 'Error while parsing meta file: Unable to find the Screening ID. Please check the documentation on the format of the meta data file, or let LOVD+ create one for you.' . "\n");
+        continue; // Continue to try the next file.
+    }
+
     if (lovd_verifyInstance('leiden')) {
         $nMiracleID = $_ADAPTER->aMetadata['Individuals']['id_miracle'];
-        if (!$nScreeningID || !$nMiracleID) {
-            lovd_printIfVerbose(VERBOSITY_LOW, 'Error while parsing meta file: Unable to find the Screening ID and/or Miracle ID.' . "\n");
-            // Here, we won't try and remove the temp file. We need it for diagnostics, and it will save us from running into the same error over and over again.
+        if (!$nMiracleID) {
+            lovd_printIfVerbose(VERBOSITY_LOW, 'Error while parsing meta file: Unable to find the Miracle ID.' . "\n");
             continue; // Continue to try the next file.
         }
     }
