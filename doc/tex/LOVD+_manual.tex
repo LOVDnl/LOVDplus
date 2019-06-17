@@ -7,7 +7,7 @@
 % To convert the manual to an html file use: pdf2htmlEX --zoom 1.3 --embed-css 2 manual.pdf
 
 %%%%% SETTINGS FOR THE TITLE PAGE %%%%%
-\setLOVDversion{3.0-17r}
+\setLOVDversion{3.0-17s}
 \title{LOVD\textsuperscript{+} user manual \\
   \vskip 0.2cm Whole exome sequencing analysis \\
   \vskip 0.2cm Build \LOVDversion}
@@ -153,6 +153,15 @@ If you are installing LOVD\textsuperscript{+} on a remote server, be sure to hav
 
 
 \subsection{Download \& Extract}
+% To download LOVD\textsuperscript{+}, go to the \href{http://www.LOVD.nl/plus/}{LOVD\textsuperscript{+} website} and click on the ``Download'' tab.
+% You can download LOVD\textsuperscript{+} in two formats; GZIPped TARball and ZIP archive.
+% The first format is common for Unix and Linux systems while the ZIP archive is popular on the Windows platform.
+% Usually you will be able to open both formats.
+% \vskip \baselineskip
+
+% Download the file of your choice and save it to your hard drive.
+% Now extract the file using GZIP/TAR or ZIP to the desired location.
+% Alternative sentence:
 Extract the LOVD\textsuperscript{+} package in the desired location.
 On a server, common directories may be \texttt{/var/www} on Unix or Linux servers,
  or \texttt{C:\textbackslash{}htdocs} on a Windows server.
@@ -470,6 +479,11 @@ Note that, since the \texttt{convert\_and\_merge\_data\_files.php} script will c
  database when it first encounters them, it is not recommended to run this script in parallel the first few runs.
 Errors may occur when two parallel runs try to create the same gene or transcript.
 If such error occurs, simply delete the \texttt{tmp} file that is created by the failed run, and run the script again.
+\vskip \baselineskip
+
+Also, when the conversion script just stops without warning,
+ it's possible that it's using more memory than currently allowed.
+You can edit the script to change the \texttt{memory\_limit} setting in the file's header.
 \end{warntable}
 
 \noindent
@@ -496,7 +510,8 @@ To run it just once, open the \texttt{scripts} folder from your browser and run 
     Example cronjob to facilitate automatic conversion of meta and data files into LOVD import files.
     Make sure the directory in which `php' resides, is in the PATH environment variable.
     Also, change ``\texttt{path\_to\_LOVD+}'' to the full path of your LOVD\textsuperscript{+} installation.
-    Feel free to change the time settings.
+    Feel free to change the time settings, but note that running the conversion script in parallel
+     may cause errors when the script is still creating genes and transcripts.
     The duration of a conversion run depends completely on the size of the file,
      and the number of genes and transcripts from the data file that are not yet imported into LOVD\textsuperscript{+}.
     The conversion of data files does not interfere with normal functionality of LOVD\textsuperscript{+},
@@ -549,6 +564,7 @@ Move your mouse over the small blue question mark near ``Select the file to impo
     \label{fig:import_import_cronjob}
   \end{shaded}
 \end{figure}
+\clearpage % To prevent a very, very empty page a few pages further.
 
 
 
@@ -607,6 +623,10 @@ Moving your mouse over the red cross shows you the error messages that occured.
 They can also be seen in the \texttt{.error} file that will be created on disk.
 \textbf{Note that by default, LOVD\textsuperscript{+} allows for 50 annotation errors during VEP file conversion.}
 See \hyperref[sec:import_settings]{the next section} for how to change these settings.
+When the conversion of a file fails, LOVD\textsuperscript{+} will not automatically try again,
+ to make sure the conversion queue doesn't get stuck on this file.
+If you want LOVD\textsuperscript{+} to try again,
+ remove the sample's \texttt{.total.data.tmp} file from the data directory.
 \vskip \baselineskip
 
 Files successfully converted into LOVD data files show up in the middle column \circled{5}.
@@ -676,6 +696,7 @@ These are the steps to create your own adapter library, containing settings for 
     All relevant files are in the \texttt{scripts/adapters/} directory.
     Create a new file there with the name \texttt{adapter.lib.EXAMPLE.php},
      replacing \texttt{EXAMPLE} with your chosen instance name (make sure your instance name is in \emph{all capitals}).
+  \clearpage % To prevent a very, very empty page a few pages further.
   \item[Edit your new file] \hfill \\
     Simply edit your new \texttt{adapter.lib.EXAMPLE.php} file and change the settings you want to change.
     To keep it simple, define and set only the settings you want to change.
@@ -738,6 +759,7 @@ However, this means that when you update LOVD\textsuperscript{+}, you'll have to
 If you prefer this method, simply navigate to the \texttt{scripts/adapters}
  folder and edit the \texttt{adapter.lib.DEFAULT.php} file.
 Once you save the changes to the file, LOVD\textsuperscript{+} will use the new settings.
+\clearpage % To prevent a very, very empty page a few pages further.
 
 
 
@@ -792,6 +814,7 @@ This is not the full list, but these are the changes that are relevant for the d
        but will provide higher quality DNA descriptions on the transcript level.\\
       Valid values: \texttt{false}, \texttt{true}.\\
       Default value: \texttt{true}.
+    \clearpage % To prevent a very, very empty next page.
     \item[enforce\_hgnc\_gene] \hfill \\
       When LOVD\textsuperscript{+} encounters a new gene symbol in the VEP data file,
        should LOVD\textsuperscript{+} check if this is a correct gene symbol in the HGNC database?
@@ -916,16 +939,16 @@ See figure \ref{fig:individuals_analysis_page_plus} for the default analysis pag
           \node at (0.390,0.825) [yesfill] {\textbf{1}};
           \node at (0.450,0.582) [yesfill] {\textbf{2}};
           \node at (0.860,0.482) [yesfill] {\textbf{3}};
-          
+
           \node at (0.890,0.865) [yesfill] {\textbf{4}};
           \draw [red,thick,rounded corners] (0.773,0.845) rectangle (0.880,0.886);
 
           \node at (0.890,0.792) [yesfill] {\textbf{5}};
           \draw [red,thick,rounded corners] (0.773,0.782) rectangle (0.880,0.801);
-          
+
           \node at (0.330,0.435) [yesfill] {\textbf{6}};
           \node at (0.710,0.085) [yesfill] {\textbf{7}};
-          
+
           \node (n1) at (0.5105,0.3945) [nofill] {};
           \node (n2) at (0.450,0.260) [yesfill] {\textbf{8}};
           \draw [red,thick] (n1) -- (n2);
@@ -962,7 +985,7 @@ Having your sequencing pipeline create a meta data file allows you to, for insta
 The link to close an analysis is located right below the sequencing run statistics.
 Closing an analysis will stop you from running any further analyses or make other changes.
 There are various levels of closing an analysis.
-By default they are `Closed', `Awaiting confirmation', and `Confirmed'.            
+By default they are `Closed', `Awaiting confirmation', and `Confirmed'.
 Finally, the display includes the total number of variants imported \circled{5},
  as well as the link to display them all (unfiltered view).
 \vskip \baselineskip

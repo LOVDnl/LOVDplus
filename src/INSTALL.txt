@@ -80,7 +80,9 @@ import files:
 */15 * * * * php -f /path_to_LOVD/scripts/convert_and_merge_data_files.php
 
 Make sure the directory in which `php` resides, is in the PATH environment
-variable. Feel free to change the time settings.
+variable. Feel free to change the time settings, but note that running the
+conversion script in parallel may cause errors when the script is still creating
+genes and transcripts.
 
 The duration of a conversion run depends completely on the size of the file, and
 the number of genes and transcripts from the data files that are not yet
