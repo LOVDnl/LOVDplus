@@ -744,9 +744,9 @@ class LOVD_LeidenDataConverter extends LOVD_DefaultDataConverter {
             'position' => 'position', // lovd_getVariantDescription() needs this.
             'QUAL' => 'VariantOnGenome/Sequencing/Quality',
             'FILTERvcf' => 'VariantOnGenome/Sequencing/Filter',
+            'Consequence' => 'VariantOnTranscript/GVS/Function', // Will be translated.
             'GATKCaller' => 'VariantOnGenome/Sequencing/GATKcaller',
             'Feature' => 'transcriptid',
-            'GVS' => 'VariantOnTranscript/GVS/Function',
             'CDS_position' => 'VariantOnTranscript/Position',
             'HGVSc' => 'VariantOnTranscript/DNA',
             'HGVSp' => 'VariantOnTranscript/Protein',
