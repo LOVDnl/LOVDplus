@@ -4,7 +4,7 @@
  * LEIDEN OPEN VARIATION DATABASE (LOVD)
  *
  * Created     : 2013-11-07
- * Modified    : 2019-02-14
+ * Modified    : 2019-06-18
  * For LOVD    : 3.0-18
  *
  * Copyright   : 2004-2019 Leiden University Medical Center; http://www.LUMC.nl/
@@ -412,7 +412,9 @@ class LOVD_CustomViewListMOD extends LOVD_CustomViewList {
                                         'db'   => array('vog.id', 'ASC', true)),
                                 'vog_effect' => array(
                                         'view' => array('Effect', 70),
-                                        'db'   => array('eg.name', 'ASC', true),
+                                        'db'   => (!in_array('AnalysisRunResults', $aObjects)?
+                                            array('eg.name', 'ASC', true) :
+                                            array('CONCAT(REPLACE(IFNULL(sa.effectid, 5), 0, 5), REPLACE(RIGHT(IFNULL(vog.effectid, 5), 1), 0, 5), REPLACE(LEFT(IFNULL(vog.effectid, 5), 1), 0, 5))', 'DESC', true)),
                                         'legend' => array(
                                             strip_tags(str_replace(array('<TR>', '</TD> <TD>'), array("\n", '      '), preg_replace('/\s+/', ' ', strip_tags($sEffectLegend, '<tr><td>')))),
                                             $sEffectLegend)),
@@ -423,7 +425,7 @@ class LOVD_CustomViewListMOD extends LOVD_CustomViewList {
                                         'view' => false,
                                         'db'   => array('vog.`VariantOnGenome/DBID`', 'ASC', true)),
                                 'allele_' => array(
-                                        'view' => array('Allele', 'ASC', true),
+                                        'view' => array('Allele', 120),
                                         'db'   => array('allele_', 'ASC', 'TEXT')),
                               ));
 

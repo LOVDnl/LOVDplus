@@ -480,6 +480,7 @@ if (PATH_COUNT >= 2 && ctype_digit($_PE[1]) && !ACTION && (PATH_COUNT == 2 || PA
         $_GET['search_variantid'] = (!$aScreeningVariantIDs? '0' : implode($aScreeningVariantIDs, '|')); // Use all the variant IDs for variants with a curation status.
         $_GET['search_vog_effect'] = ''; // Needs search term on visible column to show the VL framework, though (saying "No results have been found that match your criteria").
         $_GET['search_runid'] = ''; // To create the input field, that the JS code is referring to, so we can switch to viewing analysis results.
+        $_GET['order'] = 'vog_effect,DESC'; // To sort on the effect field first, showing pathogenic variants first.
 
         require ROOT_PATH . 'class/object_custom_viewlists.mod.php';
         // VOG needs to be first, so it groups by the VOG ID.
