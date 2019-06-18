@@ -88,10 +88,11 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && in_array(ACTION, array('downloadT
         exit;
     }
 
-    // Fetch Lab ID, we need that for matching the variants with the individual.
-    $sLabID = $_DB->query('SELECT ' . (lovd_verifyInstance('leiden')? 'id_miracle' : '`Individual/Lab_ID`') . '
+    // Fetch Lab ID and custom panel, we need that for the file name, and for double checking if the variant is in the gene panel, respectively.
+    list($sLabID, $sCustomPanel) = $_DB->query('SELECT ' . (lovd_verifyInstance('leiden')? 'id_miracle' : '`Individual/Lab_ID`') . ', custom_panel
                            FROM ' . TABLE_INDIVIDUALS . ' AS i INNER JOIN ' . TABLE_SCREENINGS . ' AS s ON (i.id = s.individualid)
-                           WHERE s.id = ?', array($nID))->fetchColumn();
+                           WHERE s.id = ?', array($nID))->fetchRow();
+    $aCustomPanel = explode(', ', $sCustomPanel);
 
     // Load the gene panel(s), for the header.
     // NOTE: We could fetch this earlier, and at the same time change the variant query to not join to the IND2GP table, but oh, well.
@@ -142,6 +143,10 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && in_array(ACTION, array('downloadT
             } else {
                 $aVariant['VariantOnGenome/Genetic_origin'] = 'Unknown';
             }
+        }
+        // Extra gene panel checks, for the custom panel.
+        if (!$aVariant['in_gene_panel'] && $aCustomPanel && in_array($aVariant['gene_id'], $aCustomPanel)) {
+            $aVariant['in_gene_panel'] = 1;
         }
         print('"' . implode('"' . "\t" . '"', $aVariant) . "\"\r\n");
     }

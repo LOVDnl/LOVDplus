@@ -1199,6 +1199,8 @@ foreach ($aFiles as $sFileID) {
                 } else {
                     $aVariant['VariantOnTranscript/Protein'] = str_replace('p.', 'p.(', $aVariant['VariantOnTranscript/Protein'] . ')');
                 }
+                // VEP uses "Ter" where they should be using "*".
+                $aVariant['VariantOnTranscript/Protein'] = str_replace('Ter', '*', $aVariant['VariantOnTranscript/Protein']);
             } elseif (in_array(substr($aTranscripts[$aVariant['transcriptid']]['id_ncbi'], 0, 2), array('NR', 'XR'))) {
                 // Non coding transcript, no wonder we didn't get a protein field.
                 $aVariant['VariantOnTranscript/RNA'] = 'r.(?)';
@@ -1215,6 +1217,24 @@ foreach ($aFiles as $sFileID) {
                 // Partially intronic, or variants spanning multiple introns, or within first/last 5 bases of an intron.
                 $aVariant['VariantOnTranscript/RNA'] = 'r.spl?';
                 $aVariant['VariantOnTranscript/Protein'] = 'p.?';
+            } elseif (!$bDropTranscriptData && $aVariant['VariantOnTranscript/DNA']
+                // Try to prevent running Mutalyzer one last time. Fetch protein description from the database.
+                && ($aVOTFromDB = $_DB->query('
+                    SELECT `VariantOnTranscript/RNA`, `VariantOnTranscript/Protein`, COUNT(*)
+                    FROM ' . TABLE_VARIANTS_ON_TRANSCRIPTS . '
+                    WHERE transcriptid = ? AND position_c_start = ? AND position_c_start_intron = ? AND position_c_end = ? AND position_c_end_intron = ? AND `VariantOnTranscript/DNA` = ?
+                    GROUP BY `VariantOnTranscript/RNA`, `VariantOnTranscript/Protein`
+                    ORDER BY COUNT(*) DESC LIMIT 1',
+                    array(
+                        $aTranscripts[$aVariant['transcriptid']]['id'],
+                        $aVariant['position_c_start'],
+                        $aVariant['position_c_start_intron'],
+                        $aVariant['position_c_end'],
+                        $aVariant['position_c_end_intron'],
+                        $aVariant['VariantOnTranscript/DNA']))->fetchRow()) && $aVOTFromDB) {
+                // Variant has been found in the database. Use the most common RNA and Protein description we found.
+                $aVariant['VariantOnTranscript/RNA'] = $aVOTFromDB[0];
+                $aVariant['VariantOnTranscript/Protein'] = $aVOTFromDB[1];
             } elseif (!$bDropTranscriptData && $aVariant['VariantOnTranscript/DNA']) {
                 // OK, too bad, we need to run Mutalyzer anyway (only if we're using this VOT line).
                 lovd_printIfVerbose(VERBOSITY_MEDIUM, 'Running mutalyzer to predict protein change for ' .

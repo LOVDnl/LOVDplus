@@ -55,10 +55,12 @@ $nIndividuals = $_DB->query('SELECT COUNT(*) FROM ' . TABLE_INDIVIDUALS)->fetchC
 $nGenes       = count(lovd_getGeneList());
 $aTotalVars   = array();
 $nTotalVars   = 0;
-$q = $_DB->query('SELECT COUNT(*), statusid FROM ' . TABLE_VARIANTS . ' GROUP BY statusid ORDER BY statusid');
-while ($r = $q->fetchRow()) {
-    $aTotalVars[$r[1]] = $r[0];
-    $nTotalVars += $r[0];
+if (!LOVD_plus) {
+    $q = $_DB->query('SELECT COUNT(*), statusid FROM ' . TABLE_VARIANTS . ' GROUP BY statusid ORDER BY statusid');
+    while ($r = $q->fetchRow()) {
+        $aTotalVars[$r[1]] = $r[0];
+        $nTotalVars += $r[0];
+    }
 }
 
 
@@ -81,17 +83,21 @@ print('      <TABLE border="0" cellpadding="0" cellspacing="0" width="100%">' . 
       '                  Users : ' . $nUsers . '<BR>' . "\n" .
       '                  Log entries : ' . $nLogs . '<BR>----------<BR>' . "\n" .
       '                  Individuals : ' . $nIndividuals . '<BR>' . "\n" .
-      '                  Genes : ' . $nGenes . '</TD></TR>' . "\n" .
-      '              <TR>' . "\n" .
-      '                <TH>Variants</TH></TR>' . "\n" .
-      '              <TR>' . "\n" .
-      '                <TD>' . "\n" .
-      '                  Total : ' . $nTotalVars);
-foreach ($aTotalVars as $nStatus => $nVars) {
-    print('<BR>' . "\n" .
-          '                  ' . $_SETT['data_status'][$nStatus] . ' : ' . $nVars);
+      '                  Genes : ' . $nGenes . '</TD></TR>');
+if ($nTotalVars) {
+    print("\n" .
+          '              <TR>' . "\n" .
+          '                <TH>Variants</TH></TR>' . "\n" .
+          '              <TR>' . "\n" .
+          '                <TD>' . "\n" .
+          '                  Total : ' . $nTotalVars);
+    foreach ($aTotalVars as $nStatus => $nVars) {
+        print('<BR>' . "\n" .
+            '                  ' . $_SETT['data_status'][$nStatus] . ' : ' . $nVars);
+    }
+    print('</TD></TR>');
 }
-print('</TD></TR></TABLE><BR>' . "\n\n");
+print('</TABLE><BR>' . "\n\n");
 
 // Mention that LOVD can be updated!
 if (!LOVD_plus && $_STAT['update_level']) { // Not for LOVD+, unless we build a separate list.
