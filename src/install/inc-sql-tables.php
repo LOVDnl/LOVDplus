@@ -933,6 +933,7 @@ $aTableSQL =
     name VARCHAR(50) NOT NULL,
     description TEXT NOT NULL,
     version TINYINT(3) UNSIGNED DEFAULT 1,
+    active BOOLEAN NOT NULL DEFAULT 1,
     created_by SMALLINT(5) UNSIGNED ZEROFILL,
     created_date DATETIME NOT NULL,
     edited_by SMALLINT(5) UNSIGNED ZEROFILL,

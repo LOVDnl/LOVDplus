@@ -1142,6 +1142,7 @@ if ($sCalcVersionFiles != $sCalcVersionDB) {
                     (@nID, "remove_by_function_coding_synonymous", 19),
                     (@nID, "remove_by_function_utr_or_intronic_or_synonymous", 20)';
             }
+            $aUpdates['3.0-17s'][] = 'ALTER TABLE ' . TABLE_ANALYSES . ' ADD COLUMN active BOOLEAN NOT NULL DEFAULT 1 AFTER version';
         }
     }
 

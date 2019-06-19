@@ -271,11 +271,12 @@ if (PATH_COUNT >= 2 && ctype_digit($_PE[1]) && !ACTION && (PATH_COUNT == 2 || PA
                                         INNER JOIN ' . TABLE_A2AF . ' AS a2af ON (a.id = a2af.analysisid)
                                         INNER JOIN ' . TABLE_GP2A . ' AS gp2a ON (a.id = gp2a.analysisid) 
                                         INNER JOIN ' . TABLE_IND2GP . ' AS i2gp ON (gp2a.genepanelid = i2gp.genepanelid)
-                                        WHERE i2gp.individualid = ? 
+                                        WHERE i2gp.individualid = ? AND a.active = 1
                                         GROUP BY a.id ORDER BY a.sortid, a.id', array($nID))->fetchAllAssoc();
         $zAnalysesAll = $_DB->query('SELECT a.id, a.name, a.version, a.description, GROUP_CONCAT(a2af.filterid ORDER BY a2af.filter_order ASC SEPARATOR ";") AS _filters, 0                               AS analysis_run, 0     AS runid, 0 AS modified
                                         FROM ' . TABLE_ANALYSES . ' AS a
-                                        INNER JOIN ' . TABLE_A2AF . ' AS a2af ON (a.id = a2af.analysisid) 
+                                        INNER JOIN ' . TABLE_A2AF . ' AS a2af ON (a.id = a2af.analysisid)
+                                        WHERE a.active = 1 
                                         GROUP BY a.id ORDER BY a.sortid, a.id')->fetchAllAssoc();
         $aFilterInfo = $_DB->query('SELECT id, name, description FROM ' . TABLE_ANALYSIS_FILTERS)->fetchAllGroupAssoc();
         // Fetch all (numeric) variant IDs of all variants that have a curation status. They will be shown by default, when no analysis has been selected yet.
