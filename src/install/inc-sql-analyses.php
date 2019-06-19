@@ -4,7 +4,7 @@
  * LEIDEN OPEN VARIATION DATABASE (LOVD)
  *
  * Created     : 2016-07-15
- * Modified    : 2019-06-17
+ * Modified    : 2019-06-19
  * For LOVD    : 3.0-18
  *
  * Copyright   : 2004-2019 Leiden University Medical Center; http://www.LUMC.nl/
@@ -47,7 +47,7 @@ switch ($_INI['instance']['name']) {
         $aAnalysesSQL =
             array(
                 'INSERT INTO ' . TABLE_ANALYSES . ' (`id`, `sortid`, `name`, `description`, `version`, `created_by`, `created_date`, `edited_by`, `edited_date`) VALUES
-                  (1, 1, "De novo",                 "Filters for de novo variants, not reported before in known databases.", 2, 0, NOW(), NULL, NULL),
+                  (1, 1, "De novo",                 "Filters for de novo variants, not reported before in known databases.", 3, 0, NOW(), NULL, NULL),
                   (2, 2, "Gene panel",              "Filters for coding or splice site variants within the gene panel.", 2, 0, NOW(), NULL, NULL),
                   (3, 3, "X-linked recessive",      "Filters for X-linked recessive variants, not found in father, not homozygous in mother. High frequencies (> 3%) are also filtered out.", 2, 0, NOW(), NULL, NULL),
                   (4, 4, "Recessive (gene panel)",  "Filters for recessive variants, homozygous or compound heterozygous in patient, but not in the parents. High frequencies (> 3%) are also filtered out.", 2, 0, NOW(), NULL, NULL),
@@ -97,7 +97,6 @@ switch ($_INI['instance']['name']) {
                   (1, "remove_by_indb_count_ug_gte_2", 5),
                   (1, "remove_with_any_frequency_gt_2", 6),
                   (1, "remove_with_any_frequency_1000G", 7),
-                  (1, "remove_with_any_frequency_dbSNP", 8),
                   (1, "remove_with_any_frequency_goNL", 9),
                   (1, "remove_with_any_frequency_EVS", 10),
                   (1, "is_present_mother_lte_4", 11),
@@ -367,7 +366,7 @@ switch ($_INI['instance']['name']) {
         $aAnalysesSQL =
             array(
                 'INSERT INTO ' . TABLE_ANALYSES . ' (`id`, `sortid`, `name`, `description`, `version`, `created_by`, `created_date`, `edited_by`, `edited_date`) VALUES
-                  (1, 1, "De novo",                 "Filters for de novo variants, not reported before in known databases.", 1, 0, NOW(), NULL, NULL),
+                  (1, 1, "De novo",                 "Filters for de novo variants, low-frequent or not reported before in known databases.", 2, 0, NOW(), NULL, NULL),
                   (2, 2, "Gene panel",              "Filters for coding or splice site variants within the gene panel.", 1, 0, NOW(), NULL, NULL),
                   (3, 3, "X-linked recessive",      "Filters for X-linked recessive variants, not found in father, not homozygous in mother. High frequencies (> 3%) are also filtered out.", 1, 0, NOW(), NULL, NULL),
                   (4, 4, "Recessive (gene panel)",  "Filters for recessive variants, homozygous or compound heterozygous in patient, but not in the parents. High frequencies (> 3%) are also filtered out.", 1, 0, NOW(), NULL, NULL),
@@ -408,7 +407,6 @@ switch ($_INI['instance']['name']) {
                   (1, "remove_with_frequency_1000G_gt_2", 6),
                   (1, "remove_with_frequency_gnomAD_gt_2", 7),
                   (1, "remove_with_any_frequency_1000G", 8),
-                  (1, "remove_with_any_frequency_dbSNP", 9),
                   (1, "remove_with_any_frequency_gnomAD", 10),
                   (1, "remove_variants_in_father", 11),
                   (1, "remove_variants_in_mother", 12),
