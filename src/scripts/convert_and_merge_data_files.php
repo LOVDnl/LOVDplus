@@ -4,7 +4,7 @@
  * LEIDEN OPEN VARIATION DATABASE (LOVD)
  *
  * Created     : 2014-11-28
- * Modified    : 2019-06-17
+ * Modified    : 2019-06-19
  * For LOVD+   : 3.0-18
  *
  * Copyright   : 2004-2019 Leiden University Medical Center; http://www.LUMC.nl/
@@ -1185,7 +1185,7 @@ foreach ($aFiles as $sFileID) {
             // VariantOnTranscript/RNA && VariantOnTranscript/Protein.
             // Try to do as much as possible by ourselves.
             $aVariant['VariantOnTranscript/RNA'] = '';
-            // Convert VEP's (p.%3D) to (p.=).
+            // Convert VEP's (p.%3D) to (p.=). They have to encode = to prevent parser errors.
             $aVariant['VariantOnTranscript/Protein'] = urldecode($aVariant['VariantOnTranscript/Protein']);
             if ($aVariant['VariantOnTranscript/Protein']) {
                 // VEP came up with something...
@@ -1195,8 +1195,12 @@ foreach ($aFiles as $sFileID) {
                     || preg_match('/^p\.([A-Z][a-z]{2})+([0-9]+)=$/', $aVariant['VariantOnTranscript/Protein'])) {
                     // But sometimes VEP messes up; DNA: c.4482G>A; Prot: c.4482G>A(p.=) or
                     //  Prot: p.ValSerThrAspHisAlaThrSerLeuProValThrIleProSerAlaAla1225=
+                    // 2019-06-19; May have been fixed, not observed anymore.
                     $aVariant['VariantOnTranscript/Protein'] = 'p.(=)';
-                } else {
+                } elseif (substr($aVariant['VariantOnTranscript/Protein'], 0, 2) == 'p.'
+                    && (substr($aVariant['VariantOnTranscript/Protein'], 2, 1) != '('
+                        || substr($aVariant['VariantOnTranscript/Protein'], -1) != ')')) {
+                    // VEP has p. notation, but without parentheses around them (see https://github.com/Ensembl/ensembl-vep/issues/498).
                     $aVariant['VariantOnTranscript/Protein'] = str_replace('p.', 'p.(', $aVariant['VariantOnTranscript/Protein'] . ')');
                 }
                 // VEP uses "Ter" where they should be using "*".
