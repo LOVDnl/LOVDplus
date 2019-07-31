@@ -1116,6 +1116,27 @@ if ($sCalcVersionFiles != $sCalcVersionDB) {
                     (@nID, "remove_by_function_utr_or_intronic", 19),
                     (@nID, "remove_by_function_coding_synonymous", 20),
                     (@nID, "remove_by_function_utr_or_intronic_or_synonymous", 21)';
+                $aUpdates['3.0-17s'][] = 'INSERT INTO ' . TABLE_ANALYSES . ' (`sortid`, `name`, `description`, `version`, `created_by`, `created_date`) VALUES
+                    (6, "Imprinted genes", "Filters for variants found in imprinted genes.", 3, 0, NOW())';
+                $aUpdates['3.0-17s'][] = 'SET @nID := (SELECT last_insert_id())';
+                $aUpdates['3.0-17s'][] = 'INSERT INTO ' . TABLE_A2AF . ' (`analysisid`, `filterid`, `filter_order`) VALUES
+                    (@nID, "apply_selected_gene_panels", 1),
+                    (@nID, "cross_screenings", 2),
+                    (@nID, "remove_by_quality_lte_100", 3),
+                    (@nID, "remove_not_imprinted", 4),
+                    (@nID, "remove_by_indb_count_hc_gte_2", 5),
+                    (@nID, "remove_by_indb_count_ug_gte_2", 6),
+                    (@nID, "remove_with_any_frequency_gt_2", 7),
+                    (@nID, "remove_with_any_frequency_1000G", 8),
+                    (@nID, "remove_with_any_frequency_goNL", 9),
+                    (@nID, "remove_with_any_frequency_EVS", 10),
+                    (@nID, "remove_intronic_distance_gt_8", 11),
+                    (@nID, "remove_intronic_distance_gt_2", 12),
+                    (@nID, "remove_by_function_utr3", 13),
+                    (@nID, "remove_by_function_utr5", 14),
+                    (@nID, "remove_by_function_utr_or_intronic", 15),
+                    (@nID, "remove_by_function_coding_synonymous", 16),
+                    (@nID, "remove_by_function_utr_or_intronic_or_synonymous", 17)';
             } elseif (!lovd_verifyInstance('mgha', false)) {
                 // Not Leiden, not MGHA, so the default.
                 $aUpdates['3.0-17s'][] = 'INSERT INTO ' . TABLE_ANALYSES . ' (`sortid`, `name`, `description`, `version`, `created_by`, `created_date`) VALUES

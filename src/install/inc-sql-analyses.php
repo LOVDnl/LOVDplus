@@ -4,7 +4,7 @@
  * LEIDEN OPEN VARIATION DATABASE (LOVD)
  *
  * Created     : 2016-07-15
- * Modified    : 2019-06-19
+ * Modified    : 2019-07-30
  * For LOVD    : 3.0-18
  *
  * Copyright   : 2004-2019 Leiden University Medical Center; http://www.LUMC.nl/
@@ -52,7 +52,7 @@ switch ($_INI['instance']['name']) {
                   (3, 3, "X-linked recessive",      "Filters for X-linked recessive variants, not found in father, not homozygous in mother. High frequencies (> 3%) are also filtered out.", 2, 0, NOW(), NULL, NULL),
                   (4, 4, "Recessive (gene panel)",  "Filters for recessive variants, homozygous or compound heterozygous in patient, but not in the parents. High frequencies (> 3%) are also filtered out.", 2, 0, NOW(), NULL, NULL),
                   (5, 5, "Recessive (whole exome)", "Filters for recessive variants, homozygous or compound heterozygous in patient, but not in the parents. High frequencies (> 3%) are also filtered out, and the gene black list is applied.", 2, 0, NOW(), NULL, NULL),
-                  (6, 6, "Imprinted genes",         "Filters for variants found in imprinted genes.", 2, 0, NOW(), NULL, NULL),
+                  (6, 6, "Imprinted genes",         "Filters for variants found in imprinted genes.", 3, 0, NOW(), NULL, NULL),
                   (7, 7, "Mosaic",                  "Filters for mosaic variants.", 2, 0, NOW(), NULL, NULL)',
                 'INSERT INTO ' . TABLE_ANALYSIS_FILTERS . ' (`id`, `name`, `description`, `has_config`) VALUES 
                   ("apply_selected_gene_panels", "Apply selected gene panels", "Select only variants that are associated with a gene that is in the selected gene panels and not within the selected blacklists.", 1),
@@ -176,7 +176,6 @@ switch ($_INI['instance']['name']) {
                   (6, "remove_by_indb_count_ug_gte_2", 6),
                   (6, "remove_with_any_frequency_gt_2", 7),
                   (6, "remove_with_any_frequency_1000G", 8),
-                  (6, "remove_with_any_frequency_dbSNP", 9),
                   (6, "remove_with_any_frequency_goNL", 10),
                   (6, "remove_with_any_frequency_EVS", 11),
                   (6, "remove_intronic_distance_gt_8", 12),
