@@ -776,6 +776,7 @@ if ($sCalcVersionFiles != $sCalcVersionDB) {
                  '3.0-17p' => array(), // Placeholder for LOVD+ queries, defined below.
                  '3.0-17q' => array(), // Placeholder for LOVD+ queries, defined below.
                  '3.0-17r' => array(), // Plenty of changes to default table structure and columns, but not documented. Leiden LOVD+ should not be updated, and existing ones will not care if they have redundant columns or non-default column settings.
+                 '3.0-17s' => array(), // Placeholder for LOVD+ queries, defined below.
                  '3.0-18' =>
                      array(
                          // These two will be ignored by LOVD+.
@@ -1088,6 +1089,81 @@ if ($sCalcVersionFiles != $sCalcVersionDB) {
             $aUpdates['3.0-17q'][] = 'SET @nID := (SELECT id FROM ' . TABLE_ANALYSES . ' WHERE name = "Recessive (whole exome)" ORDER BY version DESC LIMIT 1)';
             $aUpdates['3.0-17q'][] = 'INSERT IGNORE INTO ' . TABLE_A2AF . ' (`analysisid`, `filterid`, `filter_order`) VALUES (@nID, "remove_in_gene_blacklist", 20)';
             $aUpdates['3.0-17q'][] = 'UPDATE ' . TABLE_ANALYSES . ' SET description = "Filters for recessive variants, homozygous or compound heterozygous in patient, but not in the parents. High frequencies (> 3%) are also filtered out, and the gene black list is applied.", edited_by = 0, edited_date = NOW() WHERE name = "Recessive (whole exome)" AND version = 2';
+        }
+        if ($sCalcVersionDB < lovd_calculateVersion('3.0-17s')) {
+            if (lovd_verifyInstance('leiden')) {
+                $aUpdates['3.0-17s'][] = 'INSERT INTO ' . TABLE_ANALYSES . ' (`sortid`, `name`, `description`, `version`, `created_by`, `created_date`) VALUES
+                    (1, "De novo", "Filters for de novo variants, not reported before in known databases.", 3, 0, NOW())';
+                $aUpdates['3.0-17s'][] = 'SET @nID := (SELECT last_insert_id())';
+                $aUpdates['3.0-17s'][] = 'INSERT INTO ' . TABLE_A2AF . ' (`analysisid`, `filterid`, `filter_order`) VALUES
+                    (@nID, "apply_selected_gene_panels", 1),
+                    (@nID, "cross_screenings", 2),
+                    (@nID, "remove_by_quality_lte_100", 3),
+                    (@nID, "remove_by_indb_count_hc_gte_2", 4),
+                    (@nID, "remove_by_indb_count_ug_gte_2", 5),
+                    (@nID, "remove_with_any_frequency_gt_2", 6),
+                    (@nID, "remove_with_any_frequency_1000G", 7),
+                    (@nID, "remove_with_any_frequency_goNL", 9),
+                    (@nID, "remove_with_any_frequency_EVS", 10),
+                    (@nID, "is_present_mother_lte_4", 11),
+                    (@nID, "is_present_father_lte_4", 12),
+                    (@nID, "is_present_mother_1", 13),
+                    (@nID, "is_present_father_1", 14),
+                    (@nID, "remove_intronic_distance_gt_8", 15),
+                    (@nID, "remove_intronic_distance_gt_2", 16),
+                    (@nID, "remove_by_function_utr3", 17),
+                    (@nID, "remove_by_function_utr5", 18),
+                    (@nID, "remove_by_function_utr_or_intronic", 19),
+                    (@nID, "remove_by_function_coding_synonymous", 20),
+                    (@nID, "remove_by_function_utr_or_intronic_or_synonymous", 21)';
+                $aUpdates['3.0-17s'][] = 'INSERT INTO ' . TABLE_ANALYSES . ' (`sortid`, `name`, `description`, `version`, `created_by`, `created_date`) VALUES
+                    (6, "Imprinted genes", "Filters for variants found in imprinted genes.", 3, 0, NOW())';
+                $aUpdates['3.0-17s'][] = 'SET @nID := (SELECT last_insert_id())';
+                $aUpdates['3.0-17s'][] = 'INSERT INTO ' . TABLE_A2AF . ' (`analysisid`, `filterid`, `filter_order`) VALUES
+                    (@nID, "apply_selected_gene_panels", 1),
+                    (@nID, "cross_screenings", 2),
+                    (@nID, "remove_by_quality_lte_100", 3),
+                    (@nID, "remove_not_imprinted", 4),
+                    (@nID, "remove_by_indb_count_hc_gte_2", 5),
+                    (@nID, "remove_by_indb_count_ug_gte_2", 6),
+                    (@nID, "remove_with_any_frequency_gt_2", 7),
+                    (@nID, "remove_with_any_frequency_1000G", 8),
+                    (@nID, "remove_with_any_frequency_goNL", 9),
+                    (@nID, "remove_with_any_frequency_EVS", 10),
+                    (@nID, "remove_intronic_distance_gt_8", 11),
+                    (@nID, "remove_intronic_distance_gt_2", 12),
+                    (@nID, "remove_by_function_utr3", 13),
+                    (@nID, "remove_by_function_utr5", 14),
+                    (@nID, "remove_by_function_utr_or_intronic", 15),
+                    (@nID, "remove_by_function_coding_synonymous", 16),
+                    (@nID, "remove_by_function_utr_or_intronic_or_synonymous", 17)';
+            } elseif (!lovd_verifyInstance('mgha', false)) {
+                // Not Leiden, not MGHA, so the default.
+                $aUpdates['3.0-17s'][] = 'INSERT INTO ' . TABLE_ANALYSES . ' (`sortid`, `name`, `description`, `version`, `created_by`, `created_date`) VALUES
+                    (1, "De novo", "Filters for de novo variants, low-frequent or not reported before in known databases.", 2, 0, NOW())';
+                $aUpdates['3.0-17s'][] = 'SET @nID := (SELECT last_insert_id())';
+                $aUpdates['3.0-17s'][] = 'INSERT INTO ' . TABLE_A2AF . ' (`analysisid`, `filterid`, `filter_order`) VALUES
+                    (@nID, "apply_selected_gene_panels", 1),
+                    (@nID, "cross_screenings", 2),
+                    (@nID, "remove_by_quality_lte_100", 3),
+                    (@nID, "remove_with_frequency_1000G_gt_3", 4),
+                    (@nID, "remove_with_frequency_gnomAD_gt_3", 5),
+                    (@nID, "remove_with_frequency_1000G_gt_2", 6),
+                    (@nID, "remove_with_frequency_gnomAD_gt_2", 7),
+                    (@nID, "remove_with_any_frequency_1000G", 8),
+                    (@nID, "remove_with_any_frequency_gnomAD", 10),
+                    (@nID, "remove_variants_in_father", 11),
+                    (@nID, "remove_variants_in_mother", 12),
+                    (@nID, "remove_intronic_distance_gt_20", 13),
+                    (@nID, "remove_intronic_distance_gt_8", 14),
+                    (@nID, "remove_intronic_distance_gt_2", 15),
+                    (@nID, "remove_by_function_utr3", 16),
+                    (@nID, "remove_by_function_utr5", 17),
+                    (@nID, "remove_by_function_utr_or_intronic", 18),
+                    (@nID, "remove_by_function_coding_synonymous", 19),
+                    (@nID, "remove_by_function_utr_or_intronic_or_synonymous", 20)';
+            }
+            $aUpdates['3.0-17s'][] = 'ALTER TABLE ' . TABLE_ANALYSES . ' ADD COLUMN active BOOLEAN NOT NULL DEFAULT 1 AFTER version';
         }
     }
 

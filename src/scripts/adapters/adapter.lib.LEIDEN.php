@@ -25,6 +25,7 @@ $_INSTANCE_CONFIG['viewlists'] = array(
             'Screening/Mother/Panel_coverage/Fraction',
             'curation_progress_',
             'variants_found_',
+            'created_date_',
             'analysis_status',
         )
     ),

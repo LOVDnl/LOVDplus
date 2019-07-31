@@ -636,7 +636,7 @@ class LOVD_DefaultDataConverter {
 
     function readMetadata ($aMetaDataLines)
     {
-        // Read array of lines from .meta.lovd file of each .directvep.lovd file.
+        // Read array of lines from .meta.lovd file of each .vep.lovd file.
         // Return an array of metadata keyed by column names.
 
         $aKeyedMetadata = array(); // The array we're building up.

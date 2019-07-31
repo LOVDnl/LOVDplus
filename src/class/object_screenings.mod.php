@@ -4,10 +4,10 @@
  * LEIDEN OPEN VARIATION DATABASE (LOVD)
  *
  * Created     : 2014-01-03
- * Modified    : 2018-12-19
+ * Modified    : 2019-07-31
  * For LOVD    : 3.0-18
  *
- * Copyright   : 2004-2018 Leiden University Medical Center; http://www.LUMC.nl/
+ * Copyright   : 2004-2019 Leiden University Medical Center; http://www.LUMC.nl/
  * Programmer  : Ivo F.A.C. Fokkema <I.F.A.C.Fokkema@LUMC.nl>
  *
  *
@@ -125,6 +125,9 @@ class LOVD_ScreeningMOD extends LOVD_Screening {
                      'variants_found_' => array(
                          'view' => array('Variants found', 100),
                          'db'   => array('variants_found_', 'ASC', 'INT_UNSIGNED')),
+                     'created_date_' => array(
+                         'view' => array('Imported', 80),
+                         'db'   => array('s.created_date', 'DESC', true)),
                      'analysis_status' => array(
                          'view' => array('Analysis status', 120),
                          'db'   => array('ds.name', false, true)),
@@ -173,6 +176,7 @@ class LOVD_ScreeningMOD extends LOVD_Screening {
         $zData = parent::prepareData($zData, $sView);
 
         if ($sView == 'list') {
+            $zData['created_date_']  = substr($zData['created_date'], 0, 10);
             $zData['analysis_date_'] = substr($zData['analysis_date'], 0, 10);
             $zData['analysis_approved_date_'] = substr($zData['analysis_approved_date'], 0, 10);
         } else {

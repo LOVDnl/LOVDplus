@@ -4,7 +4,7 @@
  * LEIDEN OPEN VARIATION DATABASE (LOVD)
  *
  * Created     : 2016-07-15
- * Modified    : 2019-02-14
+ * Modified    : 2019-07-31
  * For LOVD    : 3.0-18
  *
  * Copyright   : 2004-2019 Leiden University Medical Center; http://www.LUMC.nl/
@@ -47,12 +47,12 @@ switch ($_INI['instance']['name']) {
         $aAnalysesSQL =
             array(
                 'INSERT INTO ' . TABLE_ANALYSES . ' (`id`, `sortid`, `name`, `description`, `version`, `created_by`, `created_date`, `edited_by`, `edited_date`) VALUES
-                  (1, 1, "De novo",                 "Filters for de novo variants, not reported before in known databases.", 2, 0, NOW(), NULL, NULL),
+                  (1, 1, "De novo",                 "Filters for de novo variants, not reported before in known databases.", 3, 0, NOW(), NULL, NULL),
                   (2, 2, "Gene panel",              "Filters for coding or splice site variants within the gene panel.", 2, 0, NOW(), NULL, NULL),
                   (3, 3, "X-linked recessive",      "Filters for X-linked recessive variants, not found in father, not homozygous in mother. High frequencies (> 3%) are also filtered out.", 2, 0, NOW(), NULL, NULL),
                   (4, 4, "Recessive (gene panel)",  "Filters for recessive variants, homozygous or compound heterozygous in patient, but not in the parents. High frequencies (> 3%) are also filtered out.", 2, 0, NOW(), NULL, NULL),
                   (5, 5, "Recessive (whole exome)", "Filters for recessive variants, homozygous or compound heterozygous in patient, but not in the parents. High frequencies (> 3%) are also filtered out, and the gene black list is applied.", 2, 0, NOW(), NULL, NULL),
-                  (6, 6, "Imprinted genes",         "Filters for variants found in imprinted genes.", 2, 0, NOW(), NULL, NULL),
+                  (6, 6, "Imprinted genes",         "Filters for variants found in imprinted genes.", 3, 0, NOW(), NULL, NULL),
                   (7, 7, "Mosaic",                  "Filters for mosaic variants.", 2, 0, NOW(), NULL, NULL)',
                 'INSERT INTO ' . TABLE_ANALYSIS_FILTERS . ' (`id`, `name`, `description`, `has_config`) VALUES 
                   ("apply_selected_gene_panels", "Apply selected gene panels", "Select only variants that are associated with a gene that is in the selected gene panels and not within the selected blacklists.", 1),
@@ -87,8 +87,7 @@ switch ($_INI['instance']['name']) {
                   ("remove_with_any_frequency_gt_2", "Remove variants with frequency > 2 % ", "Remove all variants that have any frequency higher than 2 %.", 0),
                   ("remove_with_any_frequency_gt_3", "Remove variants with frequency > 3 % ", "Remove all variants that have any frequency higher than 3 %.", 0),
                   ("select_gatkcaller_ug_hc", "Select called by both UG and HC", "Select only variants called by both UG and HC.", 0),
-                  ("select_homozygous_or_compound_heterozygous", "Select homozygous or possibly compound heterozygous", "Select only homozygous variants or variants associated with a gene that currently has more than one variant left.", 0),
-                  ("select_homozygous_or_heterozygous_not_from_one_parent", "Select homozygous or heterozygous variants not from one parent", "Select only homozygous variants or multiple heterozygous variants associated with the same gene, not all inherited from one parent.", 0)\',
+                  ("select_homozygous_or_heterozygous_not_from_one_parent", "Select homozygous or heterozygous variants not from one parent", "Select only homozygous variants or multiple heterozygous variants associated with the same gene, not all inherited from one parent.", 0)',
                 'INSERT INTO ' . TABLE_A2AF . ' (`analysisid`, `filterid`, `filter_order`) VALUES
                   (1, "apply_selected_gene_panels", 1),
                   (1, "cross_screenings", 2),
@@ -97,7 +96,6 @@ switch ($_INI['instance']['name']) {
                   (1, "remove_by_indb_count_ug_gte_2", 5),
                   (1, "remove_with_any_frequency_gt_2", 6),
                   (1, "remove_with_any_frequency_1000G", 7),
-                  (1, "remove_with_any_frequency_dbSNP", 8),
                   (1, "remove_with_any_frequency_goNL", 9),
                   (1, "remove_with_any_frequency_EVS", 10),
                   (1, "is_present_mother_lte_4", 11),
@@ -177,7 +175,6 @@ switch ($_INI['instance']['name']) {
                   (6, "remove_by_indb_count_ug_gte_2", 6),
                   (6, "remove_with_any_frequency_gt_2", 7),
                   (6, "remove_with_any_frequency_1000G", 8),
-                  (6, "remove_with_any_frequency_dbSNP", 9),
                   (6, "remove_with_any_frequency_goNL", 10),
                   (6, "remove_with_any_frequency_EVS", 11),
                   (6, "remove_intronic_distance_gt_8", 12),
@@ -367,7 +364,7 @@ switch ($_INI['instance']['name']) {
         $aAnalysesSQL =
             array(
                 'INSERT INTO ' . TABLE_ANALYSES . ' (`id`, `sortid`, `name`, `description`, `version`, `created_by`, `created_date`, `edited_by`, `edited_date`) VALUES
-                  (1, 1, "De novo",                 "Filters for de novo variants, not reported before in known databases.", 1, 0, NOW(), NULL, NULL),
+                  (1, 1, "De novo",                 "Filters for de novo variants, low-frequent or not reported before in known databases.", 2, 0, NOW(), NULL, NULL),
                   (2, 2, "Gene panel",              "Filters for coding or splice site variants within the gene panel.", 1, 0, NOW(), NULL, NULL),
                   (3, 3, "X-linked recessive",      "Filters for X-linked recessive variants, not found in father, not homozygous in mother. High frequencies (> 3%) are also filtered out.", 1, 0, NOW(), NULL, NULL),
                   (4, 4, "Recessive (gene panel)",  "Filters for recessive variants, homozygous or compound heterozygous in patient, but not in the parents. High frequencies (> 3%) are also filtered out.", 1, 0, NOW(), NULL, NULL),
@@ -387,8 +384,8 @@ switch ($_INI['instance']['name']) {
                   ("remove_intronic_distance_gt_2", "Remove intronic with distance >2 bp", "Remove all variants that are only mapped to introns, >2 bp from the exon.", 0),
                   ("remove_intronic_distance_gt_8", "Remove intronic with distance >8 bp", "Remove all variants that are only mapped to introns, >8 bp from the exon.", 0),
                   ("remove_intronic_distance_gt_20", "Remove intronic with distance >20 bp", "Remove all variants that are only mapped to introns, >20 bp from the exon.", 0),
-                  ("remove_variants_hom_in_father", "Remove variants homozygous in father", "Removes all variants that are found as homozygous in father.", 0),
-                  ("remove_variants_hom_in_mother", "Remove variants homozygous in mother", "Removes all variants that are found as homozygous in mother.", 0),
+                  ("remove_variants_hom_in_father", "Remove variants if homozygous in father", "Removes all variants that are found as homozygous in father.", 0),
+                  ("remove_variants_hom_in_mother", "Remove variants if homozygous in mother", "Removes all variants that are found as homozygous in mother.", 0),
                   ("remove_variants_in_father", "Remove variants also found in father", "Removes all variants that are found also in father.", 0),
                   ("remove_variants_in_mother", "Remove variants also found in mother", "Removes all variants that are found also in mother.", 0),
                   ("remove_with_any_frequency_1000G", "Remove variants in 1000G", "Remove all variants that have a frequency in 1000G.", 0),
@@ -408,7 +405,6 @@ switch ($_INI['instance']['name']) {
                   (1, "remove_with_frequency_1000G_gt_2", 6),
                   (1, "remove_with_frequency_gnomAD_gt_2", 7),
                   (1, "remove_with_any_frequency_1000G", 8),
-                  (1, "remove_with_any_frequency_dbSNP", 9),
                   (1, "remove_with_any_frequency_gnomAD", 10),
                   (1, "remove_variants_in_father", 11),
                   (1, "remove_variants_in_mother", 12),

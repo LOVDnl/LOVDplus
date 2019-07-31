@@ -4,7 +4,7 @@
  * LEIDEN OPEN VARIATION DATABASE (LOVD)
  *
  * Created     : 2014-11-28
- * Modified    : 2019-03-25
+ * Modified    : 2019-06-19
  * For LOVD+   : 3.0-18
  *
  * Copyright   : 2004-2019 Leiden University Medical Center; http://www.LUMC.nl/
@@ -28,10 +28,11 @@ $_SERVER = array_merge($_SERVER, array(
 ));
 require ROOT_PATH . 'inc-init.php';
 require ROOT_PATH . 'inc-lib-genes.php';
-// 128MB was not enough for a 100MB file. We're already no longer using file(), now we're using fgets().
-// But still, loading all the gene and transcript data, uses too much memory. After some 18000 lines, the thing dies.
-// Setting to 4GB, but still maybe we'll run into problems.
-ini_set('memory_limit', '4294967296'); // Put in bytes to avoid some issues with some environments.
+// This script is optimized for speed, not memory usage. As such, it can use quite a lot of memory, but it's as fast as
+// we can make it. Loading all the gene and transcript data uses quite a lot of memory. An top of that, if the input
+// file is very large (unfiltered VCFs, for instance), this script can halt without warning.
+// The memory limit is currently set to 4GB, but this may not work for unfiltered VCF files.
+ini_set('memory_limit', '4294967296'); // 4GB in bytes to avoid some issues with some environments.
 
 // But we don't care about your session (in fact, it locks the whole LOVD if we keep this page running).
 session_write_close();
@@ -41,6 +42,7 @@ ignore_user_abort(true);
 // Define and verify settings.
 $bCron = (empty($_SERVER['REMOTE_ADDR']) && empty($_SERVER['TERM']));
 define('VERBOSITY', $_INSTANCE_CONFIG['conversion']['verbosity_' . ($bCron? 'cron' : 'other')]);
+$nMemoryMax = lovd_convertIniValueToBytes(ini_get('memory_limit'));
 
 
 
@@ -197,8 +199,8 @@ function lovd_handleAnnotationError (&$aVariant, $sErrorMsg)
     if ($nAnnotationErrors >= $_INSTANCE_CONFIG['conversion']['annotation_error_max_allowed']) {
         $sFileMessage = (filesize($sFileError) === 0? '' : 'Please check details of ' .
             ($_INSTANCE_CONFIG['conversion']['annotation_error_drops_line']? 'dropped' : 'errors in') . ' annotation data in ' . $sFileError . "\n");
-        lovd_printIfVerbose(VERBOSITY_LOW, "ERROR: Script cannot continue because this file has too many lines of annotation data that this script cannot handle.\n"
-            . $nAnnotationErrors . " lines of transcripts data was dropped.\nPlease update your data and re-run this script.\n"
+        lovd_printIfVerbose(VERBOSITY_LOW, "ERROR: Script stops here because this file has reached the currently set limit of lines of annotation data that this script cannot handle.\n"
+            . $nAnnotationErrors . " lines of transcript data was dropped.\nPlease update your data and re-run this script, or alternatively, see the documentation on how to increase the annotation_error_max_allowed limit.\n"
             . $sFileMessage);
         exit;
     }
@@ -402,7 +404,7 @@ if ($aFiles === false) {
 
 // Die here, if we have nothing to work with.
 if (!$aFiles) {
-    lovd_printIfVerbose(VERBOSITY_MEDIUM, 'No files found.' . "\n");
+    lovd_printIfVerbose(VERBOSITY_HIGH, 'No files found.' . "\n");
     exit;
 }
 
@@ -448,7 +450,7 @@ if (!$nFiles) {
     lovd_printIfVerbose(VERBOSITY_HIGH, 'No files left to merge.' . "\n");
     exit;
 } else {
-    lovd_printIfVerbose(VERBOSITY_MEDIUM, str_repeat('-', 60) . "\n" . $nFiles . ' patient' . ($nFiles == 1? '' : 's') . ' with data files ready to be merged.' . "\n");
+    lovd_printIfVerbose(VERBOSITY_MEDIUM, str_repeat('-', 70) . "\n" . $nFiles . ' patient' . ($nFiles == 1? '' : 's') . ' with data files ready to be merged.' . "\n");
 }
 
 // But don't run, if too many are still active...
@@ -509,11 +511,16 @@ foreach ($aFiles as $sFileID) {
     $_ADAPTER->readMetadata($aMetaData);
     $nScreeningID = $_ADAPTER->aMetadata['Screenings']['id'];
 
+    if (!$nScreeningID) {
+        // Malformed meta data file? We need the screening ID to continue.
+        lovd_printIfVerbose(VERBOSITY_LOW, 'Error while parsing meta file: Unable to find the Screening ID. Please check the documentation on the format of the meta data file, or let LOVD+ create one for you.' . "\n");
+        continue; // Continue to try the next file.
+    }
+
     if (lovd_verifyInstance('leiden')) {
         $nMiracleID = $_ADAPTER->aMetadata['Individuals']['id_miracle'];
-        if (!$nScreeningID || !$nMiracleID) {
-            lovd_printIfVerbose(VERBOSITY_LOW, 'Error while parsing meta file: Unable to find the Screening ID and/or Miracle ID.' . "\n");
-            // Here, we won't try and remove the temp file. We need it for diagnostics, and it will save us from running into the same error over and over again.
+        if (!$nMiracleID) {
+            lovd_printIfVerbose(VERBOSITY_LOW, 'Error while parsing meta file: Unable to find the Miracle ID.' . "\n");
             continue; // Continue to try the next file.
         }
     }
@@ -1178,7 +1185,7 @@ foreach ($aFiles as $sFileID) {
             // VariantOnTranscript/RNA && VariantOnTranscript/Protein.
             // Try to do as much as possible by ourselves.
             $aVariant['VariantOnTranscript/RNA'] = '';
-            // Convert VEP's (p.%3D) to (p.=).
+            // Convert VEP's (p.%3D) to (p.=). They have to encode = to prevent parser errors.
             $aVariant['VariantOnTranscript/Protein'] = urldecode($aVariant['VariantOnTranscript/Protein']);
             if ($aVariant['VariantOnTranscript/Protein']) {
                 // VEP came up with something...
@@ -1188,8 +1195,12 @@ foreach ($aFiles as $sFileID) {
                     || preg_match('/^p\.([A-Z][a-z]{2})+([0-9]+)=$/', $aVariant['VariantOnTranscript/Protein'])) {
                     // But sometimes VEP messes up; DNA: c.4482G>A; Prot: c.4482G>A(p.=) or
                     //  Prot: p.ValSerThrAspHisAlaThrSerLeuProValThrIleProSerAlaAla1225=
+                    // 2019-06-19; May have been fixed, not observed anymore.
                     $aVariant['VariantOnTranscript/Protein'] = 'p.(=)';
-                } else {
+                } elseif (substr($aVariant['VariantOnTranscript/Protein'], 0, 2) == 'p.'
+                    && (substr($aVariant['VariantOnTranscript/Protein'], 2, 1) != '('
+                        || substr($aVariant['VariantOnTranscript/Protein'], -1) != ')')) {
+                    // VEP has p. notation, but without parentheses around them (see https://github.com/Ensembl/ensembl-vep/issues/498).
                     $aVariant['VariantOnTranscript/Protein'] = str_replace('p.', 'p.(', $aVariant['VariantOnTranscript/Protein'] . ')');
                 }
                 // VEP uses "Ter" where they should be using "*".
@@ -1462,13 +1473,18 @@ foreach ($aFiles as $sFileID) {
             VERBOSITY_FULL => 100,
         );
         if (VERBOSITY > VERBOSITY_NONE && !($nLine % $aLinesToReport[VERBOSITY])) {
-            lovd_printIfVerbose(VERBOSITY_LOW, '------- Line ' . $nLine . ' -------' . str_repeat(' ', 7 - strlen($nLine)) . date('Y-m-d H:i:s') . "\n");
+            // Calculate memory usage, too.
+            $nMemory = memory_get_usage(true);
+            $sMemory = lovd_convertBytesToHRSize($nMemory) . '/' . lovd_convertBytesToHRSize($nMemoryMax) .
+                ' (' . round($nMemory*100/$nMemoryMax) . '%)';
+            lovd_printIfVerbose(VERBOSITY_LOW, '------- Line ' . $nLine . ' -------' . str_repeat(' ', 7 - strlen($nLine)) . date('Y-m-d H:i:s') .
+                ' Mem: ' . $sMemory . "\n");
             flush();
         }
     }
     fclose($fInput); // Close input file.
 
-    lovd_printIfVerbose(VERBOSITY_MEDIUM, 'Done parsing file. Current time: ' . date('Y-m-d H:i:s') . ".\n");
+    lovd_printIfVerbose(VERBOSITY_MEDIUM, str_repeat('-', 70) . "\n" . 'Done parsing file. Current time: ' . date('Y-m-d H:i:s') . ".\n");
     // Show the number of times HGNC and Mutalyzer were called.
     lovd_printIfVerbose(VERBOSITY_MEDIUM,
         'Number of times HGNC called: ' . $nHGNC . (!$nHGNC? '' :

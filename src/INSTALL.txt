@@ -80,7 +80,9 @@ import files:
 */15 * * * * php -f /path_to_LOVD/scripts/convert_and_merge_data_files.php
 
 Make sure the directory in which `php` resides, is in the PATH environment
-variable. Feel free to change the time settings.
+variable. Feel free to change the time settings, but note that running the
+conversion script in parallel may cause errors when the script is still creating
+genes and transcripts.
 
 The duration of a conversion run depends completely on the size of the file, and
 the number of genes and transcripts from the data files that are not yet
@@ -92,16 +94,16 @@ Converted files can be scheduled for automatic import by the scheduling feature
 available from the Setup area. To facilitate automatic import of the scheduled
 import files, insert the following cronjob, for a user of your choice:
 
-*/15 0-5,19-23 * * * GET "http://URL_to_LOVD/import?autoupload_scheduled_file" -t 2h
+*/15 0-5,19-23 * * * curl "http://URL_to_LOVD/import?autoupload_scheduled_file"
 
-Make sure GET is installed (libwww-perl) and its directory is in the PATH
-environment variable. Using wget or curl is also possible, just make sure the
+Make sure curl is installed and its directory is in the PATH environment
+variable. Using wget or GET (libwww-perl) is also possible, just make sure the
 output is sent to STDOUT. Feel free to change the time settings.
 
 The duration of an import depends completely on the size of the file. The import
 of large data files does slow down normal functionality of LOVD+, and as such is
 recommended to run only outside of working hours. Also make sure that the caller
-script (here, we use GET) doesn't time out if the process doesn't return output
+script (here, we use curl) doesn't time out if the process doesn't return output
 for a while.
 
 
