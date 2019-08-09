@@ -4,10 +4,10 @@
  * LEIDEN OPEN VARIATION DATABASE (LOVD)
  *
  * Created     : 2010-12-21
- * Modified    : 2016-11-15
- * For LOVD    : 3.0-18
+ * Modified    : 2017-06-16
+ * For LOVD    : 3.0-19
  *
- * Copyright   : 2004-2016 Leiden University Medical Center; http://www.LUMC.nl/
+ * Copyright   : 2004-2017 Leiden University Medical Center; http://www.LUMC.nl/
  * Programmers : Ing. Ivar C. Lugtenburg <I.C.Lugtenburg@LUMC.nl>
  *               Ing. Ivo F.A.C. Fokkema <I.F.A.C.Fokkema@LUMC.nl>
  *               Jerry Hoogenboom <J.Hoogenboom@LUMC.nl>
@@ -70,9 +70,11 @@ if (!ACTION && !empty($_GET['select_db'])) {
 
 
 
-if (!ACTION && (empty($_PE[1]) || preg_match('/^chr[0-9A-Z]{1,2}$/', $_PE[1]))) {
+if (!ACTION && (empty($_PE[1]) ||
+        preg_match('/^(chr[0-9A-Z]{1,2})(?::([0-9]+)-([0-9]+))?$/', $_PE[1], $aRegionArgs))) {
     // URL: /variants
     // URL: /variants/chrX
+    // URL: /variants/chr3:20-200000
     // View all genomic variant entries, optionally restricted by chromosome.
 
     // Managers are allowed to download this list...
@@ -80,26 +82,36 @@ if (!ACTION && (empty($_PE[1]) || preg_match('/^chr[0-9A-Z]{1,2}$/', $_PE[1]))) 
         define('FORMAT_ALLOW_TEXTPLAIN', true);
     }
 
-    if (!empty($_PE[1])) {
-        $sChr = $_PE[1];
-    } else {
-        $sChr = '';
+    require_once ROOT_PATH . 'class/object_genome_variants.php';
+    $_DATA = new LOVD_GenomeVariant();
+    $aColsToHide = array('allele_');
+    $sTitle = 'View all genomic variants';
+
+    // Set conditions on viewlist if a region is specified (e.g. chr3:20-200000)
+    if (isset($aRegionArgs)) {
+        list($sRegion, $sChr, $sPositionStart, $sPositionEnd) = array_pad($aRegionArgs, 4, null);
+
+        // Set search condition for chromosome.
+        $_GET['search_chromosome'] = '="' . substr($sChr, 3) . '"';
+        $aColsToHide[] = 'chromosome';
+
+        if (!is_null($sPositionStart) && !is_null($sPositionEnd)) {
+            // Set search conditions for start and end of region.
+            $_GET['search_position_g_start'] = '>=' . $sPositionStart;
+            $_GET['search_position_g_end'] = '<=' . $sPositionEnd;
+            $sTitle .= ' in region ' . $sRegion;
+        } else {
+            $sTitle .= ' on chromosome ' . substr($sChr, 3);
+        }
     }
 
-    define('PAGE_TITLE', 'View all genomic variants' . (!$sChr? '' : ' on chromosome ' . substr($sChr, 3)));
+    // Show page with variant viewlist.
+    define('PAGE_TITLE', $sTitle);
     $_T->printHeader();
     $_T->printTitle();
 
-    require ROOT_PATH . 'class/object_genome_variants.php';
-    $_DATA = new LOVD_GenomeVariant();
-    $aColsToHide = array('allele_');
-    if ($sChr) {
-        $_GET['search_chromosome'] = '="' . substr($sChr, 3) . '"';
-        $aColsToHide[] = 'chromosome';
-    }
     $_DATA->viewList('VOG', $aColsToHide, false, false, (bool) ($_AUTH['level'] >= LEVEL_MANAGER),
                      false, true);
-
     $_T->printFooter();
     exit;
 }
@@ -228,7 +240,12 @@ if (!ACTION && !empty($_PE[1]) && !ctype_digit($_PE[1])) {
     if ((isset($_PE[2]) && $_PE[2] == 'unique') || (isset($_PE[3]) && $_PE[3] == 'unique')) {
         $bUnique = true;
     }
-    $sGene = $_DB->query('SELECT id FROM ' . TABLE_GENES . ' WHERE id = ?', array(rawurldecode($_PE[1])))->fetchColumn();
+
+    $qGene = $_DB->query('SELECT g.id, count(t.id) FROM ' . TABLE_GENES . ' AS g LEFT OUTER JOIN ' .
+                         TABLE_TRANSCRIPTS . ' AS t ON g.id = t.geneid WHERE g.id = ?',
+                         array(rawurldecode($_PE[1])));
+    list($sGene, $nTranscripts) = $qGene->fetchRow();
+
     if ($sGene) {
         lovd_isAuthorized('gene', $sGene); // To show non public entries.
 
@@ -238,19 +255,23 @@ if (!ACTION && !empty($_PE[1]) && !ctype_digit($_PE[1])) {
         }
 
         // Overview is given per transcript. If there is only one, it will be mentioned. If there are more, you will be able to select which one you'd like to see.
-        $aTranscripts = $_DB->query('SELECT t.id, t.id_ncbi FROM ' . TABLE_TRANSCRIPTS . ' AS t LEFT JOIN ' . TABLE_VARIANTS_ON_TRANSCRIPTS . ' AS vot ON (t.id = vot.transcriptid) WHERE t.geneid = ? AND vot.id IS NOT NULL', array($sGene))->fetchAllCombine();
-        $nTranscripts = count($aTranscripts);
+        $aTranscriptsWithVariants = $_DB->query(
+            'SELECT t.id, t.id_ncbi
+             FROM ' . TABLE_TRANSCRIPTS . ' AS t
+               INNER JOIN ' . TABLE_VARIANTS_ON_TRANSCRIPTS . ' AS vot ON (t.id = vot.transcriptid)
+             WHERE t.geneid = ?', array($sGene))->fetchAllCombine();
+        $nTranscriptsWithVariants = count($aTranscriptsWithVariants);
 
-        // If NM is mentioned, check if exists for this gene. If not, reload page without NM. Otherwise, restrict $aTranscripts.
+        // If NM is mentioned, check if exists for this gene. If not, reload page without NM. Otherwise, restrict $aTranscriptsWithVariants.
         if (!empty($_PE[2]) && $_PE[2] != 'unique') {
-            $nTranscript = array_search($_PE[2], $aTranscripts);
+            $nTranscript = array_search($_PE[2], $aTranscriptsWithVariants);
             if ($nTranscript === false) {
-                // NM does not exist. Throw error or just simply redirect?
+                // NM does not exist, or has no variants. Throw error or just simply redirect?
                 header('Location: ' . lovd_getInstallURL() . $_PE[0] . '/' . $_PE[1] . (!$bUnique? '' : '/unique'));
                 exit;
             } else {
-                $aTranscripts = array($nTranscript => $aTranscripts[$nTranscript]);
-                $nTranscripts = 1;
+                $aTranscriptsWithVariants = array($nTranscript => $aTranscriptsWithVariants[$nTranscript]);
+                $nTranscriptsWithVariants = 1;
             }
         }
     } else {
@@ -274,29 +295,32 @@ if (!ACTION && !empty($_PE[1]) && !ctype_digit($_PE[1])) {
 
 
     // If this gene has only one NM, show that one. Otherwise have people pick one.
-    list($nTranscriptID, $sTranscript) = each($aTranscripts);
+    list($nTranscriptID, $sTranscript) = each($aTranscriptsWithVariants);
     if (!$nTranscripts) {
-        $sMessage = 'No transcripts or variants found for this gene.';
-    } elseif ($nTranscripts == 1) {
+        $sMessage = 'No transcripts found for this gene.';
+    } elseif (!$nTranscriptsWithVariants) {
+        $sMessage = 'No variants found for this gene.';
+    } elseif ($nTranscriptsWithVariants == 1) {
         $_GET['search_transcriptid'] = $nTranscriptID;
         $sMessage = 'The variants shown are described using the ' . $sTranscript . ' transcript reference sequence.';
     } else {
         // Create select box.
         // We would like to be able to link to this list, focusing on a certain transcript but without restricting the viewer, by sending a (numeric) get_transcriptid search term.
-        if (!isset($_GET['search_transcriptid']) || !isset($aTranscripts[$_GET['search_transcriptid']])) {
+        if (!isset($_GET['search_transcriptid']) || !isset($aTranscriptsWithVariants[$_GET['search_transcriptid']])) {
             $_GET['search_transcriptid'] = $nTranscriptID;
         }
         $sSelect = '<SELECT id="change_transcript" onchange="$(\'input[name=\\\'search_transcriptid\\\']\').val($(this).val()); lovd_AJAX_viewListSubmit(\'' . $sViewListID . '\');">';
-        foreach ($aTranscripts as $nTranscriptID => $sTranscript) {
+        foreach ($aTranscriptsWithVariants as $nTranscriptID => $sTranscript) {
             $sSelect .= '<OPTION value="' . $nTranscriptID . '"' . ($_GET['search_transcriptid'] != $nTranscriptID? '' : ' selected') . '>' . $sTranscript . '</OPTION>';
         }
-        $sMessage = 'The variants shown are described using the ' . $sSelect . '</SELECT> transcript reference sequence.';
+        $sSelect .= '</SELECT>';
+        $sMessage = 'The variants shown are described using the ' . $sSelect . ' transcript reference sequence.';
     }
     if (FORMAT == 'text/html') {
         lovd_showInfoTable($sMessage);
     }
 
-    if ($nTranscripts > 0) {
+    if ($nTranscriptsWithVariants > 0) {
         require ROOT_PATH . 'class/object_custom_viewlists.php';
         if ($bUnique) {
             // When this ViewListID is changed, also change the prepareData in object_custom_viewluists.php
