@@ -4,10 +4,10 @@
  * LEIDEN OPEN VARIATION DATABASE (LOVD)
  *
  * Created     : 2016-03-07
- * Modified    : 2016-11-29
- * For LOVD    : 3.0-18
+ * Modified    : 2019-08-19
+ * For LOVD    : 3.0-21
  *
- * Copyright   : 2004-2016 Leiden University Medical Center; http://www.LUMC.nl/
+ * Copyright   : 2004-2019 Leiden University Medical Center; http://www.LUMC.nl/
  * Programmers : Anthony Marty <anthony.marty@unimelb.edu.au>
  *               Ivo F.A.C. Fokkema <I.F.A.C.Fokkema@LUMC.nl>
  *
@@ -147,7 +147,7 @@ class LOVD_GenePanelGene extends LOVD_Object {
 
 
 
-    function checkFields ($aData, $zData = false)
+    function checkFields ($aData, $zData = false, $aOptions = array())
     {
         // Checks fields before submission of data.
 
@@ -156,7 +156,7 @@ class LOVD_GenePanelGene extends LOVD_Object {
             $this->aCheckMandatory[] = 'pmid';
         }
 
-        parent::checkFields($aData);
+        parent::checkFields($aData, $zData, $aOptions);
 
         // If the PMID ID has been filled in, but it's just a zero, complain as well.
         // We won't check if it actually exists, but it has to be a bit meaningful.

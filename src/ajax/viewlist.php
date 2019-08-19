@@ -4,10 +4,10 @@
  * LEIDEN OPEN VARIATION DATABASE (LOVD)
  *
  * Created     : 2010-02-18
- * Modified    : 2016-11-29
- * For LOVD    : 3.0-18
+ * Modified    : 2018-01-16
+ * For LOVD    : 3.0-21
  *
- * Copyright   : 2004-2016 Leiden University Medical Center; http://www.LUMC.nl/
+ * Copyright   : 2004-2018 Leiden University Medical Center; http://www.LUMC.nl/
  * Programmers : Ivo F.A.C. Fokkema <I.F.A.C.Fokkema@LUMC.nl>
  *               Ivar C. Lugtenburg <I.C.Lugtenburg@LUMC.nl>
  *               Daan Asscheman <D.Asscheman@LUMC.nl>
@@ -107,7 +107,7 @@ if ($_AUTH['level'] < LEVEL_MANAGER && (!empty($_AUTH['curates']) || !empty($_AU
 
         // CustomVL_VOT_VOG_<<GENE>> is restricted per gene in the object argument, and search_transcriptid should contain a transcript ID that matches.
         // CustomVL_VIEW_<<GENE>> is restricted per gene in the object argument, and search_transcriptid should contain a transcript ID that matches.
-        if (in_array($sObjectID, array('VariantOnTranscript,VariantOnGenome', 'VariantOnTranscriptUnique,VariantOnGenome', 'VariantOnTranscript,VariantOnGenome,Screening,Individual')) && (!isset($_GET['search_transcriptid']) || !$_DB->query('SELECT COUNT(*) FROM ' . TABLE_TRANSCRIPTS . ' WHERE id = ? AND geneid = ?', array($_GET['search_transcriptid'], $_GET['id']))->fetchColumn())) {
+        if (in_array($sObjectID, array('VariantOnTranscript,VariantOnGenome', 'VariantOnTranscriptUnique,VariantOnGenome', 'VariantOnTranscript,VariantOnGenome,Screening,Individual')) && (!isset($_REQUEST['search_transcriptid']) || !$_DB->query('SELECT COUNT(*) FROM ' . TABLE_TRANSCRIPTS . ' WHERE id = ? AND geneid = ?', array($_REQUEST['search_transcriptid'], $_REQUEST['id']))->fetchColumn())) {
             die(AJAX_NO_AUTH);
         }
         lovd_isAuthorized('gene', $nID); // Authorize for the gene currently loaded.
@@ -115,20 +115,15 @@ if ($_AUTH['level'] < LEVEL_MANAGER && (!empty($_AUTH['curates']) || !empty($_AU
 }
 
 
-// 2016-07-14; 3.0-17; Submitters should not be allowed to retrieve more
-// information about users than the info the access sharing page gives them.
-$aColsToSkip = (!empty($_REQUEST['skip'])? array_keys($_REQUEST['skip']) : array());
-if ($sObject == 'User' && $_AUTH['level'] == LEVEL_SUBMITTER) {
-    // Force removal of certain columns, regardless of this has been requested or not.
-    $aColsToSkip = array_unique(array_merge($aColsToSkip, array('username', 'status_', 'last_login_', 'created_date_', 'curates', 'level_')));
-}
-
 
 // Require special clearance?
 if ($nNeededLevel && (!$_AUTH || $_AUTH['level'] < $nNeededLevel)) {
     // If not authorized, die with error message.
     die(AJAX_NO_AUTH);
 }
+
+// Load the columns to skip from the request. The external viewer uses this.
+$aColsToSkip = (!empty($_REQUEST['skip'])? array_keys($_REQUEST['skip']) : array());
 
 // Managers, and sometimes curators, are allowed to download lists...
 if (in_array(ACTION, array('download', 'downloadSelected'))) {
@@ -161,17 +156,6 @@ $sObjectClassname = 'LOVD_' . str_replace('_', '', $sObject);
 $_DATA = new $sObjectClassname($sObjectID, $nID);
 
 
-
-// Check if search forms need to be disabled.
-// FIXME: Implement this later as an argument to viewList().
-if (!empty($_GET['disableVLSearch'])) {
-    // Columns to be excluded from disabling the search
-    //  functionality can be specified in this array.
-    if (!isset($_GET['disableVLSearchExclude']) || !is_array($_GET['disableVLSearchExclude'])) {
-        $_GET['disableVLSearchExclude'] = array();
-    }
-    $_DATA->disableVLSearch($_GET['disableVLSearchExclude']);
-}
 
 if (POST && ACTION == 'applyFR') {
     // Apply find & replace.
@@ -216,10 +200,16 @@ if (POST && ACTION == 'applyFR') {
     die(AJAX_DATA_ERROR);
 }
 
-// Restrict the columns of this VL, if given.
-if (LOVD_plus && isset($_INSTANCE_CONFIG['viewlists'][$_GET['viewlistid']]['cols_to_show'])) {
-    $_DATA->setViewListCols($_INSTANCE_CONFIG['viewlists'][$_GET['viewlistid']]['cols_to_show']);
+// Show the viewlist.
+// Parameters are assumed to be in $_SESSION, only cols_to_skip can be overridden. This is for the external viewer.
+$aOptions = array();
+if ($aColsToSkip) {
+    // Don't let the requested list of columns overwrite the original one. Only additional columns may be hidden.
+    $aOptions['cols_to_skip'] = array_merge(
+        (!isset($_SESSION['viewlists'][$_GET['viewlistid']]['options']['cols_to_skip'])? array()
+            : $_SESSION['viewlists'][$_GET['viewlistid']]['options']['cols_to_skip']),
+        $aColsToSkip
+    );
 }
-// Set $bHideNav to false always, since this ajax request could only have been sent if there were navigation buttons.
-$_DATA->viewList($_GET['viewlistid'], $aColsToSkip, (!empty($_GET['nohistory'])? true : false), (!empty($_GET['hidenav'])? true : false), (!empty($_GET['options'])? true : false), (!empty($_GET['only_rows'])? true : false));
+$_DATA->viewList($_GET['viewlistid'], $aOptions);
 ?>

@@ -5,7 +5,7 @@
  *
  * Created     : 2009-10-19
  * Modified    : 2018-08-28
- * For LOVD    : 3.0-20
+ * For LOVD    : 3.0-21
  *
  * Copyright   : 2004-2018 Leiden University Medical Center; http://www.LUMC.nl/
  * Programmers : Ivo F.A.C. Fokkema <I.F.A.C.Fokkema@LUMC.nl>
@@ -113,6 +113,68 @@ function lovd_calculateVersion ($sVersion)
 
 
 
+function lovd_callMutalyzer ($sMethod, $aArgs = array())
+{
+    // Wrapper function to call Mutalyzer's REST+JSON webservice.
+    // Because we have a wrapper, we can implement CURL, which is much faster on repeated calls.
+    global $_CONF;
+
+    // Build URL, regardless of how we'll connect to it.
+    $sURL = str_replace('/services', '', $_CONF['mutalyzer_soap_url']) . '/json/' . $sMethod;
+    if ($aArgs) {
+        $i = 0;
+        foreach ($aArgs as $sVariable => $sValue) {
+            $sURL .= ($i? '&' : '?');
+            $i++;
+            $sURL .= $sVariable . '=' . rawurlencode($sValue);
+        }
+    }
+    $sJSONResponse = '';
+
+    if (function_exists('curl_init')) {
+        // Initialize curl connection.
+        static $hCurl;
+
+        if (!$hCurl) {
+            $hCurl = curl_init();
+            curl_setopt($hCurl, CURLOPT_RETURNTRANSFER, true); // Return the result as a string.
+
+            // Set proxy.
+            if ($_CONF['proxy_host']) {
+                curl_setopt($hCurl, CURLOPT_PROXY, $_CONF['proxy_host'] . ':' . $_CONF['proxy_port']);
+                if (!empty($_CONF['proxy_username']) || !empty($_CONF['proxy_password'])) {
+                    curl_setopt($hCurl, CURLOPT_PROXYUSERPWD, $_CONF['proxy_username'] . ':' . $_CONF['proxy_password']);
+                }
+            }
+        }
+
+        curl_setopt($hCurl, CURLOPT_URL, $sURL);
+        $sJSONResponse = curl_exec($hCurl);
+
+    } else {
+        // Backup method, no curl installed. Too bad, we'll do it the "slow" way.
+        $aJSONResponse = lovd_php_file($sURL);
+        if ($aJSONResponse !== false) {
+            $sJSONResponse = implode("\n", $aJSONResponse);
+        }
+    }
+
+
+
+    if ($sJSONResponse) {
+        $aJSONResponse = json_decode($sJSONResponse, true);
+        if ($aJSONResponse !== false) {
+            return $aJSONResponse;
+        }
+    }
+    // Something went wrong...
+    return false;
+}
+
+
+
+
+
 function lovd_cleanDirName ($s)
 {
     // Cleans a given path by resolving a relative path.
@@ -198,10 +260,13 @@ function lovd_convertIniValueToBytes ($sValue)
 
 
 
-function lovd_convertSecondsToTime ($sValue, $nDecimals = 0)
+function lovd_convertSecondsToTime ($sValue, $nDecimals = 0, $bVerbose = false)
 {
     // This function takes a number of seconds and converts it into whole
     // minutes, hours, days, months or years.
+    // $nDecimals indicates the number of decimals to use in the returned value.
+    // $bVerbose defines whether to use short notation (s, m, h, d, y) or long notation
+    //   (seconds, minutes, hours, days, years).
     // FIXME; Implement proper checks here? Regexp?
 
     $nValue = (int) $sValue;
@@ -213,10 +278,12 @@ function lovd_convertSecondsToTime ($sValue, $nDecimals = 0)
 
     $aConversion =
         array(
-            's' => array(60, 'm'),
-            'm' => array(60, 'h'),
-            'h' => array(24, 'd'),
-            'd' => array(365, 'y'),
+            's' => array(60, 'm', 'second'),
+            'm' => array(60, 'h', 'minute'),
+            'h' => array(24, 'd', 'hour'),
+            'd' => array(265, 'y', 'day'),
+            'y' => array(100, 'c', 'year'),
+            'c' => array(100, '', 'century'), // Above is not supported.
         );
 
     foreach ($aConversion as $sUnit => $aConvert) {
@@ -227,7 +294,13 @@ function lovd_convertSecondsToTime ($sValue, $nDecimals = 0)
         }
     }
 
-    return round($nValue, $nDecimals) . $sLast;
+    $nValue = round($nValue, $nDecimals);
+    if ($bVerbose) {
+        // Make it "3 years" instead of "3y".
+        return $nValue . ' ' . $aConversion[$sLast][2] . ($nValue == 1? '' : 's');
+    } else {
+        return $nValue . $sLast;
+    }
 }
 
 
@@ -323,6 +396,83 @@ function lovd_generateRandomID ($l = 10)
     }
     $nStart = mt_rand(0, 32-$l);
     return substr(md5(microtime()), $nStart, $l);
+}
+
+
+
+
+
+function lovd_getActivateCustomColumnQuery ($aColumns = array(), $bActivate = true)
+{
+    // Create custom columns based on the columns listed in inc-sql-columns.php file.
+    global $_INI; // $_INI is needed for inc-sql-columns.php.
+
+    // This defines $aColSQL.
+    require_once ROOT_PATH . 'install/inc-sql-columns.php';
+
+    // Make sure the first argument, defining which columns to create, is an array.
+    // When empty, all columns are created.
+    if (!is_array($aColumns)) {
+        $aColumns = array($aColumns);
+    }
+
+    // Define how many columns we need to create.
+    $nColsLeft = (empty($aColumns)? count($aColSQL) : count($aColumns));
+
+    $aSQL = array();
+    foreach ($aColSQL as $sInsertSQL) {
+        // Find the beginning of field values of an SQL INSERT query
+        // INSERT INTO table_name VALUES(...)
+        $nIndex = strpos($sInsertSQL, '(');
+        if ($nIndex !== false) {
+            // Get the string inside brackets VALUES(...)
+            $sInsertFields = rtrim(substr($sInsertSQL, $nIndex+1), ')');
+
+            // Split the string into an array.
+            $aValues = str_getcsv($sInsertFields);
+
+            // If column is requested, process it. When no columns are specified, process all columns.
+            if (empty($aColumns) || in_array($aValues[0], $aColumns)) {
+                $aSQL[] = str_replace('INSERT INTO', 'INSERT IGNORE INTO', $sInsertSQL);
+
+                // Only activate column if they are an HGVS or standard column.
+                if ($bActivate && ($aValues[3] == '1' || $aValues[4] == '1')) {
+                    $sColID = $aValues[0];
+                    $sColType = $aValues[10];
+
+                    list($sCategory) = explode('/', $sColID);
+                    $aTableInfo = lovd_getTableInfoByCategory($sCategory);
+
+                    $sAlterTable = 'ALTER TABLE ' . $aTableInfo['table_sql'] . ' ADD COLUMN `' . $sColID . '` ' . $sColType;
+                    $aSQL = array_merge($aSQL, array(
+                        'INSERT IGNORE INTO ' . TABLE_ACTIVE_COLS . ' VALUES ("' . $sColID . '", "00000", NOW())',
+                        'SET @bExists := (SELECT COUNT(*) FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = "' . $aTableInfo['table_sql'] . '" AND COLUMN_NAME = "' . $sColID . '")',
+                        'SET @sSQL := IF(@bExists > 0, \'SELECT "INFO: Column already exists."\', "' . $sAlterTable . '")',
+                        'PREPARE Statement FROM @sSQL',
+                        'EXECUTE Statement',
+                    ));
+
+                    if (!empty($aTableInfo['table_sql_rev'])) {
+                        $sAlterRevTable = 'ALTER TABLE ' . $aTableInfo['table_sql_rev'] . ' ADD COLUMN `' . $sColID . '` ' . $sColType;
+                        $aSQL = array_merge($aSQL, array(
+                            'SET @bExists := (SELECT COUNT(*) FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = "' . $aTableInfo['table_sql_rev'] . '" AND COLUMN_NAME = "' . $sColID . '")',
+                            'SET @sSQL := IF(@bExists > 0, \'SELECT "INFO: Column already exists."\', "' . $sAlterRevTable . '")',
+                            'PREPARE Statement FROM @sSQL',
+                            'EXECUTE Statement',
+                        ));
+                    }
+                }
+
+                $nColsLeft--;
+                // Make sure we stop looping once we have processed all columns listed in $aColumns.
+                if ($nColsLeft === 0) {
+                    break;
+                }
+            }
+        }
+    }
+
+    return $aSQL;
 }
 
 
@@ -719,14 +869,14 @@ function lovd_getVariantInfo ($sVariant, $sTranscriptID = '')
     } elseif (preg_match('/^([cgmn])\.\(([\-\*]?\d+|\?)([-+](?:\d+|\?))?_([\-\*]?\d+|\?)([-+](?:\d+|\?))?\)_\(([\-\*]?\d+|\?)([-+](?:\d+|\?))?_([\-\*]?\d+|\?)([-+](?:\d+|\?))?\)(d(el|up)|(inv|ins))/', $sVariant, $aRegs)) {
         //                   1 = Prefix; indicates what kind of positions we can expect, and what we'll output.
         //                               2 = Earliest start position, might be a question mark.
-        //                                       3 = Earlier start position intronic offset, if available.
-        //                                                         4 = Latest start position, might be a question mark.
-        //                                                                 5 = Latest start position intronic offset, if available.
-        //                                                                                       6 = Earliest end position, might be a question mark.
-        //                                                                                               7 = Earliest end position intronic offset, if available.
-        //                                                                                                                  8 = Latest end position, might be a question mark.
-        //                                                                                                                          9 = Latest end position intronic offset, if available.
-        //                                                                                                                                              10 = The variant, which we'll use to determine the type.
+        //                                              3 = Earlier start position intronic offset, if available.
+        //                                                                4 = Latest start position, might be a question mark.
+        //                                                                               5 = Latest start position intronic offset, if available.
+        //                                                                                                     6 = Earliest end position, might be a question mark.
+        //                                                                                                                    7 = Earliest end position intronic offset, if available.
+        //                                                                                                                                      8 = Latest end position, might be a question mark.
+        //                                                                                                                                                     9 = Latest end position intronic offset, if available.
+        //                                                                                                                                                                        10 = The variant, which we'll use to determine the type.
 
         list(, $sPrefix, $sStartPositionEarly, $sStartPositionEarlyIntron, $sStartPositionLate, $sStartPositionLateIntron, $sEndPositionEarly, $sEndPositionEarlyIntron, $sEndPositionLate, $sEndPositionLateIntron, $sVariant) = $aRegs;
 
@@ -739,8 +889,12 @@ function lovd_getVariantInfo ($sVariant, $sTranscriptID = '')
                 // Anything not c. or n. is regarded genomic, having a max of 2 positions.
                 // Found more positions? Return false.
                 return false;
-            } elseif (!ctype_digit($sStartPositionEarly) || !ctype_digit($sStartPositionLate) || !ctype_digit($sEndPositionEarly) || !ctype_digit($sEndPositionLate)) {
-                // Non-numeric first character of the positions is also impossible for genomic variants.
+            } elseif (
+                (!ctype_digit($sStartPositionEarly) && $sStartPositionEarly != '?' ) ||
+                (!ctype_digit($sStartPositionLate) && $sStartPositionLate != '?') ||
+                (!ctype_digit($sEndPositionEarly) && $sEndPositionEarly != '?') ||
+                (!ctype_digit($sEndPositionLate) && $sEndPositionLate != '?')) {
+                // Non-numeric first character of the positions (- or *) is also impossible for genomic variants.
                 return false;
             }
         }
@@ -912,6 +1066,72 @@ function lovd_getProjectFile ()
     // You need to use SCRIPT_FILENAME here, because SCRIPT_NAME can lose the .php extension.
     $sProjectFile = $sDir . basename($_SERVER['SCRIPT_FILENAME']); // /install/index.php  or /variants.php
     return $sProjectFile;
+}
+
+
+
+
+
+function lovd_getTableInfoByCategory ($sCategory)
+{
+    // Returns information on the LOVD table that holds the data for this given
+    // custom column category.
+
+    $aTables =
+        array(
+            'Individual' =>
+                array(
+                    'table_sql' => TABLE_INDIVIDUALS,
+                    'table_name' => 'Individual',
+                    'table_alias' => 'i',
+                    'shared' => false,
+                    'unit' => '',
+                ),
+            'Phenotype' =>
+                array(
+                    'table_sql' => TABLE_PHENOTYPES,
+                    'table_name' => 'Phenotype',
+                    'table_alias' => 'p',
+                    'shared' => true,
+                    'unit' => 'disease', // Is also used to determine the key (diseaseid).
+                ),
+            'Screening' =>
+                array(
+                    'table_sql' => TABLE_SCREENINGS,
+                    'table_name' => 'Screening',
+                    'table_alias' => 's',
+                    'shared' => false,
+                    'unit' => '',
+                ),
+            'VariantOnGenome' =>
+                array(
+                    'table_sql' => TABLE_VARIANTS,
+                    'table_name' => 'Genomic Variant',
+                    'table_alias' => 'vog',
+                    'shared' => false,
+                    'unit' => '',
+                ),
+            'VariantOnTranscript' =>
+                array(
+                    'table_sql' => TABLE_VARIANTS_ON_TRANSCRIPTS,
+                    'table_name' => 'Transcript Variant',
+                    'table_alias' => 'vot',
+                    'shared' => true,
+                    'unit' => 'gene', // Is also used to determine the key (geneid).
+                ),
+            'SummaryAnnotation' =>
+                array(
+                    'table_sql' => TABLE_SUMMARY_ANNOTATIONS,
+                    'table_sql_rev' => TABLE_SUMMARY_ANNOTATIONS_REV,
+                    'table_name' => 'Summary Annotations',
+                    'shared' => false,
+                    'unit' => '',
+                ),
+        );
+    if (!array_key_exists($sCategory, $aTables)) {
+        return false;
+    }
+    return $aTables[$sCategory];
 }
 
 
@@ -1639,6 +1859,22 @@ function lovd_php_file ($sURL, $bHeaders = false, $sPOST = false, $aAdditionalHe
 
 
 
+function lovd_php_gethostbyaddr ($sIP)
+{
+    // LOVD's gethostbyaddr implementation, that easily turns off all DNS lookups if offline.
+    if (!defined('OFFLINE_MODE') && OFFLINE_MODE) {
+        // We're offline. Don't do lookups.
+        return $sIP;
+    }
+
+    // Else, do a lookup.
+    return gethostbyaddr($sIP);
+}
+
+
+
+
+
 function lovd_php_htmlspecialchars ($Var)
 {
     // Recursively run htmlspecialchars(), even with unknown depth.
@@ -1942,50 +2178,6 @@ function lovd_showJGNavigation ($aOptions, $sID, $nPrefix = 3)
           $sPrefix . '    $(\'#viewentryOptionsButton_' . $sID . '\').jeegoocontext(\'viewentryMenu_' . $sID . '\', aMenuOptions);' . "\n" .
           $sPrefix . '  });' . "\n" .
           $sPrefix . '</SCRIPT>' . "\n\n");
-}
-
-
-
-
-
-function lovd_soapError ($e, $bHalt = true)
-{
-    // Formats SOAP errors for the error log, and optionally halts the system.
-
-    if (!is_object($e)) {
-        return false;
-    }
-
-    // Try to detect if arguments have been passed, and isolate them from the stacktrace.
-    $sMethod = '';
-    $sArgs = '';
-    foreach ($e->getTrace() as $aTrace) {
-        if (isset($aTrace['function']) && $aTrace['function'] == '__call') {
-            // This is the low level SOAP call. Isolate used method and arguments from here.
-            list($sMethod, $aArgs) = $aTrace['args'];
-            if ($aArgs && is_array($aArgs) && isset($aArgs[0])) {
-                $aArgs = $aArgs[0]; // Not sure why the call's argument are in a sub array, but oh, well.
-                foreach ($aArgs as $sArg => $sValue) {
-                    $sArgs .= (!$sArgs? '' : "\n") . "\t\t" . $sArg . ':' . $sValue;
-                }
-            }
-            break;
-        }
-    }
-
-    // Format the error message.
-    $sError = preg_replace('/^' . preg_quote(rtrim(lovd_getInstallURL(false), '/'), '/') . '/', '', $_SERVER['REQUEST_URI']) . ' returned error in module \'' . $sMethod . '\'.' . "\n" .
-        (!$sArgs? '' : 'Arguments:' . "\n" . $sArgs . "\n") .
-        'Error message:' . "\n" .
-        str_replace("\n", "\n\t\t", $e->__toString());
-
-    // If the system needs to be halted, send it through to lovd_displayError() who will print it on the screen,
-    // write it to the system log, and halt the system. Otherwise, just log it to the database.
-    if ($bHalt) {
-        return lovd_displayError('SOAP', $sError);
-    } else {
-        return lovd_writeLog('Error', 'SOAP', $sError);
-    }
 }
 
 

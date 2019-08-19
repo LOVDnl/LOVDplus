@@ -1,5 +1,6 @@
 .idea
 doc/tex/*.aux
+doc/tex/*.html
 doc/tex/*.log
 doc/tex/*.out
 doc/tex/*.pdf

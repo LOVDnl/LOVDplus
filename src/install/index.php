@@ -151,7 +151,7 @@ if ($_GET['step'] == 0 && defined('NOT_INSTALLED')) {
         }
         $sPHPRequirements .= '&nbsp;&nbsp;<IMG src="gfx/mark_' . (int) $bFunction . '.png" alt="" width="11" height="11">&nbsp;PHP function : ' . $sFunction . '()<BR>';
     }
-    // 2014-05-26; 3.0-11; Switching to PHP's SoapClient class to communicate with Mutalyzer's SOAP service, as their REST/JSON service is subject to change.
+    // Check for required PHP classes (PDO is checked separately).
     foreach ($aRequired['PHP_classes'] as $sClass) {
         $bClass = class_exists($sClass);
         if (!$bClass) {
@@ -506,7 +506,6 @@ if ($_GET['step'] == 2 && defined('NOT_INSTALLED')) {
     // (8) Creating standard LOVD custom columns.
     // AND
     // (9) Activating standard custom columns.
-    require_once ROOT_PATH . 'inc-lib-columns.php';
     $aInstallSQL['Activating LOVD standard custom columns...'] = lovd_getActivateCustomColumnQuery();
 
     if (LOVD_plus) {

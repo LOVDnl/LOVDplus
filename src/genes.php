@@ -4,10 +4,10 @@
  * LEIDEN OPEN VARIATION DATABASE (LOVD)
  *
  * Created     : 2010-12-15
- * Modified    : 2017-10-09
- * For LOVD    : 3.0-20
+ * Modified    : 2018-01-19
+ * For LOVD    : 3.0-21
  *
- * Copyright   : 2004-2017 Leiden University Medical Center; http://www.LUMC.nl/
+ * Copyright   : 2004-2018 Leiden University Medical Center; http://www.LUMC.nl/
  * Programmers : Ivo F.A.C. Fokkema <I.F.A.C.Fokkema@LUMC.nl>
  *               Ivar C. Lugtenburg <I.C.Lugtenburg@LUMC.nl>
  *               Daan Asscheman <D.Asscheman@LUMC.nl>
@@ -149,9 +149,32 @@ if (PATH_COUNT == 1 && !ACTION) {
 
     require ROOT_PATH . 'class/object_genes.php';
     $_DATA = new LOVD_Gene();
-    $_DATA->viewList('Genes', array(), false, false, (bool) ($_AUTH['level'] >= LEVEL_MANAGER));
+    $aVLOptions = array(
+        'show_options' => ($_AUTH['level'] >= LEVEL_MANAGER),
+    );
+    $_DATA->viewList('Genes', $aVLOptions);
 
     $_T->printFooter();
+    exit;
+}
+
+
+
+
+
+if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && !ACTION) {
+    // URL: /genes/2928
+    // Try to find a gene by its HGNC ID and forward.
+
+    if ($sID = $_DB->query('SELECT id FROM ' . TABLE_GENES . ' WHERE id_hgnc = ?', array($_PE[1]))->fetchColumn()) {
+        header('Location: ' . lovd_getInstallURL() . $_PE[0] . '/' . $sID);
+    } else {
+        define('PAGE_TITLE', 'Genes with HGNC ID #' . $_PE[1]);
+        $_T->printHeader();
+        $_T->printTitle();
+        lovd_showInfoTable('Gene not found!', 'stop');
+        $_T->printFooter();
+    }
     exit;
 }
 
@@ -208,7 +231,12 @@ if (PATH_COUNT == 2 && preg_match('/^[a-z][a-z0-9#@-]*$/i', rawurldecode($_PE[1]
     require ROOT_PATH . 'class/object_transcripts.php';
     $_DATA = new LOVD_Transcript();
     $_DATA->setSortDefault('variants');
-    $_DATA->viewList('Transcripts_for_G_VE', 'geneid', true, true);
+    $aVLOptions = array(
+        'cols_to_skip' => array('geneid'),
+        'track_history' => false,
+        'show_navigation' => false,
+    );
+    $_DATA->viewList('Transcripts_for_G_VE', $aVLOptions);
 
     // Disclaimer.
     if ($zData['disclaimer']) {
@@ -312,9 +340,6 @@ if (PATH_COUNT == 1 && ACTION == 'create') {
                 // Now we're still in the <BODY> so the progress bar can add <SCRIPT> tags as much as it wants.
                 flush();
 
-                require ROOT_PATH . 'class/soap_client.php';
-                $_Mutalyzer = new LOVD_SoapClient();
-
                 // Get LRG if it exists
                 $aRefseqGenomic = array();
                 $_BAR->setMessage('Checking for LRG...');
@@ -351,18 +376,14 @@ if (PATH_COUNT == 1 && ACTION == 'create') {
                     $sRefseqUD = $_SETT['human_builds'][$_CONF['refseq_build']]['ncbi_sequences'][$sChromosome];
                 } else {
                     // Get UD from mutalyzer.
-                    try {
-                        $sRefseqUD = lovd_getUDForGene($_CONF['refseq_build'], $sSymbol);
-                        if ($sRefseqUD === '') {
-                            // Function may return an empty string. This is not a SOAP error, but still an error. For instance a type of gene we don't support.
-                            // To prevent further problems (getting transcripts, let's handle this nicely, shall we?
-                            $_BAR->setMessage('Failed to retrieve gene reference sequence. This could be a temporary error, but it is likely that this gene is not supported by LOVD.', 'done');
-                            $_BAR->setMessageVisibility('done', true);
-                            die('</BODY>' . "\n" .
-                                '</HTML>' . "\n");
-                        }
-                    } catch (SoapFault $e) {
-                        lovd_soapError($e);
+                    $sRefseqUD = lovd_getUDForGene($_CONF['refseq_build'], $sSymbol);
+                    if (!$sRefseqUD) {
+                        // Function may return false or an empty string. For instance a type of gene we don't support.
+                        // To prevent further problems (getting transcripts), let's handle this nicely, shall we?
+                        $_BAR->setMessage('Failed to retrieve gene reference sequence. This could be a temporary error, but it is likely that this gene is not supported by LOVD.', 'done');
+                        $_BAR->setMessageVisibility('done', true);
+                        die('</BODY>' . "\n" .
+                            '</HTML>' . "\n");
                     }
                 }
 
@@ -703,13 +724,9 @@ if (PATH_COUNT == 2 && preg_match('/^[a-z][a-z0-9#@-]*$/i', rawurldecode($_PE[1]
                             );
 
             if (empty($zData['refseq_UD'])) {
-                require ROOT_PATH . 'class/soap_client.php';
-                $_Mutalyzer = new LOVD_SoapClient();
-                try {
-                    $sRefseqUD = lovd_getUDForGene($_CONF['refseq_build'], $sID);
-                    $_POST['refseq_UD'] = $sRefseqUD;
-                    $aFields[] = 'refseq_UD';
-                } catch (SoapFault $e) {} // Silent error.
+                $sRefseqUD = lovd_getUDForGene($_CONF['refseq_build'], $sID);
+                $_POST['refseq_UD'] = $sRefseqUD;
+                $aFields[] = 'refseq_UD';
             }
 
             // Prepare values.
@@ -1685,7 +1702,11 @@ if (PATH_COUNT == 2 && preg_match('/^[a-z][a-z0-9#@-]*$/i', rawurldecode($_PE[1]
         }
         $_GET['page_size'] = 10;
         $_DATA->setRowLink('Genes_AuthorizeUser', 'javascript:lovd_passAndRemoveViewListRow("{{ViewListID}}", "{{ID}}", {id: "{{ID}}", name: "{{zData_name}}", level: "{{zData_level}}"}, lovd_authorizeUser); return false;');
-        $_DATA->viewList('Genes_AuthorizeUser', array('id', 'status_', 'last_login_', 'created_date_'), true); // Create known viewListID for lovd_unauthorizeUser().
+        $aVLOptions = array(
+            'cols_to_skip' => array('id', 'status_', 'last_login_', 'created_date_'),
+            'track_history' => false,
+        );
+        $_DATA->viewList('Genes_AuthorizeUser', $aVLOptions); // Create known viewListID for lovd_unauthorizeUser().
 
 
 

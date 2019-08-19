@@ -4,8 +4,8 @@
  * LEIDEN OPEN VARIATION DATABASE (LOVD)
  *
  * Created     : 2009-10-19
- * Modified    : 2017-10-17
- * For LOVD    : 3.0-20
+ * Modified    : 2017-12-04
+ * For LOVD    : 3.0-21
  *
  * Copyright   : 2004-2017 Leiden University Medical Center; http://www.LUMC.nl/
  * Programmers : Ivo F.A.C. Fokkema <I.F.A.C.Fokkema@LUMC.nl>
@@ -63,11 +63,9 @@ if ($_SERVER['HTTP_HOST'] == 'localhost') {
 if ((!empty($_SERVER['HTTP_X_FORWARDED_PROTO']) && $_SERVER['HTTP_X_FORWARDED_PROTO'] == 'https') || (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] != 'off') || !empty($_SERVER['SSL_PROTOCOL'])) {
     // We're using SSL!
     define('SSL', true);
-    define('SSL_PROTOCOL', (!isset($_SERVER['SSL_PROTOCOL'])? '' : $_SERVER['SSL_PROTOCOL']));
     define('PROTOCOL', 'https://');
 } else {
     define('SSL', false);
-    define('SSL_PROTOCOL', '');
     define('PROTOCOL', 'http://');
 }
 
@@ -79,7 +77,10 @@ $aFormats = array('text/html', 'text/plain'); // Key [0] is default. Other value
 if (lovd_getProjectFile() == '/api.php') {
     $aFormats[] = 'text/bed';
 } elseif (lovd_getProjectFile() == '/import.php' && substr($_SERVER['QUERY_STRING'], 0, 25) == 'autoupload_scheduled_file') {
-    $_GET['format'] = 'text/plain';
+    // Set format to text/plain only when none is requested.
+    if (empty($_GET['format']) || !in_array($_GET['format'], $aFormats)) {
+        $_GET['format'] = 'text/plain';
+    }
 }
 if (!empty($_GET['format']) && in_array($_GET['format'], $aFormats)) {
     define('FORMAT', $_GET['format']);
@@ -149,7 +150,7 @@ $aRequired =
 $_SETT = array(
                 'system' =>
                      array(
-                            'version' => '3.0-20a',
+                            'version' => '3.0-21',
                           ),
                 'user_levels' =>
                      array(
@@ -308,6 +309,8 @@ $_SETT = array(
                             'hg18' =>
                                      array(
                                             'ncbi_name'      => 'Build 36.1',
+                                         // FIXME: This information is also stored in the chromosomes table.
+                                         // Remove it from here?
                                             'ncbi_sequences' =>
                                                      array(
                                                             '1'  => 'NC_000001.9',
@@ -340,6 +343,8 @@ $_SETT = array(
                             'hg19' =>
                                      array(
                                             'ncbi_name'      => 'GRCh37',
+                                         // FIXME: This information is also stored in the chromosomes table.
+                                         // Remove it from here?
                                             'ncbi_sequences' =>
                                                      array(
                                                             '1'  => 'NC_000001.10',
@@ -373,6 +378,8 @@ $_SETT = array(
                             'hg38' =>
                                      array(
                                             'ncbi_name'      => 'GRCh38',
+                                         // FIXME: This information is also stored in the chromosomes table.
+                                         // Remove it from here?
                                             'ncbi_sequences' =>
                                                      array(
                                                             '1'  => 'NC_000001.11',
@@ -842,6 +849,8 @@ if (!defined('NOT_INSTALLED')) {
     }
 
     // Define $_PE ($_PATH_ELEMENTS) and CURRENT_PATH.
+    // FIXME: Running lovd_cleanDirName() on the entire URI causes it to run also on the arguments.
+    //  If there are arguments with ../ in there, this will take effect and arguments or even the path itself is eaten.
     $sPath = preg_replace('/^' . preg_quote(lovd_getInstallURL(false), '/') . '/', '', lovd_cleanDirName(rawurldecode($_SERVER['REQUEST_URI']))); // 'login' or 'genes?create' or 'users/00001?edit'
     $aPath = explode('?', $sPath); // Cut off the Query string, that will be handled later.
     $_PE = explode('/', rtrim($aPath[0], '/')); // array('login') or array('genes') or array('users', '00001')
@@ -890,6 +899,8 @@ if (!defined('NOT_INSTALLED')) {
         } else {
             $_SETT['admin'] = array('name' => '', 'email' => ''); // We must define the keys first, or the order of the keys will not be correct.
             list($_SETT['admin']['name'], $_SETT['admin']['email']) = $_DB->query('SELECT name, email FROM ' . TABLE_USERS . ' WHERE level = ? AND id > 0 ORDER BY id ASC', array(LEVEL_ADMIN))->fetchRow();
+            // Add a cleaned email address, because perhaps the admin has multiple addresses.
+            $_SETT['admin']['address_formatted'] = $_SETT['admin']['name'] . ' <' . str_replace(array("\r\n", "\r", "\n"), '>, <', trim($_SETT['admin']['email'])) . '>';
         }
 
         // Switch gene.
