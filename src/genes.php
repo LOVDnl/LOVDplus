@@ -4,8 +4,8 @@
  * LEIDEN OPEN VARIATION DATABASE (LOVD)
  *
  * Created     : 2010-12-15
- * Modified    : 2017-03-06
- * For LOVD    : 3.0-19
+ * Modified    : 2017-10-09
+ * For LOVD    : 3.0-20
  *
  * Copyright   : 2004-2017 Leiden University Medical Center; http://www.LUMC.nl/
  * Programmers : Ivo F.A.C. Fokkema <I.F.A.C.Fokkema@LUMC.nl>
@@ -143,7 +143,7 @@ if (PATH_COUNT == 1 && !ACTION) {
         define('FORMAT_ALLOW_TEXTPLAIN', true);
     }
 
-    define('PAGE_TITLE', 'View all genes');
+    define('PAGE_TITLE', 'All genes');
     $_T->printHeader();
     $_T->printTitle();
 
@@ -164,7 +164,7 @@ if (PATH_COUNT == 2 && preg_match('/^[a-z][a-z0-9#@-]*$/i', rawurldecode($_PE[1]
     // View specific entry.
 
     $sID = rawurldecode($_PE[1]);
-    define('PAGE_TITLE', 'View ' . $sID . ' gene homepage');
+    define('PAGE_TITLE', $sID . ' gene homepage');
     $_T->printHeader();
     $_T->printTitle();
     lovd_printGeneHeader();
@@ -560,15 +560,7 @@ if (PATH_COUNT == 1 && ACTION == 'create') {
                                 $aSuccessTranscripts[] = $sTranscript;
 
                                 // Turn off the MAPPING_DONE flags for variants within range of this transcript, so that automatic mapping will pick them up again.
-                                $q = $_DB->query('UPDATE ' . TABLE_VARIANTS . ' SET mapping_flags = mapping_flags & ~' . MAPPING_DONE . ' WHERE chromosome = ? AND (' .
-                                                 '(position_g_start BETWEEN ? AND ?) OR ' .
-                                                 '(position_g_end   BETWEEN ? AND ?) OR ' .
-                                                 '(position_g_start < ? AND position_g_end > ?))',
-                                                 array($_POST['chromosome'], $aTranscriptPositions['chromTransStart'], $aTranscriptPositions['chromTransEnd'], $aTranscriptPositions['chromTransStart'], $aTranscriptPositions['chromTransEnd'], $aTranscriptPositions['chromTransStart'], $aTranscriptPositions['chromTransEnd']));
-                                if ($q->rowCount()) {
-                                    // If we have changed variants, turn on mapping immediately.
-                                    $_SESSION['mapping']['time_complete'] = 0;
-                                }
+                                $_DATA['Transcript']->turnOffMappingDone($_POST['chromosome'], $aTranscriptPositions);
                             }
                         }
                     }
@@ -1111,7 +1103,7 @@ if (PATH_COUNT == 3 && preg_match('/^[a-z][a-z0-9#@-]*$/i', rawurldecode($_PE[1]
     // View enabled columns for this gene.
 
     $sID = rawurldecode($_PE[1]);
-    define('PAGE_TITLE', 'View enabled custom data columns for gene ' . $sID);
+    define('PAGE_TITLE', 'Enabled custom data columns for gene ' . $sID);
     $_T->printHeader();
     $_T->printTitle();
 
@@ -1148,7 +1140,7 @@ if (PATH_COUNT > 3 && preg_match('/^[a-z][a-z0-9#@-]*$/i', rawurldecode($_PE[1])
     $aCol = $_PE;
     unset($aCol[0], $aCol[1], $aCol[2]); // 'genes/DMD/columns';
     $sColumnID = implode('/', $aCol);
-    define('PAGE_TITLE', 'View settings for custom data column ' . $sColumnID . ' for ' . $sUnit . ' ' . $sParentID);
+    define('PAGE_TITLE', 'Settings for custom data column ' . $sColumnID . ' for ' . $sUnit . ' ' . $sParentID);
     $_T->printHeader();
     $_T->printTitle();
 

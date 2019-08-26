@@ -4,8 +4,8 @@
  * LEIDEN OPEN VARIATION DATABASE (LOVD)
  *
  * Created     : 2009-10-19
- * Modified    : 2017-06-19
- * For LOVD    : 3.0-19
+ * Modified    : 2017-10-17
+ * For LOVD    : 3.0-20
  *
  * Copyright   : 2004-2017 Leiden University Medical Center; http://www.LUMC.nl/
  * Programmers : Ivo F.A.C. Fokkema <I.F.A.C.Fokkema@LUMC.nl>
@@ -70,6 +70,9 @@ if ((!empty($_SERVER['HTTP_X_FORWARDED_PROTO']) && $_SERVER['HTTP_X_FORWARDED_PR
     define('SSL_PROTOCOL', '');
     define('PROTOCOL', 'http://');
 }
+
+// Prevent some troubles with the menu or lovd_getProjectFile() when the URL contains double slashes or backslashes.
+$_SERVER['SCRIPT_NAME'] = lovd_cleanDirName(str_replace('\\', '/', $_SERVER['SCRIPT_NAME']));
 
 // Our output formats: text/html by default.
 $aFormats = array('text/html', 'text/plain'); // Key [0] is default. Other values may not always be allowed. It is checked in the Template class' printHeader() and in Objects::viewList().
@@ -146,7 +149,7 @@ $aRequired =
 $_SETT = array(
                 'system' =>
                      array(
-                            'version' => '3.0-19',
+                            'version' => '3.0-20a',
                           ),
                 'user_levels' =>
                      array(
@@ -173,6 +176,7 @@ $_SETT = array(
                             'paternal' => 'Imprinted, paternal'
                           ),
                 'var_effect' =>
+                (LOVD_plus?
                      array(
                             0 => 'Not curated',
                             5 => 'VUS',
@@ -180,6 +184,28 @@ $_SETT = array(
                             7 => 'Likely pathogenic',
                             3 => 'Likely benign',
                             1 => 'Benign',
+                          ) :
+                    array(
+                            0 => 'Not classified', // Submitter cannot select this.
+                            9 => 'Affects function',
+                            8 => 'Affects function, not associated with individual\'s disease phenotype',
+                            6 => 'Affects function, not associated with any known disease phenotype',
+                            7 => 'Probably affects function',
+                            3 => 'Probably does not affect function',
+                            1 => 'Does not affect function',
+                            5 => 'Effect unknown',
+                          )),
+                'var_effect_api' =>
+                     array(
+                            // The API requires different, concise but clear, values.
+                            0 => 'notClassified',
+                            9 => 'functionAffected',
+                            8 => 'notThisDisease',
+                            6 => 'notAnyDisease',
+                            7 => 'functionProbablyAffected',
+                            3 => 'functionProbablyNotAffected',
+                            1 => 'functionNotAffected',
+                            5 => 'unknown',
                           ),
                 'var_effect_short' =>
                     array(
@@ -756,9 +782,6 @@ if (defined('MISSING_CONF') || defined('MISSING_STAT') || !preg_match('/^([1-9]\
     // Store additional version information.
     list(, $_STAT['tree'],, $_STAT['build']) = $aRegsVersion;
 }
-
-// Prevent some troubles with the menu when the URL contains double slashes.
-$_SERVER['SCRIPT_NAME'] = lovd_cleanDirName($_SERVER['SCRIPT_NAME']);
 
 
 

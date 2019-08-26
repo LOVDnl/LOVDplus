@@ -4,8 +4,8 @@
  * LEIDEN OPEN VARIATION DATABASE (LOVD)
  *
  * Created     : 2010-07-27
- * Modified    : 2017-03-13
- * For LOVD    : 3.0-19
+ * Modified    : 2017-10-06
+ * For LOVD    : 3.0-20
  *
  * Copyright   : 2004-2017 Leiden University Medical Center; http://www.LUMC.nl/
  * Programmers : Ivo F.A.C. Fokkema <I.F.A.C.Fokkema@LUMC.nl>
@@ -53,7 +53,7 @@ if (PATH_COUNT == 1 && !ACTION) {
         $sGene = $_GET['search_genes_'];
     }
 
-    define('PAGE_TITLE', 'View all diseases' . (isset($sGene)? ' associated with gene ' . $sGene : ''));
+    define('PAGE_TITLE', 'All diseases' . (isset($sGene)? ' associated with gene ' . $sGene : ''));
     $_T->printHeader();
     $_T->printTitle();
 
@@ -85,7 +85,7 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && !ACTION) {
     // View specific entry.
 
     $nID = sprintf('%05d', $_PE[1]);
-    define('PAGE_TITLE', 'View disease #' . $nID);
+    define('PAGE_TITLE', 'Disease #' . $nID);
     $_T->printHeader();
     $_T->printTitle();
 
@@ -129,7 +129,7 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && !ACTION) {
         require ROOT_PATH . 'class/object_individuals.php';
         $_DATA = new LOVD_Individual();
         $_DATA->setSortDefault('id');
-        $_DATA->viewList('Individuals_for_D_VE', array('panelid', 'diseaseids'), true, false, (bool) ($_AUTH['level'] >= LEVEL_MANAGER), false, true);
+        $_DATA->viewList('Individuals_for_D_VE', array('panelid', 'diseaseids'), true, false, (bool) ($_AUTH['level'] >= LEVEL_MANAGER), false, array('find_and_replace' => true));
     }
 
     $_T->printFooter();
@@ -149,7 +149,7 @@ if (PATH_COUNT == 2 && !ctype_digit($_PE[1]) && !ACTION) {
     $aDiseases = $_DB->query('SELECT id FROM ' . TABLE_DISEASES . ' WHERE symbol = ?', array($sID))->fetchAllColumn();
     $n = count($aDiseases);
     if (!$n) {
-        define('PAGE_TITLE', 'View disease');
+        define('PAGE_TITLE', 'Disease');
         $_T->printHeader();
         $_T->printTitle();
         lovd_showInfoTable('No such ID!', 'stop');
@@ -561,7 +561,7 @@ if (PATH_COUNT == 3 && ctype_digit($_PE[1]) && $_PE[2] == 'columns' && !ACTION) 
     // View enabled columns for this disease.
 
     $nID = sprintf('%05d', $_PE[1]);
-    define('PAGE_TITLE', 'View enabled custom data columns for disease #' . $nID);
+    define('PAGE_TITLE', 'Enabled custom data columns for disease #' . $nID);
     $_T->printHeader();
     $_T->printTitle();
 
@@ -598,7 +598,7 @@ if (PATH_COUNT > 3 && ctype_digit($_PE[1]) && $_PE[2] == 'columns' && !ACTION) {
     $aCol = $_PE;
     unset($aCol[0], $aCol[1], $aCol[2]); // 'diseases/00001/columns';
     $sColumnID = implode('/', $aCol);
-    define('PAGE_TITLE', 'View settings for custom data column ' . $sColumnID . ' for ' . $sUnit . ' #' . $sParentID);
+    define('PAGE_TITLE', 'Settings for custom data column ' . $sColumnID . ' for ' . $sUnit . ' #' . $sParentID);
     $_T->printHeader();
     $_T->printTitle();
 
