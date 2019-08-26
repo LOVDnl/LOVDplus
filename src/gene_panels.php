@@ -4,10 +4,10 @@
  * LEIDEN OPEN VARIATION DATABASE (LOVD)
  *
  * Created     : 2016-03-01
- * Modified    : 2019-02-26
- * For LOVD    : 3.0-18
+ * Modified    : 2019-08-19
+ * For LOVD    : 3.0-21
  *
- * Copyright   : 2004-2018 Leiden University Medical Center; http://www.LUMC.nl/
+ * Copyright   : 2004-2019 Leiden University Medical Center; http://www.LUMC.nl/
  * Programmers : Anthony Marty <anthony.marty@unimelb.edu.au>
  *               Ivo F.A.C. Fokkema <I.F.A.C.Fokkema@LUMC.nl>
  *               John-Paul Plazzer <johnpaul.plazzer@gmail.com>
@@ -178,7 +178,7 @@ if (PATH_COUNT == 1 && !ACTION) {
 
     require ROOT_PATH . 'class/object_gene_panels.php';
     $_DATA = new LOVD_GenePanel();
-    $_DATA->viewList('GenePanel', array(), false, false, true);
+    $_DATA->viewList('GenePanel', array('show_options' => true));
 
     $_T->printFooter();
     exit;
@@ -231,7 +231,7 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && !ACTION) {
           '        <LI class="icon"><A click="lovd_AJAX_viewListSubmit(\'' . $sGPGViewListID . '\', function(){lovd_AJAX_viewListDownload(\'' . $sGPGViewListID . '\', true);});"><SPAN class="icon" style="background-image: url(gfx/menu_save.png);"></SPAN>Download gene panel\'s genes</A></LI>' . "\n" .
           '      </UL>' . "\n\n");
     $_DATA->setRowLink($sGPGViewListID, CURRENT_PATH . '/{{geneid}}');
-    $_DATA->viewList($sGPGViewListID, array(), false, false, true);
+    $_DATA->viewList($sGPGViewListID, array('show_options' => true));
 
     $_T->printFooter();
     exit;
@@ -968,7 +968,7 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && ACTION == 'manage_genes') {
     $_GET['page_size'] = 10;
     $sViewListID = 'GenePanels_ManageGenes'; // Create known viewListID for the JS functions().
     $_DATA->setRowLink($sViewListID, 'javascript:lovd_addGene(\'{{ViewListID}}\', \'{{ID}}\', \'{{zData_transcripts_HTML}}\'); return false;');
-    $_DATA->viewList($sViewListID, array(), true);
+    $_DATA->viewList($sViewListID, array('track_history' => false));
 
 
 
@@ -1452,7 +1452,7 @@ if (PATH_COUNT == 1 && ACTION == 'add') {
     $_DATA = new LOVD_GenePanel();
     // Set the row link URL to point to the gene panel genes management along with the required $_GET values.
     $_DATA->setRowLink('GenePanelSelect', 'javascript:window.location.href=\'' . lovd_getInstallURL() . 'gene_panels/{{id}}?manage_genes&select_genes_from=' . $sViewListID . '\'; return false');
-    $_DATA->viewList('GenePanelSelect', array(), false, false, true);
+    $_DATA->viewList('GenePanelSelect', array('show_options' => true));
 
     $_T->printFooter();
     exit;

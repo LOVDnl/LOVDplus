@@ -4,10 +4,10 @@
  * LEIDEN OPEN VARIATION DATABASE (LOVD)
  *
  * Created     : 2016-03-01
- * Modified    : 2019-03-13
- * For LOVD    : 3.0-18
+ * Modified    : 2019-08-19
+ * For LOVD    : 3.0-21
  *
- * Copyright   : 2004-2018 Leiden University Medical Center; http://www.LUMC.nl/
+ * Copyright   : 2004-2019 Leiden University Medical Center; http://www.LUMC.nl/
  * Programmers : Anthony Marty <anthony.marty@unimelb.edu.au>
  *               Ivo F.A.C. Fokkema <I.F.A.C.Fokkema@LUMC.nl>
  *
@@ -165,7 +165,7 @@ class LOVD_GenePanel extends LOVD_Object {
 
 
 
-    function checkFields ($aData, $zData = false)
+    function checkFields ($aData, $zData = false, $aOptions = array())
     {
         // Checks fields before submission of data.
         global $_DB;
@@ -177,7 +177,7 @@ class LOVD_GenePanel extends LOVD_Object {
                 'description',
             );
 
-        parent::checkFields($aData);
+        parent::checkFields($aData, $zData, $aOptions);
         lovd_checkXSS();
     }
 

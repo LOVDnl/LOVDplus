@@ -4,10 +4,10 @@
  * LEIDEN OPEN VARIATION DATABASE (LOVD)
  *
  * Created     : 2010-12-20
- * Modified    : 2017-09-28
- * For LOVD    : 3.0-20
+ * Modified    : 2018-01-31
+ * For LOVD    : 3.0-21
  *
- * Copyright   : 2004-2017 Leiden University Medical Center; http://www.LUMC.nl/
+ * Copyright   : 2004-2018 Leiden University Medical Center; http://www.LUMC.nl/
  * Programmers : Ivar C. Lugtenburg <I.C.Lugtenburg@LUMC.nl>
  *               Ivo F.A.C. Fokkema <I.F.A.C.Fokkema@LUMC.nl>
  *               Daan Asscheman <D.Asscheman@LUMC.nl>
@@ -95,9 +95,6 @@ class LOVD_GenomeVariant extends LOVD_Custom {
                                           'e.name AS effect, ' .
                                           'uo.name AS owned_by_, ' .
                                           'CONCAT_WS(";", uo.id, uo.name, uo.email, uo.institute, uo.department, IFNULL(uo.countryid, "")) AS _owner, ' .
-                                ($_AUTH['level'] >= LEVEL_COLLABORATOR?
-                                          'CASE vog.statusid WHEN ' . STATUS_MARKED . ' THEN "marked" WHEN ' . STATUS_HIDDEN .' THEN "del" WHEN ' . STATUS_PENDING .' THEN "del" END AS class_name,'
-                                        : '') .
                                           'ds.name AS status';
         $this->aSQLViewList['FROM']     = TABLE_VARIANTS . ' AS vog ' .
                                 // Added so that Curators and Collaborators can view the variants for which they have viewing rights in the genomic variant viewlist.
@@ -120,8 +117,8 @@ class LOVD_GenomeVariant extends LOVD_Custom {
                         'individualid_' => 'Individual ID',
                         'chromosome' => 'Chromosome',
                         'allele_' => 'Allele',
-                        'effect_reported' => 'Affects function (reported)',
-                        'effect_concluded' => 'Affects function (concluded)',
+                        'effect_reported' => 'Affects function (as reported)',
+                        'effect_concluded' => 'Affects function (by curator)',
                         'curation_status_' => 'Curation status',
                         'confirmation_status_' => 'Confirmation status',
                       ),
@@ -153,8 +150,8 @@ class LOVD_GenomeVariant extends LOVD_Custom {
                         'effect' => array(
                                     'view' => array('Effect', 70),
                                     'db'   => array('e.name', 'ASC', true),
-                                    'legend' => array('The variant\'s effect on a protein\'s function, in the format Reported/Curator concluded; ranging from \'+\' (variant affects function) to \'-\' (does not affect function).',
-                                                      'The variant\'s effect on a protein\'s function, in the format Reported/Curator concluded; \'+\' indicating the variant affects function, \'+?\' probably affects function, \'+*\' affects function, not associated with individual\'s disease phenotype, \'#\' affects function, not associated with any known disease phenotype, \'-\' does not affect function, \'-?\' probably does not affect function, \'?\' effect unknown, \'.\' effect not classified.')),
+                                    'legend' => array('The variant\'s effect on a protein\'s function, in the format \'R/C\' where R is the value ' . (LOVD_plus? 'initially reported and C is the value finally concluded' : 'reported by the source and C is the value concluded by the curator') . '; values ranging from \'+\' (variant affects function) to \'-\' (does not affect function).',
+                                                      'The variant\'s effect on a protein\'s function, in the format \'R/C\' where R is the value ' . (LOVD_plus? 'initially reported and C is the value finally concluded' : 'reported by the source and C is the value concluded by the curator') . '; \'+\' indicating the variant affects function, \'+?\' probably affects function, \'+*\' affects function, not associated with individual\'s disease phenotype, \'#\' affects function, not associated with any known disease phenotype, \'-\' does not affect function, \'-?\' probably does not affect function, \'?\' effect unknown, \'.\' effect not classified.')),
                         'allele_' => array(
                                     'view' => array('Allele', 120),
                                     'db'   => array('a.name', 'ASC', true),
@@ -220,7 +217,7 @@ class LOVD_GenomeVariant extends LOVD_Custom {
 
 
 
-    function checkFields ($aData, $zData = false)
+    function checkFields ($aData, $zData = false, $aOptions = array())
     {
         global $_AUTH, $_SETT;
 
@@ -245,7 +242,7 @@ class LOVD_GenomeVariant extends LOVD_Custom {
                 unset($aData['effect_reported']);
             } elseif (isset($aData['statusid']) && $aData['statusid'] == STATUS_OK) {
                 // Show error for curator/manager trying to publish variant without effect.
-                lovd_errorAdd('effect_reported', 'The \'Affects function (reported)\' field ' .
+                lovd_errorAdd('effect_reported', 'The \'Affects function (as reported)\' field ' .
                     'may not be "' . $_SETT['var_effect'][0] . '" when variant status is "' . $_SETT['data_status'][STATUS_OK] . '".');
             }
         }
@@ -266,7 +263,7 @@ class LOVD_GenomeVariant extends LOVD_Custom {
             }
         }
 
-        parent::checkFields($aData);
+        parent::checkFields($aData, $zData, $aOptions);
 
         lovd_checkXSS();
     }
@@ -314,10 +311,18 @@ class LOVD_GenomeVariant extends LOVD_Custom {
             $aFormStatus = array();
         }
 
+        $aTranscriptEffects = array();
         $aTranscriptsForm = array();
-        if (!empty($_DATA['Transcript'])) {
+        if (is_array($_DATA) && !empty($_DATA['Transcript'])) {
             foreach (array_keys($_DATA['Transcript']) as $sGene) {
                 $aTranscriptsForm = array_merge($aTranscriptsForm, $_DATA['Transcript'][$sGene]->getForm());
+
+                // Collect variant effect for all transcripts in $aTranscriptEffects.
+                foreach (array_keys($_DATA['Transcript'][$sGene]->aTranscripts) as $sTranscript) {
+                    if (isset($zData[$sTranscript . '_effectid'])) {
+                        $aTranscriptEffects[$sTranscript] = $zData[$sTranscript . '_effectid'];
+                    }
+                }
             }
         }
 
@@ -342,8 +347,8 @@ class LOVD_GenomeVariant extends LOVD_Custom {
                       ),
                  $this->buildForm(),
                  array(
-                        array('Affects function (reported)', '', 'select', 'effect_reported', 1, $_SETT['var_effect'], false, false, false),
-            'effect' => array('Affects function (concluded)', '', 'select', 'effect_concluded', 1, $_SETT['var_effect'], false, false, false),
+   'effect_reported' => array('Affects function (as reported)', '', 'select', 'effect_reported', 1, $_SETT['var_effect'], false, false, false),
+  'effect_concluded' => array('Affects function (by curator)', '', 'select', 'effect_concluded', 1, $_SETT['var_effect'], false, false, false),
                         'hr',
       'general_skip' => 'skip',
            'general' => array('', '', 'print', '<B>General information</B>'),
@@ -360,7 +365,63 @@ class LOVD_GenomeVariant extends LOVD_Custom {
             unset($this->aFormData['authorization']);
         }
         if ($_AUTH['level'] < LEVEL_CURATOR) {
-            unset($this->aFormData['effect'], $this->aFormData['general_skip'], $this->aFormData['general'], $this->aFormData['general_hr1'], $this->aFormData['owner'], $this->aFormData['status'], $this->aFormData['general_hr2']);
+            unset($this->aFormData['effect_concluded'], $this->aFormData['general_skip'], $this->aFormData['general'], $this->aFormData['general_hr1'], $this->aFormData['owner'], $this->aFormData['status'], $this->aFormData['general_hr2']);
+        } elseif (is_array($_DATA) && !empty($_DATA['Transcript'])) {
+            // Determine whether to show the `effect_concluded` field.
+            // When a variant is linked to one or more transcripts, its effect
+            //  on the genomic level will be determined by the "worst" effect on the
+            //  transcript levels. Only if the currently set effect is non-concordant
+            //  with the current effects on the transcripts and not set to
+            //  'not classifed' will the form field be shown, so that the user
+            //  must manually correct the current value.
+            $bHideEffectConcluded = false;
+            $nVOGEffectConcluded = intval($zData['effectid']{1});
+            if ($nVOGEffectConcluded === 0) {
+                // Set to "Not classified", we'll fill it in.
+                $bHideEffectConcluded = true;
+            } else {
+                $nMaxEffectReported = max(array_map(function ($sEffectID) {
+                    return intval($sEffectID{1});
+                }, $aTranscriptEffects));
+                if ($nVOGEffectConcluded == $nMaxEffectReported) {
+                    $bHideEffectConcluded = true;
+                }
+            }
+
+            if ($bHideEffectConcluded) {
+                $this->aFormData['effect_concluded'] = array(
+                    $this->aFormData['effect_concluded'][0], '', 'note',
+                    'Effect on genomic level will be determined by the variant\'s effect on transcript(s).');
+            }
+        }
+
+        // Determine whether to show the `effect_reported` field.
+        if (is_array($_DATA) && !empty($_DATA['Transcript'])) {
+            // When a variant is linked to one or more transcripts, its effect
+            //  on the genomic level will be determined by the "worst" effect on the
+            //  transcript levels. Only if the currently set effect is non-concordant
+            //  with the current effects on the transcripts and not set to
+            //  'not classifed' will the form field be shown, so that the user
+            //  must manually correct the current value.
+            $bHideEffectReported = false;
+            $nVOGEffectReported = intval($zData['effectid']{0});
+            if ($nVOGEffectReported === 0) {
+                // Set to "Not classified", we'll fill it in.
+                $bHideEffectReported = true;
+            } else {
+                $nMaxEffectReported = max(array_map(function ($sEffectID) {
+                    return intval($sEffectID{0});
+                }, $aTranscriptEffects));
+                if ($nVOGEffectReported == $nMaxEffectReported) {
+                    $bHideEffectReported = true;
+                }
+            }
+
+            if ($bHideEffectReported) {
+                $this->aFormData['effect_reported'] = array(
+                    $this->aFormData['effect_reported'][0], '', 'note',
+                    'Effect on genomic level will be determined by the variant\'s effect on transcript(s).');
+            }
         }
 
         return parent::getForm();

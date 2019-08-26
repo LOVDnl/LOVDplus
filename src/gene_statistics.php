@@ -4,10 +4,10 @@
  * LEIDEN OPEN VARIATION DATABASE (LOVD)
  *
  * Created     : 2016-02-25
- * Modified    : 2016-03-24
- * For LOVD    : 3.0-13
+ * Modified    : 2019-08-19
+ * For LOVD    : 3.0-21
  *
- * Copyright   : 2004-2016 Leiden University Medical Center; http://www.LUMC.nl/
+ * Copyright   : 2004-2019 Leiden University Medical Center; http://www.LUMC.nl/
  * Programmers : Anthony Marty <anthony.marty@unimelb.edu.au>
  *               Ivo F.A.C. Fokkema <I.F.A.C.Fokkema@LUMC.nl>
  *
@@ -209,7 +209,7 @@ if (PATH_COUNT == 1 && !ACTION) {
         <LI class="icon"><A click="lovd_AJAX_viewListSubmit(\'' . $sViewListID . '\', function(){window.location.href=\'' . lovd_getInstallURL() . 'gene_panels?add&select_genes_from=' . $sViewListID . '\'; return false;});"><SPAN class="icon" style="background-image: url(gfx/menu_plus.png);"></SPAN>Add selected genes to gene panel</A></LI>
         <LI class="icon"><A href="' . CURRENT_PATH . '?import"><SPAN class="icon" style="background-image: url(gfx/menu_import.png);"></SPAN>Import gene statistics</A></LI>
       </UL>' . "\n\n");
-    if (!$_DATA->viewList($sViewListID, array(), false, false, (bool) ($_AUTH['level'] >= LEVEL_SUBMITTER))) {
+    if (!$_DATA->viewList($sViewListID, array('show_options' => (bool) ($_AUTH['level'] >= LEVEL_SUBMITTER)))) {
         lovd_showInfoTable('No gene statistics have been imported into this database. Please <A href="gene_statistics?import">click here</A> to import them.', 'information');
     }
 
