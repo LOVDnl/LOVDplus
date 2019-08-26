@@ -4,10 +4,10 @@
  * LEIDEN OPEN VARIATION DATABASE (LOVD)
  *
  * Created     : 2009-10-21
- * Modified    : 2018-01-26
- * For LOVD    : 3.0-21
+ * Modified    : 2019-07-25
+ * For LOVD    : 3.0-22
  *
- * Copyright   : 2004-2018 Leiden University Medical Center; http://www.LUMC.nl/
+ * Copyright   : 2004-2019 Leiden University Medical Center; http://www.LUMC.nl/
  * Programmers : Ivo F.A.C. Fokkema <I.F.A.C.Fokkema@LUMC.nl>
  *               Ivar C. Lugtenburg <I.C.Lugtenburg@LUMC.nl>
  *               Daan Asscheman <D.Asscheman@LUMC.nl>
@@ -667,6 +667,64 @@ class LOVD_Object {
 
 
 
+    function formatArrayToTable ($aData, $nNesting = 0)
+    {
+        // Formats an Array to an data table, used for JSON data to be formatted in an VE.
+
+        if (!is_array($aData) || !$aData) {
+            return '(no data)';
+        }
+
+        $s = '<TABLE class="S11" width="100%">';
+        foreach ($aData as $sKey => $Value) {
+            // We will handle simple values as if it's an array.
+            if (!is_array($Value)) {
+                $Value = array($Value);
+            }
+
+            if ($Value === array()) {
+                // We won't print a key with an empty array.
+                continue;
+            }
+
+            if (!$nNesting) {
+                $s .= '<TR><TH>' . $sKey . '</TH></TR><TR><TD>';
+            } elseif ($nNesting == 1) {
+                $s .= '<TR><TD><B>' . $sKey . '</B></TD></TR><TR><TD>';
+            } else {
+                $s .= '<TR><TD valign="top" style="border-top: 1px solid #AFC8FA;">' . $sKey .
+                      '</TD><TD style="border-top: 1px solid #AFC8FA;"><TABLE class="S11" cellpadding="0" cellspacing="0"><TR><TD>';
+            }
+
+            // Can be array of values, in which case they are printed, one value on each line.
+            // Can be an associative array; for nested arrays we print the key in an TR and loop through the values,
+            //  normal key => value pairs are printed in separate TDs.
+
+            // Measure keys.
+            $bList = (count(array_filter(array_keys($Value), 'is_int')) == count($Value));
+            $bContainsArrays = (count(array_filter($Value, 'is_array')) > 0);
+            if ($bList && !$bContainsArrays) {
+                // Simple list.
+                $s .= implode('</TD></TR><TR><TD style="border-top: 1px solid #AFC8FA;">', $Value);
+
+            } else {
+                $s .= $this->formatArrayToTable($Value, $nNesting + 1);
+            }
+
+            $s .= '</TD></TR>';
+            if ($nNesting > 1) {
+                $s .= '</TD></TR></TABLE>';
+            }
+        }
+        $s .= '</TABLE>';
+
+        return $s;
+    }
+
+
+
+
+
     function generateRowID ($zData = false)
     {
         // Generates the row_id for the viewList rows.
@@ -942,10 +1000,13 @@ class LOVD_Object {
         // The $bDebug argument lets this function just return the SQL that is produced.
         global $_DB, $_INI;
 
+        // We never need an ORDER BY to get the number of results, so... (ORDER BY code removed 2019-02-18)
+        $aSQL['ORDER_BY'] = '';
+
         // If we don't have a HAVING clause, we can simply drop the SELECT information.
         $aColumnsNeeded = array();
         $aTablesNeeded = array();
-        if (!$aSQL['GROUP_BY'] && !$aSQL['HAVING'] && !$aSQL['ORDER_BY']) {
+        if (!$aSQL['GROUP_BY'] && !$aSQL['HAVING']) {
             $aSQL['SELECT'] = '';
         } else {
             if ($aSQL['GROUP_BY']) {
@@ -953,7 +1014,6 @@ class LOVD_Object {
                 // but non-alias columns that are used for grouping must also be kept in the JOIN!
                 // Parse GROUP BY! Can be a mix of real columns and aliases.
                 if (preg_match_all('/\b(?:(\w+)\.)?(\w+)\b/', $aSQL['GROUP_BY'], $aRegs)) {
-                    // This code is the same as for the ORDER BY parsing.
                     for ($i = 0; $i < count($aRegs[0]); $i ++) {
                         // 1: table referred to (real columns without alias only);
                         // 2: alias, or column name in given table.
@@ -969,34 +1029,23 @@ class LOVD_Object {
             }
             if ($aSQL['HAVING']) {
                 // We do have HAVING, so now we'll have to see what we need to keep, the rest we toss out.
-                // Parse HAVING! These are no fields directly from tables, but all aliases, so this parsing is different from parsing WHERE.
+                // Parse HAVING! These are *mostly* no fields directly from tables, but all aliases, so this parsing is different from parsing WHERE.
                 // We don't care about AND/OR or anything... we just want the aliases.
                 if (preg_match_all('/\b(\w+)\s(?:[!><=]+|IS (?:NOT )?NULL|LIKE )/', $aSQL['HAVING'], $aRegs)) {
                     $aColumnsNeeded = array_merge($aColumnsNeeded, $aRegs[1]);
-                }
-            }
-            if ($aSQL['ORDER_BY']) {
-                // We do have ORDER BY... We'll need to keep only the columns in the SELECT that are aliases,
-                // but non-alias columns that are used for sorting must also be kept in the JOIN!
-                // Parse ORDER BY! Can be a mix of real columns and aliases.
-                // Adding a comma in the end, so we can use a simpler pattern that always ends with one.
-                // FIXME: Wait, why are we parsing the ORDER_BY??? We can just drop it... and drop the cols which it uses... right?
-                if (false && preg_match_all('/\b(?:(\w+)\.)?(\w+)(?:\s(?:ASC|DESC))?,/', $aSQL['ORDER_BY'] . ',', $aRegs)) {
-                    // This code is the same as for the GROUP BY parsing.
+                } elseif (preg_match_all('/\b(?:(\w+)\.)?(`\w+\/[A-Za-z0-9_\/]+`)/', $aSQL['HAVING'], $aRegs)) {
+                    // However, for the multi value filter, we do have a full column here.
+                    // If we have a table name, we can just add that to the $aTablesNeeded array and be done.
+                    // Otherwise, add the column to the list of needed columns and hope we find it in the SELECT.
                     for ($i = 0; $i < count($aRegs[0]); $i ++) {
-                        // 1: table referred to (real columns without alias only);
-                        // 2: alias, or column name in given table.
                         if ($aRegs[1][$i]) {
-                            // Real table. We don't need this in the SELECT unless it's also in the HAVING, but we definitely need this in the JOIN.
+                            // Table alias given.
                             $aTablesNeeded[] = $aRegs[1][$i];
-                        } elseif ($aRegs[2][$i]) {
-                            // Alias only. Keep this column for the SELECT. When parsing the SELECT, we'll find out from which table it is.
+                        } else {
                             $aColumnsNeeded[] = $aRegs[2][$i];
                         }
                     }
                 }
-                // We never need an ORDER BY to get the number of results, so...
-                $aSQL['ORDER_BY'] = '';
             }
         }
         $aColumnsNeeded = array_unique($aColumnsNeeded);
@@ -1092,29 +1141,53 @@ class LOVD_Object {
         // Tables *always* use aliases so we'll just search for those.
         // While matching, we add a space before the FROM so that we can match the first table as well, but it won't have a JOIN statement captured.
         $aTablesUsed = array();
-        if (preg_match_all('/\s?((?:LEFT(?: OUTER)?|INNER) JOIN)?\s(' . preg_quote(TABLEPREFIX, '/') . '_[a-z0-9_]+) AS ([a-z0-9]+)\s/', ' ' . $aSQL['FROM'], $aRegs)) {
+        // This regexp is incredibly complex. Perhaps rewrite it using simpler code using multiple preg_match() calls?
+        // Splitting on "JOIN" might already help a lot.
+        if (preg_match_all(
+            '/\s?((?:LEFT(?: OUTER)?|INNER) JOIN)?\s' . // The JOIN syntax.
+            '(' . preg_quote(TABLEPREFIX, '/') . '_[a-z0-9_]+) AS ([a-z0-9_]+)\s+' . // The table and its alias.
+            '(?:FORCE INDEX FOR JOIN \([^)]+\)\s+)?' . // The optional FORCE INDEX syntax as in use by the custom VL.
+            '(ON\s+\((?:(\()?[^()]+(\()?[^()]+(\()?[^()]+(?(5)\))(?(6)\))(?(7)\)))+\))?' . // The ON clause. Optional, because we ignore the USING clause (we need table aliases).
+            '/', ' ' . $aSQL['FROM'], $aRegs)) {
             for ($i = 0; $i < count($aRegs[0]); $i ++) {
+                // 0: table's full SQL syntax;
                 // 1: JOIN syntax;
                 // 2: full table name;
-                // 3: table alias.
+                // 3: table alias;
+                // 4: full JOIN's ON clause.
                 $aTablesUsed[$aRegs[3][$i]] = array(
                     'name' => $aRegs[2][$i], // We don't actually use the name, but well...
                     'join' => $aRegs[1][$i],
+                    'join_dependencies' => array(),
+                    'SQL' => trim($aRegs[0][$i]),
                 );
+                // Now, gather the JOIN's dependencies. Doing this separately, an ON clause can be very complex.
+                foreach (explode(' ', $aRegs[4][$i]) as $sWord) {
+                    if (preg_match('/^([a-z0-9_]+)\./', ltrim($sWord, '('), $aRegs2)) {
+                        // Exclude this table's own alias.
+                        if ($aRegs2[1] != $aRegs[3][$i]) {
+                            $aTablesUsed[$aRegs[3][$i]]['join_dependencies'][] = $aRegs2[1];
+                        }
+                    }
+                }
+                $aTablesUsed[$aRegs[3][$i]]['join_dependencies'] = array_unique($aTablesUsed[$aRegs[3][$i]]['join_dependencies']);
             }
         }
 
         // Loop these tables in reverse, and remove JOINs as much as possible!
         foreach (array_reverse(array_keys($aTablesUsed)) as $sTableAlias) {
-            if (!$aTablesUsed[$sTableAlias]['join'] || in_array($sTableAlias, $aTablesNeeded)) {
-                // We've reached a table that we need, abort now.
+            if (!$aTablesUsed[$sTableAlias]['join']) {
+                // We've reached the first table, abort now.
                 break;
-                // FIXME: Actually, it's possible that more tables can be left out, although in most cases we're really done now.
-                //   To find out, we'd actually need to analyze which tables we're joining together.
-            }
-            // OK, this table is not needed. Get rid of it.
-            if ($aTablesUsed[$sTableAlias]['join'] != 'INNER JOIN' && ($nPosition = strrpos($aSQL['FROM'], $aTablesUsed[$sTableAlias]['join'])) !== false) {
-                $aSQL['FROM'] = rtrim(substr($aSQL['FROM'], 0, $nPosition));
+            } elseif (in_array($sTableAlias, $aTablesNeeded)) {
+                // This is a table that we need. Collect its dependencies and continue.
+                foreach ($aTablesUsed[$sTableAlias]['join_dependencies'] as $sTable) {
+                    $aTablesNeeded[] = $sTable;
+                }
+                continue;
+            } elseif ($aTablesUsed[$sTableAlias]['join'] != 'INNER JOIN') {
+                // OK, this table is not needed. Get rid of it.
+                $aSQL['FROM'] = rtrim(str_replace($aTablesUsed[$sTableAlias]['SQL'] . ' ', '', $aSQL['FROM'] . ' '));
                 unset($aTablesUsed[$sTableAlias]);
             }
         }
@@ -1508,6 +1581,15 @@ class LOVD_Object {
                 }
             }
 
+            // Handle JSON data (well, in a VL, we hide it).
+            foreach ($zData as $sKey => $Value) {
+                if (is_string($Value) && $Value && $Value{0} == '{'
+                    && is_array(json_decode(htmlspecialchars_decode($Value), true))) {
+                    // We don't show JSON data in the VLs.
+                    $zData[$sKey] = '<I>(data)</I>';
+                }
+            }
+
         } else {
             // Add links to users from *_by fields.
             $aUserColumns = array('owned_by', 'created_by', 'edited_by', 'updated_by', 'deleted_by', 'analysis_by', 'analysis_approved_by');
@@ -1516,6 +1598,15 @@ class LOVD_Object {
                     $zData[$sUserColumn . '_'] = 'N/A';
                 } elseif ($_AUTH && $zData[$sUserColumn] != '00000') {
                     $zData[$sUserColumn . '_'] = '<A href="users/' . $zData[$sUserColumn] . '">' . $zData[$sUserColumn . '_'] . '</A>';
+                }
+            }
+
+            // Handle JSON well.
+            foreach ($zData as $sKey => $Value) {
+                if (is_string($Value) && $Value && $Value{0} == '{'
+                    && is_array(json_decode(htmlspecialchars_decode($Value), true))) {
+                    // Restructure the JSON.
+                    $zData[$sKey] = $this->formatArrayToTable(json_decode(htmlspecialchars_decode($Value), true));
                 }
             }
         }
@@ -2540,7 +2631,7 @@ class LOVD_Object {
         // FIXME; this is a temporary hack just to get the genes?authorize working when all users have been selected.
         //   There is no longer a viewList when all users have been selected, but we need one for the JS execution.
         //   Possibly, this code can be standardized a bit and, if necessary for other viewLists as well, can be kept here.
-        if (!$nTotal && !$bSearched && (($this->sObject == 'User' && !empty($_GET['search_id'])))) {
+        if (!$nTotal && !$bSearched && (($this->sObject == 'User' && !empty($_GET['search_userid'])))) {
             // FIXME; Maybe check for JS contents of the rowlink?
             // There has been searched, but apparently the ID column is forced hidden. This must be the authorize page.
             $bSearched = true; // This will trigger the creation of the viewList table.
@@ -2869,7 +2960,7 @@ FROptions
                                 ' onclick="javascript:window.location.href=this.getAttribute(\'data-href\');"')
                         ) . '>');
                 if ($aOptions['show_options']) {
-                    print("\n" . '          <TD align="center" class="checkbox" onclick="cancelParentEvent(event);"><INPUT id="check_' . $zData['row_id'] . '" class="checkbox" type="checkbox" name="check_' . $zData['row_id'] . '" onclick="lovd_recordCheckChanges(this, \'' . $sViewListID . '\');"' . (in_array($zData['row_id'], $aSessionViewList['checked'])? ' checked' : '') . '></TD>');
+                    print("\n" . '          <TD align="center" class="checkbox" onclick="cancelParentEvent(event);"><INPUT id="check_' . $zData['row_id'] . '" class="checkbox" type="checkbox" name="check_' . $zData['row_id'] . '" onclick="lovd_recordCheckChanges(this, \'' . $sViewListID . '\'); event.stopPropagation();"' . (in_array($zData['row_id'], $aSessionViewList['checked'])? ' checked' : '') . '></TD>');
                 }
                 foreach ($this->aColumnsViewList as $sField => $aCol) {
                     if (in_array($sField, $aOptions['cols_to_skip'])) {
