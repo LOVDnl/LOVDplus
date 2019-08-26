@@ -4,13 +4,13 @@
  * LEIDEN OPEN VARIATION DATABASE (LOVD)
  *
  * Created     : 2011-08-15
- * Modified    : 2016-12-14
- * For LOVD    : 3.0-18
+ * Modified    : 2017-06-19
+ * For LOVD    : 3.0-19
  *
- * Copyright   : 2004-2016 Leiden University Medical Center; http://www.LUMC.nl/
- * Programmers : Ing. Ivo F.A.C. Fokkema <I.F.A.C.Fokkema@LUMC.nl>
- *               Ing. Ivar C. Lugtenburg <I.C.Lugtenburg@LUMC.nl>
- *               Msc. Daan Asscheman <D.Asscheman@LUMC.nl>
+ * Copyright   : 2004-2017 Leiden University Medical Center; http://www.LUMC.nl/
+ * Programmers : Ivo F.A.C. Fokkema <I.F.A.C.Fokkema@LUMC.nl>
+ *               Ivar C. Lugtenburg <I.C.Lugtenburg@LUMC.nl>
+ *               Daan Asscheman <D.Asscheman@LUMC.nl>
  *               M. Kroon <m.kroon@lumc.nl>
  *
  *
@@ -136,7 +136,7 @@ class LOVD_CustomViewList extends LOVD_Object {
         if (in_array('VariantOnGenome', $aObjects) && (in_array('VariantOnTranscript', $aObjects) ||
                 in_array('VariantOnTranscriptUnique', $aObjects))) {
             // Use "vog.id:vot.transcriptid" as row_id, fall back to "vog.id" if there is no VOT entry.
-            $aSQL['SELECT'] = 'CONCAT(MIN(vog.id), IFNULL(CONCAT(":", MIN(vot.transcriptid)), "")) AS row_id';
+            $aSQL['SELECT'] = 'CONCAT(CAST(MIN(vog.id) AS UNSIGNED), IFNULL(CONCAT(":", CAST(MIN(vot.transcriptid) AS UNSIGNED)), "")) AS row_id';
             $bSetRowID = true;
         } elseif (in_array('Transcript', $aObjects)) {
             $aSQL['SELECT'] = 'MIN(t.id) AS row_id';
@@ -178,6 +178,8 @@ class LOVD_CustomViewList extends LOVD_Object {
                         if ($nKeyG !== false && $nKeyG < $nKey) {
                             // Earlier, Gene was used, join to that.
                             $aSQL['FROM'] .= 'g.id = t.geneid)';
+                            // A view with gene info and transcript info will be grouped on the transcripts.
+                            $aSQL['GROUP_BY'] = 't.id';
                         } elseif ($nKeyVOT !== false && $nKeyVOT < $nKey) {
                             // Earlier, VOT was used, join to that.
                             $aSQL['FROM'] .= 'vot.transcriptid = t.id)';
@@ -306,6 +308,11 @@ class LOVD_CustomViewList extends LOVD_Object {
                             $aSQL['FROM'] .= 't.id = vot.transcriptid)';
                             // Nice, but if we're showing transcripts and variants on transcripts in one viewList, we'd only want to see the transcripts that HAVE variants.
                             $aSQL['WHERE'] .= (!$aSQL['WHERE']? '' : ' AND ') . 'vot.id IS NOT NULL';
+                            // Then also make sure we group on the VOT's ID, unless we're already grouping on something.
+                            if (!$aSQL['GROUP_BY']) {
+                                // t.geneid needs to be included because we order on this as well (otherwise, we could have used t.id).
+                                $aSQL['GROUP_BY'] = 't.geneid, vot.id';
+                            }
                         }
                         // We have no fallback, so we'll easily detect an error if we messed up somewhere.
                     }
@@ -849,7 +856,7 @@ class LOVD_CustomViewList extends LOVD_Object {
 
         // Replace rs numbers with dbSNP links.
         if (!empty($zData['VariantOnGenome/dbSNP'])) {
-            $zData['VariantOnGenome/dbSNP'] = preg_replace('/(rs\d+)/', '<SPAN' . ($sView != 'list'? '' : ' onclick="cancelParentEvent(event);"') . '><A href="http://www.ncbi.nlm.nih.gov/SNP/snp_ref.cgi?rs=' . "$1" . '" target="_blank">' . "$1" . '</A></SPAN>', $zData['VariantOnGenome/dbSNP']);
+            $zData['VariantOnGenome/dbSNP'] = preg_replace('/(rs\d+)/', '<SPAN' . ($sView != 'list'? '' : ' onclick="cancelParentEvent(event);"') . '><A href="https://www.ncbi.nlm.nih.gov/SNP/snp_ref.cgi?rs=' . "$1" . '" target="_blank">' . "$1" . '</A></SPAN>', $zData['VariantOnGenome/dbSNP']);
         }
 
         foreach ($this->aColumns as $sCol => $aCol) {
