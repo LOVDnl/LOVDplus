@@ -4,10 +4,10 @@
  * LEIDEN OPEN VARIATION DATABASE (LOVD)
  *
  * Created     : 2010-12-20
- * Modified    : 2018-01-31
- * For LOVD    : 3.0-21
+ * Modified    : 2019-02-08
+ * For LOVD    : 3.0-22
  *
- * Copyright   : 2004-2018 Leiden University Medical Center; http://www.LUMC.nl/
+ * Copyright   : 2004-2019 Leiden University Medical Center; http://www.LUMC.nl/
  * Programmers : Ivar C. Lugtenburg <I.C.Lugtenburg@LUMC.nl>
  *               Ivo F.A.C. Fokkema <I.F.A.C.Fokkema@LUMC.nl>
  *               Daan Asscheman <D.Asscheman@LUMC.nl>
@@ -248,7 +248,11 @@ class LOVD_GenomeVariant extends LOVD_Custom {
         }
 
         // Do this before running checkFields so that we have time to predict the DBID and fill it in.
-        if (!empty($aData['VariantOnGenome/DNA']) && isset($this->aColumns['VariantOnGenome/DBID']) && ($this->aColumns['VariantOnGenome/DBID']['public_add'] || $_AUTH['level'] >= LEVEL_CURATOR)) {
+        if (!empty($aData['VariantOnGenome/DNA']) // DNA filled in.
+            && isset($this->aColumns['VariantOnGenome/DBID']) // DBID column active.
+            && ($this->aColumns['VariantOnGenome/DBID']['public_add'] || $_AUTH['level'] >= LEVEL_CURATOR) // Submitters are allowed to fill it in, or you're curator or up.
+            && !(lovd_getProjectFile() == '/import.php' && isset($zData['VariantOnGenome/DBID']) && $aData['VariantOnGenome/DBID'] == $zData['VariantOnGenome/DBID']) // And we're not updating without touching the DBID.
+            ) {
             // VOGs with at least one VOT, which still have a chr* DBID, will get an error. So we'll empty the DBID field, allowing the new VOT value to be autofilled in.
             if (!empty($aData['aTranscripts']) && !empty($aData['VariantOnGenome/DBID']) && strpos($aData['VariantOnGenome/DBID'], 'chr' . $aData['chromosome'] . '_') !== false) {
                 $aData['VariantOnGenome/DBID'] = '';
@@ -360,13 +364,26 @@ class LOVD_GenomeVariant extends LOVD_Custom {
      'authorization' => array('Enter your password for authorization', '', 'password', 'password', 20),
                       ));
 
+        // Check if we actually have any transcripts enabled. When creating a variant, the user may disable them.
+        // We need to know for the variant effect fields.
+        $nTranscripts = 0;
+        if (ACTION == 'create') {
+            foreach (array_keys($_POST['aTranscripts']) as $nTranscriptID) {
+                if (empty($_POST['ignore_' . $nTranscriptID])) {
+                    $nTranscripts ++;
+                }
+            }
+        } elseif (!empty($_POST['aTranscripts'])) {
+            $nTranscripts = count($_POST['aTranscripts']);
+        }
+
         if (ACTION == 'create' || (ACTION == 'publish' && GET)) {
             // When creating, or when publishing without any changes, unset the authorization.
             unset($this->aFormData['authorization']);
         }
         if ($_AUTH['level'] < LEVEL_CURATOR) {
             unset($this->aFormData['effect_concluded'], $this->aFormData['general_skip'], $this->aFormData['general'], $this->aFormData['general_hr1'], $this->aFormData['owner'], $this->aFormData['status'], $this->aFormData['general_hr2']);
-        } elseif (is_array($_DATA) && !empty($_DATA['Transcript'])) {
+        } elseif ($nTranscripts) {
             // Determine whether to show the `effect_concluded` field.
             // When a variant is linked to one or more transcripts, its effect
             //  on the genomic level will be determined by the "worst" effect on the
@@ -396,7 +413,7 @@ class LOVD_GenomeVariant extends LOVD_Custom {
         }
 
         // Determine whether to show the `effect_reported` field.
-        if (is_array($_DATA) && !empty($_DATA['Transcript'])) {
+        if ($nTranscripts) {
             // When a variant is linked to one or more transcripts, its effect
             //  on the genomic level will be determined by the "worst" effect on the
             //  transcript levels. Only if the currently set effect is non-concordant

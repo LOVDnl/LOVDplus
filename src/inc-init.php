@@ -4,10 +4,10 @@
  * LEIDEN OPEN VARIATION DATABASE (LOVD)
  *
  * Created     : 2009-10-19
- * Modified    : 2017-12-04
- * For LOVD    : 3.0-21
+ * Modified    : 2019-07-30
+ * For LOVD    : 3.0-22
  *
- * Copyright   : 2004-2017 Leiden University Medical Center; http://www.LUMC.nl/
+ * Copyright   : 2004-2019 Leiden University Medical Center; http://www.LUMC.nl/
  * Programmers : Ivo F.A.C. Fokkema <I.F.A.C.Fokkema@LUMC.nl>
  *               Ivar C. Lugtenburg <I.C.Lugtenburg@LUMC.nl>
  *               Daan Asscheman <D.Asscheman@LUMC.nl>
@@ -75,6 +75,7 @@ $_SERVER['SCRIPT_NAME'] = lovd_cleanDirName(str_replace('\\', '/', $_SERVER['SCR
 // Our output formats: text/html by default.
 $aFormats = array('text/html', 'text/plain'); // Key [0] is default. Other values may not always be allowed. It is checked in the Template class' printHeader() and in Objects::viewList().
 if (lovd_getProjectFile() == '/api.php') {
+    $aFormats[] = 'application/json';
     $aFormats[] = 'text/bed';
 } elseif (lovd_getProjectFile() == '/import.php' && substr($_SERVER['QUERY_STRING'], 0, 25) == 'autoupload_scheduled_file') {
     // Set format to text/plain only when none is requested.
@@ -150,7 +151,7 @@ $aRequired =
 $_SETT = array(
                 'system' =>
                      array(
-                            'version' => '3.0-21',
+                            'version' => '3.0-21d',
                           ),
                 'user_levels' =>
                      array(
@@ -677,7 +678,7 @@ if (!class_exists('PDO')) {
 } else {
     // PDO available, check if we have the requested database driver.
     if (!in_array($_INI['database']['driver'], PDO::getAvailableDrivers())) {
-        $sDriverName = $aConfigValues['database']['driver']['values'][$_INI['database']['driver']];
+        $sDriverName = $_INI['database']['driver']; // We used to be able to get to the formatted name, but no more.
         lovd_displayError('Init', 'This PHP installation does not have ' . $sDriverName . ' support for PDO installed. Without it, LOVD will not function. Please install ' . $sDriverName . ' support for PHP PDO.');
     }
 }

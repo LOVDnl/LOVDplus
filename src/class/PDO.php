@@ -4,10 +4,10 @@
  * LEIDEN OPEN VARIATION DATABASE (LOVD)
  *
  * Created     : 2011-08-17
- * Modified    : 2017-01-25
- * For LOVD    : 3.0-19
+ * Modified    : 2019-08-01
+ * For LOVD    : 3.0-22
  *
- * Copyright   : 2004-2017 Leiden University Medical Center; http://www.LUMC.nl/
+ * Copyright   : 2004-2019 Leiden University Medical Center; http://www.LUMC.nl/
  * Programmers : Ivo F.A.C. Fokkema <I.F.A.C.Fokkema@LUMC.nl>
  *               Ivar C. Lugtenburg <I.C.Lugtenburg@LUMC.nl>
  *
@@ -60,7 +60,8 @@ class LOVD_PDO extends PDO {
                 define('MYSQL_ATTR_INIT_COMMAND', 1002);
             }
             $aOptions = array(
-                // ONLY_FULL_GROUP_BY can later be enabled again, when all queries have been checked and fixed.
+                // ONLY_FULL_GROUP_BY is causing issues; even if we try to play nice,
+                //  the totally unnecessary MIN() and MAX() calls slow down queries a lot. See #386.
                 // STRICT_TRANS_TABLES can later be enabled again, when all columns have proper defaults.
                 MYSQL_ATTR_INIT_COMMAND => 'SET NAMES utf8, SQL_MODE = REPLACE(REPLACE(REPLACE(@@SQL_MODE, "NO_ZERO_DATE", ""), "ONLY_FULL_GROUP_BY", ""), "STRICT_TRANS_TABLES", "")',
                 PDO::MYSQL_ATTR_USE_BUFFERED_QUERY => TRUE,
