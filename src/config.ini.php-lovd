@@ -1,4 +1,4 @@
-                                <?php exit(); ?>                                
+                                <?php exit(); ?>
 #################### DO NOT MODIFY OR REMOVE THE LINE ABOVE ####################
 ################################################################################
 #                              LOVD settings file                              #
@@ -25,12 +25,12 @@ hostname = localhost
 
 # Database username and password (required for MySQL).
 #
-username = 
-password = 
+username =
+password =
 
 # Database name (required). When using SQLite, specify the filename here.
 #
-database = 
+database =
 
 # This is for the table prefixes; if you wish to install more than one LOVD
 # system per database, use different directories for these installations and

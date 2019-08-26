@@ -4,12 +4,12 @@
  * LEIDEN OPEN VARIATION DATABASE (LOVD)
  *
  * Created     : 2009-10-21
- * Modified    : 2016-10-14
+ * Modified    : 2016-12-13
  * For LOVD    : 3.0-18
  *
  * Copyright   : 2004-2016 Leiden University Medical Center; http://www.LUMC.nl/
- * Programmers : Ing. Ivo F.A.C. Fokkema <I.F.A.C.Fokkema@LUMC.nl>
- *               Ing. Ivar C. Lugtenburg <I.C.Lugtenburg@LUMC.nl>
+ * Programmers : Ivo F.A.C. Fokkema <I.F.A.C.Fokkema@LUMC.nl>
+ *               Ivar C. Lugtenburg <I.C.Lugtenburg@LUMC.nl>
  *               M. Kroon <m.kroon@lumc.nl>
  *
  *
@@ -120,6 +120,8 @@ class LOVD_User extends LOVD_Object {
                         'username' => array('Username', LEVEL_MANAGER),
                         'password_force_change_' => array('Force change password', LEVEL_MANAGER),
                         'phpsessid' => array('Session ID', LEVEL_MANAGER),
+                        'auth_token_' => array('API token', LEVEL_CURATOR), // Will be unset if user is not authorized on this user (i.e., not himself or manager or up).
+                        'auth_token_expires_' => array('API token expiration', LEVEL_CURATOR), // Will be unset if user is not authorized on this user (i.e., not himself or manager or up).
                         'saved_work_' => array('Saved work', LEVEL_MANAGER),
                         'curates_' => 'Curator for',
                         'collaborates_' => array('Collaborator for', LEVEL_CURATOR),
@@ -412,7 +414,12 @@ class LOVD_User extends LOVD_Object {
                         'skip',
       'change_other' => array('Enter your password for authorization', '', 'password', 'password', 20));
             if ($_PE[1] == $_AUTH['id']) {
+                // User is resetting password for him/herself.
                 unset($this->aFormData['change_other']);
+                // If user just logged in with an unlocking code, we will rename the "Current password" field.
+                if ($_AUTH['password'] == $_AUTH['password_autogen']) {
+                    $this->aFormData['change_self'][0] = 'Unlocking code';
+                }
             } else {
                 unset($this->aFormData['change_self']);
             }
@@ -483,9 +490,21 @@ class LOVD_User extends LOVD_Object {
             // Submissions...
             if (lovd_isAuthorized('user', $zData['id']) === false) {
                 // Not authorized to view hidden data for this user; so we're not manager and we're not viewing ourselves. Nevermind then.
-                unset($this->aColumnsViewEntry['ownes_']);
+                unset($this->aColumnsViewEntry['ownes_'], $this->aColumnsViewEntry['auth_token_'], $this->aColumnsViewEntry['auth_token_expires_']);
             } else {
-                // Either we're viewing ourselves, or we're manager or up. Like this is easy, because now we don't need to check for the data status of the data.
+                // Either we're viewing ourselves, or we're manager or up.
+
+                // Auth token links. We don't show the token by default.
+                $zData['auth_token_'] = '(<A href="#" onclick="$.get(\'ajax/auth_token.php/' . $zData['id'] . '?view\').fail(function(){alert(\'Error viewing token, please try again later.\');}); return false;">Show / More information</A>)';
+                if ($zData['auth_token_expires']) {
+                    $tDiff = strtotime($zData['auth_token_expires']) - time();
+                    $sDiff = lovd_convertSecondsToTime(abs($tDiff));
+                    $zData['auth_token_expires_'] = '<SPAN title="' . $zData['auth_token_expires'] . '">' . ($tDiff > 0? 'In ' . $sDiff : 'Expired ' . $sDiff . ' ago') . '</SPAN>';
+                } else {
+                    $zData['auth_token_expires_'] = (!$zData['auth_token']? '' : '- (Never)');
+                }
+
+                // Since we're manager or viewing ourselves, we don't need to check for the data status of the data.
                 $nOwnes = 0;
                 $sOwnes = '';
 
@@ -520,6 +539,7 @@ class LOVD_User extends LOVD_Object {
     function setDefaultValues ()
     {
         // Sets default values of fields in $_POST.
+        $_POST['level'] = LEVEL_SUBMITTER;
         $_POST['allowed_ip'] = '*';
         $_POST['send_email'] = 1;
         return true;

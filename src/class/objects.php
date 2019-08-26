@@ -2413,6 +2413,7 @@ FROptions
             }
 
         } elseif (FORMAT == 'text/plain') {
+            set_time_limit(60*5); // Very large, but not infinite.
             // Download format: show headers.
             $sObject = ($this->sObject == 'Custom_ViewList'? $this->sObjectID : $this->sObject . 's');
             header('Content-type: text/plain; charset=UTF-8');

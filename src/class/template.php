@@ -617,6 +617,10 @@ function lovd_mapVariants ()
 
 <BODY style="margin : 0px;">
 
+<TABLE border="0" cellpadding="0" cellspacing="0" width="100%"><TR><TD>
+
+<!-- Have a DIV for the announcements together with the header, to make sure the announcements move with the sticky header. -->
+<DIV id="stickyheader" style="position : fixed; z-index : 10;">
 <?php
 // Check for announcements. Ignore errors, in case the table doesn't exist yet.
 $qAnnouncements = @$_DB->query('SELECT id, type, announcement FROM ' . TABLE_ANNOUNCEMENTS . ' WHERE start_date <= NOW() AND end_date >= NOW()', array(), false);
@@ -639,8 +643,6 @@ if ($_SERVER['HTTP_HOST'] == 'leiden-test.diagnostics.lovd.nl') {
 
 ?>
 
-<TABLE border="0" cellpadding="0" cellspacing="0" width="100%"><TR><TD>
-
 <TABLE border="0" cellpadding="0" cellspacing="0" width="100%" class="logo">
   <TR>
 <?php
@@ -656,7 +658,7 @@ if ($_SERVER['HTTP_HOST'] == 'leiden-test.diagnostics.lovd.nl') {
               '      <IMG src="' . $_CONF['logo_uri'] . '" alt="LOVD - Leiden Open Variation Database" ' . $sSize . '>' . "\n" .
               '    </TD>' . "\n");
 
-        print('    <TD valign="top" style="padding-top : 2px;">' . "\n" .
+        print('    <TD valign="top" style="padding-top : 2px; white-space : nowrap; width : 100%">' . "\n" .
               '      <H2 style="margin-bottom : 2px;">' . $_CONF['system_title'] . '</H2>');
 
         if ($sCurrSymbol && $sCurrGene) {
@@ -673,7 +675,7 @@ if ($_SERVER['HTTP_HOST'] == 'leiden-test.diagnostics.lovd.nl') {
         // This is done with function lovd_switchGene().
         print('      <H5 id="gene_switcher"></H5>' . "\n" .
               '    </TD>' . "\n" .
-              '    <TD valign="top" align="right" style="padding-right : 5px; padding-top : 2px;">' . "\n" .
+              '    <TD valign="top" align="right" style="padding-right : 5px; padding-top : 2px; white-space: nowrap; padding-left: 20px;">' . "\n" .
               '      LOVD v.' . $_STAT['tree'] . ' Build ' . $_STAT['build'] .
               (!defined('NOT_INSTALLED')? ' [ <A href="status">Current LOVD status</A> ]' : '') .
               '<BR>' . "\n");
@@ -689,7 +691,14 @@ if ($_SERVER['HTTP_HOST'] == 'leiden-test.diagnostics.lovd.nl') {
         }
 
         print('    </TD>' . "\n" .
-              '  </TR>' . "\n");
+              '  </TR>' . "\n" .
+              '</TABLE>' . "\n" .
+              '</DIV>' . "\n\n");
+
+        $nTotalTabWidth = 0; // Will stretch the page at least this far, so the tabs don't "break" if the window is narrow.
+        // The margin chosen here is just a default. We don't actually know the height of the announcements, unless we measure them.
+        // So after printing this table, we'll measure it and resize the margin.
+        print('<TABLE border="0" cellpadding="0" cellspacing="0" width="100%" class="logo" style="margin-top : ' . (55+(count($zAnnouncements)*46)) . 'px;' . (count($this->aMenu)? '' : ' border-bottom : 2px solid #000000;') . '">' . "\n");
 
         // Add curator info to header.
         if ($sCurrSymbol && $sCurrGene) {
@@ -709,15 +718,9 @@ if ($_SERVER['HTTP_HOST'] == 'leiden-test.diagnostics.lovd.nl') {
             }
         }
 
-        print('</TABLE>' . "\n\n");
-
-
-
         // Build menu tabs...
-        $nTotalTabWidth = 0; // Will stretch the page at least this far, so the tabs don't "break" if the window is narrow.
-        print('<TABLE border="0" cellpadding="0" cellspacing="0" width="100%" class="logo"' . (count($this->aMenu)? '' : ' style="border-bottom : 2px solid #000000;"') . '>' . "\n" .
-              '  <TR>' . "\n" .
-              '    <TD align="left" style="background : url(\'gfx/tab_fill.png\'); background-repeat : repeat-x;">' . "\n");
+        print('  <TR>' . "\n" .
+              '    <TD align="left" colspan="2" style="background : url(\'gfx/tab_fill.png\'); background-repeat : repeat-x;">' . "\n");
 
         // Loop menu.
         $n         = 0;
@@ -830,6 +833,14 @@ if ($_SERVER['HTTP_HOST'] == 'leiden-test.diagnostics.lovd.nl') {
               '  </TR>' . "\n" .
               '</TABLE>' . "\n\n" .
               '<IMG src="gfx/trans.png" alt="" width="' . $nTotalTabWidth . '" height="0">' . "\n\n");
+
+        if (!empty($zAnnouncements)) {
+            // Measure the height of the sticky header (can depend on announcements or
+            // font settings and such), and adapt the menu table to have a margin of this height.
+            print('<SCRIPT type="text/javascript">' . "\n" .
+                  '  $("table.logo :eq(1)").css("margin-top", $("#stickyheader").outerHeight(true) + "px");' . "\n" .
+                  '</SCRIPT>' . "\n\n");
+        }
 
         // Attach dropdown menus.
         print('<!-- Start drop down menu definitions -->' . "\n");
