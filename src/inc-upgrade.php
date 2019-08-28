@@ -4,7 +4,7 @@
  * LEIDEN OPEN VARIATION DATABASE (LOVD)
  *
  * Created     : 2010-01-14
- * Modified    : 2019-07-30
+ * Modified    : 2019-08-28
  * For LOVD    : 3.0-22
  *
  * Copyright   : 2004-2019 Leiden University Medical Center; http://www.LUMC.nl/
@@ -69,6 +69,7 @@ if ($sCalcVersionFiles != $sCalcVersionDB) {
         array(
             '3.0-17m' => array(), // Placeholder for an LOVD+ message, defined below.
             '3.0-17n' => array(), // Placeholder for an LOVD+ message, defined below.
+            '3.0-17o' => array(), // Placeholder for an LOVD+ message, defined below.
         );
 
     // LOVD+ messages should be built up separately, so that LOVDs won't show them.
@@ -734,14 +735,6 @@ if ($sCalcVersionFiles != $sCalcVersionDB) {
                      'EXECUTE Statement',
                  ),
                  '3.0-17h' => array(), // Placeholder for LOVD+ queries, defined below.
-                 '3.0-17i' =>
-                     array(
-                         'SET @bExists := (SELECT COUNT(*) FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = "' . TABLE_DISEASES . '" AND COLUMN_NAME = "inheritance")',
-                         'SET @sSQL := IF(@bExists > 0, \'SELECT "INFO: Column already exists."\', "
-                            ALTER TABLE ' . TABLE_DISEASES . ' ADD COLUMN inheritance VARCHAR(45) NULL AFTER name")',
-                         'PREPARE Statement FROM @sSQL',
-                         'EXECUTE Statement',
-                     ),
                  '3.0-17j' => array(), // Placeholder for LOVD+ queries, defined below.
                  '3.0-17k' =>
                      array(
@@ -947,7 +940,7 @@ if ($sCalcVersionFiles != $sCalcVersionDB) {
                      'EXECUTE Statement',
                  ),
                  '3.0-21d' => array(
-                     'SET @bLOVDplus := (SELECT ' . (string) (int) LOVD_plus . ')', // We're not running these for LOVD+, too intensive.
+                     'SET @bLOVDplus := (SELECT ' . (int) LOVD_plus . ')', // We're not running these for LOVD+, too intensive.
                      'SET @bExists := (SELECT COUNT(*) FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = "' . TABLE_VARIANTS . '" AND COLUMN_NAME = "VariantOnGenome/DNA" AND CHARACTER_MAXIMUM_LENGTH < 255)',
                      'SET @sSQL := IF(@bLOVDplus OR @bExists < 1, \'SELECT "INFO: Column not found or already enlarged."\', "
                             ALTER TABLE ' . TABLE_VARIANTS . ' MODIFY COLUMN `VariantOnGenome/DNA` VARCHAR(255) NOT NULL")',
@@ -975,6 +968,15 @@ if ($sCalcVersionFiles != $sCalcVersionDB) {
                             UPDATE ' . TABLE_COLS . ' SET mysql_type = \"VARCHAR(255)\" WHERE id = \"VariantOnTranscript/Protein\"")',
                      'PREPARE Statement FROM @sSQL',
                      'EXECUTE Statement',
+                 ),
+                 '3.0-21e' => array(
+                     'SET @bExists := (SELECT COUNT(*) FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = "' . TABLE_DISEASES . '" AND COLUMN_NAME = "inheritance")',
+                     'SET @sSQL := IF(@bExists > 0, \'SELECT "INFO: Column already exists."\', "
+                        ALTER TABLE ' . TABLE_DISEASES . ' ADD COLUMN inheritance VARCHAR(45) NULL AFTER name")',
+                     'PREPARE Statement FROM @sSQL',
+                     'EXECUTE Statement',
+                     'UPDATE ' . TABLE_COLS . ' SET select_options = "intergenic\r\nnear-gene-5\r\nutr-5\r\nstart-lost\r\ncoding\r\nnon-coding-exon\r\ncoding-near-splice\r\nnon-coding-exon-near-splice\r\ncoding-synonymous\r\ncoding-synonymous-near-splice\r\ncodingComplex\r\ncodingComplex-near-splice\r\nframeshift\r\nframeshift-near-splice\r\nmissense\r\nmissense-near-splice\r\nsplice-5\r\nsplice\r\nnon-coding-intron-near-splice\r\nintron\r\nsplice-3\r\nstop-gained\r\nstop-gained-near-splice\r\nstop-lost\r\nstop-lost-near-splice\r\nutr-3\r\nnear-gene-3" WHERE select_options = "intergenic\r\nnear-gene-5\r\nutr-5\r\ncoding\r\ncoding-near-splice\r\ncoding-synonymous\r\ncoding-synonymous-near-splice\r\ncodingComplex\r\ncodingComplex-near-splice\r\nframeshift\r\nframeshift-near-splice\r\nmissense\r\nmissense-near-splice\r\nsplice-5\r\nintron\r\nsplice-3\r\nstop-gained\r\nstop-gained-near-splice\r\nstop-lost\r\nstop-lost-near-splice\r\nutr-3\r\nnear-gene-3" AND id = "VariantOnTranscript/GVS/Function"',
+                     'UPDATE ' . TABLE_SHARED_COLS . ' SET select_options = "intergenic\r\nnear-gene-5\r\nutr-5\r\nstart-lost\r\ncoding\r\nnon-coding-exon\r\ncoding-near-splice\r\nnon-coding-exon-near-splice\r\ncoding-synonymous\r\ncoding-synonymous-near-splice\r\ncodingComplex\r\ncodingComplex-near-splice\r\nframeshift\r\nframeshift-near-splice\r\nmissense\r\nmissense-near-splice\r\nsplice-5\r\nsplice\r\nnon-coding-intron-near-splice\r\nintron\r\nsplice-3\r\nstop-gained\r\nstop-gained-near-splice\r\nstop-lost\r\nstop-lost-near-splice\r\nutr-3\r\nnear-gene-3" WHERE select_options = "intergenic\r\nnear-gene-5\r\nutr-5\r\ncoding\r\ncoding-near-splice\r\ncoding-synonymous\r\ncoding-synonymous-near-splice\r\ncodingComplex\r\ncodingComplex-near-splice\r\nframeshift\r\nframeshift-near-splice\r\nmissense\r\nmissense-near-splice\r\nsplice-5\r\nintron\r\nsplice-3\r\nstop-gained\r\nstop-gained-near-splice\r\nstop-lost\r\nstop-lost-near-splice\r\nutr-3\r\nnear-gene-3" AND colid = "VariantOnTranscript/GVS/Function"',
                  ),
              );
 

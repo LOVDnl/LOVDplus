@@ -4,10 +4,10 @@
  * LEIDEN OPEN VARIATION DATABASE (LOVD)
  *
  * Created     : 2010-12-21
- * Modified    : 2018-03-09
- * For LOVD    : 3.0-21
+ * Modified    : 2019-08-28
+ * For LOVD    : 3.0-22
  *
- * Copyright   : 2004-2018 Leiden University Medical Center; http://www.LUMC.nl/
+ * Copyright   : 2004-2019 Leiden University Medical Center; http://www.LUMC.nl/
  * Programmers : Ivar C. Lugtenburg <I.C.Lugtenburg@LUMC.nl>
  *               Ivo F.A.C. Fokkema <I.F.A.C.Fokkema@LUMC.nl>
  *               Jerry Hoogenboom <J.Hoogenboom@LUMC.nl>
@@ -474,6 +474,9 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && !ACTION) {
         // Authorized user is logged in. Provide tools.
         if (!LOVD_plus) {
             $aNavigation[CURRENT_PATH . '?edit']       = array('menu_edit.png', 'Edit variant entry', 1);
+            if ($zData['statusid'] < STATUS_OK && $_AUTH['level'] >= LEVEL_CURATOR) {
+                $aNavigation[CURRENT_PATH . '?publish'] = array('check.png', ($zData['statusid'] == STATUS_MARKED? 'Remove mark from' : 'Publish (curate)') . ' variant entry', 1);
+            }
         } else {
             if (!lovd_verifyInstance('leiden')) {
                 $aNavigation[CURRENT_PATH . '?curate' . (isset($_GET['in_window'])? '&amp;in_window' : '')] = array('menu_edit.png', 'Curate this variant', 1);
@@ -494,11 +497,8 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && !ACTION) {
                 $aNavigation[CURRENT_PATH . '?edit_remarks' . (isset($_GET['in_window'])? '&amp;in_window' : '')] = array('menu_edit.png', 'Edit remarks', 1);
             }
         }
-        if (!LOVD_plus && $zData['statusid'] < STATUS_OK && $_AUTH['level'] >= LEVEL_CURATOR) {
-            $aNavigation[CURRENT_PATH . '?publish'] = array('check.png', ($zData['statusid'] == STATUS_MARKED? 'Remove mark from' : 'Publish (curate)') . ' variant entry', 1);
-        }
         $aNavigation[CURRENT_PATH . '?map']        = array('menu_transcripts.png', 'Manage transcripts for this variant', 1);
-        if ($_AUTH['level'] >= LEVEL_CURATOR) {
+        if (LOVD_plus && $_AUTH['level'] >= LEVEL_CURATOR) {
             $aNavigation[CURRENT_PATH . '?delete_preferred_transcripts'] = array('menu_transcripts.png', 'Delete non-preferred transcripts', 1);
         }
         if ($_AUTH['level'] >= $_SETT['user_level_settings']['delete_variant']) {

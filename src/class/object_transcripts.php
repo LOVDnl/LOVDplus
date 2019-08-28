@@ -4,10 +4,10 @@
  * LEIDEN OPEN VARIATION DATABASE (LOVD)
  *
  * Created     : 2010-12-20
- * Modified    : 2018-01-24
- * For LOVD    : 3.0-21
+ * Modified    : 2019-08-28
+ * For LOVD    : 3.0-22
  *
- * Copyright   : 2004-2018 Leiden University Medical Center; http://www.LUMC.nl/
+ * Copyright   : 2004-2019 Leiden University Medical Center; http://www.LUMC.nl/
  * Programmers : Ivar C. Lugtenburg <I.C.Lugtenburg@LUMC.nl>
  *               Ivo F.A.C. Fokkema <I.F.A.C.Fokkema@LUMC.nl>
  *               Daan Asscheman <D.Asscheman@LUMC.nl>
@@ -79,6 +79,7 @@ class LOVD_Transcript extends LOVD_Object {
         $this->aSQLViewList['SELECT']   = 't.*, ' .
                                           'g.chromosome';
         if (!LOVD_plus) {
+            // Speed optimization by skipping variant counts.
             $this->aSQLViewList['SELECT'] .= ', ' .
                 'COUNT(DISTINCT ' . ($_AUTH['level'] >= LEVEL_COLLABORATOR? 'vot.id' : 'vog.id') . ') AS variants';
         }
@@ -144,7 +145,7 @@ class LOVD_Transcript extends LOVD_Object {
                     'db'   => array('variants', 'DESC', 'INT_UNSIGNED')),
             );
         if (LOVD_plus) {
-            // Diagnostics: Remove some columns, and add one.
+            // Diagnostics: Speed up view by removing the variants column.
             unset($this->aColumnsViewList['variants']);
         }
 

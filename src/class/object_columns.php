@@ -4,8 +4,8 @@
  * LEIDEN OPEN VARIATION DATABASE (LOVD)
  *
  * Created     : 2010-03-04
- * Modified    : 2018-01-26
- * For LOVD    : 3.0-21
+ * Modified    : 2019-08-28
+ * For LOVD    : 3.0-22
  *
  * Copyright   : 2004-2018 Leiden University Medical Center; http://www.LUMC.nl/
  * Programmers : Ivo F.A.C. Fokkema <I.F.A.C.Fokkema@LUMC.nl>
@@ -294,7 +294,7 @@ class LOVD_Column extends LOVD_Object {
              'width' => array('Column display width in pixels', '', 'text', 'width', 5),
                         array('', '', 'print', '<IMG src="gfx/trans.png" alt="" width="' . (int) $_POST['width'] . '" height="3" style="background : #000000;"><BR><SPAN class="form_note">(This is ' . (int) $_POST['width'] . ' pixels)</SPAN>'),
          'mandatory' => array('Mandatory field', '', 'checkbox', 'mandatory'),
-       'public_view' => array((LOVD_plus)? 'Show column on data listings' :'Show contents to public', '', 'checkbox', 'public_view'),
+       'public_view' => array((LOVD_plus? 'Show column on data listings' :'Show contents to public'), '', 'checkbox', 'public_view'),
         'public_add' => array('Show field on submission form', '', 'checkbox', 'public_add'),
                         'hr',
 // FIXME; implement this later.

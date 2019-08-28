@@ -4,10 +4,10 @@
  * LEIDEN OPEN VARIATION DATABASE (LOVD)
  *
  * Created     : 2009-10-19
- * Modified    : 2017-02-20
- * For LOVD    : 3.0-19
+ * Modified    : 2019-08-28
+ * For LOVD    : 3.0-22
  *
- * Copyright   : 2004-2017 Leiden University Medical Center; http://www.LUMC.nl/
+ * Copyright   : 2004-2019 Leiden University Medical Center; http://www.LUMC.nl/
  * Programmers : Ivo F.A.C. Fokkema <I.F.A.C.Fokkema@LUMC.nl>
  *               Ivar C. Lugtenburg <I.C.Lugtenburg@LUMC.nl>
  *               Daan Asscheman <D.Asscheman@LUMC.nl>
@@ -509,6 +509,7 @@ if ($_GET['step'] == 2 && defined('NOT_INSTALLED')) {
     $aInstallSQL['Activating LOVD standard custom columns...'] = lovd_getActivateCustomColumnQuery();
 
     if (LOVD_plus) {
+        // Make sure the DBID column is indexed.
         $aInstallSQL['Activating LOVD standard custom columns...'][] = 'ALTER TABLE ' . TABLE_VARIANTS . ' ADD INDEX(`VariantOnGenome/DBID`)';
     }
 
