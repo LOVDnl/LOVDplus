@@ -4,7 +4,7 @@
  * LEIDEN OPEN VARIATION DATABASE (LOVD)
  *
  * Created     : 2011-02-16
- * Modified    : 2019-08-22
+ * Modified    : 2019-08-30
  * For LOVD    : 3.0-22
  *
  * Copyright   : 2004-2019 Leiden University Medical Center; http://www.LUMC.nl/
@@ -1324,7 +1324,7 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && ACTION == 'edit_panels') {
         // Checks the genes added to the custom panel to ensure they exist within the database.
         if (!empty($_POST['custom_panel'])) {
             // Explode the custom panel genes into an array.
-            $aGeneSymbols = array_filter(array_unique(preg_split('/(\s|[,;])+/', strtoupper($_POST['custom_panel']))));
+            $aGeneSymbols = array_values(array_unique(array_filter(preg_split('/(\s|[,;])+/', strtoupper($_POST['custom_panel'])))));
 
             // Check if there are any genes left after cleaning up the gene symbol string.
             if (count($aGeneSymbols) > 0) {

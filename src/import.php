@@ -4,10 +4,10 @@
  * LEIDEN OPEN VARIATION DATABASE (LOVD)
  *
  * Created     : 2012-09-19
- * Modified    : 2018-02-27
- * For LOVD    : 3.0-21
+ * Modified    : 2019-08-28
+ * For LOVD    : 3.0-22
  *
- * Copyright   : 2004-2018 Leiden University Medical Center; http://www.LUMC.nl/
+ * Copyright   : 2004-2019 Leiden University Medical Center; http://www.LUMC.nl/
  * Programmers : Ivo F.A.C. Fokkema <I.F.A.C.Fokkema@LUMC.nl>
  *               Daan Asscheman <D.Asscheman@LUMC.nl>
  *               M. Kroon <m.kroon@lumc.nl>
@@ -535,7 +535,7 @@ if (ACTION == 'autoupload_scheduled_file' && PATH_COUNT == 1) {
 
     if (FORMAT == 'text/plain') {
         print('Preparing to upload ' . $sFile . ' into database...' . "\n" .
-            'Current time: ' . date('Y-m-d H:i:s.') . "\n\n");
+              'Current time: ' . date('Y-m-d H:i:s.') . "\n\n");
     }
 
     // Since we're running automatically, ignore user aborts (dying caller script).

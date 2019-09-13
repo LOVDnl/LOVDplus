@@ -4,7 +4,7 @@
  * LEIDEN OPEN VARIATION DATABASE (LOVD)
  *
  * Created     : 2009-10-19
- * Modified    : 2019-07-30
+ * Modified    : 2019-08-28
  * For LOVD    : 3.0-22
  *
  * Copyright   : 2004-2019 Leiden University Medical Center; http://www.LUMC.nl/
@@ -235,7 +235,7 @@ $_SETT = array(
                         'SMu' => 'Somatic mutation',
                         'XLD' => 'X-linked dominant' ,
                         'XLR' => 'X-linked recessive',
-                        'XL' => 'X-linked' ,
+                        'XL' => 'X-linked',
                         'YL' => 'Y-linked'
                 ),
                 'data_status' =>

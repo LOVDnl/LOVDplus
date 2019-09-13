@@ -4,7 +4,7 @@
  * LEIDEN OPEN VARIATION DATABASE (LOVD)
  *
  * Created     : 2011-08-15
- * Modified    : 2019-08-06
+ * Modified    : 2019-08-28
  * For LOVD    : 3.0-22
  *
  * Copyright   : 2004-2019 Leiden University Medical Center; http://www.LUMC.nl/
@@ -211,7 +211,7 @@ class LOVD_CustomViewList extends LOVD_Object {
                         // Not viewing the unique variants view.
                         $aSQL['SELECT'] .= (!$aSQL['SELECT']? '' : ', ') .
                             'vog.id AS vogid, vog.chromosome, a.name AS allele_' .
-                            (!$bLoadVOGEffect || $nKey? '' : ', eg.name AS vog_effect') .
+                            (!$bLoadVOGEffect? '' : ', eg.name AS vog_effect') .
                             (in_array('Individual', $aObjects)? '' : ', uo.name AS owned_by_, CONCAT_WS(";", uo.id, uo.name, uo.email, uo.institute, uo.department, IFNULL(uo.countryid, "")) AS _owner') .
                             ', dsg.id AS var_statusid, dsg.name AS var_status';
                     }
@@ -634,7 +634,7 @@ class LOVD_CustomViewList extends LOVD_Object {
                     if (array_search('Scr2Var', $aObjects) === false) {
                         unset($this->aColumnsViewList['genes']);
                     }
-                    if (empty($bLoadVOTEffect)) {
+                    if (!empty($bLoadVOGEffect) || empty($bLoadVOTEffect)) {
                         // Show vog_effect instead of vot_effect when requested.
                         unset($this->aColumnsViewList['vot_effect']);
                     }
