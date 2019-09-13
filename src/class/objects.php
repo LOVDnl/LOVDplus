@@ -4,7 +4,7 @@
  * LEIDEN OPEN VARIATION DATABASE (LOVD)
  *
  * Created     : 2009-10-21
- * Modified    : 2019-08-28
+ * Modified    : 2019-09-05
  * For LOVD    : 3.0-22
  *
  * Copyright   : 2004-2019 Leiden University Medical Center; http://www.LUMC.nl/
@@ -895,6 +895,8 @@ class LOVD_Object {
         // ViewEntry() and ViewList() call this function to see if data exists at all, and actually don't require a precise number.
         // $ID = Can be an integer/numeric string, or an array. If an integer/numeric string: ID to check for existance.
         //   If an associative array (for linking tables), use array('geneid' => 'IVD', 'userid' => 1).
+        // FIXME: This function's name is wrong, and it should be renamed to isNotEmpty() or entryExist() or so.
+        // FIXME: Also the $this->nCount should be renamed, and the custom VL's functions for filling nCount can be simplified.
         global $_DB;
 
         if ($ID) {
@@ -918,9 +920,9 @@ class LOVD_Object {
             if ($this->nCount !== '') {
                 return $this->nCount;
             }
-            $b = $_DB->query('SELECT 1 FROM ' . constant($this->sTable) . '
-                              LIMIT 1')->fetchColumn();
-            $this->nCount = $nCount = (int) $b;
+            $nCount = (int) $_DB->query('SELECT 1 FROM ' . constant($this->sTable) . '
+                                         LIMIT 1')->fetchColumn();
+            $this->nCount = $nCount;
         }
         return $nCount;
     }

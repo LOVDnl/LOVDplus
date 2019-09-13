@@ -492,7 +492,6 @@ function lovd_fetchDBID ($aData)
                 $aDBIDsSeen[$aData['chromosome']] = $sSymbol . '_' . sprintf('%06d', ($nDBIDnewNumber - 1));
             } else {
                 // 2013-02-28; 3.0-03; By using INNER JOIN to VOT and T and placing a WHERE on t.geneid we sped up this query from 0.45s to 0.00s when having 1M variants.
-                // FIXME: Implement the caching as well on a per-gene basis? LOVD might not ever need this?
                 $sSymbol = $aGenes[0];
                 $nDBIDnewNumber = $_DB->query('SELECT IFNULL(RIGHT(MAX(`VariantOnGenome/DBID`), 6), 0) + 1 FROM ' . TABLE_VARIANTS . ' AS vog INNER JOIN ' . TABLE_VARIANTS_ON_TRANSCRIPTS . ' AS vot USING (id) INNER JOIN ' . TABLE_TRANSCRIPTS . ' AS t ON (vot.transcriptid = t.id) WHERE t.geneid = ? AND `VariantOnGenome/DBID` REGEXP ?', array($sSymbol, '^' . $sSymbol . '_[0-9]{6}$'))->fetchColumn();
             }
