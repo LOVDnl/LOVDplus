@@ -4,7 +4,7 @@
  * LEIDEN OPEN VARIATION DATABASE (LOVD)
  *
  * Created     : 2009-10-19
- * Modified    : 2019-08-28
+ * Modified    : 2019-09-13
  * For LOVD    : 3.0-22
  *
  * Copyright   : 2004-2019 Leiden University Medical Center; http://www.LUMC.nl/
@@ -151,7 +151,7 @@ $aRequired =
 $_SETT = array(
                 'system' =>
                      array(
-                            'version' => '3.0-21d',
+                            'version' => '3.0-21e',
                           ),
                 'user_levels' =>
                      array(
@@ -224,20 +224,23 @@ $_SETT = array(
                 'diseases_inheritance' =>
                     array(
                         'AD' => 'Autosomal dominant',
+                        'PI' => 'Autosomal dominant with paternal imprinting',
+                        'MI' => 'Autosomal dominant with maternal imprinting',
                         'AR' => 'Autosomal recessive',
                         'DD' => 'Digenic dominant',
                         'DR' => 'Digenic recessive',
-                        'IC' => 'Isolated cases',
-                        'ICB' => 'Inherited chromosomal imbalance',
+                        'IC' => 'Isolated Cases (Sporadic)',
                         'Mi' => 'Mitochondrial',
                         'Mu' => 'Multifactorial',
                         'SMo' => 'Somatic mosaicism',
                         'SMu' => 'Somatic mutation',
-                        'XLD' => 'X-linked dominant' ,
-                        'XLR' => 'X-linked recessive',
+                        'OG' => 'Oligogenic (3 genes)',
+                        'PG' => 'Polygenic (>3 genes)',
                         'XL' => 'X-linked',
-                        'YL' => 'Y-linked'
-                ),
+                        'XLD' => 'X-linked dominant',
+                        'XLR' => 'X-linked recessive',
+                        'YL' => 'Y-linked',
+                    ),
                 'data_status' =>
                      array(
                             STATUS_IN_PROGRESS => 'In progress',
