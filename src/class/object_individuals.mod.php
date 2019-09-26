@@ -4,10 +4,10 @@
  * LEIDEN OPEN VARIATION DATABASE (LOVD)
  *
  * Created     : 2013-10-28
- * Modified    : 2017-03-13
- * For LOVD    : 3.0-18
+ * Modified    : 2019-09-26
+ * For LOVD    : 3.0-22
  *
- * Copyright   : 2004-2017 Leiden University Medical Center; http://www.LUMC.nl/
+ * Copyright   : 2004-2019 Leiden University Medical Center; http://www.LUMC.nl/
  * Programmers : Ivo F.A.C. Fokkema <I.F.A.C.Fokkema@LUMC.nl>
  *               Anthony Marty <anthony.marty@unimelb.edu.au>
  *               Juny Kesumadewi <juny.kesumadewi@unimelb.edu.au>
@@ -51,6 +51,7 @@ class LOVD_IndividualMOD extends LOVD_Individual {
     function __construct ()
     {
         // Default constructor.
+        global $_SETT;
 
         // Run parent constructor to find out about the custom columns.
         parent::__construct();
@@ -131,10 +132,10 @@ class LOVD_IndividualMOD extends LOVD_Individual {
                         'diseases_' => 'Diseases',
                         'parents_' => 'Parent(s)',
                         'variants' => 'Total variants imported',
-                        'created_by_' => array('Created by', LEVEL_COLLABORATOR),
-                        'created_date_' => array('Date created', LEVEL_COLLABORATOR),
-                        'edited_by_' => array('Last edited by', LEVEL_COLLABORATOR),
-                        'edited_date_' => array('Date last edited', LEVEL_COLLABORATOR),
+                        'created_by_' => array('Created by', $_SETT['user_level_settings']['see_nonpublic_data']),
+                        'created_date_' => array('Date created', $_SETT['user_level_settings']['see_nonpublic_data']),
+                        'edited_by_' => array('Last edited by', $_SETT['user_level_settings']['see_nonpublic_data']),
+                        'edited_date_' => array('Date last edited', $_SETT['user_level_settings']['see_nonpublic_data']),
                       ));
 
         // Set some instance specific individual identifiers.
@@ -173,7 +174,7 @@ class LOVD_IndividualMOD extends LOVD_Individual {
         } else {
             $aScreeningIdentifier = array();
         }
-        
+
         // List of columns and (default?) order for viewing a list of entries.
         $this->aColumnsViewList = array_merge(
                  array(

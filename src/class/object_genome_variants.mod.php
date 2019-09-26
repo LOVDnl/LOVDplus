@@ -104,14 +104,12 @@ class LOVD_GenomeVariantMOD extends LOVD_GenomeVariant {
                       ),
                  $this->buildViewEntry(),
                  array(
-                        'mapping_flags_' => array('Automatic mapping', LEVEL_COLLABORATOR),
                         'average_frequency_' => 'Average frequency (large NGS studies)',
-                        'owned_by_' => 'Owner',
-                        'status' => array('Variant data status', LEVEL_COLLABORATOR),
-                        'created_by_' => array('Created by', LEVEL_COLLABORATOR),
-                        'created_date_' => array('Date created', LEVEL_COLLABORATOR),
-                        'edited_by_' => array('Last edited by', LEVEL_COLLABORATOR),
-                        'edited_date_' => array('Date last edited', LEVEL_COLLABORATOR),
+                        'status' => array('Variant data status', $_SETT['user_level_settings']['see_nonpublic_data']),
+                        'created_by_' => array('Created by', $_SETT['user_level_settings']['see_nonpublic_data']),
+                        'created_date_' => array('Date created', $_SETT['user_level_settings']['see_nonpublic_data']),
+                        'edited_by_' => array('Last edited by', $_SETT['user_level_settings']['see_nonpublic_data']),
+                        'edited_date_' => array('Date last edited', $_SETT['user_level_settings']['see_nonpublic_data']),
                       ));
         if (!LOVD_plus) {
             unset($this->aColumnsViewEntry['curation_status_']);

@@ -4,8 +4,8 @@
  * LEIDEN OPEN VARIATION DATABASE (LOVD)
  *
  * Created     : 2014-01-03
- * Modified    : 2019-07-31
- * For LOVD    : 3.0-18
+ * Modified    : 2019-09-26
+ * For LOVD    : 3.0-22
  *
  * Copyright   : 2004-2019 Leiden University Medical Center; http://www.LUMC.nl/
  * Programmer  : Ivo F.A.C. Fokkema <I.F.A.C.Fokkema@LUMC.nl>
@@ -181,7 +181,7 @@ class LOVD_ScreeningMOD extends LOVD_Screening {
             $zData['analysis_approved_date_'] = substr($zData['analysis_approved_date'], 0, 10);
         } else {
             $zData['individualid_'] = '<A href="individuals/' . $zData['individualid'] . '">' . $zData['individualid'] . '</A>';
-            if ($_AUTH['level'] >= LEVEL_COLLABORATOR) {
+            if ($_AUTH['level'] >= $_SETT['user_level_settings']['see_nonpublic_data']) {
                 $zData['individualid_'] .= ' <SPAN style="color : #' . $this->getStatusColor($zData['individual_statusid']) . '">(' . $_SETT['data_status'][$zData['individual_statusid']] . ')</SPAN>';
             }
             $zData['variants_found_link'] = $zData['variants_found_'];
