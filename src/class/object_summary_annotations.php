@@ -72,7 +72,7 @@ class LOVD_SummaryAnnotation extends LOVD_Custom {
         $this->aColumnsViewEntry = array_merge(
                  array(
                         'TableHeader_General' => 'Summary annotations',
-                        'effectid' => 'Affects function',
+                        'effectid' => 'Classification',
                       ),
                  $this->buildViewEntry(),
                  array(
@@ -122,7 +122,7 @@ class LOVD_SummaryAnnotation extends LOVD_Custom {
         $this->aFormData = array_merge(
             array(
                 array('POST', '', '', '', '50%', '14', '50%'),
-                array('Affects function', '', 'select', 'effectid', 1, $aEffectIDs, true, false, false),
+                array('Classification', '', 'select', 'effectid', 1, $aEffectIDs, true, false, false),
             ),
             $this->buildForm(),
             array(

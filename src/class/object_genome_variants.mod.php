@@ -4,8 +4,8 @@
  * LEIDEN OPEN VARIATION DATABASE (LOVD)
  *
  * Created     : 2014-04-03
- * Modified    : 2019-08-19
- * For LOVD    : 3.0-21
+ * Modified    : 2019-09-26
+ * For LOVD    : 3.0-22
  *
  * Copyright   : 2004-2019 Leiden University Medical Center; http://www.LUMC.nl/
  * Programmer  : Ivo F.A.C. Fokkema <I.F.A.C.Fokkema@LUMC.nl>
@@ -92,19 +92,13 @@ class LOVD_GenomeVariantMOD extends LOVD_GenomeVariant {
         $this->aSQLViewEntry['GROUP_BY'] = 'vog.id';
 
         // List of columns and (default?) order for viewing an entry.
-        $sEffectReported = 'Affects function (reported)';
-        $sEffectConcluded = 'Affects function (concluded)';
-        if (lovd_verifyInstance('mgha') || lovd_verifyInstance('mgha_cpipe_lymphoma')) {
-            $sEffectReported = 'Classification proposed';
-            $sEffectConcluded = 'Classification final';
-        }
         $this->aColumnsViewEntry = array_merge(
                  array(
                         'individualid_' => 'Individual ID',
                         'chromosome' => 'Chromosome',
                         'allele_' => 'Allele',
-                        'effect_reported' => $sEffectReported,
-                        'effect_concluded' => $sEffectConcluded,
+                        'effect_reported' => 'Classification (proposed)',
+                        'effect_concluded' => 'Classification (final)',
                         'curation_status_' => 'Curation status',
                         'confirmation_status_' => 'Confirmation status',
                       ),
@@ -168,7 +162,7 @@ class LOVD_GenomeVariantMOD extends LOVD_GenomeVariant {
 
     function getForm ()
     {
-        global $_SETT;
+        global $_AUTH, $_SETT;
         // Build the form.
 
         // If we've built the form before, simply return it. Especially imports will repeatedly call checkFields(), which calls getForm().
@@ -176,26 +170,22 @@ class LOVD_GenomeVariantMOD extends LOVD_GenomeVariant {
             return parent::getForm();
         }
 
-        $sEffectReported = 'Affects function (reported)';
-        $sEffectConcluded = 'Affects function (concluded)';
-        if (lovd_verifyInstance('mgha') || lovd_verifyInstance('mgha_cpipe_lymphoma')) {
-            $sEffectReported = 'Classification proposed';
-            $sEffectConcluded = 'Classification final';
-        }
-
         // Array which will make up the form table.
         $this->aFormData = array_merge(
                  array(
                         array('POST', '', '', '', '50%', '14', '50%'),
-                        array($sEffectReported, '', 'select', 'effect_reported', 1, $_SETT['var_effect'], false, false, false),
-                        array($sEffectConcluded, '', 'select', 'effect_concluded', 1, $_SETT['var_effect'], false, false, false)
+   'effect_reported' => array('Classification (proposed)', '', 'select', 'effect_reported', 1, $_SETT['var_effect'], false, false, false),
+  'effect_concluded' => array('Classification (final)', '', 'select', 'effect_concluded', 1, $_SETT['var_effect'], false, false, false)
                       ),
                  $this->buildForm(),
                  array(
      'authorization' => array('Enter your password for authorization', '', 'password', 'password', 20),
                       ));
 
-        if (lovd_verifyInstance('leiden')) {
+        if ($_AUTH['level'] < $_SETT['user_level_settings']['set_concluded_effect']) {
+            unset($this->aFormData['effect_concluded']);
+        }
+        if (!lovd_verifyInstance('mgha', false)) {
             unset($this->aFormData['authorization']);
         }
 
