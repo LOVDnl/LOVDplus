@@ -561,7 +561,7 @@ if (ACTION == 'configure' && GET) {
 
     // Set JS variables and objects.
     print($sJsOtherFunctions . '
-    var oButtonFormSubmit  = {"Submit":function () { $.post("' . CURRENT_PATH . '?' . ACTION . '", $("#configure_analysis_form").serialize()); }};
+    var oButtonFormSubmit  = {"Run analysis":function () { $.post("' . CURRENT_PATH . '?' . ACTION . '", $("#configure_analysis_form").serialize()); }};
     var oButtonCancel = {"Cancel":function () { $(this).dialog("close"); }};
     var oButtonClose  = {"Close":function () { $(this).dialog("close"); }};
     ');
@@ -572,7 +572,7 @@ if (ACTION == 'configure' && GET) {
     $("#configure_analysis_dialog").html("' . $sForm . '<BR>");
 
     // Select the right buttons.
-    $("#configure_analysis_dialog").dialog({title: "Configure Analysis", buttons: $.extend({}, oButtonFormSubmit, oButtonCancel)});
+    $("#configure_analysis_dialog").dialog({title: "Configure analysis", buttons: $.extend({}, oButtonFormSubmit, oButtonCancel)});
     
     var sInfo = \'<SPAN id="filter-config-info"><EM>* Please fill in all required fields</EM></SPAN>\';
     if ($("#filter-config-info").length === 0) {
