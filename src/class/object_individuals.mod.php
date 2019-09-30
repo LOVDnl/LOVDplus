@@ -4,7 +4,7 @@
  * LEIDEN OPEN VARIATION DATABASE (LOVD)
  *
  * Created     : 2013-10-28
- * Modified    : 2019-09-26
+ * Modified    : 2019-09-30
  * For LOVD    : 3.0-22
  *
  * Copyright   : 2004-2019 Leiden University Medical Center; http://www.LUMC.nl/
@@ -222,6 +222,51 @@ class LOVD_IndividualMOD extends LOVD_Individual {
 
         // Because the information is publicly available, remove some columns for the public.
         $this->unsetColsByAuthLevel();
+    }
+
+
+
+
+
+    function buildForm ($sPrefix = '')
+    {
+        $aForm = parent::buildForm($sPrefix);
+        // Remove all except the remarks.
+        $aFormFiltered = array();
+
+        foreach($aForm as $sCol => $val) {
+            if (strpos($sCol, 'Individual/Curation/') !== false) {
+                $aFormFiltered[$sCol] = $aForm[$sCol];
+            }
+        }
+
+        if (isset($aForm['Individual/Remarks'])) {
+            $aFormFiltered['Individual/Remarks'] = $aForm['Individual/Remarks'];
+        }
+        return $aFormFiltered;
+    }
+
+
+
+
+
+    function getForm ()
+    {
+        // Build the form.
+
+        // If we've built the form before, simply return it. Especially imports will repeatedly call checkFields(), which calls getForm().
+        if (!empty($this->aFormData)) {
+            return parent::getForm();
+        }
+
+        // Array which will make up the form table.
+        $this->aFormData = array_merge(
+            array(
+                array('POST', '', '', '', '35%', '14', '65%'),
+            ),
+            $this->buildForm());
+
+        return parent::getForm();
     }
 
 
