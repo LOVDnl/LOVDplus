@@ -4,7 +4,7 @@
  * LEIDEN OPEN VARIATION DATABASE (LOVD)
  *
  * Created     : 2013-11-07
- * Modified    : 2019-09-26
+ * Modified    : 2019-09-30
  * For LOVD    : 3.0-22
  *
  * Copyright   : 2004-2019 Leiden University Medical Center; http://www.LUMC.nl/
@@ -175,7 +175,7 @@ class LOVD_CustomViewListMOD extends LOVD_CustomViewList {
 
                         // Outer joins for the observation counts.
                         // Join the variants table using the DBID to get all of the variants that are the same as this one.
-                        $aSQL['FROM'] .= ' LEFT OUTER JOIN ' . TABLE_VARIANTS . ' AS ovog USING (`VariantOnGenome/DBID`)';
+                        $aSQL['FROM'] .= ' LEFT OUTER JOIN ' . TABLE_VARIANTS . ' AS ovog ON (vog.`VariantOnGenome/DBID` = ovog.`VariantOnGenome/DBID`)';
                         // Join the screening2variants table to get the screening IDs for all these variants.
                         $aSQL['FROM'] .= ' LEFT OUTER JOIN ' . TABLE_SCR2VAR . ' AS os2v ON (ovog.id = os2v.variantid)';
                         // Join the screening table to to get the individual IDs for these variants as we count the DISTINCT individualids.
