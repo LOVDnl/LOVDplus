@@ -4,10 +4,10 @@
  * LEIDEN OPEN VARIATION DATABASE (LOVD)
  *
  * Created     : 2016-09-02
- * Modified    : 2018-12-20
- * For LOVD    : 3.0-18
+ * Modified    : 2019-09-26
+ * For LOVD    : 3.0-22
  *
- * Copyright   : 2004-2018 Leiden University Medical Center; http://www.LUMC.nl/
+ * Copyright   : 2004-2019 Leiden University Medical Center; http://www.LUMC.nl/
  * Programmers : Juny Kesumadewi <juny.kesumadewi@unimelb.edu.au>
  *               Ivo F.A.C. Fokkema <I.F.A.C.Fokkema@LUMC.nl>
  *
@@ -124,8 +124,7 @@ $_INSTANCE_CONFIG['viewlists'] = array(
             'chromosome',
             'allele_',
             'VariantOnGenome/DNA',
-            'VariantOnGenome/Sequencing/Depth/Alt/Fraction',
-            'VariantOnGenome/Sequencing/Quality',
+            'VariantOnGenome/Conservation_score/PhyloP',
             'obs_variant',
             'obs_var_ind_ratio',
             'obs_disease',

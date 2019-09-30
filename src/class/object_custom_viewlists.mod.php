@@ -4,8 +4,8 @@
  * LEIDEN OPEN VARIATION DATABASE (LOVD)
  *
  * Created     : 2013-11-07
- * Modified    : 2019-06-18
- * For LOVD    : 3.0-18
+ * Modified    : 2019-09-30
+ * For LOVD    : 3.0-22
  *
  * Copyright   : 2004-2019 Leiden University Medical Center; http://www.LUMC.nl/
  * Programmers : Ivo F.A.C. Fokkema <I.F.A.C.Fokkema@LUMC.nl>
@@ -175,7 +175,7 @@ class LOVD_CustomViewListMOD extends LOVD_CustomViewList {
 
                         // Outer joins for the observation counts.
                         // Join the variants table using the DBID to get all of the variants that are the same as this one.
-                        $aSQL['FROM'] .= ' LEFT OUTER JOIN ' . TABLE_VARIANTS . ' AS ovog USING (`VariantOnGenome/DBID`)';
+                        $aSQL['FROM'] .= ' LEFT OUTER JOIN ' . TABLE_VARIANTS . ' AS ovog ON (vog.`VariantOnGenome/DBID` = ovog.`VariantOnGenome/DBID`)';
                         // Join the screening2variants table to get the screening IDs for all these variants.
                         $aSQL['FROM'] .= ' LEFT OUTER JOIN ' . TABLE_SCR2VAR . ' AS os2v ON (ovog.id = os2v.variantid)';
                         // Join the screening table to to get the individual IDs for these variants as we count the DISTINCT individualids.
@@ -367,31 +367,31 @@ class LOVD_CustomViewListMOD extends LOVD_CustomViewList {
                 case 'VariantOnGenome':
                     $sPrefix = 'vog.';
 
-                    $sEffectLegend = 'The variant\'s affect on a protein\'s function, in the format <STRONG>[Reported]/[Curator concluded]</STRONG> indicating:
+                    $sEffectLegend = 'The variant\'s classification, in the format <STRONG>[proposed]/[final]</STRONG> indicating:
                     <TABLE border="0" cellpadding="0" cellspacing="0">
                       <TR>
                         <TD width="30">+</TD>
-                        <TD>The variant affects function</TD>
+                        <TD>Pathogenic</TD>
                       </TR>
                       <TR>
                         <TD>+?</TD>
-                        <TD>The variant probably affects function</TD>
+                        <TD>Likely pathogenic</TD>
                       </TR>
                       <TR>
                         <TD>-</TD>
-                        <TD>The variant does not affect function</TD>
+                        <TD>Benign</TD>
                       </TR>
                       <TR>
                         <TD>-?</TD>
-                        <TD>The variant probably does not affect function</TD>
+                        <TD>Likely benign</TD>
                       </TR>
                       <TR>
                         <TD>?</TD>
-                        <TD>Effect unknown</TD>
+                        <TD>VUS</TD>
                       </TR>
                       <TR>
                         <TD>.</TD>
-                        <TD>Effect not classified</TD>
+                        <TD>Not classified</TD>
                       </TR>
                     </TABLE>';
 
@@ -411,7 +411,7 @@ class LOVD_CustomViewListMOD extends LOVD_CustomViewList {
                                         'view' => false,
                                         'db'   => array('vog.id', 'ASC', true)),
                                 'vog_effect' => array(
-                                        'view' => array('Effect', 70),
+                                        'view' => array('Class.', 60),
                                         'db'   => (!in_array('AnalysisRunResults', $aObjects)?
                                             array('eg.name', 'ASC', true) :
                                             array('CONCAT(REPLACE(IFNULL(sa.effectid, 5), 0, 5), REPLACE(RIGHT(IFNULL(vog.effectid, 5), 1), 0, 5), REPLACE(LEFT(IFNULL(vog.effectid, 5), 1), 0, 5))', 'DESC', true)),

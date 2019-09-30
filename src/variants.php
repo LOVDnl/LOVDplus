@@ -4,7 +4,7 @@
  * LEIDEN OPEN VARIATION DATABASE (LOVD)
  *
  * Created     : 2010-12-21
- * Modified    : 2019-08-28
+ * Modified    : 2019-09-26
  * For LOVD    : 3.0-22
  *
  * Copyright   : 2004-2019 Leiden University Medical Center; http://www.LUMC.nl/
@@ -1021,7 +1021,7 @@ if (PATH_COUNT == 1 && ACTION == 'create') {
                                 $_DATA['Genome']->buildFields());
 
             // Prepare values.
-            $_POST['effectid'] = $_POST['effect_reported'] . ($_AUTH['level'] >= LEVEL_CURATOR? $_POST['effect_concluded'] : substr($_SETT['var_effect_default'], -1));
+            $_POST['effectid'] = $_POST['effect_reported'] . ($_AUTH['level'] >= $_SETT['user_level_settings']['set_concluded_effect']? $_POST['effect_concluded'] : substr($_SETT['var_effect_default'], -1));
 
             // 2017-09-22; 3.0-20; Replacing the old API call to Mutalyzer with our new lovd_getVariantInfo() function.
             // Don't bother with a fallback, this thing is more solid than Mutalyzer's service.
@@ -2744,7 +2744,7 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && in_array(ACTION, array('edit', 'p
                                 $_DATA['Genome']->buildFields());
 
             // Prepare values.
-            $_POST['effectid'] = $_POST['effect_reported'] . ($_AUTH['level'] >= LEVEL_CURATOR? $_POST['effect_concluded'] : $zData['effectid']{1});
+            $_POST['effectid'] = $_POST['effect_reported'] . ($_AUTH['level'] >= $_SETT['user_level_settings']['set_concluded_effect']? $_POST['effect_concluded'] : $zData['effectid']{1});
             if ($_AUTH['level'] >= LEVEL_CURATOR) {
                 $aFieldsGenome[] = 'owned_by';
                 $aFieldsGenome[] = 'statusid';
@@ -3012,13 +3012,20 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && in_array(ACTION, array('curate', 
         $_DATA['Genome']->checkFields($_POST);
 
         if (!lovd_error()) {
+            if (!isset($_POST['effect_reported'])) {
+                $_POST['effect_reported'] = $zData['effectid']{0};
+            }
+            if (!isset($_POST['effect_concluded']) || $_AUTH['level'] < $_SETT['user_level_settings']['set_concluded_effect']) {
+                $_POST['effect_concluded'] = $zData['effectid']{1};
+            }
+
             // Setup logging to show any changes to the curation data.
             $sCurationLog = '';
             if ($zData['effectid']{0} != $_POST['effect_reported']) {
-                $sCurationLog .= 'Effect reported: "' . $_SETT['var_effect'][$zData['effectid']{0}] . '" => "' . $_SETT['var_effect'][$_POST['effect_reported']] . '"' . "\n";
+                $sCurationLog .= 'Classification (proposed): "' . $_SETT['var_effect'][$zData['effectid']{0}] . '" => "' . $_SETT['var_effect'][$_POST['effect_reported']] . '"' . "\n";
             }
             if ($zData['effectid']{1} != $_POST['effect_concluded']) {
-                $sCurationLog .= 'Effect concluded: "' . $_SETT['var_effect'][$zData['effectid']{1}] . '" => "' . $_SETT['var_effect'][$_POST['effect_concluded']] . '"' . "\n";
+                $sCurationLog .= 'Classification (final): "' . $_SETT['var_effect'][$zData['effectid']{1}] . '" => "' . $_SETT['var_effect'][$_POST['effect_concluded']] . '"' . "\n";
             }
             if (trim($zData['VariantOnGenome/Remarks']) != trim($_POST['VariantOnGenome/Remarks'])) {
                 $sCurationLog .= 'VariantOnGenome/Remarks: "' . (!trim($zData['VariantOnGenome/Remarks'])? '<empty>' : str_replace(array("\r", "\n", "\t"), array('\r', '\n', '\t'), $zData['VariantOnGenome/Remarks'])) . '" => "' . (!trim($_POST['VariantOnGenome/Remarks'])? '<empty>' : str_replace(array("\r", "\n", "\t"), array('\r', '\n', '\t'), $_POST['VariantOnGenome/Remarks'])) . '"' . "\n";
@@ -3091,7 +3098,7 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && in_array(ACTION, array('curate', 
     $aForm = array_merge(
                  $_DATA['Genome']->getForm(),
                  array(
-                        array('', '', 'print', '<INPUT type="submit" value="Edit variant entry">'),
+                        array('', '', 'print', '<INPUT type="submit" value="Curate variant">'),
                       ));
     lovd_viewForm($aForm);
 
