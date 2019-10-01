@@ -122,21 +122,14 @@ if (PATH_COUNT >= 2 && ctype_digit($_PE[1]) && !ACTION && (PATH_COUNT == 2 || PA
     $zData = $_DATA->viewEntry($nID);
 
     $aNavigation = array();
-    if ($_AUTH && $_AUTH['level'] == LEVEL_ADMIN) {
-        $aNavigation[$_PE[0] . '/' . $_PE[1] . '?edit']                     = array('menu_edit.png', 'Edit individual entry', 1);
+    if ($_AUTH) {
+        // Authorized user is logged in. Provide tools.
+        if ($_AUTH['level'] >= LEVEL_OWNER) {
+            $aNavigation['individuals/' . $nID . '?curate' . (isset($_GET['in_window'])? '&amp;in_window' : '')] = array('menu_edit.png', 'Curate this individual', 1);
+        }
+        $aNavigation['javascript:lovd_openWindow(\'' . lovd_getInstallURL() . 'individuals/' . $nID . '?curation_log&in_window\', \'curation_log\', 1050, 450);'] = array('menu_clock.png', 'Show curation history', 1);
         $aNavigation[$_PE[0] . '/' . $_PE[1] . '?edit_panels']              = array('menu_edit.png', 'Edit gene panels', 1);
-        if ($_AUTH['level'] >= LEVEL_MANAGER) {
-            $aNavigation['screenings?search_individualid=' . $nID] = array('menu_magnifying_glass.png', 'View screenings', 1);
-        }
-        if ($zData['statusid'] < STATUS_OK && $_AUTH['level'] >= LEVEL_CURATOR) {
-            $aNavigation[$_PE[0] . '/' . $_PE[1] . '?publish']              = array('check.png', ($zData['statusid'] == STATUS_MARKED? 'Remove mark from' : 'Publish (curate)') . ' individual entry', 1);
-        }
-        // You can only add phenotype information to this individual, when there are phenotype columns enabled.
-        if ($_DB->query('SELECT COUNT(*) FROM ' . TABLE_IND2DIS . ' AS i2d INNER JOIN ' . TABLE_SHARED_COLS . ' AS sc USING(diseaseid) WHERE i2d.individualid = ?', array($nID))->fetchColumn()) {
-            $aNavigation['phenotypes?create&amp;target=' . $nID] = array('menu_plus.png', 'Add phenotype information to individual', 1);
-        }
-        $aNavigation['screenings?create&amp;target=' . $nID]     = array('menu_plus.png', 'Add screening to individual', 1);
-        if ($_AUTH['level'] >= LEVEL_CURATOR) {
+        if ($_AUTH['level'] >= $_SETT['user_level_settings']['delete_individual']) {
             $aNavigation[$_PE[0] . '/' . $_PE[1] . '?delete']               = array('cross.png', 'Delete individual entry', 1);
         }
     }
@@ -581,6 +574,171 @@ if (PATH_COUNT >= 2 && ctype_digit($_PE[1]) && !ACTION && (PATH_COUNT == 2 || PA
 
 
 
+if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && in_array(ACTION, array('curate', 'edit_remarks'))) {
+    // URL: /individuals/00000001?curate
+    // URL: /individuals/00000001?edit_remarks
+    // Edit the curation data for an entry, hide all other fields.
+
+    $nID = sprintf('%08d', $_PE[1]);
+    define('PAGE_TITLE', 'Curate individual #' . $nID);
+    define('LOG_EVENT', 'IndividualCuration');
+
+    // Load appropriate user level for this individual.
+    // Authorization depends on the screenings belonging to this individual.
+    // For managers and up, there needs to be a screening available that is not
+    //  yet set to ANALYSIS_STATUS_WAIT_CONFIRMATION. For Analyzers, there needs
+    //  to be a screening available, not yet set to ANALYSIS_STATUS_CLOSED and
+    //  either started by them or freely available. For the latter check, we let
+    //  lovd_isAuthorized() decide, but we'll have to check the analysis status
+    //  ourselves since lovd_isAuthorized() doesn't do this (yet).
+    // FIXME: Should lovd_isAuthorized() check the status of the screening, and
+    //  revoke editing authorization when the status is too high? We now have
+    //  the check for screening status implemented in many different places.
+    // Fetch only the analyses that we might have a successful authorization on.
+    $zScreenings = $_DB->query('SELECT id FROM ' . TABLE_SCREENINGS . ' WHERE individualid = ? AND analysis_statusid < ?',
+        array($nID, ($_AUTH['level'] >= LEVEL_MANAGER? ANALYSIS_STATUS_WAIT_CONFIRMATION : ANALYSIS_STATUS_CLOSED)))->fetchAllColumn();
+    if (!$zScreenings) {
+        // Manager or not, the screenings are closed (assuming there are any).
+        $_T->printHeader();
+        $_T->printTitle();
+        lovd_showInfoTable('Unable to curate the individual, the analysis status requires a higher user level.', 'stop');
+        $_T->printFooter();
+        exit;
+    }
+
+    // If we get here, there are screenings to authorize against. Managers are
+    //  always cool at this point, we need at least LEVEL_OWNER.
+    if ($_AUTH['level'] < LEVEL_OWNER) {
+        foreach ($zScreenings as $nScreeningID) {
+            lovd_isAuthorized('screening_analysis', $nScreeningID);
+            // If we're authorized, we can skip the rest.
+            if ($_AUTH['level'] >= LEVEL_OWNER) {
+                break;
+            }
+        }
+    }
+
+    lovd_requireAUTH(LEVEL_OWNER); // Analyzer becomes Owner, if authorized.
+
+    require ROOT_PATH . 'class/object_individuals.mod.php';
+    $_DATA = new LOVD_IndividualMOD();
+    $zData = $_DATA->loadEntry($nID);
+    require ROOT_PATH . 'inc-lib-form.php';
+
+    if (POST) {
+        lovd_errorClean();
+
+        $_DATA->checkFields($_POST, $zData);
+
+        if (!lovd_error()) {
+            // Manual query, because updateEntry() empties the whole VOG.
+            $sSQL = 'UPDATE ' . TABLE_INDIVIDUALS . ' SET id = id'; // Placeholder to make sure I can add ", ".
+            $aSQL = array();
+
+            $sCurationLog = ''; // Log to show any changes to the curation data.
+            foreach($_POST as $sCol => $val) {
+                // Process any of the curation custom columns.
+                if ($sCol == 'Individual/Remarks' || strpos($sCol, 'Individual/Curation/') !== false) {
+                    $sSQL .= ', `' . $sCol . '` = ?';
+                    $aSQL[] = $val;
+                    if (trim($zData[$sCol]) != trim($_POST[$sCol])) {
+                        // Log any changes to these custom curation columns.
+                        $sCurationLog .= $sCol . ': "' .
+                            (!trim($zData[$sCol])? '<empty>' : str_replace(array("\r", "\n", "\t"), array('\r', '\n', '\t'), $zData[$sCol])) .
+                            '" => "' .
+                            (!trim($_POST[$sCol])? '<empty>' : str_replace(array("\r", "\n", "\t"), array('\r', '\n', '\t'), $_POST[$sCol])) . '"' . "\n";
+                    }
+                }
+            }
+
+            $sSQL .= ' WHERE id = ?';
+            $aSQL[] = $nID;
+            $_DB->query($sSQL, array_values($aSQL), true, true);
+
+            if ($sCurationLog) {
+                // Write to log if any changes were detected.
+                lovd_writeLog('Event', LOG_EVENT, 'Curated individual #' . $nID . "\n" . $sCurationLog);
+            }
+
+            // Thank the user...
+            header('Location: ' . lovd_getInstallURL() . CURRENT_PATH . (isset($_GET['in_window'])? '?&in_window' : ''));
+            exit;
+
+        } else {
+            // Because we're sending the data back to the form, I need to unset the password field!
+            unset($_POST['password']);
+        }
+
+    } else {
+        // Load current values.
+        foreach ($zData as $key => $val) {
+            $_POST[$key] = $val;
+        }
+    }
+
+
+
+    $_T->printHeader();
+    $_T->printTitle();
+
+    lovd_errorPrint();
+
+    // Tooltip JS code.
+    lovd_includeJS('inc-js-tooltip.php');
+    lovd_includeJS('inc-js-custom_links.php');
+
+    // Hardcoded ACTION because when we're publishing, but we get the form on screen (i.e., something is wrong), we want this to be handled as a normal edit.
+    print('      <FORM action="' . CURRENT_PATH . '?' . ACTION . (isset($_GET['in_window'])? '&amp;in_window' : '') . '" method="post">' . "\n");
+
+    // Array which will make up the form table.
+    $aForm = array_merge(
+        $_DATA->getForm(),
+        array(
+            array('', '', 'print', '<INPUT type="submit" value="Curate individual">'),
+        ));
+    lovd_viewForm($aForm);
+
+    print("\n" .
+          '      </FORM>' . "\n\n");
+
+    $_T->printFooter();
+    exit;
+}
+
+
+
+
+
+if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && ACTION == 'curation_log') {
+    // URL: /individuals/00000001?curation_log
+    // Show logs for the changes of curation data for this individual.
+
+    $nID = sprintf('%08d', $_PE[1]);
+    define('PAGE_TITLE', 'Curation history for individual #' . $nID);
+    $_GET['search_event'] = 'IndividualCuration';
+
+    $_T->printHeader();
+    $_T->printTitle();
+
+    $_GET['page_size'] = 10;
+    $_GET['search_entry_'] = '"individual #' . $nID . '"';
+
+    require_once ROOT_PATH . 'class/object_logs.php';
+    $_DATA = new LOVD_Log();
+    $aVLOptions = array(
+        'cols_to_skip' => array('name', 'event', 'del'),
+        'track_history' => false,
+    );
+    $_DATA->viewList('Logs_for_IndividualCuration', $aVLOptions);
+
+    $_T->printFooter();
+    exit;
+}
+
+
+
+
+
 if (PATH_COUNT == 4 && ctype_digit($_PE[1]) && $_PE[2] == 'analyze' && ctype_digit($_PE[3]) && ACTION == 'close') {
     // URL: /individuals/00000001/analyze/0000000001?close
     // Close a specific analysis.
@@ -869,7 +1027,7 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && !ACTION) {
             $aNavigation['phenotypes?create&amp;target=' . $nID] = array('menu_plus.png', 'Add phenotype information to individual', 1);
         }
         $aNavigation['screenings?create&amp;target=' . $nID]     = array('menu_plus.png', 'Add screening to individual', 1);
-        if ($_AUTH['level'] >= LEVEL_CURATOR) {
+        if ($_AUTH['level'] >= $_SETT['user_level_settings']['delete_individual']) {
             $aNavigation[CURRENT_PATH . '?delete']               = array('cross.png', 'Delete individual entry', 1);
         }
     }
@@ -1537,7 +1695,7 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && ACTION == 'delete') {
 
     // FIXME: What if individual also contains other user's data?
     lovd_isAuthorized('individual', $nID);
-    lovd_requireAUTH(LEVEL_CURATOR);
+    lovd_requireAUTH($_SETT['user_level_settings']['delete_individual']);
 
     require ROOT_PATH . 'class/object_individuals.php';
     $_DATA = new LOVD_Individual();

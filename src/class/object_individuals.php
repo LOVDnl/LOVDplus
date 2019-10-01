@@ -299,8 +299,8 @@ class LOVD_Individual extends LOVD_Custom {
             }
         }
 
-        $aDiseases = array_keys($this->aFormData['aDiseases'][5]);
         if (!empty($aData['active_diseases'])) {
+            $aDiseases = array_keys($this->aFormData['aDiseases'][5]);
             if (count($aData['active_diseases']) > 1 && in_array('00000', $aData['active_diseases'])) {
                 lovd_errorAdd('active_diseases', 'You cannot select both "Healthy/Control" and a disease for the same individual entry.');
             } else {
