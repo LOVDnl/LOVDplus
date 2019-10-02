@@ -4,7 +4,7 @@
  * LEIDEN OPEN VARIATION DATABASE (LOVD)
  *
  * Created     : 2009-10-21
- * Modified    : 2019-09-26
+ * Modified    : 2019-10-01
  * For LOVD    : 3.0-22
  *
  * Copyright   : 2004-2019 Leiden University Medical Center; http://www.LUMC.nl/
@@ -2262,7 +2262,11 @@ class LOVD_Object {
         $aOptions['multi_value_filter'] &= $aOptions['show_options'];
 
         // Save viewlist options to session.
-        $_SESSION['viewlists'][$sViewListID]['options'] = $aOptions;
+        $_SESSION['viewlists'][$sViewListID]['options'] = array_merge(
+            $aOptions,
+            array(
+                'only_rows' => false, // only_rows should never be stored in SESSION.
+            ));
 
         if (!defined('LOG_EVENT')) {
            define('LOG_EVENT', $this->sObject . '::viewList()');
