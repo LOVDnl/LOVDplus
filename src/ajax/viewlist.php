@@ -4,7 +4,7 @@
  * LEIDEN OPEN VARIATION DATABASE (LOVD)
  *
  * Created     : 2010-02-18
- * Modified    : 2019-10-01
+ * Modified    : 2019-10-09
  * For LOVD    : 3.0-22
  *
  * Copyright   : 2004-2019 Leiden University Medical Center; http://www.LUMC.nl/
@@ -198,7 +198,7 @@ $sFile = ROOT_PATH . 'class/object_' . strtolower($sObject) . 's.php';
 $sFile = str_replace('_revs.php', 's.rev.php', $sFile);
 // Exception for LOVD+.
 if (LOVD_plus && substr($_GET['object'], -3) == 'MOD') {
-    $sFile = str_replace('mods.', 's.mod.', $sFile);
+    $sFile = str_replace('pluss.', 's.plus.', $sFile);
 }
 
 if (!file_exists($sFile)) {

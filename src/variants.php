@@ -4,7 +4,7 @@
  * LEIDEN OPEN VARIATION DATABASE (LOVD)
  *
  * Created     : 2010-12-21
- * Modified    : 2019-10-01
+ * Modified    : 2019-10-09
  * For LOVD    : 3.0-22
  *
  * Copyright   : 2004-2019 Leiden University Medical Center; http://www.LUMC.nl/
@@ -165,7 +165,7 @@ if (LOVD_plus && PATH_COUNT == 3 && $_PE[1] == 'DBID' && !empty($_GET['search_va
 
     lovd_requireAUTH(LEVEL_ANALYZER);
 
-    require ROOT_PATH . 'class/object_custom_viewlists.mod.php';
+    require ROOT_PATH . 'class/object_custom_viewlists.plus.php';
     $_DATA = new LOVD_CustomViewListMOD(array('VariantOnGenome', 'VariantOnTranscript', 'Screening', 'Individual'));
 
     $_GET['search_VariantOnGenome/DBID'] = '="' . $sDBID . '"';
@@ -193,7 +193,7 @@ if (LOVD_plus && PATH_COUNT == 3 && $_PE[1] == 'DBID' && !ACTION) {
 
     lovd_requireAUTH(LEVEL_ANALYZER);
 
-    require ROOT_PATH . 'class/object_custom_viewlists.mod.php';
+    require ROOT_PATH . 'class/object_custom_viewlists.plus.php';
     $_DATA = new LOVD_CustomViewListMOD(array('VariantOnGenome', 'VariantOnTranscript', 'Screening', 'Individual', 'Diseases'));
     $_GET['search_VariantOnGenome/DBID'] = '="' . $sID . '"';
 
@@ -449,7 +449,7 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && !ACTION) {
         <TR>
           <TD valign="top">' . "\n");
     if (LOVD_plus) {
-        require ROOT_PATH . 'class/object_genome_variants.mod.php';
+        require ROOT_PATH . 'class/object_genome_variants.plus.php';
         $_DATA = new LOVD_GenomeVariantMOD();
     } else {
         require ROOT_PATH . 'class/object_genome_variants.php';
@@ -2999,7 +2999,7 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && in_array(ACTION, array('curate', 
         exit;
     }
 
-    require ROOT_PATH . 'class/object_genome_variants.mod.php';
+    require ROOT_PATH . 'class/object_genome_variants.plus.php';
     $_DATA = array();
     $_DATA['Genome'] = new LOVD_GenomeVariantMOD();
     $zData = $_DATA['Genome']->loadEntry($nID);

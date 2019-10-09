@@ -4,7 +4,7 @@
  * LEIDEN OPEN VARIATION DATABASE (LOVD)
  *
  * Created     : 2012-03-27
- * Modified    : 2019-10-01
+ * Modified    : 2019-10-09
  * For LOVD    : 3.0-22
  *
  * Copyright   : 2004-2019 Leiden University Medical Center; http://www.LUMC.nl/
@@ -519,7 +519,7 @@ function lovd_mapVariants ()
   <BASE href="<?php echo lovd_getInstallURL(); ?>">
   <LINK rel="stylesheet" type="text/css" href="lib/select2/select2.min.css">
   <LINK rel="stylesheet" type="text/css" href="styles.css">
-  <LINK rel="stylesheet" type="text/css" href="styles.mod.css">
+  <LINK rel="stylesheet" type="text/css" href="styles.plus.css">
   <LINK rel="stylesheet" type="text/css" href="lib/jeegoocontext/style.css">
   <LINK rel="shortcut icon" href="favicon.ico" type="image/x-icon">
 

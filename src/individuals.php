@@ -4,7 +4,7 @@
  * LEIDEN OPEN VARIATION DATABASE (LOVD)
  *
  * Created     : 2011-02-16
- * Modified    : 2019-10-01
+ * Modified    : 2019-10-09
  * For LOVD    : 3.0-22
  *
  * Copyright   : 2004-2019 Leiden University Medical Center; http://www.LUMC.nl/
@@ -79,7 +79,7 @@ if (PATH_COUNT == 1 && !ACTION) {
         lovd_requireAUTH();
     }
 
-    require ROOT_PATH . 'class/object_individuals.mod.php';
+    require ROOT_PATH . 'class/object_individuals.plus.php';
     $_DATA = new LOVD_IndividualMOD();
     $_DATA->setRowLink('Individuals', 'javascript:window.location.href=\'' . lovd_getInstallURL() . $_PE[0] . '/{{id}}/analyze/{{screeningid}}\'; return false');
     $aVLOptions = array(
@@ -117,7 +117,7 @@ if (PATH_COUNT >= 2 && ctype_digit($_PE[1]) && !ACTION && (PATH_COUNT == 2 || PA
     print('      <TABLE cellpadding="0" cellspacing="0" border="0">
         <TR>
           <TD valign="top" width="1000">' . "\n");
-    require ROOT_PATH . 'class/object_individuals.mod.php';
+    require ROOT_PATH . 'class/object_individuals.plus.php';
     $_DATA = new LOVD_IndividualMOD($nID);
     $zData = $_DATA->viewEntry($nID);
 
@@ -166,7 +166,7 @@ if (PATH_COUNT >= 2 && ctype_digit($_PE[1]) && !ACTION && (PATH_COUNT == 2 || PA
           <TD valign="top" id="screeningViewEntry">' . "\n");
 
     // If we're here, analyzing a screening, show the screening VE on the right.
-    require_once ROOT_PATH . 'class/object_screenings.mod.php';
+    require_once ROOT_PATH . 'class/object_screenings.plus.php';
     if ($nScreeningToAnalyze) {
         // Authorize the user for this screening, but specifically meant for the analysis.
         // For LEVEL_ANALYZER, this should activate LEVEL_OWNER for
@@ -487,7 +487,7 @@ if (PATH_COUNT >= 2 && ctype_digit($_PE[1]) && !ACTION && (PATH_COUNT == 2 || PA
         $_GET['search_runid'] = ''; // To create the input field, that the JS code is referring to, so we can switch to viewing analysis results.
         $_GET['order'] = 'vog_effect,DESC'; // To sort on the effect field first, showing pathogenic variants first.
 
-        require ROOT_PATH . 'class/object_custom_viewlists.mod.php';
+        require ROOT_PATH . 'class/object_custom_viewlists.plus.php';
         // VOG needs to be first, so it groups by the VOG ID.
         $_DATA = new LOVD_CustomViewListMOD(array('VariantOnGenome', 'ObservationCounts', 'VariantOnTranscript', 'AnalysisRunResults', 'GenePanels'));
 
@@ -620,7 +620,7 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && in_array(ACTION, array('curate', 
 
     lovd_requireAUTH(LEVEL_OWNER); // Analyzer becomes Owner, if authorized.
 
-    require ROOT_PATH . 'class/object_individuals.mod.php';
+    require ROOT_PATH . 'class/object_individuals.plus.php';
     $_DATA = new LOVD_IndividualMOD();
     $zData = $_DATA->loadEntry($nID);
     require ROOT_PATH . 'inc-lib-form.php';
@@ -1463,7 +1463,7 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && ACTION == 'edit_panels') {
 
     lovd_requireAUTH(LEVEL_OWNER); // Analyzer becomes Owner, if authorized.
 
-    require ROOT_PATH . 'class/object_individuals.mod.php';
+    require ROOT_PATH . 'class/object_individuals.plus.php';
     $_DATA = new LOVD_IndividualMOD();
     $zData = $_DATA->loadEntry($nID);
     require ROOT_PATH . 'inc-lib-form.php';
