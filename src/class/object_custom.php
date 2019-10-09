@@ -4,7 +4,7 @@
  * LEIDEN OPEN VARIATION DATABASE (LOVD)
  *
  * Created     : 2011-02-17
- * Modified    : 2019-10-01
+ * Modified    : 2019-10-09
  * For LOVD    : 3.0-22
  *
  * Copyright   : 2004-2019 Leiden University Medical Center; http://www.LUMC.nl/
@@ -45,7 +45,6 @@ class LOVD_Custom extends LOVD_Object {
     // This class extends the basic Object class and it handles the Link object.
     var $sObject = 'Custom';
     var $sCategory = '';
-    var $bShared = false;
     var $aColumns = array();
     var $aCustomLinks = array();
     var $sObjectID = '';
@@ -62,8 +61,9 @@ class LOVD_Custom extends LOVD_Object {
         $aArgs = array();
 
         $this->sCategory = (empty($this->sCategory)? $this->sObject : $this->sCategory);
+        $aTableInfo = lovd_getTableInfoByCategory($this->sCategory);
 
-        if (!$this->bShared) {
+        if (empty($aTableInfo['shared'])) {
             // "Simple", non-shared, data types (individuals, genomic variants, screenings).
             $sSQL = 'SELECT c.*, ac.* ' .
                     'FROM ' . TABLE_ACTIVE_COLS . ' AS ac ' .

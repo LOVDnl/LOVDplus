@@ -4,7 +4,7 @@
  * LEIDEN OPEN VARIATION DATABASE (LOVD)
  *
  * Created     : 2009-10-19
- * Modified    : 2019-08-28
+ * Modified    : 2019-10-09
  * For LOVD    : 3.0-22
  *
  * Copyright   : 2004-2019 Leiden University Medical Center; http://www.LUMC.nl/
@@ -1092,7 +1092,7 @@ function lovd_getTableInfoByCategory ($sCategory)
                     'table_sql' => TABLE_PHENOTYPES,
                     'table_name' => 'Phenotype',
                     'table_alias' => 'p',
-                    'shared' => true,
+                    'shared' => !LOVD_plus, // True for LOVD, false for LOVD+.
                     'unit' => 'disease', // Is also used to determine the key (diseaseid).
                 ),
             'Screening' =>
@@ -1116,7 +1116,7 @@ function lovd_getTableInfoByCategory ($sCategory)
                     'table_sql' => TABLE_VARIANTS_ON_TRANSCRIPTS,
                     'table_name' => 'Transcript Variant',
                     'table_alias' => 'vot',
-                    'shared' => true,
+                    'shared' => !LOVD_plus, // True for LOVD, false for LOVD+.
                     'unit' => 'gene', // Is also used to determine the key (geneid).
                 ),
             'SummaryAnnotation' =>

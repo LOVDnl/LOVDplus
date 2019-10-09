@@ -4,7 +4,7 @@
  * LEIDEN OPEN VARIATION DATABASE (LOVD)
  *
  * Created     : 2014-04-03
- * Modified    : 2019-09-26
+ * Modified    : 2019-10-09
  * For LOVD    : 3.0-22
  *
  * Copyright   : 2004-2019 Leiden University Medical Center; http://www.LUMC.nl/
@@ -44,7 +44,6 @@ class LOVD_GenomeVariantMOD extends LOVD_GenomeVariant {
     var $sObject = 'Genome_Variant';
     var $sCategory = 'VariantOnGenome';
     var $sTable = 'TABLE_VARIANTS';
-    var $bShared = false;
 
 
 

@@ -4,8 +4,8 @@
  * LEIDEN OPEN VARIATION DATABASE (LOVD)
  *
  * Created     : 2016-04-12
- * Modified    : 2019-08-19
- * For LOVD    : 3.0-21
+ * Modified    : 2019-10-09
+ * For LOVD    : 3.0-22
  *
  * Copyright   : 2004-2019 Leiden University Medical Center; http://www.LUMC.nl/
  * Programmers : Anthony Marty <anthony.marty@unimelb.edu.au>
@@ -45,7 +45,6 @@ class LOVD_SummaryAnnotation extends LOVD_Custom {
     var $sObject = 'Summary_Annotation';
     var $sCategory = 'SummaryAnnotation';
     var $sTable = 'TABLE_SUMMARY_ANNOTATIONS';
-    var $bShared = false;
 
 
 
