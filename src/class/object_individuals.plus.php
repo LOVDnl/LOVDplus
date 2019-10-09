@@ -4,7 +4,7 @@
  * LEIDEN OPEN VARIATION DATABASE (LOVD)
  *
  * Created     : 2013-10-28
- * Modified    : 2019-09-30
+ * Modified    : 2019-10-09
  * For LOVD    : 3.0-22
  *
  * Copyright   : 2004-2019 Leiden University Medical Center; http://www.LUMC.nl/
@@ -41,8 +41,12 @@ require_once ROOT_PATH . 'class/object_individuals.php';
 
 
 
-class LOVD_IndividualMOD extends LOVD_Individual {
-    // This class extends the basic Object class and it handles the Individuals object.
+class LOVD_IndividualPLUS extends LOVD_Individual
+{
+    // This class extends the Individual class and it handles the Individuals in LOVD+.
+    var $sObject = 'IndividualPLUS';
+    var $sCategory = 'Individual';
+    var $sTable  = 'TABLE_INDIVIDUALS';
 
 
 
@@ -55,10 +59,6 @@ class LOVD_IndividualMOD extends LOVD_Individual {
 
         // Run parent constructor to find out about the custom columns.
         parent::__construct();
-
-        // And now we're going to overwrite the whole damn thing.
-        $this->sObject = 'IndividualMOD';
-        $this->sTable  = 'TABLE_INDIVIDUALS';
 
         // SQL code for loading the gene panel data.
         $this->sSQLLoadEntry = 'SELECT i.*, ' .

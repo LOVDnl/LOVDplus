@@ -4,7 +4,7 @@
  * LEIDEN OPEN VARIATION DATABASE (LOVD)
  *
  * Created     : 2014-04-03
- * Modified    : 2019-09-26
+ * Modified    : 2019-10-09
  * For LOVD    : 3.0-22
  *
  * Copyright   : 2004-2019 Leiden University Medical Center; http://www.LUMC.nl/
@@ -39,12 +39,10 @@ require_once ROOT_PATH . 'class/object_genome_variants.php';
 
 
 
-class LOVD_GenomeVariantMOD extends LOVD_GenomeVariant {
-    // This class extends the basic Object class and it handles the GenomeVariant object.
-    var $sObject = 'Genome_Variant';
-    var $sCategory = 'VariantOnGenome';
-    var $sTable = 'TABLE_VARIANTS';
-    var $bShared = false;
+class LOVD_GenomeVariantPLUS extends LOVD_GenomeVariant
+{
+    // This class extends the GenomeVariant class and it handles the Variants On Genome in LOVD+.
+    var $sObject = 'Genome_VariantPLUS';
 
 
 

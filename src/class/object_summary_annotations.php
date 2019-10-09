@@ -4,8 +4,8 @@
  * LEIDEN OPEN VARIATION DATABASE (LOVD)
  *
  * Created     : 2016-04-12
- * Modified    : 2019-08-19
- * For LOVD    : 3.0-21
+ * Modified    : 2019-10-09
+ * For LOVD    : 3.0-22
  *
  * Copyright   : 2004-2019 Leiden University Medical Center; http://www.LUMC.nl/
  * Programmers : Anthony Marty <anthony.marty@unimelb.edu.au>
@@ -40,12 +40,12 @@ require_once ROOT_PATH . 'class/object_custom.php';
 
 
 
-class LOVD_SummaryAnnotation extends LOVD_Custom {
-    // This class extends the basic Object class and it handles the Link object.
+class LOVD_SummaryAnnotation extends LOVD_Custom
+{
+    // This class extends the Custom class and it handles the Summary Annotations.
     var $sObject = 'Summary_Annotation';
     var $sCategory = 'SummaryAnnotation';
     var $sTable = 'TABLE_SUMMARY_ANNOTATIONS';
-    var $bShared = false;
 
 
 

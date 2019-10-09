@@ -38,7 +38,8 @@ if (!defined('ROOT_PATH')) {
 
 
 
-class LOVD_PDO extends PDO {
+class LOVD_PDO extends PDO
+{
     // This class provides a wrapper around PDO such that database errors are handled automatically by LOVD.
     // FIXME; lovd_queryDB() provided a $bDebug argument. How to implement that now?
     private $aLastError = array();
@@ -209,7 +210,8 @@ class LOVD_PDO extends PDO {
 
 
 
-class LOVD_PDOStatement extends PDOStatement {
+class LOVD_PDOStatement extends PDOStatement
+{
     // This class provides a wrapper around PDOStatement such that database errors are handled automatically by LOVD and LOVD can use fetch*() features more easily.
     // FIXME; apparently we don't need to call parent::__construct()? I can't get that to work, and this wrapper seems to work without it anyway...
 

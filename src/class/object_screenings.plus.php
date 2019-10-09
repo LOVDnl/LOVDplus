@@ -4,7 +4,7 @@
  * LEIDEN OPEN VARIATION DATABASE (LOVD)
  *
  * Created     : 2014-01-03
- * Modified    : 2019-09-26
+ * Modified    : 2019-10-09
  * For LOVD    : 3.0-22
  *
  * Copyright   : 2004-2019 Leiden University Medical Center; http://www.LUMC.nl/
@@ -39,8 +39,12 @@ require_once ROOT_PATH . 'class/object_screenings.php';
 
 
 
-class LOVD_ScreeningMOD extends LOVD_Screening {
-    // This class extends the basic Object class and it handles the Screening object.
+class LOVD_ScreeningPLUS extends LOVD_Screening
+{
+    // This class extends the Screening class and it handles the Screenings within LOVD+.
+    var $sObject = 'ScreeningPLUS';
+    var $sCategory = 'Screening';
+    var $sTable  = 'TABLE_SCREENINGS';
 
 
 
@@ -49,14 +53,9 @@ class LOVD_ScreeningMOD extends LOVD_Screening {
     function __construct ()
     {
         // Default constructor.
-        global $_AUTH, $_SETT;
 
         // Run parent constructor to find out about the custom columns.
         parent::__construct();
-
-        // And now we're going to overwrite the whole damn thing.
-        $this->sObject = 'ScreeningMOD';
-        $this->sTable  = 'TABLE_SCREENINGS';
 
         // SQL code for viewing an entry.
         $this->aSQLViewEntry['SELECT']   = 's.*, ' .

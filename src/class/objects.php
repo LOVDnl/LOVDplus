@@ -4,7 +4,7 @@
  * LEIDEN OPEN VARIATION DATABASE (LOVD)
  *
  * Created     : 2009-10-21
- * Modified    : 2019-10-01
+ * Modified    : 2019-10-09
  * For LOVD    : 3.0-22
  *
  * Copyright   : 2004-2019 Leiden University Medical Center; http://www.LUMC.nl/
@@ -38,9 +38,10 @@ if (!defined('ROOT_PATH')) {
 }
 
 
-class LOVD_Object {
-    // This class is the base class which is inherited by other object classes.
-    // It provides basic functionality for setting up forms and showing data.
+class LOVD_Object
+{
+    // This class is the base class which is inherited by all other object classes.
+    // It provides functionality for setting up forms and for showing, checking, inserting, updating and deleting data.
     var $sObject = '';
     var $sTable = '';
     var $aFormData = array();
@@ -2874,7 +2875,7 @@ FROptions
 
                 if (substr($this->sObject, -7) == 'Variant') {
                     $sUnit = 'variants' . (substr($this->sObject, 0, 10) == 'Transcript'? ' on transcripts' : '');
-                } elseif ($this->sObject == 'Custom_ViewList' || $this->sObject == 'Custom_ViewListMOD') {
+                } elseif ($this->sObject == 'Custom_ViewList' || $this->sObject == 'Custom_ViewListPLUS') {
                     $sUnit = 'entries';
                 } elseif ($this->sObject == 'Shared_Column') {
                     $sUnit = 'active columns';

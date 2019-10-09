@@ -41,7 +41,7 @@ class LOVD_ObservationCounts
 {
     // Wrap all the logic related to generating observation counts here.
     // It includes:
-    // - How the SQL query is constructed to get the data for each cateogory.
+    // - How the SQL query is constructed to get the data for each category.
     // - Whether observation counts data can be updated depending on status of the screening and role of the user.
     // - Generating and storing the data.
     // - Displaying the data.

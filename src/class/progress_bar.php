@@ -38,7 +38,8 @@ if (!defined('ROOT_PATH')) {
 
 
 
-class ProgressBar {
+class ProgressBar
+{
     // This class creates a progress bar that can be controlled in various ways.
     var $sID = '';
     var $nCurrentPercentage = 0;
