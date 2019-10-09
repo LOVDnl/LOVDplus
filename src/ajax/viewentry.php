@@ -46,7 +46,7 @@ if (empty($nID) || empty($sObject) || !preg_match('/^[A-Z_]+$/i', $sObject)) {
 // To prevent security problems if we forget to set a requirement here, we default to LEVEL_ADMIN.
 $aNeededLevel =
          array(
-                'ScreeningMOD' => 0, // LOVD+
+                'ScreeningPLUS' => 0, // LOVD+
                 'Transcript_Variant' => 0,
                 'User' => LEVEL_OWNER,
               );
@@ -83,7 +83,7 @@ if (FORMAT == 'text/plain' && !defined('FORMAT_ALLOW_TEXTPLAIN')) {
 
 $sFile = ROOT_PATH . 'class/object_' . strtolower($sObject) . 's.php';
 // Exception for LOVD+.
-if (LOVD_plus && substr($sObject, -3) == 'MOD') {
+if (LOVD_plus && substr($sObject, -4) == 'PLUS') {
     $sFile = str_replace('pluss.', 's.plus.', $sFile);
 }
 
@@ -94,7 +94,7 @@ if (!file_exists($sFile)) {
 
 
 
-if (in_array($sObject, array('Phenotype', 'Transcript_Variant', 'Custom_ViewList', 'ScreeningMOD'))) {
+if (in_array($sObject, array('Phenotype', 'Transcript_Variant', 'Custom_ViewList', 'ScreeningPLUS'))) {
     // Exception for VOT viewEntry, we need to isolate the gene from the ID to correctly pass this to the data object.
     if ($sObject == 'Transcript_Variant') {
         // This line below is redundant as long as it's also called at the lovd_isAuthorized() call. Remove it here maybe...?

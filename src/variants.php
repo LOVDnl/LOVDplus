@@ -166,7 +166,7 @@ if (LOVD_plus && PATH_COUNT == 3 && $_PE[1] == 'DBID' && !empty($_GET['search_va
     lovd_requireAUTH(LEVEL_ANALYZER);
 
     require ROOT_PATH . 'class/object_custom_viewlists.plus.php';
-    $_DATA = new LOVD_CustomViewListMOD(array('VariantOnGenome', 'VariantOnTranscript', 'Screening', 'Individual'));
+    $_DATA = new LOVD_CustomViewListPLUS(array('VariantOnGenome', 'VariantOnTranscript', 'Screening', 'Individual'));
 
     $_GET['search_VariantOnGenome/DBID'] = '="' . $sDBID . '"';
     if (isset($_INSTANCE_CONFIG['viewlists']['CustomVL_ObsCounts']['cols_to_show'])) {
@@ -194,7 +194,7 @@ if (LOVD_plus && PATH_COUNT == 3 && $_PE[1] == 'DBID' && !ACTION) {
     lovd_requireAUTH(LEVEL_ANALYZER);
 
     require ROOT_PATH . 'class/object_custom_viewlists.plus.php';
-    $_DATA = new LOVD_CustomViewListMOD(array('VariantOnGenome', 'VariantOnTranscript', 'Screening', 'Individual', 'Diseases'));
+    $_DATA = new LOVD_CustomViewListPLUS(array('VariantOnGenome', 'VariantOnTranscript', 'Screening', 'Individual', 'Diseases'));
     $_GET['search_VariantOnGenome/DBID'] = '="' . $sID . '"';
 
     if (isset($_INSTANCE_CONFIG['viewlists']['CustomVL_DBID']['cols_to_show'])) {
@@ -450,7 +450,7 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && !ACTION) {
           <TD valign="top">' . "\n");
     if (LOVD_plus) {
         require ROOT_PATH . 'class/object_genome_variants.plus.php';
-        $_DATA = new LOVD_GenomeVariantMOD();
+        $_DATA = new LOVD_GenomeVariantPLUS();
     } else {
         require ROOT_PATH . 'class/object_genome_variants.php';
         $_DATA = new LOVD_GenomeVariant();
@@ -3001,7 +3001,7 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && in_array(ACTION, array('curate', 
 
     require ROOT_PATH . 'class/object_genome_variants.plus.php';
     $_DATA = array();
-    $_DATA['Genome'] = new LOVD_GenomeVariantMOD();
+    $_DATA['Genome'] = new LOVD_GenomeVariantPLUS();
     $zData = $_DATA['Genome']->loadEntry($nID);
 
     require ROOT_PATH . 'inc-lib-form.php';

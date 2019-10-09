@@ -51,7 +51,7 @@ $aNeededLevel =
          array(
                 'Column' => LEVEL_CURATOR,
                 'Custom_ViewList' => 0,
-                'Custom_ViewListMOD' => 0, // LOVD+
+                'Custom_ViewListPLUS' => 0, // LOVD+
                 'Disease' => 0,
                 'Gene' => 0,
                 'Gene_Panel' => LEVEL_SUBMITTER, // LOVD+
@@ -60,12 +60,12 @@ $aNeededLevel =
                 'Gene_Statistic' => LEVEL_SUBMITTER, // LOVD+
                 'Genome_Variant' => 0,
                 'Individual' => 0,
-                'IndividualMOD' => 0, // LOVD+
+                'IndividualPLUS' => 0, // LOVD+
                 'Link' => LEVEL_MANAGER,
                 'Log' => (LOVD_plus? LEVEL_SUBMITTER : LEVEL_MANAGER),
                 'Phenotype' => 0,
                 'Screening' => 0,
-                'ScreeningMOD' => 0, // LOVD+
+                'ScreeningPLUS' => 0, // LOVD+
                 'Shared_Column' => LEVEL_CURATOR,
                 'Transcript' => 0,
                 'Transcript_Variant' => 0,
@@ -197,7 +197,7 @@ $sFile = ROOT_PATH . 'class/object_' . strtolower($sObject) . 's.php';
 // For revision tables.
 $sFile = str_replace('_revs.php', 's.rev.php', $sFile);
 // Exception for LOVD+.
-if (LOVD_plus && substr($_GET['object'], -3) == 'MOD') {
+if (LOVD_plus && substr($_GET['object'], -4) == 'PLUS') {
     $sFile = str_replace('pluss.', 's.plus.', $sFile);
 }
 

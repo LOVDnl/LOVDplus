@@ -4,7 +4,7 @@
  * LEIDEN OPEN VARIATION DATABASE (LOVD)
  *
  * Created     : 2013-11-07
- * Modified    : 2019-09-30
+ * Modified    : 2019-10-09
  * For LOVD    : 3.0-22
  *
  * Copyright   : 2004-2019 Leiden University Medical Center; http://www.LUMC.nl/
@@ -41,10 +41,10 @@ require_once ROOT_PATH . 'class/object_custom_viewlists.php';
 
 
 
-class LOVD_CustomViewListMOD extends LOVD_CustomViewList
+class LOVD_CustomViewListPLUS extends LOVD_CustomViewList
 {
     // This class extends the CustomViewList class and it handles the pre-configured Custom ViewLists in LOVD+.
-    var $sObject = 'Custom_ViewListMOD';
+    var $sObject = 'Custom_ViewListPLUS';
 
 
 

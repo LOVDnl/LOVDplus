@@ -80,7 +80,7 @@ if (PATH_COUNT == 1 && !ACTION) {
     }
 
     require ROOT_PATH . 'class/object_individuals.plus.php';
-    $_DATA = new LOVD_IndividualMOD();
+    $_DATA = new LOVD_IndividualPLUS();
     $_DATA->setRowLink('Individuals', 'javascript:window.location.href=\'' . lovd_getInstallURL() . $_PE[0] . '/{{id}}/analyze/{{screeningid}}\'; return false');
     $aVLOptions = array(
         'show_options' => (bool) ($_AUTH['level'] >= LEVEL_MANAGER),
@@ -118,7 +118,7 @@ if (PATH_COUNT >= 2 && ctype_digit($_PE[1]) && !ACTION && (PATH_COUNT == 2 || PA
         <TR>
           <TD valign="top" width="1000">' . "\n");
     require ROOT_PATH . 'class/object_individuals.plus.php';
-    $_DATA = new LOVD_IndividualMOD($nID);
+    $_DATA = new LOVD_IndividualPLUS($nID);
     $zData = $_DATA->viewEntry($nID);
 
     $aNavigation = array();
@@ -173,7 +173,7 @@ if (PATH_COUNT >= 2 && ctype_digit($_PE[1]) && !ACTION && (PATH_COUNT == 2 || PA
         //   free screenings or screenings under analysis by this user.
         lovd_isAuthorized('screening_analysis', $nScreeningToAnalyze);
 
-        $_DATA = new LOVD_ScreeningMOD();
+        $_DATA = new LOVD_ScreeningPLUS();
         $zScreening = $_DATA->viewEntry($nScreeningToAnalyze);
     }
     print('
@@ -203,7 +203,7 @@ if (PATH_COUNT >= 2 && ctype_digit($_PE[1]) && !ACTION && (PATH_COUNT == 2 || PA
     // Analysis is done per screening; show list of screenings, select one to actually start/view analyses.
     $_GET['search_individualid'] = $nID;
     $_T->printTitle('Screenings', 'H4');
-    $_DATA = new LOVD_ScreeningMOD();
+    $_DATA = new LOVD_ScreeningPLUS();
     $_DATA->setSortDefault('id');
     $_DATA->setRowID('Screenings_for_I_VE', 'Screening_{{screeningid}}');
     $_DATA->setRowLink('Screenings_for_I_VE', 'javascript:window.location.href=\'' . lovd_getInstallURL() . $_PE[0] . '/' . $nID . '/analyze/{{screeningid}}\'; return false');
@@ -469,7 +469,7 @@ if (PATH_COUNT >= 2 && ctype_digit($_PE[1]) && !ACTION && (PATH_COUNT == 2 || PA
 
       <SCRIPT type="text/javascript">
         function lovd_AJAX_viewEntryLoad () {
-          $.get(\'ajax/viewentry.php\', {object: \'ScreeningMOD\', id: \'' . $nScreeningToAnalyze . '\'},
+          $.get(\'ajax/viewentry.php\', {object: \'ScreeningPLUS\', id: \'' . $nScreeningToAnalyze . '\'},
             function (sData) {
               if (sData.length > 2) {
                 $(\'#screeningViewEntry\').html(\'\n\' + sData);
@@ -489,7 +489,7 @@ if (PATH_COUNT >= 2 && ctype_digit($_PE[1]) && !ACTION && (PATH_COUNT == 2 || PA
 
         require ROOT_PATH . 'class/object_custom_viewlists.plus.php';
         // VOG needs to be first, so it groups by the VOG ID.
-        $_DATA = new LOVD_CustomViewListMOD(array('VariantOnGenome', 'ObservationCounts', 'VariantOnTranscript', 'AnalysisRunResults', 'GenePanels'));
+        $_DATA = new LOVD_CustomViewListPLUS(array('VariantOnGenome', 'ObservationCounts', 'VariantOnTranscript', 'AnalysisRunResults', 'GenePanels'));
 
         // For MGHA instances, we want to use double click to view detailed variant page. This is so that curators can copy data on the analysis results view list.
         if (lovd_verifyInstance('mgha', false)) {
@@ -621,7 +621,7 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && in_array(ACTION, array('curate', 
     lovd_requireAUTH(LEVEL_OWNER); // Analyzer becomes Owner, if authorized.
 
     require ROOT_PATH . 'class/object_individuals.plus.php';
-    $_DATA = new LOVD_IndividualMOD();
+    $_DATA = new LOVD_IndividualPLUS();
     $zData = $_DATA->loadEntry($nID);
     require ROOT_PATH . 'inc-lib-form.php';
 
@@ -1464,7 +1464,7 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && ACTION == 'edit_panels') {
     lovd_requireAUTH(LEVEL_OWNER); // Analyzer becomes Owner, if authorized.
 
     require ROOT_PATH . 'class/object_individuals.plus.php';
-    $_DATA = new LOVD_IndividualMOD();
+    $_DATA = new LOVD_IndividualPLUS();
     $zData = $_DATA->loadEntry($nID);
     require ROOT_PATH . 'inc-lib-form.php';
 

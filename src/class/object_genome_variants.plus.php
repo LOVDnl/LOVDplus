@@ -39,9 +39,10 @@ require_once ROOT_PATH . 'class/object_genome_variants.php';
 
 
 
-class LOVD_GenomeVariantMOD extends LOVD_GenomeVariant
+class LOVD_GenomeVariantPLUS extends LOVD_GenomeVariant
 {
     // This class extends the GenomeVariant class and it handles the Variants On Genome in LOVD+.
+    var $sObject = 'Genome_VariantPLUS';
 
 
 
