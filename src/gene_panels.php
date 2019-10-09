@@ -4,8 +4,8 @@
  * LEIDEN OPEN VARIATION DATABASE (LOVD)
  *
  * Created     : 2016-03-01
- * Modified    : 2019-08-19
- * For LOVD    : 3.0-21
+ * Modified    : 2019-10-09
+ * For LOVD    : 3.0-22
  *
  * Copyright   : 2004-2019 Leiden University Medical Center; http://www.LUMC.nl/
  * Programmers : Anthony Marty <anthony.marty@unimelb.edu.au>
@@ -248,7 +248,7 @@ if (PATH_COUNT == 1 && ACTION == 'create') {
     define('PAGE_TITLE', 'Create a new gene panel entry');
     define('LOG_EVENT', 'GenePanelCreate');
 
-    lovd_requireAUTH(LEVEL_ANALYZER);
+    lovd_requireAUTH($_SETT['user_level_settings']['genepanels_create']);
 
     require ROOT_PATH . 'class/object_gene_panels.php';
     $_DATA = new LOVD_GenePanel();
@@ -262,7 +262,7 @@ if (PATH_COUNT == 1 && ACTION == 'create') {
             // Fields to be used.
             $aFields = array('name', 'description', 'type', 'remarks', 'created_by', 'created_date');
 
-            // If we are a manager then we can update the PMID mandatory field
+            // If we are a manager then we can update the PMID mandatory field.
             if ($_AUTH['level'] >= LEVEL_MANAGER) {
                 $aFields[] = 'pmid_mandatory';
             }
