@@ -41,8 +41,9 @@ require_once ROOT_PATH . 'class/object_individuals.php';
 
 
 
-class LOVD_IndividualMOD extends LOVD_Individual {
-    // This class extends the basic Object class and it handles the Individuals object.
+class LOVD_IndividualMOD extends LOVD_Individual
+{
+    // This class extends the Individual class and it handles the Individuals in LOVD+.
 
 
 

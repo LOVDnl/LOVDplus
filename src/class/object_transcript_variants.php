@@ -42,8 +42,9 @@ require_once ROOT_PATH . 'class/object_custom.php';
 
 
 
-class LOVD_TranscriptVariant extends LOVD_Custom {
-    // This class extends the basic Object class and it handles the Link object.
+class LOVD_TranscriptVariant extends LOVD_Custom
+{
+    // This class extends the Custom class and it handles the Variants On Transcripts.
     var $sObject = 'Transcript_Variant';
     var $sCategory = 'VariantOnTranscript';
     var $sTable = 'TABLE_VARIANTS_ON_TRANSCRIPTS';

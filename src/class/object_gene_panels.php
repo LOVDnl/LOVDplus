@@ -40,8 +40,9 @@ require_once ROOT_PATH . 'class/objects.php';
 
 
 
-class LOVD_GenePanel extends LOVD_Object {
-    // This class extends the basic Object class and it handles the GenePanel object.
+class LOVD_GenePanel extends LOVD_Object
+{
+    // This class extends the basic Object class and it handles the Gene Panels.
     var $sObject = 'Gene_Panel';
 
 
@@ -168,7 +169,6 @@ class LOVD_GenePanel extends LOVD_Object {
     function checkFields ($aData, $zData = false, $aOptions = array())
     {
         // Checks fields before submission of data.
-        global $_DB;
 
         // Mandatory fields.
         $this->aCheckMandatory =

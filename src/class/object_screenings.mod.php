@@ -39,8 +39,9 @@ require_once ROOT_PATH . 'class/object_screenings.php';
 
 
 
-class LOVD_ScreeningMOD extends LOVD_Screening {
-    // This class extends the basic Object class and it handles the Screening object.
+class LOVD_ScreeningMOD extends LOVD_Screening
+{
+    // This class extends the Screening class and it handles the Screenings within LOVD+.
 
 
 
@@ -49,7 +50,6 @@ class LOVD_ScreeningMOD extends LOVD_Screening {
     function __construct ()
     {
         // Default constructor.
-        global $_AUTH, $_SETT;
 
         // Run parent constructor to find out about the custom columns.
         parent::__construct();

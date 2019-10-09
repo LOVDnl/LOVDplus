@@ -41,14 +41,16 @@ require_once ROOT_PATH . 'class/objects.php';
 
 
 
-class LOVD_Custom extends LOVD_Object {
-    // This class extends the basic Object class and it handles the Link object.
+class LOVD_Custom extends LOVD_Object
+{
+    // This class extends the basic Object class and it handles all Custom objects, serving as a parent class.
     var $sObject = 'Custom';
     var $sCategory = '';
     var $aColumns = array();
     var $aCustomLinks = array();
     var $sObjectID = '';
     var $nID = '';
+
 
 
 

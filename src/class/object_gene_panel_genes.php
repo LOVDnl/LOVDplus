@@ -40,8 +40,9 @@ require_once ROOT_PATH . 'class/objects.php';
 
 
 
-class LOVD_GenePanelGene extends LOVD_Object {
-    // This class extends the basic Object class and it handles the GenePanelGene object.
+class LOVD_GenePanelGene extends LOVD_Object
+{
+    // This class extends the basic Object class and it handles the Gene Panels' Genes.
     var $sObject = 'Gene_Panel_Gene';
 
 

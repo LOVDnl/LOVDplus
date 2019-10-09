@@ -35,7 +35,8 @@ if (!defined('ROOT_PATH')) {
 
 
 
-class LOVD_API {
+class LOVD_API
+{
     // This class defines the LOVD API object, handling URL parsing and general
     //  handling of headers.
 

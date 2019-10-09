@@ -40,9 +40,10 @@ require_once ROOT_PATH . 'class/objects.php';
 
 
 
-class LOVD_Announcement extends LOVD_Object {
-// This class extends the basic Object class and it handles the Announcement object.
-var $sObject = 'Announcement';
+class LOVD_Announcement extends LOVD_Object
+{
+    // This class extends the basic Object class and it handles the Announcements.
+    var $sObject = 'Announcement';
 
 
 

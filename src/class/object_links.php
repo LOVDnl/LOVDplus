@@ -41,8 +41,9 @@ require_once ROOT_PATH . 'class/objects.php';
 
 
 
-class LOVD_Link extends LOVD_Object {
-    // This class extends the basic Object class and it handles the Link object.
+class LOVD_Link extends LOVD_Object
+{
+    // This class extends the basic Object class and it handles the Links.
     var $sObject = 'Link';
 
 

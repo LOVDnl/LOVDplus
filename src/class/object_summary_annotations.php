@@ -40,8 +40,9 @@ require_once ROOT_PATH . 'class/object_custom.php';
 
 
 
-class LOVD_SummaryAnnotation extends LOVD_Custom {
-    // This class extends the basic Object class and it handles the Link object.
+class LOVD_SummaryAnnotation extends LOVD_Custom
+{
+    // This class extends the Custom class and it handles the Summary Annotations.
     var $sObject = 'Summary_Annotation';
     var $sCategory = 'SummaryAnnotation';
     var $sTable = 'TABLE_SUMMARY_ANNOTATIONS';

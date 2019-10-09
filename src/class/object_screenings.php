@@ -42,8 +42,9 @@ require_once ROOT_PATH . 'class/object_custom.php';
 
 
 
-class LOVD_Screening extends LOVD_Custom {
-    // This class extends the basic Object class and it handles the Link object.
+class LOVD_Screening extends LOVD_Custom
+{
+    // This class extends the Custom class and it handles the Screenings.
     var $sObject = 'Screening';
 
 

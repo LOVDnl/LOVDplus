@@ -42,8 +42,9 @@ require_once ROOT_PATH . 'class/object_custom.php';
 
 
 
-class LOVD_GenomeVariant extends LOVD_Custom {
-    // This class extends the basic Object class and it handles the GenomeVariant object.
+class LOVD_GenomeVariant extends LOVD_Custom
+{
+    // This class extends the Custom class and it handles the Variants On Genome.
     var $sObject = 'Genome_Variant';
     var $sCategory = 'VariantOnGenome';
     var $sTable = 'TABLE_VARIANTS';

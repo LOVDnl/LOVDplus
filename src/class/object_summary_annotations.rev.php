@@ -40,8 +40,9 @@ require_once ROOT_PATH . 'class/object_summary_annotations.php';
 
 
 
-class LOVD_SummaryAnnotationREV extends LOVD_SummaryAnnotation {
-    // This class extends the basic SummaryAnnotation class and it handles the SummaryAnnotationREV object.
+class LOVD_SummaryAnnotationREV extends LOVD_SummaryAnnotation
+{
+    // This class extends the SummaryAnnotation class and it handles the Summary Annotation's Revisions.
     var $sObject = 'Summary_Annotation_REV';
 
 

@@ -41,8 +41,9 @@ require_once ROOT_PATH . 'class/object_custom_viewlists.php';
 
 
 
-class LOVD_CustomViewListMOD extends LOVD_CustomViewList {
-    // This class extends the basic Object class and it handles pre-configured custom viewLists.
+class LOVD_CustomViewListMOD extends LOVD_CustomViewList
+{
+    // This class extends the CustomViewList class and it handles the pre-configured Custom ViewLists in LOVD+.
     var $sObject = 'Custom_ViewListMOD';
 
 

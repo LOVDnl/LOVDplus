@@ -39,8 +39,9 @@ require_once ROOT_PATH . 'class/object_gene_panel_genes.php';
 
 
 
-class LOVD_GenePanelGeneREV extends LOVD_GenePanelGene {
-    // This class extends the basic GenePanelGene class and it handles the GenePanelGeneREV object.
+class LOVD_GenePanelGeneREV extends LOVD_GenePanelGene
+{
+    // This class extends the GenePanelGene class and it handles the Gene Panels' Genes' Revisions.
     var $sObject = 'Gene_Panel_Gene_REV';
 
 
