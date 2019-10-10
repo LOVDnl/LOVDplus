@@ -210,8 +210,10 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && !ACTION) {
         if ($_AUTH['level'] >= $_SETT['user_level_settings']['genepanels_edit']) {
             $aNavigation[CURRENT_PATH . '?edit'] = array('menu_edit.png', 'Edit gene panel information', 1);
         }
-        if ($_AUTH['level'] >= LEVEL_ANALYZER) {
+        if ($_AUTH['level'] >= $_SETT['user_level_settings']['genepanels_manage_genes']) {
             $aNavigation[CURRENT_PATH . '?manage_genes'] = array('menu_plus.png', 'Manage gene panel\'s genes', 1);
+        }
+        if ($_AUTH['level'] >= LEVEL_ANALYZER) {
             $aNavigation[CURRENT_PATH . '?history']      = array('menu_clock.png', 'View differences between two dates', 1);
             $aNavigation[CURRENT_PATH . '?history_full'] = array('menu_clock.png', 'View full history of genes in this gene panel', 1);
             $aNavigation['download/' . CURRENT_PATH]     = array('menu_save.png', 'Download this gene panel and its genes', 1);
@@ -644,7 +646,7 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && ACTION == 'manage_genes') {
     $nID = sprintf('%05d', $_PE[1]);
     define('LOG_EVENT', 'GenePanelManage');
 
-    lovd_requireAUTH(LEVEL_ANALYZER);
+    lovd_requireAUTH($_SETT['user_level_settings']['genepanels_manage_genes']);
     $bRemovableGenes = ($_AUTH['level'] >= LEVEL_MANAGER);
 
     $zData = $_DB->query('SELECT * FROM ' . TABLE_GENE_PANELS . ' WHERE id = ?', array($nID))->fetchAssoc();

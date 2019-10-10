@@ -171,6 +171,7 @@ $_SETT = array(
                     'delete_variant' => (LOVD_plus? LEVEL_ADMIN : LEVEL_CURATOR),
                     'genepanels_create' => LEVEL_MANAGER,
                     'genepanels_edit' => LEVEL_MANAGER,
+                    'genepanels_manage_genes' => LEVEL_MANAGER,
                     // The see_nonpublic_data setting currently also defines the visibility
                     //  of the status, created* and edited* fields.
                     'see_nonpublic_data' => (LOVD_plus? LEVEL_SUBMITTER : LEVEL_COLLABORATOR),
