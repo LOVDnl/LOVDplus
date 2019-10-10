@@ -167,7 +167,7 @@ if (PATH_COUNT == 1 && !ACTION) {
     // View all entries.
 
     // Submitters are allowed to download this panel...
-    if ($_AUTH['level'] >= LEVEL_SUBMITTER) {
+    if ($_AUTH) {
         define('FORMAT_ALLOW_TEXTPLAIN', true);
     }
 
@@ -213,11 +213,9 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && !ACTION) {
         if ($_AUTH['level'] >= $_SETT['user_level_settings']['genepanels_manage_genes']) {
             $aNavigation[CURRENT_PATH . '?manage_genes'] = array('menu_plus.png', 'Manage gene panel\'s genes', 1);
         }
-        if ($_AUTH['level'] >= LEVEL_ANALYZER) {
-            $aNavigation[CURRENT_PATH . '?history']      = array('menu_clock.png', 'View differences between two dates', 1);
-            $aNavigation[CURRENT_PATH . '?history_full'] = array('menu_clock.png', 'View full history of genes in this gene panel', 1);
-            $aNavigation['download/' . CURRENT_PATH]     = array('menu_save.png', 'Download this gene panel and its genes', 1);
-        }
+        $aNavigation[CURRENT_PATH . '?history']      = array('menu_clock.png', 'View differences between two dates', 1);
+        $aNavigation[CURRENT_PATH . '?history_full'] = array('menu_clock.png', 'View full history of genes in this gene panel', 1);
+        $aNavigation['download/' . CURRENT_PATH]     = array('menu_save.png', 'Download this gene panel and its genes', 1);
         if ($_AUTH['level'] >= $_SETT['user_level_settings']['genepanels_delete']) {
             $aNavigation[CURRENT_PATH . '?delete'] = array('cross.png', 'Delete gene panel entry', 1);
         }
