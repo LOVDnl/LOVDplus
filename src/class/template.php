@@ -73,7 +73,7 @@ class LOVD_Template
     {
         // Builds up the menu array, to be used in the full text/html header.
         // Can't be in the constructor, because that one is called before we have $_SESSION.
-        global $_AUTH;
+        global $_AUTH, $_SETT;
 
         if (defined('NOT_INSTALLED') || (ROOT_PATH == '../' && substr(lovd_getProjectFile(), 0, 9) == '/install/')) {
             // In install directory.
@@ -88,7 +88,7 @@ class LOVD_Template
                         'genes_' =>
                          array(
                              '/gene_panels' => array('menu_magnifying_glass.png', 'View all gene panels', 0),
-                             '/gene_panels?create' => array('plus.png', 'Create a new gene panel', LEVEL_SUBMITTER),
+                             '/gene_panels?create' => array('plus.png', 'Create a new gene panel', $_SETT['user_level_settings']['genepanels_create']),
                              'hr',
                              '/genes' => array('menu_magnifying_glass.png', 'View all genes', 0),
                              '/gene_statistics' => array('menu_magnifying_glass.png', 'View all gene statistics', 0),

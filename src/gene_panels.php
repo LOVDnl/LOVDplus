@@ -4,8 +4,8 @@
  * LEIDEN OPEN VARIATION DATABASE (LOVD)
  *
  * Created     : 2016-03-01
- * Modified    : 2019-08-19
- * For LOVD    : 3.0-21
+ * Modified    : 2019-10-10
+ * For LOVD    : 3.0-22
  *
  * Copyright   : 2004-2019 Leiden University Medical Center; http://www.LUMC.nl/
  * Programmers : Anthony Marty <anthony.marty@unimelb.edu.au>
@@ -167,7 +167,7 @@ if (PATH_COUNT == 1 && !ACTION) {
     // View all entries.
 
     // Submitters are allowed to download this panel...
-    if ($_AUTH['level'] >= LEVEL_SUBMITTER) {
+    if ($_AUTH) {
         define('FORMAT_ALLOW_TEXTPLAIN', true);
     }
 
@@ -205,15 +205,19 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && !ACTION) {
     $zData = $_DATA->viewEntry($nID);
 
     $aNavigation = array();
-    if ($_AUTH && $_AUTH['level'] >= LEVEL_ANALYZER) {
+    if ($_AUTH) {
         // Authorized user is logged in. Provide tools.
-        $aNavigation[CURRENT_PATH . '?edit']            = array('menu_edit.png', 'Edit gene panel information', 1);
-        $aNavigation[CURRENT_PATH . '?manage_genes']    = array('menu_plus.png', 'Manage gene panel\'s genes', 1);
-        $aNavigation[CURRENT_PATH . '?history']         = array('menu_clock.png', 'View differences between two dates', 1);
-        $aNavigation[CURRENT_PATH . '?history_full']    = array('menu_clock.png', 'View full history of genes in this gene panel', 1);
-        $aNavigation['download/' . CURRENT_PATH]        = array('menu_save.png', 'Download this gene panel and its genes', 1);
-        if ($_AUTH['level'] >= LEVEL_ADMIN) {
-            $aNavigation[CURRENT_PATH . '?delete']      = array('cross.png', 'Delete gene panel entry', 1);
+        if ($_AUTH['level'] >= $_SETT['user_level_settings']['genepanels_edit']) {
+            $aNavigation[CURRENT_PATH . '?edit'] = array('menu_edit.png', 'Edit gene panel information', 1);
+        }
+        if ($_AUTH['level'] >= $_SETT['user_level_settings']['genepanels_manage_genes']) {
+            $aNavigation[CURRENT_PATH . '?manage_genes'] = array('menu_plus.png', 'Manage gene panel\'s genes', 1);
+        }
+        $aNavigation[CURRENT_PATH . '?history']      = array('menu_clock.png', 'View differences between two dates', 1);
+        $aNavigation[CURRENT_PATH . '?history_full'] = array('menu_clock.png', 'View full history of genes in this gene panel', 1);
+        $aNavigation['download/' . CURRENT_PATH]     = array('menu_save.png', 'Download this gene panel and its genes', 1);
+        if ($_AUTH['level'] >= $_SETT['user_level_settings']['genepanels_delete']) {
+            $aNavigation[CURRENT_PATH . '?delete'] = array('cross.png', 'Delete gene panel entry', 1);
         }
     }
     lovd_showJGNavigation($aNavigation, 'GenePanel');
@@ -248,7 +252,7 @@ if (PATH_COUNT == 1 && ACTION == 'create') {
     define('PAGE_TITLE', 'Create a new gene panel entry');
     define('LOG_EVENT', 'GenePanelCreate');
 
-    lovd_requireAUTH(LEVEL_ANALYZER);
+    lovd_requireAUTH($_SETT['user_level_settings']['genepanels_create']);
 
     require ROOT_PATH . 'class/object_gene_panels.php';
     $_DATA = new LOVD_GenePanel();
@@ -262,7 +266,7 @@ if (PATH_COUNT == 1 && ACTION == 'create') {
             // Fields to be used.
             $aFields = array('name', 'description', 'type', 'remarks', 'created_by', 'created_date');
 
-            // If we are a manager then we can update the PMID mandatory field
+            // If we are a manager then we can update the PMID mandatory field.
             if ($_AUTH['level'] >= LEVEL_MANAGER) {
                 $aFields[] = 'pmid_mandatory';
             }
@@ -374,7 +378,7 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && ACTION == 'edit') {
     define('PAGE_TITLE', 'Edit gene panel entry #' . $nID);
     define('LOG_EVENT', 'GenePanelEdit');
 
-    lovd_requireAUTH(LEVEL_ANALYZER);
+    lovd_requireAUTH($_SETT['user_level_settings']['genepanels_edit']);
 
     require ROOT_PATH . 'class/object_gene_panels.php';
     $_DATA = new LOVD_GenePanel();
@@ -545,7 +549,7 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && ACTION == 'delete') {
     define('LOG_EVENT', 'GenePanelDelete');
 
     // Require admin clearance.
-    lovd_requireAUTH(LEVEL_ADMIN);
+    lovd_requireAUTH($_SETT['user_level_settings']['genepanels_delete']);
 
     require ROOT_PATH . 'class/object_gene_panels.php';
     $_DATA = new LOVD_GenePanel();
@@ -640,8 +644,8 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && ACTION == 'manage_genes') {
     $nID = sprintf('%05d', $_PE[1]);
     define('LOG_EVENT', 'GenePanelManage');
 
-    lovd_requireAUTH(LEVEL_ANALYZER);
-    $bRemovableGenes = ($_AUTH['level'] >= LEVEL_MANAGER);
+    lovd_requireAUTH($_SETT['user_level_settings']['genepanels_manage_genes']);
+    $bRemovableGenes = ($_AUTH['level'] >= $_SETT['user_level_settings']['genepanels_genes_delete']);
 
     $zData = $_DB->query('SELECT * FROM ' . TABLE_GENE_PANELS . ' WHERE id = ?', array($nID))->fetchAssoc();
     if (!$zData) {
@@ -809,7 +813,7 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && ACTION == 'manage_genes') {
             }
 
             // Now delete what was no longer selected.
-            if ($aGenesCurrentlyAssociated && $_AUTH['level'] >= LEVEL_MANAGER) {
+            if ($aGenesCurrentlyAssociated && $bRemovableGenes) {
                 // When not using deleteEntry(), we could simply run one query for all genes that were dropped.
                 // However, for that we'd need to duplicate code handling the revision history.
                 // So we're going to keep the code simple, in expense of some speed on large deletions.
@@ -977,7 +981,8 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && ACTION == 'manage_genes') {
 
     lovd_showInfoTable('All genes below have been selected for this gene panel.<BR>' .
         (!$bRemovableGenes?
-            'Only higher level users can also remove genes from this gene panel. If you believe a certain gene should be removed, please ask a Manager to do so.' :
+            'Only higher level users can also remove genes from this gene panel. If you believe a certain gene should be removed, please ask a ' .
+            $_SETT['user_levels'][$_SETT['user_level_settings']['genepanels_genes_delete']] . ' to do so.' :
             'To remove a gene from this list, click the red cross on the far right of the line.'), 'information', 950);
 
     $aInheritances =
@@ -1113,11 +1118,11 @@ if (PATH_COUNT == 3 && preg_match('/^[a-z][a-z0-9#@-]+$/i', rawurldecode($_PE[2]
 
     $aNavigation = array();
 
-    if ($_AUTH['level'] >= LEVEL_ANALYZER) {
+    if ($_AUTH['level'] >= $_SETT['user_level_settings']['genepanels_genes_edit']) {
         $aNavigation[CURRENT_PATH . '?edit'] = array('menu_edit.png', 'Edit gene information', 1);
     }
-    if ($_AUTH['level'] >= LEVEL_MANAGER) {
-        $aNavigation[CURRENT_PATH . '?delete']      = array('cross.png', 'Remove gene entry', 1);
+    if ($_AUTH['level'] >= $_SETT['user_level_settings']['genepanels_genes_delete']) {
+        $aNavigation[CURRENT_PATH . '?delete'] = array('cross.png', 'Remove gene entry', 1);
     }
 
     lovd_showJGNavigation($aNavigation, 'GenePanelGene');
@@ -1139,7 +1144,7 @@ if (PATH_COUNT == 3 && preg_match('/^[a-z][a-z0-9#@-]+$/i', rawurldecode($_PE[2]
     define('PAGE_TITLE', 'Edit gene ' . $sGeneID . ' in gene panel #' . $nGenePanelID);
     define('LOG_EVENT', 'GenePanelGeneEdit');
 
-    lovd_requireAUTH(LEVEL_ANALYZER);
+    lovd_requireAUTH($_SETT['user_level_settings']['genepanels_genes_edit']);
 
     require ROOT_PATH . 'class/object_gene_panel_genes.php';
     require ROOT_PATH . 'inc-lib-form.php';
@@ -1223,7 +1228,7 @@ if (PATH_COUNT == 3 && preg_match('/^[a-z][a-z0-9#@-]+$/i', rawurldecode($_PE[2]
     define('PAGE_TITLE', 'Remove gene ' . $sGeneID . ' from gene panel #' . $nGenePanelID);
     define('LOG_EVENT', 'GenePanelGeneDelete');
 
-    lovd_requireAUTH(LEVEL_MANAGER);
+    lovd_requireAUTH($_SETT['user_level_settings']['genepanels_genes_delete']);
 
     require ROOT_PATH . 'class/object_gene_panel_genes.php';
     require ROOT_PATH . 'inc-lib-form.php';
