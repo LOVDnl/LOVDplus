@@ -170,6 +170,7 @@ $_SETT = array(
                     'delete_individual' => (LOVD_plus? LEVEL_ADMIN : LEVEL_CURATOR),
                     'delete_variant' => (LOVD_plus? LEVEL_ADMIN : LEVEL_CURATOR),
                     'genepanels_create' => LEVEL_MANAGER,
+                    'genepanels_delete' => LEVEL_ADMIN,
                     'genepanels_edit' => LEVEL_MANAGER,
                     'genepanels_genes_edit' => LEVEL_ANALYZER,
                     'genepanels_manage_genes' => LEVEL_MANAGER,

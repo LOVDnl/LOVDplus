@@ -218,7 +218,7 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && !ACTION) {
             $aNavigation[CURRENT_PATH . '?history_full'] = array('menu_clock.png', 'View full history of genes in this gene panel', 1);
             $aNavigation['download/' . CURRENT_PATH]     = array('menu_save.png', 'Download this gene panel and its genes', 1);
         }
-        if ($_AUTH['level'] >= LEVEL_ADMIN) {
+        if ($_AUTH['level'] >= $_SETT['user_level_settings']['genepanels_delete']) {
             $aNavigation[CURRENT_PATH . '?delete'] = array('cross.png', 'Delete gene panel entry', 1);
         }
     }
@@ -551,7 +551,7 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && ACTION == 'delete') {
     define('LOG_EVENT', 'GenePanelDelete');
 
     // Require admin clearance.
-    lovd_requireAUTH(LEVEL_ADMIN);
+    lovd_requireAUTH($_SETT['user_level_settings']['genepanels_delete']);
 
     require ROOT_PATH . 'class/object_gene_panels.php';
     $_DATA = new LOVD_GenePanel();
