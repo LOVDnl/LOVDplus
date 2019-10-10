@@ -172,6 +172,7 @@ $_SETT = array(
                     'genepanels_create' => LEVEL_MANAGER,
                     'genepanels_delete' => LEVEL_ADMIN,
                     'genepanels_edit' => LEVEL_MANAGER,
+                    'genepanels_genes_delete' => LEVEL_MANAGER,
                     'genepanels_genes_edit' => LEVEL_ANALYZER,
                     'genepanels_manage_genes' => LEVEL_MANAGER,
                     // The see_nonpublic_data setting currently also defines the visibility
