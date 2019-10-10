@@ -1119,11 +1119,11 @@ if (PATH_COUNT == 3 && preg_match('/^[a-z][a-z0-9#@-]+$/i', rawurldecode($_PE[2]
 
     $aNavigation = array();
 
-    if ($_AUTH['level'] >= LEVEL_ANALYZER) {
+    if ($_AUTH['level'] >= $_SETT['user_level_settings']['genepanels_genes_edit']) {
         $aNavigation[CURRENT_PATH . '?edit'] = array('menu_edit.png', 'Edit gene information', 1);
     }
-    if ($_AUTH['level'] >= LEVEL_MANAGER) {
-        $aNavigation[CURRENT_PATH . '?delete']      = array('cross.png', 'Remove gene entry', 1);
+    if ($_AUTH['level'] >= $_SETT['user_level_settings']['genepanels_manage_genes']) {
+        $aNavigation[CURRENT_PATH . '?delete'] = array('cross.png', 'Remove gene entry', 1);
     }
 
     lovd_showJGNavigation($aNavigation, 'GenePanelGene');
@@ -1145,7 +1145,7 @@ if (PATH_COUNT == 3 && preg_match('/^[a-z][a-z0-9#@-]+$/i', rawurldecode($_PE[2]
     define('PAGE_TITLE', 'Edit gene ' . $sGeneID . ' in gene panel #' . $nGenePanelID);
     define('LOG_EVENT', 'GenePanelGeneEdit');
 
-    lovd_requireAUTH(LEVEL_ANALYZER);
+    lovd_requireAUTH($_SETT['user_level_settings']['genepanels_genes_edit']);
 
     require ROOT_PATH . 'class/object_gene_panel_genes.php';
     require ROOT_PATH . 'inc-lib-form.php';
@@ -1229,7 +1229,7 @@ if (PATH_COUNT == 3 && preg_match('/^[a-z][a-z0-9#@-]+$/i', rawurldecode($_PE[2]
     define('PAGE_TITLE', 'Remove gene ' . $sGeneID . ' from gene panel #' . $nGenePanelID);
     define('LOG_EVENT', 'GenePanelGeneDelete');
 
-    lovd_requireAUTH(LEVEL_MANAGER);
+    lovd_requireAUTH($_SETT['user_level_settings']['genepanels_manage_genes']);
 
     require ROOT_PATH . 'class/object_gene_panel_genes.php';
     require ROOT_PATH . 'inc-lib-form.php';
