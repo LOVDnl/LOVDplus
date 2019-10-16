@@ -4,7 +4,7 @@
  * LEIDEN OPEN VARIATION DATABASE (LOVD)
  *
  * Created     : 2013-11-07
- * Modified    : 2019-10-09
+ * Modified    : 2019-10-16
  * For LOVD    : 3.0-22
  *
  * Copyright   : 2004-2019 Leiden University Medical Center; http://www.LUMC.nl/
@@ -415,7 +415,7 @@ class LOVD_CustomViewListPLUS extends LOVD_CustomViewList
                                         'view' => array('Class.', 60),
                                         'db'   => (!in_array('AnalysisRunResults', $aObjects)?
                                             array('eg.name', 'ASC', true) :
-                                            array('CONCAT(REPLACE(IFNULL(sa.effectid, 5), 0, 5), REPLACE(RIGHT(IFNULL(vog.effectid, 5), 1), 0, 5), REPLACE(LEFT(IFNULL(vog.effectid, 5), 1), 0, 5))', 'DESC', true)),
+                                            array('CONCAT(REPLACE(IFNULL(sa.effectid, 5), 0, 5), REPLACE(RIGHT(IFNULL(vog.effectid, 5), 1), 0, 5), REPLACE(LEFT(IFNULL(vog.effectid, 5), 1), 0, 5), eg.name)', 'DESC', 'TEXT')),
                                         'legend' => array(
                                             strip_tags(str_replace(array('<TR>', '</TD> <TD>'), array("\n", '      '), preg_replace('/\s+/', ' ', strip_tags($sEffectLegend, '<tr><td>')))),
                                             $sEffectLegend)),
