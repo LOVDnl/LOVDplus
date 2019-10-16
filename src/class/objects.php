@@ -4,7 +4,7 @@
  * LEIDEN OPEN VARIATION DATABASE (LOVD)
  *
  * Created     : 2009-10-21
- * Modified    : 2019-10-09
+ * Modified    : 2019-10-16
  * For LOVD    : 3.0-22
  *
  * Copyright   : 2004-2019 Leiden University Medical Center; http://www.LUMC.nl/
@@ -2334,10 +2334,12 @@ class LOVD_Object
         }
 
         $sSQLOrderBy = $this->aColumnsViewList[$aOrder[0]]['db'][0] . ' ' . $aOrder[1];
-        if (preg_match('/AS\s+`?' . preg_quote($aOrder[0], '/') . '`?\b/i', $this->aSQLViewList['SELECT'])) {
+        if (preg_match('/^\w\./', $this->aColumnsViewList[$aOrder[0]]['db'][0]) // Only for normal columns.
+            && preg_match('/AS\s+`?' . preg_quote($aOrder[0], '/') . '`?\b/i', $this->aSQLViewList['SELECT'])) {
             // Current field name is present as an alias in SELECT clause, use
             // this instead in the ORDER BY clause. (needed for aggregated
             // fields)
+            // But we should *only* do this when the db field was just a given column ("table.column").
             $sSQLOrderBy = '`' . trim($aOrder[0], '`') . '` ' . $aOrder[1];
         }
 
