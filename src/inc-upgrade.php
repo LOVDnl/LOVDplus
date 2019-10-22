@@ -4,7 +4,7 @@
  * LEIDEN OPEN VARIATION DATABASE (LOVD)
  *
  * Created     : 2010-01-14
- * Modified    : 2019-08-28
+ * Modified    : 2019-10-16
  * For LOVD    : 3.0-22
  *
  * Copyright   : 2004-2019 Leiden University Medical Center; http://www.LUMC.nl/
@@ -38,6 +38,49 @@ if (!defined('ROOT_PATH')) {
 // How are the versions related?
 $sCalcVersionFiles = lovd_calculateVersion($_SETT['system']['version']);
 $sCalcVersionDB = lovd_calculateVersion($_STAT['version']);
+
+
+
+
+
+function lovd_addConditionalSQL ($sCondition, $aConditionArgs, $sSQL)
+{
+    // This function returns the given SQL surrounded by SQL conditions.
+    // This allows for a quick way to write SQL to, for instance, add a column only if it doesn't exist yet.
+
+    if (!is_array($aConditionArgs)) {
+        return array(
+            // This will cause a query error.
+            'lovd_addConditionalSQL() error; $aConditionArgs not an array.'
+        );
+    }
+
+    $aReturn = array();
+    switch ($sCondition) {
+        case 'column_not_exists':
+            // Args: Table, Column.
+            if (count($aConditionArgs) != 2) {
+                return array(
+                    // This will cause a query error.
+                    'lovd_addConditionalSQL() error; $aConditionArgs does not exactly contain two arguments.'
+                );
+            }
+            list($sTable, $sColumn) = $aConditionArgs;
+            $aReturn = array(
+                'SET @bExists := (SELECT COUNT(*) FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = "' . $sTable . '" AND COLUMN_NAME = "' . $sColumn . '")',
+                'SET @sSQL := IF(@bExists > 0, \'SELECT "INFO: Column already exists."\', "' . $sSQL . '")',
+                'PREPARE Statement FROM @sSQL',
+                'EXECUTE Statement',
+            );
+            break;
+        default:
+            return array(
+                // This will cause a query error.
+                'lovd_addConditionalSQL() error; $sCondition ' . $sCondition . ' not recognized.'
+            );
+    }
+    return $aReturn;
+}
 
 
 
@@ -977,6 +1020,10 @@ if ($sCalcVersionFiles != $sCalcVersionDB) {
                      'EXECUTE Statement',
                      'UPDATE ' . TABLE_COLS . ' SET select_options = "intergenic\r\nnear-gene-5\r\nutr-5\r\nstart-lost\r\ncoding\r\nnon-coding-exon\r\ncoding-near-splice\r\nnon-coding-exon-near-splice\r\ncoding-synonymous\r\ncoding-synonymous-near-splice\r\ncodingComplex\r\ncodingComplex-near-splice\r\nframeshift\r\nframeshift-near-splice\r\nmissense\r\nmissense-near-splice\r\nsplice-5\r\nsplice\r\nnon-coding-intron-near-splice\r\nintron\r\nsplice-3\r\nstop-gained\r\nstop-gained-near-splice\r\nstop-lost\r\nstop-lost-near-splice\r\nutr-3\r\nnear-gene-3" WHERE select_options = "intergenic\r\nnear-gene-5\r\nutr-5\r\ncoding\r\ncoding-near-splice\r\ncoding-synonymous\r\ncoding-synonymous-near-splice\r\ncodingComplex\r\ncodingComplex-near-splice\r\nframeshift\r\nframeshift-near-splice\r\nmissense\r\nmissense-near-splice\r\nsplice-5\r\nintron\r\nsplice-3\r\nstop-gained\r\nstop-gained-near-splice\r\nstop-lost\r\nstop-lost-near-splice\r\nutr-3\r\nnear-gene-3" AND id = "VariantOnTranscript/GVS/Function"',
                      'UPDATE ' . TABLE_SHARED_COLS . ' SET select_options = "intergenic\r\nnear-gene-5\r\nutr-5\r\nstart-lost\r\ncoding\r\nnon-coding-exon\r\ncoding-near-splice\r\nnon-coding-exon-near-splice\r\ncoding-synonymous\r\ncoding-synonymous-near-splice\r\ncodingComplex\r\ncodingComplex-near-splice\r\nframeshift\r\nframeshift-near-splice\r\nmissense\r\nmissense-near-splice\r\nsplice-5\r\nsplice\r\nnon-coding-intron-near-splice\r\nintron\r\nsplice-3\r\nstop-gained\r\nstop-gained-near-splice\r\nstop-lost\r\nstop-lost-near-splice\r\nutr-3\r\nnear-gene-3" WHERE select_options = "intergenic\r\nnear-gene-5\r\nutr-5\r\ncoding\r\ncoding-near-splice\r\ncoding-synonymous\r\ncoding-synonymous-near-splice\r\ncodingComplex\r\ncodingComplex-near-splice\r\nframeshift\r\nframeshift-near-splice\r\nmissense\r\nmissense-near-splice\r\nsplice-5\r\nintron\r\nsplice-3\r\nstop-gained\r\nstop-gained-near-splice\r\nstop-lost\r\nstop-lost-near-splice\r\nutr-3\r\nnear-gene-3" AND colid = "VariantOnTranscript/GVS/Function"',
+                 ),
+                 '3.0-21f' => lovd_addConditionalSQL(
+                     'column_not_exists', array(TABLE_USERS, 'auth_token'),
+                     'ALTER TABLE ' . TABLE_USERS . ' ADD COLUMN auth_token CHAR(32) AFTER password_force_change, ADD COLUMN auth_token_expires DATETIME AFTER auth_token'
                  ),
              );
 
