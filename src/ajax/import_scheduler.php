@@ -4,10 +4,10 @@
  * LEIDEN OPEN VARIATION DATABASE (LOVD)
  *
  * Created     : 2017-11-16
- * Modified    : 2017-12-04
- * For LOVD    : 3.0-21
+ * Modified    : 2019-10-28
+ * For LOVD    : 3.0-22
  *
- * Copyright   : 2004-2017 Leiden University Medical Center; http://www.LUMC.nl/
+ * Copyright   : 2004-2019 Leiden University Medical Center; http://www.LUMC.nl/
  * Programmer  : Ivo F.A.C. Fokkema <I.F.A.C.Fokkema@LUMC.nl>
  *
  *
@@ -68,6 +68,7 @@ $bFileLost  = !file_exists($_INI['paths']['data_files'] . '/' . $sFile);
 $nPriority  = $zFile['priority'];
 $bProcessed = (int) $zFile['in_progress'];
 $bError     = !empty($zFile['process_errors']);
+$bErrorLabID = ($bError && strpos($zFile['process_errors'], 'Another individual with this Lab ID already exists in the database') !== false);
 
 $sFormUnschedule     = '<FORM id=\'import_scheduler_unschedule_form\'><INPUT type=\'hidden\' name=\'csrf_token\' value=\'{{CSRF_TOKEN}}\'>Are you sure you want to unschedule this file?</FORM>';
 $sFormSetPriority    = '<FORM id=\'import_scheduler_set_priority_form\'><INPUT type=\'hidden\' name=\'csrf_token\' value=\'{{CSRF_TOKEN}}\'>Please select the priority with which the file will be processed.<BR><SELECT name=\'priority\'>' .
@@ -83,15 +84,18 @@ $sMessageIntro       = 'Please choose from the actions below.<BR>';
 $sMessageUnschedule  = 'You can unschedule this file, which will remove it from the list of files to import. You can do this by clicking &quot;Unschedule file&quot; below.<BR>';
 $sMessageSetPriority = 'You can set the priority with which this file will be imported by clicking &quot;Set priority&quot; below.<BR>';
 $sMessageReschedule  = 'You can also reschedule this file, resetting it and putting it back at the end of the queue, so LOVD will try to import it again. You can do this by clicking &quot;Reschedule file&quot; below.<BR>';
+$sMessageNewScreening = 'However, since this file failed to import due to its Lab ID already existing in the database, you can also have the file edited so the data will be appended to the existing Individual as a new Screening. You can do this by clicking &quot;Import as new Screening&quot; below.<BR>';
 
 // Set JS variables and objects.
 print('
 var bFileLost              = ' . (int) $bFileLost . ';
 var bProcessed             = ' . (int) $bProcessed . ';
 var bError                 = ' . (int) $bError . ';
+var bErrorLabID            = ' . (int) $bErrorLabID . ';
 var oButtonUnschedule      = {"Unschedule file":function () { $.get("' . CURRENT_PATH . '?unschedule"); }};
 var oButtonSetPriority     = {"Set priority":function () { $.get("' . CURRENT_PATH . '?set_priority"); }};
 var oButtonReschedule      = {"Reschedule file":function () { $.get("' . CURRENT_PATH . '?reschedule"); }};
+var oButtonNewScreening    = {"Import as new Screening":function () { $.get("' . CURRENT_PATH . '?new_screening"); }};
 var oButtonBack            = {"Back":function () { $.get("' . CURRENT_PATH . '?view"); }};
 var oButtonCancel          = {"Cancel":function () { $.get("' . CURRENT_PATH . '?view"); }};
 var oButtonClose           = {"Close":function () { $(this).dialog("close"); }};
@@ -273,6 +277,9 @@ if (ACTION == 'view') {
     }
     if (bError && !bFileLost) {
         $("#import_scheduler_dialog").append("' . $sMessageReschedule . '<BR>");
+        if (bErrorLabID && !bFileLost) {
+            $("#import_scheduler_dialog").append("' . $sMessageNewScreening . '<BR>");
+        }
     }
     $("#import_scheduler_dialog").append("<BR>");
     
@@ -283,6 +290,9 @@ if (ACTION == 'view') {
     }
     if (bError && !bFileLost) {
         $.extend(oButtons, oButtonReschedule);
+        if (bErrorLabID && !bFileLost) {
+            $.extend(oButtons, oButtonNewScreening);
+        }
     }
     $.extend(oButtons, oButtonClose);
     $("#import_scheduler_dialog").dialog({buttons: oButtons}); 

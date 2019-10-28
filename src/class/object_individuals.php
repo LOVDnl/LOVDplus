@@ -328,6 +328,7 @@ class LOVD_Individual extends LOVD_Custom
             }
             if ($r) {
                 list($nID, $sCreatedDate) = $r;
+                // NOTE: Do not just change this error message, we are parsing for it in ajax/import_scheduler.php.
                 lovd_errorAdd('Individual/Lab_ID',
                     'Another individual with this Lab ID already exists in the database; #' . $nID . ', imported ' . $sCreatedDate . '.');
             }
