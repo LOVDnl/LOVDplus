@@ -334,10 +334,28 @@ if (ACTION == 'new_screening' && POST) {
     }
 
     // Find original Individual.
-    $nID = $_DB->query('SELECT id FROM ' . TABLE_INDIVIDUALS . ' WHERE `Individual/Lab_ID` = ?',
-        array($aParsed['Individuals']['Individual/Lab_ID']))->fetchColumn();
-    if (!$nID) {
+    $zIndividual = $_DB->query('
+        SELECT i.*, GROUP_CONCAT(i2d.diseaseid SEPARATOR ";") AS _diseases
+        FROM ' . TABLE_INDIVIDUALS . ' AS i LEFT OUTER JOIN ' . TABLE_IND2DIS . ' AS i2d ON (i.id = i2d.individualid)
+        WHERE `Individual/Lab_ID` = ?
+        GROUP BY i.id',
+        array($aParsed['Individuals']['Individual/Lab_ID']))->fetchAssoc();
+    if (!$zIndividual) {
         die('alert("Error: Could not find original Individual entry in the database. I will not try and edit this file.\n");');
+    }
+    $zIndividual['diseases'] = (!$zIndividual['_diseases']? array() : explode(';', $zIndividual['_diseases']));
+
+    // Compare data from meta data file with database, to check for data mismatches.
+    foreach ($aParsed['Individuals'] as $sKey => $sVal) {
+        if ($sKey != 'id' && $sVal != $zIndividual[$sKey]) {
+            die('alert("Error: Data mismatch between meta data file and database contents at Individual field ' .
+                $sKey . ' (' . $zIndividual[$sKey] . ' => ' . $sVal . '). I will not try and edit this file.\n");');
+        }
+    }
+    if ($aParsed['Individuals_To_Diseases']['diseaseid']
+        && !in_array($aParsed['Individuals_To_Diseases']['diseaseid'], $zIndividual['diseases'])) {
+        die('alert("Error: Data mismatch between meta data file and database contents at Individuals_To_Diseases.' .
+            ' I will not try and edit this file.\n");');
     }
 
     // Unfortunately, we cannot easily just remove or edit a line.
@@ -374,7 +392,7 @@ if (ACTION == 'new_screening' && POST) {
                 if (array_values($aParsed['Screenings']) == $aLine) {
                     // Full match; this is the Screenings line.
                     // Replace individual ID, and replace line.
-                    $aParsed['Screenings']['individualid'] = $nID;
+                    $aParsed['Screenings']['individualid'] = $zIndividual['id'];
                     $aMetaData[$i] = '"' . implode("\"\t\"", $aParsed['Screenings']) . "\"\r\n";
                     $bSuccess = true;
                     // No else needed here; we'll just complain later if we weren't successful.
