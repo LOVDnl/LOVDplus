@@ -4,10 +4,10 @@
  * LEIDEN OPEN VARIATION DATABASE (LOVD)
  *
  * Created     : 2010-12-21
- * Modified    : 2019-10-09
+ * Modified    : 2020-01-16
  * For LOVD    : 3.0-22
  *
- * Copyright   : 2004-2019 Leiden University Medical Center; http://www.LUMC.nl/
+ * Copyright   : 2004-2020 Leiden University Medical Center; http://www.LUMC.nl/
  * Programmers : Ivar C. Lugtenburg <I.C.Lugtenburg@LUMC.nl>
  *               Ivo F.A.C. Fokkema <I.F.A.C.Fokkema@LUMC.nl>
  *               Jerry Hoogenboom <J.Hoogenboom@LUMC.nl>
@@ -499,7 +499,7 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && !ACTION) {
         }
         $aNavigation[CURRENT_PATH . '?map']        = array('menu_transcripts.png', 'Manage transcripts for this variant', 1);
         if (LOVD_plus && $_AUTH['level'] >= LEVEL_CURATOR) {
-            $aNavigation[CURRENT_PATH . '?delete_preferred_transcripts'] = array('menu_transcripts.png', 'Delete non-preferred transcripts', 1);
+            $aNavigation[CURRENT_PATH . '?delete_non-preferred_transcripts'] = array('menu_transcripts.png', 'Delete non-preferred transcripts', 1);
         }
         if ($_AUTH['level'] >= $_SETT['user_level_settings']['delete_variant']) {
             $aNavigation[CURRENT_PATH . '?delete'] = array('cross.png', 'Delete variant entry', 1);
@@ -3299,8 +3299,8 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && ACTION == 'search_global') {
 
 
 
-if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && in_array(ACTION, array('delete_preferred_transcripts', 'map'))) {
-    // URL: /variants/0000000001?delete_preferred_transcripts
+if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && in_array(ACTION, array('delete_non-preferred_transcripts', 'map'))) {
+    // URL: /variants/0000000001?delete_non-preferred_transcripts
     // URL: /variants/0000000001?map
     // Map a variant to additional transcripts, or remove transcripts from the variant.
 
@@ -3331,7 +3331,7 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && in_array(ACTION, array('delete_pr
     $zData = $_DATA->loadEntry($nID);
     // Load all transcript ID's that are currently present in the database connected to this variant.
     $aCurrentTranscripts = $_DB->query('SELECT t.id, t.geneid FROM ' . TABLE_TRANSCRIPTS . ' AS t INNER JOIN ' . TABLE_VARIANTS_ON_TRANSCRIPTS . ' AS vot ON (t.id = vot.transcriptid) WHERE vot.id = ? ORDER BY t.geneid', array($nID))->fetchAllCombine();
-    if (ACTION == 'delete_preferred_transcripts') {
+    if (ACTION == 'delete_non-preferred_transcripts') {
         if (!LOVD_plus) {
             // Only available for LOVD+!
             exit;
@@ -3481,7 +3481,7 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && in_array(ACTION, array('delete_pr
             // Write to log...
             if (ACTION == 'map') {
                 lovd_writeLog('Event', LOG_EVENT, 'Updated the transcript list for variant #' . $nID);
-            } elseif (ACTION == 'delete_preferred_transcripts' && $aToRemove) {
+            } elseif (ACTION == 'delete_non-preferred_transcripts' && $aToRemove) {
                 $sTranscriptsRemoved = '';
                 foreach ($aToRemove as $nTranscriptID) {
                     $sTranscriptsRemoved .= (!$sTranscriptsRemoved? '' : ', ') . $aTranscriptsToRemove[$nTranscriptID];
@@ -3522,7 +3522,8 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && in_array(ACTION, array('delete_pr
         $aVOT = $_DB->query('SELECT t.id, t.geneid, t.name, t.id_ncbi FROM ' . TABLE_TRANSCRIPTS . ' AS t LEFT OUTER JOIN ' . TABLE_VARIANTS_ON_TRANSCRIPTS . ' AS vot ON (t.id = vot.transcriptid) WHERE vot.id = ? ORDER BY t.geneid, id_ncbi', array($nID))->fetchAllAssoc();
     }
 
-    if (!(LOVD_plus && ACTION == 'delete_preferred_transcripts')) {
+    if (!(LOVD_plus && ACTION == 'delete_non-preferred_transcripts')) {
+        // Normal mapping feature.
         lovd_showInfoTable('The variant entry is currently NOT mapped to the following transcripts. Click on a transcript to map the variant to it.', 'information');
 
         $_GET['page_size'] = 10;
@@ -3541,6 +3542,7 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && in_array(ACTION, array('delete_pr
         lovd_showInfoTable('The variant entry is currently mapped to the following transcripts. Click on the cross at the right side of the transcript to remove the mapping.', 'information');
 
     } else {
+        // Only deselecting transcripts, not adding anything.
         lovd_showInfoTable('The following transcript' . (count($aTranscriptsToRemove) == 1? '' : 's') . ' have been deselected from this variant: ' . implode(', ', $aTranscriptsToRemove) . '. If you wish, you can deselect more by clicking on the cross at the right side of the transcript.<BR>Please confirm removal by typing in your password below and click "Save transcript list".', 'information');
     }
 
@@ -3628,7 +3630,7 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && in_array(ACTION, array('delete_pr
       </SCRIPT>
 <?php
 
-    if (LOVD_plus && ACTION == 'delete_preferred_transcripts') {
+    if (LOVD_plus && ACTION == 'delete_non-preferred_transcripts') {
         // Trigger the removal of the non-preferred transcripts.
         print('
       <SCRIPT type="text/javascript">
