@@ -4,10 +4,10 @@
  * LEIDEN OPEN VARIATION DATABASE (LOVD)
  *
  * Created     : 2010-01-14
- * Modified    : 2019-10-16
- * For LOVD    : 3.0-22
+ * Modified    : 2020-02-18
+ * For LOVD    : 3.0-23
  *
- * Copyright   : 2004-2019 Leiden University Medical Center; http://www.LUMC.nl/
+ * Copyright   : 2004-2020 Leiden University Medical Center; http://www.LUMC.nl/
  * Programmers : Ivo F.A.C. Fokkema <I.F.A.C.Fokkema@LUMC.nl>
  *               Ivar C. Lugtenburg <I.C.Lugtenburg@LUMC.NL>
  *               M. Kroon <m.kroon@lumc.nl>
@@ -1025,6 +1025,10 @@ if ($sCalcVersionFiles != $sCalcVersionDB) {
                      'column_not_exists', array(TABLE_USERS, 'auth_token'),
                      'ALTER TABLE ' . TABLE_USERS . ' ADD COLUMN auth_token CHAR(32) AFTER password_force_change, ADD COLUMN auth_token_expires DATETIME AFTER auth_token'
                  ),
+                 '3.0-23' => array(
+                     'ALTER TABLE ' . TABLE_GENES . ' DROP COLUMN allow_index_wiki',
+                     'ALTER TABLE ' . TABLE_USERS . ' DROP COLUMN reference',
+                 )
              );
 
     if ($sCalcVersionDB < lovd_calculateVersion('3.0-alpha-01')) {
@@ -1427,7 +1431,7 @@ if ($sCalcVersionFiles != $sCalcVersionDB) {
 
     require ROOT_PATH . 'class/progress_bar.php';
     // FIXME; if we're not in post right now, don't send the form in POST either! (GET variables then should be put in input fields then)
-    $sFormNextPage = '<FORM action="' . $_SERVER['REQUEST_URI'] . '" method="post" id="upgrade_form">' . "\n";
+    $sFormNextPage = '<FORM action="' . addslashes($_SERVER['REQUEST_URI']) . '" method="post" id="upgrade_form">' . "\n";
     foreach ($_POST as $key => $val) {
         // Added htmlspecialchars to prevent XSS and allow values to include quotes.
         if (is_array($val)) {
@@ -1581,7 +1585,7 @@ if ($sCalcVersionFiles != $sCalcVersionDB) {
         $_SERVER['REQUEST_URI'] = preg_replace('/[?&]force_lock$/', '', $_SERVER['REQUEST_URI']);
     }
 
-    print('<SCRIPT type="text/javascript">document.forms[\'upgrade_form\'].action=\'' . str_replace('\'', '\\\'', $_SERVER['REQUEST_URI']) . '\';</SCRIPT>' . "\n");
+    print('<SCRIPT type="text/javascript">document.forms[\'upgrade_form\'].action=\'' . addslashes($_SERVER['REQUEST_URI']) . '\';</SCRIPT>' . "\n");
     if ($bLocked) {
         print('<SCRIPT type="text/javascript">document.forms[\'upgrade_form\'].submit.value = document.forms[\'upgrade_form\'].submit.value.replace(\'Proceed\', \'Force upgrade\');</SCRIPT>' . "\n");
     }
