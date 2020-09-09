@@ -364,6 +364,21 @@ function lovd_getVariantPosition ($sVariant, $aTranscript = array())
             $aReturn['end'] = $aReturn['start'];
             $aReturn['end_intron'] = $aReturn['start_intron'];
         }
+
+        // If a variant is described poorly with a start > end, then we'll swap the positions so we will store them correctly.
+        if ($aReturn['start'] > $aReturn['end']) {
+            // There's many ways of doing this, but this method is the simplest to read.
+            $nTmp = $aReturn['start'];
+            $aReturn['start'] = $aReturn['end'];
+            $aReturn['end'] = $nTmp;
+
+            // And intronic, if needed.
+            if ($aReturn['start_intron'] || $aReturn['end_intron']) {
+                $nTmp = $aReturn['start_intron'];
+                $aReturn['start_intron'] = $aReturn['end_intron'];
+                $aReturn['end_intron'] = $nTmp;
+            }
+        }
     }
 
     return $aReturn;
