@@ -5,16 +5,19 @@
  * LEIDEN OPEN VARIATION DATABASE FOR DIAGNOSTICS (LOVD+)
  *
  * Created     : 2018-08-17
- * Modified    : 2018-10-12
- * Version     : 0.3
- * For LOVD+   : 3.0-18
+ * Modified    : 2020-09-10
+ * Version     : 0.4
+ * For LOVD+   : 3.0-24
  *
  * Purpose     : Takes (VEP) annotated VCF files and converts them to tab-
  *               delimited files, with one transcript mapping per line. There
  *               are various tools to do this, but these either can't be shipped
  *               with LOVD+ due to license issues, or they're not standalone.
  *
- * Changelog   : 0.3    2018-10-12
+ * Changelog   : 0.4    2020-09-10
+ *               Fixed problem with *-alleles, that disrupt parsing the VEP
+ *               annotation.
+ *               0.3    2018-10-12
  *               Fixed bug in allele trimming; lovd_ltrimCommonChars() should
  *               actually only be used once, and should not be looped.
  *               Also, added the transcript_prefix filter.
@@ -57,7 +60,7 @@ if (isset($_SERVER['HTTP_HOST'])) {
 
 // Default settings.
 $_CONFIG = array(
-    'version' => '0.3',
+    'version' => '0.4',
     'annotation_ids' => array(
         'CSQ' => '|', // VEP (at least until v93) uses 'CSQ' for the annotation, and splits fields on '|'.
     ),
@@ -556,6 +559,15 @@ while ($sLine = fgets($fInput)) {
                 }
             }
         }
+    }
+
+    // VCF 4.2 can contain lines with an ALT allele of "*", indicating the allele is
+    //  not WT at this position, but affected by an earlier mentioned variant instead.
+    // Because these are not actually variants, and they can disrupt the formation
+    //  of $aALTsCleaned, we remove them.
+    if (in_array('*', $aALTs)) {
+        unset($aALTs[array_search('*', $aALTs)]);
+        $aALTs = array_values($aALTs); // Reset the keys.
     }
 
     // VEP shortens the Allele in the annotation, so we need to do the same (VEP v93).
