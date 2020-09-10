@@ -4,10 +4,10 @@
  * LEIDEN OPEN VARIATION DATABASE (LOVD)
  *
  * Created     : 2016-09-02
- * Modified    : 2019-09-26
- * For LOVD    : 3.0-22
+ * Modified    : 2020-09-09
+ * For LOVD    : 3.0-24
  *
- * Copyright   : 2004-2019 Leiden University Medical Center; http://www.LUMC.nl/
+ * Copyright   : 2004-2020 Leiden University Medical Center; http://www.LUMC.nl/
  * Programmers : Juny Kesumadewi <juny.kesumadewi@unimelb.edu.au>
  *               Ivo F.A.C. Fokkema <I.F.A.C.Fokkema@LUMC.nl>
  *
@@ -378,8 +378,10 @@ class LOVD_DefaultDataConverter {
                 // Homozygous REF; not a variant. Skip this line silently.
                 $aVariant['lovd_ignore_variant'] = 'silent';
                 break;
-            case '0/1':
-                // Heterozygous.
+            case '0/1': // Heterozygous.
+            case '0|1': // Phased heterozygous.
+                // Phased GTs are currently not handled, because we don't know if
+                //  variants have been filtered and as such we can't trust these values.
                 if (!empty($aVariant['VariantOnGenome/Sequencing/Father/GenoType']) && !empty($aVariant['VariantOnGenome/Sequencing/Mother/GenoType'])) {
                     if (strpos($aVariant['VariantOnGenome/Sequencing/Father/GenoType'], '1') !== false && strpos($aVariant['VariantOnGenome/Sequencing/Mother/GenoType'], '1') === false) {
                         // From father, inferred.
@@ -394,8 +396,11 @@ class LOVD_DefaultDataConverter {
                     $aVariant['allele'] = 0;
                 }
                 break;
-            case '1/1':
-                // Homozygous.
+            case '1': // Hemizygous (LOVD doesn't have a separate allele value for this).
+            case '1/1': // Homozygous.
+            case '1|1': // Phased homozygous.
+                // Phased GTs are currently not handled, because we don't know if
+                //  variants have been filtered and as such we can't trust these values.
                 $aVariant['allele'] = 3;
                 break;
             default:
