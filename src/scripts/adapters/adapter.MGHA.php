@@ -17,6 +17,7 @@ $_GET['format'] = 'text/plain';
 // To prevent notices when running inc-init.php.
 $_SERVER = array_merge($_SERVER, array(
     'HTTP_HOST' => 'localhost',
+    'HTTPS' => 'on',
     'REQUEST_URI' => 'scripts/adapter.php',
     'QUERY_STRING' => '',
     'REQUEST_METHOD' => 'GET',

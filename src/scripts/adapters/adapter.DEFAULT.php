@@ -4,20 +4,23 @@
  * LEIDEN OPEN VARIATION DATABASE FOR DIAGNOSTICS (LOVD+)
  *
  * Created     : 2018-08-16
- * Modified    : 2018-12-19
- * Version     : 0.2
- * For LOVD+   : 3.0-18
+ * Modified    : 2021-11-23
+ * Version     : 0.3
+ * For LOVD+   : 3.0-24
  *
  * Purpose     : Prepares the conversion script; runs the VEP2TSV converter to
  *               create data files, and creates meta data files if needed.
  *
- * Changelog   : 0.2    2018-12-19
+ * Changelog   : 0.3    2021-11-23
+ *               Added the HTTPS $_SERVER variable to make sure we can handle
+ *               SSL redirects.
+ *               0.2    2018-12-19
  *               No longer create the id_sample column in the Meta data files,
  *               we've dropped this column.
  *               0.1    2018-08-28
  *               Initial release.
  *
- * Copyright   : 2004-2018 Leiden University Medical Center; http://www.LUMC.nl/
+ * Copyright   : 2004-2021 Leiden University Medical Center; http://www.LUMC.nl/
  * Programmer  : Ivo F.A.C. Fokkema <I.F.A.C.Fokkema@LUMC.nl>
  *
  *
@@ -51,6 +54,7 @@ $_GET['format'] = 'text/plain';
 // To prevent notices when running inc-init.php.
 $_SERVER = array_merge($_SERVER, array(
     'HTTP_HOST' => 'localhost',
+    'HTTPS' => 'on',
     'REQUEST_URI' => __FILE__,
     'QUERY_STRING' => '',
     'REQUEST_METHOD' => 'GET',
