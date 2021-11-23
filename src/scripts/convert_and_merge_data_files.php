@@ -734,7 +734,8 @@ foreach ($aFiles as $sFileID) {
             // 2015-10-28; Because of the double column mappings, we ended up with values divided twice.
             // Flipping the array makes sure we get rid of double mappings.
             foreach (array_flip($aColumnMappings) as $sLOVDColumn => $sVEPColumn) {
-                if ($sVEPColumn == 'AFESP5400' || $sVEPColumn == 'ALTPERC' || strpos($sVEPColumn, 'ALTPERC_') === 0) {
+                if (!empty($aVariant[$sLOVDColumn])
+                    && ($sVEPColumn == 'AFESP5400' || $sVEPColumn == 'ALTPERC' || strpos($sVEPColumn, 'ALTPERC_') === 0)) {
                     $aVariant[$sLOVDColumn] /= 100;
                 }
             }
