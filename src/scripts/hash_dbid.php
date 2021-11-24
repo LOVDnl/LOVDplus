@@ -4,10 +4,10 @@
  * LEIDEN OPEN VARIATION DATABASE (LOVD)
  *
  * Created     : 2017-06-05
- * Modified    : 2017-11-13
- * For LOVD+   : 3.0-18
+ * Modified    : 2021-11-23
+ * For LOVD+   : 3.0-24
  *
- * Copyright   : 2004-2017 Leiden University Medical Center; http://www.LUMC.nl/
+ * Copyright   : 2004-2021 Leiden University Medical Center; http://www.LUMC.nl/
  * Programmers : Juny Kesumadewi <juny.kesumadewi@unimelb.edu.au>
  *               Ivo F.A.C. Fokkema <I.F.A.C.Fokkema@LUMC.nl>
  *
@@ -23,6 +23,7 @@ $_GET['format'] = 'text/plain';
 // To prevent notices when running inc-init.php.
 $_SERVER = array_merge($_SERVER, array(
     'HTTP_HOST' => 'localhost',
+    'HTTPS' => 'on',
     'REQUEST_URI' => 'scripts/hash_dbid.php',
     'QUERY_STRING' => '',
     'REQUEST_METHOD' => 'GET',
