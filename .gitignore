@@ -13,3 +13,5 @@ tests/test_results/reports
 vendor
 composer.lock
 __*
+.env
+.config.ini.php

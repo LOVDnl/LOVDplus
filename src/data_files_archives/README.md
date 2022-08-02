@@ -1,0 +1,1 @@
+The following path is where LOVD will write automatically imported files to.
