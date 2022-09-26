@@ -4,10 +4,10 @@
  * LEIDEN OPEN VARIATION DATABASE (LOVD)
  *
  * Created     : 2010-03-04
- * Modified    : 2020-11-24
- * For LOVD    : 3.0-26
+ * Modified    : 2022-05-27
+ * For LOVD    : 3.0-28
  *
- * Copyright   : 2004-2020 Leiden University Medical Center; http://www.LUMC.nl/
+ * Copyright   : 2004-2022 Leiden University Medical Center; http://www.LUMC.nl/
  * Programmers : Ivo F.A.C. Fokkema <I.F.A.C.Fokkema@LUMC.nl>
  *               Ivar C. Lugtenburg <I.C.Lugtenburg@LUMC.nl>
  *               M. Kroon <m.kroon@lumc.nl>
@@ -65,7 +65,9 @@ if (PATH_COUNT < 3 && !ACTION) {
     $_T->printHeader();
     $_T->printTitle();
 
-    lovd_isAuthorized('gene', $_AUTH['curates']); // Will set user's level to LEVEL_CURATOR if they are one at all.
+    if ($_AUTH) {
+        lovd_isAuthorized('gene', $_AUTH['curates']); // Will set user's level to LEVEL_CURATOR if they are one at all.
+    }
     lovd_requireAUTH(LEVEL_CURATOR);
 
     require ROOT_PATH . 'class/object_columns.php';
@@ -119,7 +121,9 @@ if (PATH_COUNT > 2 && !ACTION) {
     $_T->printHeader();
     $_T->printTitle();
 
-    lovd_isAuthorized('gene', $_AUTH['curates']); // Will set user's level to LEVEL_CURATOR if they are one at all.
+    if ($_AUTH) {
+        lovd_isAuthorized('gene', $_AUTH['curates']); // Will set user's level to LEVEL_CURATOR if they are one at all.
+    }
     lovd_requireAUTH(LEVEL_CURATOR);
 
     require ROOT_PATH . 'class/object_columns.php';
@@ -385,7 +389,7 @@ if (PATH_COUNT == 1 && ACTION == 'data_type_wizard') {
         }
 
         // Check regexp syntax.
-        if (!empty($_POST['preg_pattern']) && ($_POST['preg_pattern']{0} != '/' || @preg_match($_POST['preg_pattern'], '') === false)) {
+        if (!empty($_POST['preg_pattern']) && ($_POST['preg_pattern'][0] != '/' || @preg_match($_POST['preg_pattern'], '') === false)) {
             lovd_errorAdd('preg_pattern', 'The \'Regular expression pattern\' field does not seem to contain valid PHP Perl compatible regexp syntax.');
         }
 
@@ -564,7 +568,7 @@ if (PATH_COUNT == 1 && ACTION == 'data_type_wizard') {
     lovd_includeJS('inc-js-tooltip.php');
 
     print('      <FORM action="' . CURRENT_PATH . '?' . ACTION . '&amp;workID=' . $_GET['workID'] . '" method="post">' . "\n" .
-          '        <INPUT type="hidden" name="form_type" value="' . $_POST['form_type'] . '">' . "\n");
+          '        <INPUT type="hidden" name="form_type" value="' . htmlspecialchars($_POST['form_type']) . '">' . "\n");
 
     // Array which will make up the form table.
     $aForm = array(
@@ -801,13 +805,13 @@ if (PATH_COUNT == 1 && ACTION == 'create') {
     lovd_includeJS('inc-js-columns.php');
 
     print('      <FORM action="' . CURRENT_PATH . '?' . ACTION . '" method="post">' . "\n" .
-          '        <INPUT type="hidden" name="category" value="' . $_POST['category'] . '">' . "\n" .
-          '        <INPUT type="hidden" name="description_form" value="' . $_POST['description_form'] . '">' . "\n" .
-          '        <INPUT type="hidden" name="select_options" value="' . $_POST['select_options'] . '">' . "\n" .
-          '        <INPUT type="hidden" name="preg_pattern" value="' . $_POST['preg_pattern'] . '">' . "\n" .
+          '        <INPUT type="hidden" name="category" value="' . htmlspecialchars($_POST['category']) . '">' . "\n" .
+          '        <INPUT type="hidden" name="description_form" value="' . htmlspecialchars($_POST['description_form']) . '">' . "\n" .
+          '        <INPUT type="hidden" name="select_options" value="' . htmlspecialchars($_POST['select_options']) . '">' . "\n" .
+          '        <INPUT type="hidden" name="preg_pattern" value="' . htmlspecialchars($_POST['preg_pattern']) . '">' . "\n" .
 // FIXME; remove this when implemented properly.
-          '        <INPUT type="hidden" name="allow_count_all" value="' . $_POST['allow_count_all'] . '">' . "\n" .
-          '        <INPUT type="hidden" name="workID" value="' . $_POST['workID'] . '">' . "\n");
+          '        <INPUT type="hidden" name="allow_count_all" value="' . htmlspecialchars($_POST['allow_count_all']) . '">' . "\n" .
+          '        <INPUT type="hidden" name="workID" value="' . htmlspecialchars($_POST['workID']) . '">' . "\n");
 
     // Array which will make up the form table.
     $aForm = array_merge(
@@ -1160,13 +1164,13 @@ if (PATH_COUNT > 2 && ACTION == 'edit') {
     lovd_includeJS('inc-js-columns.php');
 
     print('      <FORM action="' . CURRENT_PATH . '?' . ACTION . '" method="post" onsubmit="return lovd_checkSubmittedForm();">' . "\n" .
-          '        <INPUT type="hidden" name="category" value="' . $_POST['category'] . '">' . "\n" .
-          '        <INPUT type="hidden" name="description_form" value="' . $_POST['description_form'] . '">' . "\n" .
-          '        <INPUT type="hidden" name="select_options" value="' . $_POST['select_options'] . '">' . "\n" .
-          '        <INPUT type="hidden" name="preg_pattern" value="' . $_POST['preg_pattern'] . '">' . "\n" .
+          '        <INPUT type="hidden" name="category" value="' . htmlspecialchars($_POST['category']) . '">' . "\n" .
+          '        <INPUT type="hidden" name="description_form" value="' . htmlspecialchars($_POST['description_form']) . '">' . "\n" .
+          '        <INPUT type="hidden" name="select_options" value="' . htmlspecialchars($_POST['select_options']) . '">' . "\n" .
+          '        <INPUT type="hidden" name="preg_pattern" value="' . htmlspecialchars($_POST['preg_pattern']) . '">' . "\n" .
 // FIXME; remove this when implemented properly.
-          '        <INPUT type="hidden" name="allow_count_all" value="' . $_POST['allow_count_all'] . '">' . "\n" .
-          '        <INPUT type="hidden" name="workID" value="' . $_POST['workID'] . '">' . "\n");
+          '        <INPUT type="hidden" name="allow_count_all" value="' . htmlspecialchars($_POST['allow_count_all']) . '">' . "\n" .
+          '        <INPUT type="hidden" name="workID" value="' . htmlspecialchars($_POST['workID']) . '">' . "\n");
 
     // Array which will make up the form table.
     $aForm = array_merge(
@@ -1217,7 +1221,9 @@ if (PATH_COUNT > 2 && ACTION == 'add') {
     // Required clearance depending on which type of column is being added.
     $aTableInfo = lovd_getTableInfoByCategory($sCategory);
     if ($aTableInfo['shared']) {
-        lovd_isAuthorized('gene', $_AUTH['curates']); // Any gene will do.
+        if ($_AUTH) {
+            lovd_isAuthorized('gene', $_AUTH['curates']); // Any gene will do.
+        }
         lovd_requireAUTH(LEVEL_CURATOR);
     } else {
         lovd_requireAUTH(LEVEL_MANAGER);
@@ -1545,7 +1551,7 @@ if (!isset($_GET['in_window'])) {
         // If the target is received through $_GET do not show the selection list unless there is a problem with the target.
         if (!empty($_POST['target']) && !is_array($_POST['target']) && !in_array('target', $_ERROR['fields'])) {
             $aForm[] = array('', '', 'print', '<B>Enabling the ' . $zData['id'] . ' column for the ' . $aTableInfo['unit'] . ' ' . $_POST['target'] . '</B><BR><BR>' . "\n");
-            print('      <INPUT type="hidden" name="target" value="' . $_POST['target'] . '">' . "\n");
+            print('      <INPUT type="hidden" name="target" value="' . htmlspecialchars($_POST['target']) . '">' . "\n");
         } else {
             print('      Please select the ' . $aTableInfo['unit'] . '(s) for which you want to add the ' . $zData['colid'] . ' column.<BR><BR>' . "\n");
             $nPossibleTargets = ($nPossibleTargets > 15? 15 : $nPossibleTargets);
@@ -1592,7 +1598,9 @@ if (PATH_COUNT > 2 && ACTION == 'remove') {
     // Required clearance depending on which type of column is being added.
     $aTableInfo = lovd_getTableInfoByCategory($sCategory);
     if ($aTableInfo['shared']) {
-        lovd_isAuthorized('gene', $_AUTH['curates']); // Any gene will do.
+        if ($_AUTH) {
+            lovd_isAuthorized('gene', $_AUTH['curates']); // Any gene will do.
+        }
         lovd_requireAUTH(LEVEL_CURATOR);
     } else {
         lovd_requireAUTH(LEVEL_MANAGER);
@@ -1822,7 +1830,7 @@ if (PATH_COUNT > 2 && ACTION == 'remove') {
             // General query for phenotype data and VOT columns, but for VOT we need to put a join to table_transcripts...
             $nEntriesWithData = $_DB->query('SELECT COUNT(*) FROM ' . $aTableInfo['table_sql'] . ($sCategory != 'VariantOnTranscript'? '' : ' AS vot INNER JOIN ' . TABLE_TRANSCRIPTS . ' AS t ON (vot.transcriptid = t.id)') . ' WHERE ' . $aTableInfo['unit'] . 'id = ? AND `' . $zData['id'] . '` IS NOT NULL AND `' . $zData['id'] . '` != "" AND `' . $zData['id'] . '` != "-"', array($_POST['target']))->fetchColumn();
             $aForm[] = array('', '', 'print', '<B>Removing the ' . $zData['id'] . ' column from ' . $aTableInfo['unit'] . ' ' . $_POST['target'] . '<BR>(' . $sTarget . ')</B><BR><BR>');
-            print('      <INPUT type="hidden" name="target" value="' . $_POST['target'] . '">' . "\n");
+            print('      <INPUT type="hidden" name="target" value="' . htmlspecialchars($_POST['target']) . '">' . "\n");
         } else {
             $nEntriesWithData = -1; // We need to determine this on the fly.
             print('      Please select the ' . $aTableInfo['unit'] . '(s) for which you want to remove the ' . $zData['colid'] . ' column.<BR><BR>' . "\n");

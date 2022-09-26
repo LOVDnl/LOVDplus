@@ -4,10 +4,10 @@
  * LEIDEN OPEN VARIATION DATABASE (LOVD)
  *
  * Created     : 2012-09-19
- * Modified    : 2021-08-11
- * For LOVD    : 3.0-27
+ * Modified    : 2022-05-27
+ * For LOVD    : 3.0-28
  *
- * Copyright   : 2004-2021 Leiden University Medical Center; http://www.LUMC.nl/
+ * Copyright   : 2004-2022 Leiden University Medical Center; http://www.LUMC.nl/
  * Programmers : Ivo F.A.C. Fokkema <I.F.A.C.Fokkema@LUMC.nl>
  *               Daan Asscheman <D.Asscheman@LUMC.nl>
  *               M. Kroon <m.kroon@lumc.nl>
@@ -547,7 +547,9 @@ if (ACTION == 'autoupload_scheduled_file' && PATH_COUNT == 1) {
 
 
 // Require at least curator clearance.
-lovd_isAuthorized('gene', $_AUTH['curates']); // Any gene will do.
+if ($_AUTH) {
+    lovd_isAuthorized('gene', $_AUTH['curates']); // Any gene will do.
+}
 lovd_requireAUTH(LEVEL_CURATOR);
 if ($_AUTH['level'] == LEVEL_CURATOR) {
     // If user has level curator, only simulate is allowed.
@@ -1492,14 +1494,14 @@ if (POST || $_FILES) { // || $_FILES is in use for the automatic loading of file
                         if (strlen($aLine['effectid']) != 2) {
                             lovd_errorAdd('import', 'Error (' . $sCurrentSection . ', line ' . $nLine . '): Please select a valid entry for the \'effectid\' field.');
                         } else {
-                            $aLine['effect_reported'] = $aLine['effectid']{0};
-                            $aLine['effect_concluded'] = $aLine['effectid']{1};
+                            $aLine['effect_reported'] = $aLine['effectid'][0];
+                            $aLine['effect_concluded'] = $aLine['effectid'][1];
                         }
                     } else {
                         // Apply the default values.
                         $aLine['effectid'] = $_SETT['var_effect_default']; // Defaults for import.
-                        $aLine['effect_reported'] = $aLine['effectid']{0}; // Defaults for checkFields().
-                        $aLine['effect_concluded'] = $aLine['effectid']{1}; // Defaults for checkFields().
+                        $aLine['effect_reported'] = $aLine['effectid'][0]; // Defaults for checkFields().
+                        $aLine['effect_concluded'] = $aLine['effectid'][1]; // Defaults for checkFields().
                     }
                 }
 
@@ -1632,7 +1634,7 @@ if (POST || $_FILES) { // || $_FILES is in use for the automatic loading of file
                         }
                     }
                     // Check regexp syntax.
-                    if (!empty($aLine['preg_pattern']) && ($aLine['preg_pattern']{0} != '/' || @preg_match($aLine['preg_pattern'], '') === false)) {
+                    if (!empty($aLine['preg_pattern']) && ($aLine['preg_pattern'][0] != '/' || @preg_match($aLine['preg_pattern'], '') === false)) {
                         lovd_errorAdd('import', 'Error (' . $sCurrentSection . ', line ' . $nLine . '): The \'Regular expression pattern\' field does not seem to contain valid PHP Perl compatible regexp syntax.');
                     }
 

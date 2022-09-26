@@ -4,8 +4,8 @@
  * LEIDEN OPEN VARIATION DATABASE (LOVD)
  *
  * Created     : 2012-11-08
- * Modified    : 2021-08-12
- * For LOVD    : 3.0-27
+ * Modified    : 2022-06-24
+ * For LOVD    : 3.0-28
  *
  * Supported URIs:
  *  3.0-26       /api/rest.php/get_frequencies (POST)
@@ -40,7 +40,7 @@
  *  3.0-27 (v2)  /api/v#/ga4gh/table/variants/data:hg19:chr1:123456-234567 (GET/HEAD)
  *  3.0-18 (v1)  /api/v#/submissions (POST) (/v# is optional)
  *
- * Copyright   : 2004-2020 Leiden University Medical Center; http://www.LUMC.nl/
+ * Copyright   : 2004-2022 Leiden University Medical Center; http://www.LUMC.nl/
  * Programmer  : Ivo F.A.C. Fokkema <I.F.A.C.Fokkema@LUMC.nl>
  *
  *
@@ -217,7 +217,7 @@ if ($sDataType == 'variants') {
 
             // Print header.
             header('Content-type: text/plain; charset=UTF-8');
-            print('track name="Variants in the LOVD ' . $sSymbol . ' database' . (!$nPMID? '' : ' (PMID:' . $nPMID . ')') . '" description="Variants in LOVD ' . $sSymbol . ' db' . (!$nPMID? '' : ' (PMID:' . $nPMID . ')') . '" visibility=' . (!empty($_GET['visibility']) && is_numeric($_GET['visibility'])? $_GET['visibility'] : 3) . ' itemRgb="On" db="' . $sBuild . '" url="' . ($_CONF['location_url']? $_CONF['location_url'] : lovd_getInstallURL()) . 'variants.php?select_db=' . $sSymbol . '&action=search_all&trackid=$$' . '"' . "\n\n");
+            print('track name="Variants in the LOVD ' . $sSymbol . ' database' . (!$nPMID? '' : ' (PMID:' . $nPMID . ')') . '" description="Variants in LOVD ' . $sSymbol . ' db' . (!$nPMID? '' : ' (PMID:' . $nPMID . ')') . '" visibility=' . (!empty($_GET['visibility']) && is_numeric($_GET['visibility'])? $_GET['visibility'] : 3) . ' itemRgb="On" db="' . $sBuild . '" url="' . ($_CONF['location_url']?: lovd_getInstallURL()) . 'variants.php?select_db=' . $sSymbol . '&action=search_all&trackid=$$' . '"' . "\n\n");
 
             foreach ($aData as $r) {
                 list($nPositionStart, $nPositionEnd, $sVariantType, $sDNA) = array_values($r);
@@ -282,7 +282,7 @@ if ($sDataType == 'variants') {
                    ORDER BY t.id_ncbi
                    SEPARATOR ";"
                  ) AS _position_mRNA,
-                 ' . (!$bDNA38? '' : 'vog.chromosome, vog.`VariantOnGenome/DNA/hg38` AS `DNA/hg38`, ') . '
+                 ' . (!$bDNA38? '' : 'vog.chromosome, GROUP_CONCAT(DISTINCT IFNULL(vog.`VariantOnGenome/DNA/hg38`, "") SEPARATOR ";") AS `DNA/hg38`, ') . '
                  CONCAT("chr", vog.chromosome, ":", 
                    IF(
                      vog.position_g_start = vog.position_g_end,
@@ -356,15 +356,15 @@ if ($sDataType == 'variants') {
                             }
                         } else {
                             // This does a first match; trying to find the position at the start of the DNA field. Later this match will be made more accurate!
-                            $sQ .= ' AND REPLACE(REPLACE(REPLACE(REPLACE(vot.`VariantOnTranscript/DNA`, "[", ""), "(", ""), ")", ""), "?", "") LIKE "' . $_DB->quote($_GET['search_' . $sField]) . '%"';
+                            $sQ .= ' AND REPLACE(REPLACE(REPLACE(REPLACE(vot.`VariantOnTranscript/DNA`, "[", ""), "(", ""), ")", ""), "?", "") LIKE ' . $_DB->quote($_GET['search_' . $sField] . '%');
                         }
                     } elseif ($sField == 'Variant/DNA') {
                         // This matches regardless of the characters (, ) and ?.
-                        $sQ .= ' AND REPLACE(REPLACE(REPLACE(vot.`VariantOnTranscript/DNA`, "(", ""), ")", ""), "?", "") = "' . str_replace(array('(', ')', '?'), ' ', $_DB->quote($_GET['search_' . $sField])) . '"';
+                        $sQ .= ' AND REPLACE(REPLACE(REPLACE(vot.`VariantOnTranscript/DNA`, "(", ""), ")", ""), "?", "") = ' . str_replace(array('(', ')', '?'), ' ', $_DB->quote($_GET['search_' . $sField]));
                     } elseif ($sField == 'Variant/DBID') {
-                        $sQ .= ' AND vog.`VariantOnGenome/DBID` LIKE "' . $_DB->quote($_GET['search_' . $sField]) . '%"';
+                        $sQ .= ' AND vog.`VariantOnGenome/DBID` LIKE ' . $_DB->quote($_GET['search_' . $sField] . '%');
                     } else {
-                        $sQ .= ' AND vot.`' . $sField . '` = "' . $_DB->quote($_GET['search_' . $sField]) . '"';
+                        $sQ .= ' AND vot.`' . $sField . '` = ' . $_DB->quote($_GET['search_' . $sField]);
                     }
                 }
             }
@@ -397,7 +397,7 @@ if ($sDataType == 'variants') {
         FROM ' . TABLE_GENES . ' AS g
           LEFT OUTER JOIN ' . TABLE_TRANSCRIPTS . ' AS t ON (g.id = t.geneid)
           LEFT OUTER JOIN ' . TABLE_USERS . ' AS u ON (g.created_by = u.id)
-          LEFT OUTER JOIN ' . TABLE_CURATES . ' AS u2g ON (g.id = u2g.geneid AND u2g.allow_edit = 1)
+          LEFT OUTER JOIN ' . TABLE_CURATES . ' AS u2g ON (g.id = u2g.geneid AND u2g.allow_edit = 1 AND show_order != 0)
           LEFT OUTER JOIN ' . TABLE_USERS . ' AS cur ON (u2g.userid = cur.id)
         WHERE 1=1';
 
@@ -540,7 +540,7 @@ if ($sFeedType == 'feed') {
         set_time_limit(60);
         $sTitle = ($bSearching? ($n? 'R' : 'No r') . 'esults for your query of' : 'Listing of all genes in') . ' the database';
     }
-    $sLink = ($_CONF['location_url']? $_CONF['location_url'] : lovd_getInstallURL()) . 'api/rest.php/' . $sDataType . ($sSymbol? '/' . $sSymbol : '') . (empty($bUnique)? '' : '/unique');
+    $sLink = ($_CONF['location_url']?: lovd_getInstallURL()) . 'api/rest.php/' . $sDataType . ($sSymbol? '/' . $sSymbol : '') . (empty($bUnique)? '' : '/unique');
     $sID   = 'tag:' . $_SERVER['HTTP_HOST'] . ',' . $_STAT['installed_date'] . ':' . $_STAT['signature'] . '/REST_api';
 } else {
     $sTitle = $sLink = $sID = '';
@@ -623,6 +623,9 @@ if ($sDataType == 'variants') {
         // GV shared and future LOVDs; if we have hg38 data, add that.
         if (FORMAT == 'application/json' && $_CONF['refseq_build'] != 'hg38'
             && $bDNA38 && $zData['DNA/hg38']) {
+            // We asked for a list, so we might get different values.
+            // Just pick the first that's filled in.
+            $zData['DNA/hg38'] = strstr(trim($zData['DNA/hg38'], ';') . ';', ';', true);
             $aPositions = lovd_getVariantInfo($zData['DNA/hg38']);
             $aReturn['position_genomic']['hg38'] = 'chr' . $zData['chromosome'] .
                 ':' . $aPositions['position_start'] .
@@ -666,11 +669,11 @@ if ($sDataType == 'variants') {
         // Prepare other fields to be included.
         $sTitle = substr($sSymbol, 0, strpos($sSymbol . '_', '_')) . ':' . htmlspecialchars($zData['Variant/DNA'][0]);
         if ($sFeedType == 'feed') {
-            $sSelfURL = ($_CONF['location_url']? $_CONF['location_url'] : lovd_getInstallURL()) . 'api/rest.php/variants/' . $sSymbol . '/' . $zData['id'];
+            $sSelfURL = ($_CONF['location_url']?: lovd_getInstallURL()) . 'api/rest.php/variants/' . $sSymbol . '/' . $zData['id'];
         } else {
             $sSelfURL = '';
         }
-        $sAltURL               = ($_CONF['location_url']? $_CONF['location_url'] : lovd_getInstallURL()) . 'variants/' . $sSymbol . '/' . $sRefSeq . '?search_VariantOnGenome%2FDBID=' . rawurlencode($zData['Variant/DBID']);
+        $sAltURL               = ($_CONF['location_url']?: lovd_getInstallURL()) . 'variants/' . $sSymbol . '/' . $sRefSeq . '?search_VariantOnGenome%2FDBID=' . rawurlencode($zData['Variant/DBID']);
         $sID                   = 'tag:' . $_SERVER['HTTP_HOST'] . ',' . substr($zData['created_date'], 0, 10) . ':' . $sSymbol . '/' . $zData['id'];
         $sContributors         = implode(', ', $zData['owned_by']);
 
@@ -760,11 +763,11 @@ if ($sDataType == 'variants') {
         // Prepare other fields to be included.
         $sTitle = $zData['id'];
         if ($sFeedType == 'feed') {
-            $sSelfURL = ($_CONF['location_url']? $_CONF['location_url'] : lovd_getInstallURL()) . 'api/rest.php/genes/' . $zData['id'];
+            $sSelfURL = ($_CONF['location_url']?: lovd_getInstallURL()) . 'api/rest.php/genes/' . $zData['id'];
         } else {
             $sSelfURL = '';
         }
-        $sAltURL             = ($_CONF['location_url']? $_CONF['location_url'] : lovd_getInstallURL()) . 'genes/' . $zData['id'];
+        $sAltURL             = ($_CONF['location_url']?: lovd_getInstallURL()) . 'genes/' . $zData['id'];
         $sID                 = 'tag:' . $_SERVER['HTTP_HOST'] . ',' . substr($zData['created_date'], 0, 10) . ':' . $zData['id'];
         $sContributors       = htmlspecialchars(implode(', ', $zData['curators']));
         $sContent = '';

@@ -4,10 +4,10 @@
  * LEIDEN OPEN VARIATION DATABASE (LOVD)
  *
  * Created     : 2020-03-04
- * Modified    : 2020-03-11
- * For LOVD    : 3.0-24
+ * Modified    : 2022-05-27
+ * For LOVD    : 3.0-28
  *
- * Copyright   : 2004-2020 Leiden University Medical Center; http://www.LUMC.nl/
+ * Copyright   : 2004-2022 Leiden University Medical Center; http://www.LUMC.nl/
  * Programmer  : Ivo F.A.C. Fokkema <I.F.A.C.Fokkema@LUMC.nl>
  *
  *
@@ -38,7 +38,7 @@ if (!ACTION || !in_array(ACTION, array('bySubmission', 'fromVL', 'process'))) {
 }
 
 // Require curator clearance (any gene).
-if (!lovd_isAuthorized('gene', $_AUTH['curates'])) {
+if (!$_AUTH || !lovd_isAuthorized('gene', $_AUTH['curates'])) {
     // If not authorized, die with error message.
     die('alert("Lost your session. Please log in again.");');
 }
@@ -364,10 +364,10 @@ if (ACTION == 'process' && !empty($_GET['workid']) && GET) {
 
                     $_POST += $zData; // Won't overwrite existing key (statusid).
                     // Now loop through $_POST to find the effectid fields, that need to be split.
-                    foreach ($_POST as $key => $val) {
-                        if (preg_match('/^(\d+_)?effect(id)$/', $key, $aRegs)) { // (id) instead of id to make sure we have a $aRegs (so to prevent notices).
-                            $_POST[$aRegs[1] . 'effect_reported'] = $val{0};
-                            $_POST[$aRegs[1] . 'effect_concluded'] = $val{1};
+                    foreach ($_POST as $sKey => $sVal) {
+                        if (preg_match('/^(\d+_)?effect(id)$/', $sKey, $aRegs)) { // (id) instead of id to make sure we have a $aRegs (so to prevent notices).
+                            $_POST[$aRegs[1] . 'effect_reported'] = $sVal[0];
+                            $_POST[$aRegs[1] . 'effect_concluded'] = $sVal[1];
                         }
                     }
 
