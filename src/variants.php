@@ -4,10 +4,10 @@
  * LEIDEN OPEN VARIATION DATABASE (LOVD)
  *
  * Created     : 2010-12-21
- * Modified    : 2020-10-01
- * For LOVD    : 3.0-25
+ * Modified    : 2021-01-12
+ * For LOVD    : 3.0-26
  *
- * Copyright   : 2004-2020 Leiden University Medical Center; http://www.LUMC.nl/
+ * Copyright   : 2004-2021 Leiden University Medical Center; http://www.LUMC.nl/
  * Programmers : Ivar C. Lugtenburg <I.C.Lugtenburg@LUMC.nl>
  *               Ivo F.A.C. Fokkema <I.F.A.C.Fokkema@LUMC.nl>
  *               Jerry Hoogenboom <J.Hoogenboom@LUMC.nl>
@@ -106,12 +106,12 @@ if (!ACTION && !empty($_GET['select_db'])) {
 
 
 
-if (!ACTION && (empty($_PE[1]) ||
-        preg_match('/^(chr[0-9A-Z]{1,2})(?::([0-9]+)-([0-9]+))?$/', $_PE[1], $aRegionArgs))) {
+if (!ACTION && (empty($_PE[1])
+        || preg_match('/^(chr[0-9A-Z]{1,2})(?::([0-9]+)-([0-9]+))?$/', $_PE[1], $aRegionArgs))) {
     // URL: /variants
     // URL: /variants/chrX
     // URL: /variants/chr3:20-200000
-    // View all variant entries on the genome level, optionally restricted by chromosome.
+    // View all variant entries on the genome level, optionally restricted by chromosome or genomic range.
 
     // Managers are allowed to download this list...
     if ($_AUTH['level'] >= LEVEL_MANAGER) {
@@ -123,7 +123,12 @@ if (!ACTION && (empty($_PE[1]) ||
     $aColsToHide = array('allele_');
     $sTitle = 'All variants';
 
-    // Set conditions on viewlist if a region is specified (e.g. chr3:20-200000)
+    // Show page with variant VL.
+    define('PAGE_TITLE', $sTitle);
+    $_T->printHeader();
+    $_T->printTitle();
+
+    // Set conditions on VL if a region is specified (e.g. chr3:20-200000).
     if (isset($aRegionArgs)) {
         list($sRegion, $sChr, $sPositionStart, $sPositionEnd) = array_pad($aRegionArgs, 4, null);
 
@@ -139,12 +144,34 @@ if (!ACTION && (empty($_PE[1]) ||
         } else {
             $sTitle .= ' on chromosome ' . substr($sChr, 3);
         }
-    }
 
-    // Show page with variant viewlist.
-    define('PAGE_TITLE', $sTitle);
-    $_T->printHeader();
-    $_T->printTitle();
+    } elseif ($_SETT['customization_settings']['variants_VL_per_chromosome_only']) {
+        // Optimize for speed; show a list of chromosomes with variant counts
+        //  instead of the Variant VL for the whole genome.
+        print('Please select a chromosome to view the variant listing.<BR><BR>' . "\n");
+        $aChromosomes = $_DB->query('
+            SELECT c.name, COUNT(vog.id)
+            FROM ' . TABLE_CHROMOSOMES . ' AS c
+              LEFT OUTER JOIN ' . TABLE_VARIANTS . ' AS vog ON (c.name = vog.chromosome)' .
+            ($_AUTH['level'] >= $_SETT['user_level_settings']['see_nonpublic_data']? '' :
+                ' WHERE vog.statusid >= ' . STATUS_MARKED) . '
+            GROUP BY c.name
+            ORDER BY c.sort_id')->fetchAllCombine();
+        print('
+      <TABLE border="0" cellpadding="0" cellspacing="1" class="data">
+        <TR>
+          <TH valign="top" class="ordered">Chromosome</TH>
+          <TH valign="top">Variants</TH></TR>');
+        foreach ($aChromosomes as $sChr => $nVariants) {
+            print('
+        <TR class="data" valign="top" style="cursor : pointer;" onclick="window.location.href = \'' . $_PE[0] . '/chr' . $sChr . '\';">
+          <TD class="ordered"><A href="' . $_PE[0] . '/chr' . $sChr . '" class="hide">' . $sChr . '</A></TD>
+          <TD>' . $nVariants . '</TD></TR>');
+        }
+        print('</TABLE>' . "\n\n");
+        $_T->printFooter();
+        exit;
+    }
 
     $aVLOptions = array(
         'cols_to_skip' => $aColsToHide,
@@ -219,7 +246,8 @@ if (LOVD_plus && PATH_COUNT == 3 && $_PE[1] == 'DBID' && !ACTION) {
 
 
 
-if (PATH_COUNT == 2 && $_PE[1] == 'in_gene' && !ACTION) {
+if (PATH_COUNT == 2 && $_PE[1] == 'in_gene' && !ACTION
+    && (!(LOVD_plus || LOVD_light) || (!empty($_GET['search_geneid']) && !empty('search_VariantOnTranscript/DNA')))) {
     // URL: /variants/in_gene
     // View all entries effecting a transcript.
 
@@ -734,7 +762,7 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && !ACTION) {
       <DIV id="viewentryDiv">
       </DIV>' . "\n\n");
 
-    $_GET['search_id_'] = $nID;
+    $_GET['search_id'] = $nID;
     print('      <BR><BR>' . "\n\n");
     $_T->printTitle('Variant on transcripts', 'H4');
     require ROOT_PATH . 'class/object_transcript_variants.php';
@@ -757,7 +785,7 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && !ACTION) {
         });
     }
     $_DATA->viewList($sViewListID, $aVLOptions);
-    unset($_GET['search_id_']);
+    unset($_GET['search_id']);
 ?>
 
       <SCRIPT type="text/javascript">
@@ -2125,6 +2153,7 @@ if (PATH_COUNT == 2 && $_PE[1] == 'upload' && ACTION == 'create') {
                                         'show_hgmd' => 1,
                                         'show_genecards' => 1,
                                         'show_genetests' => 1,
+                                        'show_orphanet' => 1,
                                         'note_index' => '',
                                         'note_listing' => '',
                                         'refseq' => '',
@@ -2988,8 +3017,8 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && in_array(ACTION, array('edit', 'p
 
 
 if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && in_array(ACTION, array('curate', 'edit_remarks'))) {
-    // URL: /variants/0000000001?curate
-    // URL: /variants/0000000001?edit_remarks
+    // URL: /variants/0000000001?curate
+    // URL: /variants/0000000001?edit_remarks
     // Edit the curation data for an entry, hide all other fields.
 
     $nID = sprintf('%010d', $_PE[1]);
@@ -3670,9 +3699,9 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && in_array(ACTION, array('delete_no
 
 
 if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && in_array(ACTION, array('confirmation_status_log', 'curation_status_log', 'curation_log'))) {
-    // URL: /variants/0000000001?confirmation_status_log
+    // URL: /variants/0000000001?confirmation_status_log
     // URL: /variants/0000000001?curation_log
-    // URL: /variants/0000000001?curation_status_log
+    // URL: /variants/0000000001?curation_status_log
     // Show logs for the changes of confirmation or curation data/status for this variant.
 
     $nID = sprintf('%010d', $_PE[1]);
