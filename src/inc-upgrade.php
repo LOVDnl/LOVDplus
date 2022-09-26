@@ -4,8 +4,8 @@
  * LEIDEN OPEN VARIATION DATABASE (LOVD)
  *
  * Created     : 2010-01-14
- * Modified    : 2020-02-18
- * For LOVD    : 3.0-23
+ * Modified    : 2020-07-09
+ * For LOVD    : 3.0-24
  *
  * Copyright   : 2004-2020 Leiden University Medical Center; http://www.LUMC.nl/
  * Programmers : Ivo F.A.C. Fokkema <I.F.A.C.Fokkema@LUMC.nl>
@@ -69,6 +69,23 @@ function lovd_addConditionalSQL ($sCondition, $aConditionArgs, $sSQL)
             $aReturn = array(
                 'SET @bExists := (SELECT COUNT(*) FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = "' . $sTable . '" AND COLUMN_NAME = "' . $sColumn . '")',
                 'SET @sSQL := IF(@bExists > 0, \'SELECT "INFO: Column already exists."\', "' . $sSQL . '")',
+                'PREPARE Statement FROM @sSQL',
+                'EXECUTE Statement',
+            );
+            break;
+        case 'column_exists_has_no_key':
+            // Args: Table, Column.
+            if (count($aConditionArgs) != 2) {
+                return array(
+                    // This will cause a query error.
+                    'lovd_addConditionalSQL() error; $aConditionArgs does not exactly contain two arguments.'
+                );
+            }
+            list($sTable, $sColumn) = $aConditionArgs;
+            $aReturn = array(
+                'SET @bExists := (SELECT COUNT(*) FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = "' . $sTable . '" AND COLUMN_NAME = "' . $sColumn . '")',
+                'SET @bHasKey := (SELECT COUNT(*) FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = "' . $sTable . '" AND COLUMN_NAME = "' . $sColumn . '" AND COLUMN_KEY != "")',
+                'SET @sSQL := IF(@bExists = 0 OR @bHasKey = 1, \'SELECT "INFO: Column does not exists or already has key."\', "' . $sSQL . '")',
                 'PREPARE Statement FROM @sSQL',
                 'EXECUTE Statement',
             );
@@ -1028,7 +1045,17 @@ if ($sCalcVersionFiles != $sCalcVersionDB) {
                  '3.0-23' => array(
                      'ALTER TABLE ' . TABLE_GENES . ' DROP COLUMN allow_index_wiki',
                      'ALTER TABLE ' . TABLE_USERS . ' DROP COLUMN reference',
-                 )
+                 ),
+                 '3.0-24' => array_merge(
+                     lovd_addConditionalSQL(
+                        'column_exists_has_no_key', array(TABLE_VARIANTS, 'VariantOnGenome/DBID'),
+                         'ALTER TABLE ' . TABLE_VARIANTS . ' ADD INDEX (`VariantOnGenome/DBID`)'
+                     ),
+                     array(
+                         'DELETE FROM ' . TABLE_EFFECT . ' WHERE id LIKE "6_" OR id LIKE "8_" OR id LIKE "_6" OR id LIKE "_8"',
+                         'UPDATE ' . TABLE_LINKS . ' SET replace_text = "<A href=\"https://pubmed.ncbi.nlm.nih.gov/[2]\" target=\"_blank\">[1]</A>" WHERE name = "PubMed" AND replace_text = "<A href=\"https://www.ncbi.nlm.nih.gov/pubmed/[2]\" target=\"_blank\">[1]</A>"',
+                     )
+                 ),
              );
 
     if ($sCalcVersionDB < lovd_calculateVersion('3.0-alpha-01')) {
@@ -1409,6 +1436,18 @@ if ($sCalcVersionFiles != $sCalcVersionDB) {
                     (@nID, "remove_by_function_utr_or_intronic_or_synonymous", 20)';
             }
             $aUpdates['3.0-17s'][] = 'ALTER TABLE ' . TABLE_ANALYSES . ' ADD COLUMN active BOOLEAN NOT NULL DEFAULT 1 AFTER version';
+        }
+    }
+
+
+
+    // First, print the messages belonging to the updates. Otherwise we'll have to work around the progress bar, that I don't want.
+    foreach ($aUpdateMessages as $sVersion => $aMessage) {
+        if (lovd_calculateVersion($sVersion) > $sCalcVersionDB && lovd_calculateVersion($sVersion) <= $sCalcVersionFiles && $aMessage) {
+            // Message should be displayed.
+            // Prepare default values for arguments.
+            $aMessage += array('', 'information', '100%', '', true);
+            lovd_showInfoTable($aMessage[0], $aMessage[1], $aMessage[2], $aMessage[3], $aMessage[4]);
         }
     }
 
