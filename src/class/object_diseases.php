@@ -4,10 +4,10 @@
  * LEIDEN OPEN VARIATION DATABASE (LOVD)
  *
  * Created     : 2010-07-28
- * Modified    : 2019-10-01
- * For LOVD    : 3.0-22
+ * Modified    : 2021-08-10
+ * For LOVD    : 3.0-27
  *
- * Copyright   : 2004-2019 Leiden University Medical Center; http://www.LUMC.nl/
+ * Copyright   : 2004-2021 Leiden University Medical Center; http://www.LUMC.nl/
  * Programmers : Ivo F.A.C. Fokkema <I.F.A.C.Fokkema@LUMC.nl>
  *               Ivar C. Lugtenburg <I.C.Lugtenburg@LUMC.nl>
  *               Daan Asscheman <D.Asscheman@LUMC.nl>
@@ -195,7 +195,7 @@ class LOVD_Disease extends LOVD_Object
                         'name' => 'Name',
                         'id_omim' => 'OMIM ID',
                         'link_HPO_' => 'Human Phenotype Ontology Project (HPO)',
-                        'inheritance' => 'Inheritance',
+                        'inheritance_' => 'Inheritance',
                         'individuals' => 'Individuals reported having this disease',
                         'phenotypes_' => 'Phenotype entries for this disease',
                         'genes_' => 'Associated with',
@@ -225,7 +225,7 @@ class LOVD_Disease extends LOVD_Object
                                     'db'   => array('d.id_omim', 'ASC', true)),
                         'inheritance' => array(
                                     'view' => array('Inheritance', 75),
-                                    'db'   => array('inheritance', 'ASC', true),
+                                    'db'   => array('d.inheritance', 'ASC', true),
                                     'legend' => array('Abbreviations:' . strip_tags(str_replace('<TR>', "\n", preg_replace('/\s+/', ' ', $sInheritanceLegend))),
                                         'Values based on OMIM\'s and HPO\'s values for inheritance.<BR>' . str_replace(array("\r", "\n"), '', $sInheritanceLegend),
                                     )),
@@ -390,6 +390,7 @@ class LOVD_Disease extends LOVD_Object
     function prepareData ($zData = '', $sView = 'list')
     {
         // Prepares the data by "enriching" the variable received with links, pictures, etc.
+        global $_SETT;
 
         if (!in_array($sView, array('list', 'entry'))) {
             $sView = 'list';
@@ -416,6 +417,7 @@ class LOVD_Disease extends LOVD_Object
             } else {
                 $zData['genes_'] = implode(', ', $zData['genes']);
             }
+
         } else {
             if (!empty($zData['id_omim'])) {
                 $zData['link_HPO_'] = '<A href="' . lovd_getExternalSource('hpo_disease',
@@ -425,6 +427,14 @@ class LOVD_Disease extends LOVD_Object
                 // Cannot link to HPO without OMIM ID, hide this row.
                 unset($this->aColumnsViewEntry['link_HPO_']);
             }
+
+            $zData['inheritance_'] = '';
+            $aInheritances = explode(';', $zData['inheritance']);
+            foreach ($aInheritances as $sInheritance) {
+                $zData['inheritance_'] .= (!$zData['inheritance_']? '' : ', ') .
+                    (!isset($_SETT['diseases_inheritance'][$sInheritance])? $sInheritance : $_SETT['diseases_inheritance'][$sInheritance]);
+            }
+
             $zData['phenotypes_'] = $zData['phenotypes'];
             if ($zData['phenotypes']) {
                 $zData['phenotypes_'] = '<A href="phenotypes/disease/' . $zData['id'] . '">' . $zData['phenotypes'] . '</A>';

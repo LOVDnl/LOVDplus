@@ -4,10 +4,10 @@
  * LEIDEN OPEN VARIATION DATABASE (LOVD)
  *
  * Created     : 2011-02-16
- * Modified    : 2020-08-13
- * For LOVD    : 3.0-25
+ * Modified    : 2021-08-13
+ * For LOVD    : 3.0-27
  *
- * Copyright   : 2004-2020 Leiden University Medical Center; http://www.LUMC.nl/
+ * Copyright   : 2004-2021 Leiden University Medical Center; http://www.LUMC.nl/
  * Programmers : Ivar C. Lugtenburg <I.C.Lugtenburg@LUMC.nl>
  *               Ivo F.A.C. Fokkema <I.F.A.C.Fokkema@LUMC.nl>
  *               Daan Asscheman <D.Asscheman@LUMC.nl>
@@ -1043,7 +1043,11 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && !ACTION) {
 
     require ROOT_PATH . 'class/object_individuals.php';
     $_DATA = new LOVD_Individual($nID);
+
+    // Added the DIV to allow us reloading the VE using JS.
+    print('      <DIV id="viewentryDiv">' . "\n");
     $zData = $_DATA->viewEntry($nID);
+    print('      </DIV>' . "\n\n");
 
     $aNavigation = array();
     if ($_AUTH && $_AUTH['level'] >= LEVEL_OWNER) {
@@ -1073,7 +1077,8 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && !ACTION) {
         // List of phenotype entries associated with this person, per disease.
         $_GET['search_individualid'] = $nID;
         $_T->printTitle('Phenotypes', 'H4');
-        // Repeat searching for diseases, since this individual might have phenotype entry for a disease he doesn't have.
+        // Repeat searching for diseases, since this individual might have a
+        //  phenotype entry for a disease they don't have.
         $zData['diseases'] = $_DB->query('SELECT id, symbol, name FROM ' . TABLE_DISEASES . ' WHERE id IN (?' . str_repeat(', ?', count($zData['phenotypes'])-1) . ')', $zData['phenotypes'])->fetchAllRow();
         require ROOT_PATH . 'class/object_phenotypes.php';
         foreach($zData['diseases'] as $aDisease) {
@@ -1405,6 +1410,11 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && in_array(ACTION, array('edit', 'p
     $_T->printHeader();
     $_T->printTitle();
 
+    // If we're not the creator nor the owner, warn.
+    if ($_POST['created_by'] != $_AUTH['id'] && $_POST['owned_by'] != $_AUTH['id']) {
+        lovd_showInfoTable('Warning: You are editing data not created or owned by you. You are free to correct errors such as data inserted into the wrong field or typographical errors, but make sure that all other edits are made in consultation with the submitter. If you disagree with the submitter\'s findings, add a remark rather than removing or overwriting data.', 'warning', 760);
+    }
+
     if (GET) {
         print('      To edit an individual information entry, please fill out the form below.<BR>' . "\n" .
               '      <BR>' . "\n\n");
@@ -1729,7 +1739,7 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && ACTION == 'delete') {
             lovd_errorAdd('password', 'Please fill in the \'Enter your password for authorization\' field.');
         }
 
-        // User had to enter his/her password for authorization.
+        // User had to enter their password for authorization.
         if ($_POST['password'] && !lovd_verifyPassword($_POST['password'], $_AUTH['password'])) {
             lovd_errorAdd('password', 'Please enter your correct password for authorization.');
         }

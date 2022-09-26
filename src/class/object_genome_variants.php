@@ -4,10 +4,10 @@
  * LEIDEN OPEN VARIATION DATABASE (LOVD)
  *
  * Created     : 2010-12-20
- * Modified    : 2021-01-28
- * For LOVD    : 3.0-26
+ * Modified    : 2021-08-12
+ * For LOVD    : 3.0-27
  *
- * Copyright   : 2004-2020 Leiden University Medical Center; http://www.LUMC.nl/
+ * Copyright   : 2004-2021 Leiden University Medical Center; http://www.LUMC.nl/
  * Programmers : Ivar C. Lugtenburg <I.C.Lugtenburg@LUMC.nl>
  *               Ivo F.A.C. Fokkema <I.F.A.C.Fokkema@LUMC.nl>
  *               Daan Asscheman <D.Asscheman@LUMC.nl>
@@ -70,6 +70,7 @@ class LOVD_GenomeVariant extends LOVD_Custom
                                            'a.name AS allele_, ' .
                                            'GROUP_CONCAT(DISTINCT i.id, ";", i.statusid SEPARATOR ";;") AS __individuals, ' .
                                            'GROUP_CONCAT(s2v.screeningid SEPARATOR "|") AS screeningids, ' .
+                                           'GROUP_CONCAT(DISTINCT IFNULL(NULLIF(i.license, ""), IFNULL(iuc.default_license, uc.default_license)) SEPARATOR ";;") AS license, ' .
                                            'sa.id AS summaryannotationid, ' .
                                            'uo.name AS owned_by_, CONCAT_WS(";", uo.id, uo.name, uo.email, uo.institute, uo.department, IFNULL(uo.countryid, "")) AS _owner, ' .
                                            'uc.name AS created_by_, ' .
@@ -80,6 +81,7 @@ class LOVD_GenomeVariant extends LOVD_Custom
                                            'LEFT OUTER JOIN ' . TABLE_INDIVIDUALS . ' AS i ON (s.individualid = i.id) ' .
                                            'LEFT OUTER JOIN ' . TABLE_ALLELES . ' AS a ON (vog.allele = a.id) ' .
                                            'LEFT OUTER JOIN ' . TABLE_SUMMARY_ANNOTATIONS . ' AS sa ON (vog.`VariantOnGenome/DBID` = sa.id) ' .
+                                           'LEFT OUTER JOIN ' . TABLE_USERS . ' AS iuc ON (i.created_by = iuc.id) ' .
                                            'LEFT OUTER JOIN ' . TABLE_USERS . ' AS uo ON (vog.owned_by = uo.id) ' .
                                            'LEFT OUTER JOIN ' . TABLE_USERS . ' AS uc ON (vog.created_by = uc.id) ' .
                                            'LEFT OUTER JOIN ' . TABLE_USERS . ' AS ue ON (vog.edited_by = ue.id)';
@@ -128,7 +130,8 @@ class LOVD_GenomeVariant extends LOVD_Custom
                 'average_frequency_' => 'Average frequency (gnomAD v.2.1.1)',
                 'owned_by_' => 'Owner',
                 'status' => array('Variant data status', $_SETT['user_level_settings']['see_nonpublic_data']),
-                'created_by_' => array('Created by', $_SETT['user_level_settings']['see_nonpublic_data']),
+                'license_' => 'Database submission license',
+                'created_by_' => 'Created by',
                 'created_date_' => array('Date created', $_SETT['user_level_settings']['see_nonpublic_data']),
                 'edited_by_' => array('Last edited by', $_SETT['user_level_settings']['see_nonpublic_data']),
                 'edited_date_' => array('Date last edited', $_SETT['user_level_settings']['see_nonpublic_data']),
@@ -249,19 +252,21 @@ class LOVD_GenomeVariant extends LOVD_Custom
                       );
 
         if ($_AUTH['level'] >= LEVEL_CURATOR) {
+            // This still allows for "Unclassified", which anyway is the default.
             $this->aCheckMandatory[] = 'effect_concluded';
         }
 
         if (isset($aData['effect_reported']) && $aData['effect_reported'] === '0') {
-            // `effect_reported` is not allowed to be '0' (Not classified) when user is a submitter
-            // or when the variant has status '9' (Public).
+            // `effect_reported` is not allowed to be '0' (Not classified)
+            //  when user is a submitter or when the variant is set to Marked or Public.
             if ($_AUTH['level'] < LEVEL_CURATOR) {
                 // Remove the mandatory `effect_reported` field to throw an error.
                 unset($aData['effect_reported']);
-            } elseif (isset($aData['statusid']) && $aData['statusid'] == STATUS_OK) {
+            } elseif (isset($aData['statusid']) && $aData['statusid'] >= STATUS_MARKED) {
                 // Show error for curator/manager trying to publish variant without effect.
                 lovd_errorAdd('effect_reported', 'The \'Affects function (as reported)\' field ' .
-                    'may not be "' . $_SETT['var_effect'][0] . '" when variant status is "' . $_SETT['data_status'][STATUS_OK] . '".');
+                    'may not be "' . $_SETT['var_effect'][0] . '" when variant status is "' .
+                    $_SETT['data_status'][STATUS_MARKED] . '" or "' . $_SETT['data_status'][STATUS_OK] . '".');
             }
         }
 
@@ -483,9 +488,12 @@ class LOVD_GenomeVariant extends LOVD_Custom
             // While in principle a variant should only be connected to one patient, due to database model limitations, through several screenings, one could link a variant to more individuals.
             foreach ($zData['individuals'] as $aIndividual) {
                 list($nID, $nStatusID) = $aIndividual;
-                $zData['individualid_'] .= ($zData['individualid_']? ', ' : '') . '<A href="individuals/' . $nID . '">' . $nID . '</A>';
                 if ($_AUTH['level'] >= $_SETT['user_level_settings']['see_nonpublic_data']) {
-                    $zData['individualid_'] .= ' <SPAN style="color : #' . $this->getStatusColor($nStatusID) . '">(' . $_SETT['data_status'][$nStatusID] . ')</SPAN>';
+                    $zData['individualid_'] .= ($zData['individualid_']? ', ' : '') .
+                        '<A href="individuals/' . $nID . '">' . $nID . '</A> ' .
+                        '<SPAN style="color: #' . $this->getStatusColor($nStatusID) . '">(' . $_SETT['data_status'][$nStatusID] . ')</SPAN>';
+                } elseif ($nStatusID >= STATUS_MARKED) {
+                    $zData['individualid_'] .= ($zData['individualid_']? ', ' : '') . '<A href="individuals/' . $nID . '">' . $nID . '</A>';
                 }
             }
             if (empty($zData['individualid_'])) {

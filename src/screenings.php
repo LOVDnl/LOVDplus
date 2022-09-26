@@ -4,10 +4,10 @@
  * LEIDEN OPEN VARIATION DATABASE (LOVD)
  *
  * Created     : 2011-03-18
- * Modified    : 2020-10-28
- * For LOVD    : 3.0-26
+ * Modified    : 2021-08-13
+ * For LOVD    : 3.0-27
  *
- * Copyright   : 2004-2020 Leiden University Medical Center; http://www.LUMC.nl/
+ * Copyright   : 2004-2021 Leiden University Medical Center; http://www.LUMC.nl/
  * Programmers : Ivar C. Lugtenburg <I.C.Lugtenburg@LUMC.nl>
  *               Ivo F.A.C. Fokkema <I.F.A.C.Fokkema@LUMC.nl>
  *               Daan Asscheman <D.Asscheman@LUMC.nl>
@@ -607,6 +607,11 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && ACTION == 'edit') {
     $_T->printHeader();
     $_T->printTitle();
 
+    // If we're not the creator nor the owner, warn.
+    if ($_POST['created_by'] != $_AUTH['id'] && $_POST['owned_by'] != $_AUTH['id']) {
+        lovd_showInfoTable('Warning: You are editing data not created or owned by you. You are free to correct errors such as data inserted into the wrong field or typographical errors, but make sure that all other edits are made in consultation with the submitter. If you disagree with the submitter\'s findings, add a remark rather than removing or overwriting data.', 'warning', 760);
+    }
+
     if (GET) {
         print('      To edit an screening information entry, please fill out the form below.<BR>' . "\n" .
               '      <BR>' . "\n\n");
@@ -865,9 +870,10 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && ACTION == 'removeVariants') {
     if (POST) {
         lovd_errorClean();
 
-        // Preventing notices...
-        // $_SESSION['viewlists']['Screenings_' . $nID . '_removeVariants']['checked'] stores the IDs of the variants that are supposed to be present in TABLE_SCR2VAR.
-        if (isset($_SESSION['viewlists']['Screenings_' . $nID . '_removeVariants']['checked'])) {
+        if (empty($_SESSION['viewlists']['Screenings_' . $nID . '_removeVariants']['checked'])) {
+            // No variants selected.
+            lovd_errorAdd('', 'Please select at least one variant to remove.');
+        } else {
             // Check if all checked variants are actually from this screening.
             $aDiff = array_diff($_SESSION['viewlists']['Screenings_' . $nID . '_removeVariants']['checked'], $aValidVariants);
             if (!empty($aDiff)) {
@@ -880,7 +886,7 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && ACTION == 'removeVariants') {
         if (empty($_POST['password'])) {
             lovd_errorAdd('password', 'Please fill in the \'Enter your password for authorization\' field.');
         } elseif (!lovd_verifyPassword($_POST['password'], $_AUTH['password'])) {
-            // User had to enter his/her password for authorization.
+            // User had to enter their password for authorization.
             lovd_errorAdd('password', 'Please enter your correct password for authorization.');
         }
 
@@ -1005,7 +1011,7 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && ACTION == 'delete') {
             lovd_errorAdd('password', 'Please fill in the \'Enter your password for authorization\' field.');
         }
 
-        // User had to enter his/her password for authorization.
+        // User had to enter their password for authorization.
         if ($_POST['password'] && !lovd_verifyPassword($_POST['password'], $_AUTH['password'])) {
             lovd_errorAdd('password', 'Please enter your correct password for authorization.');
         }

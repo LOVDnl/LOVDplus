@@ -4,8 +4,8 @@
  * LEIDEN OPEN VARIATION DATABASE (LOVD)
  *
  * Created     : 2009-10-21
- * Modified    : 2021-02-22
- * For LOVD    : 3.0-26
+ * Modified    : 2021-08-11
+ * For LOVD    : 3.0-27
  *
  * Copyright   : 2004-2021 Leiden University Medical Center; http://www.LUMC.nl/
  * Programmers : Ivo F.A.C. Fokkema <I.F.A.C.Fokkema@LUMC.nl>
@@ -469,8 +469,22 @@ class LOVD_Object
                         $aData[$sName] = array();
                     }
                 }
-                // Simple check on non-custom columns (custom columns have their own function for this) to see if the given value is actually allowed.
-                // 0 is a valid entry for the check for mandatory fields, so we should also check if 0 is a valid entry in the selection list!
+
+                if ($aOptions['explode_strings'] && !is_array($aData[$sName])
+                    && isset($GLOBALS['aLine'][$sName]) && $GLOBALS['aLine'][$sName] == $aData[$sName]) {
+                    // Selection lists imported with spaces around their values
+                    //  (e.g., "PCR; SEQ") will be checked *without* the space, but
+                    //  imported *with* the space. Fix that.
+                    // Selection values can't contain an ";", so this is safe.
+                    $GLOBALS['aLine'][$sName] = $aData[$sName] =
+                        implode(';', array_map('trim', explode(';', $aData[$sName])));
+                }
+
+                // Simple check on non-custom columns (custom columns have
+                //  checkSelectedInput() for this) to see if the given value is
+                //  actually allowed. "0" is a valid entry for the check for
+                //  mandatory fields, so we should also check if "0" is a valid
+                //  entry in the selection list!
                 if (strpos($sName, '/') === false && isset($aData[$sName]) && $aData[$sName] !== '') {
                     $Val = $aData[$sName];
                     $aSelectOptions = array_keys($aField[5]);
@@ -1651,7 +1665,7 @@ class LOVD_Object
                 $zData['owner'] = array($zData['owner']);
             }
             // We are going to overwrite the 'owned_by_' field.
-            $zData['owned_by_'] = '';
+            $sOwnedBy = '';
             foreach($zData['owner'] as $aLinkData) {
                 if (count($aLinkData) >= 6) {
                     list($nID, $sName, $sEmail, $sInstitute, $sDepartment, $sCountryID) = $aLinkData;
@@ -1661,11 +1675,16 @@ class LOVD_Object
                     }
                     // For VLs, call the tooltip function with a request to move the tooltip left, because "Owner" is often the last column in the table,
                     //  and we don't want it to run off the page. I have found no way of moving the tooltip left whenever it's enlarging the document size.
-                    $zData['owned_by_'] .= (!$zData['owned_by_']? '' : ', ') .
+                    $sOwnedBy .= (!$sOwnedBy? '' : ', ') .
                         '<SPAN class="custom_link" onmouseover="lovd_showToolTip(\'' .
                         addslashes('<TABLE border=0 cellpadding=0 cellspacing=0 width=350 class=S11><TR><TH valign=top>User&nbsp;ID</TH><TD>' . ($_AUTH['level'] < LEVEL_MANAGER? $nID : '<A href=users/' . $nID . '>' . $nID . '</A>') . '</TD></TR><TR><TH valign=top>Name</TH><TD>' . $sName . '</TD></TR><TR><TH valign=top>Email&nbsp;address</TH><TD>' . str_replace("\r\n", '<BR>', lovd_hideEmail($sEmail)) . '</TD></TR><TR><TH valign=top>Institute</TH><TD>' . $sInstitute . '</TD></TR><TR><TH valign=top>Department</TH><TD>' . $sDepartment . '</TD></TR><TR><TH valign=top>Country</TH><TD>' . $sCountryID . '</TD></TR></TABLE>') .
                         '\', this, [' . ($sView == 'list'? '-200' : '0') . ', 0]);">' . $sName . '</SPAN>';
                 }
+            }
+            if ($sOwnedBy) {
+                // Overwrite only if we came up with something better
+                //  (which won't happen for LOVD-owned data).
+                $zData['owned_by_'] = $sOwnedBy;
             }
         }
         if (LOVD_plus) {
@@ -2965,6 +2984,7 @@ class LOVD_Object
                 }
 
                 if ($aOptions['show_navigation']) {
+                    lovd_pagesplitInit(); // Has not run yet when we have bad search syntax.
                     lovd_pagesplitShowNav($sViewListID, $nTotal, $bTrueCount, $bSortableVL, $bLegend);
                 }
 
@@ -3133,9 +3153,9 @@ FROptions
                 // FIXME; This code is sort of duplicated, some 100 lines below we also print this, *if* results are found.
                 print('</TABLE><BR>' . "\n"); // <BR> is necessary to keep the InfoTable apart from the data headers.
                 if ($aOptions['show_navigation']) {
-                    print('        <INPUT type="hidden" name="total" value="' . $nTotal . '" disabled>' . "\n" .
-                          '        <INPUT type="hidden" name="page_size" value="' . $_GET['page_size'] . '">' . "\n" .
-                          '        <INPUT type="hidden" name="page" value="' . $_GET['page'] . '">' . "\n");
+                    print('        <INPUT type="hidden" name="total" value="' . (int) $nTotal . '" disabled>' . "\n" .
+                          '        <INPUT type="hidden" name="page_size" value="' . (int) $_GET['page_size'] . '">' . "\n" .
+                          '        <INPUT type="hidden" name="page" value="' . (int) $_GET['page'] . '">' . "\n");
                 }
                 lovd_showInfoTable($sMessage, 'stop');
                 print('      </DIV></FORM>' . "\n\n");

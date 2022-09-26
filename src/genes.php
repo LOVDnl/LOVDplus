@@ -4,8 +4,8 @@
  * LEIDEN OPEN VARIATION DATABASE (LOVD)
  *
  * Created     : 2010-12-15
- * Modified    : 2021-01-06
- * For LOVD    : 3.0-26
+ * Modified    : 2021-06-15
+ * For LOVD    : 3.0-27
  *
  * Copyright   : 2004-2021 Leiden University Medical Center; http://www.LUMC.nl/
  * Programmers : Ivo F.A.C. Fokkema <I.F.A.C.Fokkema@LUMC.nl>
@@ -270,11 +270,9 @@ if (PATH_COUNT == 1 && ACTION == 'create') {
     lovd_requireAUTH(LEVEL_MANAGER);
 
     require ROOT_PATH . 'class/object_genes.php';
-    // FIXME: This is just to use two functions of the object that don't actually use the object. Better put them elsewhere.
     require ROOT_PATH . 'class/object_transcripts.php';
     require ROOT_PATH . 'inc-lib-form.php';
     $_DATA['Genes'] = new LOVD_Gene();
-    // FIXME: This is just to use two functions of the object that don't actually use the object. Better put them elsewhere.
     $_DATA['Transcript'] = new LOVD_transcript();
 
     $sPath = CURRENT_PATH . '?' . ACTION;
@@ -304,13 +302,11 @@ if (PATH_COUNT == 1 && ACTION == 'create') {
                 // Gene Symbol must be unique.
                 // Enforced in the table, but we want to handle this gracefully.
                 // When numeric, we search the id_hgnc field. When not, we search the id (gene symbol) field.
-                $sSQL = 'SELECT id, id_hgnc FROM ' . TABLE_GENES . ' WHERE id' . (!ctype_digit($_POST['hgnc_id'])? '' : '_hgnc') . ' = ?';
-                $aSQL = array($_POST['hgnc_id']);
-                $result = $_DB->query($sSQL, $aSQL)->fetchObject();
+                $zGene = $_DB->query(
+                    'SELECT id, id_hgnc FROM ' . TABLE_GENES . ' WHERE id' . (!ctype_digit($_POST['hgnc_id'])? '' : '_hgnc') . ' = ?',
+                    array($_POST['hgnc_id']))->fetchAssoc();
 
-                if ($result !== false) {
-                    lovd_errorAdd('hgnc_id', sprintf('This gene entry (%s, HGNC-ID=%d) is already present in this LOVD installation.', $result->id, $result->id_hgnc));
-                } else {
+                if ($zGene === false) {
                     // This call already makes the needed lovd_errorAdd() calls.
                     $aGeneInfo = lovd_getGeneInfoFromHGNC($_POST['hgnc_id']);
                     if (!empty($aGeneInfo)) {
@@ -320,7 +316,18 @@ if (PATH_COUNT == 1 && ACTION == 'create') {
                         $sChromLocation = $aGeneInfo['location'];
                         $sEntrez = $aGeneInfo['entrez_id'];
                         $nOmim = $aGeneInfo['omim_id'];
+
+                        if (!ctype_digit($_POST['hgnc_id'])) {
+                            // Check again if we have this gene already, perhaps under a different name.
+                            $zGene = $_DB->query(
+                                'SELECT id, id_hgnc FROM ' . TABLE_GENES . ' WHERE id_hgnc = ?',
+                                array($aGeneInfo['hgnc_id']))->fetchAssoc();
+                        }
                     }
+                }
+
+                if ($zGene !== false) {
+                    lovd_errorAdd('hgnc_id', sprintf('This gene entry (%s, HGNC-ID=%d) is already present in this LOVD installation.', $zGene['id'], $zGene['id_hgnc']));
                 }
             }
 
@@ -380,8 +387,39 @@ if (PATH_COUNT == 1 && ACTION == 'create') {
                     // Get UD from mutalyzer.
                     $sRefseqUD = lovd_getUDForGene($_CONF['refseq_build'], $sSymbol);
                     if (!$sRefseqUD) {
+                        // The future is VV. However, as we're currently still using
+                        //  Mutalyzer for mapping, only use VV when Mutalyzer fails.
+                        $_BAR->setMessage('Collecting all available transcripts...');
+                        $_BAR->setProgress($nProgress += 17);
+                        require ROOT_PATH . 'class/variant_validator.php';
+                        $_VV = new LOVD_VV();
+                        $aData = $_VV->getTranscriptsByGene($sSymbol);
+                        $aTranscripts = array();
+                        foreach ($aData['data'] as $sTranscript => $aTranscript) {
+                            // Look for transcripts with genomic locations on this build.
+                            if (!$aTranscript['genomic_positions'] || !isset($aTranscript['genomic_positions'][$_CONF['refseq_build']][$sChromosome])) {
+                                continue;
+                            }
+                            $aTranscripts[$sTranscript] = array(
+                                'name' => $aTranscript['name'],
+                                'id_protein_ncbi' => $aTranscript['id_ncbi_protein'],
+                                'position_g_mrna_start' => $aTranscript['genomic_positions'][$_CONF['refseq_build']][$sChromosome]['start'],
+                                'position_g_mrna_end' => $aTranscript['genomic_positions'][$_CONF['refseq_build']][$sChromosome]['end'],
+                                'position_c_mrna_start' => -$aTranscript['transcript_positions']['cds_start'] + 1, // FIXME; Fix the database, the VV model is more logical.
+                                'position_c_mrna_end' => $aTranscript['transcript_positions']['length'] - $aTranscript['transcript_positions']['cds_start'] + 1, // FIXME; Fix the database, the VV model is more logical.
+                                'position_c_cds_end' => $aTranscript['transcript_positions']['cds_length'],
+                            );
+                        }
+                        if ($aTranscripts) {
+                            $sRefseqUD = 'VV';
+                        }
+                    }
+                    if (!$sRefseqUD) {
                         // Function may return false or an empty string. For instance a type of gene we don't support.
                         // To prevent further problems (getting transcripts), let's handle this nicely, shall we?
+                        // Going through the previous symbols won't make sense here because
+                        //  downstream functions will also need to know that old name.
+                        // We're not investing in this Mutalyzer connection anymore.
                         $_BAR->setMessage('Failed to retrieve gene reference sequence. This could be a temporary error, but it is likely that this gene is not supported by LOVD.', 'done');
                         $_BAR->setMessageVisibility('done', true);
                         die('</BODY>' . "\n" .
@@ -389,12 +427,14 @@ if (PATH_COUNT == 1 && ACTION == 'create') {
                     }
                 }
 
-                // Get all transcripts and info.
-                // FIXME: When changing code here, check in transcripts?create if you need to make changes there, too.
-                $_BAR->setMessage('Collecting all available transcripts...');
-                $_BAR->setProgress($nProgress += 17);
+                if ($sRefseqUD != 'VV') {
+                    // Get all transcripts and info.
+                    // FIXME: When changing code here, check in transcripts?create if you need to make changes there, too.
+                    $_BAR->setMessage('Collecting all available transcripts...');
+                    $_BAR->setProgress($nProgress += 17);
 
-                $aTranscripts = $_DATA['Transcript']->getTranscriptPositions($sRefseqUD, $sSymbol, $sGeneName, $nProgress);
+                    $aTranscripts = $_DATA['Transcript']->getTranscriptPositions($sRefseqUD, $sSymbol, $sGeneName, $nProgress);
+                }
 
                 $_BAR->setProgress(100);
                 $_BAR->setMessage('Information collected, now building form...');
@@ -409,16 +449,42 @@ if (PATH_COUNT == 1 && ACTION == 'create') {
                                                                   'id_entrez' => $sEntrez,
                                                                   'id_omim' => $nOmim,
                                                                   'genomic_references' => $aRefseqGenomic,
-                                                                  'refseq_UD' => $sRefseqUD,
+                                                                  'refseq_UD' => ($sRefseqUD == 'VV'? array_pop($aRefseqGenomic) : $sRefseqUD), // FIXME: When we get rid of Mutalyzer, get rid of this.
                                                                 );
                 if (!empty($aTranscripts)) {
-                    $_SESSION['work'][$sPath][$_POST['workID']]['values'] = array_merge($_SESSION['work'][$sPath][$_POST['workID']]['values'], array(
-                                                                  'transcripts' => $aTranscripts['id'],
-                                                                  'transcriptMutalyzer' => $aTranscripts['mutalyzer'],
-                                                                  'transcriptsProtein' => $aTranscripts['protein'],
-                                                                  'transcriptNames' => $aTranscripts['name'],
-                                                                  'transcriptPositions' => $aTranscripts['positions'],
-                                                                ));
+                    if ($sRefseqUD == 'VV') {
+                        // FIXME: When we're switching to VV, fix this ridiculous format.
+                        $_SESSION['work'][$sPath][$_POST['workID']]['values']['transcripts'] = array_keys($aTranscripts);
+                        $_SESSION['work'][$sPath][$_POST['workID']]['values'] = array_merge($_SESSION['work'][$sPath][$_POST['workID']]['values'], array(
+                            'transcriptMutalyzer' => array(),
+                            'transcriptsProtein' => array(),
+                            'transcriptNames' => array(),
+                            'transcriptPositions' => array(),
+                        ));
+
+                        foreach ($aTranscripts as $sTranscript => $aTranscript) {
+                            $_SESSION['work'][$sPath][$_POST['workID']]['values']['transcriptMutalyzer'][$sTranscript] = 0;
+                            $_SESSION['work'][$sPath][$_POST['workID']]['values']['transcriptsProtein'][$sTranscript] = $aTranscript['id_protein_ncbi'];
+                            $_SESSION['work'][$sPath][$_POST['workID']]['values']['transcriptNames'][$sTranscript] = $aTranscript['name'];
+                            $_SESSION['work'][$sPath][$_POST['workID']]['values']['transcriptPositions'][$sTranscript] = array(
+                                'chromTransStart' => $aTranscript['position_g_mrna_start'],
+                                'chromTransEnd' => $aTranscript['position_g_mrna_end'],
+                                'cTransStart' => $aTranscript['position_c_mrna_start'],
+                                'cTransEnd' => $aTranscript['position_c_mrna_end'],
+                                'cCDSStop' => $aTranscript['position_c_cds_end'],
+                            );
+                        }
+
+                    } else {
+                        // FIXME: This data format makes no sense. Redo this once we're switching to VV.
+                        $_SESSION['work'][$sPath][$_POST['workID']]['values'] = array_merge($_SESSION['work'][$sPath][$_POST['workID']]['values'], array(
+                            'transcripts' => $aTranscripts['id'],
+                            'transcriptMutalyzer' => $aTranscripts['mutalyzer'],
+                            'transcriptsProtein' => $aTranscripts['protein'],
+                            'transcriptNames' => $aTranscripts['name'],
+                            'transcriptPositions' => $aTranscripts['positions'],
+                        ));
+                    }
                 }
 
                 print('<SCRIPT type="text/javascript">' . "\n" .
@@ -893,7 +959,7 @@ if (PATH_COUNT == 2 && preg_match('/^[a-z][a-z0-9#@-]*$/i', $_PE[1]) && ACTION =
             lovd_errorAdd('password', 'Please fill in the \'Enter your password for authorization\' field.');
         }
 
-        // User had to enter his/her password for authorization.
+        // User had to enter their password for authorization.
         if ($_POST['password'] && !lovd_verifyPassword($_POST['password'], $_AUTH['password'])) {
             lovd_errorAdd('password', 'Please enter your correct password for authorization.');
         }
@@ -1599,7 +1665,7 @@ if (PATH_COUNT == 2 && preg_match('/^[a-z][a-z0-9#@-]*$/i', $_PE[1]) && in_array
             if (empty($_POST['password'])) {
                 lovd_errorAdd('password', 'Please fill in the \'Enter your password for authorization\' field.');
             } elseif ($_POST['password'] && !lovd_verifyPassword($_POST['password'], $_AUTH['password'])) {
-                // User had to enter his/her password for authorization.
+                // User had to enter their password for authorization.
                 lovd_errorAdd('password', 'Please enter your correct password for authorization.');
             }
 
@@ -1712,7 +1778,7 @@ if (PATH_COUNT == 2 && preg_match('/^[a-z][a-z0-9#@-]*$/i', $_PE[1]) && in_array
         // Show viewList() of users that are NO curator or collaborator at this moment.
         require ROOT_PATH . 'class/object_users.php';
         $_DATA = new LOVD_User();
-        lovd_showInfoTable('The following users are currently not a curator for this gene. Click on a user to select him/her as Curator or Collaborator.', 'information');
+        lovd_showInfoTable('The following users are currently not a curator for this gene. Click on a user to select them as Curator or Collaborator.', 'information');
         if ($aCurators) {
             // Create search string that hides the users currently selected to be curator or collaborator.
             $_GET['search_userid'] = '!' . implode(' !', array_keys($aCurators));
@@ -1735,7 +1801,7 @@ if (PATH_COUNT == 2 && preg_match('/^[a-z][a-z0-9#@-]*$/i', $_PE[1]) && in_array
 
         lovd_showInfoTable('All users below have access to all data (public and non-public) of the ' . $sID . ' gene database. If you don\'t want to give the user access to <I>edit</I> any of the data that is not their own, deselect the "Allow edit" checkbox. Please note that users with level Manager or higher, cannot be restricted in their right to edit all information in the database.<BR>Users without edit rights are called Collaborators. Users having edit rights are called Curators; they receive email notifications of new submission and are shown on the gene\'s home page by default. You can disable that below by deselecting the "Shown" checkbox next to their name. To sort the list of curators for this gene, click and drag the <IMG src="gfx/drag_vertical.png" alt="" width="5" height="13"> icon up or down the list. Release the mouse button in the preferred location.', 'information');
     } else {
-        lovd_showInfoTable('To sort the list of curators for this gene, click and drag the <IMG src="gfx/drag_vertical.png" alt="" width="5" height="13"> icon up or down the list. Release the mouse button in the preferred location. If you do not want a user to be shown on the list of curators on the gene homepage and on the top of the screen, deselect the checkbox on the right side of his/her name.', 'information');
+        lovd_showInfoTable('To sort the list of curators for this gene, click and drag the <IMG src="gfx/drag_vertical.png" alt="" width="5" height="13"> icon up or down the list. Release the mouse button in the preferred location. If you do not want a user to be shown on the list of curators on the gene homepage and on the top of the screen, deselect the checkbox on the right side of their name.', 'information');
     }
 
     // Form & table.

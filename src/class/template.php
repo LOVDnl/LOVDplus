@@ -4,8 +4,8 @@
  * LEIDEN OPEN VARIATION DATABASE (LOVD)
  *
  * Created     : 2012-03-27
- * Modified    : 2021-02-03
- * For LOVD    : 3.0-26
+ * Modified    : 2021-07-07
+ * For LOVD    : 3.0-27
  *
  * Copyright   : 2004-2021 Leiden University Medical Center; http://www.LUMC.nl/
  * Programmers : Ivo F.A.C. Fokkema <I.F.A.C.Fokkema@LUMC.nl>
@@ -448,7 +448,7 @@ function lovd_mapVariants ()
 
             // Not every page request should trigger the mapping...
             if (!empty($_SESSION['mapping']['time_complete']) && $_SESSION['mapping']['time_complete'] >= (time() - 60 * 60 * 24)) {
-                // If it is less than one day ago that mapping was complete, don't start it automatically, but allow the user to start it himself.
+                // If it is less than one day ago that mapping was complete, don't start it automatically, but allow the user to start it themself.
                 print('$("#mapping_progress").click(lovd_mapVariants);' . "\n");
             } elseif (!empty($_SESSION['mapping']['time_error']) && $_SESSION['mapping']['time_error'] >= (time() - 60 * 60)) {
                 // If it is less than one hour ago that an error occurred, don't start it either.
@@ -623,14 +623,26 @@ function lovd_mapVariants ()
         }
     }
 <?php
-    // Determine whether or not to show the donation dialog.
-    $nTimeToShow = strtotime('+' . ($_CONF['donate_dialog_months_hidden'] < 1? 1 : $_CONF['donate_dialog_months_hidden']) . ' months', $_COOKIE['lovd_settings']['donation_dialog_last_seen']);
-    if ($_CONF['donate_dialog_allow'] && $nTimeToShow <= time()) {
-        print('
+        if (!defined('MISSING_CONF') && isset($_COOKIE['lovd_settings'])) {
+            // Determine whether or not to show the donation dialog.
+            $nTimeToShow = strtotime('+' . ($_CONF['donate_dialog_months_hidden'] < 1? 1 : $_CONF['donate_dialog_months_hidden']) . ' months', $_COOKIE['lovd_settings']['donation_dialog_last_seen']);
+            if ($_CONF['donate_dialog_allow'] && $nTimeToShow <= time()) {
+                print('
     // Donation dialog last seen ' . date('Y-m-d H:i:s', $_COOKIE['lovd_settings']['donation_dialog_last_seen']) . ', show again.
     $.get("ajax/donate.php");
 ');
-    }
+
+            } elseif (!LOVD_plus && $_AUTH && !isset($_AUTH['default_license']) && substr(lovd_getProjectFile(), 0, 9) != '/install/') {
+                // Determine whether or not to show the dialog to remind the user to choose a license.
+                $nTimeToShow = strtotime('+1 day', $_COOKIE['lovd_settings']['default_license_dialog_last_seen']);
+                if ($nTimeToShow <= time()) {
+                    print('
+    // Dialog to remind user to choose a default license last seen ' . date('Y-m-d H:i:s', $_COOKIE['lovd_settings']['default_license_dialog_last_seen']) . ', show again.
+    $.get("ajax/licenses.php/user/' . $_AUTH['id'] . '?remind");
+');
+                }
+            }
+        }
 ?>
   </SCRIPT>
   <LINK rel="stylesheet" type="text/css" href="lib/jQuery/css/cupertino/jquery-ui.css">
@@ -729,7 +741,7 @@ if ($_SERVER['HTTP_HOST'] == 'leiden-test.diagnostics.lovd.nl') {
             $nCurators = count($aCurators);
             foreach ($aCurators as $i => $z) {
                 $i ++;
-                $sCurators .= ($sCurators? ($i == $nCurators? ' and ' : ', ') : '') . '<A href="mailto:' . str_replace(array("\r\n", "\r", "\n"), ', ', trim($z['email'])) . '">' . $z['name'] . '</A>';
+                $sCurators .= ($sCurators? ($i == $nCurators? ($i == 2? '' : ',') . ' and ' : ', ') : '') . '<A href="mailto:' . str_replace(array("\r\n", "\r", "\n"), ', ', trim($z['email'])) . '">' . $z['name'] . '</A>';
             }
 
             if ($sCurators) {

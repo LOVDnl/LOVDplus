@@ -4,8 +4,8 @@
  * LEIDEN OPEN VARIATION DATABASE (LOVD)
  *
  * Created     : 2009-10-21
- * Modified    : 2021-01-26
- * For LOVD    : 3.0-26
+ * Modified    : 2021-07-27
+ * For LOVD    : 3.0-27
  *
  * Copyright   : 2004-2021 Leiden University Medical Center; http://www.LUMC.nl/
  * Programmers : Ivo F.A.C. Fokkema <I.F.A.C.Fokkema@LUMC.nl>
@@ -120,15 +120,16 @@ class LOVD_User extends LOVD_Object
                         'username' => array('Username', LEVEL_MANAGER),
                         'password_force_change_' => array('Force change password', LEVEL_MANAGER),
                         'phpsessid' => array('Session ID', LEVEL_MANAGER),
-                        'auth_token_' => array('API token', LEVEL_CURATOR), // Will be unset if user is not authorized on this user (i.e., not himself or manager or up).
-                        'auth_token_expires_' => array('API token expiration', LEVEL_CURATOR), // Will be unset if user is not authorized on this user (i.e., not himself or manager or up).
+                        'auth_token_' => array('API token', LEVEL_CURATOR), // Will be unset if user is not authorized on this user (i.e., not themself or manager or up).
+                        'auth_token_expires_' => array('API token expiration', LEVEL_CURATOR), // Will be unset if user is not authorized on this user (i.e., not themself or manager or up).
                         'api_settings' => array('API settings', LEVEL_MANAGER),
                         'saved_work_' => array('Saved work', LEVEL_MANAGER),
                         'curates_' => 'Curator for',
                         'collaborates_' => array('Collaborator for', LEVEL_CURATOR),
-                        'entries_owned_by_' => 'Data owner for', // Will be unset if user is not authorized on this user (i.e., not himself or manager or up).
-                        'entries_created_by_' => 'Has created', // Will be unset if not viewing himself or manager or up.
+                        'entries_owned_by_' => 'Data owner for', // Will be unset if user is not authorized on this user (i.e., not themself or manager or up).
+                        'entries_created_by_' => 'Has created', // Will be unset if not viewing themself or manager or up.
                         'colleagues_' => '', // Other users that may access this user's data.
+                        'default_license_' => 'Default license',
                         'level_' => array('User level', LEVEL_CURATOR),
                         'allowed_ip_' => array('Allowed IP address list', LEVEL_MANAGER),
                         'status_' => array('Status', LEVEL_MANAGER),
@@ -418,7 +419,7 @@ class LOVD_User extends LOVD_Object
                         'skip',
       'change_other' => array('Enter your password for authorization', '', 'password', 'password', 20));
             if ($_PE[1] == $_AUTH['id']) {
-                // User is resetting password for him/herself.
+                // User is resetting password for themself.
                 unset($this->aFormData['change_other']);
                 // If user just logged in with an unlocking code, we will rename the "Current password" field.
                 if ($_AUTH['password'] == $_AUTH['password_autogen']) {
@@ -545,6 +546,23 @@ class LOVD_User extends LOVD_Object
 
             $this->aColumnsViewEntry['colleagues_'] = 'Shares access with ' . count($zData['colleagues']) . ' user' . (count($zData['colleagues']) == 1? '' : 's');
             $zData['colleagues_'] = $this->getObjectLinksHTML($zData['colleagues'], 'users/%s');
+
+            // License information.
+            if (!$zData['default_license']) {
+                $zData['default_license_'] = 'No default license selected';
+            } else {
+                // The license contains both the license for the world as well as the license for LOVD.
+                $zData['default_license'] = strstr($zData['default_license'] . ';', ';', true);
+                $sLicenseName = substr($zData['default_license'], 3, -4);
+                $sLicenseVersion = substr($zData['default_license'], -3);
+                $zData['default_license_'] =
+                    '<A rel="license" href="https://creativecommons.org/licenses/' . $sLicenseName . '/' . $sLicenseVersion . '/" target="_blank" onclick="$.get(\'ajax/licenses.php/user/' . $zData['id'] . '?view\').fail(function(){alert(\'Error viewing license information, please try again later.\');}); return false;">' .
+                    '<IMG src="gfx/' . str_replace($sLicenseVersion, '80x15', $zData['default_license']) . '.png" alt="Creative Commons License" title="' . $_SETT['licenses'][$zData['default_license']] . '" border="0">' .
+                    '</A> ';
+            }
+            if (lovd_isAuthorized('user', $zData['id'])) {
+                $zData['default_license_'] .= '<SPAN style="float:right;">(<A href="#" onclick="$.get(\'ajax/licenses.php/user/' . $zData['id'] . '?edit\').fail(function(){alert(\'Error viewing license information, please try again later.\');}); return false;">Change</A>)</SPAN>';
+            }
 
             $zData['allowed_ip_'] = preg_replace('/[;,]+/', '<BR>', $zData['allowed_ip']);
             $zData['status_'] = ($zData['active']? '<IMG src="gfx/status_online.png" alt="Online" title="Online" width="14" height="14" align="top"> Online' : 'Offline');

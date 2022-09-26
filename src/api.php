@@ -4,8 +4,8 @@
  * LEIDEN OPEN VARIATION DATABASE (LOVD)
  *
  * Created     : 2012-11-08
- * Modified    : 2021-02-01
- * For LOVD    : 3.0-26
+ * Modified    : 2021-08-12
+ * For LOVD    : 3.0-27
  *
  * Supported URIs:
  *  3.0-26       /api/rest.php/get_frequencies (POST)
@@ -30,6 +30,14 @@
  *  3.0-beta-10  /api/rest.php/genes?search_position=chrX:3200000
  *  3.0-beta-10  /api/rest.php/genes?search_position=chrX:3200000_4000000&position_match=exact|exclusive|partial
  *  3.0-22       /api/rest.php/*****?format=application/json   (JSON output for whole LOVD2-style API)
+ *  3.0-27 (v2)  /api/v#/ga4gh (GET/HEAD) (redirects)
+ *  3.0-27 (v2)  /api/v#/ga4gh/service-info (GET/HEAD)
+ *  3.0-27 (v2)  /api/v#/ga4gh/tables (GET/HEAD)
+ *  3.0-27 (v2)  /api/v#/ga4gh/table/variants (GET/HEAD) (redirects)
+ *  3.0-27 (v2)  /api/v#/ga4gh/table/variants/info (GET/HEAD)
+ *  3.0-27 (v2)  /api/v#/ga4gh/table/variants/data (GET/HEAD)
+ *  3.0-27 (v2)  /api/v#/ga4gh/table/variants/data:hg19:chr1:123456 (GET/HEAD)
+ *  3.0-27 (v2)  /api/v#/ga4gh/table/variants/data:hg19:chr1:123456-234567 (GET/HEAD)
  *  3.0-18 (v1)  /api/v#/submissions (POST) (/v# is optional)
  *
  * Copyright   : 2004-2020 Leiden University Medical Center; http://www.LUMC.nl/
@@ -348,15 +356,15 @@ if ($sDataType == 'variants') {
                             }
                         } else {
                             // This does a first match; trying to find the position at the start of the DNA field. Later this match will be made more accurate!
-                            $sQ .= ' AND REPLACE(REPLACE(REPLACE(REPLACE(vot.`VariantOnTranscript/DNA`, "[", ""), "(", ""), ")", ""), "?", "") LIKE "' . $_GET['search_' . $sField] . '%"';
+                            $sQ .= ' AND REPLACE(REPLACE(REPLACE(REPLACE(vot.`VariantOnTranscript/DNA`, "[", ""), "(", ""), ")", ""), "?", "") LIKE "' . $_DB->quote($_GET['search_' . $sField]) . '%"';
                         }
                     } elseif ($sField == 'Variant/DNA') {
                         // This matches regardless of the characters (, ) and ?.
-                        $sQ .= ' AND REPLACE(REPLACE(REPLACE(vot.`VariantOnTranscript/DNA`, "(", ""), ")", ""), "?", "") = "' . str_replace(array('(', ')', '?'), ' ', $_GET['search_' . $sField]) . '"';
+                        $sQ .= ' AND REPLACE(REPLACE(REPLACE(vot.`VariantOnTranscript/DNA`, "(", ""), ")", ""), "?", "") = "' . str_replace(array('(', ')', '?'), ' ', $_DB->quote($_GET['search_' . $sField])) . '"';
                     } elseif ($sField == 'Variant/DBID') {
-                        $sQ .= ' AND vog.`VariantOnGenome/DBID` LIKE "' . $_GET['search_' . $sField] . '%"';
+                        $sQ .= ' AND vog.`VariantOnGenome/DBID` LIKE "' . $_DB->quote($_GET['search_' . $sField]) . '%"';
                     } else {
-                        $sQ .= ' AND vot.`' . $sField . '` = "' . $_GET['search_' . $sField] . '"';
+                        $sQ .= ' AND vot.`' . $sField . '` = "' . $_DB->quote($_GET['search_' . $sField]) . '"';
                     }
                 }
             }
@@ -405,7 +413,7 @@ if ($sDataType == 'variants') {
             if (!empty($_GET['search_' . $sField])) {
                 $bSearching = true;
                 if ($sField == 'symbol') {
-                    $sQ .= ' AND g.id = "' . $_GET['search_' . $sField] . '"';
+                    $sQ .= ' AND g.id = "' . $_DB->quote(GET['search_' . $sField]) . '"';
                 } elseif ($sField == 'position' && preg_match('/^chr([0-9]{1,2}|[MXY])(:[0-9]{1,9}(_[0-9]+)?)?$/', $_GET['search_' . $sField], $aRegs)) {
                     // $aRegs numbering:                             1                2           3
                     @list(, $sChromosome, $sPositionStart, $sPositionEnd) = $aRegs;

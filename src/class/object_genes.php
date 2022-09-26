@@ -4,8 +4,8 @@
  * LEIDEN OPEN VARIATION DATABASE (LOVD)
  *
  * Created     : 2010-12-15
- * Modified    : 2021-01-06
- * For LOVD    : 3.0-26
+ * Modified    : 2021-07-07
+ * For LOVD    : 3.0-27
  *
  * Copyright   : 2004-2021 Leiden University Medical Center; http://www.LUMC.nl/
  * Programmers : Ivar C. Lugtenburg <I.C.Lugtenburg@LUMC.nl>
@@ -615,10 +615,10 @@ class LOVD_Gene extends LOVD_Object
                 // 2013-06-05; 3.0-06; There should be no link for users not logged in; they can't access these anyways.
                 if ($_AUTH) {
                     // Use links, hidden curators possibly in the list (depends on exact user level).
-                    $zData['curators_'] .= ($i == 1? '' : ($i == $nCurators? ' and ' : ', ')) . ($nOrder? '<B><A href="users/' . $nUserID . '">' . $sName . '</A></B>' : '<I><A href="users/' . $nUserID . '">' . $sName . '</A> (hidden)</I>');
+                    $zData['curators_'] .= ($i == 1? '' : ($i == $nCurators? ($i == 2? '' : ',') . ' and ' : ', ')) . ($nOrder? '<B><A href="users/' . $nUserID . '">' . $sName . '</A></B>' : '<I><A href="users/' . $nUserID . '">' . $sName . '</A> (hidden)</I>');
                 } else {
                     // Don't use links, and we never see hidden users anyways.
-                    $zData['curators_'] .= ($i == 1? '' : ($i == $nCurators? ' and ' : ', ')) . '<B>' . $sName . '</B>';
+                    $zData['curators_'] .= ($i == 1? '' : ($i == $nCurators? ($i == 2? '' : ',') . ' and ' : ', ')) . '<B>' . $sName . '</B>';
                 }
             }
             $this->aColumnsViewEntry['curators_'] .= ' (' . $nCurators . ')';
@@ -628,7 +628,7 @@ class LOVD_Gene extends LOVD_Object
                 $i = 0;
                 foreach ($aCollaborators as $nUserID => $sName) {
                     $i ++;
-                    $zData['collaborators_'] .= ($i == 1? '' : ($i == $nCollaborators? ' and ' : ', ')) . '<A href="users/' . $nUserID . '">' . $sName . '</A>';
+                    $zData['collaborators_'] .= ($i == 1? '' : ($i == $nCollaborators? ($i == 2? '' : ',') . ' and ' : ', ')) . '<A href="users/' . $nUserID . '">' . $sName . '</A>';
                 }
                 $this->aColumnsViewEntry['collaborators_'][0] .= ' (' . $nCollaborators . ')';
             }
@@ -751,7 +751,7 @@ class LOVD_Gene extends LOVD_Object
             $aDisclaimer = array(0 => 'No', 1 => 'Standard LOVD disclaimer', 2 => 'Own disclaimer');
             $zData['disclaimer_']      = $aDisclaimer[$zData['disclaimer']];
             $zData['disclaimer_text_'] = (!$zData['disclaimer']? '' : ($zData['disclaimer'] == 2? html_entity_decode($zData['disclaimer_text']) :
-                'The contents of this LOVD database are the intellectual property of the respective curator(s). Any unauthorised use, copying, storage or distribution of this material without written permission from the curator(s) will lead to copyright infringement with possible ensuing litigation. Copyright &copy; ' . $sYear . '. All Rights Reserved. For further details, refer to Directive 96/9/EC of the European Parliament and the Council of March 11 (1996) on the legal protection of databases.<BR><BR>We have used all reasonable efforts to ensure that the information displayed on these pages and contained in the databases is of high quality. We make no warranty, express or implied, as to its accuracy or that the information is fit for a particular purpose, and will not be held responsible for any consequences arising out of any inaccuracies or omissions. Individuals, organisations and companies which use this database do so on the understanding that no liability whatsoever either direct or indirect shall rest upon the curator(s) or any of their employees or agents for the effects of any product, process or method that may be produced or adopted by any part, notwithstanding that the formulation of such product, process or method may be based upon information here provided.'));
+                'The contents of this LOVD database are the intellectual property of the respective submitter(s) and curator(s) of the individual records. Individual data entries may indicate which data license applies to that specific record. When no license is listed, no permissions are granted. Any unauthorized use, copying, storage, or distribution of this material without written permission from the curator(s) will lead to copyright infringement with possible ensuing litigation. Copyright &copy; ' . $sYear . '. All Rights Reserved. For further details, refer to Directive 96/9/EC of the European Parliament and the Council of March 11 (1996) on the legal protection of databases.<BR><BR>We have used all reasonable efforts to ensure that the information displayed on these pages and contained in the databases is of high quality. We make no warranty, express or implied, as to its accuracy or that the information is fit for a particular purpose, and will not be held responsible for any consequences arising from any inaccuracies or omissions. Individuals, organizations, and companies that use this database do so on the understanding that no liability whatsoever, either direct or indirect, shall rest upon the data submitter(s), curator(s), or any of their employees or agents for the effects of any product, process, or method that may be produced or adopted by any part, notwithstanding that the formulation of such product, process or method may be based upon information here provided.'));
 
             // Unset fields that will not be shown if they're empty.
             foreach (array('note_index', 'refseq_url_', 'url_homepage_',
