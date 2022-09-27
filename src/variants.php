@@ -3072,19 +3072,19 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && in_array(ACTION, array('curate', 
 
         if (!lovd_error()) {
             if (!isset($_POST['effect_reported'])) {
-                $_POST['effect_reported'] = $zData['effectid']{0};
+                $_POST['effect_reported'] = $zData['effectid'][0];
             }
             if (!isset($_POST['effect_concluded']) || $_AUTH['level'] < $_SETT['user_level_settings']['set_concluded_effect']) {
-                $_POST['effect_concluded'] = $zData['effectid']{1};
+                $_POST['effect_concluded'] = $zData['effectid'][1];
             }
 
             // Setup logging to show any changes to the curation data.
             $sCurationLog = '';
-            if ($zData['effectid']{0} != $_POST['effect_reported']) {
-                $sCurationLog .= 'Classification (proposed): "' . $_SETT['var_effect'][$zData['effectid']{0}] . '" => "' . $_SETT['var_effect'][$_POST['effect_reported']] . '"' . "\n";
+            if ($zData['effectid'][0] != $_POST['effect_reported']) {
+                $sCurationLog .= 'Classification (proposed): "' . $_SETT['var_effect'][$zData['effectid'][0]] . '" => "' . $_SETT['var_effect'][$_POST['effect_reported']] . '"' . "\n";
             }
-            if ($zData['effectid']{1} != $_POST['effect_concluded']) {
-                $sCurationLog .= 'Classification (final): "' . $_SETT['var_effect'][$zData['effectid']{1}] . '" => "' . $_SETT['var_effect'][$_POST['effect_concluded']] . '"' . "\n";
+            if ($zData['effectid'][1] != $_POST['effect_concluded']) {
+                $sCurationLog .= 'Classification (final): "' . $_SETT['var_effect'][$zData['effectid'][1]] . '" => "' . $_SETT['var_effect'][$_POST['effect_concluded']] . '"' . "\n";
             }
             if (trim($zData['VariantOnGenome/Remarks']) != trim($_POST['VariantOnGenome/Remarks'])) {
                 $sCurationLog .= 'VariantOnGenome/Remarks: "' . (!trim($zData['VariantOnGenome/Remarks'])? '<empty>' : str_replace(array("\r", "\n", "\t"), array('\r', '\n', '\t'), $zData['VariantOnGenome/Remarks'])) . '" => "' . (!trim($_POST['VariantOnGenome/Remarks'])? '<empty>' : str_replace(array("\r", "\n", "\t"), array('\r', '\n', '\t'), $_POST['VariantOnGenome/Remarks'])) . '"' . "\n";
@@ -3133,8 +3133,8 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && in_array(ACTION, array('curate', 
         foreach ($zData as $key => $val) {
             $_POST[$key] = $val;
         }
-        $_POST['effect_reported'] = $zData['effectid']{0};
-        $_POST['effect_concluded'] = $zData['effectid']{1};
+        $_POST['effect_reported'] = $zData['effectid'][0];
+        $_POST['effect_concluded'] = $zData['effectid'][1];
     }
 
 
