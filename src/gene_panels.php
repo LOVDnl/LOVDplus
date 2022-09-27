@@ -163,7 +163,7 @@ function displayGenePanelHistory ($nID, $sFromDate, $sToDate)
 
 
 if (PATH_COUNT == 1 && !ACTION) {
-    // URL: /gene_panels
+    // URL: /gene_panels
     // View all entries.
 
     // Submitters are allowed to download this panel...
@@ -189,7 +189,7 @@ if (PATH_COUNT == 1 && !ACTION) {
 
 
 if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && !ACTION) {
-    // URL: /gene_panels/00001
+    // URL: /gene_panels/00001
     // View specific entry.
 
     $nID = sprintf('%05d', $_PE[1]);
@@ -246,7 +246,7 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && !ACTION) {
 
 
 if (PATH_COUNT == 1 && ACTION == 'create') {
-    // URL: /gene_panels?create
+    // URL: /gene_panels?create
     // Create a new gene panel entry.
 
     define('PAGE_TITLE', 'Create a new gene panel entry');
@@ -371,7 +371,7 @@ if (PATH_COUNT == 1 && ACTION == 'create') {
 
 
 if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && ACTION == 'edit') {
-    // URL: /gene_panels/00001?edit
+    // URL: /gene_panels/00001?edit
     // Edit a specific entry.
 
     $nID = sprintf('%05d', $_PE[1]);
@@ -541,7 +541,7 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && ACTION == 'edit') {
 
 
 if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && ACTION == 'delete') {
-    // URL: /gene_panels/00001?delete
+    // URL: /gene_panels/00001?delete
     // Drop specific entry.
 
     $nID = sprintf('%05d', $_PE[1]);
@@ -638,7 +638,7 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && ACTION == 'delete') {
 
 
 if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && ACTION == 'manage_genes') {
-    // URL: /gene_panels/00001?manage_genes
+    // URL: /gene_panels/00001?manage_genes
     // Manage genes in a gene panel.
 
     $nID = sprintf('%05d', $_PE[1]);
@@ -1101,7 +1101,7 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && ACTION == 'manage_genes') {
 
 
 if (PATH_COUNT == 3 && preg_match('/^[a-z][a-z0-9#@-]+$/i', rawurldecode($_PE[2])) && !ACTION) {
-    // URL: /gene_panels/00001/BRCA1
+    // URL: /gene_panels/00001/BRCA1
     // View specific gene panel gene entry.
 
     $nGenePanelID = sprintf('%05d', $_PE[1]);
@@ -1136,7 +1136,7 @@ if (PATH_COUNT == 3 && preg_match('/^[a-z][a-z0-9#@-]+$/i', rawurldecode($_PE[2]
 
 
 if (PATH_COUNT == 3 && preg_match('/^[a-z][a-z0-9#@-]+$/i', rawurldecode($_PE[2])) && ACTION == 'edit') {
-    // URL: /gene_panels/00001/BRCA1?edit
+    // URL: /gene_panels/00001/BRCA1?edit
     // Edit specific gene panel gene entry.
 
     $nGenePanelID = sprintf('%05d', $_PE[1]);
@@ -1220,7 +1220,7 @@ if (PATH_COUNT == 3 && preg_match('/^[a-z][a-z0-9#@-]+$/i', rawurldecode($_PE[2]
 
 
 if (PATH_COUNT == 3 && preg_match('/^[a-z][a-z0-9#@-]+$/i', rawurldecode($_PE[2])) && ACTION == 'delete') {
-    // URL: /gene_panels/00001/BRCA1?delete
+    // URL: /gene_panels/00001/BRCA1?delete
     // Drop specific gene panel gene entry.
 
     $nGenePanelID = sprintf('%05d', $_PE[1]);
@@ -1304,7 +1304,7 @@ if (PATH_COUNT == 3 && preg_match('/^[a-z][a-z0-9#@-]+$/i', rawurldecode($_PE[2]
 
 
 if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && ACTION == 'history_full') {
-    // URL: /gene_panels/00001?history_full
+    // URL: /gene_panels/00001?history_full
     // Show the history for this gene panel.
 
     $nID = sprintf('%05d', $_PE[1]);
@@ -1329,7 +1329,7 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && ACTION == 'history_full') {
 
 
 if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && ACTION == 'history') {
-    // URL: /gene_panels/00001?history
+    // URL: /gene_panels/00001?history
     // URL: /gene_panels/00001?history&from=2013-09-06&to=2016-06-02
     // URL: /gene_panels/00001?history&from=2013-09-06%2014:15:09&to=2016-06-02%2016:27:29
     // Show the history of this gene panel between two dates.
@@ -1426,7 +1426,7 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && ACTION == 'history') {
 
 
 if (PATH_COUNT == 1 && ACTION == 'add') {
-// URL: /gene_panels?add
+// URL: /gene_panels?add
 // Show all gene panels so as the user can select which one to add the selected genes into.
 
     define('PAGE_TITLE', 'Select gene panel to add selected genes to');

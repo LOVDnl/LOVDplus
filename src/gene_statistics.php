@@ -43,7 +43,7 @@ if ($_AUTH) {
 
 
 if (PATH_COUNT == 1 && !ACTION) {
-    // URL: /gene_statistics
+    // URL: /gene_statistics
     // View all entries.
 
     // Submitters are allowed to download this list...
@@ -222,7 +222,7 @@ if (PATH_COUNT == 1 && !ACTION) {
 
 
 if (PATH_COUNT == 1 && ACTION == 'import') {
-    // URL: /gene_statistics?import
+    // URL: /gene_statistics?import
     // Import new gene statistics.
 
     // FIXME: For later: This code is mostly duplicated from import.php.

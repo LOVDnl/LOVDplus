@@ -43,7 +43,7 @@ if ($_AUTH) {
 
 
 if (PATH_COUNT == 2 && ACTION == 'create') {
-    // URL: /summary_annotations/chrX_000030?create
+    // URL: /summary_annotations/chrX_000030?create
     // Create a new summary annotation record.
 
     $sID = $_PE[1];
@@ -143,7 +143,7 @@ if (PATH_COUNT == 2 && ACTION == 'create') {
 
 
 if (PATH_COUNT == 2 && ACTION == 'edit') {
-    // URL: /summary_annotations/chrX_000030?edit
+    // URL: /summary_annotations/chrX_000030?edit
     // Edit a specific entry.
 
     $sID = $_PE[1];
@@ -242,7 +242,7 @@ if (PATH_COUNT == 2 && ACTION == 'edit') {
 
 
 if (PATH_COUNT == 2 && ACTION == 'history') {
-    // URL: /summary_annotations/chrX_000030?history
+    // URL: /summary_annotations/chrX_000030?history
     // Show the history for this summary annotation record.
 
     $sID = $_PE[1];

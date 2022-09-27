@@ -41,7 +41,7 @@ if ($_AUTH) {
 
 
 if (PATH_COUNT == 1 && !ACTION) {
-    // URL: /analyses
+    // URL: /analyses
     // View all entries.
     exit;
 }
@@ -51,7 +51,7 @@ if (PATH_COUNT == 1 && !ACTION) {
 
 
 if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && !ACTION) {
-    // URL: /analyses/001
+    // URL: /analyses/001
     // View specific entry.
     exit;
 }
@@ -61,7 +61,7 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && !ACTION) {
 
 
 if (PATH_COUNT == 1 && ACTION == 'create') {
-    // URL: /analyses?create
+    // URL: /analyses?create
     // Create a new entry.
     exit;
 }
@@ -71,7 +71,7 @@ if (PATH_COUNT == 1 && ACTION == 'create') {
 
 
 if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && ACTION == 'edit') {
-    // URL: /analyses/001?edit
+    // URL: /analyses/001?edit
     // Edit an entry.
     exit;
 }
@@ -81,7 +81,7 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && ACTION == 'edit') {
 
 
 if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && ACTION == 'modify') {
-    // URL: /analyses/001?modify
+    // URL: /analyses/001?modify
     // Mentioned in the code, but should be replaced by a link to the runID, or perhaps just pick the filters defined in the analysis?
     exit;
 }
@@ -91,7 +91,7 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && ACTION == 'modify') {
 
 
 if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && ACTION == 'delete') {
-    // URL: /analyses/001?delete
+    // URL: /analyses/001?delete
     // Drop specific entry.
     exit;
 }
@@ -101,7 +101,7 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && ACTION == 'delete') {
 
 
 if (PATH_COUNT == 2 && $_PE[1] == 'run' && !ACTION) {
-    // URL: /analyses/run
+    // URL: /analyses/run
     // View all entries.
     exit;
 }
@@ -111,7 +111,7 @@ if (PATH_COUNT == 2 && $_PE[1] == 'run' && !ACTION) {
 
 
 if (PATH_COUNT == 3 && $_PE[1] == 'run' && ctype_digit($_PE[2]) && !ACTION) {
-    // URL: /analyses/run/00001
+    // URL: /analyses/run/00001
     // View specific entry.
     exit;
 }
@@ -121,7 +121,7 @@ if (PATH_COUNT == 3 && $_PE[1] == 'run' && ctype_digit($_PE[2]) && !ACTION) {
 
 
 if (PATH_COUNT == 3 && $_PE[1] == 'run' && ctype_digit($_PE[2]) && ACTION == 'modify') {
-    // URL: /analyses/run/00001?modify
+    // URL: /analyses/run/00001?modify
     // Modify a run analysis.
 
     $nID = sprintf('%05d', $_PE[2]);

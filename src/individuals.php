@@ -63,7 +63,7 @@ if (LOVD_plus && PATH_COUNT == 1 && !ACTION && !isset($_GET['search_analysis_sta
 
 
 if (PATH_COUNT == 1 && !ACTION) {
-    // URL: /individuals
+    // URL: /individuals
     // View all entries.
 
     // Managers are allowed to download this list...
@@ -96,8 +96,8 @@ if (PATH_COUNT == 1 && !ACTION) {
 
 
 if (PATH_COUNT >= 2 && ctype_digit($_PE[1]) && !ACTION && (PATH_COUNT == 2 || PATH_COUNT == 4 && $_PE[2] == 'analyze' && ctype_digit($_PE[3]))) {
-    // URL: /individuals/00000001
-    // URL: /individuals/00000001/analyze/0000000001
+    // URL: /individuals/00000001
+    // URL: /individuals/00000001/analyze/0000000001
     // View specific entry.
 
     $nID = sprintf('%08d', $_PE[1]);
@@ -575,8 +575,8 @@ if (PATH_COUNT >= 2 && ctype_digit($_PE[1]) && !ACTION && (PATH_COUNT == 2 || PA
 
 
 if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && in_array(ACTION, array('curate', 'edit_remarks'))) {
-    // URL: /individuals/00000001?curate
-    // URL: /individuals/00000001?edit_remarks
+    // URL: /individuals/00000001?curate
+    // URL: /individuals/00000001?edit_remarks
     // Edit the curation data for an entry, hide all other fields.
 
     $nID = sprintf('%08d', $_PE[1]);
@@ -740,7 +740,7 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && ACTION == 'curation_log') {
 
 
 if (PATH_COUNT == 4 && ctype_digit($_PE[1]) && $_PE[2] == 'analyze' && ctype_digit($_PE[3]) && ACTION == 'close') {
-    // URL: /individuals/00000001/analyze/0000000001?close
+    // URL: /individuals/00000001/analyze/0000000001?close
     // Close a specific analysis.
 
     $nIndividualID = sprintf('%08d', $_PE[1]);
@@ -835,7 +835,7 @@ if (PATH_COUNT == 4 && ctype_digit($_PE[1]) && $_PE[2] == 'analyze' && ctype_dig
 
 
 if (PATH_COUNT == 4 && ctype_digit($_PE[1]) && $_PE[2] == 'analyze' && ctype_digit($_PE[3]) && ACTION == 'open') {
-    // URL: /individuals/00000001/analyze/0000000001?open
+    // URL: /individuals/00000001/analyze/0000000001?open
     // Open a specific analysis.
 
     $nIndividualID = sprintf('%08d', $_PE[1]);
@@ -1450,7 +1450,7 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && in_array(ACTION, array('edit', 'p
 
 
 if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && ACTION == 'edit_panels') {
-    // URL: /individuals/00000001?edit_panels
+    // URL: /individuals/00000001?edit_panels
     // Edit an individuals gene panels.
 
     $nID = sprintf('%08d', $_PE[1]);
