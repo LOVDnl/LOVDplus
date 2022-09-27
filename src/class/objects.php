@@ -2331,7 +2331,7 @@ class LOVD_Object
                 print("\n" .
                       '        <TR>' . "\n" .
                       '          <TH valign="top">' . str_replace(' ', '&nbsp;', $sHeader) . '</TH>' . "\n" .
-                      '          <TD>' . ($zData[$sField] === ''? '-' : str_replace(array("\r\n", "\r", "\n"), '<BR>', $zData[$sField])) . '</TD></TR>');
+                      '          <TD>' . (!isset($zData[$sField]) || $zData[$sField] === ''? '-' : str_replace(array("\r\n", "\r", "\n"), '<BR>', $zData[$sField])) . '</TD></TR>');
             }
         }
         print('</TABLE>' . "\n\n");
@@ -3300,7 +3300,7 @@ FROptions
                         $aCSSClasses[] = 'mvs';
                     }
 
-                    print("\n" . '          <TD' . (!empty($aCol['view'][2])? ' ' . $aCol['view'][2] : '') . (!empty($aCSSClasses)? ' class="' . join(' ', $aCSSClasses) . '"' : '') . '>' . ($zData[$sField] === ''? '-' : $zData[$sField]) . '</TD>');
+                    print("\n" . '          <TD' . (!empty($aCol['view'][2])? ' ' . $aCol['view'][2] : '') . (!empty($aCSSClasses)? ' class="' . join(' ', $aCSSClasses) . '"' : '') . '>' . (!isset($zData[$sField]) || $zData[$sField] === ''? '-' : $zData[$sField]) . '</TD>');
                 }
                 print('</TR>');
 
