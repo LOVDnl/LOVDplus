@@ -533,7 +533,6 @@ class LOVD_Object
         // No longer do this through $aForm, because when importing,
         //  we do have data to check but no $aForm entry linked to it.
         foreach ($aData as $sFieldname => $sFieldvalue) {
-
             if (!is_string($sFieldvalue) || isset($aErroredFields[$sFieldname])) {
                 // Do not process non-string values at the moment (currently there are no checks for them),
                 //  and fields for which an (more specific) error has already been reported earlier.
@@ -558,7 +557,7 @@ class LOVD_Object
                     // For numerical columns, maxlength works differently!
                     if (in_array($sMySQLType, array('FLOAT', 'FLOAT_UNSIGNED'))) {
                         // Floats don't have a real min/max value. We'll check
-                        //  if they contain value values further below.
+                        //  if they contain valid values further below.
 
                     } elseif (in_array($sMySQLType, array('DECIMAL', 'DECIMAL_UNSIGNED', 'INT', 'INT_UNSIGNED'))) {
                         // Although the data type wizard makes sure that a
@@ -572,7 +571,12 @@ class LOVD_Object
                         list($nMin, $nMax) = lovd_getColumnMinMax(constant($this->sTable), $sNameClean);
                         if ($sFieldvalue < $nMin) {
                             lovd_errorAdd($sFieldname, 'The \'' . $sHeader . '\' field is limited to numbers no lower than ' . $nMin . '.');
-                        } elseif ($sFieldvalue > $nMax) {
+                        } elseif ($sFieldvalue > $nMax
+                            && !in_array($sNameClean, array('id', 'individualid', 'screeningid'))) {
+                            // Uhm, yeah, but remember that when we're importing new data, we're OK with IDs that are too
+                            //  high, because the import will change them. We don't necessarily need to check if we're
+                            //  currently importing, we can just see the field names.
+                            // (this mostly applies to LOVD+, but is also true for LOVD)
                             lovd_errorAdd($sFieldname, 'The \'' . $sHeader . '\' field is limited to numbers no higher than ' . $nMax . '.');
                         }
 
