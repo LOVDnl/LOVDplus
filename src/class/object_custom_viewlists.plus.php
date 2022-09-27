@@ -4,10 +4,10 @@
  * LEIDEN OPEN VARIATION DATABASE (LOVD)
  *
  * Created     : 2013-11-07
- * Modified    : 2019-10-16
- * For LOVD    : 3.0-22
+ * Modified    : 2022-09-27
+ * For LOVD    : 3.0-28
  *
- * Copyright   : 2004-2019 Leiden University Medical Center; http://www.LUMC.nl/
+ * Copyright   : 2004-2022 Leiden University Medical Center; http://www.LUMC.nl/
  * Programmers : Ivo F.A.C. Fokkema <I.F.A.C.Fokkema@LUMC.nl>
  *               Anthony Marty <anthony.marty@unimelb.edu.au>
  *               Juny Kesumadewi <juny.kesumadewi@unimelb.edu.au>
@@ -113,7 +113,7 @@ class LOVD_CustomViewListPLUS extends LOVD_CustomViewList
                         $aSQL['FROM'] = TABLE_ANALYSES_RUN_RESULTS . ' AS arr';
                         // We can't have objects::viewList() optimizing on us and not giving us the normal view with VL headers
                         // because we have no results yet... Always set to 1. Doesn't need to be correct, just not zero.
-                        $this->nCount = 1;
+                        $this->bEntryExists = true;
                         if (array_search('VariantOnGenome', $aObjects)) {
                             $aSQL['GROUP_BY'] = 'vog.id'; // Necessary for GROUP_CONCAT().
                         }
@@ -143,9 +143,8 @@ class LOVD_CustomViewListPLUS extends LOVD_CustomViewList
                         // First data table in query.
                         $aSQL['SELECT'] .= ', vog.id AS row_id'; // To ensure other table's id columns don't interfere.
                         $aSQL['FROM'] = TABLE_VARIANTS . ' AS vog';
-                        // MAX(id) gets nowhere nearly the correct number of results when data has been removed or archived, but this number
-                        //  anyway doesn't need to be accurate at all, and a COUNT(*) can be too slow on larger systems.
-                        $this->nCount = $_DB->query('SELECT MAX(id) FROM ' . TABLE_VARIANTS)->fetchColumn();
+                        $this->bEntryExists = (bool) $_DB->query('
+                            SELECT 1 FROM ' . TABLE_VARIANTS . ' LIMIT 1')->fetchColumn();
                         $aSQL['GROUP_BY'] = 'vog.id'; // Necessary for GROUP_CONCAT(), such as in Screening.
                         $aSQL['ORDER_BY'] = 'vog.chromosome ASC, vog.position_g_start';
                     } else {
@@ -247,9 +246,8 @@ class LOVD_CustomViewListPLUS extends LOVD_CustomViewList
                         // First data table in query.
                         $aSQL['SELECT'] .= (!$aSQL['SELECT']? '' : ', ') . 'vot.*, vot.id AS row_id'; // To ensure other table's id columns don't interfere.
                         $aSQL['FROM'] = TABLE_VARIANTS_ON_TRANSCRIPTS . ' AS vot';
-                        // MAX(id) on the VOT table gets nowhere nearly the correct number of results, but this number
-                        //  anyway doesn't need to be accurate at all, and a COUNT(*) can be too slow on larger systems.
-                        $this->nCount = $_DB->query('SELECT MAX(id) FROM ' . TABLE_VARIANTS_ON_TRANSCRIPTS)->fetchColumn();
+                        $this->bEntryExists = (bool) $_DB->query('
+                            SELECT 1 FROM ' . TABLE_VARIANTS_ON_TRANSCRIPTS . ' LIMIT 1')->fetchColumn();
                         $aSQL['GROUP_BY'] = 'vot.id'; // Necessary for GROUP_CONCAT(), such as in Screening.
                     } elseif ($nKeyVOG !== false && $nKeyVOG < $nKey) {
                         // Previously, VOG was used. We will join VOT with VOG, using GROUP_CONCAT.
