@@ -4,10 +4,10 @@
  * LEIDEN OPEN VARIATION DATABASE (LOVD)
  *
  * Created     : 2012-09-19
- * Modified    : 2020-02-10
- * For LOVD    : 3.0-23
+ * Modified    : 2022-05-27
+ * For LOVD    : 3.0-28
  *
- * Copyright   : 2004-2020 Leiden University Medical Center; http://www.LUMC.nl/
+ * Copyright   : 2004-2022 Leiden University Medical Center; http://www.LUMC.nl/
  * Programmers : Ivo F.A.C. Fokkema <I.F.A.C.Fokkema@LUMC.nl>
  *               Daan Asscheman <D.Asscheman@LUMC.nl>
  *               M. Kroon <m.kroon@lumc.nl>
@@ -45,7 +45,7 @@ if (LOVD_plus) {
 
 
 if (ACTION == 'schedule' && PATH_COUNT == 1) {
-    // URL: /import?schedule
+    // URL: /import?schedule
     // Schedule files for import.
     define('LOG_EVENT', 'ImportSchedule');
     define('PAGE_TITLE', 'Schedule files for import');
@@ -414,7 +414,7 @@ if (ACTION == 'schedule' && PATH_COUNT == 1) {
 
 
 if (ACTION == 'download_scheduled_file' && PATH_COUNT == 1 && !empty($_GET['file'])) {
-    // URL: /import?download_scheduled_file&file=LOVD_API_submission_00001_2017-11-01_13:47:02.955519.lovd
+    // URL: /import?download_scheduled_file&file=LOVD_API_submission_00001_2017-11-01_13:47:02.955519.lovd
     // Download files from data directory.
     // This code could go into download.php, but that's currently quite specific
     //  for LOVD data, generated out of the database.
@@ -450,7 +450,7 @@ if (ACTION == 'download_scheduled_file' && PATH_COUNT == 1 && !empty($_GET['file
 
 
 if (ACTION == 'autoupload_scheduled_file' && PATH_COUNT == 1) {
-    // URL: /import?autoupload_scheduled_file
+    // URL: /import?autoupload_scheduled_file
     // This URL forces FORMAT to be text/plain.
     // All unneeded output will be prevented.
     define('FORMAT_ALLOW_TEXTPLAIN', true); // To allow automatic data loading.
@@ -547,7 +547,9 @@ if (ACTION == 'autoupload_scheduled_file' && PATH_COUNT == 1) {
 
 
 // Require at least curator clearance.
-lovd_isAuthorized('gene', $_AUTH['curates']); // Any gene will do.
+if ($_AUTH) {
+    lovd_isAuthorized('gene', $_AUTH['curates']); // Any gene will do.
+}
 lovd_requireAUTH(LEVEL_CURATOR);
 if ($_AUTH['level'] == LEVEL_CURATOR) {
     // If user has level curator, only simulate is allowed.
@@ -755,7 +757,9 @@ if (POST || $_FILES) { // || $_FILES is in use for the automatic loading of file
         if (function_exists('mime_content_type')) {
             $sType = mime_content_type($_FILES['import']['tmp_name']);
         }
-        if ($sType && substr($sType, 0, 5) != 'text/') { // Not all systems report the regular files as "text/plain"; also reported was "text/x-pascal; charset=us-ascii".
+        if ($sType && substr($sType, 0, 5) != 'text/' && $sType != 'application/octet-stream') {
+            // Not all systems report the regular files as "text/plain"; also reported was "text/x-pascal; charset=us-ascii".
+            // Others getting application/octet-stream here. It does seem to depend on the browser, but it's a hard to kill issue.
             lovd_errorAdd('import', 'The upload file is not a tab-delimited text file and cannot be imported. It seems to be of type "' . htmlspecialchars($sType) . '".');
 
         } else {
@@ -803,10 +807,10 @@ if (POST || $_FILES) { // || $_FILES is in use for the automatic loading of file
         // Later, per section 'update_columns_not_allowed' is filled with additional fields which are not allowed to be updated, together with the error message when they are changed and the error type (soft or hard warning).
         $aParsed = array_fill_keys(
             array('Columns', 'Genes', 'Transcripts', 'Diseases', 'Genes_To_Diseases', 'Individuals', 'Individuals_To_Diseases', 'Phenotypes', 'Screenings', 'Screenings_To_Genes', 'Variants_On_Genome', 'Variants_On_Transcripts', 'Screenings_To_Variants'),
-            array('allowed_columns' => array(), 'columns' => array(), 'update_columns_not_allowed' => array('edited_by' => array('message' => 'Edited by field is set by LOVD', 'error_type' => 'soft'),
-                                                                                                            'edited_date' => array('message' => 'Edited date field is set by LOVD', 'error_type' => 'soft'),
-                                                                                                            'created_by' => array('message' => 'Created by field is set by LOVD', 'error_type' => 'soft'),
-                                                                                                            'created_date' => array('message' => 'Created date field is set by LOVD', 'error_type' => 'soft')), 'data' => array(), 'ids' => array(), 'nColumns' => 0, 'object' => null, 'required_columns' => array(), 'settings' => array()));
+            array('allowed_columns' => array(), 'columns' => array(), 'update_columns_not_allowed' => array('edited_by' => array('message' => 'Edited by field is set by LOVD.', 'error_type' => 'soft'),
+                                                                                                            'edited_date' => array('message' => 'Edited date field is set by LOVD.', 'error_type' => 'soft'),
+                                                                                                            'created_by' => array('message' => 'Created by field is set by LOVD.', 'error_type' => 'soft'),
+                                                                                                            'created_date' => array('message' => 'Created date field is set by LOVD.', 'error_type' => 'soft')), 'data' => array(), 'ids' => array(), 'nColumns' => 0, 'object' => null, 'required_columns' => array(), 'settings' => array()));
         $aParsed['Genes_To_Diseases'] = $aParsed['Individuals_To_Diseases'] = $aParsed['Screenings_To_Genes'] = $aParsed['Screenings_To_Variants'] = array('allowed_columns' => array(), 'data' => array()); // Just the data, nothing else!
         $aUsers = $_DB->query('SELECT id FROM ' . TABLE_USERS)->fetchAllColumn();
         $aImportFlags = array('max_errors' => 50);
@@ -972,7 +976,7 @@ if (POST || $_FILES) { // || $_FILES is in use for the automatic loading of file
                             break;
                         case 'Genes':
                             // The following columns are allowed for update: chrom_band, imprinting, reference, url_homepage, url_external, allow_download, show_hgmd, show_genecards,
-                            // show_genetests, note_index, note_listing, refseq, refseq_url, disclaimer, disclaimer_text, header, header_align,
+                            // show_genetests, show_orphanet, note_index, note_listing, refseq, refseq_url, disclaimer, disclaimer_text, header, header_align,
                             // footer, footer_align.
                             if ($sMode == 'update') {
                                 // Not allowed to be inserted yet, so we don't want checkFields() to be run like that.
@@ -1412,14 +1416,13 @@ if (POST || $_FILES) { // || $_FILES is in use for the automatic loading of file
                     case 'Individuals_To_Diseases':
                     case 'Screenings_To_Genes':
                     case 'Screenings_To_Variants':
-                        reset($aLine);
-                        list($sCol1, $nID1) = each($aLine);
-                        list($sCol2, $nID2) = each($aLine);
+                        list($sCol1, $sCol2) = array_keys($aLine);
+                        list($nID1, $nID2) = array_values($aLine);
                         if (isset($nID1) && isset($nID2)) {
                             $zData = $_DB->query('SELECT * FROM ' . $sTableName . ' WHERE ' . $sCol1 . ' = ? AND ' . $sCol2 . ' = ?', array($nID1, $nID2))->fetchAssoc();
                         }
                         if (!$zData && !in_array($sCurrentSection, $aSectionsAlreadyWarnedFor)) {
-                            $_BAR[0]->appendMessage('Warning: It is currently not possible to do an update on section ' . $sCurrentSection . ' via an import <BR>', 'done');
+                            $_BAR[0]->appendMessage('Warning: It is currently not possible to do an update on section ' . $sCurrentSection . ' via an import.<BR>', 'done');
                             $nWarnings ++;
                             $aSectionsAlreadyWarnedFor[] = $sCurrentSection;
                         }
@@ -1491,14 +1494,14 @@ if (POST || $_FILES) { // || $_FILES is in use for the automatic loading of file
                         if (strlen($aLine['effectid']) != 2) {
                             lovd_errorAdd('import', 'Error (' . $sCurrentSection . ', line ' . $nLine . '): Please select a valid entry for the \'effectid\' field.');
                         } else {
-                            $aLine['effect_reported'] = $aLine['effectid']{0};
-                            $aLine['effect_concluded'] = $aLine['effectid']{1};
+                            $aLine['effect_reported'] = $aLine['effectid'][0];
+                            $aLine['effect_concluded'] = $aLine['effectid'][1];
                         }
                     } else {
                         // Apply the default values.
                         $aLine['effectid'] = $_SETT['var_effect_default']; // Defaults for import.
-                        $aLine['effect_reported'] = $aLine['effectid']{0}; // Defaults for checkFields().
-                        $aLine['effect_concluded'] = $aLine['effectid']{1}; // Defaults for checkFields().
+                        $aLine['effect_reported'] = $aLine['effectid'][0]; // Defaults for checkFields().
+                        $aLine['effect_concluded'] = $aLine['effectid'][1]; // Defaults for checkFields().
                     }
                 }
 
@@ -1513,6 +1516,8 @@ if (POST || $_FILES) { // || $_FILES is in use for the automatic loading of file
                     'explode_strings' => true,      // Multiple selection lists are input as simple strings here.
                     'show_select_alts' => true,     // Show alternatives in errors for select fields.
                 );
+                // $aLine may get overwritten here for selection lists; spaces
+                //  around select values are removed by checkFields().
                 $aSection['object']->checkFields($aLine, $zData, $aCheckFieldsOptions);
                 for ($i = $nErrors; isset($_ERROR['messages'][$i]); $i++) {
                     // When updating, if a error is triggered by a field that is
@@ -1623,13 +1628,13 @@ if (POST || $_FILES) { // || $_FILES is in use for the automatic loading of file
                     if (!empty($aLine['select_options'])) {
                         $aOptions = explode("\r\n", $aLine['select_options']);
                         foreach ($aOptions as $n => $sOption) {
-                            if (!preg_match('/^([^=]+|[A-Z0-9 \/\()?._+-]+ *= *[^=]+)$/i', $sOption)) {
+                            if (!preg_match('/^([^=;]+|[A-Z0-9 \/\()?._+-]+ *= *[^=;]+)$/i', $sOption)) {
                                 lovd_errorAdd('import', 'Error (' . $sCurrentSection . ', line ' . $nLine . '): Select option #' . ($n + 1) . ' &quot;' . htmlspecialchars($sOption) . '&quot; not understood.');
                             }
                         }
                     }
                     // Check regexp syntax.
-                    if (!empty($aLine['preg_pattern']) && ($aLine['preg_pattern']{0} != '/' || @preg_match($aLine['preg_pattern'], '') === false)) {
+                    if (!empty($aLine['preg_pattern']) && ($aLine['preg_pattern'][0] != '/' || @preg_match($aLine['preg_pattern'], '') === false)) {
                         lovd_errorAdd('import', 'Error (' . $sCurrentSection . ', line ' . $nLine . '): The \'Regular expression pattern\' field does not seem to contain valid PHP Perl compatible regexp syntax.');
                     }
 
@@ -2349,7 +2354,7 @@ if (POST || $_FILES) { // || $_FILES is in use for the automatic loading of file
             //  that all data is attached to an individual.
             $sSQL = '';
             $aIDs = array();
-            if (count($aParsed['Individuals']['data'])) {
+            if (!empty($aParsed['Individuals']['data'])) {
                 // Individuals were submitted.
                 // Collect genes and the individual IDs.
                 // If no genes are available, we'll email the managers.
@@ -2359,16 +2364,16 @@ if (POST || $_FILES) { // || $_FILES is in use for the automatic loading of file
                     }
                 }
                 $sSQL = 'SELECT t.geneid, GROUP_CONCAT(DISTINCT "individuals/", s.individualid ORDER BY s.individualid SEPARATOR ";")
-                                 FROM ' . TABLE_SCREENINGS . ' AS s
-                                   INNER JOIN ' . TABLE_SCR2VAR . ' AS s2v ON (s.id = s2v.screeningid)
-                                   INNER JOIN ' . TABLE_VARIANTS . ' AS vog ON (s2v.variantid = vog.id)
-                                   LEFT OUTER JOIN ' . TABLE_VARIANTS_ON_TRANSCRIPTS . ' AS vot ON (vog.id = vot.id)
-                                   LEFT OUTER JOIN ' . TABLE_TRANSCRIPTS . ' AS t ON (vot.transcriptid = t.id)
-                                 WHERE vog.statusid < ?
-                                   AND s.individualid IN (?' . str_repeat(', ?', count($aIDs) - 1) . ')
-                                 GROUP BY t.geneid
-                                 ORDER BY t.geneid';
-            } elseif (count($aParsed['Variants_On_Genome']['data'])) {
+                         FROM ' . TABLE_SCREENINGS . ' AS s
+                           INNER JOIN ' . TABLE_SCR2VAR . ' AS s2v ON (s.id = s2v.screeningid)
+                           INNER JOIN ' . TABLE_VARIANTS . ' AS vog ON (s2v.variantid = vog.id)
+                           LEFT OUTER JOIN ' . TABLE_VARIANTS_ON_TRANSCRIPTS . ' AS vot ON (vog.id = vot.id)
+                           LEFT OUTER JOIN ' . TABLE_TRANSCRIPTS . ' AS t ON (vot.transcriptid = t.id)
+                         WHERE vog.statusid < ?
+                           AND s.individualid IN (?' . str_repeat(', ?', count($aIDs) - 1) . ')
+                         GROUP BY t.geneid
+                         ORDER BY t.geneid';
+            } elseif (!empty($aParsed['Variants_On_Genome']['data'])) {
                 // We have separate variants instead.
                 // Collect genes and the variant IDs.
                 // If no genes are available, we'll email the managers.
@@ -2378,13 +2383,13 @@ if (POST || $_FILES) { // || $_FILES is in use for the automatic loading of file
                     }
                 }
                 $sSQL = 'SELECT DISTINCT t.geneid, GROUP_CONCAT(DISTINCT "variants/", vog.id ORDER BY vog.id SEPARATOR ";")
-                                 FROM ' . TABLE_VARIANTS . ' AS vog
-                                   LEFT OUTER JOIN ' . TABLE_VARIANTS_ON_TRANSCRIPTS . ' AS vot ON (vog.id = vot.id)
-                                   LEFT OUTER JOIN ' . TABLE_TRANSCRIPTS . ' AS t ON (vot.transcriptid = t.id)
-                                 WHERE vog.statusid < ?
-                                   AND vog.id IN (?' . str_repeat(', ?', count($aIDs) - 1) . ')
-                                 GROUP BY t.geneid
-                                 ORDER BY t.geneid';
+                         FROM ' . TABLE_VARIANTS . ' AS vog
+                           LEFT OUTER JOIN ' . TABLE_VARIANTS_ON_TRANSCRIPTS . ' AS vot ON (vog.id = vot.id)
+                           LEFT OUTER JOIN ' . TABLE_TRANSCRIPTS . ' AS t ON (vot.transcriptid = t.id)
+                         WHERE vog.statusid < ?
+                           AND vog.id IN (?' . str_repeat(', ?', count($aIDs) - 1) . ')
+                         GROUP BY t.geneid
+                         ORDER BY t.geneid';
             }
             $aGenesToNotify = $_DB->query($sSQL, array_merge(array(STATUS_MARKED), $aIDs))->fetchAllCombine();
             $aFailedGenes = array(); // Which emails were *NOT* successfully sent?
@@ -2844,7 +2849,7 @@ if (!lovd_isCurator($_SESSION['currdb'])) {
                     foreach ($aDone as $sSection => $n) {
                         $sMessage .= (!$sMessage? '' : ', ') . $n . ' ' . $sSection;
                     }
-                    $sMessage = preg_replace('/, ([^,]+)/', " and $1", $sMessage);
+                    $sMessage = preg_replace('/, ([^,]+)$/', ", and $1", $sMessage);
                 } else {
                     $sMessage = 'new links only';
                 }

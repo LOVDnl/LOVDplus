@@ -4,10 +4,10 @@
  * LEIDEN OPEN VARIATION DATABASE (LOVD)
  *
  * Created     : 2011-02-17
- * Modified    : 2019-12-19
- * For LOVD    : 3.0-23
+ * Modified    : 2022-02-10
+ * For LOVD    : 3.0-28
  *
- * Copyright   : 2004-2019 Leiden University Medical Center; http://www.LUMC.nl/
+ * Copyright   : 2004-2022 Leiden University Medical Center; http://www.LUMC.nl/
  * Programmers : Ivar C. Lugtenburg <I.C.Lugtenburg@LUMC.nl>
  *               Ivo F.A.C. Fokkema <I.F.A.C.Fokkema@LUMC.nl>
  *               M. Kroon <m.kroon@lumc.nl>
@@ -157,16 +157,20 @@ class LOVD_Custom extends LOVD_Object
         parent::__construct();
 
         // Hide entries that are not marked or public.
-        if ($_AUTH['level'] < $_SETT['user_level_settings']['see_nonpublic_data']) { // This check assumes lovd_isAuthorized() has already been called for gene-specific overviews.
+        if (!$_AUTH || $_AUTH['level'] < $_SETT['user_level_settings']['see_nonpublic_data']) { // This check assumes lovd_isAuthorized() has already been called for gene-specific overviews.
             if (in_array($this->sCategory, array('VariantOnGenome', 'VariantOnTranscript'))) {
                 $sAlias = 'vog';
             } else {
-                $sAlias = strtolower($this->sCategory{0});
+                $sAlias = strtolower($this->sCategory[0]);
             }
 
-            // Construct list of user IDs for current user and users who share access with him.
-            $aOwnerIDs = array_merge(array($_AUTH['id']), lovd_getColleagues(COLLEAGUE_ALL));
-            $sOwnerIDsSQL = join(', ', $aOwnerIDs);
+            if ($_AUTH) {
+                // Construct list of user IDs for current user and users who share access with them.
+                $aOwnerIDs = array_merge(array($_AUTH['id']), lovd_getColleagues(COLLEAGUE_ALL));
+                $sOwnerIDsSQL = join(', ', $aOwnerIDs);
+            } else {
+                $sOwnerIDsSQL = '';
+            }
 
             $this->aSQLViewList['WHERE'] .= (!empty($this->aSQLViewList['WHERE'])? ' AND ' : '') . '(' . ($this->sObject == 'Screening'? 'i' : $sAlias) . '.statusid >= ' . STATUS_MARKED . (!$_AUTH? '' : ' OR (' . $sAlias . '.created_by = "' . $_AUTH['id'] . '" OR ' . $sAlias . '.owned_by IN (' . $sOwnerIDsSQL . '))') . '';
             $this->aSQLViewEntry['WHERE'] .= (!empty($this->aSQLViewEntry['WHERE'])? ' AND ' : '') . '(' . ($this->sObject == 'Screening'? 'i' : $sAlias) . '.statusid >= ' . STATUS_MARKED . (!$_AUTH? '' : ' OR (' . $sAlias . '.created_by = "' . $_AUTH['id'] . '" OR ' . $sAlias . '.owned_by IN (' . $sOwnerIDsSQL . '))') . ')';
@@ -327,7 +331,7 @@ class LOVD_Custom extends LOVD_Object
 
         $aViewEntry = array();
         foreach ($this->aColumns as $sID => $aCol) {
-            if (!$aCol['public_view'] && $_AUTH['level'] < $_SETT['user_level_settings']['see_nonpublic_data']) {
+            if (!$aCol['public_view'] && (!$_AUTH || $_AUTH['level'] < $_SETT['user_level_settings']['see_nonpublic_data'])) {
                 continue;
             }
             $aViewEntry[$sID] = $aCol['head_column'];
@@ -349,7 +353,7 @@ class LOVD_Custom extends LOVD_Object
         foreach ($this->aColumns as $sID => $aCol) {
             // In LOVD_plus, the public_view field is used to set if a custom column will be displayed in a VL or not.
             // So, in LOVD_plus we need to check for ALL USERS if a custom column has public_view flag turned on or not.
-            if (!$aCol['public_view'] && (LOVD_plus? true : $_AUTH['level'] < $_SETT['user_level_settings']['see_nonpublic_data'])) {
+            if (!$aCol['public_view'] && (LOVD_plus? true : (!$_AUTH || $_AUTH['level'] < $_SETT['user_level_settings']['see_nonpublic_data']))) {
                 continue;
             }
             $bAlignRight = preg_match('/^(DEC|FLOAT|(TINY|SMALL|MEDIUM|BIG)?INT)/', $aCol['mysql_type']);
@@ -573,7 +577,7 @@ class LOVD_Custom extends LOVD_Object
 
         $zData = parent::prepareData($zData, $sView);
         foreach ($this->aColumns as $sCol => $aCol) {
-            if (!$aCol['public_view'] && $_AUTH['level'] < LEVEL_OWNER) {
+            if (!$aCol['public_view'] && (!$_AUTH || $_AUTH['level'] < LEVEL_OWNER)) {
                 continue;
             }
             if (!empty($aCol['custom_links'])) {
@@ -587,9 +591,64 @@ class LOVD_Custom extends LOVD_Object
                 }
             }
         }
-        // Mark the status, if shown on the page.
-        if ($sView == 'entry' && isset($zData['statusid'])) {
-            $zData['status'] = '<SPAN style="color : #' . $this->getStatusColor($zData['statusid']) . '">' . $_SETT['data_status'][$zData['statusid']] . '</SPAN>';
+        if ($sView == 'entry') {
+            // Mark the status, if shown on the page.
+            if (isset($zData['statusid'])) {
+                $zData['status'] = '<SPAN style="color : #' . $this->getStatusColor($zData['statusid']) . '">' . $_SETT['data_status'][$zData['statusid']] . '</SPAN>';
+            }
+
+            // License information.
+            if (isset($this->aColumnsViewEntry['license_'])) {
+                if (empty($zData['license'])) {
+                    $zData['license_'] = 'No license selected';
+
+                } elseif (strpos($zData['license'], ';;') !== false) {
+                    // Variants are special cases, they can be linked to multiple individuals.
+                    // This is not an LOVD feature, but a consequence of the data model chosen.
+                    // In some cases, this may mean various licenses apply.
+                    $zData['license_'] = 'Multiple licenses, see links to submissions above.';
+
+                } else {
+                    // Normal case, one license only (but still possibly from multiple individuals).
+                    // The license contains both the license for the world as well as the license for LOVD.
+                    $zData['license'] = strstr($zData['license'] . ';', ';', true);
+                    $sLicenseName = substr($zData['license'], 3, -4);
+                    $sLicenseVersion = substr($zData['license'], -3);
+                    $nIndividualID = false;
+
+                    if ($this->sObject == 'Genome_Variant') {
+                        if (count($zData['individuals']) > 1) {
+                            // We need to pick one, to link to it. We'll pick the public IDs first.
+                            foreach (array(STATUS_OK, STATUS_MARKED, STATUS_HIDDEN, STATUS_PENDING) as $nStatus) {
+                                foreach ($zData['individuals'] as list($nIndividualID, $nIndStatus)) {
+                                    if ($nStatus == $nIndStatus) {
+                                        break 2;
+                                    }
+                                }
+                            }
+                        } elseif ($zData['individuals']) {
+                            $nIndividualID = $zData['individuals'][0][0];
+                        }
+                    } elseif ($this->sObject == 'Individual') {
+                        $nIndividualID = $zData['id'];
+                    } elseif (in_array($this->sObject, array('Phenotype', 'Screening'))) {
+                        $nIndividualID = $zData['individualid'];
+                    }
+
+                    $zData['license_'] =
+                        '<A rel="license" href="https://creativecommons.org/licenses/' . $sLicenseName . '/' . $sLicenseVersion . '/" target="_blank" onclick="$.get(\'ajax/licenses.php/' . ($nIndividualID? 'individual/' . $nIndividualID : 'user/' . $zData['created_by']) . '?view\').fail(function(){alert(\'Error viewing license information, please try again later.\');}); return false;">' .
+                        '<SPAN style="display: none;">' . $_SETT['licenses'][$zData['license']] . '</SPAN>' .
+                        '<IMG src="gfx/' . str_replace($sLicenseVersion, '80x15', $zData['license']) . '.png" alt="Creative Commons License" title="' . $_SETT['licenses'][$zData['license']] . '" border="0">' .
+                        '</A> ';
+                    // Also annotate the HTML.
+                    $this->aColumnsViewEntry['license_'] = '<SPAN xmlns:dct="http://purl.org/dc/terms/" href="http://purl.org/dc/dcmitype/Dataset" property="dct:title" rel="dct:type">Database submission</SPAN> license';
+                    // NOTE: We're using our created_by here, but the license has been set perhaps by somebody else (the Individual's creator).
+                    // This isn't very important as this is just annotation. The detailed view of the license will list the correct name.
+                    $zData['created_by_'] = '<SPAN xmlns:cc="http://creativecommons.org/ns#" property="cc:attributionName">' . $zData['created_by_'] . '</SPAN>';
+
+                    // A tool to change the license is only given on the Individuals VE, which has the ability to be reloaded.
+                }
+            }
         }
         return $zData;
     }

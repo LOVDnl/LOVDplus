@@ -4,10 +4,10 @@
  * LEIDEN OPEN VARIATION DATABASE (LOVD)
  *
  * Created     : 2009-10-23
- * Modified    : 2019-08-29
- * For LOVD    : 3.0-22
+ * Modified    : 2022-01-14
+ * For LOVD    : 3.0-28
  *
- * Copyright   : 2004-2019 Leiden University Medical Center; http://www.LUMC.nl/
+ * Copyright   : 2004-2022 Leiden University Medical Center; http://www.LUMC.nl/
  * Programmers : Ivo F.A.C. Fokkema <I.F.A.C.Fokkema@LUMC.nl>
  *               Ivar C. Lugtenburg <I.C.Lugtenburg@LUMC.nl>
  *               M. Kroon <m.kroon@lumc.nl>
@@ -54,7 +54,7 @@ class LOVD_SystemSetting extends LOVD_Object
     function checkFields ($aData, $zData = false, $aOptions = array())
     {
         // Checks fields before submission of data.
-        global $_SETT;
+        global $_SETT, $_STAT;
 
         $this->aCheckMandatory =
                  array(
@@ -65,13 +65,31 @@ class LOVD_SystemSetting extends LOVD_Object
         parent::checkFields($aData, $zData, $aOptions);
 
         // Database URL is mandatory, if the option "Include in the global LOVD listing" is selected.
-        if (!empty($aData['include_in_listing']) && empty($aData['location_url'])) {
-            lovd_errorAdd('location_url', 'Please fill in an URL in the \'Database URL\' field, if you want this LOVD installation to be included in the global LOVD listing; otherwise disable the \'Include in the global LOVD listing\' setting below.');
-        }
-
-        // Database URL should be an URL.
-        if (!empty($aData['location_url']) && !lovd_matchURL($aData['location_url'])) {
-            lovd_errorAdd('location_url', 'Please fill in a correct URL in the \'Database URL\' field.');
+        // If mandatory or given, we'll check the URL (if not given, we'll auto-generate it).
+        if (!empty($aData['include_in_listing']) || !empty($aData['location_url'])) {
+            // Database URL should be an URL.
+            if (!empty($aData['location_url']) && !lovd_matchURL($aData['location_url'])) {
+                lovd_errorAdd('location_url', 'Please fill in a correct URL in the \'Database URL\' field, if you want this LOVD installation to be included in the global LOVD listing; otherwise empty the field and disable the \'Include in the global LOVD listing\' setting below.');
+            } else {
+                // Validate the URL. Failures are fatal since 3.0-28; before, this was an ajax script.
+                $sResponse = implode('',
+                    lovd_php_file(
+                        $_SETT['check_location_URL'] . '?url=' . rawurlencode(rtrim(
+                                (empty($aData['location_url'])? lovd_getInstallURL() : $aData['location_url']), '/') . '/') .
+                        '&signature=' . rawurlencode($_STAT['signature'])));
+                if (strpos($sResponse, 'http') === 0) {
+                    // I don't have a nice feedback system, $aData is not passed as reference.
+                    // So we'll just overwrite $_POST in this case.
+                    // It's OK, the value will be escaped before being fed back to the form.
+                    $aData['location_url'] = $_POST['location_url'] = $sResponse;
+                } elseif (empty($aData['location_url'])) {
+                    // Couldn't automatically determine the URL, so we'll have to ask.
+                    lovd_errorAdd('location_url', 'Please fill in an URL in the \'Database URL\' field, if you want this LOVD installation to be included in the global LOVD listing; otherwise disable the \'Include in the global LOVD listing\' setting below.');
+                } else {
+                    // Some other error occurred.
+                    lovd_errorAdd('location_url', 'Error while trying to validate your database URL: ' . htmlspecialchars($sResponse));
+                }
+            }
         }
 
         // Email address.
@@ -127,6 +145,31 @@ class LOVD_SystemSetting extends LOVD_Object
             lovd_errorAdd('proxy_host', 'Please also fill in a correct host name of the proxy server, if you wish to use one.');
         }
 
+        // MD key must work.
+        if (!empty($aData['md_apikey'])) {
+            $aResponse = lovd_php_file(
+                'https://mobidetails.iurc.montp.inserm.fr/MD/api/service/check_api_key',
+                false,
+                'api_key=' . $aData['md_apikey'],
+                array(
+                    'Accept: application/json',
+                ));
+            if ($aResponse) {
+                $aResponse = json_decode(implode('', $aResponse), true);
+            }
+            if (!$aResponse || !isset($aResponse['api_key_pass_check']) || !isset($aResponse['api_key_status'])) {
+                lovd_errorAdd('md_apikey', 'While testing the given MobiDetails API key, got an error from MobiDetails.');
+            } else {
+                if ($aResponse['api_key_pass_check'] === false) {
+                    // API key error.
+                    lovd_errorAdd('md_apikey', 'MobiDetails indicates that this API key is invalid.');
+                } elseif ($aResponse['api_key_status'] != 'active') {
+                    // That's weird, key expired maybe?
+                    lovd_errorAdd('md_apikey', 'MobiDetails indicates the status of this API key is &quot;' . $aResponse['api_key_status'] . '&quot;.');
+                }
+            }
+        }
+
         // Custom logo must exist.
         if (!empty($aData['logo_uri'])) {
             // Determine if file can be read and is an image or not.
@@ -154,12 +197,10 @@ class LOVD_SystemSetting extends LOVD_Object
         }
 
         // Prevent notices.
-        $_POST['api_feed_history'] = 0;
-        $_POST['allow_count_hidden_entries'] = 0;
-        $_POST['use_versioning'] = 0;
-
         if (LOVD_plus) {
             $_POST['logo_uri'] = 'LOVD_plus_logo145x50';
+            $_POST['donate_dialog_allow'] = 0;
+            $_POST['donate_dialog_months_hidden'] = 0;
             $_POST['send_stats'] = 0;
             $_POST['include_in_listing'] = 0;
             $_POST['allow_submitter_registration'] = 0;
@@ -167,7 +208,7 @@ class LOVD_SystemSetting extends LOVD_Object
         }
 
         // XSS attack prevention. Deny input of HTML.
-        lovd_checkXSS();
+        lovd_checkXSS($aData);
     }
 
 
@@ -191,8 +232,10 @@ class LOVD_SystemSetting extends LOVD_Object
         unset($aHumanBuilds['hg18']);
 
         $aFeedHistory = array('Not available');
-        for ($i = 1; $i <= 12; $i ++) {
+        $aDonationDialogMonths = array();
+        foreach (array(1, 2, 3, 6, 9, 12) as $i) {
             $aFeedHistory[$i] = $i . ' month' . ($i == 1? '' : 's');
+            $aDonationDialogMonths[$i] = $i . ' month' . ($i == 1? '' : 's');
         }
 
         $this->aFormData =
@@ -202,7 +245,7 @@ class LOVD_SystemSetting extends LOVD_Object
                         'hr',
                         array('Title of this LOVD installation', 'This will be shown on the top of every page.', 'text', 'system_title', 45),
                         array('Institute (optional)', 'The institute which runs this database is displayed in the public area and in emails sent by LOVD. It\'s commonly set to a laboratory name or a website name.', 'text', 'institute', 45),
-                        array('Database URL (optional)', 'This is the URL with which the database can be accessed by the outside world, including "http://" or "https://". It will also be used in emails sent by LOVD. This field is mandatory if you select the "Include in the global LOVD listing" option.<BR>If you click the "check" link, LOVD will verify or try to predict the value.', 'print', '<INPUT type="text" name="location_url" size="40" id="location_url" value="' . (empty($_POST['location_url'])? '' : htmlspecialchars($_POST['location_url'])) . '"' . (!lovd_errorFindField('location_url')? '' : ' class="err"') . '>&nbsp;<SPAN id="location_url_check">(<A href="#" onclick="javascript:lovd_checkURL(); return false;">check</A>)</SPAN>'),
+                        array('Database URL (optional)', 'This is the URL with which the database can be accessed by the outside world, including "http://" or "https://". It will also be used in emails sent by LOVD. This field is mandatory if you select the "Include in the global LOVD listing" option.<BR>If you click the "check" link, LOVD will verify or try to predict the value.', 'text', 'location_url', 40),
                         array('LOVD email address', 'This email address will be used to send emails from LOVD to users. We need this address to make sure that emails from LOVD arrive. Please note that although strictly speaking this email address does not need to exist, we recommend that you use a valid address.', 'text', 'email_address', 40),
                         array('Forward messages to database admin?', 'This will forward messages to the database administrator about submitter registrations and submissions.', 'checkbox', 'send_admin_submissions'),
       'refseq_build' => array('Human Build to map to (UCSC/NCBI)', 'We need to know which version of the Human Build we need to map the variants in this LOVD to.', 'select', 'refseq_build', 1, $aHumanBuilds, false, false, false),
@@ -221,14 +264,21 @@ class LOVD_SystemSetting extends LOVD_Object
                         array('', '', 'note', 'The following two fields only apply if the proxy server requires authentication.'),
                         array('Proxy server username', 'In case the proxy server requires authentication, please enter the required username here.', 'text', 'proxy_username', 20),
                         array('Proxy server password', 'In case the proxy server requires authentication, please enter the required password here.', 'password', 'proxy_password', 20, true),
+                        'skip',
+                        array('', '', 'print', 'API keys'),
+                        array('MobiDetails API key', '', 'text', 'md_apikey', 40),
+                        array('', '', 'note', 'LOVD allows looking up variants in <A href="https://mobidetails.iurc.montp.inserm.fr/MD" target="_blank">MobiDetails</A>, an online DNA variant annotation and interpretation platform. To submit variants to MobiDetails, you need an API key. You can register for one <A href="https://mobidetails.iurc.montp.inserm.fr/MD/auth/register" target="_blank">here</A>.'),
                         'hr',
                         'skip',
                         'skip',
                         array('', '', 'print', '<B>Customize LOVD</B>'), // Don't edit, we're parsing for this.
-                        array('', '', 'note', 'Here you can customize the way LOVD looks. We will add more options here later.'),
+                        array('', '', 'note', 'Here you can customize the way LOVD looks.'),
                         'hr',
                         array('System logo', 'If you wish to have your custom logo on the top left of every page instead of the default LOVD logo, enter the path to the image here, relative to the LOVD installation path.', 'text', 'logo_uri', 40),
                         array('', '', 'note', 'Currently, only images already uploaded to the LOVD server are allowed here.'),
+                        array('Ask visitors of this database to donate to LOVD?', 'We rely on donations to keep updating and developing the LOVD software. Please consider allowing LOVD to regularly ask visitors to donate to the LOVD project using a popup dialog.', 'checkbox', 'donate_dialog_allow'),
+                        array('Once shown, don\'t show the dialog for this long', 'When enabled, the dialog will always be shown to new users. Once seen, select for how long the dialog should then remain hidden for this user.', 'select', 'donate_dialog_months_hidden', 1, $aDonationDialogMonths, false, false, false),
+                        array('', '', 'note', 'We rely on donations to keep updating and developing the LOVD software. Please consider allowing LOVD to regularly ask visitors to donate to the LOVD project using a popup dialog. If enabled, new visitors will always see this dialog. You can configure for how long this dialog should then be hidden from them.'),
                         'hr',
                         'skip',
                         'skip',
@@ -272,7 +322,8 @@ class LOVD_SystemSetting extends LOVD_Object
                     && strpos($aFormEntry[3], '<B>Customize LOVD</B>') !== false) {
                     unset($this->aFormData[$nKey], $this->aFormData[$nKey + 1], $this->aFormData[$nKey + 2],
                         $this->aFormData[$nKey + 3], $this->aFormData[$nKey + 4], $this->aFormData[$nKey + 5],
-                        $this->aFormData[$nKey + 6], $this->aFormData[$nKey + 7]);
+                        $this->aFormData[$nKey + 6], $this->aFormData[$nKey + 7], $this->aFormData[$nKey + 8],
+                        $this->aFormData[$nKey + 9], $this->aFormData[$nKey + 10]);
                     continue;
 
                 } elseif (isset($this->aFormData[$nKey]) && is_array($aFormEntry)

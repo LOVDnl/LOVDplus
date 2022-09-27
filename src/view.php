@@ -4,10 +4,10 @@
  * LEIDEN OPEN VARIATION DATABASE (LOVD)
  *
  * Created     : 2011-12-05
- * Modified    : 2017-11-20
- * For LOVD    : 3.0-21
+ * Modified    : 2022-02-10
+ * For LOVD    : 3.0-28
  *
- * Copyright   : 2004-2017 Leiden University Medical Center; http://www.LUMC.nl/
+ * Copyright   : 2004-2022 Leiden University Medical Center; http://www.LUMC.nl/
  * Programmers : Ivo F.A.C. Fokkema <I.F.A.C.Fokkema@LUMC.nl>
  *               Ivar C. Lugtenburg <I.C.Lugtenburg@LUMC.nl>
  *               Daan Asscheman <D.Asscheman@LUMC.nl>
@@ -48,25 +48,31 @@ if (!ACTION && !empty($_PE[1]) && !ctype_digit($_PE[1])) {
     // URL: /view/DMD/NM_004006.2
     // View all entries in a specific gene, affecting a specific trancript, with all joinable data.
 
-    $qGene = $_DB->query('SELECT g.id, count(t.id) FROM ' . TABLE_GENES . ' AS g LEFT OUTER JOIN ' .
-                         TABLE_TRANSCRIPTS . ' AS t ON g.id = t.geneid WHERE g.id = ?',
-                         array(rawurldecode($_PE[1])));
+    $qGene = $_DB->query('
+        SELECT g.id, COUNT(t.id)
+        FROM ' . TABLE_GENES . ' AS g
+          LEFT OUTER JOIN ' . TABLE_TRANSCRIPTS . ' AS t ON g.id = t.geneid
+        WHERE g.id = ?
+        GROUP BY g.id', array($_PE[1]));
     list($sGene, $nTranscripts) = $qGene->fetchRow();
 
     if ($sGene) {
         lovd_isAuthorized('gene', $sGene); // To show non public entries.
 
         // Curators are allowed to download this list...
-        if ($_AUTH['level'] >= LEVEL_CURATOR) {
+        if ($_AUTH && $_AUTH['level'] >= LEVEL_CURATOR) {
             define('FORMAT_ALLOW_TEXTPLAIN', true);
         }
 
-        // Overview is given per transcript. If there is only one, it will be mentioned. If there are more, you will be able to select which one you'd like to see.
+        // Overview is given per transcript. If there is only one, it will be mentioned.
+        // If there are more, you will be able to select which one you'd like to see.
         $aTranscriptsWithVariants = $_DB->query(
             'SELECT t.id, t.id_ncbi
              FROM ' . TABLE_TRANSCRIPTS . ' AS t
                INNER JOIN ' . TABLE_VARIANTS_ON_TRANSCRIPTS . ' AS vot ON (t.id = vot.transcriptid)
-             WHERE t.geneid = ?', array($sGene))->fetchAllCombine();
+             WHERE t.geneid = ?
+             GROUP BY t.id
+             ORDER BY COUNT(vot.id) DESC, t.id ASC', array($sGene))->fetchAllCombine();
         $nTranscriptsWithVariants = count($aTranscriptsWithVariants);
 
         // If NM is mentioned, check if exists for this gene. If not, reload page without NM. Otherwise, restrict $aTranscriptsWithVariants.
@@ -98,7 +104,8 @@ if (!ACTION && !empty($_PE[1]) && !ctype_digit($_PE[1])) {
     $sViewListID = 'CustomVL_VIEW_' . $sGene;
 
     // If this gene has only one NM, show that one. Otherwise have people pick one.
-    list($nTranscriptID, $sTranscript) = each($aTranscriptsWithVariants);
+    $nTranscriptID = key($aTranscriptsWithVariants);
+    $sTranscript = current($aTranscriptsWithVariants);
     if (!$nTranscripts) {
         $sMessage = 'No transcripts found for this gene.';
     } elseif (!$nTranscriptsWithVariants) {
@@ -128,7 +135,7 @@ if (!ACTION && !empty($_PE[1]) && !ctype_digit($_PE[1])) {
         $_DATA = new LOVD_CustomViewList(array('VariantOnTranscript', 'VariantOnGenome', 'Screening', 'Individual'), $sGene);
         $aVLOptions = array(
             'cols_to_skip' => array('chromosome'),
-            'show_options' => ($_AUTH['level'] >= LEVEL_CURATOR),
+            'show_options' => ($_AUTH && $_AUTH['level'] >= LEVEL_CURATOR),
             'find_and_replace' => true,
         );
         $_DATA->viewList($sViewListID, $aVLOptions);

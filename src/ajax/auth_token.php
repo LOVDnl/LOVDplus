@@ -4,10 +4,10 @@
  * LEIDEN OPEN VARIATION DATABASE (LOVD)
  *
  * Created     : 2016-11-17
- * Modified    : 2017-12-11
- * For LOVD    : 3.0-21
+ * Modified    : 2021-02-25
+ * For LOVD    : 3.0-27
  *
- * Copyright   : 2004-2017 Leiden University Medical Center; http://www.LUMC.nl/
+ * Copyright   : 2004-2021 Leiden University Medical Center; http://www.LUMC.nl/
  * Programmer  : Ivo F.A.C. Fokkema <I.F.A.C.Fokkema@LUMC.nl>
  *
  *
@@ -32,6 +32,10 @@ define('ROOT_PATH', '../');
 require ROOT_PATH . 'inc-init.php';
 header('Content-type: text/javascript; charset=UTF-8');
 
+// URL: /ajax/auth_token.php/00001?view
+// URL: /ajax/auth_token.php/00001?create
+// URL: /ajax/auth_token.php/00001?revoke
+
 // Check for basic format.
 if (PATH_COUNT != 3 || !ctype_digit($_PE[2]) || !in_array(ACTION, array('create', 'revoke', 'view'))) {
     die('alert("Error while sending data.");');
@@ -44,9 +48,8 @@ if (!$_AUTH || !lovd_isAuthorized('user', $_PE[2])) {
 }
 
 // Let's download the user's data.
-$nID = sprintf('%0' . $_SETT['objectid_length']['users'] . 'd', $_PE[2]);
-$zUser = $_DB->query('SELECT id, username, auth_token, auth_token_expires FROM ' . TABLE_USERS . ' WHERE id = ?', array($nID))->fetchAssoc();
-
+$nID = lovd_getCurrentID();
+$zUser = $_DB->query('SELECT id, username, auth_token, auth_token_expires FROM ' . TABLE_USERS . ' WHERE id > 0 AND id = ?', array($nID))->fetchAssoc();
 if (!$zUser) {
     // FIXME: Should we log this?
     die('alert("Data not found.");');
@@ -151,7 +154,8 @@ if (ACTION == 'create' && POST) {
         die('alert("Failed to create new token.\n' . htmlspecialchars($_DB->formatError()) . '");');
     }
     // If we get here, the token has been created and stored successfully!
-    lovd_writeLog('Event', 'AuthTokenCreate', 'Successfully created new API token, expires ' . $sAuthTokenExpires);
+    lovd_writeLog('Event', 'AuthTokenCreate', 'Successfully created new API token for user #' . $nID . ', ' .
+        (!$sAuthTokenExpires? 'never expires' : 'expires ' . $sAuthTokenExpires));
 
     // Display the form, and put the right buttons in place.
     print('
@@ -202,7 +206,7 @@ if (ACTION == 'revoke' && POST) {
         die('alert("Failed to revoke token.\n' . htmlspecialchars($_DB->formatError()) . '");');
     }
     // If we get here, the token has been revoked successfully!
-    lovd_writeLog('Event', 'AuthTokenRevoke', 'Successfully revoked current API token');
+    lovd_writeLog('Event', 'AuthTokenRevoke', 'Successfully revoked current API token for user #' . $nID);
 
     // Display the form, and put the right buttons in place.
     print('

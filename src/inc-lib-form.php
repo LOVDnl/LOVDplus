@@ -4,10 +4,10 @@
  * LEIDEN OPEN VARIATION DATABASE (LOVD)
  *
  * Created     : 2009-10-21
- * Modified    : 2019-08-28
- * For LOVD    : 3.0-22
+ * Modified    : 2021-11-10
+ * For LOVD    : 3.0-28
  *
- * Copyright   : 2004-2019 Leiden University Medical Center; http://www.LUMC.nl/
+ * Copyright   : 2004-2021 Leiden University Medical Center; http://www.LUMC.nl/
  * Programmers : Ivo F.A.C. Fokkema <I.F.A.C.Fokkema@LUMC.nl>
  *               Ivar C. Lugtenburg <I.C.Lugtenburg@LUMC.nl>
  *               M. Kroon <m.kroon@lumc.nl>
@@ -141,7 +141,7 @@ function lovd_checkORCIDChecksum ($sID)
     $sBaseDigits = ltrim(str_replace('-', '', substr($sID, 0, -1)), '0'); // '0000-0002-1368-1939' => 21368193
     $nTotal = 0;
     for ($i = 0; $i < strlen($sBaseDigits); $i++) {
-        $nDigit = (int) $sBaseDigits{$i};
+        $nDigit = (int) $sBaseDigits[$i];
         $nTotal = ($nTotal + $nDigit) * 2;
     }
     $nRemainder = $nTotal % 11;
@@ -174,10 +174,16 @@ function lovd_checkXSS ($aInput = '')
     foreach ($aInput as $key => $val) {
         if (is_array($val)) {
             $bSuccess = $bSuccess && lovd_checkXSS($val);
-        } elseif (!empty($val) && preg_match('/<.*>/s', $val)) {
-            // Disallowed tag found.
+        } elseif (!empty($val) && strpos($key, '/') !== false && preg_match('/<.*>/s', $val)) {
+            // Disallowed tag found. This check is for custom columns, that often contain < characters.
             $bSuccess = false;
             lovd_errorAdd($key, 'Disallowed tag found in form field' . (is_numeric($key)? '.' : ' "' . htmlspecialchars($key) . '".') . ' XSS attack?');
+        } elseif (strpos($key, '/') === false && strpos($val, '<') !== false) {
+            // This check is for any fixed field, such as the registration form.
+            // Just disallow any use of <; it can introduce XSS even without a matching >.
+            $bSuccess = false;
+            lovd_errorAdd($key, 'The use of \'&lt;\' in form fields is now allowed.' .
+                (is_numeric($key)? '.' : ' Please remove it from the "' . htmlspecialchars($key) . '" field.'));
         }
     }
     return $bSuccess;
@@ -392,6 +398,7 @@ function lovd_fetchDBID ($aData)
     if (!isset($aData['aTranscripts'])) {
         $aData['aTranscripts'] = array();
     }
+    $aGenes = array();
     $aTranscriptVariants = array();
     foreach ($aData['aTranscripts'] as $nTranscriptID => $aTranscript) {
         // Check for non-empty VariantOnTranscript/DNA fields.
@@ -447,7 +454,9 @@ function lovd_fetchDBID ($aData)
         foreach($aDBIDOptions as $sDBIDoption) {
             // Loop through all the options returned from the database and decide which option to take.
             preg_match('/^((.+)_(\d{6}))$/', $sDBID, $aMatches);
-            list($sDBIDnew, $sDBIDnewSymbol, $sDBIDnewNumber) = array($aMatches[1], $aMatches[2], $aMatches[3]);
+            //              2 = chr## or gene
+            //                   3 = the actual ID.
+            list($sDBIDnewSymbol, $sDBIDnewNumber) = array($aMatches[2], $aMatches[3]);
 
             if (preg_match('/^(.+)_(\d{6})$/', $sDBIDoption, $aMatches)) {
                 list($sDBIDoption, $sDBIDoptionSymbol, $sDBIDoptionNumber) = $aMatches;
@@ -460,11 +469,15 @@ function lovd_fetchDBID ($aData)
                 if ($sDBIDoptionSymbol == $sDBIDnewSymbol && $sDBIDoptionNumber < $sDBIDnewNumber && $sDBIDoptionNumber != '000000') {
                     // If the symbol of the option is the same, but the number is lower (not including 000000), take it.
                     $sDBID = $sDBIDoption;
-                } elseif ($sDBIDoptionSymbol != $sDBIDnewSymbol && isset($aGenes) && in_array($sDBIDoptionSymbol, $aGenes)) {
-                    // If the symbol of the option is different and is one of the genes of the variant you are editing/creating, take it.
-                    $sDBID = $sDBIDoption;
                 } elseif (substr($sDBIDnewSymbol, 0, 3) == 'chr' && substr($sDBIDoptionSymbol, 0, 3) != 'chr') {
                     // If the symbol of the option is not a chromosome, but the current DBID is, take it.
+                    $sDBID = $sDBIDoption;
+                } elseif ($sDBIDoptionSymbol != $sDBIDnewSymbol && isset($aGenes) && in_array($sDBIDoptionSymbol, $aGenes)
+                    && (!in_array($sDBIDnewSymbol, $aGenes)
+                        || ($sDBIDoptionNumber != '000000' && $sDBIDnewNumber == '000000')
+                        || $sDBIDoptionNumber < $sDBIDnewNumber)) {
+                    // If the symbol of the option is different and is one of the genes of the variant you are editing/creating, take it.
+                    // (but only if the currently selected DBID is *not* in the gene list or if we can pick a non 000000 ID, or if the option's number is lower)
                     $sDBID = $sDBIDoption;
                 }
             }
@@ -491,9 +504,22 @@ function lovd_fetchDBID ($aData)
                 // Update the cache!
                 $aDBIDsSeen[$aData['chromosome']] = $sSymbol . '_' . sprintf('%06d', ($nDBIDnewNumber - 1));
             } else {
-                // 2013-02-28; 3.0-03; By using INNER JOIN to VOT and T and placing a WHERE on t.geneid we sped up this query from 0.45s to 0.00s when having 1M variants.
+                // We used to speed up this query by joining to VOT and T and
+                //  placing a WHERE on t.geneid. However, this assumes that all
+                //  variants with gene-based DBIDs still have VOTs on that gene.
+                // This wasn't always the case in our database as transcripts
+                //  were sometimes removed and added with time in between them,
+                //  and variants were imported and given DBIDs already in use.
+                // So, we now speed up this query by adding an additional WHERE
+                //  on the chromosome. It provides a small speedup, while the
+                //  risk of missing variants is very small (they have to be on
+                //  a different chromosome).
                 $sSymbol = $aGenes[0];
-                $nDBIDnewNumber = $_DB->query('SELECT IFNULL(RIGHT(MAX(`VariantOnGenome/DBID`), 6), 0) + 1 FROM ' . TABLE_VARIANTS . ' AS vog INNER JOIN ' . TABLE_VARIANTS_ON_TRANSCRIPTS . ' AS vot USING (id) INNER JOIN ' . TABLE_TRANSCRIPTS . ' AS t ON (vot.transcriptid = t.id) WHERE t.geneid = ? AND `VariantOnGenome/DBID` REGEXP ?', array($sSymbol, '^' . $sSymbol . '_[0-9]{6}$'))->fetchColumn();
+                $nDBIDnewNumber = $_DB->query('
+                    SELECT IFNULL(RIGHT(MAX(`VariantOnGenome/DBID`), 6), 0) + 1
+                    FROM ' . TABLE_VARIANTS . '
+                    WHERE chromosome = ? AND `VariantOnGenome/DBID` REGEXP ?',
+                        array($aData['chromosome'], '^' . $sSymbol . '_[0-9]{6}$'))->fetchColumn();
             }
             $sDBID = $sSymbol . '_' . sprintf('%06d', $nDBIDnewNumber);
         }
@@ -640,7 +666,7 @@ function lovd_recaptchaV2_verify ($sUserResponse)
         // Verify reCaptcha V2 user response with Google.
         $aPostVars = array('secret' => '6Lf_XBsUAAAAAIjtOpBdpVyzwsWYO4AtgmgjxDcb',
             'response' => $sUserResponse);
-        $aResponseRaw = lovd_php_file('https://www.google.com/recaptcha/api/siteverify', false,
+        $aResponseRaw = lovd_php_file('https://www.recaptcha.net/recaptcha/api/siteverify', false,
             http_build_query($aPostVars), 'Accept: application/json');
         // Note: "error-codes" in the response object is optional, even when
         // verification fails.
@@ -783,9 +809,11 @@ function lovd_sendMailFormatAddresses ($aRecipients, & $aEmailsUsed)
 
 
 
-function lovd_setUpdatedDate ($aGenes)
+function lovd_setUpdatedDate ($aGenes, $bAuth = true)
 {
     // Updates the updated_date field of the indicated gene.
+    // $bAuth allows you to control who gets marked as updated_by; the current
+    //  user (the default) or LOVD (pass false).
     global $_AUTH, $_DB;
 
     if (LOVD_plus) {
@@ -811,7 +839,11 @@ function lovd_setUpdatedDate ($aGenes)
     }
 
     // Just update the database and we'll see what happens.
-    $q = $_DB->query('UPDATE ' . TABLE_GENES . ' SET updated_by = ?, updated_date = NOW() WHERE id IN (?' . str_repeat(', ?', count($aGenes) - 1) . ')', array_merge(array($_AUTH['id']), $aGenes), false);
+    $q = $_DB->query('
+        UPDATE ' . TABLE_GENES . '
+        SET updated_by = ?, updated_date = NOW()
+        WHERE id IN (?' . str_repeat(', ?', count($aGenes) - 1) . ')',
+        array_merge(array((!$bAuth? 0 : $_AUTH['id'])), $aGenes), false);
     return ($q->rowCount());
 }
 
@@ -825,7 +857,7 @@ function lovd_trimField ($sVal)
     // Instead, we check if the field is surrounded by quotes. If so, we take the first and last character off and return the field.
 
     $sVal = trim($sVal);
-    if ($sVal && $sVal{0} == '"' && substr($sVal, -1) == '"') {
+    if ($sVal && $sVal[0] == '"' && substr($sVal, -1) == '"') {
         $sVal = substr($sVal, 1, -1); // Just trim the first and last quote off, nothing else!
     }
     return trim($sVal);
@@ -1106,7 +1138,7 @@ function lovd_wrapText ($s, $l = 70, $sCut = ' ')
     if (empty($sCut) || !is_string($sCut)) {
         $sCut = ' ';
     } elseif (strlen($sCut) > 1) {
-        $sCut = $sCut{0};
+        $sCut = $sCut[0];
     }
     if ($sCut != ' ') {
         // If it's not a space, we will add it to the end of each line as well, so we use extra space.

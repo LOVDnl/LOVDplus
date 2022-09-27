@@ -4,10 +4,10 @@
  * LEIDEN OPEN VARIATION DATABASE (LOVD)
  *
  * Created     : 2010-04-19
- * Modified    : 2017-08-09
- * For LOVD    : 3.0-20
+ * Modified    : 2022-06-14
+ * For LOVD    : 3.0-28
  *
- * Copyright   : 2004-2017 Leiden University Medical Center; http://www.LUMC.nl/
+ * Copyright   : 2004-2022 Leiden University Medical Center; http://www.LUMC.nl/
  * Programmers : Ivo F.A.C. Fokkema <I.F.A.C.Fokkema@LUMC.nl>
  *               Ivar C. Lugtenburg <I.C.Lugtenburg@LUMC.nl>
  *               M. Kroon <m.kroon@lumc.nl>
@@ -44,10 +44,10 @@ if ($_AUTH) {
 
 
 if (PATH_COUNT == 1 && !ACTION) {
-    // URL: /links
+    // URL: /links
     // View all entries.
 
-    define('PAGE_TITLE', 'Custom links');
+    define('PAGE_TITLE', lovd_getCurrentPageTitle());
     $_T->printHeader();
     $_T->printTitle();
 
@@ -67,11 +67,11 @@ if (PATH_COUNT == 1 && !ACTION) {
 
 
 if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && !ACTION) {
-    // URL: /links/001
+    // URL: /links/001
     // View specific entry.
 
-    $nID = sprintf('%03d', $_PE[1]);
-    define('PAGE_TITLE', 'Custom link #' . $nID);
+    $nID = lovd_getCurrentID();
+    define('PAGE_TITLE', lovd_getCurrentPageTitle());
     $_T->printHeader();
     $_T->printTitle();
 
@@ -98,10 +98,10 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && !ACTION) {
 
 
 if (PATH_COUNT == 1 && ACTION == 'create') {
-    // URL: /links?create
+    // URL: /links?create
     // Create a new entry.
 
-    define('PAGE_TITLE', 'Create a new custom link');
+    define('PAGE_TITLE', lovd_getCurrentPageTitle());
     define('LOG_EVENT', 'LinkCreate');
 
     // Require manager clearance.
@@ -206,11 +206,11 @@ if (PATH_COUNT == 1 && ACTION == 'create') {
 
 
 if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && ACTION == 'edit') {
-    // URL: /links/001?edit
+    // URL: /links/001?edit
     // Edit specific entry.
 
-    $nID = sprintf('%03d', $_PE[1]);
-    define('PAGE_TITLE', 'Edit custom link #' . $nID);
+    $nID = lovd_getCurrentID();
+    define('PAGE_TITLE', lovd_getCurrentPageTitle());
     define('LOG_EVENT', 'LinkEdit');
 
     // Require manager clearance.
@@ -339,11 +339,11 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && ACTION == 'edit') {
 
 
 if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && ACTION == 'delete') {
-    // URL: /links/001?delete
+    // URL: /links/001?delete
     // Delete specific entry.
 
-    $nID = sprintf('%03d', $_PE[1]);
-    define('PAGE_TITLE', 'Delete custom link #' . $nID);
+    $nID = lovd_getCurrentID();
+    define('PAGE_TITLE', lovd_getCurrentPageTitle());
     define('LOG_EVENT', 'LinkDelete');
 
     // Require manager clearance.
@@ -362,7 +362,7 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && ACTION == 'delete') {
             lovd_errorAdd('password', 'Please fill in the \'Enter your password for authorization\' field.');
         }
 
-        // User had to enter his/her password for authorization.
+        // User had to enter their password for authorization.
         if ($_POST['password'] && !lovd_verifyPassword($_POST['password'], $_AUTH['password'])) {
             lovd_errorAdd('password', 'Please enter your correct password for authorization.');
         }

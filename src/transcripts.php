@@ -4,10 +4,10 @@
  * LEIDEN OPEN VARIATION DATABASE (LOVD)
  *
  * Created     : 2010-12-21
- * Modified    : 2019-07-25
- * For LOVD    : 3.0-22
+ * Modified    : 2022-06-07
+ * For LOVD    : 3.0-28
  *
- * Copyright   : 2004-2019 Leiden University Medical Center; http://www.LUMC.nl/
+ * Copyright   : 2004-2022 Leiden University Medical Center; http://www.LUMC.nl/
  * Programmers : Ivar C. Lugtenburg <I.C.Lugtenburg@LUMC.nl>
  *               Ivo F.A.C. Fokkema <I.F.A.C.Fokkema@LUMC.nl>
  *               Daan Asscheman <D.Asscheman@LUMC.nl>
@@ -43,19 +43,19 @@ if ($_AUTH) {
 
 
 
-if (!ACTION && (empty($_PE[1]) || preg_match('/^[a-z][a-z0-9#@-]*$/i', rawurldecode($_PE[1])))) {
-    // URL: /transcripts
-    // URL: /transcripts/DMD
+if (!ACTION && (empty($_PE[1]) || preg_match('/^[a-z][a-z0-9#@-]*$/i', $_PE[1]))) {
+    // URL: /transcripts
+    // URL: /transcripts/DMD
     // View all entries.
 
     if (empty($_PE[1])) {
         $sGene = '';
     } else {
-        $sGene = $_DB->query('SELECT id FROM ' . TABLE_GENES . ' WHERE id = ?', array(rawurldecode($_PE[1])))->fetchColumn();
+        $sGene = $_DB->query('SELECT id FROM ' . TABLE_GENES . ' WHERE id = ?', array($_PE[1]))->fetchColumn();
         $_GET['search_geneid'] = '="' . $sGene . '"';
         lovd_isAuthorized('gene', $sGene);
     }
-    define('PAGE_TITLE', 'All transcripts' . ($sGene? ' of gene ' . $sGene : ''));
+    define('PAGE_TITLE', lovd_getCurrentPageTitle());
     $_T->printHeader();
     $_T->printTitle();
     if ($sGene) {
@@ -64,10 +64,17 @@ if (!ACTION && (empty($_PE[1]) || preg_match('/^[a-z][a-z0-9#@-]*$/i', rawurldec
 
     require ROOT_PATH . 'class/object_transcripts.php';
     $_DATA = new LOVD_Transcript();
-    $_DATA->sSortDefault = ($sGene? 'variants' : 'geneid');
+    if ($sGene) {
+        // Standard sorting is on geneid, that is not useful. Choose an alternative.
+        if ($_SETT['customization_settings']['transcripts_VL_show_variant_counts']) {
+            $_DATA->sSortDefault = 'variants';
+        } else {
+            $_DATA->sSortDefault = 'id_ncbi';
+        }
+    }
     $aVLOptions = array(
         'cols_to_skip' => ($sGene? array('geneid') : array()),
-        'show_options' => ($_AUTH['level'] >= LEVEL_CURATOR),
+        'show_options' => ($_AUTH && $_AUTH['level'] >= LEVEL_CURATOR),
     );
     $_DATA->viewList('Transcripts', $aVLOptions);
 
@@ -83,11 +90,11 @@ if (!ACTION && (empty($_PE[1]) || preg_match('/^[a-z][a-z0-9#@-]*$/i', rawurldec
 
 
 if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && !ACTION) {
-    // URL: /transcripts/00001
+    // URL: /transcripts/00000001
     // View specific entry.
 
-    $nID = sprintf('%08d', $_PE[1]);
-    define('PAGE_TITLE', 'Transcript #' . $nID);
+    $nID = lovd_getCurrentID();
+    define('PAGE_TITLE', lovd_getCurrentPageTitle());
     $_T->printHeader();
     $_T->printTitle();
 
@@ -113,7 +120,7 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && !ACTION) {
     $_DATA->sSortDefault = 'VariantOnTranscript/DNA';
     $_DATA->setRowLink('VOT_for_T_VE', 'javascript:window.location.href=\'' . lovd_getInstallURL() . 'variants/{{ID}}#{{transcriptid}}\'; return false');
     $aVLOptions = array(
-        'cols_to_skip' => array('geneid', 'transcriptid', 'id_ncbi', 'id_'),
+        'cols_to_skip' => array('geneid', 'transcriptid', 'id_ncbi'),
     );
     $_DATA->viewList('VOT_for_T_VE', $aVLOptions);
 
@@ -126,15 +133,15 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && !ACTION) {
 
 
 if (PATH_COUNT == 2 && !ctype_digit($_PE[1]) && !ACTION) {
-    // URL: /transcripts/NM_004006.2
+    // URL: /transcripts/NM_004006.2
     // Try to find a transcripts by its NCBI ID and forward.
     // When we have multiple hits, refer to listView.
 
-    $sID = rawurldecode($_PE[1]);
+    $sID = $_PE[1];
     if ($nID = $_DB->query('SELECT id FROM ' . TABLE_TRANSCRIPTS . ' WHERE id_ncbi = ?', array($sID))->fetchColumn()) {
         header('Location: ' . lovd_getInstallURL() . $_PE[0] . '/' . $nID);
     } else {
-        define('PAGE_TITLE', 'Transcript');
+        define('PAGE_TITLE', 'Transcript ' . $sID);
         $_T->printHeader();
         $_T->printTitle();
         lovd_showInfoTable('No such ID!', 'stop');
@@ -159,10 +166,12 @@ if (ACTION == 'create') {
 
     // If no gene given, ask for it and forward user.
     if (!isset($_PE[1])) {
-        define('PAGE_TITLE', 'Add transcript to a gene');
+        define('PAGE_TITLE', 'Add transcript entry to a gene');
 
         // Is user authorized in any gene?
-        lovd_isAuthorized('gene', $_AUTH['curates']);
+        if ($_AUTH) {
+            lovd_isAuthorized('gene', $_AUTH['curates']);
+        }
         lovd_requireAUTH(LEVEL_CURATOR);
 
         $_T->printHeader();
@@ -197,8 +206,8 @@ if (ACTION == 'create') {
 
 
     // Gene given, check validity.
-    $sGene = $_DB->query('SELECT id FROM ' . TABLE_GENES . ' WHERE id = ?', array(rawurldecode($_PE[1])))->fetchColumn();
-    define('PAGE_TITLE', 'Add transcript to gene ' . $sGene);
+    $sGene = $_DB->query('SELECT id FROM ' . TABLE_GENES . ' WHERE id = ?', array($_PE[1]))->fetchColumn();
+    define('PAGE_TITLE', 'Add transcript entry to ' . (!$sGene? 'a' : ' the ' . $sGene) . ' gene');
     $sPath = CURRENT_PATH . '?' . ACTION;
     $sPathBase = $_PE[0] . '?' . ACTION;
     if (!$sGene) {
@@ -243,7 +252,7 @@ if (ACTION == 'create') {
         $_POST['workID'] = $nTime['sec'] . $nTime['usec'];
 
         $sFormNextPage = '<FORM action="' . $sPath . '" id="createTranscript" method="post">' . "\n" .
-                         '          <INPUT type="hidden" name="workID" value="' . $_POST['workID'] . '">' . "\n" .
+                         '          <INPUT type="hidden" name="workID" value="' . htmlspecialchars($_POST['workID']) . '">' . "\n" .
                          '          <INPUT type="submit" value="Continue &raquo;">' . "\n" .
                          '        </FORM>';
 
@@ -268,6 +277,34 @@ if (ACTION == 'create') {
                                                                   'transcriptPositions' => $aTranscripts['positions'],
                                                                   'transcriptsAdded' => $aTranscripts['added'],
                                                                 );
+
+        if (!$aTranscripts['id']) {
+            // Mutalyzer doesn't see any transcripts at all.
+            // The future is VV. However, as we're currently still using
+            //  Mutalyzer for mapping, only use VV when Mutalyzer fails.
+            require ROOT_PATH . 'class/variant_validator.php';
+            $_VV = new LOVD_VV();
+            $aData = $_VV->getTranscriptsByGene($zGene['id']);
+            $aTranscripts = array();
+            foreach ($aData['data'] as $sTranscript => $aTranscript) {
+                // Look for transcripts with genomic locations on this build.
+                if (!$aTranscript['genomic_positions'] || !isset($aTranscript['genomic_positions'][$_CONF['refseq_build']][$zGene['chromosome']])) {
+                    continue;
+                }
+                // FIXME: When we're switching to VV, fix this ridiculous format.
+                $_SESSION['work'][$sPathBase][$_POST['workID']]['values']['transcripts'][] = $sTranscript;
+                $_SESSION['work'][$sPathBase][$_POST['workID']]['values']['transcriptMutalyzer'][$sTranscript] = 0;
+                $_SESSION['work'][$sPathBase][$_POST['workID']]['values']['transcriptsProtein'][$sTranscript] = $aTranscript['id_ncbi_protein'];
+                $_SESSION['work'][$sPathBase][$_POST['workID']]['values']['transcriptNames'][$sTranscript] = $aTranscript['name'];
+                $_SESSION['work'][$sPathBase][$_POST['workID']]['values']['transcriptPositions'][$sTranscript] = array(
+                    'chromTransStart' => $aTranscript['genomic_positions'][$_CONF['refseq_build']][$zGene['chromosome']]['start'],
+                    'chromTransEnd' => $aTranscript['genomic_positions'][$_CONF['refseq_build']][$zGene['chromosome']]['end'],
+                    'cTransStart' => -$aTranscript['transcript_positions']['cds_start'] + 1, // FIXME; Fix the database, the VV model is more logical.
+                    'cTransEnd' => $aTranscript['transcript_positions']['length'] - $aTranscript['transcript_positions']['cds_start'] + 1, // FIXME; Fix the database, the VV model is more logical.
+                    'cCDSStop' => $aTranscript['transcript_positions']['cds_length'],
+                );
+            }
+        }
 
         $_BAR->setProgress(100);
         $_BAR->setMessage('Information collected, now building form...');
@@ -435,7 +472,7 @@ if (ACTION == 'create') {
                       ));
     lovd_viewForm($aForm);
 
-    print('<INPUT type="hidden" name="workID" value="' . $_POST['workID'] . '">' . "\n");
+    print('<INPUT type="hidden" name="workID" value="' . htmlspecialchars($_POST['workID']) . '">' . "\n");
     print('</FORM>' . "\n\n");
 
     $_T->printFooter();
@@ -447,11 +484,11 @@ if (ACTION == 'create') {
 
 
 if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && ACTION == 'edit') {
-    // URL: /transcripts/00001?edit
+    // URL: /transcripts/00000001?edit
     // Edit a transcript
 
-    $nID = sprintf('%08d', $_PE[1]);
-    define('PAGE_TITLE', 'Edit transcript #' . $nID);
+    $nID = lovd_getCurrentID();
+    define('PAGE_TITLE', lovd_getCurrentPageTitle());
     define('LOG_EVENT', 'TranscriptEdit');
 
     // Load appropriate user level for this transcript.
@@ -535,11 +572,11 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && ACTION == 'edit') {
 
 
 if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && ACTION == 'delete') {
-    // URL: /transcripts/00001?delete
+    // URL: /transcripts/00000001?delete
     // Drop specific entry.
 
-    $nID = sprintf('%08d', $_PE[1]);
-    define('PAGE_TITLE', 'Delete transcript information entry #' . $nID);
+    $nID = lovd_getCurrentID();
+    define('PAGE_TITLE', lovd_getCurrentPageTitle());
     define('LOG_EVENT', 'TranscriptDelete');
 
     // Load appropriate user level for this transcript.
@@ -559,7 +596,7 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && ACTION == 'delete') {
             lovd_errorAdd('password', 'Please fill in the \'Enter your password for authorization\' field.');
         }
 
-        // User had to enter his/her password for authorization.
+        // User had to enter their password for authorization.
         if ($_POST['password'] && !lovd_verifyPassword($_POST['password'], $_AUTH['password'])) {
             lovd_errorAdd('password', 'Please enter your correct password for authorization.');
         }

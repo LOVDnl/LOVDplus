@@ -4,10 +4,10 @@
  * LEIDEN OPEN VARIATION DATABASE (LOVD)
  *
  * Created     : 2009-10-19
- * Modified    : 2020-02-18
- * For LOVD    : 3.0-23
+ * Modified    : 2022-07-15
+ * For LOVD    : 3.0-28
  *
- * Copyright   : 2004-2020 Leiden University Medical Center; http://www.LUMC.nl/
+ * Copyright   : 2004-2022 Leiden University Medical Center; http://www.LUMC.nl/
  * Programmers : Ivo F.A.C. Fokkema <I.F.A.C.Fokkema@LUMC.nl>
  *               Ivar C. Lugtenburg <I.C.Lugtenburg@LUMC.nl>
  *               Daan Asscheman <D.Asscheman@LUMC.nl>
@@ -34,6 +34,18 @@
 // Don't allow direct access.
 if (!defined('ROOT_PATH')) {
     exit;
+}
+
+// Sometimes inc-init.php gets run over CLI (LOVD+, external scripts, etc.).
+// Handle that here, instead of building lots of code in many different places.
+if (!isset($_SERVER['HTTP_HOST'])) {
+    // To prevent notices...
+    $_SERVER = array_merge($_SERVER, array(
+        'HTTP_HOST' => 'localhost',
+        'REQUEST_URI' => '/' . basename(__FILE__),
+        'QUERY_STRING' => '',
+        'REQUEST_METHOD' => 'GET',
+    ));
 }
 
 // Require library standard functions.
@@ -75,8 +87,17 @@ $_SERVER['SCRIPT_NAME'] = lovd_cleanDirName(str_replace('\\', '/', $_SERVER['SCR
 // Our output formats: text/html by default.
 $aFormats = array('text/html', 'text/plain'); // Key [0] is default. Other values may not always be allowed. It is checked in the Template class' printHeader() and in Objects::viewList().
 if (lovd_getProjectFile() == '/api.php') {
-    $aFormats[] = 'application/json';
-    $aFormats[] = 'text/bed';
+    // The REST API has JSON as an *optional* format,
+    //  for the new API it's the *default*.
+    if (strpos($_SERVER['REQUEST_URI'], '/rest') !== false) {
+        // REST API.
+        $aFormats[] = 'application/json';
+        $aFormats[] = 'text/bed';
+    } else {
+        // New API.
+        array_unshift($aFormats, 'application/json');
+    }
+
 } elseif (lovd_getProjectFile() == '/import.php' && substr($_SERVER['QUERY_STRING'], 0, 25) == 'autoupload_scheduled_file') {
     // Set format to text/plain only when none is requested.
     if (empty($_GET['format']) || !in_array($_GET['format'], $aFormats)) {
@@ -130,6 +151,10 @@ define('ON_WINDOWS', (strtoupper(substr(PHP_OS, 0, 3) == 'WIN')));
 // LOVD and LOVD+, simply define if we're active or not.
 @define('LOVD_plus', true);
 
+// Flag LOVD_light disables certain features to streamline LOVD for high
+// quantities of variants but no or few individuals or diseases.
+define('LOVD_light', false);
+
 // For the installation process (and possibly later somewhere else, too).
 $aRequired =
          array(
@@ -151,7 +176,7 @@ $aRequired =
 $_SETT = array(
                 'system' =>
                      array(
-                            'version' => '3.0-23',
+                            'version' => '3.0-28',
                           ),
                 'user_levels' =>
                      array(
@@ -177,9 +202,22 @@ $_SETT = array(
                     'genepanels_manage_genes' => LEVEL_MANAGER,
                     // The see_nonpublic_data setting currently also defines the visibility
                     //  of the status, created* and edited* fields.
-                    'see_nonpublic_data' => (LOVD_plus? LEVEL_SUBMITTER : LEVEL_COLLABORATOR),
+                    'see_nonpublic_data' => ((LOVD_plus || LOVD_light)? LEVEL_SUBMITTER : LEVEL_COLLABORATOR),
                     'set_concluded_effect' => (LOVD_plus? LEVEL_MANAGER : LEVEL_CURATOR),
                     'submit_new_data' => (LOVD_plus? LEVEL_MANAGER : LEVEL_SUBMITTER),
+                ),
+                'customization_settings' => // Miscellaneous configuration settings.
+                array(
+                    'genes_show_meta_data' => !(LOVD_plus || LOVD_light),
+                    'genes_VE_show_unique_variant_counts' => !LOVD_light,
+                    'genes_VL_show_variant_counts' => !(LOVD_plus || LOVD_light),
+                    'graphs_enable' => !LOVD_light,
+                    'transcripts_VL_show_variant_counts' => !(LOVD_plus || LOVD_light),
+                    'variant_mapping_in_background' => !(LOVD_plus || LOVD_light),
+                    'variants_hide_observation_features' => LOVD_light,
+                    'variants_VL_per_chromosome_only' => (LOVD_plus || LOVD_light),
+                    'variants_VL_quick_dirty_sort' => (LOVD_plus || LOVD_light),
+                    'variants_VL_show_effect' => !LOVD_light,
                 ),
                 'gene_imprinting' =>
                      array(
@@ -201,8 +239,6 @@ $_SETT = array(
                     array(
                             0 => 'Not classified', // Submitter cannot select this.
                             9 => 'Affects function',
-                            8 => 'Affects function, not associated with individual\'s disease phenotype',
-                            6 => 'Affects function, not associated with any known disease phenotype',
                             7 => 'Probably affects function',
                             3 => 'Probably does not affect function',
                             1 => 'Does not affect function',
@@ -213,8 +249,6 @@ $_SETT = array(
                             // The API requires different, concise but clear, values.
                             0 => 'notClassified',
                             9 => 'functionAffected',
-                            8 => 'notThisDisease',
-                            6 => 'notAnyDisease',
                             7 => 'functionProbablyAffected',
                             3 => 'functionProbablyNotAffected',
                             1 => 'functionNotAffected',
@@ -226,9 +260,7 @@ $_SETT = array(
                         1 => '-',   // Does not affect function
                         3 => '-?',  // Probably does not affect function
                         5 => '?',   // Effect unknown
-                        6 => '#',   // Variant affects function but was not associated with any known disease phenotype
                         7 => '+?',  // Probably affects function
-                        8 => '+*',  // Variant affects function but was not associated with this individual's disease phenotype
                         9 => '+',   // Affects function
                     ),
                 'var_effect_default' => '00',
@@ -238,6 +270,7 @@ $_SETT = array(
                         'PI' => 'Autosomal dominant with paternal imprinting',
                         'MI' => 'Autosomal dominant with maternal imprinting',
                         'AR' => 'Autosomal recessive',
+                        'Di' => 'Digenic', // HPO 0010984, OMIM doesn't have this.
                         'DD' => 'Digenic dominant',
                         'DR' => 'Digenic recessive',
                         'IC' => 'Isolated Cases (Sporadic)',
@@ -266,6 +299,14 @@ $_SETT = array(
                         4 => 'Medium priority',
                         9 => 'High priority',
                     ),
+                'licenses' => array(
+                    'cc_by_4.0' => 'Creative Commons Attribution 4.0 International',
+                    'cc_by-nc_4.0' => 'Creative Commons Attribution-NonCommercial 4.0 International',
+                    'cc_by-nc-nd_4.0' => 'Creative Commons Attribution-NonCommercial-NoDerivatives 4.0 International',
+                    'cc_by-nc-sa_4.0' => 'Creative Commons Attribution-NonCommercial-ShareAlike 4.0 International',
+                    'cc_by-nd_4.0' => 'Creative Commons Attribution-NoDerivatives 4.0 International',
+                    'cc_by-sa_4.0' => 'Creative Commons Attribution-ShareAlike 4.0 International',
+                ),
                 'update_levels' =>
                      array(
                             1 => 'Optional',
@@ -275,7 +316,7 @@ $_SETT = array(
                             8 => '<SPAN style="color:red;">Important</SPAN>',
                             9 => '<SPAN style="color:red;"><B>Critical</B></SPAN>',
                           ),
-                'upstream_URL' => 'http://www.LOVD.nl/',
+                'upstream_URL' => 'https://www.LOVD.nl/',
                 'upstream_BTS_URL' => 'https://github.com/LOVDnl/LOVD3/issues/',
                 'upstream_BTS_URL_new_ticket' => 'https://github.com/LOVDnl/LOVD3/issues/new',
                 'list_sizes' =>
@@ -385,7 +426,7 @@ $_SETT = array(
                                                             '22' => 'NC_000022.10',
                                                             'X'  => 'NC_000023.10',
                                                             'Y'  => 'NC_000024.9',
-                                                            'M'  => 'NC_012920.1', // Note that hg19 uses NC_012920!
+                                                            'M'  => 'NC_012920.1', // GRCh37; Note that hg19 actually uses NC_001807.4!
                                                           ),
                                           ),
                             // http://www.ncbi.nlm.nih.gov/projects/genome/assembly/grc/human/data/
@@ -808,7 +849,7 @@ if (defined('MISSING_CONF') || defined('MISSING_STAT') || !preg_match('/^([1-9]\
 
 
 // Force GPC magic quoting OFF.
-if (get_magic_quotes_gpc()) {
+if (function_exists('get_magic_quotes_gpc') && @get_magic_quotes_gpc()) {
     lovd_magicUnquoteAll();
 }
 
@@ -860,16 +901,46 @@ if (!defined('NOT_INSTALLED')) {
         $_AUTH = false;
     }
 
+    // Also set cookies for session-independent settings.
+    $aCookieSettingsDefaults = array(
+        'default_license_dialog_last_seen' => 0,
+        'donation_dialog_last_seen' => 0,
+    );
+    if (!isset($_COOKIE['lovd_settings'])) {
+        // @ is to suppress errors in Travis test.
+        @setcookie('lovd_settings', json_encode($aCookieSettingsDefaults), strtotime('+1 year'), lovd_getInstallURL(false));
+        $_COOKIE['lovd_settings'] = $aCookieSettingsDefaults;
+    } else {
+        $aCookieSettings = @json_decode($_COOKIE['lovd_settings'], true);
+        if (!$aCookieSettings) {
+            $aCookieSettings = array();
+        }
+        $_COOKIE['lovd_settings'] = $aCookieSettings + $aCookieSettingsDefaults;
+    }
+
     // Define $_PE ($_PATH_ELEMENTS) and CURRENT_PATH.
     // FIXME: Running lovd_cleanDirName() on the entire URI causes it to run also on the arguments.
     //  If there are arguments with ../ in there, this will take effect and arguments or even the path itself is eaten.
-    $sPath = preg_replace('/^' . preg_quote(lovd_getInstallURL(false), '/') . '/', '', lovd_cleanDirName(rawurldecode($_SERVER['REQUEST_URI']))); // 'login' or 'genes?create' or 'users/00001?edit'
+    $sPath = preg_replace('/^' . preg_quote(lovd_getInstallURL(false), '/') . '/', '', lovd_cleanDirName(html_entity_decode(rawurldecode($_SERVER['REQUEST_URI']), ENT_HTML5))); // 'login' or 'genes?create' or 'users/00001?edit'
     $sPath = strip_tags($sPath); // XSS tag removal on entire string (and no longer on individual parts).
-    $aPath = explode('?', $sPath); // Cut off the Query string, that will be handled later.
-    $_PE = explode('/', rtrim($aPath[0], '/')); // array('login') or array('genes') or array('users', '00001')
+    $sPath = strstr($sPath . '?', '?', true); // Cut off the Query string, that will be handled later.
+    foreach (array("'", '"', '`', '+') as $sChar) {
+        // All these kind of quotes that we'll never have unless somebody is messing with us.
+        if (strpos($sPath, $sChar) !== false) {
+            // XSS attack. Filter everything out.
+            $sPath = strstr($sPath, $sChar, true);
+            // Also overwrite $_SERVER['REQUEST_URI'] as it's used more often (e.g., gene switcher) and we want it cleaned.
+            $_SERVER['REQUEST_URI'] = strstr($_SERVER['REQUEST_URI'], rawurlencode($sChar), true) .
+                (empty($_SERVER['QUERY_STRING'])? '' : '?' . $_SERVER['QUERY_STRING']);
+        }
+    }
+    $_PE = explode('/', rtrim($sPath, '/')); // array('login') or array('genes') or array('users', '00001')
 
     if (isset($_SETT['objectid_length'][$_PE[0]]) && isset($_PE[1]) && ctype_digit($_PE[1])) {
         $_PE[1] = sprintf('%0' . $_SETT['objectid_length'][$_PE[0]] . 'd', $_PE[1]);
+    } elseif (isset($_PE[2]) && $_PE[0] == 'phenotypes' && $_PE[1] == 'disease') {
+        // Disease-specific list of phenotypes; /phenotypes/disease/00001.
+        $_PE[2] = sprintf('%0' . $_SETT['objectid_length'][$_PE[1] . 's'] . 'd', $_PE[2]);
     }
     define('CURRENT_PATH', implode('/', $_PE));
     define('PATH_COUNT', count($_PE)); // So you don't need !empty($_PE[1]) && ...
@@ -887,6 +958,7 @@ if (!defined('NOT_INSTALLED')) {
     // Define constant for request method.
     define($_SERVER['REQUEST_METHOD'], true);
     @define('GET', false);
+    @define('HEAD', false);
     @define('POST', false);
     @define('PUT', false);
     @define('DELETE', false);
@@ -902,8 +974,12 @@ if (!defined('NOT_INSTALLED')) {
 
         // Load DB admin data; needed by sending messages.
         if ($_AUTH && $_AUTH['level'] == LEVEL_ADMIN) {
-            // Saves me quering the database!
-            $_SETT['admin'] = array('name' => $_AUTH['name'], 'email' => $_AUTH['email']);
+            // Saves me querying the database!
+            $_SETT['admin'] = array(
+                'name' => $_AUTH['name'],
+                'email' => $_AUTH['email'],
+                'address_formatted' => $_AUTH['name'] . ' <' . str_replace(array("\r\n", "\r", "\n"), '>, <', trim($_AUTH['email'])) . '>',
+            );
         } else {
             $_SETT['admin'] = array('name' => '', 'email' => ''); // We must define the keys first, or the order of the keys will not be correct.
             list($_SETT['admin']['name'], $_SETT['admin']['email']) = $_DB->query('SELECT name, email FROM ' . TABLE_USERS . ' WHERE level = ? AND id > 0 ORDER BY id ASC', array(LEVEL_ADMIN))->fetchRow();

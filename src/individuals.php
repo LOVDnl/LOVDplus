@@ -4,10 +4,10 @@
  * LEIDEN OPEN VARIATION DATABASE (LOVD)
  *
  * Created     : 2011-02-16
- * Modified    : 2020-02-10
- * For LOVD    : 3.0-23
+ * Modified    : 2022-06-03
+ * For LOVD    : 3.0-28
  *
- * Copyright   : 2004-2020 Leiden University Medical Center; http://www.LUMC.nl/
+ * Copyright   : 2004-2022 Leiden University Medical Center; http://www.LUMC.nl/
  * Programmers : Ivar C. Lugtenburg <I.C.Lugtenburg@LUMC.nl>
  *               Ivo F.A.C. Fokkema <I.F.A.C.Fokkema@LUMC.nl>
  *               Daan Asscheman <D.Asscheman@LUMC.nl>
@@ -63,7 +63,7 @@ if (LOVD_plus && PATH_COUNT == 1 && !ACTION && !isset($_GET['search_analysis_sta
 
 
 if (PATH_COUNT == 1 && !ACTION) {
-    // URL: /individuals
+    // URL: /individuals
     // View all entries.
 
     // Managers are allowed to download this list...
@@ -96,8 +96,8 @@ if (PATH_COUNT == 1 && !ACTION) {
 
 
 if (PATH_COUNT >= 2 && ctype_digit($_PE[1]) && !ACTION && (PATH_COUNT == 2 || PATH_COUNT == 4 && $_PE[2] == 'analyze' && ctype_digit($_PE[3]))) {
-    // URL: /individuals/00000001
-    // URL: /individuals/00000001/analyze/0000000001
+    // URL: /individuals/00000001
+    // URL: /individuals/00000001/analyze/0000000001
     // View specific entry.
 
     $nID = sprintf('%08d', $_PE[1]);
@@ -482,7 +482,7 @@ if (PATH_COUNT >= 2 && ctype_digit($_PE[1]) && !ACTION && (PATH_COUNT == 2 || PA
 
       <DIV id="analysis_results_VL"' . ($aScreeningVariantIDs? '' : ' style="display: none;"') . '>' . "\n");
         // The default behaviour is to show a viewlist with any variants that have a curation status.
-        $_GET['search_variantid'] = (!$aScreeningVariantIDs? '0' : implode($aScreeningVariantIDs, '|')); // Use all the variant IDs for variants with a curation status.
+        $_GET['search_variantid'] = (!$aScreeningVariantIDs? '0' : implode('|', $aScreeningVariantIDs)); // Use all the variant IDs for variants with a curation status.
         $_GET['search_vog_effect'] = ''; // Needs search term on visible column to show the VL framework, though (saying "No results have been found that match your criteria").
         $_GET['search_runid'] = ''; // To create the input field, that the JS code is referring to, so we can switch to viewing analysis results.
         $_GET['order'] = 'vog_effect,DESC'; // To sort on the effect field first, showing pathogenic variants first.
@@ -575,8 +575,8 @@ if (PATH_COUNT >= 2 && ctype_digit($_PE[1]) && !ACTION && (PATH_COUNT == 2 || PA
 
 
 if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && in_array(ACTION, array('curate', 'edit_remarks'))) {
-    // URL: /individuals/00000001?curate
-    // URL: /individuals/00000001?edit_remarks
+    // URL: /individuals/00000001?curate
+    // URL: /individuals/00000001?edit_remarks
     // Edit the curation data for an entry, hide all other fields.
 
     $nID = sprintf('%08d', $_PE[1]);
@@ -740,7 +740,7 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && ACTION == 'curation_log') {
 
 
 if (PATH_COUNT == 4 && ctype_digit($_PE[1]) && $_PE[2] == 'analyze' && ctype_digit($_PE[3]) && ACTION == 'close') {
-    // URL: /individuals/00000001/analyze/0000000001?close
+    // URL: /individuals/00000001/analyze/0000000001?close
     // Close a specific analysis.
 
     $nIndividualID = sprintf('%08d', $_PE[1]);
@@ -835,7 +835,7 @@ if (PATH_COUNT == 4 && ctype_digit($_PE[1]) && $_PE[2] == 'analyze' && ctype_dig
 
 
 if (PATH_COUNT == 4 && ctype_digit($_PE[1]) && $_PE[2] == 'analyze' && ctype_digit($_PE[3]) && ACTION == 'open') {
-    // URL: /individuals/00000001/analyze/0000000001?open
+    // URL: /individuals/00000001/analyze/0000000001?open
     // Open a specific analysis.
 
     $nIndividualID = sprintf('%08d', $_PE[1]);
@@ -950,12 +950,12 @@ if (PATH_COUNT == 4 && ctype_digit($_PE[1]) && $_PE[2] == 'analyze' && ctype_dig
 
 
 if ((PATH_COUNT == 1 || (!empty($_PE[1]) && !ctype_digit($_PE[1]))) && !ACTION) {
-    // URL: /individuals
-    // URL: /individuals/DMD
+    // URL: /individuals
+    // URL: /individuals/DMD
     // View all entries.
 
     if (!empty($_PE[1])) {
-        $sGene = $_DB->query('SELECT id FROM ' . TABLE_GENES . ' WHERE id = ?', array(rawurldecode($_PE[1])))->fetchColumn();
+        $sGene = $_DB->query('SELECT id FROM ' . TABLE_GENES . ' WHERE id = ?', array($_PE[1]))->fetchColumn();
         if ($sGene) {
             lovd_isAuthorized('gene', $sGene); // To show non public entries.
             $_GET['search_genes_searched'] = '="' . $sGene . '"';
@@ -969,11 +969,11 @@ if ((PATH_COUNT == 1 || (!empty($_PE[1]) && !ctype_digit($_PE[1]))) && !ACTION) 
     }
 
     // Managers and authorized curators are allowed to download this list...
-    if ($_AUTH['level'] >= LEVEL_CURATOR) {
+    if ($_AUTH && $_AUTH['level'] >= LEVEL_CURATOR) {
         define('FORMAT_ALLOW_TEXTPLAIN', true);
     }
 
-    define('PAGE_TITLE', 'All individuals' . (isset($sGene)? ' with variants in gene ' . $sGene : ''));
+    define('PAGE_TITLE', lovd_getCurrentPageTitle());
     $_T->printHeader();
     $_T->printTitle();
 
@@ -987,8 +987,10 @@ if ((PATH_COUNT == 1 || (!empty($_PE[1]) && !ctype_digit($_PE[1]))) && !ACTION) 
     $_DATA = new LOVD_Individual();
     $aVLOptions = array(
         'cols_to_skip' => $aColsToHide,
-        'show_options' => ($_AUTH['level'] >= LEVEL_CURATOR),
+        'show_options' => ($_AUTH && $_AUTH['level'] >= LEVEL_CURATOR),
         'find_and_replace' => true,
+        'curate_set' => true,
+        'merge_set' => true,
     );
     $_DATA->viewList('Individuals', $aVLOptions);
 
@@ -1001,32 +1003,67 @@ if ((PATH_COUNT == 1 || (!empty($_PE[1]) && !ctype_digit($_PE[1]))) && !ACTION) 
 
 
 if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && !ACTION) {
-    // URL: /individuals/00000001
+    // URL: /individuals/00000001
     // View specific entry.
 
-    $nID = sprintf('%08d', $_PE[1]);
-    define('PAGE_TITLE', 'Individual #' . $nID);
+    $nID = lovd_getCurrentID();
+    define('PAGE_TITLE', lovd_getCurrentPageTitle());
+
+    // Before we start the template here, do a quick check if this entry exists.
+    // This is non-standard, we normally rely on viewEntry() to sort that out.
+    // But this individual may have been merged, after sending the submission
+    //  confirmation email. Check the logs if that is the case, and forward.
+    if (!$_DB->query('SELECT COUNT(*) FROM ' . TABLE_INDIVIDUALS . ' WHERE id = ?',
+            array($nID))->fetchColumn()) {
+        // Entry doesn't exist. Can we find a merge log entry?
+        $nNewID = $_DB->query('
+            SELECT RIGHT(log, ' . $_SETT['objectid_length'][$_PE[0]] . ')
+            FROM ' . TABLE_LOGS . '
+            WHERE name = ? AND event = ? AND log LIKE ?',
+                array('Event', 'MergeEntries', 'Merged individual entry #' . $nID . ' into %'))->fetchColumn();
+        if ($nNewID) {
+            // HTTP 301 Moved Permanently.
+            header('Location: ' . lovd_getInstallURL() . $_PE[0] . '/' . $nNewID . '?&redirected_after_merge', true, 301);
+            exit;
+        }
+    }
+
     $_T->printHeader();
     $_T->printTitle();
+
+    if (isset($_GET['redirected_after_merge'])) {
+        // We got redirected after using an ID that got merged into this entry.
+        lovd_showInfoTable(
+            'Please note that you got redirected after using an Individual ID that no longer exists,' .
+            ' because that entry got merged into this entry.', 'warning');
+    }
 
     // Load appropriate user level for this individual.
     lovd_isAuthorized('individual', $nID);
 
     require ROOT_PATH . 'class/object_individuals.php';
     $_DATA = new LOVD_Individual($nID);
+
+    // Added the DIV to allow us reloading the VE using JS.
+    print('      <DIV id="viewentryDiv">' . "\n");
     $zData = $_DATA->viewEntry($nID);
+    print('      </DIV>' . "\n\n");
 
     $aNavigation = array();
     if ($_AUTH && $_AUTH['level'] >= LEVEL_OWNER) {
         $aNavigation[CURRENT_PATH . '?edit']                     = array('menu_edit.png', 'Edit individual entry', 1);
-        if ($zData['statusid'] < STATUS_OK && $_AUTH['level'] >= LEVEL_CURATOR) {
-            $aNavigation[CURRENT_PATH . '?publish']              = array('check.png', ($zData['statusid'] == STATUS_MARKED? 'Remove mark from' : 'Publish (curate)') . ' individual entry', 1);
+        if ($_AUTH['level'] >= LEVEL_CURATOR) {
+            if ($zData['statusid'] < STATUS_OK) {
+                $aNavigation[CURRENT_PATH . '?publish']          = array('check.png', ($zData['statusid'] == STATUS_MARKED? 'Remove mark from' : 'Publish (curate)') . ' individual entry', 1);
+            }
+            $aNavigation['javascript:$.get(\'ajax/curate_set.php?bySubmission&id=' . $nID . '\').fail(function(){alert(\'Request failed. Please try again.\');});'] = array('check.png', 'Publish (curate) entire submission', 1);
         }
         // You can only add phenotype information to this individual, when there are phenotype columns enabled.
         if ($_DB->query('SELECT COUNT(*) FROM ' . TABLE_IND2DIS . ' AS i2d INNER JOIN ' . TABLE_SHARED_COLS . ' AS sc USING(diseaseid) WHERE i2d.individualid = ?', array($nID))->fetchColumn()) {
             $aNavigation['phenotypes?create&amp;target=' . $nID] = array('menu_plus.png', 'Add phenotype information to individual', 1);
         }
         $aNavigation['screenings?create&amp;target=' . $nID]     = array('menu_plus.png', 'Add screening to individual', 1);
+        $aNavigation['download/all/submission/' . $nID]          = array('menu_save.png', 'Download submission in LOVD3 format', 1);
         if ($_AUTH['level'] >= $_SETT['user_level_settings']['delete_individual']) {
             $aNavigation[CURRENT_PATH . '?delete']               = array('cross.png', 'Delete individual entry', 1);
         }
@@ -1040,7 +1077,8 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && !ACTION) {
         // List of phenotype entries associated with this person, per disease.
         $_GET['search_individualid'] = $nID;
         $_T->printTitle('Phenotypes', 'H4');
-        // Repeat searching for diseases, since this individual might have phenotype entry for a disease he doesn't have.
+        // Repeat searching for diseases, since this individual might have a
+        //  phenotype entry for a disease they don't have.
         $zData['diseases'] = $_DB->query('SELECT id, symbol, name FROM ' . TABLE_DISEASES . ' WHERE id IN (?' . str_repeat(', ?', count($zData['phenotypes'])-1) . ')', $zData['phenotypes'])->fetchAllRow();
         require ROOT_PATH . 'class/object_phenotypes.php';
         foreach($zData['diseases'] as $aDisease) {
@@ -1074,7 +1112,8 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && !ACTION) {
             'cols_to_skip' => array('screeningid', 'individualid', 'created_date', 'edited_date'),
             'track_history' => false,
             'show_navigation' => false,
-            'show_options' => ($_AUTH['level'] >= LEVEL_CURATOR),
+            'show_options' => ($_AUTH && $_AUTH['level'] >= LEVEL_CURATOR),
+            'merge_set' => true,
         );
         // This ViewList ID is checked in ajax/viewlist.php. Don't just change it.
         $_DATA->viewList('Screenings_for_I_VE', $aScreeningVLOptions);
@@ -1088,7 +1127,7 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && !ACTION) {
         // VOG needs to be first, so it groups by the VOG ID.
         $_DATA = new LOVD_CustomViewList(array('VariantOnGenome', 'Scr2Var', 'VariantOnTranscript'));
         $aVariantVLOptions = array(
-            'show_options' => ($_AUTH['level'] >= LEVEL_CURATOR),
+            'show_options' => ($_AUTH && $_AUTH['level'] >= LEVEL_CURATOR),
         );
         $_DATA->viewList('CustomVL_VOT_for_I_VE', $aVariantVLOptions);
     }
@@ -1102,13 +1141,15 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && !ACTION) {
 
 
 if (PATH_COUNT == 1 && ACTION == 'create') {
-    // URL: /individuals?create
+    // URL: /individuals?create
     // Create a new entry.
 
-    define('PAGE_TITLE', 'Create a new individual information entry');
+    define('PAGE_TITLE', lovd_getCurrentPageTitle());
     define('LOG_EVENT', 'IndividualCreate');
 
-    lovd_isAuthorized('gene', $_AUTH['curates']);
+    if ($_AUTH) {
+        lovd_isAuthorized('gene', $_AUTH['curates']);
+    }
     lovd_requireAUTH($_SETT['user_level_settings']['submit_new_data']);
 
     require ROOT_PATH . 'class/object_individuals.php';
@@ -1216,12 +1257,12 @@ if (PATH_COUNT == 1 && ACTION == 'create') {
 
 
 if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && in_array(ACTION, array('edit', 'publish'))) {
-    // URL: /individuals/00000001?edit
-    // URL: /individuals/00000001?publish
+    // URL: /individuals/00000001?edit
+    // URL: /individuals/00000001?publish
     // Edit an entry.
 
-    $nID = sprintf('%08d', $_PE[1]);
-    define('PAGE_TITLE', 'Edit individual #' . $nID);
+    $nID = lovd_getCurrentID();
+    define('PAGE_TITLE', lovd_getCurrentPageTitle());
     define('LOG_EVENT', 'IndividualEdit');
 
     // Load appropriate user level for this individual.
@@ -1242,12 +1283,6 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && in_array(ACTION, array('edit', 'p
     // If we're publishing... pretend the form has been sent with a different status.
     if (GET && ACTION == 'publish') {
         $_POST = $zData;
-        if ($zData['active_diseases_']) {
-            $_POST['active_diseases'] = explode(';', $zData['active_diseases_']);
-        } else {
-            // An array with an empty string as a value doesn't get past the checkFields() since '' is not a valid option.
-            $_POST['active_diseases'] = array();
-        }
         $_POST['statusid'] = STATUS_OK;
     }
 
@@ -1284,7 +1319,7 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && in_array(ACTION, array('edit', 'p
             $_DATA->updateEntry($nID, $_POST, $aFields);
 
             // Get genes which are modified only when individual and variant status is marked or public.
-            if ($zData['statusid'] >= STATUS_MARKED || $_POST['statusid'] >= STATUS_MARKED) {
+            if ($zData['statusid'] >= STATUS_MARKED || (isset($_POST['statusid']) && $_POST['statusid'] >= STATUS_MARKED)) {
                 $aGenes = $_DB->query('SELECT DISTINCT t.geneid FROM ' . TABLE_TRANSCRIPTS . ' AS t ' .
                                       'INNER JOIN ' . TABLE_VARIANTS_ON_TRANSCRIPTS . ' AS vot ON (vot.transcriptid = t.id) ' .
                                       'INNER JOIN ' . TABLE_VARIANTS . ' AS vog ON (vog.id = vot.id) ' .
@@ -1301,14 +1336,9 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && in_array(ACTION, array('edit', 'p
             lovd_writeLog('Event', LOG_EVENT, 'Edited individual information entry ' . $nID);
 
             // Change linked diseases?
-            // Diseases the gene is currently linked to.
-            // FIXME; we moeten afspraken op papier zetten over de naamgeving van velden, ik zou hier namelijk geen _ achter plaatsen.
-            //   Een idee zou namelijk zijn om loadEntry()/viewEntry() automatisch velden te laten exploden afhankelijk van hun naam. Is dat wat?
-            $aDiseases = explode(';', $zData['active_diseases_']);
-
             // Remove diseases.
             $aToRemove = array();
-            foreach ($aDiseases as $nDisease) {
+            foreach ($zData['active_diseases'] as $nDisease) {
                 if ($nDisease && !in_array($nDisease, $_POST['active_diseases'])) {
                     // User has requested removal...
                     $aToRemove[] = $nDisease;
@@ -1328,7 +1358,7 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && in_array(ACTION, array('edit', 'p
             $aSuccess = array();
             $aFailed = array();
             foreach ($_POST['active_diseases'] as $nDisease) {
-                if (!in_array($nDisease, $aDiseases)) {
+                if (!in_array($nDisease, $zData['active_diseases'])) {
                     // Add disease to gene.
                     $q = $_DB->query('INSERT IGNORE INTO ' . TABLE_IND2DIS . ' VALUES (?, ?)', array($nID, $nDisease), false);
                     if (!$q) {
@@ -1372,8 +1402,6 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && in_array(ACTION, array('edit', 'p
     } else {
         // Load current values.
         $_POST = array_merge($_POST, $zData);
-        // Load connected diseases.
-        $_POST['active_diseases'] = explode(';', $_POST['active_diseases_']);
         if ($zData['statusid'] < STATUS_HIDDEN) {
             $_POST['statusid'] = STATUS_OK;
         }
@@ -1383,6 +1411,11 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && in_array(ACTION, array('edit', 'p
 
     $_T->printHeader();
     $_T->printTitle();
+
+    // If we're not the creator nor the owner, warn.
+    if ($_POST['created_by'] != $_AUTH['id'] && $_POST['owned_by'] != $_AUTH['id']) {
+        lovd_showInfoTable('Warning: You are editing data not created or owned by you. You are free to correct errors such as data inserted into the wrong field or typographical errors, but make sure that all other edits are made in consultation with the submitter. If you disagree with the submitter\'s findings, add a remark rather than removing or overwriting data.', 'warning', 760);
+    }
 
     if (GET) {
         print('      To edit an individual information entry, please fill out the form below.<BR>' . "\n" .
@@ -1417,7 +1450,7 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && in_array(ACTION, array('edit', 'p
 
 
 if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && ACTION == 'edit_panels') {
-    // URL: /individuals/00000001?edit_panels
+    // URL: /individuals/00000001?edit_panels
     // Edit an individuals gene panels.
 
     $nID = sprintf('%08d', $_PE[1]);
@@ -1684,11 +1717,11 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && ACTION == 'edit_panels') {
 
 
 if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && ACTION == 'delete') {
-    // URL: /individuals/00000001?delete
+    // URL: /individuals/00000001?delete
     // Drop specific entry.
 
-    $nID = sprintf('%08d', $_PE[1]);
-    define('PAGE_TITLE', 'Delete individual information entry ' . $nID);
+    $nID = lovd_getCurrentID();
+    define('PAGE_TITLE', lovd_getCurrentPageTitle());
     define('LOG_EVENT', 'IndividualDelete');
 
     // FIXME: What if individual also contains other user's data?
@@ -1700,6 +1733,17 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && ACTION == 'delete') {
     $zData = $_DATA->loadEntry($nID);
     require ROOT_PATH . 'inc-lib-form.php';
 
+    $aVariantsRemovable = $_DB->query('
+        SELECT s2v.variantid, MAX(s2.individualid)
+        FROM lovd_v3_screenings AS s
+          INNER JOIN lovd_v3_screenings2variants AS s2v ON (s.id = s2v.screeningid)
+          LEFT OUTER JOIN lovd_v3_screenings2variants AS s2v2 ON (s2v.variantid = s2v2.variantid AND s2v.screeningid != s2v2.screeningid)
+          LEFT OUTER JOIN lovd_v3_screenings AS s2 ON (s2v2.screeningid = s2.id AND s2.individualid != ?)
+        WHERE s.individualid = ?
+        GROUP BY s2v.variantid
+        HAVING MAX(s2.individualid) IS NULL', array($nID, $nID))->fetchAllColumn();
+    $nVariantsRemovable = count($aVariantsRemovable);
+
     if (!empty($_POST)) {
         lovd_errorClean();
 
@@ -1708,37 +1752,35 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && ACTION == 'delete') {
             lovd_errorAdd('password', 'Please fill in the \'Enter your password for authorization\' field.');
         }
 
-        // User had to enter his/her password for authorization.
+        // User had to enter their password for authorization.
         if ($_POST['password'] && !lovd_verifyPassword($_POST['password'], $_AUTH['password'])) {
             lovd_errorAdd('password', 'Please enter your correct password for authorization.');
         }
 
         if (!lovd_error()) {
-            // FIXME: All of this doesn't look right. We should first check which genes are linked to the *public variants*, if we're deleting them OR if this Ind is public.
-            //  Only then can you delete the variants when requested. Now it's the other way around, and the selection isn't done right.
             // Query text.
-            // This also deletes the entries in TABLE_PHENOTYPES && TABLE_SCREENINGS && TABLE_SCR2VAR && TABLE_SCR2GENES.
             $_DB->beginTransaction();
-            if (isset($_POST['remove_variants']) && $_POST['remove_variants'] == 'remove') {
-                $aOutput = $_DB->query('SELECT id FROM ' . TABLE_SCREENINGS . ' WHERE individualid = ?', array($nID))->fetchAllColumn();
-                if (count($aOutput)) {
-                    $_DB->query('DELETE vog FROM ' . TABLE_VARIANTS . ' AS vog INNER JOIN ' . TABLE_SCR2VAR . ' AS s2v ON (vog.id = s2v.variantid) WHERE s2v.screeningid IN (?' . str_repeat(', ?', count($aOutput) - 1) . ')', $aOutput);
-                }
-            }
 
+            // Search for effected genes before the deletion, else we can't find the link.
             // Get genes which are modified only when individual and variant status is marked or public.
-            if ($_POST['statusid'] >= STATUS_MARKED) {
+            if ($zData['statusid'] >= STATUS_MARKED) {
                 $aGenes = $_DB->query('SELECT DISTINCT t.geneid FROM ' . TABLE_TRANSCRIPTS . ' AS t ' .
-                                      'INNER JOIN ' . TABLE_VARIANTS_ON_TRANSCRIPTS . ' AS vot ON (vot.transcriptid = t.id) ' .
-                                      'INNER JOIN ' . TABLE_VARIANTS . ' AS vog ON (vog.id = vot.id) ' .
-                                      'INNER JOIN ' . TABLE_SCR2VAR . ' AS s2v ON (s2v.variantid = vog.id) ' .
-                                      'INNER JOIN ' . TABLE_SCREENINGS . ' AS s ON (s.id = s2v.screeningid) ' .
-                                      'WHERE vog.statusid >= ? AND s.individualid = ?', array(STATUS_MARKED, $nID))->fetchAllColumn();
+                    'INNER JOIN ' . TABLE_VARIANTS_ON_TRANSCRIPTS . ' AS vot ON (vot.transcriptid = t.id) ' .
+                    'INNER JOIN ' . TABLE_VARIANTS . ' AS vog ON (vog.id = vot.id) ' .
+                    'INNER JOIN ' . TABLE_SCR2VAR . ' AS s2v ON (s2v.variantid = vog.id) ' .
+                    'INNER JOIN ' . TABLE_SCREENINGS . ' AS s ON (s.id = s2v.screeningid) ' .
+                    'WHERE vog.statusid >= ? AND s.individualid = ?', array(STATUS_MARKED, $nID))->fetchAllColumn();
             }
 
+            if (isset($_POST['remove_variants']) && $_POST['remove_variants'] == 'remove') {
+                // This also deletes the entries in TABLE_SCR2VAR.
+                $_DB->query('DELETE FROM ' . TABLE_VARIANTS . ' WHERE id IN (?' . str_repeat(', ?', count($aVariantsRemovable) - 1) . ')', $aVariantsRemovable);
+            }
+
+            // This also deletes the entries in TABLE_PHENOTYPES && TABLE_SCREENINGS && TABLE_SCR2VAR && TABLE_SCR2GENE.
             $_DATA->deleteEntry($nID);
 
-            if ($_POST['statusid'] >= STATUS_MARKED && $aGenes) {
+            if ($zData['statusid'] >= STATUS_MARKED && $aGenes) {
                 // Change updated date for genes.
                 lovd_setUpdatedDate($aGenes);
             }
@@ -1775,22 +1817,26 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && ACTION == 'delete') {
     print('      <FORM action="' . CURRENT_PATH . '?' . ACTION . '" method="post">' . "\n");
 
     $nVariants = $_DB->query('SELECT COUNT(DISTINCT s2v.variantid) FROM ' . TABLE_SCREENINGS . ' AS s LEFT OUTER JOIN ' . TABLE_SCR2VAR . ' AS s2v ON (s.id = s2v.screeningid) WHERE s.individualid = ? GROUP BY s.individualid', array($nID))->fetchColumn();
-    $aOptions = array('remove' => 'Also remove all variants attached to this individual', 'keep' => 'Keep all attached variants as separate entries');
+    $aOptions = array('remove' => 'Yes, remove ' . ($nVariantsRemovable == 1? 'this variant' : 'these variants') . ' attached to only this individual', 'keep' => 'No, keep ' . ($nVariantsRemovable == 1? 'this variant' : 'these variants') . ' as separate entries');
 
     // Array which will make up the form table.
     $aForm = array_merge(
                  array(
-                        array('POST', '', '', '', '45%', '14', '55%'),
-                        array('Deleting individual information entry', '', 'print', '<B>' . $nID . ' (Owner: ' . $zData['owned_by_'] . ')</B>'),
+                        array('POST', '', '', '', '40%', '14', '60%'),
+                        array('Deleting individual information entry', '', 'print', '<B>' . $nID . ' (Owner: ' . htmlspecialchars($zData['owned_by_']) . ')</B>'),
                         'skip',
-                        array('', '', 'print', 'This individual entry has ' . ($nVariants? $nVariants : 0) . ' variant' . ($nVariants == 1? '' : 's') . ' attached.'),
-          'variants' => array('What should LOVD do with the attached variants?', '', 'select', 'remove_variants', 1, $aOptions, false, false, false),
+                        array('', '', 'print', 'This individual entry has ' . ($nVariants?: 0) . ' variant' . ($nVariants == 1? '' : 's') . ' attached.'),
+'variants_removable' => array('', '', 'print', (!$nVariantsRemovable? 'No variants will be removed.' : '<B>' . $nVariantsRemovable . ' variant' . ($nVariantsRemovable == 1? '' : 's') . ' will be removed, because ' . ($nVariantsRemovable == 1? 'it is' : 'these are'). ' not attached to other individuals!!!</B>')),
+          'variants' => array('Should LOVD remove ' . ($nVariantsRemovable == 1? 'this variant' : 'these ' . $nVariantsRemovable . ' variants') . '?', '', 'select', 'remove_variants', 1, $aOptions, false, false, false),
                         array('', '', 'note', '<B>All phenotypes and screenings attached to this individual will be automatically removed' . ($nVariants? ' regardless' : '') . '!!!</B>'),
      'variants_skip' => 'skip',
                         array('Enter your password for authorization', '', 'password', 'password', 20),
                         array('', '', 'submit', 'Delete individual information entry'),
                       ));
-    if (!$nVariants) {
+    if (!$nVariantsRemovable) {
+        if (!$nVariants) {
+            unset($aForm['variants_removable']);
+        }
         unset($aForm['variants'], $aForm['variants_skip']);
     }
 

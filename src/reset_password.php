@@ -4,10 +4,10 @@
  * LEIDEN OPEN VARIATION DATABASE (LOVD)
  *
  * Created     : 2011-05-20
- * Modified    : 2018-01-19
- * For LOVD    : 3.0-21
+ * Modified    : 2022-06-21
+ * For LOVD    : 3.0-28
  *
- * Copyright   : 2004-2018 Leiden University Medical Center; http://www.LUMC.nl/
+ * Copyright   : 2004-2022 Leiden University Medical Center; http://www.LUMC.nl/
  * Programmers : Ivar C. Lugtenburg <I.C.Lugtenburg@LUMC.nl>
  *               Ivo F.A.C. Fokkema <I.F.A.C.Fokkema@LUMC.nl>
  *               M. Kroon <m.kroon@lumc.nl>
@@ -52,19 +52,39 @@ if (!$_AUTH && $_CONF['allow_unlock_accounts']) {
     if (POST && !empty($_POST['username'])) {
         lovd_errorClean();
 
+        // Sleep a second to prevent this script from being run
+        //  too many times in sequence. Run it here so people can't see the
+        //  difference between a successful attempt or a failure.
+        sleep(1);
+
         // Find account.
-        $zData = $_DB->query('SELECT * FROM ' . TABLE_USERS . ' WHERE username = ?', array($_POST['username']))->fetchAssoc();
-        if (!$zData) {
-            // If username does not exist, we don't want to let the user know. So this message in entire incorrect.
+        $zData = array($_DB->query('SELECT * FROM ' . TABLE_USERS . ' WHERE username = ?',
+            array($_POST['username']))->fetchAssoc());
+        if ($zData == array(false)) {
+            $zData = $_DB->query('SELECT * FROM ' . TABLE_USERS . ' WHERE email = ?',
+                array($_POST['username']))->fetchAllAssoc();
+            if (!$zData) {
+                $zData = $_DB->query('SELECT * FROM ' . TABLE_USERS . ' WHERE email REGEXP ?',
+                    array("(^|\r\n)" . $_POST['username'] . "(\r\n|$)"))->fetchAllAssoc();
+            }
+        }
+        if (!$zData || $zData == array(false)) {
+            // If username does not exist, we don't want to let the user know. So this message is entirely incorrect.
             $_T->printHeader();
             $_T->printTitle();
             lovd_writeLog('Auth', LOG_EVENT, $_SERVER['REMOTE_ADDR'] . ' (' . lovd_php_gethostbyaddr($_SERVER['REMOTE_ADDR']) . ') tried to reset password for non-existent account ' . $_POST['username']);
-            print('      If you entered the username correctly, we have successfully reset your password.<BR>' . "\n" .
-                  '      We\'ve sent you an email containing your new password. With this new password, you can <A href="' . ROOT_PATH . 'login">unlock your account</A> and choose a new password.<BR><BR>' . "\n" .
-                  '      If you don\'t receive this email, it is possible that the username you entered is not correct. Please double-check it.<BR><BR>' . "\n\n");
+            print('      If you entered the username or email address correctly, we have successfully reset your password and we have sent you an email containing your new password.' . "\n" .
+                  '      With this new password, you can <A href="' . ROOT_PATH . 'login">unlock your account</A> and choose a new password.<BR><BR>' . "\n" .
+                  '      If you don\'t receive this email, it is possible that the username or email address that you entered was not correct. In that case, please double-check it. Another possibility is that you registered at a different LOVD installation. Accounts are not shared between different LOVD installations, so please double-check where you are registered.<BR><BR>' . "\n\n");
             $_T->printFooter();
             exit;
+
+        } elseif (count($zData) > 1) {
+            // If email address given links to multiple account, we don't want to unlock them all.
+            lovd_writeLog('Auth', LOG_EVENT, $_SERVER['REMOTE_ADDR'] . ' (' . lovd_php_gethostbyaddr($_SERVER['REMOTE_ADDR']) . ') tried to reset password with email address matching multiple accounts: ' . $_POST['username']);
+            lovd_errorAdd('username', 'This email address links to multiple accounts. Please provide the username of the account you wish to reset.');
         }
+        $zData = $zData[0];
 
         if (!lovd_error()) {
             // Found account... unlock and generate new passwd.
@@ -79,29 +99,29 @@ if (!$_AUTH && $_CONF['allow_unlock_accounts']) {
             $nLength = strlen($sFormat);
             $sPasswd = '';
             for ($i = 0; $i < $nLength; $i ++) {
-                $sType = $sFormat{$i};
-                $sPasswd .= $aChars[$sType]{mt_rand(0, strlen($aChars[$sType]) - 1)};
+                $sType = $sFormat[$i];
+                $sPasswd .= $aChars[$sType][mt_rand(0, strlen($aChars[$sType]) - 1)];
             }
 
             // Update database.
-            $_DB->query('UPDATE ' . TABLE_USERS . ' SET password_autogen = MD5(?) WHERE username = ?', array($sPasswd, $_POST['username']));
+            $_DB->query('UPDATE ' . TABLE_USERS . ' SET password_autogen = MD5(?) WHERE username = ?', array($sPasswd, $zData['username']));
 
-            lovd_writeLog('Auth', LOG_EVENT, $_SERVER['REMOTE_ADDR'] . ' (' . lovd_php_gethostbyaddr($_SERVER['REMOTE_ADDR']) . ') successfully reset password for account ' . $_POST['username']);
+            lovd_writeLog('Auth', LOG_EVENT, $_SERVER['REMOTE_ADDR'] . ' (' . lovd_php_gethostbyaddr($_SERVER['REMOTE_ADDR']) . ') successfully reset password for account ' .
+                $_POST['username'] . ($_POST['username'] == $zData['username']? '' : ' (' . $zData['username'] . ')'));
 
             // Send email confirmation.
-
-            // For submitters, we need to take the FIRST email address only.
-            if (isset($zData['submitterid'])) {
-                $aEmail = explode("\r\n", trim($zData['email']));
-                $zData['email'] = $aEmail[0];
-            }
-
             $aTo = array(array($zData['name'], $zData['email']));
 
             $sMessage = 'Dear ' . $zData['name'] . ',' . "\n\n" .
-                        'Your password from your LOVD account has been reset, as requested. Your new, randomly generated, password can be found below. Please log in to LOVD and choose a new password.' . "\n\n" .
-                        'Below is a copy of your updated account information.' . "\n\n" .
-                        'If you did not request a new password, you can disregard this message. Your old password will continue to function normally. However, you may then want to report this email to the Database administrator ' . $_SETT['admin']['name'] . ', email: ' . str_replace(array("\r\n", "\r", "\n"), ' or ', trim($_SETT['admin']['email'])) . ', who can investigate possible misuse of the system.' . "\n\n";
+                        'Your password from your LOVD account has been reset, as requested. ' .
+                        'Your username and your new, randomly generated, password can be found below. ' .
+                        'Please log in to LOVD and choose a new password.' . "\n\n" .
+                        'If you did not request a new password, you can disregard this message. ' .
+                        'Your old password will continue to function normally. ' .
+                        'However, you may then want to report this email to the Database administrator ' .
+                            $_SETT['admin']['name'] . ', email: ' . str_replace(array("\r\n", "\r", "\n"),
+                                ' or ', trim($_SETT['admin']['email'])) .
+                            ', who can investigate possible misuse of the system.' . "\n\n";
 
             // Add the location of the database, so that the user can just click the link.
             if ($_CONF['location_url']) {
@@ -112,9 +132,10 @@ if (!$_AUTH && $_CONF['allow_unlock_accounts']) {
                          '    LOVD ' . $_SETT['system']['version'] . ' system at ' . $_CONF['institute'] . "\n\n";
 
             // Array containing the unlock code field.
-            $a['password_autogen'] = $sPasswd;
+            $zData['password_autogen'] = $sPasswd;
             $aMailFields = array(
-                            'a',
+                            'zData',
+                            'username' => 'Your username',
                             'password_autogen' => 'New password / unlocking code',
                            );
 
@@ -133,8 +154,9 @@ if (!$_AUTH && $_CONF['allow_unlock_accounts']) {
             $_T->printTitle();
 
             if ($bMail) {
-                print('      Successfully reset your password.<BR>' . "\n" .
-                      '      We\'ve sent you an email containing your new password. With this new password, you can <A href="' . ROOT_PATH . 'login.php">unlock your account</A> and choose a new password.<BR><BR>' . "\n\n");
+                print('      If you entered the username or email address correctly, we have successfully reset your password and we have sent you an email containing your new password.' . "\n" .
+                      '      With this new password, you can <A href="' . ROOT_PATH . 'login">unlock your account</A> and choose a new password.<BR><BR>' . "\n" .
+                      '      If you don\'t receive this email, it is possible that the username or email address that you entered was not correct. In that case, please double-check it. Another possibility is that you registered at a different LOVD installation. Accounts are not shared between different LOVD installations, so please double-check where you are registered.<BR><BR>' . "\n\n");
             } else {
                 // Couldn't send confirmation...
                 lovd_writeLog('Error', LOG_EVENT, 'Error sending email for account ' . $_AUTH['username'] . ' (' . $zData['name'] . ')');
@@ -146,7 +168,6 @@ if (!$_AUTH && $_CONF['allow_unlock_accounts']) {
 
         } else {
             unset($_POST['username']);
-            lovd_writeLog('Auth', LOG_EVENT, $_SERVER['REMOTE_ADDR'] . ' (' . lovd_php_gethostbyaddr($_SERVER['REMOTE_ADDR']) . ') tried to reset password for denied account ' . $_POST['username']);
         }
     }
 
@@ -155,7 +176,7 @@ if (!$_AUTH && $_CONF['allow_unlock_accounts']) {
     $_T->printHeader();
     $_T->printTitle();
 
-    print('      If you forgot your password, please fill in your username here. A new random password will be generated and emailed to the known email address. You need this new password to unlock your account and choose a new password.<BR>' . "\n" .
+    print('      If you forgot your password, please fill in your username or email address here. If an account exists that matches this information, a new random password will be generated and emailed to the known email address. You need this new password to unlock your account and choose a new password.<BR>' . "\n" .
           '      <BR>' . "\n\n");
 
     lovd_errorPrint();
@@ -167,7 +188,6 @@ if (!$_AUTH && $_CONF['allow_unlock_accounts']) {
     $aForm = array(
                     array('POST', '', '', '', '30%', '20', '70%'),
                     array('Username', '', 'text', 'username', 20),
-                    'skip',
                     array('', '', 'submit', 'Reset password'),
                   );
     lovd_viewForm($aForm);

@@ -4,10 +4,10 @@
  * LEIDEN OPEN VARIATION DATABASE (LOVD)
  *
  * Created     : 2010-01-28
- * Modified    : 2019-08-28
- * For LOVD    : 3.0-22
+ * Modified    : 2021-04-21
+ * For LOVD    : 3.0-27
  *
- * Copyright   : 2004-2019 Leiden University Medical Center; http://www.LUMC.nl/
+ * Copyright   : 2004-2021 Leiden University Medical Center; http://www.LUMC.nl/
  * Programmers : Ivo F.A.C. Fokkema <I.F.A.C.Fokkema@LUMC.nl>
  *               Ivar C. Lugtenburg <I.C.Lugtenburg@LUMC.nl>
  *               M. Kroon <m.kroon@lumc.nl>
@@ -137,6 +137,9 @@ class LOVD_Log extends LOVD_Object
                 $zData['entry'] = preg_replace('/the ([A-Z][A-Za-z0-9-]+) gene/', 'the <A href="genes/$1">$1</A> gene', $zData['entry']);
                 $zData['entry'] = preg_replace('/#([0-9]+)\s/', '#<A href="users/$1">$1</A> ', $zData['entry']);
                 break;
+            case 'MergeEntries':
+                $zData['entry'] = preg_replace('/(Merged (individual|screening) entry #(?:[0-9]+) into entry #)([0-9]+)$/', '$1<A href="${2}s/$3">$3</A>', $zData['entry']);
+                break;
             case 'GeneCreate':
             case 'GeneEdit':
             case 'GeneEmpty':
@@ -145,7 +148,8 @@ class LOVD_Log extends LOVD_Object
                 break;
             case 'IndividualCreate':
             case 'IndividualEdit':
-                $zData['entry'] = preg_replace('/(entry|individual) ([0-9]{8})( .+)?$/', '$1 <A href="individuals/$2">$2</A>$3', $zData['entry']);
+            case 'IndividualLicenseEdit':
+                $zData['entry'] = preg_replace('/(entry|individual) (#)?([0-9]{8})( .+)?$/', '$1 $2<A href="individuals/$3">$3</A>$4', $zData['entry']);
                 break;
             case 'LinkCreate':
             case 'LinkEdit':
@@ -168,17 +172,24 @@ class LOVD_Log extends LOVD_Object
             case 'TranscriptEdit':
                 $zData['entry'] = preg_replace('/(entry) (#)?([0-9]+) /', '$1 $2<A href="transcripts/$3">$3</A> ', $zData['entry']);
                 break;
+            case 'QuickCurate':
+                $zData['entry'] = preg_replace('/(Curated (.+) information entry) (#)?([0-9]+)( .+)?$/', '$1 $3<A href="${2}s/$4">$4</A>$5', $zData['entry']);
+                break;
             case 'ShareAccess':
                 $zData['entry'] = preg_replace('/(user) (#)?([0-9]+)/', '$1 $2<A href="users/$3">$3</A>', $zData['entry']);
                 break;
+            case 'APISettingsEdit':
+            case 'AuthTokenCreate':
+            case 'AuthTokenRevoke':
             case 'UserBoot':
             case 'UserCreate':
             case 'UserEdit':
+            case 'UserLicenseEdit':
             case 'UserLock':
             case 'UserRegister':
             case 'UserResetPassword':
             case 'UserUnlock':
-                $zData['entry'] = preg_replace('/(ID|user) (#)?([0-9]+)( .+)?$/', '$1 $2<A href="users/$3">$3</A>$4', $zData['entry']);
+                $zData['entry'] = preg_replace('/(ID|user) (#)?([0-9]+)(\W|$)/', '$1 $2<A href="users/$3">$3</A>$4', $zData['entry']);
                 break;
             case 'VariantCreate':
             case 'VariantEdit':

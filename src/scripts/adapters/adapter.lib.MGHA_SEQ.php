@@ -466,7 +466,7 @@ class LOVD_MghaSeqDataConverter extends LOVD_DefaultDataConverter {
         $sAlt = strtoupper($aLine['ALT']);
 
         // 'Eat' letters from either end - first left, then right - to isolate the difference.
-        while (strlen($sRef) > 0 && strlen($sAlt) > 0 && $sRef{0} == $sAlt{0}) {
+        while (strlen($sRef) > 0 && strlen($sAlt) > 0 && $sRef[0] == $sAlt[0]) {
             $sRef = substr($sRef, 1);
             $sAlt = substr($sAlt, 1);
         }

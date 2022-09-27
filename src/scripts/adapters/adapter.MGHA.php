@@ -129,7 +129,7 @@ if ($argc != 1 && in_array($argv[1], array('--help', '-help', '-h', '-?'))) {
     // Find the sample meta data file (SMDF).
     // All processed SMDF should be renamed to .ARK.
     while (($aFiles = readdir($h)) !== false) {
-        if ($aFiles{0} == '.') {
+        if ($aFiles[0] == '.') {
             // Current dir, parent dir, and hidden files.
             continue;
         }

@@ -11,6 +11,305 @@
 
 
 /***************************
+ * 3.0 Build 28 (tag:3.0-28)
+ * 2022-07-18
+ *********/
+ * Applied several fixes to the LOVD2-style API. There was a problem with
+   searching and the unique variant view didn't always show the variant descrip-
+   tion on the alternative genome build. Also, removed a gene's MIM accession
+   when it's empty.
+   Closes #548: "LOVD2-style API showing unique variant view with JSON output
+   picks random entries for alternative genome build".
+ * Several internal XSS issues were fixed, adding protection against stored XSS.
+ * Fixed not updating a gene's timestamp when an Individual is deleted.
+ * Fixed variants linked to multiple individuals getting deleted when one of the
+   individuals would be deleted. Note that normally, variants cannot be linked
+   to multiple individuals.
+ * Fixed warning shown when editing somebody else's data.
+ * Fixed several PHP warnings and notices throughout the code.
+ * Remove graphs from LOVD light.
+   Closes #564: "LOVD light's status page crashes".
+ * Allow passing the classification method to the submission API using the
+   pathogenicity's @source value. Allowed values for @source are currently;
+   "ACMG", "ACGS", "EAHAD-CFDB", "ENIGMA", "IARC", "InSiGHT", "kConFab", and
+   "other".
+   Closes #568: "Make it easier to provide the classification method when using
+   the submission API".
+ * Improve lovd_getVariantInfo() and lovd_fixHGVS(). Added functionality to deal
+   with repeats, fixed bugs in the interpretation of positions, cleaned up the
+   way wildtypes and '?' types were handled, made even more specific warning and
+   error messages, implemented decisions on how to handle uncertain variants,
+   expanded the test cases.
+   Closes #566: "Improve lovd_getVariantInfo() and lovd_fixHGVS()".
+ * Fix LOVD for PHP8. LOVD was incompatible with PHP8 due to the removal of
+   curly braces as a string access operator.
+   Closes #571: "LOVD incompatible with PHP8".
+ * Multiple-selection lists didn't show pre-selected values on Windows browsers
+   when the field itself didn't have focus, due to a styling issue. This problem
+   does not exist on Linux. Removed some styling of the lists, so all users can
+   see the pre-selected items.
+   Closes #570: "Pre-selected items are not visible in multiple-selection list
+   when list is not in focus".
+ * Updated the copyright statement to 2022.
+ * Completely rebuilt the URL validation on the system settings form.
+   Closes #577: "Blind SSRF vulnerability on lovd3 database url".
+ * Corrected grammar in code of conduct, and fixed link to code of conduct from
+   the readme.
+ * Fixed bug in generating page titles, improved generated page titles, and let
+   more pages use generated page titles.
+ * Don't needlessly show VLs on the user's unfinished submission page.
+ * Fixed row link when viewing other user's unfinished submissions.
+ * Enable the "Your submissions" link that was defined but not enabled.
+ * Removed hidden curators from the LOVD2-style API, genes output.
+   Closes #590: "REST JSON API includes hidden curator names".
+ * Fixed link to LRGs.
+   Closes #599: "LOVD uses wrong protocol to open LRG web pages".
+ * Added a /diseases/[OMIMID] redirect. This makes it easier to check if a
+   disease with a certain OMIMID is configured in an LOVD instance.
+   Closes #591: "Allow for /diseases/[OMIMID] forwards".
+ * Fixed several issues in our Variant Validator library. Small changes like
+   delA to del were misinterpreted as a WROLLFORWARD, caused by a change on our
+   side. Properly store warnings as one list, not a list within lists.
+   Restructure the filtering of the warnings a bit. Catch IREFSEQUPDATED
+   messages, alerting us about updated refseqs. Silently remove LRG-related
+   errors when running verifyVariant(). Also let verifyVariant() ignore
+   "RefSeqGene record not available". Throw WALIGNMENTGAPS when necessary, and
+   hide VV's warnings. Fix recognizing WROLLFORWARD. Sync LOVD with VV endpoint
+   and replace WGAP by WALIGNMENTGAPS. Clarify that verifyGenomic() needs an NC
+   (not an LRG or so). Also, just return false if we have no build, so we don't
+   need to call VV and handle the output. We know it'll fail. Ignore slow
+   Ensembl transcripts when using verifyGenomic(). Also use the new VV warning
+   code in the variant fixing script. Handle out of range errors for variants
+   close to the ends of the NCs.
+   Closes #583: "Adapt VV library for recent change that throws warnings for
+   silent corrections".
+
+
+/***************************
+ * 3.0 Build 27 (tag:3.0-27)
+ * 2021-08-17
+ *********/
+ * Redefined all FLOAT UNSIGNED columns as FLOAT, since MySQL 8 has deprecated
+   FLOAT UNSIGNED columns.
+ * Fixed bug in page titles when creating a new variant for a screening.
+   Closes #505: "Page titles not always correct".
+ * Fixed bugs in the password reset feature. The password reset didn't work well
+   when the email address was used to reset the password.
+   Closes #507: "Resetting password doesn't unlock account".
+ * Fixed problems with genes not supported by Mutalyzer by using VV as a backup.
+   Prevent notices when Mutalyzer doesn't recognize a gene. Started the
+   migration by using VV as a backup for Mutalyzer when creating genes and
+   adding transcripts to existing genes. There are too many "unsupported" genes
+   right now, that have changed their symbol and therefore are no longer
+   supported by Mutalyzer. VV can handle them just fine. For now, call VV only
+   when Mutalyzer fails to generate a UD or when Mutalyzer fails to find
+   transcripts at all.
+   Closes #513: "Invalid transcripts for G6PC1".
+ * When creating a gene by its symbol, recheck if we don't already have it. When
+   creating a gene by its HGNC ID, LOVD checks if we already have that HGNC ID
+   in the database. LOVD didn't do that if you use the symbol, it only checked
+   if we have that symbol already. So for genes who've changed symbol, it was
+   possible to open the create gene form using its new symbol, after which you
+   would get a query error.
+   Closes #515: "Creating a gene that already exists under a different symbol
+   can cause a query error".
+ * Implemented data licensing. Data submissions can now be licensed by data
+   owners, so it is clear for every user of LOVD what can, and what can not, be
+   done with the data deposited in LOVD.
+   Closes #502: "Allow submitters to choose license applying to their data".
+ * Removed all gender-specific pronouns and replaced them with "they", "them",
+   or "their". Fixed both the documentation as well as the software.
+   Part of #97: "Use singular 'they' everywhere instead of 'he', or 'he/she'".
+ * Fixed various security issues. After running a "bug bounty program" for a
+   week, several minor and a two major possible security vulnerabilities have
+   been identified in the LOVD website and the LOVD software. Amongst others,
+   vulnerabilities were reported by Preet Bhoir, Chirag Mistry, K0t, Taha Smily,
+   Vijay Farswan, and Warbid. They have all been fixed.
+ * Added the GA4GH Data Discovery API to LOVD3. This is a full LOVD3-specific
+   implementation of the GA4GH Data Discovery standards without the use of other
+   libraries. This endpoint currently requires authorization. The data is shared
+   using the VarioML aggregated variant format, which was developed in parallel
+   to the development of this API. No other format is available or supported.
+   This format allows for the export of virtually all standard fields in LOVD.
+   Closes #518: "Build GA4GH Data Connect API".
+ * Fix several errors collected from the system logs.
+   Closes #527: "Query error: 'Invalid parameter number: number of bound
+   variables does not match number of tokens'".
+ * Improved security in various ways. Improved URL parsing. Sleep for one second
+   when resetting a password. Also synced the two different messages printed to
+   the screen when resetting a password.
+ * Fixed display of LOVD owned records. The owner field was displayed as empty
+   for data owned by LOVD.
+   Closes #533: "Entries owned by LOVD don't show an owner".
+ * Explain inheritance codes on the Diseases detailed view, instead of showing
+   the abbreviations only. Also add Digenic as an inheritance mode for Diseases.
+   Closes #537: "Improve the inheritance in the Diseases VE".
+ * Fixed issues with importing data.
+   Closes #539: "Selection list values surrounded with spaces are not cleaned
+   when importing".
+ * Don't allow Curators and up to publish Variants without effects.
+   Closes #484: "Curators and up can create variant submissions without
+   classification".
+ * Warn users when editing other user's data.
+   Closes #542: "Warn Curators not to overwrite data from Submitters".
+
+
+/***************************
+ * 3.0 Build 26 (tag:3.0-26)
+ * 2021-02-22
+ *********/
+ * Changed rules when variant ID columns are shown, and restyled them a bit.
+ * Added an "LOVD light" switch, allowing large databases to easily enable
+   database optimizations. An "LOVD light" database will perform much faster
+   than a regular LOVD instance, because it disables some features that cost a
+   lot of CPU power on large databases.
+ * Improved imported frequencies; the "average frequency (large NGS studies)"
+   field now imports gnomAD v.2.1.1 frequencies, and also links to the variant
+   location in gnomAD.
+ * Removed the "Conversion" variant type. The HGVS nomenclature will remove it
+   from their nomenclature pages, this variant type will now be described as a
+   deletion-insertion.
+ * Fixed missing checks on selection field values; semicolons are now disallowed
+   in values.
+   Closes #480: "Disallow semicolons to be used as a selection option for
+   fields".
+ * Improved the automated tests.
+   Closes #482: "Fix randomly failing tests".
+ * LOVD will now automatically add the Entrez ID and OMIM ID to genes that don't
+   have these IDs filled in, when any user edits the gene.
+   Closes #483: "Not all information can be added to a gene once created".
+ * Fixed query error when creating or editing an entry and leaving a decimal
+   field empty.
+   Closes #489: "Query error upon editing an entry while leaving a decimal field
+   empty".
+ * Updated the upstream URL to prevent redirect issues. We now require HTTPS on
+   our website.
+ * Added an option to add links to Orphanet from the gene homepages.
+   Closes #488: "Add links to Orphanet from the gene home pages".
+ * Fixed bug; HGNC IDs weren't handled well in the submission API.
+   Closes #492: "Submission API: Providing HGNC IDs as integers causes
+   unpredictable results".
+ * Fixed the link from the Diseases detailed view to HPO.
+ * Added the genomic DNA description(s) to the LOVD2-style API's JSON output.
+ * Fixed reCAPTCHA for users in China by using a different domain. Google.com is
+   blocked, but Rechaptcha.net is not.
+   Closes #495: "Can't add or register new user account".
+ * Fixed hard-coded table name in the API, which disabled part of the API if the
+   table prefix was not "lovd_v3".
+   Closes #497: "'lovd3_whole_genome.lovd_v3_variants_on_transcripts' doesn't
+   exist".
+ * Added an optional donation request dialog. When enabled, this shows a dialog
+   requesting for a donation. The dialog will be hidden for a chosen amount of
+   time.
+ * Fixed problems with MySQL 8.0.x.
+ * Fixed how the input for numeric columns are checked; minimum and maximum
+   values weren't checked properly.
+
+
+/***************************
+ * 3.0 Build 25 (tag:3.0-25)
+ * 2020-10-22
+ *********/
+ * Added the possibility to download an entire submission from the Individuals
+   detailed view.
+   Closes #436: "Add feature to download single submission in the LOVD3 format".
+ * Improved the Variant Validation script - reduced the number of failures,
+   improved errors handling, fixed display of errors, improved autonomous
+   decision making and error recognition, improved protein predictions, fixed
+   bug where the script could empty DNA, RNA, and protein fields.
+ * Fixed link to the Ensembl and NCBI genome browsers. The link to the Ensembl
+   genome browser had to be changed because their API changed; the link to the
+   NCBI sequence viewer failed because of an additional request coming from
+   their server that LOVD didn't handle.
+   Closes #435: "Graphical display links don't work".
+   Closes #438: "Fix link to Ensembl genome browser".
+   Closes #439: "Fix link to NCBI sequence viewer".
+ * Fixed bug; The feature to map a variant to the genome didn't always work.
+   Closes #444: "Mapping transcript to genome doesn't work if you empty the
+   genomic field first".
+ * Updated the LOVD2 to LOVD3 converter script; added support for the DbSNP
+   column, and added support for multiple diseases per individual, if separated
+   by a semicolon.
+   Closes #437: "LOVD2 converter: Warning: linked Variant/DbSNP to non-existing
+   column VariantOnTranscript/DbSNP in output section Variants_On_Transcripts".
+   Closes #454: "LOVD2 Converter: LOVD2 records with multiple disease values do
+   not get disease values converted individually".
+ * Improved the "forgot your password" feature.
+   Closes #448: "Add username to password reset email".
+ * Added feature to merge entries (Individuals, Screenings). The merge is only
+   processed in case there are no conflicts in values between the two entries.
+   For Screenings, safely merge differences in Template and Technique. The log
+   entry that is generated by the merge is used to redirect users who use the ID
+   that has been merged into the other.
+   Closes #450: "Add feature to merge entries".
+ * Fixed incomplete grouping of variants in the unique variants view for large
+   data sets.
+   Closes #457: "Fix MySQL weirdness in grouping variants".
+ * Improved page titles by adding details to them.
+   Closes #452: "Improve variant page's titles with variant information".
+ * Fixed the generation of DBIDs, in some cases DBIDs were generated that were
+   already in use.
+   Closes #460: "LOVD generates DBIDs that are already in use under certain
+   circumstances".
+ * Improved the submission API to allow variant-only submissions and to directly
+   process submissions if configured to do so. Also, HGNC IDs can be used
+   instead of gene symbols.
+   Closes #462: "Allow processing variant-only submissions through the API".
+   Closes #466: "Add the option for submitting HGNC IDs instead of gene symbols
+   for the submission API".
+ * Extended search capabilities by allowing searching for prefix or suffix.
+   Closes #464: "Extend search capabilities".
+ * Added a link to MobiDetails, an annotation platform dedicated to the
+   interpretation of DNA variants. You can have MobiDetails analyze a variant in
+   LOVD and see all generated predictions on their platform.
+   Closes #455: "Add a link to MobiDetails".
+   Closes #471: "Improve link to MobiDetails".
+ * Added a "how to query" information dialog above data listings.
+ * Improved the communication with the Variant Validator service.
+   Closes #469: "Selectively send the NC to VV whenever using the transcript-
+   based nomenclature".
+ * Several other small fixes.
+
+
+/***************************
+ * 3.0 Build 24 (tag:3.0-24)
+ * 2020-07-13
+ *********/
+ * Fixed bug; The entered IP value to restrict an account was not validated when
+   registering a new submitter account.
+ * Added new features to allow Curators and up to more quickly curate new data;
+   the "Curate (publish) selected entries" feature and the "Publish (curate)
+   entire submission" feature.
+   Closes #225: "Allow multiple entries to be published (curated) at the same
+   time".
+ * Fixed bug; The JSON variant API wasn't selecting data properly.
+ * APIs and views now sort transcripts based on the number of variants they
+   contain.
+   Closes #420: "API not returning EXT2 result for primary transcript that is
+   present in UI".
+ * Fixed notices and deprecated function calls.
+ * Improved handling of OMIM IDs and HPO terms in submission API.
+ * Rebuilt all automated tests.
+   Closes #113: "Improve tests to be less cluttered".
+   Closes #284: "Upgrade Travis environment and simplify setup".
+ * Created an object for communicating to the Variant Validator service, and
+   created a variant verification script. The variant verification script checks
+   all variants in the database using the Variant Validator service.
+ * Added support for clinical classification columns in the submission API.
+   These columns will become the new defaults to store clinical classification.
+ * Removed additional variant effect values that were added in 3.0-20. They will
+   be replaced by the new clinical classification columns.
+ * Fixed bug; When creating or editing a custom column, the example width bar
+   didn't change anymore when you set the column's width.
+ * Fixed bug; The registration spam filter rejected too many real registrations.
+   Closes #428: "Spam registration filter is too strict".
+ * Fixed several issues with custom links.
+   Closes #430: "Custom links on the gene homepage are hard coded".
+ * Improved the "forgot my password" feature.
+   Closes #432: "Improve the 'forgot my password' feature".
+
+
+/***************************
  * 3.0 Build 23 (tag:3.0-23)
  * 2020-02-19
  *********/
@@ -206,8 +505,8 @@
    Closes #98: "Configurable homepage".
  * Fixed bug; The variant mapper gets stuck when encountering variants with no
    position set.
- * Improved message that the curator sees, when he tries to disable a custom
-   column that has already been disabled for all his genes.
+ * Improved message that the curator sees, when they try to disable a custom
+   column that has already been disabled for all their genes.
    Closes #162: "Confusing message when curator disables custom column".
  * Added links to overviews of created entries on user page.
    Closes #190: "Add links to records created by user on user's profile page".
@@ -709,7 +1008,7 @@
    variant mapper was sometimes incorrect.
  * Fixed typo in the data importer.
  * Fixed bug; Fixed fatal error when a user submits an individual with variants
-   for which is he both curator and submitter.
+   for which they are both curator and submitter.
  * Fixed bug; Diseases could not be linked to a big number of genes (hundreds).
  * Fixed bug; The ORCID integration during user registration had to be updated
    due to a discontinued service.
@@ -1351,10 +1650,10 @@
    should not have been applied to the 'description_form' field when editing
    shared columns, since it's not applied when creating the column, either.
  * Fixed bug; Submitter registration emails were sent to the database
-   administrator always, even if he indicated not wanting them.
+   administrator always, even if they indicated not wanting them.
  * After registering a submitter account, you are now forwarded to your account
    details instead of the gene list.
- * When creating a new user, you can have the account details mailed to him/her.
+ * When creating a new user, you can have the account details mailed to them.
  * Added support for non-coding genes with NR transcript reference sequences.
  * Fixed bug; Transcripts could not be added to variants not HGVS compliant on
    genomic level.
@@ -1381,7 +1680,7 @@
    older than 3.0-beta-06 or newer.
  * Fixed bug; Wrong DBIDs were predicted because of a bug introduced in r221
    (3.0-beta-08) that should have prevented exactly that.
- * The 'Human-readable reference sequence location' field on the gene data entry
+ * The 'Human-readable reference sequence location' field on the gene data entry
    form now also allows local URLs.
  * Links to the reference sequences from the gene homepage are now opened in a
    new window.

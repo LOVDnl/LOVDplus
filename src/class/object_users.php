@@ -4,10 +4,10 @@
  * LEIDEN OPEN VARIATION DATABASE (LOVD)
  *
  * Created     : 2009-10-21
- * Modified    : 2020-02-10
- * For LOVD    : 3.0-23
+ * Modified    : 2022-05-25
+ * For LOVD    : 3.0-28
  *
- * Copyright   : 2004-2020 Leiden University Medical Center; http://www.LUMC.nl/
+ * Copyright   : 2004-2022 Leiden University Medical Center; http://www.LUMC.nl/
  * Programmers : Ivo F.A.C. Fokkema <I.F.A.C.Fokkema@LUMC.nl>
  *               Ivar C. Lugtenburg <I.C.Lugtenburg@LUMC.nl>
  *               M. Kroon <m.kroon@lumc.nl>
@@ -120,14 +120,16 @@ class LOVD_User extends LOVD_Object
                         'username' => array('Username', LEVEL_MANAGER),
                         'password_force_change_' => array('Force change password', LEVEL_MANAGER),
                         'phpsessid' => array('Session ID', LEVEL_MANAGER),
-                        'auth_token_' => array('API token', LEVEL_CURATOR), // Will be unset if user is not authorized on this user (i.e., not himself or manager or up).
-                        'auth_token_expires_' => array('API token expiration', LEVEL_CURATOR), // Will be unset if user is not authorized on this user (i.e., not himself or manager or up).
+                        'auth_token_' => array('API token', LEVEL_CURATOR), // Will be unset if user is not authorized on this user (i.e., not themself or manager or up).
+                        'auth_token_expires_' => array('API token expiration', LEVEL_CURATOR), // Will be unset if user is not authorized on this user (i.e., not themself or manager or up).
+                        'api_settings' => array('API settings', LEVEL_MANAGER),
                         'saved_work_' => array('Saved work', LEVEL_MANAGER),
                         'curates_' => 'Curator for',
                         'collaborates_' => array('Collaborator for', LEVEL_CURATOR),
-                        'entries_owned_by_' => 'Data owner for', // Will be unset if user is not authorized on this user (i.e., not himself or manager or up).
-                        'entries_created_by_' => 'Has created', // Will be unset if not viewing himself or manager or up.
+                        'entries_owned_by_' => 'Data owner for', // Will be unset if user is not authorized on this user (i.e., not themself or manager or up).
+                        'entries_created_by_' => 'Has created', // Will be unset if not viewing themself or manager or up.
                         'colleagues_' => '', // Other users that may access this user's data.
+                        'default_license_' => 'Default license',
                         'level_' => array('User level', LEVEL_CURATOR),
                         'allowed_ip_' => array('Allowed IP address list', LEVEL_MANAGER),
                         'status_' => array('Status', LEVEL_MANAGER),
@@ -193,8 +195,6 @@ class LOVD_User extends LOVD_Object
         $this->sSortDefault = 'level_';
 
         // Because the user information is publicly available, remove some columns for the public.
-        // FIXME; Dit moet eigenlijk per user anders; curatoren mogen deze info wel van submitters zien.
-        // Dus eigenlijk if ($_AUTH['level'] <= $zData['level']) maar we hebben hier geen $zData...
         $this->unsetColsByAuthLevel();
 
         parent::__construct();
@@ -279,8 +279,7 @@ class LOVD_User extends LOVD_Object
         if (!empty($aData['allowed_ip'])) {
             // This function will throw an error itself (second argument).
             $bIP = lovd_matchIPRange($aData['allowed_ip'], 'allowed_ip');
-
-            if (lovd_getProjectFile() == '/install/index.php' || (ACTION == 'edit' && $_PE[1] == $_AUTH['id'])) {
+            if (lovd_getProjectFile() == '/install/index.php' || ACTION == 'register' || (ACTION == 'edit' && $_PE[1] == $_AUTH['id'])) {
                 // Check given security IP range.
                 if ($bIP && !lovd_validateIP($aData['allowed_ip'], $_SERVER['REMOTE_ADDR'])) {
                     // This IP range is not allowing the current IP to connect. This ain't right.
@@ -301,13 +300,17 @@ class LOVD_User extends LOVD_Object
         }
 
         // Level can't be higher or equal than the current user.
-        if (!empty($aData['level']) && $aData['level'] >= $_AUTH['level']) {
-            lovd_writeLog('Error', 'HackAttempt', 'Tried to upgrade user ID ' . $_PE[1] . ' to level ' . $_SETT['user_levels'][$aData['level']] . ')');
+        // But don't complain when the level doesn't exist, because we would
+        //  have handled that already.
+        if (!empty($aData['level']) && $aData['level'] >= $_AUTH['level'] && isset($_SETT['user_levels'][$aData['level']])) {
+            lovd_writeLog('Error', 'HackAttempt', 'Tried to ' .
+                (ACTION != 'edit'? 'create user' : 'upgrade user ID ' . $_PE[1]) .
+                ' to level ' . $_SETT['user_levels'][$aData['level']] . ')');
             lovd_errorAdd('level', 'User level is not permitted. Hack attempt.');
         }
 
         // XSS attack prevention. Deny input of HTML.
-        lovd_checkXSS();
+        lovd_checkXSS($aData);
     }
 
 
@@ -378,7 +381,7 @@ class LOVD_User extends LOVD_Object
                         'skip',
                         array('', '', 'print', '<B>Security</B>'),
                         'hr',
-             'level' => array('Level', ($_AUTH['level'] != LEVEL_ADMIN? '' : '<B>Managers</B> basically have the same rights as you, but can\'t uninstall LOVD nor can they create or edit other Manager accounts.<BR>') . '<B>Submitters</B> can submit, but not publish information in the database. Submitters can also create their own accounts, you don\'t need to do this for them.<BR><BR>In LOVD 3.0, <B>Curators</B> are Submitter-level users with Curator rights on certain genes. To create a Curator account, you need to create a Submitter and then grant this user rights on the necessary genes.', 'select', 'level', 1, $aUserLevels, false, false, false),
+             'level' => array('Level', (!$_AUTH || $_AUTH['level'] != LEVEL_ADMIN? '' : '<B>Managers</B> basically have the same rights as you, but can\'t uninstall LOVD nor can they create or edit other Manager accounts.<BR>') . '<B>Submitters</B> can submit, but not publish information in the database. Submitters can also create their own accounts, you don\'t need to do this for them.<BR><BR>In LOVD 3.0, <B>Curators</B> are Submitter-level users with Curator rights on certain genes. To create a Curator account, you need to create a Submitter and then grant this user rights on the necessary genes.', 'select', 'level', 1, $aUserLevels, false, false, false),
                         array('Allowed IP address list (optional)', 'To help prevent others to try and guess the username/password combination, you can restrict access to the account to a number of IP addresses or ranges.', 'text', 'allowed_ip', 20),
                         array('', '', 'note', 'Default value: *<BR>' . (strpos($_SERVER['REMOTE_ADDR'], ':') !== false? '' : '<I>Your current IP address: ' . $_SERVER['REMOTE_ADDR'] . '</I><BR>') . '<B>Please be extremely careful using this setting.</B> Using this setting too strictly, can deny the user access to LOVD, even if the correct credentials have been provided.<BR>Set to \'*\' to allow all IP addresses, use \'-\' to specify a range and use \';\' to separate addresses or ranges.'),
             'locked' => array('Locked', '', 'checkbox', 'locked'),
@@ -414,7 +417,7 @@ class LOVD_User extends LOVD_Object
                         'skip',
       'change_other' => array('Enter your password for authorization', '', 'password', 'password', 20));
             if ($_PE[1] == $_AUTH['id']) {
-                // User is resetting password for him/herself.
+                // User is resetting password for themself.
                 unset($this->aFormData['change_other']);
                 // If user just logged in with an unlocking code, we will rename the "Current password" field.
                 if ($_AUTH['password'] == $_AUTH['password_autogen']) {
@@ -426,7 +429,7 @@ class LOVD_User extends LOVD_Object
         }
 
         if (LOVD_plus && isset($this->aFormData['level'])) {
-            $this->aFormData['level'][1] = ($_AUTH['level'] != LEVEL_ADMIN? '' : '<B>Managers</B> basically have the same rights as you, but can\'t uninstall LOVD nor can they create or edit other Manager accounts.<BR>') . '<B>Analyzers</B> can analyze individuals that are not analyzed yet by somebody else, but can not send variants for confirmation.<BR><B>Read-only</B> users can only see existing data in LOVD+, but can not start or edit any analyses or data.';
+            $this->aFormData['level'][1] = (!$_AUTH || $_AUTH['level'] != LEVEL_ADMIN? '' : '<B>Managers</B> basically have the same rights as you, but can\'t uninstall LOVD nor can they create or edit other Manager accounts.<BR>') . '<B>Analyzers</B> can analyze individuals that are not analyzed yet by somebody else, but can not send variants for confirmation.<BR><B>Read-only</B> users can only see existing data in LOVD+, but can not start or edit any analyses or data.';
         }
         return parent::getForm();
     }
@@ -438,7 +441,7 @@ class LOVD_User extends LOVD_Object
     function prepareData ($zData = '', $sView = 'list')
     {
         // Prepares the data by "enriching" the variable received with links, pictures, etc.
-        global $_DB, $_SETT;
+        global $_AUTH, $_DB, $_SETT;
 
         if (!in_array($sView, array('list', 'entry'))) {
             $sView = 'list';
@@ -481,7 +484,7 @@ class LOVD_User extends LOVD_Object
             }
 
             // Get HTML links for genes curated by current user.
-            $zData['curates_'] = $this->lovd_getObjectLinksHTML($zData['curates'], 'genes/%s');
+            $zData['curates_'] = $this->getObjectLinksHTML($zData['curates'], 'genes/%s');
 
             $zData['collaborates_'] = '';
             foreach ($zData['collaborates'] as $key => $sGene) {
@@ -491,10 +494,13 @@ class LOVD_User extends LOVD_Object
             // Submissions...
             if (lovd_isAuthorized('user', $zData['id']) === false) {
                 // Not authorized to view hidden data for this user; so we're not manager and we're not viewing ourselves. Nevermind then.
-                unset($this->aColumnsViewEntry['entries_owned_by_'],
-                      $this->aColumnsViewEntry['entries_created_by_'],
-                      $this->aColumnsViewEntry['auth_token_'],
-                      $this->aColumnsViewEntry['auth_token_expires_']);
+                unset(
+                    $this->aColumnsViewEntry['entries_owned_by_'],
+                    $this->aColumnsViewEntry['entries_created_by_'],
+                    $this->aColumnsViewEntry['auth_token_'],
+                    $this->aColumnsViewEntry['auth_token_expires_'],
+                    $this->aColumnsViewEntry['api_settings']
+                );
             } else {
                 // Either we're viewing ourselves, or we're manager or up.
 
@@ -506,6 +512,10 @@ class LOVD_User extends LOVD_Object
                     $zData['auth_token_expires_'] = '<SPAN title="' . $zData['auth_token_expires'] . '">' . ($tDiff > 0? 'In ' . $sDiff : 'Expired ' . $sDiff . ' ago') . '</SPAN>';
                 } else {
                     $zData['auth_token_expires_'] = (!$zData['auth_token']? '' : '- (Never)');
+                }
+                if ($_AUTH && $_AUTH['level'] >= LEVEL_MANAGER && lovd_isAuthorized('user', $zData['id'])) {
+                    $zData['api_settings'] = '<SPAN style="float:right;">(<A href="#" onclick="$.get(\'ajax/api_settings.php/' . $zData['id'] . '?edit\').fail(function(){alert(\'Error viewing settings, please try again later.\');}); return false;">Change</A>)</SPAN>' .
+                        $zData['api_settings'];
                 }
 
                 // Since we're manager or viewing ourselves, we don't need to check for the data status of the data.
@@ -533,7 +543,24 @@ class LOVD_User extends LOVD_Object
             }
 
             $this->aColumnsViewEntry['colleagues_'] = 'Shares access with ' . count($zData['colleagues']) . ' user' . (count($zData['colleagues']) == 1? '' : 's');
-            $zData['colleagues_'] = $this->lovd_getObjectLinksHTML($zData['colleagues'], 'users/%s');
+            $zData['colleagues_'] = $this->getObjectLinksHTML($zData['colleagues'], 'users/%s');
+
+            // License information.
+            if (!$zData['default_license']) {
+                $zData['default_license_'] = 'No default license selected';
+            } else {
+                // The license contains both the license for the world as well as the license for LOVD.
+                $zData['default_license'] = strstr($zData['default_license'] . ';', ';', true);
+                $sLicenseName = substr($zData['default_license'], 3, -4);
+                $sLicenseVersion = substr($zData['default_license'], -3);
+                $zData['default_license_'] =
+                    '<A rel="license" href="https://creativecommons.org/licenses/' . $sLicenseName . '/' . $sLicenseVersion . '/" target="_blank" onclick="$.get(\'ajax/licenses.php/user/' . $zData['id'] . '?view\').fail(function(){alert(\'Error viewing license information, please try again later.\');}); return false;">' .
+                    '<IMG src="gfx/' . str_replace($sLicenseVersion, '80x15', $zData['default_license']) . '.png" alt="Creative Commons License" title="' . $_SETT['licenses'][$zData['default_license']] . '" border="0">' .
+                    '</A> ';
+            }
+            if (lovd_isAuthorized('user', $zData['id'])) {
+                $zData['default_license_'] .= '<SPAN style="float:right;">(<A href="#" onclick="$.get(\'ajax/licenses.php/user/' . $zData['id'] . '?edit\').fail(function(){alert(\'Error viewing license information, please try again later.\');}); return false;">Change</A>)</SPAN>';
+            }
 
             $zData['allowed_ip_'] = preg_replace('/[;,]+/', '<BR>', $zData['allowed_ip']);
             $zData['status_'] = ($zData['active']? '<IMG src="gfx/status_online.png" alt="Online" title="Online" width="14" height="14" align="top"> Online' : 'Offline');

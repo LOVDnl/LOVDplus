@@ -4,10 +4,10 @@
  * LEIDEN OPEN VARIATION DATABASE (LOVD)
  *
  * Created     : 2009-10-21
- * Modified    : 2020-02-10
- * For LOVD    : 3.0-23
+ * Modified    : 2022-05-26
+ * For LOVD    : 3.0-28
  *
- * Copyright   : 2004-2020 Leiden University Medical Center; http://www.LUMC.nl/
+ * Copyright   : 2004-2022 Leiden University Medical Center; http://www.LUMC.nl/
  * Programmers : Ivo F.A.C. Fokkema <I.F.A.C.Fokkema@LUMC.nl>
  *               Ivar C. Lugtenburg <I.C.Lugtenburg@LUMC.nl>
  *               Daan Asscheman <D.Asscheman@LUMC.nl>
@@ -72,7 +72,7 @@ class LOVD_Object
     var $nID = 0;
     var $sRowID = ''; // FIXME; needs getter and setter?
     var $sRowLink = ''; // FIXME; needs getter and setter?
-    var $nCount = '';
+    protected $bEntryExists = NULL;
     var $aRowClassGenerators = array();
 
 
@@ -104,33 +104,6 @@ class LOVD_Object
 
 
 
-    function autoExplode ($zData)
-    {
-        // Automatically explode GROUP_CONCAT values based on their name.
-        foreach ($zData as $key => $val) {
-            if ($key{0} == '_') {
-                unset($zData[$key]);
-                if (!empty($val)) {
-                    if ($key{1} == '_') {
-                        // Explode GROUP_CONCAT nested array
-                        $aValues = explode(';;', $val);
-                        $zData[ltrim($key, '_')] = array_map('explode', array_fill(0, count($aValues), ';'), $aValues);
-                    } else {
-                        // Explode GROUP_CONCAT array
-                        $zData[ltrim($key, '_')] = explode(';', $val);
-                    }
-                } else {
-                    $zData[ltrim($key, '_')] = array();
-                }
-            }
-        }
-        return $zData;
-    }
-
-
-
-
-
     public function applyColumnFindAndReplace ($sFRViewlistCol, $sFRSearchValue, $sFRReplaceValue,
                                                $aArgs, $aOptions) {
         // Perform a find and replace action for given viewlist column. Return
@@ -145,8 +118,8 @@ class LOVD_Object
 
         // FIXME: This check should be done earlier, not just when running it.
         // Check user authorization needed to perform find and replace action.
-        // Fixme: check if authorization level is correctly set for viewlist data.
-        if ($_AUTH['level'] < LEVEL_CURATOR) {
+        // FIXME: check if authorization level is correctly set for viewlist data.
+        if (!$_AUTH || $_AUTH['level'] < LEVEL_CURATOR) {
             $sErr = 'You do not have authorization to perform this action.';
             lovd_displayError('FindAndReplace', $sErr);
             return false;
@@ -169,17 +142,32 @@ class LOVD_Object
 
         // Get replace statement to use inside subquery. This is needed to
         // analyse the changed values with checkFields() later on.
-        $sReplaceStmtInsideSubq = $this->generateViewListFRReplaceStatement($sTableRef,
-            $sFieldname, $sFRSearchValue, $sFRReplaceValue, $aOptions);
+        $sReplaceStmtInsideSubq = $this->generateViewListFRReplaceStatement(
+            $sTableRef,
+            $sFieldname,
+            $sFRSearchValue,
+            $sFRReplaceValue,
+            $aOptions
+        );
 
         // Construct find & replace search condition to select only records
         // that match the find & replace search options.
-        $sFRSearchCondition = $this->generateFRSearchCondition($sFRSearchValue, $sSubqueryAlias,
-                                                               $sFieldname, $aOptions);
+        $sFRSearchCondition = $this->generateFRSearchCondition(
+            $sFRSearchValue,
+            $sSubqueryAlias,
+            $sFieldname,
+            $aOptions
+        );
 
         // Run checkFields() on all changed records.
-        list($bSuccess,) = $this->checkFieldFRResult($sFieldname, $sTablename, $sTableRef,
-            $sFRSearchCondition, $aArgs, $sReplaceStmtInsideSubq);
+        list($bSuccess,) = $this->checkFieldFRResult(
+            $sFieldname,
+            $sTablename,
+            $sTableRef,
+            $sFRSearchCondition,
+            $aArgs,
+            $sReplaceStmtInsideSubq
+        );
         if (!$bSuccess) {
             return false;
         }
@@ -206,8 +194,13 @@ class LOVD_Object
         }
 
         // Generate replacement statement for outside the subquery.
-        $sReplaceStmtOutsideSubq = $this->generateViewListFRReplaceStatement($sSubqueryAlias,
-            $sFieldname, $sFRSearchValue, $sFRReplaceValue, $aOptions);
+        $sReplaceStmtOutsideSubq = $this->generateViewListFRReplaceStatement(
+            $sSubqueryAlias,
+            $sFieldname,
+            $sFRSearchValue,
+            $sFRReplaceValue,
+            $aOptions
+        );
 
         // Construct and apply update query.
         $sUpdateSQL = 'UPDATE ' . $sTablename .  ', (' . $sSelectSQL . ') AS ' .
@@ -219,13 +212,15 @@ class LOVD_Object
         if ($sTablename == TABLE_VARIANTS_ON_TRANSCRIPTS) {
             // Update edited_by/-date fields of variant on genome table if query changes values on
             // variant on transcript.
-            $sUpdateSQL = 'UPDATE ' . TABLE_VARIANTS .  ' vog INNER JOIN ' .
-                          TABLE_VARIANTS_ON_TRANSCRIPTS . ' vot ON vog.id = vot.id, (' .
-                          $sSelectSQL . ') AS ' . $sSubqueryAlias . ' SET vot.`' . $sFieldname .
-                          '` = ' . $sReplaceStmtOutsideSubq . ', vog.edited_by = ?, ' .
-                          'vog.edited_date = ? WHERE ' . $sFRSearchCondition . ' AND vot.' .
-                          $sIDField . ' = ' . $sSubqueryAlias . '.' . $sSubqueryIDField .
-                          ' AND vot.transcriptid = '  . $sSubqueryAlias . '.transcriptid';
+            $sUpdateSQL = '
+                UPDATE ' . TABLE_VARIANTS .  ' vog
+                  INNER JOIN ' . TABLE_VARIANTS_ON_TRANSCRIPTS . ' vot ON (vog.id = vot.id),
+                  (' . $sSelectSQL . ') AS ' . $sSubqueryAlias . '
+                SET vot.`' . $sFieldname . '` = ' . $sReplaceStmtOutsideSubq . ',
+                  vog.edited_by = ?, vog.edited_date = ?
+                WHERE ' . $sFRSearchCondition . '
+                  AND vot.' . $sIDField . ' = ' . $sSubqueryAlias . '.' . $sSubqueryIDField . '
+                  AND vot.transcriptid = '  . $sSubqueryAlias . '.transcriptid';
         }
 
         // Add edit fields to SQL arguments.
@@ -241,6 +236,33 @@ class LOVD_Object
             lovd_writeLog('Event', 'FindAndReplace', 'Find and Replace successfully run on ' . $sFRViewlistCol . ', replacing "' . $sFRSearchValue . '" (matching ' . ($aOptions['sFRMatchType'] == 1? 'anywhere' : 'at the ' . ($aOptions['sFRMatchType'] == 2? 'beginning' : 'end')) . ') with "' . $sFRReplaceValue . '"' . (empty($aOptions['bFRReplaceAll'])? '' : ', overwriting the entire field'). ', updating ' . $n . ' row' . ($n == 1? '' : 's') . '.' . ($sTablename != TABLE_VARIANTS_ON_TRANSCRIPTS? '' : ' Note: the number of updated rows may be an overcalculation since variant data is stored in multiple rows.'));
         }
         return $bSuccess;
+    }
+
+
+
+
+
+    function autoExplode ($zData)
+    {
+        // Automatically explode GROUP_CONCAT values based on their name.
+        foreach ($zData as $sKey => $sVal) {
+            if ($sKey[0] == '_') {
+                unset($zData[$sKey]);
+                if (!empty($sVal)) {
+                    if ($sKey[1] == '_') {
+                        // Explode GROUP_CONCAT nested array
+                        $aValues = explode(';;', $sVal);
+                        $zData[ltrim($sKey, '_')] = array_map('explode', array_fill(0, count($aValues), ';'), $aValues);
+                    } else {
+                        // Explode GROUP_CONCAT array
+                        $zData[ltrim($sKey, '_')] = explode(';', $sVal);
+                    }
+                } else {
+                    $zData[ltrim($sKey, '_')] = array();
+                }
+            }
+        }
+        return $zData;
     }
 
 
@@ -431,7 +453,9 @@ class LOVD_Object
             }
 
             // Mandatory fields, as defined by child object.
-            if (in_array($sName, $this->aCheckMandatory) && (!isset($aData[$sName]) || $aData[$sName] === '')) {
+            // Empty multiple selection fields are not sent by the browser, but they are by the quick curation code,
+            //  so we have to check for an empty array() as well. Just make sure we don't complain about '0'.
+            if (in_array($sName, $this->aCheckMandatory) && (!isset($aData[$sName]) || $aData[$sName] === '' || $aData[$sName] === array())) {
                 lovd_errorAdd($sName, 'Please fill in the \'' . $sHeader . '\' field.');
                 $aErroredFields[$sName] = true;
             }
@@ -445,8 +469,22 @@ class LOVD_Object
                         $aData[$sName] = array();
                     }
                 }
-                // Simple check on non-custom columns (custom columns have their own function for this) to see if the given value is actually allowed.
-                // 0 is a valid entry for the check for mandatory fields, so we should also check if 0 is a valid entry in the selection list!
+
+                if ($aOptions['explode_strings'] && !is_array($aData[$sName])
+                    && isset($GLOBALS['aLine'][$sName]) && $GLOBALS['aLine'][$sName] == $aData[$sName]) {
+                    // Selection lists imported with spaces around their values
+                    //  (e.g., "PCR; SEQ") will be checked *without* the space, but
+                    //  imported *with* the space. Fix that.
+                    // Selection values can't contain an ";", so this is safe.
+                    $GLOBALS['aLine'][$sName] = $aData[$sName] =
+                        implode(';', array_map('trim', explode(';', $aData[$sName])));
+                }
+
+                // Simple check on non-custom columns (custom columns have
+                //  checkSelectedInput() for this) to see if the given value is
+                //  actually allowed. "0" is a valid entry for the check for
+                //  mandatory fields, so we should also check if "0" is a valid
+                //  entry in the selection list!
                 if (strpos($sName, '/') === false && isset($aData[$sName]) && $aData[$sName] !== '') {
                     $Val = $aData[$sName];
                     $aSelectOptions = array_keys($aField[5]);
@@ -495,7 +533,6 @@ class LOVD_Object
         // No longer do this through $aForm, because when importing,
         //  we do have data to check but no $aForm entry linked to it.
         foreach ($aData as $sFieldname => $sFieldvalue) {
-
             if (!is_string($sFieldvalue) || isset($aErroredFields[$sFieldname])) {
                 // Do not process non-string values at the moment (currently there are no checks for them),
                 //  and fields for which an (more specific) error has already been reported earlier.
@@ -518,15 +555,31 @@ class LOVD_Object
                 $nMaxLength = lovd_getColumnLength(constant($this->sTable), $sNameClean);
                 if (!empty($sFieldvalue)) {
                     // For numerical columns, maxlength works differently!
-                    if (in_array($sMySQLType, array('DECIMAL', 'DECIMAL_UNSIGNED', 'FLOAT', 'FLOAT_UNSIGNED', 'INT', 'INT_UNSIGNED'))) {
-                        // SIGNED cols: negative values.
-                        if (in_array($sMySQLType, array('DECIMAL', 'INT')) && (int) $sFieldvalue < (int) ('-' . str_repeat('9', $nMaxLength))) {
-                            lovd_errorAdd($sFieldname, 'The \'' . $sHeader . '\' field is limited to numbers no lower than -' . str_repeat('9', $nMaxLength) . '.');
+                    if (in_array($sMySQLType, array('FLOAT', 'FLOAT_UNSIGNED'))) {
+                        // Floats don't have a real min/max value. We'll check
+                        //  if they contain valid values further below.
+
+                    } elseif (in_array($sMySQLType, array('DECIMAL', 'DECIMAL_UNSIGNED', 'INT', 'INT_UNSIGNED'))) {
+                        // Although the data type wizard makes sure that a
+                        //  numeric field allowing 3 characters can actually
+                        //  contain 999, somebody could still override this and
+                        //  create a TINYINT(3) UNSIGNED column.
+                        // lovd_getColumnLength() then considers 999 to be the
+                        //  maximum value, which isn't true. We actually define
+                        //  a MEDIUMINT(8) ourselves, which needs proper checks.
+                        // lovd_getColumnMinMax() does a much better job.
+                        list($nMin, $nMax) = lovd_getColumnMinMax(constant($this->sTable), $sNameClean);
+                        if ($sFieldvalue < $nMin) {
+                            lovd_errorAdd($sFieldname, 'The \'' . $sHeader . '\' field is limited to numbers no lower than ' . $nMin . '.');
+                        } elseif ($sFieldvalue > $nMax
+                            && !in_array($sNameClean, array('id', 'individualid', 'screeningid'))) {
+                            // Uhm, yeah, but remember that when we're importing new data, we're OK with IDs that are too
+                            //  high, because the import will change them. We don't necessarily need to check if we're
+                            //  currently importing, we can just see the field names.
+                            // (this mostly applies to LOVD+, but is also true for LOVD)
+                            lovd_errorAdd($sFieldname, 'The \'' . $sHeader . '\' field is limited to numbers no higher than ' . $nMax . '.');
                         }
-                        // ALL numerical cols (except floats): positive values.
-                        if (substr($sMySQLType, 0, 5) != 'FLOAT' && (int) $sFieldvalue > (int) str_repeat('9', $nMaxLength)) {
-                            lovd_errorAdd($sFieldname, 'The \'' . $sHeader . '\' field is limited to numbers no higher than ' . str_repeat('9', $nMaxLength) . '.');
-                        }
+
                     } elseif (strlen($sFieldvalue) > $nMaxLength) {
                         lovd_errorAdd($sFieldname, 'The \'' . $sHeader . '\' field is limited to ' . $nMaxLength . ' characters, you entered ' . strlen($sFieldvalue) . '.');
                     }
@@ -668,12 +721,70 @@ class LOVD_Object
 
 
 
+    function entryExist ($ID = false)
+    {
+        // Checks if any, or a specific, entry exists in the database table.
+        // ViewEntry() and ViewList() call this function to see if data exists.
+        // $ID = Can be an integer, string, or an array.
+        // - If an integer/string: ID to check for.
+        // - If an associative array (for linking tables), use
+        //   array('geneid' => 'IVD', 'userid' => 1).
+        global $_DB;
+
+        if ($ID) {
+            // Prepare ID variable, to always be in the array('id' => 1) format.
+            $aIDs = $ID;
+            if (!is_array($ID)) {
+                $sIDColumn = 'id';
+                // In case a different column name is used, better use that instead.
+                if (!empty($this->aColumnsViewList['id']['db'][0])) {
+                    $sIDColumn = $this->aColumnsViewList['id']['db'][0];
+                    // But take the optional table alias off.
+                    $sIDColumn = substr(strrchr('.' . $sIDColumn, '.'), 1);
+                }
+                $aIDs = array($sIDColumn => $ID);
+            }
+
+            $bEntryExists = (bool) $_DB->query('
+                SELECT 1
+                FROM ' . constant($this->sTable) . '
+                WHERE ' . implode(' = ? AND ', array_keys($aIDs)) . ' = ? LIMIT 1',
+                array_values($aIDs))->fetchColumn();
+            return $bEntryExists;
+        } else {
+            if (isset($this->bEntryExists)) {
+                return $this->bEntryExists;
+            }
+            $bEntryExists = (bool) $_DB->query('
+                SELECT 1
+                FROM ' . constant($this->sTable) . ' LIMIT 1')->fetchColumn();
+            $this->bEntryExists = $bEntryExists;
+            return $this->bEntryExists;
+        }
+    }
+
+
+
+
+
     function formatArrayToTable ($aData, $nNesting = 0)
     {
         // Formats an Array to an data table, used for JSON data to be formatted in an VE.
 
         if (!is_array($aData) || !$aData) {
             return '(no data)';
+        }
+
+        // Handle simple setting arrays differently.
+        // Added SORT_REGULAR to prevent array_unique() to transform nested
+        //  arrays to string to make the comparison (as it does by default).
+        //  Adding SORT_REGULAR makes it actually compare the arrays instead of
+        //  comparing "Array" and then taking the first only.
+        if (!$nNesting && current(array_unique(array_values($aData), SORT_REGULAR)) == 1) {
+            // This is a simple array with just settings that are turned on.
+            return implode('<BR>', array_map(function ($sKey) {
+                return ucfirst(str_replace('_', ' ', $sKey)) . ' <IMG src="gfx/mark_1.png" alt="" width="11" height="11">';
+            }, array_keys($aData)));
         }
 
         $s = '<TABLE class="S11" width="100%">';
@@ -726,32 +837,6 @@ class LOVD_Object
 
 
 
-    function generateRowID ($zData = false)
-    {
-        // Generates the row_id for the viewList rows.
-        if ($zData && is_array($zData) && !empty($zData)) {
-            if (!isset($zData['row_id'])) {
-                if (isset($zData['id'])) {
-                    if ($this->sRowID !== '') {
-                        $zData['row_id'] = str_replace('{{ID}}', rawurlencode($zData['id']), $this->sRowID);
-                        foreach ($zData as $key => $val) {
-                            $zData['row_id'] = preg_replace('/\{\{' . preg_quote($key, '/') . '\}\}/', rawurlencode($val), $zData['row_id']);
-                        }
-                    } else {
-                        $zData['row_id'] = $zData['id'];
-                    }
-                } else {
-                    $zData['row_id'] = '';
-                }
-            }
-        }
-        return $zData;
-    }
-
-
-
-
-
     private function generateFRSearchCondition ($sFRSearchValue, $sTablename, $sFieldname,
                                                 $aOptions)
     {
@@ -789,6 +874,32 @@ class LOVD_Object
             $sFRSearchCondition = $sCompositeFieldname . ' LIKE ' . $_DB->quote('%' . lovd_escapeSearchTerm($sFRSearchValue) . '%');
         }
         return $sFRSearchCondition;
+    }
+
+
+
+
+
+    function generateRowID ($zData = false)
+    {
+        // Generates the row_id for the viewList rows.
+        if ($zData && is_array($zData) && !empty($zData)) {
+            if (!isset($zData['row_id'])) {
+                if (isset($zData['id'])) {
+                    if ($this->sRowID !== '') {
+                        $zData['row_id'] = str_replace('{{ID}}', rawurlencode($zData['id']), $this->sRowID);
+                        foreach ($zData as $key => $val) {
+                            $zData['row_id'] = preg_replace('/\{\{' . preg_quote($key, '/') . '\}\}/', rawurlencode($val), $zData['row_id']);
+                        }
+                    } else {
+                        $zData['row_id'] = $zData['id'];
+                    }
+                } else {
+                    $zData['row_id'] = '';
+                }
+            }
+        }
+        return $zData;
     }
 
 
@@ -890,48 +1001,6 @@ class LOVD_Object
 
 
 
-    function getCount ($ID = false)
-    {
-        // Returns the number of entries in the database table.
-        // ViewEntry() and ViewList() call this function to see if data exists at all, and actually don't require a precise number.
-        // $ID = Can be an integer/numeric string, or an array. If an integer/numeric string: ID to check for existance.
-        //   If an associative array (for linking tables), use array('geneid' => 'IVD', 'userid' => 1).
-        // FIXME: This function's name is wrong, and it should be renamed to isNotEmpty() or entryExist() or so.
-        // FIXME: Also the $this->nCount should be renamed, and the custom VL's functions for filling nCount can be simplified.
-        global $_DB;
-
-        if ($ID) {
-            // Prepare ID variable, to always be in the array('id' => 1) format.
-            $aIDs = $ID;
-            if (!is_array($ID)) {
-                $sIDColumn = 'id';
-                // In case a different column name is used, better use that instead.
-                if (!empty($this->aColumnsViewList['id']['db'][0])) {
-                    $sIDColumn = $this->aColumnsViewList['id']['db'][0];
-                    // But take the optional table alias off.
-                    $sIDColumn = substr(strrchr('.' . $sIDColumn, '.'), 1);
-                }
-                $aIDs = array($sIDColumn => $ID);
-            }
-
-            $nCount = (int) $_DB->query('SELECT 1 FROM ' . constant($this->sTable) . '
-                                         WHERE ' . implode(' = ? AND ', array_keys($aIDs)) . ' = ? LIMIT 1',
-                                array_values($aIDs))->fetchColumn();
-        } else {
-            if ($this->nCount !== '') {
-                return $this->nCount;
-            }
-            $nCount = (int) $_DB->query('SELECT 1 FROM ' . constant($this->sTable) . '
-                                         LIMIT 1')->fetchColumn();
-            $this->nCount = $nCount;
-        }
-        return $nCount;
-    }
-
-
-
-
-
     private function getFieldInfo ($sViewListCol)
     {
         // Get information on viewlist column. Returns:
@@ -983,6 +1052,47 @@ class LOVD_Object
     {
         // Returns the $this->aFormData variable, to build a form.
         return $this->aFormData;
+    }
+
+
+
+
+
+    public static function getObjectLinksHTML ($aIDs, $sURLFormat)
+    {
+        // Returns a list of object links in HTML format.
+        // Parameter $aIDs is an array with object IDs, and optionally, values.
+        // Parameter $sURLFormat designates the target of the links, where any
+        //   sprintf() recognized format (like %s) will be substituted with the
+        //   object ID, e.g. "genes/%s".
+        // For more information on formats to use, see:
+        //   http://php.net/manual/en/function.sprintf.php
+        // FIXME: There's no real reason why this is in the object.
+
+        $sShortDescription = '';
+        $sHTMLoutput = '';
+        $i = 0;
+        foreach ($aIDs as $key => $val) {
+            if (is_array($val)) {
+                $sObjectID = $val[0];
+                $sObjectValue = $val[1];
+            } else {
+                $sObjectID = $sObjectValue = $val;
+            }
+
+            $sHTMLoutput .= (!$key ? '' : ', ') . '<A href="' . sprintf($sURLFormat, $sObjectID) .
+                '">' . $sObjectValue . '</A>';
+            if ($i < 20) {
+                $sShortDescription .= (!$key ? '' : ', ') . '<A href="' .
+                    sprintf($sURLFormat, $sObjectID) . '">' . $sObjectValue . '</A>';
+                $i++;
+            }
+        }
+        if (count($aIDs) > 22) {
+            // Replace long gene list by shorter one, allowing expand.
+            $sHTMLoutput = '<SPAN>' . $sShortDescription . ', <A href="#" onclick="$(this).parent().hide(); $(this).parent().next().show(); return false;">' . (count($aIDs) - $i) . ' more...</A></SPAN><SPAN style="display : none;">' . $sHTMLoutput . '</SPAN>';
+        }
+        return $sHTMLoutput;
     }
 
 
@@ -1073,7 +1183,7 @@ class LOVD_Object
                     // 4: alias, if present.
                     // Try to see which table(s) is/are used here.
                     $aTables = array();
-                    $sTable = ($aRegs[2][$i]? $aRegs[2][$i] : $aRegs[3][$i]);
+                    $sTable = ($aRegs[2][$i]?: $aRegs[3][$i]);
                     if ($sTable) {
                         $aTables[] = $sTable;
                     } else {
@@ -1088,7 +1198,7 @@ class LOVD_Object
                         }
                     }
                     // Key: alias or, when not available, the SELECT statement (table.col).
-                    $aColumnsUsed[($aRegs[4][$i]? $aRegs[4][$i] : $aRegs[1][$i])] = array(
+                    $aColumnsUsed[($aRegs[4][$i]?: $aRegs[1][$i])] = array(
                         'SQL' => $aRegs[1][$i],
                         'tables' => $aTables,
                     );
@@ -1288,7 +1398,7 @@ class LOVD_Object
 
 
 
-    function insertEntry ($aData, $aFields = array())
+    function insertEntry ($aData, $aFields = array(), $bHalt = true)
     {
         // Inserts data in $aData into the database, using only fields defined in $aFields.
         // $aData = Associative array with values to be inserted. Keys should equal database column names.
@@ -1338,7 +1448,10 @@ class LOVD_Object
         if (!defined('LOG_EVENT')) {
             define('LOG_EVENT', $this->sObject . '::insertEntry()');
         }
-        $q = $_DB->query($sSQL, $aSQL, true, true);
+        $q = $_DB->query($sSQL, $aSQL, $bHalt, true);
+        if (!$bHalt && $q === false) {
+            return false;
+        }
 
         $nID = $_DB->lastInsertId(); // Will not return an ID for linking tables.
         if ($nID && substr(lovd_getColumnType(constant($this->sTable), 'id'), 0, 3) == 'INT') {
@@ -1378,7 +1491,7 @@ class LOVD_Object
                 }
             }
         }
-        return ($nID? $nID : true);
+        return ($nID?: true);
     }
 
 
@@ -1455,46 +1568,6 @@ class LOVD_Object
 
 
 
-    public static function lovd_getObjectLinksHTML ($aIDs, $sURLFormat)
-    {
-        // Returns a list of object links in HTML format.
-        // Parameter $aIDs is an array with object IDs, and optionally, values.
-        // Parameter $sURLFormat designates the target of the links, where any
-        //   sprintf() recognized format (like %s) will be substituted with the
-        //   object ID, e.g. "genes/%s".
-        // For more information on formats to use, see:
-        //   http://php.net/manual/en/function.sprintf.php
-
-        $sShortDescription = '';
-        $sHTMLoutput = '';
-        $i = 0;
-        foreach ($aIDs as $key => $val) {
-            if (is_array($val)) {
-                $sObjectID = $val[0];
-                $sObjectValue = $val[1];
-            } else {
-                $sObjectID = $sObjectValue = $val;
-            }
-
-            $sHTMLoutput .= (!$key ? '' : ', ') . '<A href="' . sprintf($sURLFormat, $sObjectID) .
-                '">' . $sObjectValue . '</A>';
-            if ($i < 20) {
-                $sShortDescription .= (!$key ? '' : ', ') . '<A href="' .
-                    sprintf($sURLFormat, $sObjectID) . '">' . $sObjectValue . '</A>';
-                $i++;
-            }
-        }
-        if (count($aIDs) > 22) {
-            // Replace long gene list by shorter one, allowing expand.
-            $sHTMLoutput = '<SPAN>' . $sShortDescription . ', <A href="#" onclick="$(this).parent().hide(); $(this).parent().next().show(); return false;">' . (count($aIDs) - $i) . ' more...</A></SPAN><SPAN style="display : none;">' . $sHTMLoutput . '</SPAN>';
-        }
-        return $sHTMLoutput;
-    }
-
-
-
-
-
     function prepareData ($zData = '', $sView = 'list')
     {
         // Prepares the data by "enriching" the variable received with links, pictures, etc.
@@ -1525,6 +1598,9 @@ class LOVD_Object
         if ($sView == 'list') {
             // By default, we put anchors in the id_ and DNA fields, if present.
             if ($zData['row_link']) {
+                if (substr($zData['row_link'], 0, 11) == 'javascript:') {
+                    $zData['row_link'] = htmlspecialchars(rawurldecode($zData['row_link']));
+                }
                 if (isset($this->aColumnsViewList['id_']) && $zData['id']) {
                     $zData['id_'] = '<A href="' . $zData['row_link'] . '" class="hide">' . $zData['id'] . '</A>';
                 }
@@ -1539,7 +1615,7 @@ class LOVD_Object
             // Status coloring will only be done, when we have authorization.
             // Instead of having the logic in separate objects and the custom VL object, put it together here.
             // In LOVD+, we disable the feature of coloring hidden and marked data, since all data is hidden.
-            if (!LOVD_plus && $_AUTH['level'] >= $_SETT['user_level_settings']['see_nonpublic_data']) {
+            if (!LOVD_plus && $_AUTH && $_AUTH['level'] >= $_SETT['user_level_settings']['see_nonpublic_data']) {
                 // Loop through possible status fields, always keep the minimum.
                 foreach (array('statusid', 'var_statusid', 'ind_statusid') as $sField) {
                     if (!empty($zData[$sField])) {
@@ -1562,7 +1638,7 @@ class LOVD_Object
 
             // Handle JSON data (well, in a VL, we hide it).
             foreach ($zData as $sKey => $Value) {
-                if (is_string($Value) && $Value && $Value{0} == '{'
+                if (is_string($Value) && $Value && $Value[0] == '{'
                     && is_array(json_decode(htmlspecialchars_decode($Value), true))) {
                     // We don't show JSON data in the VLs.
                     $zData[$sKey] = '<I>(data)</I>';
@@ -1582,7 +1658,7 @@ class LOVD_Object
 
             // Handle JSON well.
             foreach ($zData as $sKey => $Value) {
-                if (is_string($Value) && $Value && $Value{0} == '{'
+                if (is_string($Value) && $Value && $Value[0] == '{'
                     && is_array(json_decode(htmlspecialchars_decode($Value), true))) {
                     // Restructure the JSON.
                     $zData[$sKey] = $this->formatArrayToTable(json_decode(htmlspecialchars_decode($Value), true));
@@ -1596,7 +1672,7 @@ class LOVD_Object
                 $zData['owner'] = array($zData['owner']);
             }
             // We are going to overwrite the 'owned_by_' field.
-            $zData['owned_by_'] = '';
+            $sOwnedBy = '';
             foreach($zData['owner'] as $aLinkData) {
                 if (count($aLinkData) >= 6) {
                     list($nID, $sName, $sEmail, $sInstitute, $sDepartment, $sCountryID) = $aLinkData;
@@ -1606,18 +1682,37 @@ class LOVD_Object
                     }
                     // For VLs, call the tooltip function with a request to move the tooltip left, because "Owner" is often the last column in the table,
                     //  and we don't want it to run off the page. I have found no way of moving the tooltip left whenever it's enlarging the document size.
-                    $zData['owned_by_'] .= (!$zData['owned_by_']? '' : ', ') .
+                    $sOwnedBy .= (!$sOwnedBy? '' : ', ') .
                         '<SPAN class="custom_link" onmouseover="lovd_showToolTip(\'' .
-                        addslashes('<TABLE border=0 cellpadding=0 cellspacing=0 width=350 class=S11><TR><TH valign=top>User&nbsp;ID</TH><TD>' . ($_AUTH['level'] < LEVEL_MANAGER? $nID : '<A href=users/' . $nID . '>' . $nID . '</A>') . '</TD></TR><TR><TH valign=top>Name</TH><TD>' . $sName . '</TD></TR><TR><TH valign=top>Email&nbsp;address</TH><TD>' . str_replace("\r\n", '<BR>', lovd_hideEmail($sEmail)) . '</TD></TR><TR><TH valign=top>Institute</TH><TD>' . $sInstitute . '</TD></TR><TR><TH valign=top>Department</TH><TD>' . $sDepartment . '</TD></TR><TR><TH valign=top>Country</TH><TD>' . $sCountryID . '</TD></TR></TABLE>') .
+                        addslashes(
+                            '<TABLE border=0 cellpadding=0 cellspacing=0 width=350 class=S11><TR><TH valign=top>User&nbsp;ID</TH><TD>' .
+                            (!$_AUTH || $_AUTH['level'] < LEVEL_MANAGER? $nID : '<A href=users/' . $nID . '>' . $nID . '</A>') .
+                            '</TD></TR><TR><TH valign=top>Name</TH><TD>' . htmlspecialchars($sName) .
+                            '</TD></TR><TR><TH valign=top>Email&nbsp;address</TH><TD>' . str_replace("\r\n", '<BR>', lovd_hideEmail($sEmail)) .
+                            '</TD></TR><TR><TH valign=top>Institute</TH><TD>' . htmlspecialchars($sInstitute) .
+                            '</TD></TR><TR><TH valign=top>Department</TH><TD>' . htmlspecialchars($sDepartment) .
+                            '</TD></TR><TR><TH valign=top>Country</TH><TD>' . $sCountryID . '</TD></TR></TABLE>') .
                         '\', this, [' . ($sView == 'list'? '-200' : '0') . ', 0]);">' . $sName . '</SPAN>';
                 }
+            }
+            if ($sOwnedBy) {
+                // Overwrite only if we came up with something better
+                //  (which won't happen for LOVD-owned data).
+                $zData['owned_by_'] = $sOwnedBy;
             }
         }
         if (LOVD_plus) {
             // Analyzer's details like the owner's details.
             if (isset($zData['analysis_by']) && (int) $zData['analysis_by'] && !empty($zData['analyzer'])) {
                 list($nID, $sName, $sEmail, $sInstitute, $sDepartment, $sCountryID) = $zData['analyzer'];
-                $zData['analysis_by_'] = '<SPAN class="custom_link" onmouseover="lovd_showToolTip(\'' . addslashes('<TABLE border=0 cellpadding=0 cellspacing=0 width=350 class=S11><TR><TH valign=top>User&nbsp;ID</TH><TD>' . ($_AUTH['level'] < LEVEL_MANAGER? $nID : '<A href=users/' . $nID . '>' . $nID . '</A>') . '</TD></TR><TR><TH valign=top>Name</TH><TD>' . $sName . '</TD></TR><TR><TH valign=top>Email&nbsp;address</TH><TD>' . str_replace("\r\n", '<BR>', lovd_hideEmail($sEmail)) . '</TD></TR><TR><TH valign=top>Institute</TH><TD>' . $sInstitute . '</TD></TR><TR><TH valign=top>Department</TH><TD>' . $sDepartment . '</TD></TR><TR><TH valign=top>Country</TH><TD>' . $sCountryID . '</TD></TR></TABLE>') . '\', this);">' . $sName . '</SPAN>';
+                $zData['analysis_by_'] = '<SPAN class="custom_link" onmouseover="lovd_showToolTip(\'' .
+                    addslashes('<TABLE border=0 cellpadding=0 cellspacing=0 width=350 class=S11><TR><TH valign=top>User&nbsp;ID</TH><TD>' .
+                        (!$_AUTH || $_AUTH['level'] < LEVEL_MANAGER? $nID : '<A href=users/' . $nID . '>' . $nID . '</A>') . '</TD></TR>' .
+                        '<TR><TH valign=top>Name</TH><TD>' . $sName . '</TD></TR>' .
+                        '<TR><TH valign=top>Email&nbsp;address</TH><TD>' . str_replace("\r\n", '<BR>', lovd_hideEmail($sEmail)) . '</TD></TR>' .
+                        '<TR><TH valign=top>Institute</TH><TD>' . $sInstitute . '</TD></TR>' .
+                        '<TR><TH valign=top>Department</TH><TD>' . $sDepartment . '</TD></TR>' .
+                        '<TR><TH valign=top>Country</TH><TD>' . $sCountryID . '</TD></TR></TABLE>') . '\', this);">' . $sName . '</SPAN>';
             }
         }
 
@@ -1841,10 +1936,23 @@ class LOVD_Object
                                     break;
                                 default:
                                     if (preg_match('/^!?"?([^"]+)"?$/', $sTerm, $aMatches)) {
+                                        // ASDF, !ASDF, "ASDF", !"ASDF".
+                                        // Added support for ^term and term$, ^term$ being the same as ="term".
                                         $sOperator = (substr($sTerm, 0, 1) == '!'? 'NOT ' : '') . 'LIKE';
+                                        $sTerm = ltrim($sTerm, '!');
+                                        $sPrefix = $sSuffix = '%';
                                         $$CLAUSE .= '(' . $aCol['db'][0] . ' ' . $sOperator . ' ?' . ($sOperator == 'NOT LIKE'? ' OR ' . $aCol['db'][0] . ' IS NULL)' : ')');
-                                        $aArguments[$CLAUSE][] = '%' . $aMatches[1] . '%';
+                                        if (substr($sTerm, 0, 1) == '^') {
+                                            $sPrefix = '';
+                                            $aMatches[1] = substr($aMatches[1], 1);
+                                        }
+                                        if (substr($sTerm, -1) == '$') {
+                                            $sSuffix = '';
+                                            $aMatches[1] = substr($aMatches[1], 0, -1);
+                                        }
+                                        $aArguments[$CLAUSE][] = $sPrefix . $aMatches[1] . $sSuffix;
                                     } elseif (preg_match('/^!?=""$/', $sTerm)) {
+                                        // ="", !="".
                                         $bNot = (substr($sTerm, 0, 1) == '!');
                                         if ($bNot) {
                                             $$CLAUSE .= '(' . $aCol['db'][0] . ' != "" AND ' . $aCol['db'][0] . ' IS NOT NULL)';
@@ -1852,6 +1960,7 @@ class LOVD_Object
                                             $$CLAUSE .= '(' . $aCol['db'][0] . ' = "" OR ' . $aCol['db'][0] . ' IS NULL)';
                                         }
                                     } elseif (preg_match('/^!?="([^"]*)"$/', $sTerm, $aMatches)) {
+                                        // ="ASDF", !="ASDF".
                                         $sOperator = (substr($sTerm, 0, 1) == '!'? '!=' : '=');
                                         $$CLAUSE .= '(' . $aCol['db'][0] . ' ' . $sOperator . ' ?' . ($sOperator == '!='? ' OR ' . $aCol['db'][0] . ' IS NULL)' : ')');
                                         // 2013-07-25; 3.0-07; When not using LIKE, undo escaping done by lovd_escapeSearchTerm().
@@ -1994,7 +2103,7 @@ class LOVD_Object
         // $ID = Can be an integer/numeric string, or an array. If an integer/numeric string: ID to change.
         //   If an associative array (for linking tables), use array('geneid' => 'IVD', 'userid' => 1).
         // $aData = Associative array with values to be inserted. Keys should equal database column names.
-        // $aFields = The keys of the associative array that will actually get inserted.
+        // $aFields = The keys of the associative array that will actually get updated.
         global $_DB;
 
         // Check to see if an ID has been passed and there is data to process.
@@ -2138,8 +2247,7 @@ class LOVD_Object
         $bAjax = (substr(lovd_getProjectFile(), 0, 6) == '/ajax/');
 
         // Check existence of entry.
-        $n = $this->getCount($ID);
-        if (!$n) {
+        if (!$this->entryExist($ID)) {
             lovd_showInfoTable('No such ID!', 'stop');
             if (!$bAjax) {
                 $_T->printFooter();
@@ -2223,7 +2331,7 @@ class LOVD_Object
                 print("\n" .
                       '        <TR>' . "\n" .
                       '          <TH valign="top">' . str_replace(' ', '&nbsp;', $sHeader) . '</TH>' . "\n" .
-                      '          <TD>' . ($zData[$sField] === ''? '-' : str_replace(array("\r\n", "\r", "\n"), '<BR>', $zData[$sField])) . '</TD></TR>');
+                      '          <TD>' . (!isset($zData[$sField]) || $zData[$sField] === ''? '-' : str_replace(array("\r\n", "\r", "\n"), '<BR>', $zData[$sField])) . '</TD></TR>');
             }
         }
         print('</TABLE>' . "\n\n");
@@ -2262,12 +2370,16 @@ class LOVD_Object
                 'only_rows' => false,           // Only put the table rows in the output.
                 'find_and_replace' => false,    // Allow find and replace on columns.
                 'multi_value_filter' => false,  // Allow multi valued search on columns.
+                'curate_set' => false,          // Allow "curate entries" option.
+                'merge_set' => false,           // Allow "merge entries" option.
             ),
             $aOptions);
 
-        // Disallow F&R and multivalue search when options menu is hidden.
+        // Disallow options when options menu is hidden.
         $aOptions['find_and_replace'] &= $aOptions['show_options'];
         $aOptions['multi_value_filter'] &= $aOptions['show_options'];
+        $aOptions['curate_set'] &= $aOptions['show_options'];
+        $aOptions['merge_set'] &= $aOptions['show_options'];
 
         // Save viewlist options to session.
         $_SESSION['viewlists'][$sViewListID]['options'] = array_merge(
@@ -2304,11 +2416,7 @@ class LOVD_Object
         require_once ROOT_PATH . 'inc-lib-viewlist.php';
 
         // First, check if entries are in the database at all.
-        // FIXME: This check, meant for optimization, proves to be slowing down the entire VL on larger DBs.
-        // FIXME: It would be better to remove this and remove the nCount calculators in the custom VL object completely.
-        // FIXME: Currently anyway we don't provide correct counts there for performance reasons, so the variable name isn't correct.
-        $nTotal = $this->getCount();
-        if (!$nTotal && FORMAT == 'text/html') {
+        if (!$this->entryExist() && FORMAT == 'text/html') {
             if ($aOptions['only_rows']) {
                 die('0'); // Silent error.
             }
@@ -2350,7 +2458,7 @@ class LOVD_Object
             $sSQLOrderBy = '`' . trim($aOrder[0], '`') . '` ' . $aOrder[1];
         }
 
-        if (in_array($aOrder[0], array('chromosome','VariantOnGenome/DNA'))) {
+        if (in_array($aOrder[0], array('chromosome', 'VariantOnGenome/DNA'))) {
             // 2014-03-07; 3.0-10; We need to find the table alias of the VOG or genes table, because otherwise MySQL fails here ('chromosome' is ambiguous) if both are joined.
             // 2014-04-28; 3.0-10; Prefer the genes table, since it joins to VOG as well, but may not have results which messes up the order.
             // 2018-11-22; LOVD+ 3.0-18; Override, we have overviews of VOGs that sometimes don't have genes, link to the first table instead!
@@ -2363,13 +2471,27 @@ class LOVD_Object
             } elseif (($nPosGenes === false || $nPosVOG < $nPosGenes) && preg_match('/' . TABLE_VARIANTS . ' AS ([a-z]+)/i', $this->aSQLViewList['FROM'], $aRegs)) {
                 $sAlias = $aRegs[1];
             }
-            $this->aSQLViewList['FROM'] .= ' LEFT OUTER JOIN ' . TABLE_CHROMOSOMES . ' AS chr ON (' . (!$sAlias? '' : $sAlias . '.') . 'chromosome = chr.name)';
-            $sSQLOrderBy = 'chr.sort_id ' . $aOrder[1];
+            if (!$_SETT['customization_settings']['variants_VL_quick_dirty_sort']) {
+                // The quick dirty sort sorts on chromosomes alphabetically to use the VOG's keys.
+                // It's ugly because 2 sorts after 10-19, but it's 1000x faster if also the sort on VOG/DNA is dropped (which we do below).
+                $this->aSQLViewList['FROM'] .= ' LEFT OUTER JOIN ' . TABLE_CHROMOSOMES . ' AS chr ON (' . (!$sAlias? '' : $sAlias . '.') . 'chromosome = chr.name)';
+                $sSQLOrderBy = 'chr.sort_id ' . $aOrder[1];
+            } else {
+                $sSQLOrderBy = $sAlias . '.chromosome ' . $aOrder[1];
+            }
             if ($aOrder[0] == 'VariantOnGenome/DNA') {
-                $sSQLOrderBy .= ', position_g_start ' . $aOrder[1] . ', position_g_end ' . $aOrder[1] . ', `VariantOnGenome/DNA` ' . $aOrder[1];
+                $sSQLOrderBy .= ', position_g_start ' . $aOrder[1] . ', position_g_end ' . $aOrder[1];
+                if (!$_SETT['customization_settings']['variants_VL_quick_dirty_sort']) {
+                    // Only actually sort on VOG/DNA if we're not dirty-sorting.
+                    $sSQLOrderBy .= ', `VariantOnGenome/DNA` ' . $aOrder[1];
+                }
             }
         } elseif ($aOrder[0] == 'VariantOnTranscript/DNA') {
-            $sSQLOrderBy = 'position_c_start ' . $aOrder[1] . ', position_c_start_intron ' . $aOrder[1] . ', position_c_end ' . $aOrder[1] . ', position_c_end_intron ' . $aOrder[1] . ', `VariantOnTranscript/DNA` ' . $aOrder[1];
+            $sSQLOrderBy = 'position_c_start ' . $aOrder[1] . ', position_c_start_intron ' . $aOrder[1] . ', position_c_end ' . $aOrder[1] . ', position_c_end_intron ' . $aOrder[1];
+            if (!$_SETT['customization_settings']['variants_VL_quick_dirty_sort']) {
+                // Only actually sort on VOT/DNA if we're not dirty-sorting.
+                $sSQLOrderBy .= ', `VariantOnTranscript/DNA` ' . $aOrder[1];
+            }
         }
         // At this point, we're not sure if we'll actually use the ORDER BY at all.
         $this->aSQLViewList['ORDER_BY'] = $sSQLOrderBy . (empty($this->aSQLViewList['ORDER_BY'])? '' : ', ' . $this->aSQLViewList['ORDER_BY']);
@@ -2453,7 +2575,7 @@ class LOVD_Object
             'bFRReplaceAll' =>  $bFRReplaceAll
         );
 
-        $nTotal = 0; // Overwrites the previous $nTotal.
+        $nTotal = 0;
         if (!count($aBadSyntaxColumns)) {
             // Build argument list.
             $aArgs = array_merge($aArguments['WHERE'], $aArguments['HAVING']);
@@ -2534,6 +2656,8 @@ class LOVD_Object
                             // 2015-09-18; 3.0-14; We need to run rawurldecode() or else Columns are not selectable this way.
                             $aSessionViewList['checked'][] = rawurldecode($zData['row_id']);
                         }
+                        // Now, unique() the list since we don't want to keep adding the same IDs.
+                        $aSessionViewList['checked'] = array_unique($aSessionViewList['checked']);
                     } elseif ($_GET['ids_changed'] == 'none') {
                         // If the unselect all button was clicked, reset the 'checked' array.
                         $aSessionViewList['checked'] = array();
@@ -2699,7 +2823,189 @@ class LOVD_Object
                 }
                 print('      </DIV>' . "\n\n");
 
+                // Add an info DIV about how to query. Print it only once.
+                if (!defined('PrintedViewListHowToQuery')) {
+                    define('PrintedViewListHowToQuery', true);
+                    print('
+        <DIV id="viewlistHowToQuery" title="How to query this table" style="display : none;">
+          <H2 class="LOVD">How to query this table</H2>
+          All list views have search fields which can be used to search data.
+          You can search for a complete word or you can search for a part of a search term.
+          If you enclose two or more words in double quotes, LOVD will search for the combination of those words only exactly in the order you specify.
+          Note that search terms are case-insensitive and that wildcards such as * are treated as normal text!
+          For all options, like &quot;and&quot;, &quot;or&quot;, and &quot;not&quot; searches, or searching for prefixes or suffixes, see the table below.<BR>
+          <BR>
+
+          <TABLE cellspacing="0" width="750">
+            <TR>
+              <TH style="border-bottom: 1px solid black;">Operator</TH>
+              <TH style="border-bottom: 1px solid black;">Column type</TH>
+              <TH style="border-bottom: 1px solid black;">Example</TH>
+              <TH style="border-bottom: 1px solid black;">Matches</TH></TR>
+            <TR>
+              <TH>&nbsp;</TH>
+              <TD>Text</TD>
+              <TD>Arg</TD>
+              <TD>all entries containing \'Arg\'</TD></TR>
+            <TR>
+              <TH>space</TH>
+              <TD>Text</TD>
+              <TD>Arg Ser</TD>
+              <TD>all entries containing \'Arg\' and \'Ser\'</TD></TR>
+            <TR>
+              <TH>|</TH>
+              <TD>Text</TD>
+              <TD>Arg|Ser</TD>
+              <TD>all entries containing \'Arg\' or \'Ser\'</TD></TR>
+            <TR>
+              <TH>!</TH>
+              <TD>Text</TD>
+              <TD>!fs</TD>
+              <TD>all entries not containing \'fs\'</TD></TR>
+            <TR>
+              <TH>^</TH>
+              <TD>Text</TD>
+              <TD>^p.(Arg</TD>
+              <TD>all entries beginning with \'p.(Arg\'</TD></TR>
+            <TR>
+              <TH>$</TH>
+              <TD>Text</TD>
+              <TD>Ser)$</TD>
+              <TD>all entries ending with \'Ser)\'</TD></TR>
+            <TR>
+              <TH>=&quot;&quot;</TH>
+              <TD>Text</TD>
+              <TD>=&quot;&quot;</TD>
+              <TD>all entries with this field empty</TD></TR>
+            <TR>
+              <TH>=&quot;&quot;</TH>
+              <TD>Text</TD>
+              <TD>=&quot;p.0&quot;</TD>
+              <TD>all entries exactly matching \'p.0\'</TD></TR>
+            <TR>
+              <TH>!=&quot;&quot;</TH>
+              <TD>Text</TD>
+              <TD>!=&quot;&quot;</TD>
+              <TD>all entries with this field not empty</TD></TR>
+            <TR>
+              <TH>!=&quot;&quot;</TH>
+              <TD>Text</TD>
+              <TD>!=&quot;p.0&quot;</TD>
+              <TD>all entries not exactly matching \'p.0?\'</TD></TR>
+            <TR>
+              <TH>combination</TH>
+              <TD>Text</TD>
+              <TD>*|Ter !fs</TD>
+              <TD>all entries containing \'*\' or \'Ter\' but not containing \'fs\'</TD></TR>
+            <TR>
+              <TH style="border-top: 1px solid black;"></TH>
+              <TD style="border-top: 1px solid black;">Date</TD>
+              <TD style="border-top: 1px solid black;">2020</TD>
+              <TD style="border-top: 1px solid black;">all entries matching the year 2020</TD></TR>
+            <TR>
+              <TH>|</TH>
+              <TD>Date</TD>
+              <TD>2020-03|2020-04</TD>
+              <TD>all entries matching March or April, 2020</TD></TR>
+            <TR>
+              <TH>!</TH>
+              <TD>Date</TD>
+              <TD>!2020-03</TD>
+              <TD>all entries not matching March, 2020</TD></TR>
+            <TR>
+              <TH>&lt;</TH>
+              <TD>Date</TD>
+              <TD>&lt;2020</TD>
+              <TD>all entries before the year 2020</TD></TR>
+            <TR>
+              <TH>&lt;=</TH>
+              <TD>Date</TD>
+              <TD>&lt;=2020-06</TD>
+              <TD>all entries in or before June, 2020</TD></TR>
+            <TR>
+              <TH>&gt;</TH>
+              <TD>Date</TD>
+              <TD>&gt;2020-06</TD>
+              <TD>all entries after June, 2020</TD></TR>
+            <TR>
+              <TH>&gt;=</TH>
+              <TD>Date</TD>
+              <TD>&gt;=2020-06-15</TD>
+              <TD>all entries on or after June 15th, 2020</TD></TR>
+            <TR>
+              <TH>combination</TH>
+              <TD>Date</TD>
+              <TD>2019|2020 &lt;2020-03</TD>
+              <TD>all entries in 2019 or 2020, and before March, 2020</TD></TR>
+            <TR>
+              <TH style="border-top: 1px solid black;"></TH>
+              <TD style="border-top: 1px solid black;">Numeric</TD>
+              <TD style="border-top: 1px solid black;">23</TD>
+              <TD style="border-top: 1px solid black;">all entries exactly matching 23</TD></TR>
+            <TR>
+              <TH>|</TH>
+              <TD>Numeric</TD>
+              <TD>23|24</TD>
+              <TD>all entries exactly matching 23 or 24</TD></TR>
+            <TR>
+              <TH>!</TH>
+              <TD>Numeric</TD>
+              <TD>!23</TD>
+              <TD>all entries not exactly matching 23</TD></TR>
+            <TR>
+              <TH>&lt;</TH>
+              <TD>Numeric</TD>
+              <TD>&lt;23</TD>
+              <TD>all entries lower than 23</TD></TR>
+            <TR>
+              <TH>&lt;=</TH>
+              <TD>Numeric</TD>
+              <TD>&lt;=23</TD>
+              <TD>all entries lower than, or equal to, 23</TD></TR>
+            <TR>
+              <TH>&gt;</TH>
+              <TD>Numeric</TD>
+              <TD>&gt;23</TD>
+              <TD>all entries higher than 23</TD></TR>
+            <TR>
+              <TH>&gt;=</TH>
+              <TD>Numeric</TD>
+              <TD>&gt;=23</TD>
+              <TD>all entries higher than, or equal to, 23</TD></TR>
+            <TR>
+              <TH>combination</TH>
+              <TD>Numeric</TD>
+              <TD>&gt;=20 &lt;30 !23</TD>
+              <TD>all entries with values from 20 to 29, but not equal to 23</TD></TR></TABLE><BR><BR>
+
+          Some more advanced examples:<BR><BR>
+          <TABLE cellspacing="0" width="750">
+            <TR>
+              <TH style="border-bottom: 1px solid black;">Example</TH>
+              <TH style="border-bottom: 1px solid black;">Matches</TH></TR>
+            <TR>
+              <TH>Asian</TH>
+              <TD>all entries containing \'Asian\', \'asian\', including \'Caucasian\', \'caucasian\', etc.</TD></TR>
+            <TR>
+              <TH>Asian !Caucasian</TH>
+              <TD>all entries containing \'Asian\' but not containing \'Caucasian\'</TD></TR>
+            <TR>
+              <TH>Asian|African !Caucasian</TH>
+              <TD>all entries containing \'Asian\' or \'African\', but not containing \'Caucasian\'</TD></TR>
+            <TR>
+              <TH>&quot;South Asian&quot;</TH>
+              <TD>all entries containing \'South Asian\', but not containing \'South East Asian\'</TD></TR></TABLE><BR><BR>
+
+          To sort on a certain column, click on the column header or on the arrows.
+          If that column is already selected to sort on, the sort order will be swapped.
+          The column currently sorted on has a darker blue background color than the other columns.
+          The up and down arrows next to the column name indicate the current sorting direction.
+          When sorting on any field other than the default, LOVD will sort secondarily on the default sort column.
+        </DIV>' . "\n\n");
+                }
+
                 if ($aOptions['show_navigation']) {
+                    lovd_pagesplitInit(); // Has not run yet when we have bad search syntax.
                     lovd_pagesplitShowNav($sViewListID, $nTotal, $bTrueCount, $bSortableVL, $bLegend);
                 }
 
@@ -2868,9 +3174,9 @@ FROptions
                 // FIXME; This code is sort of duplicated, some 100 lines below we also print this, *if* results are found.
                 print('</TABLE><BR>' . "\n"); // <BR> is necessary to keep the InfoTable apart from the data headers.
                 if ($aOptions['show_navigation']) {
-                    print('        <INPUT type="hidden" name="total" value="' . $nTotal . '" disabled>' . "\n" .
-                          '        <INPUT type="hidden" name="page_size" value="' . $_GET['page_size'] . '">' . "\n" .
-                          '        <INPUT type="hidden" name="page" value="' . $_GET['page'] . '">' . "\n");
+                    print('        <INPUT type="hidden" name="total" value="' . (int) $nTotal . '" disabled>' . "\n" .
+                          '        <INPUT type="hidden" name="page_size" value="' . (int) $_GET['page_size'] . '">' . "\n" .
+                          '        <INPUT type="hidden" name="page" value="' . (int) $_GET['page'] . '">' . "\n");
                 }
                 lovd_showInfoTable($sMessage, 'stop');
                 print('      </DIV></FORM>' . "\n\n");
@@ -2930,8 +3236,10 @@ FROptions
                     foreach ($zData as $key => $val) {
                         // Also allow data from $zData to be put into the row link & row id.
                         // FIXME; This is a temporary ugly solution, so we need to fix this later!!!!
-                        $zData['row_link'] = preg_replace('/\{\{' . preg_quote($key, '/') . '\}\}/', rawurlencode($val), $zData['row_link']);
-                        $zData['row_link'] = preg_replace('/\{\{zData_' . preg_quote($key, '/') . '\}\}/', rawurlencode($val), $zData['row_link']);
+                        $zData['row_link'] = preg_replace('/\{\{' . preg_quote($key, '/') . '\}\}/', rawurlencode(htmlspecialchars(addslashes($val))), $zData['row_link']);
+                        $zData['row_link'] = preg_replace('/\{\{zData_' . preg_quote($key, '/') . '\}\}/', rawurlencode(htmlspecialchars(addslashes($val))), $zData['row_link']);
+                        // But don't break C>G notation, variants can't be searched using row links otherwise.
+                        $zData['row_link'] = str_replace('%26gt%3B', '%3E', $zData['row_link']);
                     }
                 } else {
                     $zData['row_link'] = '';
@@ -2992,7 +3300,7 @@ FROptions
                         $aCSSClasses[] = 'mvs';
                     }
 
-                    print("\n" . '          <TD' . (!empty($aCol['view'][2])? ' ' . $aCol['view'][2] : '') . (!empty($aCSSClasses)? ' class="' . join(' ', $aCSSClasses) . '"' : '') . '>' . ($zData[$sField] === ''? '-' : $zData[$sField]) . '</TD>');
+                    print("\n" . '          <TD' . (!empty($aCol['view'][2])? ' ' . $aCol['view'][2] : '') . (!empty($aCSSClasses)? ' class="' . join(' ', $aCSSClasses) . '"' : '') . '>' . (!isset($zData[$sField]) || $zData[$sField] === ''? '-' : $zData[$sField]) . '</TD>');
                 }
                 print('</TR>');
 
@@ -3019,8 +3327,8 @@ FROptions
             print('</TABLE>' . "\n");
             if ($aOptions['show_navigation']) {
                 print('        <INPUT type="hidden" name="total" value="' . $nTotal . '" disabled>' . "\n" .
-                      '        <INPUT type="hidden" name="page_size" value="' . $_GET['page_size'] . '">' . "\n" .
-                      '        <INPUT type="hidden" name="page" value="' . $_GET['page'] . '">' . "\n\n");
+                      '        <INPUT type="hidden" name="page_size" value="' . htmlspecialchars($_GET['page_size']) . '">' . "\n" .
+                      '        <INPUT type="hidden" name="page" value="' . htmlspecialchars($_GET['page']) . '">' . "\n\n");
 
                 lovd_pagesplitShowNav($sViewListID, $nTotal, $bTrueCount, $bSortableVL, $bLegend);
             }
@@ -3092,6 +3400,16 @@ $sMVSOption
 
 OPMENU
 );
+
+                if ($aOptions['curate_set']) {
+                    print('        // Add menu option for curating a selected set.' . "\n" .
+                          '        $("#viewlistMenu_' . $sViewListID . '").append(\'<LI class="icon"><A click="lovd_AJAX_viewListSubmit(\\\'' . $sViewListID . '\\\', function(){$.get(\\\'ajax/curate_set.php?fromVL&vlid=' . $sViewListID . '\\\').fail(function(){alert(\\\'Request failed. Please try again.\\\');});});"><SPAN class="icon"></SPAN>Curate (publish) selected entries</A></LI>\');' . "\n\n");
+                }
+                if ($aOptions['merge_set']) {
+                    print('        // Add menu option for merging a selected set of entries.' . "\n" .
+                          '        $("#viewlistMenu_' . $sViewListID . '").append(\'<LI class="icon"><A click="lovd_AJAX_viewListSubmit(\\\'' . $sViewListID . '\\\', function(){$.get(\\\'ajax/merge_entries.php?fromVL&vlid=' . $sViewListID . '\\\').fail(function(){alert(\\\'Request failed. Please try again.\\\');});});"><SPAN class="icon"></SPAN>Merge selected entries</A></LI>\');' . "\n\n");
+                }
+
                 if (!LOVD_plus
                     || empty($_INSTANCE_CONFIG['viewlists']['restrict_downloads'])
                     || (!empty($_INSTANCE_CONFIG['viewlists'][$sViewListID]['allow_download_from_level'])

@@ -4,10 +4,10 @@
  * LEIDEN OPEN VARIATION DATABASE (LOVD)
  *
  * Created     : 2009-10-19
- * Modified    : 2020-02-10
- * For LOVD    : 3.0-23
+ * Modified    : 2021-02-03
+ * For LOVD    : 3.0-26
  *
- * Copyright   : 2004-2020 Leiden University Medical Center; http://www.LUMC.nl/
+ * Copyright   : 2004-2021 Leiden University Medical Center; http://www.LUMC.nl/
  * Programmers : Ivo F.A.C. Fokkema <I.F.A.C.Fokkema@LUMC.nl>
  *               Ivar C. Lugtenburg <I.C.Lugtenburg@LUMC.nl>
  *               Daan Asscheman <D.Asscheman@LUMC.nl>
@@ -508,10 +508,8 @@ if ($_GET['step'] == 2 && defined('NOT_INSTALLED')) {
     // (9) Activating standard custom columns.
     $aInstallSQL['Activating LOVD standard custom columns...'] = lovd_getActivateCustomColumnQuery();
 
-    if (LOVD_plus) {
-        // Make sure the DBID column is indexed.
-        $aInstallSQL['Activating LOVD standard custom columns...'][] = 'ALTER TABLE ' . TABLE_VARIANTS . ' ADD INDEX(`VariantOnGenome/DBID`)';
-    }
+    // Make sure the DBID column is indexed.
+    $aInstallSQL['Activating LOVD standard custom columns...'][] = 'ALTER TABLE ' . TABLE_VARIANTS . ' ADD INDEX (`VariantOnGenome/DBID`)';
 
 
     // (10) Creating the "Healthy / Control" disease. Maybe later enable some more default columns? (IQ, ...)
@@ -642,13 +640,24 @@ if ($_GET['step'] == 3 && !($_DB->query('SHOW TABLES LIKE "' . TABLE_CONFIG . '"
 
         if (!lovd_error()) {
             // Store information and go to next page.
-            // FIXME; use object::insertEntry()
-            if (empty($_POST['proxy_port'])) {
-                // Empty port number, insert NULL instead of 0.
-                $_POST['proxy_port'] = NULL;
+
+            // Standard fields to be used.
+            $aFields = array(
+                'system_title', 'institute', 'location_url', 'email_address', 'send_admin_submissions', 'refseq_build',
+                'proxy_host', 'proxy_port', 'proxy_username', 'proxy_password',
+                'mutalyzer_soap_url', 'md_apikey',
+                'logo_uri', 'donate_dialog_allow', 'donate_dialog_months_hidden',
+                'send_stats', 'include_in_listing',
+                'allow_submitter_registration', 'lock_users', 'allow_unlock_accounts', 'allow_submitter_mods', 'use_ssl', 'lock_uninstall');
+
+            // Prepare values.
+            // Make sure the database URL ends in a /.
+            if ($_POST['location_url'] && substr($_POST['location_url'], -1) != '/') {
+                $_POST['location_url'] .= '/';
             }
-            $q = $_DB->query('INSERT INTO ' . TABLE_CONFIG . ' VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)', array($_POST['system_title'], $_POST['institute'], $_POST['location_url'], $_POST['email_address'], $_POST['send_admin_submissions'], $_POST['api_feed_history'], $_POST['refseq_build'], $_POST['proxy_host'], $_POST['proxy_port'], $_POST['proxy_username'], $_POST['proxy_password'], $_POST['logo_uri'], $_POST['mutalyzer_soap_url'], "", $_POST['send_stats'], $_POST['include_in_listing'], $_POST['allow_submitter_registration'], $_POST['lock_users'], $_POST['allow_unlock_accounts'], $_POST['allow_submitter_mods'], $_POST['allow_count_hidden_entries'], $_POST['use_ssl'], $_POST['use_versioning'], $_POST['lock_uninstall']), false, true);
-            if (!$q) {
+
+            $b = $_SYSSETTING->insertEntry($_POST, $aFields, false);
+            if (!$b) {
                 // Error when running query.
                 print('      Error during install while storing the settings.<BR>' . "\n" .
                       '      I got:<DIV class="err">' . str_replace(array("\r\n", "\r", "\n"), '<BR>', $_DB->formatError()) . '</DIV><BR><BR>' . "\n" .

@@ -4,10 +4,10 @@
  * LEIDEN OPEN VARIATION DATABASE (LOVD)
  *
  * Created     : 2009-10-22
- * Modified    : 2020-02-10
- * For LOVD    : 3.0-23
+ * Modified    : 2021-04-22
+ * For LOVD    : 3.0-27
  *
- * Copyright   : 2004-2020 Leiden University Medical Center; http://www.LUMC.nl/
+ * Copyright   : 2004-2021 Leiden University Medical Center; http://www.LUMC.nl/
  * Programmers : Ivo F.A.C. Fokkema <I.F.A.C.Fokkema@LUMC.nl>
  *               Ivar C. Lugtenburg <I.C.Lugtenburg@LUMC.nl>
  *               M. Kroon <m.kroon@lumc.nl>
@@ -80,8 +80,10 @@ $aTableSQL =
     password_force_change BOOLEAN NOT NULL DEFAULT 0,
     auth_token CHAR(32),
     auth_token_expires DATETIME,
+    api_settings TEXT,
     phpsessid CHAR(32),
     saved_work TEXT,
+    default_license VARCHAR(20),
     level TINYINT(1) UNSIGNED NOT NULL DEFAULT 1,
     allowed_ip VARCHAR(255) NOT NULL DEFAULT "*",
     login_attempts TINYINT(1) UNSIGNED NOT NULL DEFAULT 0,
@@ -141,6 +143,7 @@ $aTableSQL =
     show_hgmd BOOLEAN NOT NULL DEFAULT 0,
     show_genecards BOOLEAN NOT NULL DEFAULT 0,
     show_genetests BOOLEAN NOT NULL DEFAULT 0,
+    show_orphanet BOOLEAN NOT NULL DEFAULT 0,
     note_index TEXT,
     note_listing TEXT,
     refseq VARCHAR(1) NOT NULL DEFAULT "",
@@ -294,6 +297,7 @@ $aTableSQL =
     motherid MEDIUMINT(8) UNSIGNED ZEROFILL,
     panelid MEDIUMINT(8) UNSIGNED ZEROFILL,
     panel_size MEDIUMINT(8) UNSIGNED NOT NULL DEFAULT 1,
+    license VARCHAR(20),
     owned_by SMALLINT(5) UNSIGNED ZEROFILL,
     statusid TINYINT(1) UNSIGNED,
     created_by SMALLINT(5) UNSIGNED ZEROFILL,
@@ -361,7 +365,7 @@ $aTableSQL =
     position_g_end INT(10) UNSIGNED,
     type VARCHAR(10),
     mapping_flags TINYINT(3) UNSIGNED NOT NULL DEFAULT 0,
-    average_frequency FLOAT UNSIGNED,
+    average_frequency FLOAT,
     owned_by SMALLINT(5) UNSIGNED ZEROFILL,
     statusid TINYINT(1) UNSIGNED,
 
@@ -716,7 +720,10 @@ $aTableSQL =
     proxy_username VARCHAR(255) NOT NULL DEFAULT "",
     proxy_password VARCHAR(255) NOT NULL DEFAULT "",
     logo_uri VARCHAR(100) NOT NULL DEFAULT "gfx/LOVD' . (LOVD_plus? '_plus' : '3') . '_logo145x50.jpg",
+    donate_dialog_allow BOOLEAN NOT NULL DEFAULT 0,
+    donate_dialog_months_hidden TINYINT(2) UNSIGNED NOT NULL DEFAULT 1,
     mutalyzer_soap_url VARCHAR(100) NOT NULL DEFAULT "https://mutalyzer.nl/services",
+    md_apikey VARCHAR(50) NOT NULL DEFAULT "",
     omim_apikey VARCHAR(40) NOT NULL DEFAULT "",
     send_stats BOOLEAN NOT NULL DEFAULT 1,
     include_in_listing BOOLEAN NOT NULL DEFAULT 1,
@@ -776,7 +783,7 @@ $aTableSQL =
     date DATETIME NOT NULL,
     mtime MEDIUMINT(6) UNSIGNED ZEROFILL NOT NULL,
     userid SMALLINT(5) UNSIGNED ZEROFILL,
-    event VARCHAR(20) NOT NULL,
+    event VARCHAR(25) NOT NULL,
     log TEXT NOT NULL,
     PRIMARY KEY (name, date, mtime),
     INDEX (userid),

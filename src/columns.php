@@ -4,10 +4,10 @@
  * LEIDEN OPEN VARIATION DATABASE (LOVD)
  *
  * Created     : 2010-03-04
- * Modified    : 2019-10-09
- * For LOVD    : 3.0-22
+ * Modified    : 2022-05-27
+ * For LOVD    : 3.0-28
  *
- * Copyright   : 2004-2019 Leiden University Medical Center; http://www.LUMC.nl/
+ * Copyright   : 2004-2022 Leiden University Medical Center; http://www.LUMC.nl/
  * Programmers : Ivo F.A.C. Fokkema <I.F.A.C.Fokkema@LUMC.nl>
  *               Ivar C. Lugtenburg <I.C.Lugtenburg@LUMC.nl>
  *               M. Kroon <m.kroon@lumc.nl>
@@ -43,8 +43,8 @@ if ($_AUTH) {
 
 
 if (PATH_COUNT < 3 && !ACTION) {
-    // URL: /columns
-    // URL: /columns/(VariantOnGenome|VariantOnTranscript|Individual|...)
+    // URL: /columns
+    // URL: /columns/(VariantOnGenome|VariantOnTranscript|Individual|...)
     // View all columns.
 
     if (!empty($_PE[1])) {
@@ -65,12 +65,14 @@ if (PATH_COUNT < 3 && !ACTION) {
     $_T->printHeader();
     $_T->printTitle();
 
-    lovd_isAuthorized('gene', $_AUTH['curates']); // Will set user's level to LEVEL_CURATOR if he is one at all.
+    if ($_AUTH) {
+        lovd_isAuthorized('gene', $_AUTH['curates']); // Will set user's level to LEVEL_CURATOR if they are one at all.
+    }
     lovd_requireAUTH(LEVEL_CURATOR);
 
     require ROOT_PATH . 'class/object_columns.php';
     $_DATA = new LOVD_Column();
-    if ($_DATA->getCount()) {
+    if ($_DATA->entryExist()) {
         lovd_showInfoTable('Please note that these are all ' . (empty($_PE[1])? '' : $_PE[1]) . ' columns available in this LOVD installation. This is not the list of columns actually added to the system.' .
                            (!empty($_PE[1]) && !$aTableInfo['shared']? '' :
                             ' Also, modifications made to the columns added to ' . (empty($_PE[1])? 'the system' : 'a certain ' . $aTableInfo['unit']) . ' are not shown.'), 'information', 950);
@@ -109,17 +111,19 @@ if (PATH_COUNT < 3 && !ACTION) {
 
 
 if (PATH_COUNT > 2 && !ACTION) {
-    // URL: /columns/VariantOnGenome/DNA
-    // URL: /columns/Phenotype/Blood_pressure/Systolic
+    // URL: /columns/VariantOnGenome/DNA
+    // URL: /columns/Phenotype/Blood_pressure/Systolic
     // View specific column.
 
-    $sColumnID = implode('/', array_slice($_PE, 1));
+    $sColumnID = lovd_getCurrentID();
+    define('PAGE_TITLE', lovd_getCurrentPageTitle());
 
-    define('PAGE_TITLE', 'Custom data column ' . $sColumnID);
     $_T->printHeader();
     $_T->printTitle();
 
-    lovd_isAuthorized('gene', $_AUTH['curates']); // Will set user's level to LEVEL_CURATOR if he is one at all.
+    if ($_AUTH) {
+        lovd_isAuthorized('gene', $_AUTH['curates']); // Will set user's level to LEVEL_CURATOR if they are one at all.
+    }
     lovd_requireAUTH(LEVEL_CURATOR);
 
     require ROOT_PATH . 'class/object_columns.php';
@@ -150,10 +154,10 @@ if (PATH_COUNT > 2 && !ACTION) {
 
 
 if (PATH_COUNT == 2 && ACTION == 'order') {
-    // URL: /columns/Individual?order
+    // URL: /columns/Individual?order
     // Change in what order the columns will be shown in a viewList/viewEntry.
 
-    $sCategory = $_PE[1];
+    $sCategory = lovd_getCurrentID();
 
     $aTableInfo = lovd_getTableInfoByCategory($sCategory);
     if (!$aTableInfo) {
@@ -250,7 +254,7 @@ if (PATH_COUNT == 2 && ACTION == 'order') {
 
 
 if (PATH_COUNT == 1 && ACTION == 'data_type_wizard') {
-    // URL: /columns?data_type_wizard
+    // URL: /columns?data_type_wizard
     // Show form type forms and send info back.
 
     define('TAB_SELECTED', 'setup');
@@ -385,7 +389,7 @@ if (PATH_COUNT == 1 && ACTION == 'data_type_wizard') {
         }
 
         // Check regexp syntax.
-        if (!empty($_POST['preg_pattern']) && ($_POST['preg_pattern']{0} != '/' || @preg_match($_POST['preg_pattern'], '') === false)) {
+        if (!empty($_POST['preg_pattern']) && ($_POST['preg_pattern'][0] != '/' || @preg_match($_POST['preg_pattern'], '') === false)) {
             lovd_errorAdd('preg_pattern', 'The \'Regular expression pattern\' field does not seem to contain valid PHP Perl compatible regexp syntax.');
         }
 
@@ -393,7 +397,7 @@ if (PATH_COUNT == 1 && ACTION == 'data_type_wizard') {
         if (!empty($_POST['select_options'])) {
             $aOptions = explode("\r\n", $_POST['select_options']);
             foreach ($aOptions as $n => $sOption) {
-                if (!preg_match('/^([^=]+|[A-Z0-9 \/\()?._+-]+ *= *[^=]+)$/i', $sOption)) {
+                if (!preg_match('/^([^=;]+|[A-Z0-9 \/\()?._+-]+ *= *[^=;]+)$/i', $sOption)) {
                     lovd_errorAdd('select_options', 'Select option #' . ($n + 1) . ' &quot;' . htmlspecialchars($sOption) . '&quot; not understood.');
                 }
             }
@@ -564,7 +568,7 @@ if (PATH_COUNT == 1 && ACTION == 'data_type_wizard') {
     lovd_includeJS('inc-js-tooltip.php');
 
     print('      <FORM action="' . CURRENT_PATH . '?' . ACTION . '&amp;workID=' . $_GET['workID'] . '" method="post">' . "\n" .
-          '        <INPUT type="hidden" name="form_type" value="' . $_POST['form_type'] . '">' . "\n");
+          '        <INPUT type="hidden" name="form_type" value="' . htmlspecialchars($_POST['form_type']) . '">' . "\n");
 
     // Array which will make up the form table.
     $aForm = array(
@@ -638,7 +642,7 @@ if (PATH_COUNT == 1 && ACTION == 'data_type_wizard') {
 
 
 if (PATH_COUNT == 1 && ACTION == 'create') {
-    // URL: /columns?create
+    // URL: /columns?create
     // Create a new column.
 
     define('TAB_SELECTED', 'setup');
@@ -660,23 +664,23 @@ if (PATH_COUNT == 1 && ACTION == 'create') {
                     'options' =>
                          array(
                              array(
-                                    'onclick'     => 'javascript:$(\'#optionForm input\').attr(\'value\', \'Individual\'); $(\'#optionForm\').submit();',
+                                    'onclick'     => 'javascript:$(\'#optionForm input\').val(\'Individual\'); $(\'#optionForm\').submit();',
                                     'option_text' => '<B>Information on the individual, not related to disease</B>, not changing over time, such as date of birth',
                                   ),
                              array(
-                                    'onclick'     => 'javascript:$(\'#optionForm input\').attr(\'value\', \'Phenotype\'); $(\'#optionForm\').submit();',
+                                    'onclick'     => 'javascript:$(\'#optionForm input\').val(\'Phenotype\'); $(\'#optionForm\').submit();',
                                     'option_text' => '<B>Information on the phenotype, related to disease</B>, possibly changing over time, such as blood pressure',
                                   ),
                              array(
-                                    'onclick'     => 'javascript:$(\'#optionForm input\').attr(\'value\', \'Screening\'); $(\'#optionForm\').submit();',
+                                    'onclick'     => 'javascript:$(\'#optionForm input\').val(\'Screening\'); $(\'#optionForm\').submit();',
                                     'option_text' => '<B>Information on the detection of new variants</B>, such as detection technique or laboratory conditions',
                                   ),
                              array(
-                                    'onclick'     => 'javascript:$(\'#optionForm input\').attr(\'value\', \'VariantOnGenome\'); $(\'#optionForm\').submit();',
+                                    'onclick'     => 'javascript:$(\'#optionForm input\').val(\'VariantOnGenome\'); $(\'#optionForm\').submit();',
                                     'option_text' => '<B>Information on the variant(s) found, in general or on the genomic level</B>, such as restriction site change',
                                   ),
                              array(
-                                    'onclick'     => 'javascript:$(\'#optionForm input\').attr(\'value\', \'VariantOnTranscript\'); $(\'#optionForm\').submit();',
+                                    'onclick'     => 'javascript:$(\'#optionForm input\').val(\'VariantOnTranscript\'); $(\'#optionForm\').submit();',
                                     'option_text' => '<B>Information on the variant(s) found, specific for the transcript level</B>, such as predicted effect on protein level',
                                   ),
                              array(
@@ -801,13 +805,13 @@ if (PATH_COUNT == 1 && ACTION == 'create') {
     lovd_includeJS('inc-js-columns.php');
 
     print('      <FORM action="' . CURRENT_PATH . '?' . ACTION . '" method="post">' . "\n" .
-          '        <INPUT type="hidden" name="category" value="' . $_POST['category'] . '">' . "\n" .
-          '        <INPUT type="hidden" name="description_form" value="' . $_POST['description_form'] . '">' . "\n" .
-          '        <INPUT type="hidden" name="select_options" value="' . $_POST['select_options'] . '">' . "\n" .
-          '        <INPUT type="hidden" name="preg_pattern" value="' . $_POST['preg_pattern'] . '">' . "\n" .
+          '        <INPUT type="hidden" name="category" value="' . htmlspecialchars($_POST['category']) . '">' . "\n" .
+          '        <INPUT type="hidden" name="description_form" value="' . htmlspecialchars($_POST['description_form']) . '">' . "\n" .
+          '        <INPUT type="hidden" name="select_options" value="' . htmlspecialchars($_POST['select_options']) . '">' . "\n" .
+          '        <INPUT type="hidden" name="preg_pattern" value="' . htmlspecialchars($_POST['preg_pattern']) . '">' . "\n" .
 // FIXME; remove this when implemented properly.
-          '        <INPUT type="hidden" name="allow_count_all" value="' . $_POST['allow_count_all'] . '">' . "\n" .
-          '        <INPUT type="hidden" name="workID" value="' . $_POST['workID'] . '">' . "\n");
+          '        <INPUT type="hidden" name="allow_count_all" value="' . htmlspecialchars($_POST['allow_count_all']) . '">' . "\n" .
+          '        <INPUT type="hidden" name="workID" value="' . htmlspecialchars($_POST['workID']) . '">' . "\n");
 
     // Array which will make up the form table.
     $aForm = array_merge(
@@ -828,16 +832,16 @@ if (PATH_COUNT == 1 && ACTION == 'create') {
 
 
 if (PATH_COUNT > 2 && ACTION == 'edit') {
-    // URL: /columns/VariantOnGenome/DNA?edit
-    // URL: /columns/Phenotype/Blood_pressure/Systolic?edit
+    // URL: /columns/VariantOnGenome/DNA?edit
+    // URL: /columns/Phenotype/Blood_pressure/Systolic?edit
     // Edit specific column.
 
     define('TAB_SELECTED', 'setup');
 
-    $sColumnID = implode('/', array_slice($_PE, 1));
+    $sColumnID = lovd_getCurrentID();
     $sCategory = $_PE[1];
 
-    define('PAGE_TITLE', 'Edit custom data column ' . $sColumnID);
+    define('PAGE_TITLE', lovd_getCurrentPageTitle());
     define('LOG_EVENT', 'ColEdit');
 
     // Require manager clearance.
@@ -1160,13 +1164,13 @@ if (PATH_COUNT > 2 && ACTION == 'edit') {
     lovd_includeJS('inc-js-columns.php');
 
     print('      <FORM action="' . CURRENT_PATH . '?' . ACTION . '" method="post" onsubmit="return lovd_checkSubmittedForm();">' . "\n" .
-          '        <INPUT type="hidden" name="category" value="' . $_POST['category'] . '">' . "\n" .
-          '        <INPUT type="hidden" name="description_form" value="' . $_POST['description_form'] . '">' . "\n" .
-          '        <INPUT type="hidden" name="select_options" value="' . $_POST['select_options'] . '">' . "\n" .
-          '        <INPUT type="hidden" name="preg_pattern" value="' . $_POST['preg_pattern'] . '">' . "\n" .
+          '        <INPUT type="hidden" name="category" value="' . htmlspecialchars($_POST['category']) . '">' . "\n" .
+          '        <INPUT type="hidden" name="description_form" value="' . htmlspecialchars($_POST['description_form']) . '">' . "\n" .
+          '        <INPUT type="hidden" name="select_options" value="' . htmlspecialchars($_POST['select_options']) . '">' . "\n" .
+          '        <INPUT type="hidden" name="preg_pattern" value="' . htmlspecialchars($_POST['preg_pattern']) . '">' . "\n" .
 // FIXME; remove this when implemented properly.
-          '        <INPUT type="hidden" name="allow_count_all" value="' . $_POST['allow_count_all'] . '">' . "\n" .
-          '        <INPUT type="hidden" name="workID" value="' . $_POST['workID'] . '">' . "\n");
+          '        <INPUT type="hidden" name="allow_count_all" value="' . htmlspecialchars($_POST['allow_count_all']) . '">' . "\n" .
+          '        <INPUT type="hidden" name="workID" value="' . htmlspecialchars($_POST['workID']) . '">' . "\n");
 
     // Array which will make up the form table.
     $aForm = array_merge(
@@ -1185,7 +1189,7 @@ if (PATH_COUNT > 2 && ACTION == 'edit') {
 <SCRIPT type="text/javascript">
 function lovd_checkSubmittedForm ()
 {
-    if ($('input[name="mysql_type"]').attr('value') != '<?php echo $zData['mysql_type'] ?>') {
+    if ($('input[name="mysql_type"]').val() != '<?php echo $zData['mysql_type'] ?>') {
         return window.confirm('<?php echo $sJSMessage ?>');
     }
 }
@@ -1200,183 +1204,15 @@ function lovd_checkSubmittedForm ()
 
 
 
-/*******************************************************************************
-if ($_GET['action'] == 'edit_colid' && !empty($_GET['edit_colid'])) {
-    // Edit specific custom colid.
-
-    define('TAB_SELECTED', 'setup');
-
-// Require manager clearance.
-lovd_requireAUTH(LEVEL_MANAGER);
-
-    $zData = $_DB>query('SELECT * FROM ' . TABLE_COLS . ' WHERE created_by != 0 AND colid = "' . $_GET['edit_colid'] . '"')->fetchAssoc();
-    if (!$zData) {
-        // Wrong ID, apparently.
-        $_T->printHeader();
-        $_T->printTitle('LOVD Setup - Manage custom column defaults');
-        lovd_showInfoTable('No such ID!', 'stop');
-        $_T->printFooter();
-        exit;
-    }
-
-    $bSelected = true;
-    if (substr($zData['colid'], 0, 7) == 'Variant') {
-        // Check genes to find if column is active.
-        $aGenes = lovd_getGeneList();
-        foreach ($aGenes as $sSymbol) {
-            $bSelected = $_DB->query('SELECT colid FROM ' . TABLEPREFIX . '_' . $sSymbol . '_columns WHERE colid = "' . $zData['colid'] . '"')->fetchColumn();
-            if ($bSelected) {
-                // Column present in this gene.
-                break;
-            }
-        }
-    } elseif (substr($zData['colid'], 0, 7) == 'Patient') {
-        // Patient column.
-        $bSelected = $_DB->query('SELECT colid FROM ' . TABLE_PATIENTS_COLS . ' WHERE colid = "' . $zData['colid'] . '"')->fetchColumn();
-    }
-
-    if (!$zData['created_by'] || $bSelected) {
-        $_T->printHeader();
-        $_T->printTitle('LOVD Setup - Manage custom column defaults');
-        lovd_showInfoTable('Column has been selected, cannot be renamed!', 'stop');
-        $_T->printFooter();
-        exit;
-    }
-
-    // Require form functions.
-    require ROOT_PATH . 'inc-lib-form.php';
-
-    if (isset($_GET['sent'])) {
-        lovd_errorClean();
-
-        // Mandatory fields.
-        $aCheck =
-                 array(
-                        'col_cat' => 'Category',
-                        'colid' => 'Column ID',
-                        'password' => 'Enter your password for authorization',
-                      );
-
-        foreach ($aCheck as $key => $val) {
-            if (empty($_POST[$key])) {
-                lovd_errorAdd($key, 'Please fill in the \'' . $val . '\' field.');
-            }
-        }
-
-        // ColID format.
-        if ($_POST['colid'] && !preg_match('/^[A-Za-z0-9_]+(\/[A-Za-z0-9_]+)*$/', $_POST['colid'])) {
-            lovd_errorAdd('colid', 'The column ID is not of the correct format. It can contain only letters, numbers and underscores. Subcategories must be devided by a slash (/).');
-        }
-
-        // ColID must not exist in the database.
-        if ($_POST['col_cat'] && $_POST['colid'] && $_POST['col_cat'] . '/' . $_POST['colid'] != $zData['colid']) {
-            $n = $_DB->query('SELECT COUNT(*) FROM ' . TABLE_COLS . ' WHERE colid = "' . $_POST['col_cat'] . '/' . $_POST['colid'] . '"')->fetchColumn();
-            if ($n) {
-                lovd_errorAdd('colid', 'There is already a ' . $_POST['col_cat'] . ' column with this column ID. Please choose another one.');
-            }
-        }
-
-        // User had to enter his/her password for authorization.
-        if ($_POST['password'] && !lovd_verifyPassword($_POST['password'], $_AUTH['password'])) {
-            lovd_errorAdd('password', 'Please enter your correct password for authorization.');
-        }
-
-        if (!lovd_error()) {
-            // Query text.
-            $_POST['colid'] = $_POST['col_cat'] . '/' . $_POST['colid'];
-            $sQ = 'UPDATE ' . TABLE_COLS . ' SET colid = "' . $_POST['colid'] . '", edited_by = "' . $_AUTH['id'] . '", edited_date = NOW() WHERE colid = "' . $zData['colid'] . '"';
-            $q = $_DB->query($sQ);
-            if (!$q) {
-                $sError = $_DB->formatError(); // Save the mysql_error before it disappears.
-                $_T->printHeader();
-                $_T->printTitle('LOVD Setup - Manage custom column defaults');
-                lovd_dbFout('ColEditColID', $sQ, $sError);
-            }
-
-            // Write to log...
-            lovd_writeLog('MySQL:Event', 'ColEditColID', $_AUTH['username'] . ' (' . $_DB->quote($_AUTH['name']) . ') successfully changed column ID ' . $zData['colid'] . ' to ' . $_POST['colid']);
-
-            // 2008-12-03; 2.0-15; Update links (whether they exist or not)
-            $sQ = 'UPDATE ' . TABLE_COLS2LINKS . ' SET colid="' . $_POST['colid'] . '" WHERE colid="' . $zData['colid'] . '"';
-            $q = $_DB->query($sQ);
-            if (!$q) {
-                // Silent error.
-                lovd_writeLog('MySQL:Error', 'ColEdit', 'Custom links could not be updated for ' . $_POST['colid']);
-            } else {
-                lovd_writeLog('MySQL:Event', 'ColEdit', 'Custom links successfully updated for ' . $_POST['colid']);
-            }
-
-            // Thank the user...
-            header('Refresh: 3; url=' . PROTOCOL . $_SERVER['HTTP_HOST'] . $_SERVER['PHP_SELF'] . '?action=view&view=' . rawurlencode($_POST['colid']));
-
-            $_T->printHeader();
-            $_T->printTitle('LOVD Setup - Manage custom column defaults');
-            print('      Successfully changed column ID \'' . $zData['colid'] . '\' to \'' . $_POST['colid'] . '\'!<BR><BR>' . "\n\n");
-
-            $_T->printFooter();
-            exit;
-
-        } else {
-            // Errors, so the whole lot returns to the form.
-            lovd_magicUnquoteAll();
-
-            // Because we're sending the data back to the form, I need to unset the password fields!
-            unset($_POST['password']);
-        }
-
-    } else {
-        foreach ($zData as $key => $val) {
-            if (!isset($_POST[$key]) || !$_POST[$key]) {
-                $_POST[$key] = $val;
-            }
-        }
-        list($_POST['col_cat'], $_POST['colid']) = explode('/', $_POST['colid'], 2);
-        $_POST['password'] = '';
-    }
-
-
-
-    $_T->printHeader();
-    $_T->printTitle('LOVD Setup - Manage custom column defaults');
-
-    lovd_errorPrint();
-
-    // Table.
-    print('      <FORM action="' . $_SERVER['PHP_SELF'] . '?action=' . $_GET['action'] . '&amp;edit_colid=' . rawurlencode($zData['colid']) . '&amp;sent=true" method="post">' . "\n");
-
-    // Array which will make up the form table.
-    $aForm = array(
-                    array('POST', '', '', '50%', '50%'),
-                    array('Category', 'select', 'col_cat', 1, array('Patient' => 'Patient', 'Variant' => 'Variant'), true, false, false),
-                    array('Column ID', 'text', 'colid', 30),
-                    array('', 'print', '<SPAN class="form_note">This ID must be unique and may contain only letters, numbers and underscores. Subcategories must be divided by a slash (/), such as \'Phenotype/Disease\'.<BR>Do NOT add \'Patient/\' or \'Variant/\' here.</SPAN>'),
-                    'skip',
-                    array('Enter your password for authorization', 'password', 'password', 20),
-                    array('', 'submit', 'Edit column ID'),
-                  );
-    $_MODULES->processForm('SetupColumnsGlobalEdit', $aForm);
-    lovd_viewForm($aForm);
-
-    print('</FORM>' . "\n\n");
-
-    $_T->printFooter();
-    exit;
-}
-*///////////////////////////////////////////////////////////////////////////////
-
-
-
-
-
 if (PATH_COUNT > 2 && ACTION == 'add') {
-    // URL: /columns/VariantOnGenome/DNA?add
-    // URL: /columns/Phenotype/Blood_pressure/Systolic?add
+    // URL: /columns/VariantOnGenome/DNA?add
+    // URL: /columns/Phenotype/Blood_pressure/Systolic?add
     // Add specific column to the data table, and enable.
 
-    $sColumnID = implode('/', array_slice($_PE, 1));
+    $sColumnID = lovd_getCurrentID();
     $sCategory = $_PE[1];
 
-    define('PAGE_TITLE', 'Add/enable custom data column ' . $sColumnID);
+    define('PAGE_TITLE', lovd_getCurrentPageTitle());
     define('LOG_EVENT', 'ColAdd');
 
     // Require form & column functions.
@@ -1385,7 +1221,9 @@ if (PATH_COUNT > 2 && ACTION == 'add') {
     // Required clearance depending on which type of column is being added.
     $aTableInfo = lovd_getTableInfoByCategory($sCategory);
     if ($aTableInfo['shared']) {
-        lovd_isAuthorized('gene', $_AUTH['curates']); // Any gene will do.
+        if ($_AUTH) {
+            lovd_isAuthorized('gene', $_AUTH['curates']); // Any gene will do.
+        }
         lovd_requireAUTH(LEVEL_CURATOR);
     } else {
         lovd_requireAUTH(LEVEL_MANAGER);
@@ -1494,7 +1332,7 @@ if (PATH_COUNT > 2 && ACTION == 'add') {
             lovd_errorAdd('password', 'Please fill in the \'Enter your password for authorization\' field.');
         }
 
-        // User had to enter his/her password for authorization.
+        // User had to enter their password for authorization.
         if ($_POST['password'] && !lovd_verifyPassword($_POST['password'], $_AUTH['password'])) {
             lovd_errorAdd('password', 'Please enter your correct password for authorization.');
         }
@@ -1508,14 +1346,12 @@ if (PATH_COUNT > 2 && ACTION == 'add') {
             $_T->printHeader();
             $_T->printTitle();
 
-            $zData['active_checked'] = false;
-            if (in_array($sColumnID, $_DB->query('DESCRIBE ' . $aTableInfo['table_sql'])->fetchAllColumn())) {
-                $zData['active_checked'] = true;
-            }
-            $zData['active'] = false;
-            if (in_array($sColumnID, $_DB->query('SELECT colid FROM  ' . TABLE_ACTIVE_COLS)->fetchAllColumn())) {
-                $zData['active'] = true;
-            }
+            $zData['active_checked'] = in_array(
+                $sColumnID,
+                $_DB->query('DESCRIBE ' . $aTableInfo['table_sql'])->fetchAllColumn());
+            $zData['active'] = (bool)
+                $_DB->query('SELECT COUNT(*) FROM  ' . TABLE_ACTIVE_COLS . ' WHERE colid = ?',
+                array($sColumnID))->fetchColumn();
 
             if (!$zData['active_checked']) {
                 $sMessage = 'Adding column to data table ' . ($tAlter < 4? '' : '(this may take some time)') . '...';
@@ -1715,7 +1551,7 @@ if (!isset($_GET['in_window'])) {
         // If the target is received through $_GET do not show the selection list unless there is a problem with the target.
         if (!empty($_POST['target']) && !is_array($_POST['target']) && !in_array('target', $_ERROR['fields'])) {
             $aForm[] = array('', '', 'print', '<B>Enabling the ' . $zData['id'] . ' column for the ' . $aTableInfo['unit'] . ' ' . $_POST['target'] . '</B><BR><BR>' . "\n");
-            print('      <INPUT type="hidden" name="target" value="' . $_POST['target'] . '">' . "\n");
+            print('      <INPUT type="hidden" name="target" value="' . htmlspecialchars($_POST['target']) . '">' . "\n");
         } else {
             print('      Please select the ' . $aTableInfo['unit'] . '(s) for which you want to add the ' . $zData['colid'] . ' column.<BR><BR>' . "\n");
             $nPossibleTargets = ($nPossibleTargets > 15? 15 : $nPossibleTargets);
@@ -1746,14 +1582,14 @@ if (!isset($_GET['in_window'])) {
 
 
 if (PATH_COUNT > 2 && ACTION == 'remove') {
-    // URL: /columns/VariantOnGenome/DNA?remove
-    // URL: /columns/Phenotype/Blood_pressure/Systolic?remove
+    // URL: /columns/VariantOnGenome/DNA?remove
+    // URL: /columns/Phenotype/Blood_pressure/Systolic?remove
     // Disable specific custom column.
 
-    $sColumnID = implode('/', array_slice($_PE, 1));
+    $sColumnID = lovd_getCurrentID();
     $sCategory = $_PE[1];
 
-    define('PAGE_TITLE', 'Remove custom data column ' . $sColumnID);
+    define('PAGE_TITLE', lovd_getCurrentPageTitle());
     define('LOG_EVENT', 'ColRemove');
 
     // Require form & column functions.
@@ -1762,7 +1598,9 @@ if (PATH_COUNT > 2 && ACTION == 'remove') {
     // Required clearance depending on which type of column is being added.
     $aTableInfo = lovd_getTableInfoByCategory($sCategory);
     if ($aTableInfo['shared']) {
-        lovd_isAuthorized('gene', $_AUTH['curates']); // Any gene will do.
+        if ($_AUTH) {
+            lovd_isAuthorized('gene', $_AUTH['curates']); // Any gene will do.
+        }
         lovd_requireAUTH(LEVEL_CURATOR);
     } else {
         lovd_requireAUTH(LEVEL_MANAGER);
@@ -1860,7 +1698,7 @@ if (PATH_COUNT > 2 && ACTION == 'remove') {
             lovd_errorAdd('password', 'Please fill in the \'Enter your password for authorization\' field.');
         }
 
-        // User had to enter his/her password for authorization.
+        // User had to enter their password for authorization.
         if ($_POST['password'] && !lovd_verifyPassword($_POST['password'], $_AUTH['password'])) {
             lovd_errorAdd('password', 'Please enter your correct password for authorization.');
         }
@@ -1992,7 +1830,7 @@ if (PATH_COUNT > 2 && ACTION == 'remove') {
             // General query for phenotype data and VOT columns, but for VOT we need to put a join to table_transcripts...
             $nEntriesWithData = $_DB->query('SELECT COUNT(*) FROM ' . $aTableInfo['table_sql'] . ($sCategory != 'VariantOnTranscript'? '' : ' AS vot INNER JOIN ' . TABLE_TRANSCRIPTS . ' AS t ON (vot.transcriptid = t.id)') . ' WHERE ' . $aTableInfo['unit'] . 'id = ? AND `' . $zData['id'] . '` IS NOT NULL AND `' . $zData['id'] . '` != "" AND `' . $zData['id'] . '` != "-"', array($_POST['target']))->fetchColumn();
             $aForm[] = array('', '', 'print', '<B>Removing the ' . $zData['id'] . ' column from ' . $aTableInfo['unit'] . ' ' . $_POST['target'] . '<BR>(' . $sTarget . ')</B><BR><BR>');
-            print('      <INPUT type="hidden" name="target" value="' . $_POST['target'] . '">' . "\n");
+            print('      <INPUT type="hidden" name="target" value="' . htmlspecialchars($_POST['target']) . '">' . "\n");
         } else {
             $nEntriesWithData = -1; // We need to determine this on the fly.
             print('      Please select the ' . $aTableInfo['unit'] . '(s) for which you want to remove the ' . $zData['colid'] . ' column.<BR><BR>' . "\n");
@@ -2089,13 +1927,13 @@ if (PATH_COUNT > 2 && ACTION == 'remove') {
 
 
 if (PATH_COUNT > 2 && ACTION == 'delete') {
-    // URL: /columns/VariantOnGenome/DNA?delete
-    // URL: /columns/Phenotype/Blood_pressure/Systolic?delete
+    // URL: /columns/VariantOnGenome/DNA?delete
+    // URL: /columns/Phenotype/Blood_pressure/Systolic?delete
     // Drop specific custom column.
 
     define('TAB_SELECTED', 'setup');
 
-    $sColumnID = implode('/', array_slice($_PE, 1));
+    $sColumnID = lovd_getCurrentID();
     $sCategory = $_PE[1];
 
     $zData = $_DB->query('SELECT c.id, c.hgvs, c.head_column, ac.colid, c.created_by FROM ' . TABLE_COLS . ' AS c LEFT OUTER JOIN ' . TABLE_ACTIVE_COLS . ' AS ac ON (c.id = ac.colid) WHERE c.id = ?', array($sColumnID))->fetchAssoc();
@@ -2122,7 +1960,7 @@ if (PATH_COUNT > 2 && ACTION == 'delete') {
     // Require form & column functions.
     require ROOT_PATH . 'inc-lib-form.php';
 
-    define('PAGE_TITLE', 'Delete custom data column ' . $sColumnID);
+    define('PAGE_TITLE', lovd_getCurrentPageTitle());
     define('LOG_EVENT', 'ColDelete');
 
     lovd_requireAUTH(LEVEL_MANAGER);
@@ -2138,7 +1976,7 @@ if (PATH_COUNT > 2 && ACTION == 'delete') {
             lovd_errorAdd('password', 'Please fill in the \'Enter your password for authorization\' field.');
         }
 
-        // User had to enter his/her password for authorization.
+        // User had to enter their password for authorization.
         if ($_POST['password'] && !lovd_verifyPassword($_POST['password'], $_AUTH['password'])) {
             lovd_errorAdd('password', 'Please enter your correct password for authorization.');
         }

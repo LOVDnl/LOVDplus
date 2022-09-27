@@ -4,10 +4,11 @@
  * LEIDEN OPEN VARIATION DATABASE (LOVD)
  *
  * Created     : 2012-11-08
- * Modified    : 2020-02-06
- * For LOVD    : 3.0-23
+ * Modified    : 2022-06-24
+ * For LOVD    : 3.0-28
  *
  * Supported URIs:
+ *  3.0-26       /api/rest.php/get_frequencies (POST)
  *  3.0-beta-10  /api/rest.php/variants/{{ GENE }}
  *  3.0-beta-10  /api/rest.php/variants/{{ GENE }}/{{ ID }}
  *  3.0-beta-10  /api/rest.php/variants/{{ GENE }}/unique
@@ -29,9 +30,17 @@
  *  3.0-beta-10  /api/rest.php/genes?search_position=chrX:3200000
  *  3.0-beta-10  /api/rest.php/genes?search_position=chrX:3200000_4000000&position_match=exact|exclusive|partial
  *  3.0-22       /api/rest.php/*****?format=application/json   (JSON output for whole LOVD2-style API)
+ *  3.0-27 (v2)  /api/v#/ga4gh (GET/HEAD) (redirects)
+ *  3.0-27 (v2)  /api/v#/ga4gh/service-info (GET/HEAD)
+ *  3.0-27 (v2)  /api/v#/ga4gh/tables (GET/HEAD)
+ *  3.0-27 (v2)  /api/v#/ga4gh/table/variants (GET/HEAD) (redirects)
+ *  3.0-27 (v2)  /api/v#/ga4gh/table/variants/info (GET/HEAD)
+ *  3.0-27 (v2)  /api/v#/ga4gh/table/variants/data (GET/HEAD)
+ *  3.0-27 (v2)  /api/v#/ga4gh/table/variants/data:hg19:chr1:123456 (GET/HEAD)
+ *  3.0-27 (v2)  /api/v#/ga4gh/table/variants/data:hg19:chr1:123456-234567 (GET/HEAD)
  *  3.0-18 (v1)  /api/v#/submissions (POST) (/v# is optional)
  *
- * Copyright   : 2004-2020 Leiden University Medical Center; http://www.LUMC.nl/
+ * Copyright   : 2004-2022 Leiden University Medical Center; http://www.LUMC.nl/
  * Programmer  : Ivo F.A.C. Fokkema <I.F.A.C.Fokkema@LUMC.nl>
  *
  *
@@ -135,12 +144,12 @@ if ($sDataType == 'variants') {
     }
 
     // Get chromosome, reference sequence, and other data.
-    // LOVD3 has multiple transcripts maybe, so we just grab the first one.
-    // This is actually not really useful for BED files...
+    // LOVD3 has multiple transcripts maybe, so we just grab the one holding
+    // the most variants.
     list($sChromosome, $nRefSeqID, $sRefSeq, $nPositionMRNAStart, $nPositionMRNAEnd, $nPositionCDSEnd, $bSense) =
         $_DB->query('SELECT g.chromosome, t.id, t.id_ncbi, t.position_c_mrna_start, t.position_c_mrna_end, t.position_c_cds_end, (t.position_g_mrna_start < t.position_g_mrna_end) AS sense
-                     FROM ' . TABLE_GENES . ' as g LEFT JOIN ' . TABLE_TRANSCRIPTS . ' AS t ON (g.id = t.geneid)
-                     WHERE g.id = ? ORDER BY t.id ASC LIMIT 1',
+                     FROM ' . TABLE_GENES . ' AS g LEFT OUTER JOIN ' . TABLE_TRANSCRIPTS . ' AS t ON (g.id = t.geneid) LEFT OUTER JOIN ' . TABLE_VARIANTS_ON_TRANSCRIPTS . ' AS vot ON (t.id = vot.transcriptid)
+                     WHERE g.id = ? GROUP BY t.id ORDER BY COUNT(vot.id) DESC, t.id ASC LIMIT 1',
             array($sSymbol))->fetchRow();
 
     if (FORMAT == 'application/json') {
@@ -168,15 +177,60 @@ if ($sDataType == 'variants') {
             }
             $bQueryPMID = ($nPMID && count($aPMIDCols));
             // We're not selecting any transcripts here, we want as much data as possible. That means we might be mixing
-            //  transcripts here. To try and get as much of the consistent variants here, and to try and guess which
-            //  transcript is better, order by transcript ID (oldest first) and grab the first vot.DNA that you find.
-            $sQ = 'SELECT LEAST(vog.position_g_start, vog.position_g_end), GREATEST(vog.position_g_start, vog.position_g_end), vog.type,
-                     SUBSTRING_INDEX(GROUP_CONCAT(DISTINCT vot.`VariantOnTranscript/DNA` ORDER BY vot.transcriptid SEPARATOR ";;"), ";;", 1) AS `VariantOnTranscript/DNA`
-                   FROM ' . TABLE_VARIANTS_ON_TRANSCRIPTS . ' AS vot INNER JOIN ' . TABLE_VARIANTS . ' AS vog USING (id) LEFT JOIN ' . TABLE_TRANSCRIPTS . ' AS t ON (vot.transcriptid = t.id)' .
-                   (!$bJoinWithPatient? '' : ' LEFT JOIN ' . TABLE_SCR2VAR . ' AS s2v ON (vog.id = s2v.variantid) LEFT JOIN ' . TABLE_SCREENINGS . ' AS s ON (s2v.screeningid = s.id) LEFT JOIN ' . TABLE_INDIVIDUALS . ' AS i ON (s.individualid = i.id) ') . '
-                   WHERE t.geneid = "' . $sSymbol . '" AND vog.statusid >= ' . STATUS_MARKED . ' AND vog.position_g_start != 0 AND vog.position_g_start IS NOT NULL' .
+            //  transcripts here. To try and get as much of the consistent variants here, order by the count of variants
+            //  per transcript, and grab the first vot.DNA that you find.
+            // FIXME: Because of an unknown reason, the transcript sorting mechanism that works fine for the entire
+            //  genes table, refuses to work for the variants, even though they have much less results.
+            //  ORDER BY (SELECT COUNT(*) FROM lovd_v3_variants_on_transcripts WHERE transcriptid = vot.transcriptid) DESC
+            //  So, no other option then to prefetch the transcript counts.
+            $aTranscripts = $_DB->query('
+                SELECT t.id
+                FROM ' . TABLE_TRANSCRIPTS . ' AS t
+                  INNER JOIN ' . TABLE_VARIANTS_ON_TRANSCRIPTS . ' AS vot ON (t.id = vot.transcriptid)
+                WHERE t.geneid = ? GROUP BY t.id ORDER BY COUNT(*) DESC, t.id ASC', array($sSymbol))->fetchAllColumn();
+            $aData = $_DB->query('
+                SELECT LEAST(vog.position_g_start, vog.position_g_end), GREATEST(vog.position_g_start, vog.position_g_end), vog.type,
+                  SUBSTRING_INDEX(GROUP_CONCAT(DISTINCT vot.`VariantOnTranscript/DNA` ORDER BY ' . implode(', ', array_map(function ($nID) { return '(vot.transcriptid = ' . $nID . ') DESC'; }, $aTranscripts)) . ' SEPARATOR ";;"), ";;", 1) AS `VariantOnTranscript/DNA`
+                FROM ' . TABLE_VARIANTS_ON_TRANSCRIPTS . ' AS vot
+                  INNER JOIN ' . TABLE_VARIANTS . ' AS vog USING (id)
+                  LEFT OUTER JOIN ' . TABLE_TRANSCRIPTS . ' AS t ON (vot.transcriptid = t.id)' .
+                   (!$bJoinWithPatient? '' : '
+                  LEFT OUTER JOIN ' . TABLE_SCR2VAR . ' AS s2v ON (vog.id = s2v.variantid)
+                  LEFT OUTER JOIN ' . TABLE_SCREENINGS . ' AS s ON (s2v.screeningid = s.id)
+                  LEFT OUTER JOIN ' . TABLE_INDIVIDUALS . ' AS i ON (s.individualid = i.id)') . '
+                WHERE t.geneid = ? AND vog.statusid >= ? AND vog.position_g_start != 0 AND vog.position_g_start IS NOT NULL' .
                    (!$bQueryPMID? '' : ' AND (`' . implode('` LIKE "%:' . $nPMID . '}%" OR `', $aPMIDCols) . '` LIKE "%:' . $nPMID . '}%") ') . '
-                   GROUP BY vog.`VariantOnGenome/DNA` ORDER BY vog.position_g_start, vog.position_g_end';
+                GROUP BY vog.`VariantOnGenome/DNA` ORDER BY vog.position_g_start, vog.position_g_end', array($sSymbol, STATUS_MARKED))->fetchAllAssoc();
+            $n = count($aData);
+
+            // We're exporting a BED file for a Genome Browser.
+            // This code structure is getting pretty bad, by the way.
+            $aVariantTypeColors =
+                array(
+                    'substr' => '204,0,255',
+                    '>'      => '204,0,255', // This one can be removed later.
+                    'del'    => '0,0,255',
+                    'ins'    => '0,153,0',
+                    'dup'    => '255,153,0',
+                    ''       => '0,0,0', // Backup, for non-matching variants.
+                );
+
+            // Print header.
+            header('Content-type: text/plain; charset=UTF-8');
+            print('track name="Variants in the LOVD ' . $sSymbol . ' database' . (!$nPMID? '' : ' (PMID:' . $nPMID . ')') . '" description="Variants in LOVD ' . $sSymbol . ' db' . (!$nPMID? '' : ' (PMID:' . $nPMID . ')') . '" visibility=' . (!empty($_GET['visibility']) && is_numeric($_GET['visibility'])? $_GET['visibility'] : 3) . ' itemRgb="On" db="' . $sBuild . '" url="' . ($_CONF['location_url']?: lovd_getInstallURL()) . 'variants.php?select_db=' . $sSymbol . '&action=search_all&trackid=$$' . '"' . "\n\n");
+
+            foreach ($aData as $r) {
+                list($nPositionStart, $nPositionEnd, $sVariantType, $sDNA) = array_values($r);
+                if (!isset($aVariantTypeColors[$sVariantType])) {
+                    $sVariantType = '';
+                }
+                $sVariantTypeColor = $aVariantTypeColors[$sVariantType];
+
+                // Print the data.
+                print('chr' . $sChromosome . "\t" . ($nPositionStart-1) . "\t" . $nPositionEnd . "\t" . $sSymbol . ':' . preg_replace('/\s+/', '', $sDNA) . "\t" . '0' . "\t" . ($bSense? '+' : '-') . "\t" . ($nPositionStart-1) . "\t" . $nPositionEnd . "\t" . $sVariantTypeColor . "\n");
+            }
+            exit;
+
         } else {
             // Not mappable!
             header('HTTP/1.0 503 Service Unavailable');
@@ -228,7 +282,7 @@ if ($sDataType == 'variants') {
                    ORDER BY t.id_ncbi
                    SEPARATOR ";"
                  ) AS _position_mRNA,
-                 ' . (!$bDNA38? '' : 'vog.chromosome, vog.`VariantOnGenome/DNA/hg38` AS `DNA/hg38`, ') . '
+                 ' . (!$bDNA38? '' : 'vog.chromosome, GROUP_CONCAT(DISTINCT IFNULL(vog.`VariantOnGenome/DNA/hg38`, "") SEPARATOR ";") AS `DNA/hg38`, ') . '
                  CONCAT("chr", vog.chromosome, ":", 
                    IF(
                      vog.position_g_start = vog.position_g_end,
@@ -239,7 +293,7 @@ if ($sDataType == 'variants') {
                  GROUP_CONCAT(DISTINCT LEFT(vog.effectid, 1) SEPARATOR ";") AS effect_reported,
                  GROUP_CONCAT(DISTINCT RIGHT(vog.effectid, 1) SEPARATOR ";") AS effect_concluded,
                  vog.`VariantOnGenome/DNA`,
-                 GROUP_CONCAT(' . ($nRefSeqID? '' : 't.id_ncbi, ":", ') . 'vot.`VariantOnTranscript/DNA`
+                 GROUP_CONCAT(DISTINCT ' . ($nRefSeqID? '' : 't.id_ncbi, ":", ') . 'vot.`VariantOnTranscript/DNA`
                    ORDER BY t.id_ncbi SEPARATOR ";;") AS `__VariantOnTranscript/DNA`,
                  vog.`VariantOnGenome/DBID`,
                  GROUP_CONCAT(DISTINCT uc.name SEPARATOR ";") AS _created_by,
@@ -255,7 +309,7 @@ if ($sDataType == 'variants') {
                  LEFT OUTER JOIN ' . TABLE_INDIVIDUALS . ' AS i ON (s.individualid = i.id AND i.statusid >= ' . STATUS_MARKED . ')
                  LEFT OUTER JOIN ' . TABLE_USERS . ' AS uc ON (vog.created_by = uc.id)
                  LEFT OUTER JOIN ' . TABLE_USERS . ' AS uo ON (vog.owned_by = uo.id)
-               WHERE ' . (!$nRefSeqID? '' : 'vot.transcriptid = ' . $nRefSeqID . ' AND ') . 'vog.statusid >= ' . STATUS_MARKED;
+               WHERE ' . ($nRefSeqID? 't.id = ' . $nRefSeqID : 't.geneid = ' . $_DB->quote($sSymbol)) . ' AND vog.statusid >= ' . STATUS_MARKED;
         $bSearching = false;
         if ($nID) {
             $sFeedType = 'entry';
@@ -302,15 +356,15 @@ if ($sDataType == 'variants') {
                             }
                         } else {
                             // This does a first match; trying to find the position at the start of the DNA field. Later this match will be made more accurate!
-                            $sQ .= ' AND REPLACE(REPLACE(REPLACE(REPLACE(vot.`VariantOnTranscript/DNA`, "[", ""), "(", ""), ")", ""), "?", "") LIKE "' . $_GET['search_' . $sField] . '%"';
+                            $sQ .= ' AND REPLACE(REPLACE(REPLACE(REPLACE(vot.`VariantOnTranscript/DNA`, "[", ""), "(", ""), ")", ""), "?", "") LIKE ' . $_DB->quote($_GET['search_' . $sField] . '%');
                         }
                     } elseif ($sField == 'Variant/DNA') {
                         // This matches regardless of the characters (, ) and ?.
-                        $sQ .= ' AND REPLACE(REPLACE(REPLACE(vot.`VariantOnTranscript/DNA`, "(", ""), ")", ""), "?", "") = "' . str_replace(array('(', ')', '?'), ' ', $_GET['search_' . $sField]) . '"';
+                        $sQ .= ' AND REPLACE(REPLACE(REPLACE(vot.`VariantOnTranscript/DNA`, "(", ""), ")", ""), "?", "") = ' . str_replace(array('(', ')', '?'), ' ', $_DB->quote($_GET['search_' . $sField]));
                     } elseif ($sField == 'Variant/DBID') {
-                        $sQ .= ' AND vog.`VariantOnGenome/DBID` LIKE "' . $_GET['search_' . $sField] . '%"';
+                        $sQ .= ' AND vog.`VariantOnGenome/DBID` LIKE ' . $_DB->quote($_GET['search_' . $sField] . '%');
                     } else {
-                        $sQ .= ' AND vot.`' . $sField . '` = "' . $_GET['search_' . $sField] . '"';
+                        $sQ .= ' AND vot.`' . $sField . '` = ' . $_DB->quote($_GET['search_' . $sField]);
                     }
                 }
             }
@@ -328,12 +382,24 @@ if ($sDataType == 'variants') {
 } elseif ($sDataType == 'genes') {
     // Listing or simple request on gene symbol.
     // First build query.
-    // FIXME: All transcripts are listed here, ordered by the NCBI ID. However, the variant API chooses the first transcript based on its internal ID and shows only the variants on that one.
-    // FIXME: This causes a bit of a problem since varcache stores the transcripts string with the gene and doesn't know what transcript the variants are on until it reads out the variant list.
-    // FIXME: Decided to solve this for varcache by updating the NM in the database after the variants have been read. Leaving this here for now.
-    $sQ = 'SELECT g.id, g.name, g.chromosome, g.chrom_band, MAX(t.position_g_mrna_start < t.position_g_mrna_end) AS sense, LEAST(MIN(t.position_g_mrna_start), MIN(t.position_g_mrna_end)) AS position_g_mrna_start, GREATEST(MAX(t.position_g_mrna_start), MAX(t.position_g_mrna_end)) AS position_g_mrna_end, g.refseq_genomic, GROUP_CONCAT(DISTINCT t.id_ncbi ORDER BY t.id_ncbi SEPARATOR ";") AS id_ncbi, g.id_entrez, g.created_date, g.updated_date, u.name AS created_by, GROUP_CONCAT(DISTINCT cur.name SEPARATOR ";") AS curators
-           FROM ' . TABLE_GENES . ' AS g LEFT JOIN ' . TABLE_TRANSCRIPTS . ' AS t ON (g.id = t.geneid) LEFT JOIN ' . TABLE_USERS . ' AS u ON (g.created_by = u.id) LEFT JOIN ' . TABLE_CURATES . ' AS u2g ON (g.id = u2g.geneid AND u2g.allow_edit = 1) LEFT JOIN ' . TABLE_USERS . ' AS cur ON (u2g.userid = cur.id)
-           WHERE 1=1';
+    // All transcripts are listed here, ordered by the number of variants.
+    $sQ = '
+        SELECT g.id, g.name, g.chromosome, g.chrom_band,
+          MAX(t.position_g_mrna_start < t.position_g_mrna_end) AS sense,
+          LEAST(MIN(t.position_g_mrna_start),
+          MIN(t.position_g_mrna_end)) AS position_g_mrna_start,
+          GREATEST(MAX(t.position_g_mrna_start),
+          MAX(t.position_g_mrna_end)) AS position_g_mrna_end, g.refseq_genomic,
+          GROUP_CONCAT(DISTINCT t.id_ncbi ORDER BY (SELECT COUNT(*) FROM ' . TABLE_VARIANTS_ON_TRANSCRIPTS . ' WHERE transcriptid = t.id) DESC,
+          t.id ASC SEPARATOR ";") AS id_ncbi, g.id_entrez,
+          g.created_date, g.updated_date, u.name AS created_by,
+          GROUP_CONCAT(DISTINCT cur.name SEPARATOR ";") AS curators
+        FROM ' . TABLE_GENES . ' AS g
+          LEFT OUTER JOIN ' . TABLE_TRANSCRIPTS . ' AS t ON (g.id = t.geneid)
+          LEFT OUTER JOIN ' . TABLE_USERS . ' AS u ON (g.created_by = u.id)
+          LEFT OUTER JOIN ' . TABLE_CURATES . ' AS u2g ON (g.id = u2g.geneid AND u2g.allow_edit = 1 AND show_order != 0)
+          LEFT OUTER JOIN ' . TABLE_USERS . ' AS cur ON (u2g.userid = cur.id)
+        WHERE 1=1';
 
     $bSearching = false;
     if ($sSymbol) {
@@ -347,7 +413,7 @@ if ($sDataType == 'variants') {
             if (!empty($_GET['search_' . $sField])) {
                 $bSearching = true;
                 if ($sField == 'symbol') {
-                    $sQ .= ' AND g.id = "' . $_GET['search_' . $sField] . '"';
+                    $sQ .= ' AND g.id = "' . $_DB->quote(GET['search_' . $sField]) . '"';
                 } elseif ($sField == 'position' && preg_match('/^chr([0-9]{1,2}|[MXY])(:[0-9]{1,9}(_[0-9]+)?)?$/', $_GET['search_' . $sField], $aRegs)) {
                     // $aRegs numbering:                             1                2           3
                     @list(, $sChromosome, $sPositionStart, $sPositionEnd) = $aRegs;
@@ -388,14 +454,73 @@ if ($sDataType == 'variants') {
         }
     }
     $sQ .= ' GROUP BY g.id ORDER BY g.id';
+
+
+
+} elseif ($sDataType == 'get_frequencies') {
+    // This addition to the API allows us to fetch frequencies from the LOVDs.
+    // This is built so that the GnomAD LOVD can provide frequencies to other LOVDs.
+
+    // This requires the presence of the VariantOnGenome/Frequency column.
+    if (!$_DB->query('SELECT COUNT(*) FROM ' . TABLE_ACTIVE_COLS . ' WHERE colid = ?', array('VariantOnGenome/Frequency'))->fetchColumn()) {
+        // Column not active, we can't do this.
+        header('HTTP/1.0 503 Service Unavailable');
+        die(json_encode(array('errors' => array('The VariantOnGenome/Frequency column is not active for this LOVD installation.'))) . "\n");
+    }
+
+    if (!empty($_POST['variants'])) {
+        $aVariants = @json_decode($_POST['variants'], true);
+        if (!$aVariants) {
+            header('HTTP/1.0 400 Bad Request');
+            die('Error decoding variant string.' . "\n");
+        }
+    } else {
+        // Hmm... in GET then, maybe?
+        $aVariants = array();
+        if (isset($_GET['variant'])) {
+            if (preg_match('/^([0-9]{1,2}|[XYM]);([0-9]+);([0-9]+);(g\..+)/', $_GET['variant'], $aRegs)) {
+                list(,$sChr, $nPositionStart, $nPositionEnd, $sDNA) = $aRegs;
+                $aVariants[] = array('chromosome' => $sChr, 'position_g_start' => $nPositionStart, 'position_g_end' => $nPositionEnd, 'DNA' => $sDNA);
+            }
+        }
+    }
+    if (!$aVariants) {
+        // No variants in $_POST nor $_GET.
+        header('HTTP/1.0 400 Bad Request');
+        die('No variants received.' . "\n");
+    } elseif (count($aVariants) > 25) {
+        // More than 25 variants at the same time at this time not supported.
+        header('HTTP/1.0 400 Bad Request');
+        die('Please do not request more than 25 variants at the same time.' . "\n");
+    }
+
+    // Send one query to the server, request all variants using a UNION. This is done to prevent overhead from 25 queries.
+    $sSQL = '';
+    $aArgs = array();
+    foreach ($aVariants as $nKey => $aVariant) {
+        // If we received through $_POST we're not 100% sure everything looks like how it should.
+        if (count($aVariant) == 4) {
+            $sSQL .= (!$sSQL? '' : ' UNION ALL ') . '(SELECT ' . $nKey . ' AS result, `VariantOnGenome/Frequency` AS frequency FROM ' . TABLE_VARIANTS . ' WHERE chromosome = ? AND position_g_start = ? AND position_g_end = ? AND `VariantOnGenome/DNA` = ?)';
+            $aArgs = array_merge($aArgs, array($aVariant['chromosome'], $aVariant['position_g_start'], $aVariant['position_g_end'], $aVariant['DNA']));
+        }
+    }
+    // In case there are multiple observations of the same variant,
+    //  we need the one with the Frequency filled in. Sort that entry last.
+    $sSQL .= ' ORDER BY result ASC, (frequency IS NULL) DESC, (frequency = "") DESC';
+
+    if ($sSQL && $aArgs) {
+        $aResults = $_DB->query($sSQL, $aArgs)->fetchAllCombine();
+    } else {
+        $aResults = array();
+    }
+    die(json_encode($aResults) . "\n");
 }
 $aData = $_DB->query($sQ)->fetchAllAssoc();
 $n = count($aData);
 
 if ($n) {
     header('HTTP/1.0 200 OK');
-} elseif (FORMAT != 'text/bed') {
-    // We don't want 404s in de text/bed format, ever. It should just return a BED file with a header, but no variants.
+} else {
     header('HTTP/1.0 404 Not Found');
     if ($nID) {
         // Really requested a (variant) ID. Goodbye.
@@ -403,35 +528,7 @@ if ($n) {
     }
 }
 
-if ($sDataType == 'variants' && FORMAT == 'text/bed') {
-    // We're exporting a BED file for a Genome Browser.
-    // This code structure is getting pretty bad, by the way.
-    $aVariantTypeColors =
-             array(
-                    'substr' => '204,0,255',
-                    '>'      => '204,0,255', // This one can be removed later.
-                    'del'    => '0,0,255',
-                    'ins'    => '0,153,0',
-                    'dup'    => '255,153,0',
-                    ''       => '0,0,0', // Backup, for non-matching variants.
-                  );
 
-    // Print header.
-    header('Content-type: text/plain; charset=UTF-8');
-    print('track name="Variants in the LOVD ' . $sSymbol . ' database' . (!$nPMID? '' : ' (PMID:' . $nPMID . ')') . '" description="Variants in LOVD ' . $sSymbol . ' db' . (!$nPMID? '' : ' (PMID:' . $nPMID . ')') . '" visibility=' . (!empty($_GET['visibility']) && is_numeric($_GET['visibility'])? $_GET['visibility'] : 3) . ' itemRgb="On" db="' . $sBuild . '" url="' . ($_CONF['location_url']? $_CONF['location_url'] : lovd_getInstallURL()) . 'variants.php?select_db=' . $sSymbol . '&action=search_all&trackid=$$' . '"' . "\n\n");
-
-    foreach ($aData as $r) {
-        list($nPositionStart, $nPositionEnd, $sVariantType, $sDNA) = array_values($r);
-        if (!isset($aVariantTypeColors[$sVariantType])) {
-            $sVariantType = '';
-        }
-        $sVariantTypeColor = $aVariantTypeColors[$sVariantType];
-
-        // Print the data.
-        print('chr' . $sChromosome . "\t" . ($nPositionStart-1) . "\t" . $nPositionEnd . "\t" . $sSymbol . ':' . preg_replace('/\s+/', '', $sDNA) . "\t" . '0' . "\t" . ($bSense? '+' : '-') . "\t" . ($nPositionStart-1) . "\t" . $nPositionEnd . "\t" . $sVariantTypeColor . "\n");
-    }
-    exit;
-}
 
 // Start feed class.
 require ROOT_PATH . 'class/feeds.php';
@@ -443,7 +540,7 @@ if ($sFeedType == 'feed') {
         set_time_limit(60);
         $sTitle = ($bSearching? ($n? 'R' : 'No r') . 'esults for your query of' : 'Listing of all genes in') . ' the database';
     }
-    $sLink = ($_CONF['location_url']? $_CONF['location_url'] : lovd_getInstallURL()) . 'api/rest.php/' . $sDataType . ($sSymbol? '/' . $sSymbol : '') . (empty($bUnique)? '' : '/unique');
+    $sLink = ($_CONF['location_url']?: lovd_getInstallURL()) . 'api/rest.php/' . $sDataType . ($sSymbol? '/' . $sSymbol : '') . (empty($bUnique)? '' : '/unique');
     $sID   = 'tag:' . $_SERVER['HTTP_HOST'] . ',' . $_STAT['installed_date'] . ':' . $_STAT['signature'] . '/REST_api';
 } else {
     $sTitle = $sLink = $sID = '';
@@ -510,6 +607,10 @@ if ($sDataType == 'variants') {
             'position_genomic' => array(
                 $_CONF['refseq_build'] => $zData['position_genomic'],
             ),
+            'variant_genomic' => array(
+                $_CONF['refseq_build'] => 'chr' . $sChromosome . ':' .
+                    $zData['VariantOnGenome/DNA'],
+            ),
             'Variant/DNA' => explode(';;', $zData['__VariantOnTranscript/DNA']),
             'Variant/DBID' => $zData['Variant/DBID'],
             'Times_reported' => $zData['Times'],
@@ -522,10 +623,15 @@ if ($sDataType == 'variants') {
         // GV shared and future LOVDs; if we have hg38 data, add that.
         if (FORMAT == 'application/json' && $_CONF['refseq_build'] != 'hg38'
             && $bDNA38 && $zData['DNA/hg38']) {
+            // We asked for a list, so we might get different values.
+            // Just pick the first that's filled in.
+            $zData['DNA/hg38'] = strstr(trim($zData['DNA/hg38'], ';') . ';', ';', true);
             $aPositions = lovd_getVariantInfo($zData['DNA/hg38']);
             $aReturn['position_genomic']['hg38'] = 'chr' . $zData['chromosome'] .
                 ':' . $aPositions['position_start'] .
                 ($aPositions['position_start'] == $aPositions['position_end']? '' : '_' . $aPositions['position_end']);
+            $aReturn['variant_genomic']['hg38'] = 'chr' . $zData['chromosome'] .
+                ':' . $zData['DNA/hg38'];
         }
 
         if ($bUnique && FORMAT == 'application/json') {
@@ -563,11 +669,11 @@ if ($sDataType == 'variants') {
         // Prepare other fields to be included.
         $sTitle = substr($sSymbol, 0, strpos($sSymbol . '_', '_')) . ':' . htmlspecialchars($zData['Variant/DNA'][0]);
         if ($sFeedType == 'feed') {
-            $sSelfURL = ($_CONF['location_url']? $_CONF['location_url'] : lovd_getInstallURL()) . 'api/rest.php/variants/' . $sSymbol . '/' . $zData['id'];
+            $sSelfURL = ($_CONF['location_url']?: lovd_getInstallURL()) . 'api/rest.php/variants/' . $sSymbol . '/' . $zData['id'];
         } else {
             $sSelfURL = '';
         }
-        $sAltURL               = ($_CONF['location_url']? $_CONF['location_url'] : lovd_getInstallURL()) . 'variants/' . $sSymbol . '/' . $sRefSeq . '?search_VariantOnGenome%2FDBID=' . rawurlencode($zData['Variant/DBID']);
+        $sAltURL               = ($_CONF['location_url']?: lovd_getInstallURL()) . 'variants/' . $sSymbol . '/' . $sRefSeq . '?search_VariantOnGenome%2FDBID=' . rawurlencode($zData['Variant/DBID']);
         $sID                   = 'tag:' . $_SERVER['HTTP_HOST'] . ',' . substr($zData['created_date'], 0, 10) . ':' . $sSymbol . '/' . $zData['id'];
         $sContributors         = implode(', ', $zData['owned_by']);
 
@@ -657,11 +763,11 @@ if ($sDataType == 'variants') {
         // Prepare other fields to be included.
         $sTitle = $zData['id'];
         if ($sFeedType == 'feed') {
-            $sSelfURL = ($_CONF['location_url']? $_CONF['location_url'] : lovd_getInstallURL()) . 'api/rest.php/genes/' . $zData['id'];
+            $sSelfURL = ($_CONF['location_url']?: lovd_getInstallURL()) . 'api/rest.php/genes/' . $zData['id'];
         } else {
             $sSelfURL = '';
         }
-        $sAltURL             = ($_CONF['location_url']? $_CONF['location_url'] : lovd_getInstallURL()) . 'genes/' . $zData['id'];
+        $sAltURL             = ($_CONF['location_url']?: lovd_getInstallURL()) . 'genes/' . $zData['id'];
         $sID                 = 'tag:' . $_SERVER['HTTP_HOST'] . ',' . substr($zData['created_date'], 0, 10) . ':' . $zData['id'];
         $sContributors       = htmlspecialchars(implode(', ', $zData['curators']));
         $sContent = '';

@@ -4,10 +4,10 @@
  * LEIDEN OPEN VARIATION DATABASE (LOVD)
  *
  * Created     : 2010-01-22
- * Modified    : 2020-02-10
- * For LOVD    : 3.0-23
+ * Modified    : 2021-11-10
+ * For LOVD    : 3.0-28
  *
- * Copyright   : 2004-2020 Leiden University Medical Center; http://www.LUMC.nl/
+ * Copyright   : 2004-2021 Leiden University Medical Center; http://www.LUMC.nl/
  * Programmers : Ivo F.A.C. Fokkema <I.F.A.C.Fokkema@LUMC.nl>
  *               Ivar C. Lugtenburg <I.C.Lugtenburg@LUMC.nl>
  *
@@ -74,12 +74,20 @@ function lovd_formatSearchExpression ($sExpression, $sColumnType)
         foreach ($aORExpressions as $nORIndex => $sORExpression) {
             switch ($sColumnType) {
                 case 'TEXT':
-                    if ($sORExpression{0} == '!' && $sORExpression{1} == '=') {
+                    if ($sORExpression == '!=""') {
+                        $sFormattedExpression .= 'Is not empty';
+                    } elseif ($sORExpression == '=""') {
+                        $sFormattedExpression .= 'Is empty';
+                    } elseif (substr($sORExpression, 0, 2) == '!=') {
                         $sFormattedExpression .= 'Does not exactly match ' . trim($sORExpression, '!="');
-                    } elseif ($sORExpression{0} == '!' && $sORExpression{1} != '=') {
+                    } elseif ($sORExpression[0] == '!') {
                         $sFormattedExpression .= 'Does not contain ' . trim($sORExpression, '!=');
-                    } elseif ($sORExpression{0} == '=') {
+                    } elseif ($sORExpression[0] == '=') {
                         $sFormattedExpression .= 'Exactly matches ' . trim($sORExpression, '="');
+                    } elseif ($sORExpression[0] == '^') {
+                        $sFormattedExpression .= 'Starts with ' . ltrim($sORExpression, '^');
+                    } elseif (substr($sORExpression, -1) == '$') {
+                        $sFormattedExpression .= 'Ends with ' . rtrim($sORExpression, '$');
                     } else {
                         $sFormattedExpression .= 'Contains ' . $sORExpression;
                     }
@@ -90,7 +98,7 @@ function lovd_formatSearchExpression ($sExpression, $sColumnType)
                 case 'DECIMAL_UNSIGNED':
                 case 'DATE':
                 case 'DATETIME':
-                    if (!in_array($sORExpression{0}, array('<', '>', '!'))) {
+                    if (!in_array($sORExpression[0], array('<', '>', '!'))) {
                         $sFormattedExpression .= '=' . $sORExpression;
                     } else {
                         $sFormattedExpression .= $sORExpression;
@@ -216,8 +224,11 @@ function lovd_pagesplitShowNav ($sViewListID, $nTotal, $bTrueTotal = true, $bSor
     // Put a button here that shows the full legend, if it's available for this VL. We don't know that here, so we use JS to show it if necessary.
     if ($bLegend) {
         print("\n" .
-              '          <TD><B onclick="lovd_showLegend(\'' . $sViewListID . '\');" title="Click here to see the full legend of this data table." class="legend">Legend</B>&nbsp;&nbsp;</TD>');
+              '          <TD><B onclick="lovd_showDialog(\'viewlistLegend_' . $sViewListID . '\');" title="Click here to see the full legend of this data table." class="legend">Legend</B>&nbsp;&nbsp;</TD>');
     }
+
+    print("\n" .
+          '          <TD><B onclick="lovd_showDialog(\'viewlistHowToQuery\');" title="Click here to see how to query data tables in LOVD." class="legend">How to query</B>&nbsp;&nbsp;</TD>');
 
     if ($nPages > 1) {
         // First printed page number.

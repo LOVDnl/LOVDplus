@@ -4,10 +4,10 @@
  * LEIDEN OPEN VARIATION DATABASE (LOVD)
  *
  * Created     : 2012-03-27
- * Modified    : 2021-01-08
- * For LOVD    : 3.0-26
+ * Modified    : 2022-06-27
+ * For LOVD    : 3.0-28
  *
- * Copyright   : 2004-2021 Leiden University Medical Center; http://www.LUMC.nl/
+ * Copyright   : 2004-2022 Leiden University Medical Center; http://www.LUMC.nl/
  * Programmers : Ivo F.A.C. Fokkema <I.F.A.C.Fokkema@LUMC.nl>
  *               Ivar C. Lugtenburg <I.C.Lugtenburg@LUMC.nl>
  *               Daan Asscheman <D.Asscheman@LUMC.nl>
@@ -83,7 +83,7 @@ class LOVD_Template
 
         $this->aMenu =
             array(
-                        'genes' => (!empty($_SESSION['currdb'])? $_SESSION['currdb'] . ' homepage' : 'View all genes'),
+                        'genes' => ($_SESSION['currdb']? $_SESSION['currdb'] . ' homepage' : 'View all genes'),
                         'gene_panels' => 'View all gene panels',
                         'genes_' =>
                          array(
@@ -106,7 +106,7 @@ class LOVD_Template
                         'variants' => 'View variants',
                         'variants_' =>
                          array(
-                                '' => array('menu_magnifying_glass.png', 'View all genomic variants', 0),
+                                '' => array('menu_magnifying_glass.png', 'View all variants', 0),
                                 '/variants/in_gene' => array('menu_magnifying_glass.png', 'View all variants affecting transcripts', 0),
                              'hr',
                                 '/variants/' . $_SESSION['currdb'] . '/unique' => array('menu_magnifying_glass.png', 'View unique variants in gene ' . $_SESSION['currdb'], 0),
@@ -170,8 +170,8 @@ class LOVD_Template
                                         array('config_free_edit.php', 'copy', 'Copy Column', 'Copy Column', 'lovd_free_edit_copy'),
                                         'vr',
 */
-                             '/genes/' . $_SESSION['currdb'] . '/columns' => array('menu_columns.png', 'View variant columns enabled in ' . ($_SESSION['currdb']? $_SESSION['currdb'] : 'gene'), ($_AUTH && in_array($_SESSION['currdb'], $_AUTH['curates'])? LEVEL_CURATOR : LEVEL_MANAGER)),
-                             '/columns/VariantOnTranscript' => array('menu_columns_add.png', 'Add variant column to ' . ($_SESSION['currdb']? $_SESSION['currdb'] : 'gene'), ($_AUTH && in_array($_SESSION['currdb'], $_AUTH['curates'])? LEVEL_CURATOR : LEVEL_MANAGER)),
+                             '/genes/' . $_SESSION['currdb'] . '/columns' => array('menu_columns.png', 'View variant columns enabled in ' . ($_SESSION['currdb']?: 'gene'), ($_AUTH && in_array($_SESSION['currdb'], $_AUTH['curates'])? LEVEL_CURATOR : LEVEL_MANAGER)),
+                             '/columns/VariantOnTranscript' => array('menu_columns_add.png', 'Add variant column to ' . ($_SESSION['currdb']?: 'gene'), ($_AUTH && in_array($_SESSION['currdb'], $_AUTH['curates'])? LEVEL_CURATOR : LEVEL_MANAGER)),
 /*
                                         'vr',
                                         array('genes', 'manage', 'Edit gene db', 'Manage ' . $_SESSION['currdb'] . ' gene', 'lovd_database_edit'),
@@ -234,6 +234,11 @@ class LOVD_Template
             unset($this->aMenu['configuration_']);
         }
 
+        if (!$_SETT['customization_settings']['graphs_enable']) {
+            // Hide link to graphs for current gene.
+            unset($this->aMenu['genes_']['/genes/' . $_SESSION['currdb'] . '/graphs']);
+        }
+
         if (LOVD_plus) {
             // Unset unneeded tabs for Diagnostics.
             unset($this->aMenu['genes']);
@@ -261,11 +266,14 @@ class LOVD_Template
             unset($this->aMenu['genes_']['/gene_statistics']);
         }
 
-        if (!defined('PAGE_TITLE')) {
-            $sFile = substr(lovd_getProjectFile(), 1, strrpos(lovd_getProjectFile(), '.') - 1); // Isolate "genes" out of "/genes.php".
-            if (array_key_exists($sFile, $this->aMenu)) {
-                define('PAGE_TITLE', $this->aMenu[$sFile]);
-            }
+        if (LOVD_light) {
+            unset($this->aMenu['variants_']['/variants/in_gene']);
+            unset($this->aMenu['variants_']['/variants/' . $_SESSION['currdb'] . '/unique']);
+            unset($this->aMenu['transcripts'], $this->aMenu['transcripts_']);
+            unset($this->aMenu['diseases'], $this->aMenu['diseases_']);
+            unset($this->aMenu['individuals'], $this->aMenu['individuals_']);
+            unset($this->aMenu['screenings'], $this->aMenu['screenings_']);
+            unset($this->aMenu['submit'], $this->aMenu['submit_']);
         }
 
         return true;
@@ -288,6 +296,7 @@ class LOVD_Template
 
         $this->bBotIncluded = true;
         switch (FORMAT) {
+            case 'application/json':
             case 'text/plain':
                 return false;
             case 'text/html':
@@ -354,7 +363,7 @@ class LOVD_Template
 
         }
         print('  Powered by <A href="' . $_SETT['upstream_URL'] . $_STAT['tree'] . '/" target="_blank">LOVD v.' . $_STAT['tree'] . '</A> Build ' . $_STAT['build'] . '<BR>' . "\n" .
-              '  LOVD' . (LOVD_plus? '+' : '') . ' software &copy;2004-2021 <A href="http://www.lumc.nl/" target="_blank">Leiden University Medical Center</A>' . "\n");
+              '  LOVD' . (LOVD_plus? '+' : '') . ' software &copy;2004-2022 <A href="http://www.lumc.nl/" target="_blank">Leiden University Medical Center</A>' . "\n");
 ?>
     </TD>
     <TD width="42" align="right">
@@ -398,8 +407,10 @@ class LOVD_Template
 <SCRIPT type="text/javascript">
   <!--
 <?php
-        if (!LOVD_plus && !((ROOT_PATH == '../' && !(defined('TAB_SELECTED') && TAB_SELECTED == 'docs')) || defined('NOT_INSTALLED'))) {
-            // In install directory.
+        if ($_SETT['customization_settings']['variant_mapping_in_background'] && !defined('NOT_INSTALLED')
+            && !(ROOT_PATH == '../' && defined('TAB_SELECTED') && TAB_SELECTED == 'docs')) {
+            // Allow variant mapping to happen in the background (either manually or
+            // automatically triggered).
             print('
 function lovd_mapVariants ()
 {
@@ -437,7 +448,7 @@ function lovd_mapVariants ()
 
             // Not every page request should trigger the mapping...
             if (!empty($_SESSION['mapping']['time_complete']) && $_SESSION['mapping']['time_complete'] >= (time() - 60 * 60 * 24)) {
-                // If it is less than one day ago that mapping was complete, don't start it automatically, but allow the user to start it himself.
+                // If it is less than one day ago that mapping was complete, don't start it automatically, but allow the user to start it themself.
                 print('$("#mapping_progress").click(lovd_mapVariants);' . "\n");
             } elseif (!empty($_SESSION['mapping']['time_error']) && $_SESSION['mapping']['time_error'] >= (time() - 60 * 60)) {
                 // If it is less than one hour ago that an error occurred, don't start it either.
@@ -480,6 +491,8 @@ function lovd_mapVariants ()
         $this->bFull = ($bFull && !isset($_GET['in_window']));
         $this->bTopIncluded = true;
         switch (FORMAT) {
+            case 'application/json':
+                return false;
             case 'text/plain':
                 if (!defined('FORMAT_ALLOW_TEXTPLAIN')) {
                     die('text/plain not allowed here');
@@ -564,13 +577,6 @@ function lovd_mapVariants ()
             $sCurrSymbol = $_SESSION['currdb'];
             $sCurrGene = $_SETT['currdb']['name'];
         }
-
-        // FIXME; how will we handle this? (if we'll handle this)
-        // During submission, show the gene we're submitting to instead of the currently selected gene.
-        //if (lovd_getProjectFile() == '/submit.php' && !empty($_POST['gene']) && $_POST['gene'] != $_SESSION['currdb']) {
-        //    // Fetch gene's info from db... we don't have it anywhere yet.
-        //    list($sCurrSymbol, $sCurrGene) = $_DB->query('SELECT id, gene FROM ' . TABLE_DBS . ' WHERE id = ?', array($_POST['gene']))->fetchRow();
-        //}
 ?>
 
   <SCRIPT type="text/javascript">
@@ -616,7 +622,28 @@ function lovd_mapVariants ()
             document.location.href = sURL.replace('{{GENE}}', $('#select_gene_dropdown').val());
         }
     }
+<?php
+        if (!defined('MISSING_CONF') && isset($_COOKIE['lovd_settings'])) {
+            // Determine whether or not to show the donation dialog.
+            $nTimeToShow = strtotime('+' . ($_CONF['donate_dialog_months_hidden'] < 1? 1 : $_CONF['donate_dialog_months_hidden']) . ' months', $_COOKIE['lovd_settings']['donation_dialog_last_seen']);
+            if ($_CONF['donate_dialog_allow'] && $nTimeToShow <= time()) {
+                print('
+    // Donation dialog last seen ' . date('Y-m-d H:i:s', $_COOKIE['lovd_settings']['donation_dialog_last_seen']) . ', show again.
+    $.get("ajax/donate.php");
+');
 
+            } elseif (!LOVD_plus && $_AUTH && !isset($_AUTH['default_license']) && substr(lovd_getProjectFile(), 0, 9) != '/install/') {
+                // Determine whether or not to show the dialog to remind the user to choose a license.
+                $nTimeToShow = strtotime('+1 day', $_COOKIE['lovd_settings']['default_license_dialog_last_seen']);
+                if ($nTimeToShow <= time()) {
+                    print('
+    // Dialog to remind user to choose a default license last seen ' . date('Y-m-d H:i:s', $_COOKIE['lovd_settings']['default_license_dialog_last_seen']) . ', show again.
+    $.get("ajax/licenses.php/user/' . $_AUTH['id'] . '?remind");
+');
+                }
+            }
+        }
+?>
   </SCRIPT>
   <LINK rel="stylesheet" type="text/css" href="lib/jQuery/css/cupertino/jquery-ui.css">
 </HEAD>
@@ -636,7 +663,7 @@ if ($qAnnouncements) {
     $zAnnouncements = array();
 }
 foreach ($zAnnouncements as $zAnnouncement) {
-    lovd_showInfoTable($zAnnouncement['announcement'], $zAnnouncement['type'], '100%', (!$_AUTH || $_AUTH['level'] < LEVEL_MANAGER? '' : 'announcements/' . $zAnnouncement['id']), false);
+    lovd_showInfoTable($zAnnouncement['announcement'], $zAnnouncement['type'], '100%', (!$_AUTH || $_AUTH['level'] < LEVEL_MANAGER? '' : 'announcements/' . $zAnnouncement['id']), false, false);
 }
 
 if ($_SERVER['HTTP_HOST'] == 'leiden-test.diagnostics.lovd.nl') {
@@ -684,12 +711,12 @@ if ($_SERVER['HTTP_HOST'] == 'leiden-test.diagnostics.lovd.nl') {
               '    </TD>' . "\n" .
               '    <TD valign="top" align="right" style="padding-right : 5px; padding-top : 2px; white-space: nowrap; padding-left: 20px;">' . "\n" .
               '      LOVD v.' . $_STAT['tree'] . ' Build ' . $_STAT['build'] .
-              (!defined('NOT_INSTALLED')? ' [ <A href="status">Current LOVD status</A> ]' : '') .
+              (defined('NOT_INSTALLED') || empty($_SETT['customization_settings']['graphs_enable'])? '' : ' [ <A href="status">Current LOVD status</A> ]') .
               '<BR>' . "\n");
         if (!(defined('NOT_INSTALLED') || (ROOT_PATH == '../' && substr(lovd_getProjectFile(), 0, 9) == '/install/'))) {
             if ($_AUTH) {
-                print('      <B>Welcome, ' . $_AUTH['name'] . '</B><BR>' . "\n" .
-                      '      <A href="users/' . $_AUTH['id'] . '"><B>Your account</B></A> | ' . (false && $_AUTH['level'] == LEVEL_SUBMITTER && $_CONF['allow_submitter_mods']? '<A href="variants?search_created_by=' . $_AUTH['id'] . '"><B>Your submissions</B></A> | ' : '') . (!empty($_AUTH['saved_work']['submissions']['individual']) || !empty($_AUTH['saved_work']['submissions']['screening'])? '<A href="users/' . $_AUTH['id'] . '?submissions"><B>Unfinished submissions</B></A> | ' : '') . '<A href="logout"><B>Log out</B></A>' . "\n");
+                print('      <B>Welcome, ' . htmlspecialchars($_AUTH['name']) . '</B><BR>' . "\n" .
+                      '      <A href="users/' . $_AUTH['id'] . '"><B>Your account</B></A> | <A href="individuals?search_created_by=' . $_AUTH['id'] . '"><B>Your submissions</B></A> | ' . (!empty($_AUTH['saved_work']['submissions']['individual']) || !empty($_AUTH['saved_work']['submissions']['screening'])? '<A href="users/' . $_AUTH['id'] . '?submissions"><B>Unfinished submissions</B></A> | ' : '') . '<A href="logout"><B>Log out</B></A>' . "\n");
             } else {
                 // LOVD+ doesn't allow for submitter registrations, because submitters already achieve rights.
                 print('      ' . (LOVD_plus || empty($_CONF['allow_submitter_registration']) || $_CONF['lovd_read_only']? '' : '<A href="users?register"><B>Register as submitter</B></A> | ') .
@@ -710,11 +737,15 @@ if ($_SERVER['HTTP_HOST'] == 'leiden-test.diagnostics.lovd.nl') {
         // Add curator info to header.
         if ($sCurrSymbol && $sCurrGene) {
             $sCurators = '';
-            $aCurators = $_DB->query('SELECT u.name, u.email FROM ' . TABLE_USERS . ' AS u LEFT JOIN ' . TABLE_CURATES . ' AS u2g ON (u.id = u2g.userid) WHERE u2g.geneid = ? AND u2g.allow_edit = 1 AND u2g.show_order > 0 ORDER BY u2g.show_order ASC, u.level DESC, u.name ASC', array($sCurrSymbol))->fetchAllAssoc();
+            $aCurators = $_DB->query('
+                SELECT u.name, u.email
+                FROM ' . TABLE_USERS . ' AS u LEFT JOIN ' . TABLE_CURATES . ' AS u2g ON (u.id = u2g.userid)
+                WHERE u2g.geneid = ? AND u2g.allow_edit = 1 AND u2g.show_order != 0
+                ORDER BY u2g.show_order ASC, u.level DESC, u.name ASC', array($sCurrSymbol))->fetchAllAssoc();
             $nCurators = count($aCurators);
             foreach ($aCurators as $i => $z) {
                 $i ++;
-                $sCurators .= ($sCurators? ($i == $nCurators? ' and ' : ', ') : '') . '<A href="mailto:' . str_replace(array("\r\n", "\r", "\n"), ', ', trim($z['email'])) . '">' . $z['name'] . '</A>';
+                $sCurators .= ($sCurators? ($i == $nCurators? ($i == 2? '' : ',') . ' and ' : ', ') : '') . '<A href="mailto:' . str_replace(array("\r\n", "\r", "\n"), ', ', trim($z['email'])) . '">' . $z['name'] . '</A>';
             }
 
             if ($sCurators) {
@@ -755,13 +786,15 @@ if ($_SERVER['HTTP_HOST'] == 'leiden-test.diagnostics.lovd.nl') {
                     }
                     list($sIMG, $sName, $nRequiredLevel) = $aItem;
                     $bDisabled = false;
-                    if ($nRequiredLevel && (($nRequiredLevel == LEVEL_CURATOR && !$bCurator) || ($nRequiredLevel != LEVEL_CURATOR && $nRequiredLevel > $_AUTH['level']))) {
+                    if ($nRequiredLevel && $_AUTH
+                        && (($nRequiredLevel == LEVEL_CURATOR && !$bCurator)
+                            || ($nRequiredLevel != LEVEL_CURATOR && $nRequiredLevel > $_AUTH['level']))) {
                         $bDisabled = true;
                     } else {
                         if (!$sURL) {
                             // Default action of default page.
                             $sURL = $sPrefix;
-                        } elseif ($sURL{0} == '/') {
+                        } elseif ($sURL[0] == '/') {
                             // Direct URL.
                             $sURL = substr($sURL, 1);
                         } else {
@@ -779,10 +812,6 @@ if ($_SERVER['HTTP_HOST'] == 'leiden-test.diagnostics.lovd.nl') {
                                 '</A></LI>' . "\n";
                         $bHR = false;
                     }
-// class disabled, disabled. Nu gewoon maar even weggehaald.
-//                    $sUL .= '  <LI class="disabled">' .
-//                        (!$sIMG? '' : '<SPAN class="icon" style="background-image: url(gfx/' . preg_replace('/(\.[a-z]+)$/', '_disabled' . "$1", $sIMG) . ');"></SPAN>') . $sName .
-//                        '</LI>' . "\n";
                 }
                 $sUL .= '</UL>' . "\n";
 
@@ -816,7 +845,7 @@ if ($_SERVER['HTTP_HOST'] == 'leiden-test.diagnostics.lovd.nl') {
             if ($_SESSION['currdb']) {
                 if (in_array($sPrefix, array('configuration', 'genes', 'transcripts', 'variants', 'screenings', 'individuals'))) {
                     $sURL = $sPrefix . '/' . $_SESSION['currdb'];
-                    if ($sPrefix == 'variants') {
+                    if ($sPrefix == 'variants' && isset($this->aMenu[$sPrefix . '_']['/' . $sURL . '/unique'])) {
                         $sURL .= '/unique';
                     }
                 } elseif ($sPrefix == 'diseases') {
@@ -921,6 +950,7 @@ if ($_SERVER['HTTP_HOST'] == 'leiden-test.diagnostics.lovd.nl') {
         }
 
         switch (FORMAT) {
+            case 'application/json':
             case 'text/plain':
                 return false;
             case 'text/html':

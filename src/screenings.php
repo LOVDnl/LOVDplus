@@ -4,10 +4,10 @@
  * LEIDEN OPEN VARIATION DATABASE (LOVD)
  *
  * Created     : 2011-03-18
- * Modified    : 2020-02-10
- * For LOVD    : 3.0-23
+ * Modified    : 2022-06-06
+ * For LOVD    : 3.0-28
  *
- * Copyright   : 2004-2020 Leiden University Medical Center; http://www.LUMC.nl/
+ * Copyright   : 2004-2022 Leiden University Medical Center; http://www.LUMC.nl/
  * Programmers : Ivar C. Lugtenburg <I.C.Lugtenburg@LUMC.nl>
  *               Ivo F.A.C. Fokkema <I.F.A.C.Fokkema@LUMC.nl>
  *               Daan Asscheman <D.Asscheman@LUMC.nl>
@@ -191,12 +191,12 @@ if ($_AUTH) {
 
 
 if ((PATH_COUNT == 1 || (!empty($_PE[1]) && !ctype_digit($_PE[1]))) && !ACTION) {
-    // URL: /screenings
-    // URL: /screenings/DMD
+    // URL: /screenings
+    // URL: /screenings/DMD
     // View all entries.
 
     if (!empty($_PE[1])) {
-        $sGene = $_DB->query('SELECT id FROM ' . TABLE_GENES . ' WHERE id = ?', array(rawurldecode($_PE[1])))->fetchColumn();
+        $sGene = $_DB->query('SELECT id FROM ' . TABLE_GENES . ' WHERE id = ?', array($_PE[1]))->fetchColumn();
         if ($sGene) {
             // We need the authorization call if we would show the screenings with VARIANTS in gene X, not before!
 //            lovd_isAuthorized('gene', $sGene); // To show non public entries.
@@ -212,7 +212,7 @@ if ((PATH_COUNT == 1 || (!empty($_PE[1]) && !ctype_digit($_PE[1]))) && !ACTION) 
         }
     }
 
-    define('PAGE_TITLE', 'All screenings' . (isset($sGene)? ' for gene ' . $sGene : ''));
+    define('PAGE_TITLE', lovd_getCurrentPageTitle());
     $_T->printHeader();
     $_T->printTitle();
 
@@ -225,7 +225,7 @@ if ((PATH_COUNT == 1 || (!empty($_PE[1]) && !ctype_digit($_PE[1]))) && !ACTION) 
     $_DATA = new LOVD_Screening();
     $aVLOptions = array(
         'cols_to_skip' => $aColsToHide,
-        'show_options' => ($_AUTH['level'] >= LEVEL_MANAGER),
+        'show_options' => ($_AUTH && $_AUTH['level'] >= LEVEL_MANAGER),
         'find_and_replace' => true,
     );
     $_DATA->viewList('Screenings', $aVLOptions);
@@ -239,11 +239,11 @@ if ((PATH_COUNT == 1 || (!empty($_PE[1]) && !ctype_digit($_PE[1]))) && !ACTION) 
 
 
 if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && !ACTION) {
-    // URL: /screenings/0000000001
+    // URL: /screenings/0000000001
     // View specific entry.
 
-    $nID = sprintf('%010d', $_PE[1]);
-    define('PAGE_TITLE', 'Screening #' . $nID);
+    $nID = lovd_getCurrentID();
+    define('PAGE_TITLE', lovd_getCurrentPageTitle());
     $_T->printHeader();
     $_T->printTitle();
 
@@ -291,7 +291,7 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && !ACTION) {
         $_DATA = new LOVD_CustomViewList(array('VariantOnGenome', 'Scr2Var', 'VariantOnTranscript'));
         $aVLOptions = array(
             'cols_to_skip' => array('transcriptid'),
-            'show_options' => ($_AUTH['level'] >= LEVEL_CURATOR),
+            'show_options' => ($_AUTH && $_AUTH['level'] >= LEVEL_CURATOR),
         );
         $_DATA->viewList('CustomVL_VOT_for_S_VE', $aVLOptions);
     }
@@ -305,17 +305,17 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && !ACTION) {
 
 
 if (PATH_COUNT == 1 && ACTION == 'create' && isset($_GET['target']) && ctype_digit($_GET['target'])) {
-    // URL: /screenings?create
+    // URL: /screenings?create
     // Create a new entry.
 
     define('LOG_EVENT', 'ScreeningCreate');
 
     lovd_requireAUTH($_SETT['user_level_settings']['submit_new_data']);
 
-    $_GET['target'] = sprintf('%08d', $_GET['target']);
+    $_GET['target'] = sprintf('%0' . $_SETT['objectid_length']['individuals'] . 'd', $_GET['target']);
+    define('PAGE_TITLE', lovd_getCurrentPageTitle());
     $z = $_DB->query('SELECT id FROM ' . TABLE_INDIVIDUALS . ' WHERE id = ?', array($_GET['target']))->fetchAssoc();
     if (!$z) {
-        define('PAGE_TITLE', 'Create a new screening entry');
         $_T->printHeader();
         $_T->printTitle();
         lovd_showInfoTable('The individual ID given is not valid, please go to the desired individual entry and click on the "Add screening" button.', 'stop');
@@ -325,7 +325,6 @@ if (PATH_COUNT == 1 && ACTION == 'create' && isset($_GET['target']) && ctype_dig
         lovd_requireAUTH(LEVEL_OWNER);
     }
     $_POST['individualid'] = $_GET['target'];
-    define('PAGE_TITLE', 'Create a new screening information entry for individual #' . $_GET['target']);
 
     lovd_isAuthorized('gene', $_AUTH['curates']);
 
@@ -462,11 +461,11 @@ if (PATH_COUNT == 1 && ACTION == 'create' && isset($_GET['target']) && ctype_dig
 
 
 if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && ACTION == 'edit') {
-    // URL: /screenings/0000000001?edit
+    // URL: /screenings/0000000001?edit
     // Edit an entry.
 
-    $nID = sprintf('%010d', $_PE[1]);
-    define('PAGE_TITLE', 'Edit an screening information entry');
+    $nID = lovd_getCurrentID();
+    define('PAGE_TITLE', lovd_getCurrentPageTitle());
     define('LOG_EVENT', 'ScreeningEdit');
 
     // Load appropriate user level for this screening entry.
@@ -608,6 +607,11 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && ACTION == 'edit') {
     $_T->printHeader();
     $_T->printTitle();
 
+    // If we're not the creator nor the owner, warn.
+    if ($_POST['created_by'] != $_AUTH['id'] && $_POST['owned_by'] != $_AUTH['id']) {
+        lovd_showInfoTable('Warning: You are editing data not created or owned by you. You are free to correct errors such as data inserted into the wrong field or typographical errors, but make sure that all other edits are made in consultation with the submitter. If you disagree with the submitter\'s findings, add a remark rather than removing or overwriting data.', 'warning', 760);
+    }
+
     if (GET) {
         print('      To edit an screening information entry, please fill out the form below.<BR>' . "\n" .
               '      <BR>' . "\n\n");
@@ -642,11 +646,11 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && ACTION == 'edit') {
 
 
 if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && ACTION == 'confirmVariants') {
-    // URL: /screenings/0000000001?confirmVariants
+    // URL: /screenings/0000000001?confirmVariants
     // Confirm existing variant entries within the same individual.
 
-    $nID = sprintf('%010d', $_PE[1]);
-    define('PAGE_TITLE', 'Confirm variant entries with screening #' . $nID);
+    $nID = lovd_getCurrentID();
+    define('PAGE_TITLE', lovd_getCurrentPageTitle());
     define('LOG_EVENT', 'VariantConfirm');
 
     $z = $_DB->query('SELECT id, individualid, variants_found FROM ' . TABLE_SCREENINGS . ' WHERE id = ?', array($nID))->fetchAssoc();
@@ -673,7 +677,6 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && ACTION == 'confirmVariants') {
         exit;
     } else {
         $nIndividual = $z['individualid'];
-        $_GET['search_screeningids'] = $_DB->query('SELECT GROUP_CONCAT(id SEPARATOR "|") FROM ' . TABLE_SCREENINGS . ' WHERE individualid = ? AND id != ? GROUP BY individualid', array($nIndividual, $nID))->fetchColumn();
     }
 
     $bSubmit = false;
@@ -782,12 +785,15 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && ACTION == 'confirmVariants') {
     lovd_showInfoTable('The variant entries below are all variants found in this individual, not yet confirmed by/added to this screening.', 'information');
 
     $_GET['page_size'] = 10;
-    $_GET['search_screeningids'] .= ' !' . $nID;
+    $_GET['search_screeningids'] = $_DB->query('
+        SELECT GROUP_CONCAT(id SEPARATOR "|")
+        FROM ' . TABLE_SCREENINGS . '
+        WHERE individualid = ? AND id != ?
+        GROUP BY individualid', array($nIndividual, $nID))->fetchColumn();
     require ROOT_PATH . 'class/object_genome_variants.php';
     $_DATA = new LOVD_GenomeVariant();
     $_DATA->setRowLink('Screenings_' . $nID . '_confirmVariants', 'javascript:$(\'#check_{{ID}}\').trigger(\'click\'); return false;');
     $aVLOptions = array(
-        'cols_to_skip' => array('id_', 'chromosome'),
         'track_history' => false,
         'show_options' => true,
     );
@@ -814,11 +820,11 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && ACTION == 'confirmVariants') {
 
 
 if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && ACTION == 'removeVariants') {
-    // URL: /screenings/0000000001?removeVariants
+    // URL: /screenings/0000000001?removeVariants
     // Remove variants from a screening entry.
 
-    $nID = sprintf('%010d', $_PE[1]);
-    define('PAGE_TITLE', 'Remove variant entries from screening #' . $nID);
+    $nID = lovd_getCurrentID();
+    define('PAGE_TITLE', lovd_getCurrentPageTitle());
     define('LOG_EVENT', 'VariantRemove');
 
     $z = $_DB->query('SELECT id, individualid, variants_found FROM ' . TABLE_SCREENINGS . ' WHERE id = ?', array($nID))->fetchAssoc();
@@ -864,9 +870,10 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && ACTION == 'removeVariants') {
     if (POST) {
         lovd_errorClean();
 
-        // Preventing notices...
-        // $_SESSION['viewlists']['Screenings_' . $nID . '_removeVariants']['checked'] stores the IDs of the variants that are supposed to be present in TABLE_SCR2VAR.
-        if (isset($_SESSION['viewlists']['Screenings_' . $nID . '_removeVariants']['checked'])) {
+        if (empty($_SESSION['viewlists']['Screenings_' . $nID . '_removeVariants']['checked'])) {
+            // No variants selected.
+            lovd_errorAdd('', 'Please select at least one variant to remove.');
+        } else {
             // Check if all checked variants are actually from this screening.
             $aDiff = array_diff($_SESSION['viewlists']['Screenings_' . $nID . '_removeVariants']['checked'], $aValidVariants);
             if (!empty($aDiff)) {
@@ -879,7 +886,7 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && ACTION == 'removeVariants') {
         if (empty($_POST['password'])) {
             lovd_errorAdd('password', 'Please fill in the \'Enter your password for authorization\' field.');
         } elseif (!lovd_verifyPassword($_POST['password'], $_AUTH['password'])) {
-            // User had to enter his/her password for authorization.
+            // User had to enter their password for authorization.
             lovd_errorAdd('password', 'Please enter your correct password for authorization.');
         }
 
@@ -942,11 +949,10 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && ACTION == 'removeVariants') {
 
     $_GET['page_size'] = 10;
     $_GET['search_screeningids'] = $nID;
-    $_GET['search_id_'] = (count($aInvalidVariants)? '!' . implode(' !', $aInvalidVariants) : '');
+    $_GET['search_id'] = (count($aInvalidVariants)? '!' . implode(' !', $aInvalidVariants) : '');
     require ROOT_PATH . 'class/object_genome_variants.php';
     $_DATA = new LOVD_GenomeVariant();
     $aVLOptions = array(
-        'cols_to_skip' => array('id_', 'screeningids', 'chromosome'),
         'track_history' => false,
         'show_options' => true,
     );
@@ -975,11 +981,11 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && ACTION == 'removeVariants') {
 
 
 if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && ACTION == 'delete') {
-    // URL: /screenings/0000000001?delete
+    // URL: /screenings/0000000001?delete
     // Drop specific entry.
 
-    $nID = sprintf('%010d', $_PE[1]);
-    define('PAGE_TITLE', 'Delete screening information entry ' . $nID);
+    $nID = lovd_getCurrentID();
+    define('PAGE_TITLE', lovd_getCurrentPageTitle());
     define('LOG_EVENT', 'ScreeningDelete');
 
     lovd_isAuthorized('screening', $nID);
@@ -1005,7 +1011,7 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && ACTION == 'delete') {
             lovd_errorAdd('password', 'Please fill in the \'Enter your password for authorization\' field.');
         }
 
-        // User had to enter his/her password for authorization.
+        // User had to enter their password for authorization.
         if ($_POST['password'] && !lovd_verifyPassword($_POST['password'], $_AUTH['password'])) {
             lovd_errorAdd('password', 'Please enter your correct password for authorization.');
         }
@@ -1029,7 +1035,7 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && ACTION == 'delete') {
                 $_DB->query('DELETE FROM ' . TABLE_VARIANTS . ' WHERE id IN (?' . str_repeat(', ?', count($aVariantsRemovable) - 1) . ')', $aVariantsRemovable);
             }
 
-            // This also deletes the entries in TABLE_SCR2GENES and TABLE_SCR2VAR.
+            // This also deletes the entries in TABLE_SCR2GENE and TABLE_SCR2VAR.
             $_DATA->deleteEntry($nID);
 
             if ($aGenes) {
@@ -1040,7 +1046,7 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && ACTION == 'delete') {
             $_DB->commit();
 
             // Write to log...
-            lovd_writeLog('Event', LOG_EVENT, 'Deleted screening information entry ' . $nID);
+            lovd_writeLog('Event', LOG_EVENT, 'Deleted screening information entry ' . $nID . ' (Owner: ' . $zData['owned_by_'] . ')');
 
             // Thank the user...
             header('Refresh: 3; url=' . lovd_getInstallURL() . 'individuals/' . $zData['individualid']);
@@ -1069,15 +1075,15 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && ACTION == 'delete') {
     print('      <FORM action="' . CURRENT_PATH . '?' . ACTION . '" method="post">' . "\n");
 
     $nVariants = $_DB->query('SELECT COUNT(variantid) FROM ' . TABLE_SCR2VAR . ' WHERE screeningid = ?', array($nID))->fetchColumn();
-    $aOptions = array('remove' => 'Yes, Remove ' . ($nVariantsRemovable == 1? 'this variant' : 'these variants') . ' from this screening', 'keep' => 'No, Keep ' . ($nVariantsRemovable == 1? 'this variant' : 'these variants') . ' as separate entries');
+    $aOptions = array('remove' => 'Yes, remove ' . ($nVariantsRemovable == 1? 'this variant' : 'these variants') . ' attached to only this screening', 'keep' => 'No, keep ' . ($nVariantsRemovable == 1? 'this variant' : 'these variants') . ' as separate entries');
 
     // Array which will make up the form table.
     $aForm = array_merge(
                  array(
                         array('POST', '', '', '', '40%', '14', '60%'),
-                        array('Deleting screening information entry', '', 'print', '<B>' . $nID . ' (Owner: ' . $zData['owned_by_'] . ')</B>'),
+                        array('Deleting screening information entry', '', 'print', '<B>' . $nID . ' (Owner: ' . htmlspecialchars($zData['owned_by_']) . ')</B>'),
                         'skip',
-                        array('', '', 'print', 'This screening entry has ' . ($nVariants? $nVariants : 0) . ' variant' . ($nVariants == 1? '' : 's') . ' attached.'),
+                        array('', '', 'print', 'This screening entry has ' . ($nVariants?: 0) . ' variant' . ($nVariants == 1? '' : 's') . ' attached.'),
 'variants_removable' => array('', '', 'print', (!$nVariantsRemovable? 'No variants will be removed.' : '<B>' . $nVariantsRemovable . ' variant' . ($nVariantsRemovable == 1? '' : 's') . ' will be removed, because ' . ($nVariantsRemovable == 1? 'it is' : 'these are'). ' not attached to other screenings!!!</B>')),
           'variants' => array('Should LOVD remove ' . ($nVariantsRemovable == 1? 'this variant' : 'these ' . $nVariantsRemovable . ' variants') . '?', '', 'select', 'remove_variants', 1, $aOptions, false, false, false),
      'variants_skip' => 'skip',
@@ -1098,5 +1104,4 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && ACTION == 'delete') {
     $_T->printFooter();
     exit;
 }
-
 ?>

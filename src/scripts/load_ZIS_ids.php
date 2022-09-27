@@ -54,7 +54,7 @@ if (!$h) {
     die('Can\'t open directory.' . "\n");
 }
 while (($sFile = readdir($h)) !== false) {
-    if ($sFile{0} == '.') {
+    if ($sFile[0] == '.') {
         // Current dir, parent dir, and hidden files.
         continue;
     }

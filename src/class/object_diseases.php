@@ -4,10 +4,10 @@
  * LEIDEN OPEN VARIATION DATABASE (LOVD)
  *
  * Created     : 2010-07-28
- * Modified    : 2019-10-01
- * For LOVD    : 3.0-22
+ * Modified    : 2022-02-10
+ * For LOVD    : 3.0-28
  *
- * Copyright   : 2004-2019 Leiden University Medical Center; http://www.LUMC.nl/
+ * Copyright   : 2004-2022 Leiden University Medical Center; http://www.LUMC.nl/
  * Programmers : Ivo F.A.C. Fokkema <I.F.A.C.Fokkema@LUMC.nl>
  *               Ivar C. Lugtenburg <I.C.Lugtenburg@LUMC.nl>
  *               Daan Asscheman <D.Asscheman@LUMC.nl>
@@ -160,8 +160,8 @@ class LOVD_Disease extends LOVD_Object
 
         // SQL code for viewing an entry.
         $this->aSQLViewEntry['SELECT']   = 'd.*, ' .
-                                           '(SELECT COUNT(*) FROM ' . TABLE_INDIVIDUALS . ' AS i INNER JOIN ' . TABLE_IND2DIS . ' AS i2d ON (i.id = i2d.individualid) WHERE i2d.diseaseid = d.id' . ($_AUTH['level'] >= $_SETT['user_level_settings']['see_nonpublic_data']? '' : ' AND i.statusid >= ' . STATUS_MARKED) . ') AS individuals, ' .
-                                           '(SELECT COUNT(*) FROM ' . TABLE_PHENOTYPES . ' AS p WHERE p.diseaseid = d.id' . ($_AUTH['level'] >= $_SETT['user_level_settings']['see_nonpublic_data']? '' : ' AND p.statusid >= ' . STATUS_MARKED) . ') AS phenotypes, ' .
+                                           '(SELECT COUNT(*) FROM ' . TABLE_INDIVIDUALS . ' AS i INNER JOIN ' . TABLE_IND2DIS . ' AS i2d ON (i.id = i2d.individualid) WHERE i2d.diseaseid = d.id' . ($_AUTH && $_AUTH['level'] >= $_SETT['user_level_settings']['see_nonpublic_data']? '' : ' AND i.statusid >= ' . STATUS_MARKED) . ') AS individuals, ' .
+                                           '(SELECT COUNT(*) FROM ' . TABLE_PHENOTYPES . ' AS p WHERE p.diseaseid = d.id' . ($_AUTH && $_AUTH['level'] >= $_SETT['user_level_settings']['see_nonpublic_data']? '' : ' AND p.statusid >= ' . STATUS_MARKED) . ') AS phenotypes, ' .
                                            'GROUP_CONCAT(DISTINCT g2d.geneid ORDER BY g2d.geneid SEPARATOR ";") AS _genes, ' .
                                            'uc.name AS created_by_, ' .
                                            'ue.name AS edited_by_';
@@ -173,8 +173,8 @@ class LOVD_Disease extends LOVD_Object
 
         // SQL code for viewing a list of entries.
         $this->aSQLViewList['SELECT']   = 'd.*, d.id AS diseaseid, ' .
-                                          '(SELECT COUNT(DISTINCT i.id) FROM ' . TABLE_IND2DIS . ' AS i2d LEFT OUTER JOIN ' . TABLE_INDIVIDUALS . ' AS i ON (i2d.individualid = i.id' . ($_AUTH['level'] >= $_SETT['user_level_settings']['see_nonpublic_data']? '' : ' AND i.statusid >= ' . STATUS_MARKED) . ') WHERE i2d.diseaseid = d.id) AS individuals, ' .
-                                          '(SELECT COUNT(*) FROM ' . TABLE_PHENOTYPES . ' AS p WHERE p.diseaseid = d.id' . ($_AUTH['level'] >= $_SETT['user_level_settings']['see_nonpublic_data']? '' : ' AND p.statusid >= ' . STATUS_MARKED) . ') AS phenotypes, ' .
+                                          '(SELECT COUNT(DISTINCT i.id) FROM ' . TABLE_IND2DIS . ' AS i2d LEFT OUTER JOIN ' . TABLE_INDIVIDUALS . ' AS i ON (i2d.individualid = i.id' . ($_AUTH && $_AUTH['level'] >= $_SETT['user_level_settings']['see_nonpublic_data']? '' : ' AND i.statusid >= ' . STATUS_MARKED) . ') WHERE i2d.diseaseid = d.id) AS individuals, ' .
+                                          '(SELECT COUNT(*) FROM ' . TABLE_PHENOTYPES . ' AS p WHERE p.diseaseid = d.id' . ($_AUTH && $_AUTH['level'] >= $_SETT['user_level_settings']['see_nonpublic_data']? '' : ' AND p.statusid >= ' . STATUS_MARKED) . ') AS phenotypes, ' .
                                           'COUNT(g2d.geneid) AS gene_count, ' .
                                           'GROUP_CONCAT(DISTINCT g2d.geneid ORDER BY g2d.geneid SEPARATOR ";") AS _genes';
         $this->aSQLViewList['FROM']     = TABLE_DISEASES . ' AS d ' .
@@ -195,7 +195,7 @@ class LOVD_Disease extends LOVD_Object
                         'name' => 'Name',
                         'id_omim' => 'OMIM ID',
                         'link_HPO_' => 'Human Phenotype Ontology Project (HPO)',
-                        'inheritance' => 'Inheritance',
+                        'inheritance_' => 'Inheritance',
                         'individuals' => 'Individuals reported having this disease',
                         'phenotypes_' => 'Phenotype entries for this disease',
                         'genes_' => 'Associated with',
@@ -225,7 +225,7 @@ class LOVD_Disease extends LOVD_Object
                                     'db'   => array('d.id_omim', 'ASC', true)),
                         'inheritance' => array(
                                     'view' => array('Inheritance', 75),
-                                    'db'   => array('inheritance', 'ASC', true),
+                                    'db'   => array('d.inheritance', 'ASC', true),
                                     'legend' => array('Abbreviations:' . strip_tags(str_replace('<TR>', "\n", preg_replace('/\s+/', ' ', $sInheritanceLegend))),
                                         'Values based on OMIM\'s and HPO\'s values for inheritance.<BR>' . str_replace(array("\r", "\n"), '', $sInheritanceLegend),
                                     )),
@@ -319,7 +319,7 @@ class LOVD_Disease extends LOVD_Object
         }
 
         // XSS attack prevention. Deny input of HTML.
-        lovd_checkXSS();
+        lovd_checkXSS($aData);
     }
 
 
@@ -390,6 +390,7 @@ class LOVD_Disease extends LOVD_Object
     function prepareData ($zData = '', $sView = 'list')
     {
         // Prepares the data by "enriching" the variable received with links, pictures, etc.
+        global $_SETT;
 
         if (!in_array($sView, array('list', 'entry'))) {
             $sView = 'list';
@@ -416,6 +417,7 @@ class LOVD_Disease extends LOVD_Object
             } else {
                 $zData['genes_'] = implode(', ', $zData['genes']);
             }
+
         } else {
             if (!empty($zData['id_omim'])) {
                 $zData['link_HPO_'] = '<A href="' . lovd_getExternalSource('hpo_disease',
@@ -425,6 +427,14 @@ class LOVD_Disease extends LOVD_Object
                 // Cannot link to HPO without OMIM ID, hide this row.
                 unset($this->aColumnsViewEntry['link_HPO_']);
             }
+
+            $zData['inheritance_'] = '';
+            $aInheritances = explode(';', $zData['inheritance']);
+            foreach ($aInheritances as $sInheritance) {
+                $zData['inheritance_'] .= (!$zData['inheritance_']? '' : ', ') .
+                    (!isset($_SETT['diseases_inheritance'][$sInheritance])? $sInheritance : $_SETT['diseases_inheritance'][$sInheritance]);
+            }
+
             $zData['phenotypes_'] = $zData['phenotypes'];
             if ($zData['phenotypes']) {
                 $zData['phenotypes_'] = '<A href="phenotypes/disease/' . $zData['id'] . '">' . $zData['phenotypes'] . '</A>';

@@ -4,10 +4,10 @@
  * LEIDEN OPEN VARIATION DATABASE (LOVD)
  *
  * Created     : 2010-01-19
- * Modified    : 2018-01-19
- * For LOVD    : 3.0-21
+ * Modified    : 2020-07-09
+ * For LOVD    : 3.0-24
  *
- * Copyright   : 2004-2018 Leiden University Medical Center; http://www.LUMC.nl/
+ * Copyright   : 2004-2020 Leiden University Medical Center; http://www.LUMC.nl/
  * Programmers : Ivo F.A.C. Fokkema <I.F.A.C.Fokkema@LUMC.nl>
  *               Ivar C. Lugtenburg <I.C.Lugtenburg@LUMC.nl>
  *
@@ -60,7 +60,7 @@ if (!empty($_POST)) {
             if ($zUser) {
                 // The user exists, now check account unlocking, locked accounts, successful and unsuccessful logins.
 
-                // Instead of having inc-auth.php stop the user when his IP is not allowed to log in, it's better to do that here.
+                // Instead of having inc-auth.php stop the user when their IP is not allowed to log in, it's better to do that here.
                 if ($zUser['allowed_ip'] && !lovd_validateIP($zUser['allowed_ip'], $_SERVER['REMOTE_ADDR'])) {
                     lovd_writeLog('Auth', 'AuthError', $_SERVER['REMOTE_ADDR'] . ' (' . lovd_php_gethostbyaddr($_SERVER['REMOTE_ADDR']) . ') is not in IP allow list for ' . $_POST['username'] . ': "' . $zUser['allowed_ip'] . '"');
 
@@ -142,7 +142,7 @@ if (!empty($_POST)) {
                     // FIXME; This is temporary code; can be removed once the old authentication method has died out.
                     // Regenerate the new password hash, *but only if the user has upgraded the database already*!!!
                     if (strlen($zUser['password']) == 32 && $_STAT['version'] >= '3.0-alpha-02') {
-                        // User has logged in, so we have his password. Create salt and regenerate password hash for him.
+                        // User has logged in, so we have their password. Create salt and regenerate password hash for them.
                         $_SESSION['auth']['password'] = lovd_createPasswordHash($_POST['password']);
                         $_DB->query('UPDATE ' . TABLE_USERS . ' SET password = ?, password_autogen = "", phpsessid = ?, last_login = NOW(), login_attempts = 0 WHERE id = ?', array($_SESSION['auth']['password'], session_id(), $_AUTH['id']));
                     } else {
@@ -171,7 +171,7 @@ if (!empty($_POST)) {
                 lovd_writeLog('Auth', 'AuthError', $_SERVER['REMOTE_ADDR'] . ' (' . lovd_php_gethostbyaddr($_SERVER['REMOTE_ADDR']) . ') tried logging in using ' . $_POST['username'] . '/' . str_repeat('*', strlen($_POST['password'])));
                 lovd_errorAdd('', 'Invalid Username/Password combination.');
 
-                // This may not actually update (user misspelled his username) but we can call the query anyway.
+                // This may not actually update (user misspelled their username) but we can call the query anyway.
                 if ($_CONF['lock_users']) {
                     $_DB->query('UPDATE ' . TABLE_USERS . ' SET login_attempts = login_attempts + 1 WHERE username = ? AND level < ' . LEVEL_ADMIN, array($_POST['username']), false);
                 }
@@ -179,11 +179,6 @@ if (!empty($_POST)) {
                 // Check if the user is locked, now.
                 if ($zUser && $zUser['login_attempts'] >= (3-1)) {
                     lovd_errorAdd('password', 'Your account is now locked, since this is the third time a wrong password was provided.');
-                }
-
-                // The "Forgot my password" option.
-                if ($_CONF['allow_unlock_accounts']) {
-                    lovd_errorAdd('', 'Did you <A href="reset_password">forget your password</A>?');
                 }
             }
         }
@@ -219,17 +214,17 @@ if (!$_AUTH) {
           '        <TABLE border="0" cellpadding="0" cellspacing="0" width="275">' . "\n" .
           '          <TR align="right">' . "\n" .
           '            <TD width="100" style="padding-right : 5px;">Username</TD>' . "\n" .
-          '            <TD width="175"><INPUT type="text" name="username" size="20"></TD></TR>' . "\n" .
+          '            <TD width="175" colspan="2"><INPUT type="text" name="username" size="20"></TD></TR>' . "\n" .
           '          <TR>' . "\n" .
           '            <TD colspan="2"><IMG src="gfx/trans.png" alt="" width="1" height="1"></TD></TR>' . "\n" .
           '          <TR align="right">' . "\n" .
           '            <TD width="100" style="padding-right : 5px;">Password</TD>' . "\n" .
-          '            <TD width="175"><INPUT type="password" name="password" size="20"></TD></TR>' . "\n" .
+          '            <TD width="175" colspan="2"><INPUT type="password" name="password" size="20"></TD></TR>' . "\n" .
           '          <TR>' . "\n" .
           '            <TD colspan="2"><IMG src="gfx/trans.png" alt="" width="1" height="1"></TD></TR>' . "\n" .
           '          <TR align="right">' . "\n" .
-          '            <TD width="100">&nbsp;</TD>' . "\n" .
-          '            <TD width="175"><INPUT type="submit" value="Log in"></TD></TR></TABLE>' . "\n" .
+          '            <TD width="150" colspan="2">' . (!$_CONF['allow_unlock_accounts']? '&nbsp;' : '<A href="reset_password">Forgot your password</A>?') . '</TD>' . "\n" .
+          '            <TD width="125"><INPUT type="submit" value="Log in"></TD></TR></TABLE>' . "\n" .
           '      </FORM>' . "\n\n" .
           '      <SCRIPT type="text/javascript">' . "\n" .
           '        document.forms[\'login\'].username.focus();' . "\n" .

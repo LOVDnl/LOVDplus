@@ -4,10 +4,10 @@
  * LEIDEN OPEN VARIATION DATABASE (LOVD)
  *
  * Created     : 2011-05-23
- * Modified    : 2020-02-10
- * For LOVD    : 3.0-23
+ * Modified    : 2022-02-10
+ * For LOVD    : 3.0-28
  *
- * Copyright   : 2004-2020 Leiden University Medical Center; http://www.LUMC.nl/
+ * Copyright   : 2004-2022 Leiden University Medical Center; http://www.LUMC.nl/
  * Programmers : Ivar C. Lugtenburg <I.C.Lugtenburg@LUMC.nl>
  *               Ivo F.A.C. Fokkema <I.F.A.C.Fokkema@LUMC.nl>
  *               Daan Asscheman <D.Asscheman@LUMC.nl>
@@ -44,7 +44,7 @@ if ($_AUTH) {
 
 
 if (PATH_COUNT == 1 && !ACTION) {
-    // URL: /phenotypes
+    // URL: /phenotypes
     // Not supported, forward user to disease-specific overview.
     header('Location: ' . lovd_getInstallURL() . $_PE[0] . '/disease?search_phenotypes=' . urlencode('!0'));
     exit;
@@ -55,7 +55,7 @@ if (PATH_COUNT == 1 && !ACTION) {
 
 
 if (PATH_COUNT == 2 && $_PE[1] == 'disease' && !ACTION) {
-    // URL: /phenotypes/disease
+    // URL: /phenotypes/disease
     // Present users the list of diseases to choose from, to view the phenotype entries for this disease.
 
     define('PAGE_TITLE', 'Select a disease to view all phenotype entries');
@@ -77,11 +77,11 @@ if (PATH_COUNT == 2 && $_PE[1] == 'disease' && !ACTION) {
 
 
 if (PATH_COUNT == 3 && $_PE[1] == 'disease' && ctype_digit($_PE[2]) && !ACTION) {
-    // URL: /phenotypes/disease/00001
+    // URL: /phenotypes/disease/00001
     // View all phenotype entries for a certain disease.
 
-    $nDiseaseID = sprintf('%05d', $_PE[2]);
-    define('PAGE_TITLE', 'Phenotypes for disease #' . $nDiseaseID);
+    $nDiseaseID = lovd_getCurrentID();
+    define('PAGE_TITLE', lovd_getCurrentPageTitle());
     $_T->printHeader();
     $_T->printTitle();
 
@@ -91,8 +91,10 @@ if (PATH_COUNT == 3 && $_PE[1] == 'disease' && ctype_digit($_PE[2]) && !ACTION) 
     $_GET['search_diseaseid'] = $nDiseaseID;
     $aVLOptions = array(
         'cols_to_skip' => array('diseaseid'),
-        'show_options' => ($_AUTH['level'] >= LEVEL_MANAGER),
+        // We can't enable curator authorization, as phenotype entries authorize through their individual's variants.
+        'show_options' => ($_AUTH && $_AUTH['level'] >= LEVEL_MANAGER),
         'find_and_replace' => true,
+        'curate_set' => true,
     );
     $_DATA->viewList('Phenotypes_for_Disease_' . $nDiseaseID, $aVLOptions);
 
@@ -105,11 +107,11 @@ if (PATH_COUNT == 3 && $_PE[1] == 'disease' && ctype_digit($_PE[2]) && !ACTION) 
 
 
 if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && !ACTION) {
-    // URL: /phenotypes/0000000001
+    // URL: /phenotypes/0000000001
     // View specific entry.
 
-    $nID = sprintf('%010d', $_PE[1]);
-    define('PAGE_TITLE', 'Phenotype #' . $nID);
+    $nID = lovd_getCurrentID();
+    define('PAGE_TITLE', lovd_getCurrentPageTitle());
     $_T->printHeader();
     $_T->printTitle();
 
@@ -145,7 +147,7 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && !ACTION) {
 
 
 if (PATH_COUNT == 1 && ACTION == 'create' && !empty($_GET['target']) && ctype_digit($_GET['target'])) {
-    // URL: /phenotypes?create&target=00000001
+    // URL: /phenotypes?create&target=00000001
     // Create a new entry.
 
     // FIXME; ik vind nog steeds dat vooral het begin van deze code nog enigszins rommelig is.
@@ -155,10 +157,10 @@ if (PATH_COUNT == 1 && ACTION == 'create' && !empty($_GET['target']) && ctype_di
 
     lovd_requireAUTH($_SETT['user_level_settings']['submit_new_data']);
 
-    $_GET['target'] = sprintf('%08d', $_GET['target']);
+    $_GET['target'] = sprintf('%0' . $_SETT['objectid_length']['individuals'] . 'd', $_GET['target']);
     $z = $_DB->query('SELECT id FROM ' . TABLE_INDIVIDUALS . ' WHERE id = ?', array($_GET['target']))->fetchAssoc();
     if (!$z) {
-        define('PAGE_TITLE', 'Create a new phenotype entry');
+        define('PAGE_TITLE', lovd_getCurrentPageTitle());
         $_T->printHeader();
         $_T->printTitle();
         lovd_showInfoTable('The individual ID given is not valid, please go to the desired individual entry and click on the "Add phenotype" button.', 'stop');
@@ -168,14 +170,14 @@ if (PATH_COUNT == 1 && ACTION == 'create' && !empty($_GET['target']) && ctype_di
         lovd_requireAUTH(LEVEL_OWNER);
     }
     $_POST['individualid'] = $_GET['target'];
-    define('PAGE_TITLE', 'Create a new phenotype information entry for individual #' . $_GET['target']);
+    define('PAGE_TITLE', lovd_getCurrentPageTitle());
 
     require ROOT_PATH . 'inc-lib-form.php';
     lovd_errorClean();
 
     if (!empty($_GET['diseaseid'])) {
         if (ctype_digit($_GET['diseaseid'])) {
-            $_POST['diseaseid'] = sprintf('%05d', $_GET['diseaseid']);
+            $_POST['diseaseid'] = sprintf('%0' . $_SETT['objectid_length']['diseases'] . 'd', $_GET['diseaseid']);
             // Check if there are phenotype columns enabled for this disease & check if the $_POST['diseaseid'] is actually linked to this individual.
             if (!$_DB->query('SELECT COUNT(*) FROM ' . TABLE_IND2DIS . ' AS i2d INNER JOIN ' . TABLE_SHARED_COLS . ' AS sc USING(diseaseid) WHERE i2d.individualid = ? AND i2d.diseaseid = ?', array($_POST['individualid'], $_POST['diseaseid']))->fetchColumn()) {
                 lovd_errorAdd('diseaseid', htmlspecialchars($_POST['diseaseid']) . ' is not a valid disease id or no phenotype columns have been enabled for this disease.');
@@ -342,7 +344,7 @@ if (PATH_COUNT == 1 && ACTION == 'create' && !empty($_GET['target']) && ctype_di
     lovd_viewForm($aForm);
 
     print("\n" .
-          '        <INPUT type="hidden" name="diseaseid" value="' . $_POST['diseaseid'] . '">' . "\n" .
+          '        <INPUT type="hidden" name="diseaseid" value="' . htmlspecialchars($_POST['diseaseid']) . '">' . "\n" .
           '      </FORM>' . "\n\n");
 
     $_T->printFooter();
@@ -354,12 +356,12 @@ if (PATH_COUNT == 1 && ACTION == 'create' && !empty($_GET['target']) && ctype_di
 
 
 if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && in_array(ACTION, array('edit', 'publish'))) {
-    // URL: /phenotypes/0000000001?edit
-    // URL: /phenotypes/0000000001?publish
+    // URL: /phenotypes/0000000001?edit
+    // URL: /phenotypes/0000000001?publish
     // Edit an entry.
 
-    $nID = sprintf('%010d', $_PE[1]);
-    define('PAGE_TITLE', 'Edit phenotype #' . $nID);
+    $nID = lovd_getCurrentID();
+    define('PAGE_TITLE', lovd_getCurrentPageTitle());
     define('LOG_EVENT', 'PhenotypeEdit');
 
     // Load appropriate user level for this phenotype entry.
@@ -416,7 +418,7 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && in_array(ACTION, array('edit', 'p
             $_DATA->updateEntry($nID, $_POST, $aFields);
 
             // Get genes which are modified only when phenotype, individual and variant are marked or public.
-            if ($zData['statusid'] >= STATUS_MARKED || $_POST['statusid'] >= STATUS_MARKED) {
+            if ($zData['statusid'] >= STATUS_MARKED || (isset($_POST['statusid']) && $_POST['statusid'] >= STATUS_MARKED)) {
                 $aGenes = $_DB->query('SELECT DISTINCT t.geneid FROM ' . TABLE_TRANSCRIPTS . ' AS t ' .
                                       'INNER JOIN ' . TABLE_VARIANTS_ON_TRANSCRIPTS . ' AS vot ON (vot.transcriptid = t.id) ' .
                                       'INNER JOIN ' . TABLE_VARIANTS . ' AS vog ON (vog.id = vot.id) ' .
@@ -469,6 +471,11 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && in_array(ACTION, array('edit', 'p
     $_T->printHeader();
     $_T->printTitle();
 
+    // If we're not the creator nor the owner, warn.
+    if ($_POST['created_by'] != $_AUTH['id'] && $_POST['owned_by'] != $_AUTH['id']) {
+        lovd_showInfoTable('Warning: You are editing data not created or owned by you. You are free to correct errors such as data inserted into the wrong field or typographical errors, but make sure that all other edits are made in consultation with the submitter. If you disagree with the submitter\'s findings, add a remark rather than removing or overwriting data.', 'warning', 760);
+    }
+
     if (GET) {
         print('      To edit an phenotype information entry, please fill out the form below.<BR>' . "\n" .
               '      <BR>' . "\n\n");
@@ -502,11 +509,11 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && in_array(ACTION, array('edit', 'p
 
 
 if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && ACTION == 'delete') {
-    // URL: /phenotypes/0000000001?delete
+    // URL: /phenotypes/0000000001?delete
     // Drop specific entry.
 
-    $nID = sprintf('%010d', $_PE[1]);
-    define('PAGE_TITLE', 'Delete phenotype #' . $nID);
+    $nID = lovd_getCurrentID();
+    define('PAGE_TITLE', lovd_getCurrentPageTitle());
     define('LOG_EVENT', 'PhenotypeDelete');
 
     // FIXME; hier moet een goede controle komen, wanneer lager is toegestaan.
@@ -527,7 +534,7 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && ACTION == 'delete') {
             lovd_errorAdd('password', 'Please fill in the \'Enter your password for authorization\' field.');
         }
 
-        // User had to enter his/her password for authorization.
+        // User had to enter their password for authorization.
         if ($_POST['password'] && !lovd_verifyPassword($_POST['password'], $_AUTH['password'])) {
             lovd_errorAdd('password', 'Please enter your correct password for authorization.');
         }
@@ -586,7 +593,7 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && ACTION == 'delete') {
     $aForm = array_merge(
                  array(
                         array('POST', '', '', '', '40%', '14', '60%'),
-                        array('Deleting phenotype information entry', '', 'print', $nID . ' (Owner: ' . $zData['owned_by_'] . ')'),
+                        array('Deleting phenotype information entry', '', 'print', $nID . ' (Owner: ' . htmlspecialchars($zData['owned_by_']) . ')'),
                         'skip',
                         array('Enter your password for authorization', '', 'password', 'password', 20),
                         array('', '', 'submit', 'Delete phenotype information entry'),

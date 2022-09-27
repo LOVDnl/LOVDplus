@@ -4,10 +4,10 @@
  * LEIDEN OPEN VARIATION DATABASE (LOVD)
  *
  * Created     : 2011-11-09
- * Modified    : 2019-10-09
- * For LOVD    : 3.0-22
+ * Modified    : 2022-02-10
+ * For LOVD    : 3.0-28
  *
- * Copyright   : 2004-2019 Leiden University Medical Center; http://www.LUMC.nl/
+ * Copyright   : 2004-2022 Leiden University Medical Center; http://www.LUMC.nl/
  * Programmers : Ivar C. Lugtenburg <I.C.Lugtenburg@LUMC.nl>
  *               Ivo F.A.C. Fokkema <I.F.A.C.Fokkema@LUMC.nl>
  *               M. Kroon <m.kroon@lumc.nl>
@@ -60,12 +60,13 @@ if (isset($aNeededLevel[$sObject])) {
 // Call isAuthorized() on the object. NB: isAuthorized() modifies the global
 // $_AUTH for curators, owners and colleagues.
 if ($sObject == 'Transcript_Variant') {
+    // Note that these values have NOT been sanitized yet.
     list($nVariantID, $nTranscriptID) = explode(',', $nID);
     lovd_isAuthorized('variant', $nVariantID);
 } elseif ($sObject == 'User') {
     lovd_isAuthorized(strtolower($sObject), $nID);
     // Users viewing their own profile should see a lot more...
-    if ($_AUTH['id'] == $nID && $_AUTH['level'] < LEVEL_CURATOR) {
+    if ($_AUTH && $_AUTH['id'] == $nID && $_AUTH['level'] < LEVEL_CURATOR) {
         $_AUTH['level'] = LEVEL_CURATOR;
     }
 }
@@ -97,8 +98,6 @@ if (!file_exists($sFile)) {
 if (in_array($sObject, array('Phenotype', 'Transcript_Variant', 'Custom_ViewList', 'ScreeningPLUS'))) {
     // Exception for VOT viewEntry, we need to isolate the gene from the ID to correctly pass this to the data object.
     if ($sObject == 'Transcript_Variant') {
-        // This line below is redundant as long as it's also called at the lovd_isAuthorized() call. Remove it here maybe...?
-        list($nVariantID, $nTranscriptID) = explode(',', $nID);
         $sObjectID = $_DB->query('SELECT geneid FROM ' . TABLE_TRANSCRIPTS . ' WHERE id = ?', array($nTranscriptID))->fetchColumn();
     }
 }

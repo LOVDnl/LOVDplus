@@ -4,10 +4,10 @@
  * LEIDEN OPEN VARIATION DATABASE (LOVD)
  *
  * Created     : 2016-08-26
- * Modified    : 2017-08-09
- * For LOVD    : 3.0-20
+ * Modified    : 2022-06-09
+ * For LOVD    : 3.0-28
  *
- * Copyright   : 2004-2017 Leiden University Medical Center; http://www.LUMC.nl/
+ * Copyright   : 2004-2022 Leiden University Medical Center; http://www.LUMC.nl/
  * Programmers : Ivo F.A.C. Fokkema <I.F.A.C.Fokkema@LUMC.nl>
  *               M. Kroon <m.kroon@lumc.nl>
  *
@@ -43,10 +43,10 @@ if ($_AUTH) {
 
 
 if (PATH_COUNT == 1 && !ACTION) {
-    // URL: /announcements
+    // URL: /announcements
     // View all entries.
 
-    define('PAGE_TITLE', 'System announcements');
+    define('PAGE_TITLE', lovd_getCurrentPageTitle());
     $_T->printHeader();
     $_T->printTitle();
 
@@ -66,11 +66,11 @@ if (PATH_COUNT == 1 && !ACTION) {
 
 
 if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && !ACTION) {
-    // URL: /announcements/00001
+    // URL: /announcements/00001
     // View specific entry.
 
     $nID = sprintf('%05d', $_PE[1]);
-    define('PAGE_TITLE', 'Announcement #' . $nID);
+    define('PAGE_TITLE', lovd_getCurrentPageTitle());
     $_T->printHeader();
     $_T->printTitle();
 
@@ -98,12 +98,11 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && !ACTION) {
 
 
 if (PATH_COUNT == 1 && ACTION == 'create') {
-    // URL: /announcements?create
-    // URL: /announcements?register
+    // URL: /announcements?create
     // Create a new announcement.
 
     define('LOG_EVENT', 'AnnouncementCreate');
-    define('PAGE_TITLE', 'Create a new announcement');
+    define('PAGE_TITLE', lovd_getCurrentPageTitle());
 
     // Require manager clearance.
     lovd_requireAUTH(LEVEL_MANAGER);
@@ -193,11 +192,11 @@ if (PATH_COUNT == 1 && ACTION == 'create') {
 
 
 if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && ACTION == 'edit') {
-    // URL: /announcements/00001?edit
+    // URL: /announcements/00001?edit
     // Edit specific entry.
 
     $nID = sprintf('%05d', $_PE[1]);
-    define('PAGE_TITLE', 'Edit announcement #' . $nID);
+    define('PAGE_TITLE', lovd_getCurrentPageTitle());
     define('LOG_EVENT', 'AnnouncementEdit');
 
     // Require manager clearance.
@@ -286,11 +285,11 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && ACTION == 'edit') {
 
 
 if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && ACTION == 'delete') {
-    // URL: /announcements/00001?delete
+    // URL: /announcements/00001?delete
     // Delete a specific announcement.
 
     $nID = sprintf('%05d', $_PE[1]);
-    define('PAGE_TITLE', 'Delete announcement #' . $nID);
+    define('PAGE_TITLE', lovd_getCurrentPageTitle());
     define('LOG_EVENT', 'AnnouncementDelete');
 
     // Require manager clearance.
@@ -309,7 +308,7 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && ACTION == 'delete') {
             lovd_errorAdd('password', 'Please fill in the \'Enter your password for authorization\' field.');
         }
 
-        // User had to enter his/her password for authorization.
+        // User had to enter their password for authorization.
         if ($_POST['password'] && !lovd_verifyPassword($_POST['password'], $_AUTH['password'])) {
             lovd_errorAdd('password', 'Please enter your correct password for authorization.');
         }
