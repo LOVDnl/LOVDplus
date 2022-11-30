@@ -764,7 +764,7 @@ class LOVD_VV
                 // Check for intronic and positions outside of the mRNA.
 
                 // Fetch transcript positions from the database.
-                $aTranscript = $_DB->query('
+                $aTranscript = $_DB->q('
                     SELECT position_c_mrna_start, position_c_mrna_end
                     FROM ' . TABLE_TRANSCRIPTS . ' WHERE id_ncbi = ?',
                     array($sRefSeqNM))->fetchAssoc();

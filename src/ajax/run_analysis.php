@@ -4,10 +4,10 @@
  * LEIDEN OPEN VARIATION DATABASE (LOVD)
  *
  * Created     : 2013-11-05
- * Modified    : 2019-09-26
- * For LOVD    : 3.0-22
+ * Modified    : 2022-11-30
+ * For LOVD+   : 3.0-29
  *
- * Copyright   : 2004-2019 Leiden University Medical Center; http://www.LUMC.nl/
+ * Copyright   : 2004-2022 Leiden University Medical Center; http://www.LUMC.nl/
  * Programmers : Ivo F.A.C. Fokkema <I.F.A.C.Fokkema@LUMC.nl>
  *               Juny Kesumadewi <juny.kesumadewi@unimelb.edu.au>
  *
@@ -81,7 +81,7 @@ $aSQL = array($_REQUEST['screeningid'], ANALYSIS_STATUS_CLOSED, ANALYSIS_STATUS_
 if ($_AUTH['level'] < LEVEL_MANAGER) {
     $aSQL[] = $_AUTH['id'];
 }
-$zIndividual = $_DB->query($sSQL, $aSQL)->fetchAssoc();
+$zIndividual = $_DB->q($sSQL, $aSQL)->fetchAssoc();
 if (!$zIndividual) {
     die(AJAX_FALSE);
 }
@@ -105,7 +105,7 @@ if (!empty($zIndividual['custom_panel'])) {
 $zAnalysis = $zAnalysisRun = $zFilterConfig = false;
 if ($_REQUEST['runid']) {
     // Check if the run exists and retrieve any existing configurations data of each filter.
-    $zAnalysisRun = $_DB->query('SELECT ar.id, ar.analysisid, a.name, GROUP_CONCAT(arf.filterid ORDER BY arf.filter_order SEPARATOR ";") AS _filters
+    $zAnalysisRun = $_DB->q('SELECT ar.id, ar.analysisid, a.name, GROUP_CONCAT(arf.filterid ORDER BY arf.filter_order SEPARATOR ";") AS _filters
                                  FROM ' . TABLE_ANALYSES_RUN . ' AS ar
                                    INNER JOIN ' . TABLE_ANALYSES . ' AS a ON (ar.analysisid = a.id)
                                    INNER JOIN ' . TABLE_ANALYSES_RUN_FILTERS . ' AS arf ON (ar.id = arf.runid)
@@ -115,16 +115,16 @@ if ($_REQUEST['runid']) {
     }
 
     // Check if this analysis run has not started before. Can't start twice... (maybe a restart option is needed later?)
-    if ($_DB->query('SELECT COUNT(*), IFNULL(MAX(arf.run_time)>-1, 0) AS analysis_run FROM ' . TABLE_ANALYSES_RUN . ' AS ar INNER JOIN ' . TABLE_ANALYSES_RUN_FILTERS . ' AS arf ON (ar.id = arf.runid) WHERE ar.id = ? GROUP BY ar.id HAVING analysis_run = 1', array($zAnalysisRun['id']))->fetchColumn()) {
+    if ($_DB->q('SELECT COUNT(*), IFNULL(MAX(arf.run_time)>-1, 0) AS analysis_run FROM ' . TABLE_ANALYSES_RUN . ' AS ar INNER JOIN ' . TABLE_ANALYSES_RUN_FILTERS . ' AS arf ON (ar.id = arf.runid) WHERE ar.id = ? GROUP BY ar.id HAVING analysis_run = 1', array($zAnalysisRun['id']))->fetchColumn()) {
         die('This analysis has already been performed on this screening.');
     }
 
     // Get the config_json of each filter. The JSON can be too big to be included in group_concat in the query that returns $zAnalysisRun query above.
-    $zFilterConfig = $_DB->query('SELECT filterid, config_json FROM ' . TABLE_ANALYSES_RUN_FILTERS . ' WHERE runid = ?', array($_REQUEST['runid']))->fetchAllGroupAssoc();
+    $zFilterConfig = $_DB->q('SELECT filterid, config_json FROM ' . TABLE_ANALYSES_RUN_FILTERS . ' WHERE runid = ?', array($_REQUEST['runid']))->fetchAllGroupAssoc();
 
 } else {
     // Check if analysis exists.
-    $zAnalysis = $_DB->query('SELECT a.id, a.name, GROUP_CONCAT(a2af.filterid ORDER BY a2af.filter_order SEPARATOR ";") AS _filters FROM ' . TABLE_ANALYSES . ' AS a INNER JOIN ' . TABLE_A2AF . ' AS a2af ON (a.id = a2af.analysisid) WHERE id = ? GROUP BY a.id', array($_REQUEST['analysisid']))->fetchAssoc();
+    $zAnalysis = $_DB->q('SELECT a.id, a.name, GROUP_CONCAT(a2af.filterid ORDER BY a2af.filter_order SEPARATOR ";") AS _filters FROM ' . TABLE_ANALYSES . ' AS a INNER JOIN ' . TABLE_A2AF . ' AS a2af ON (a.id = a2af.analysisid) WHERE id = ? GROUP BY a.id', array($_REQUEST['analysisid']))->fetchAssoc();
     if (!$zAnalysis || !$zAnalysis['_filters']) {
         die('Analysis not recognized or no filters defined. If the analysis is defined properly, this is an error in the software.');
     }
@@ -255,7 +255,7 @@ if (ACTION == 'configure' && GET) {
                          WHERE s.id != ? AND s.analysis_statusid < ?
                          ORDER BY `' . preg_replace('/[^A-Za-z0-9\/_-]/', '', $sLabIDColName) . '`, s.id';
                 $aSQL = array($_REQUEST['screeningid'], ANALYSIS_STATUS_ARCHIVED);
-                $zScreenings = $_DB->query($sSQL, $aSQL)->fetchAllAssoc();
+                $zScreenings = $_DB->q($sSQL, $aSQL)->fetchAllAssoc();
 
                 // Build the strings to represent the other screenings.
                 $aScreenings = array(); // All useful screenings in the database; ['screeningid:role_name'] => 'label';
@@ -455,7 +455,7 @@ if (ACTION == 'configure' && GET) {
                 if (empty($zIndividual['gene_panels']) || empty($zIndividual['gene_panels']['blacklist']) || $bModified) {
                     // No black list assigned to this individual, or something changed. Check all blacklists from the database.
                     // If one blacklist is found, run that one. If multiple are found, ask. If none are found, complain.
-                    $zBlackLists = $_DB->query('SELECT id, name FROM ' . TABLE_GENE_PANELS . ' WHERE type = ? ORDER BY id', array('blacklist'))->fetchAllCombine();
+                    $zBlackLists = $_DB->q('SELECT id, name FROM ' . TABLE_GENE_PANELS . ' WHERE type = ? ORDER BY id', array('blacklist'))->fetchAllCombine();
 
                     if (!$zBlackLists) {
                         // No blacklists in the database. Complain.
@@ -659,13 +659,13 @@ if (ACTION == 'configure' && POST) {
                     $aGenePanelIds = array_values(array_diff($aGenePanelIds, $aUseOlderGenePanels));
                     if (!empty($aGenePanelIds)) {
                         // Increase DB limits to allow concatenation of large number of gene IDs.
-                        $_DB->query('SET group_concat_max_len = 500000');
+                        $_DB->q('SET group_concat_max_len = 500000');
                         $sSQL = 'SELECT gp.id, gp.name, GROUP_CONCAT(gp2g.geneid SEPARATOR ";") AS _genes
                                  FROM ' . TABLE_GP2GENE . ' AS gp2g
                                    INNER JOIN ' . TABLE_GENE_PANELS . ' AS gp ON (gp2g.genepanelid = gp.id)
                                  WHERE gp2g.genepanelid IN (? ' . str_repeat(', ?', count($aGenePanelIds)-1) . ')
                                  GROUP BY gp.id';
-                        $zGenePanels = $_DB->query($sSQL, $aGenePanelIds)->fetchAllAssoc();
+                        $zGenePanels = $_DB->q($sSQL, $aGenePanelIds)->fetchAllAssoc();
 
                         // Populate data for each gene panel.
                         foreach ($zGenePanels as $zGenePanel) {
@@ -750,13 +750,13 @@ if (ACTION == 'configure' && POST) {
                     $aGenePanelIds = array_values(array_diff($aGenePanelIds, $aUseOlderGenePanels));
                     if (!empty($aGenePanelIds)) {
                         // Increase DB limits to allow concatenation of large number of gene IDs.
-                        $_DB->query('SET group_concat_max_len = 500000');
+                        $_DB->q('SET group_concat_max_len = 500000');
                         $sSQL = 'SELECT gp.id, gp.name, GROUP_CONCAT(gp2g.geneid SEPARATOR ";") AS _genes
                                  FROM ' . TABLE_GP2GENE . ' AS gp2g
                                    INNER JOIN ' . TABLE_GENE_PANELS . ' AS gp ON (gp2g.genepanelid = gp.id)
                                  WHERE gp2g.genepanelid IN (? ' . str_repeat(', ?', count($aGenePanelIds)-1) . ')
                                  GROUP BY gp.id';
-                        $zGenePanels = $_DB->query($sSQL, $aGenePanelIds)->fetchAllAssoc();
+                        $zGenePanels = $_DB->q($sSQL, $aGenePanelIds)->fetchAllAssoc();
 
                         // Populate data for each gene panel.
                         foreach ($zGenePanels as $zGenePanel) {
@@ -808,12 +808,12 @@ if (ACTION == 'run') {
     // All checked. Update individual. We already have checked that we're allowed to analyze this one. So just update the settings, if not already done before.
     define('LOG_EVENT', 'AnalysisRun');
     $_DB->beginTransaction();
-    $_DB->query('UPDATE ' . TABLE_SCREENINGS . ' SET analysis_statusid = ?, analysis_by = ?, analysis_date = NOW() WHERE id = ? AND (analysis_statusid = ? OR analysis_by IS NULL OR analysis_date IS NULL)', array(ANALYSIS_STATUS_IN_PROGRESS, $_AUTH['id'], $_REQUEST['screeningid'], ANALYSIS_STATUS_READY));
+    $_DB->q('UPDATE ' . TABLE_SCREENINGS . ' SET analysis_statusid = ?, analysis_by = ?, analysis_date = NOW() WHERE id = ? AND (analysis_statusid = ? OR analysis_by IS NULL OR analysis_date IS NULL)', array(ANALYSIS_STATUS_IN_PROGRESS, $_AUTH['id'], $_REQUEST['screeningid'], ANALYSIS_STATUS_READY));
 
 
     if (!$_REQUEST['runid']) {
         // Create analysis in database.
-        $q = $_DB->query('INSERT INTO ' . TABLE_ANALYSES_RUN . ' VALUES (NULL, ?, ?, 0, ?, ?, NOW())', array($zAnalysis['id'], $_REQUEST['screeningid'], $sCustomPanel, $_AUTH['id']));
+        $q = $_DB->q('INSERT INTO ' . TABLE_ANALYSES_RUN . ' VALUES (NULL, ?, ?, 0, ?, ?, NOW())', array($zAnalysis['id'], $_REQUEST['screeningid'], $sCustomPanel, $_AUTH['id']));
         if (!$q) {
             $_DB->rollBack();
             die('Failed to create analysis run in the database. If the analysis is defined properly, this is an error in the software.');
@@ -824,7 +824,7 @@ if (ACTION == 'run') {
         $aFilters = explode(';', $zAnalysis['_filters']);
         foreach ($aFilters as $i => $sFilter) {
             $sFilterConfig = (empty($aConfig[$sFilter])? NULL : json_encode($aConfig[$sFilter]));
-            $q = $_DB->query('INSERT INTO ' . TABLE_ANALYSES_RUN_FILTERS . ' (runid, filterid, config_json, filter_order) VALUES (?, ?, ?, ?)', array($nRunID, $sFilter, $sFilterConfig, ($i+1)));
+            $q = $_DB->q('INSERT INTO ' . TABLE_ANALYSES_RUN_FILTERS . ' (runid, filterid, config_json, filter_order) VALUES (?, ?, ?, ?)', array($nRunID, $sFilter, $sFilterConfig, ($i+1)));
             if (!$q) {
                 $_DB->rollBack();
                 die('Failed to create analysis run filter in the database. If the analysis is defined properly, this is an error in the software.');
@@ -833,13 +833,13 @@ if (ACTION == 'run') {
     } else {
         $nRunID = (int) $_REQUEST['runid']; // (int) is to prevent zerofill from messing things up.
         // Update the existing analyses run record to store the custom panel genes.
-        $_DB->query('UPDATE ' . TABLE_ANALYSES_RUN . ' SET custom_panel = ? WHERE id = ?', array($sCustomPanel, $nRunID));
+        $_DB->q('UPDATE ' . TABLE_ANALYSES_RUN . ' SET custom_panel = ? WHERE id = ?', array($sCustomPanel, $nRunID));
 
         // Insert into database the new configurations.
         $aFilters = explode(';', $zAnalysisRun['_filters']);
         foreach ($aFilters as $sFilter) {
             $sFilterConfig = (empty($aConfig[$sFilter])? NULL : json_encode($aConfig[$sFilter]));
-            $q = $_DB->query('UPDATE ' . TABLE_ANALYSES_RUN_FILTERS . ' SET config_json = ? WHERE filterid = ? AND runid = ?', array($sFilterConfig, $sFilter, $nRunID));
+            $q = $_DB->q('UPDATE ' . TABLE_ANALYSES_RUN_FILTERS . ' SET config_json = ? WHERE filterid = ? AND runid = ?', array($sFilterConfig, $sFilter, $nRunID));
             if (!$q) {
                 $_DB->rollBack();
                 die('Failed to update analysis run filter in the database. If the analysis is defined properly, this is an error in the software.');
@@ -872,7 +872,7 @@ if (ACTION == 'run') {
         );
 
     // Collect variant IDs and store in session.
-    $_SESSION['analyses'][$nRunID]['IDsLeft'] = $_DB->query('SELECT DISTINCT CAST(s2v.variantid AS UNSIGNED) FROM ' . TABLE_SCR2VAR . ' AS s2v WHERE s2v.screeningid = ?', array($_REQUEST['screeningid']))->fetchAllColumn();
+    $_SESSION['analyses'][$nRunID]['IDsLeft'] = $_DB->q('SELECT DISTINCT CAST(s2v.variantid AS UNSIGNED) FROM ' . TABLE_SCR2VAR . ' AS s2v WHERE s2v.screeningid = ?', array($_REQUEST['screeningid']))->fetchAllColumn();
 
     // Instruct page to start running filters in sequence.
     die(AJAX_TRUE . ' ' . str_pad($nRunID, 5, '0', STR_PAD_LEFT));

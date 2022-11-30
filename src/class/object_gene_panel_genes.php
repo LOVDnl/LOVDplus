@@ -4,10 +4,10 @@
  * LEIDEN OPEN VARIATION DATABASE (LOVD)
  *
  * Created     : 2016-03-07
- * Modified    : 2019-08-19
- * For LOVD    : 3.0-21
+ * Modified    : 2022-11-30
+ * For LOVD+   : 3.0-29
  *
- * Copyright   : 2004-2019 Leiden University Medical Center; http://www.LUMC.nl/
+ * Copyright   : 2004-2022 Leiden University Medical Center; http://www.LUMC.nl/
  * Programmers : Anthony Marty <anthony.marty@unimelb.edu.au>
  *               Ivo F.A.C. Fokkema <I.F.A.C.Fokkema@LUMC.nl>
  *
@@ -182,7 +182,7 @@ class LOVD_GenePanelGene extends LOVD_Object
         global $_DB, $zData;
 
         // Get the available transcripts for this gene.
-        $aTranscripts = $_DB->query('SELECT id, id_ncbi FROM ' . TABLE_TRANSCRIPTS . ' WHERE geneid = ?', array($zData['geneid']))->fetchAllCombine();
+        $aTranscripts = $_DB->q('SELECT id, id_ncbi FROM ' . TABLE_TRANSCRIPTS . ' WHERE geneid = ?', array($zData['geneid']))->fetchAllCombine();
 
         // If we have found some transcripts for this gene then show them here otherwise show no transcripts available.
         if (count($aTranscripts)) {

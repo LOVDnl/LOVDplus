@@ -4,11 +4,11 @@
  * LEIDEN OPEN VARIATION DATABASE (LOVD)
  *
  * Created     : 2014-01-31
- * Modified    : 2017-02-15
- * For LOVD    : 3.0-18
+ * Modified    : 2022-11-30
+ * For LOVD+   : 3.0-29
  *
- * Copyright   : 2004-2016 Leiden University Medical Center; http://www.LUMC.nl/
- * Programmer  : Ing. Ivo F.A.C. Fokkema <I.F.A.C.Fokkema@LUMC.nl>
+ * Copyright   : 2004-2022 Leiden University Medical Center; http://www.LUMC.nl/
+ * Programmer  : Ivo F.A.C. Fokkema <I.F.A.C.Fokkema@LUMC.nl>
  *
  *
  * This file is part of LOVD.
@@ -140,7 +140,7 @@ if (PATH_COUNT == 3 && $_PE[1] == 'run' && ctype_digit($_PE[2]) && ACTION == 'mo
     //   HAVING clauses filtering out NULL values don't work. There *are* values there, you just don't see them and you can't filter on them.
     //   Changing the created_by filter to an INT also solves the problem. It just makes no sense. So removing the GROUP_CONCAT here, to make sure I don't get results when I don't want them.
     // $sSQL = 'SELECT ar.*, s.individualid, a.name, GROUP_CONCAT(arf.filterid ORDER BY arf.filter_order SEPARATOR ";") AS _filters FROM ' . TABLE_ANALYSES_RUN . ' AS ar INNER JOIN ' . TABLE_SCREENINGS . ' AS s ON (ar.screeningid = s.id) INNER JOIN ' . TABLE_ANALYSES . ' AS a ON (ar.analysisid = a.id) INNER JOIN ' . TABLE_ANALYSES_RUN_FILTERS . ' AS arf ON (ar.id = arf.runid) WHERE ar.id = ?' . ($_AUTH['level'] >= LEVEL_MANAGER? '' : ' AND ar.created_by = ?');
-    $zData = $_DB->query('SELECT ar.*, s.individualid, a.name
+    $zData = $_DB->q('SELECT ar.*, s.individualid, a.name
                           FROM ' . TABLE_ANALYSES_RUN . ' AS ar
                            INNER JOIN ' . TABLE_SCREENINGS . ' AS s ON (ar.screeningid = s.id)
                            INNER JOIN ' . TABLE_ANALYSES . ' AS a ON (ar.analysisid = a.id)
@@ -156,7 +156,7 @@ if (PATH_COUNT == 3 && $_PE[1] == 'run' && ctype_digit($_PE[2]) && ACTION == 'mo
 
     // See above, I had to split the queries.
     // $zData['filters'] = explode(';', $zData['_filters']);
-    $zData['filters'] = $_DB->query('SELECT arf.filterid, CASE af.name WHEN "" THEN af.id ELSE af.name END AS name FROM ' . TABLE_ANALYSES_RUN_FILTERS . ' AS arf INNER JOIN ' . TABLE_ANALYSIS_FILTERS . ' AS af ON (arf.filterid = af.id) WHERE arf.runid = ? ORDER BY arf.filter_order', array($nID))->fetchAllCombine();
+    $zData['filters'] = $_DB->q('SELECT arf.filterid, CASE af.name WHEN "" THEN af.id ELSE af.name END AS name FROM ' . TABLE_ANALYSES_RUN_FILTERS . ' AS arf INNER JOIN ' . TABLE_ANALYSIS_FILTERS . ' AS af ON (arf.filterid = af.id) WHERE arf.runid = ? ORDER BY arf.filter_order', array($nID))->fetchAllCombine();
     $nFilters = count($zData['filters']);
 
     if (count($zData['filters']) <= 1) {
@@ -183,14 +183,14 @@ if (PATH_COUNT == 3 && $_PE[1] == 'run' && ctype_digit($_PE[2]) && ACTION == 'mo
 
             $_DB->beginTransaction();
             // First, copy the analysis run.
-            $_DB->query('INSERT INTO ' . TABLE_ANALYSES_RUN . ' (analysisid, screeningid, modified, created_by, created_date) VALUES (?, ?, 1, ?, NOW())', array($zData['analysisid'], $zData['screeningid'], $_AUTH['id']));
+            $_DB->q('INSERT INTO ' . TABLE_ANALYSES_RUN . ' (analysisid, screeningid, modified, created_by, created_date) VALUES (?, ?, 1, ?, NOW())', array($zData['analysisid'], $zData['screeningid'], $_AUTH['id']));
             $nNewRunID = $_DB->lastInsertId();
             // Now insert filters.
             foreach (array_keys($zData['filters']) as $nOrder => $sFilter) {
                 if (in_array($sFilter, $_POST['remove_filters'])) {
                     continue; // Column selected to be removed.
                 }
-                $_DB->query('INSERT INTO ' . TABLE_ANALYSES_RUN_FILTERS . ' (runid, filterid, filter_order) VALUES (?, ?, ?)', array($nNewRunID, $sFilter, $nOrder));
+                $_DB->q('INSERT INTO ' . TABLE_ANALYSES_RUN_FILTERS . ' (runid, filterid, filter_order) VALUES (?, ?, ?)', array($nNewRunID, $sFilter, $nOrder));
             }
 
             // If we get here, it all succeeded.

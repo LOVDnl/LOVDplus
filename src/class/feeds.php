@@ -109,10 +109,10 @@ class Feed
             // Let the date of last update depend on the type of feed.
             if (preg_match('/\/variants\/(.+)$/', $sFeedURL, $aRegs)) {
                 // Variants of a specific gene.
-                $sDateUpdated = $_DB->query('SELECT MAX(updated_date) FROM ' . TABLE_GENES . ' WHERE id = ?', array($aRegs[1]))->fetchColumn();
+                $sDateUpdated = $_DB->q('SELECT MAX(updated_date) FROM ' . TABLE_GENES . ' WHERE id = ?', array($aRegs[1]))->fetchColumn();
             } else {
                 // Find date of last update for all genes.
-                $sDateUpdated = $_DB->query('SELECT MAX(updated_date) FROM ' . TABLE_GENES)->fetchColumn();
+                $sDateUpdated = $_DB->q('SELECT MAX(updated_date) FROM ' . TABLE_GENES)->fetchColumn();
             }
             $this->sAtomFeed = str_replace('{{ FEED_DATE_UPDATED }}', $this->formatDate($sDateUpdated), $this->sAtomFeed);
 

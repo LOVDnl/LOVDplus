@@ -4,10 +4,10 @@
  * LEIDEN OPEN VARIATION DATABASE (LOVD)
  *
  * Created     : 2013-11-27
- * Modified    : 2019-02-14
- * For LOVD    : 3.0-18
+ * Modified    : 2022-11-30
+ * For LOVD+   : 3.0-29
  *
- * Copyright   : 2004-2019 Leiden University Medical Center; http://www.LUMC.nl/
+ * Copyright   : 2004-2022 Leiden University Medical Center; http://www.LUMC.nl/
  * Programmer  : Ivo F.A.C. Fokkema <I.F.A.C.Fokkema@LUMC.nl>
  *
  *
@@ -50,7 +50,7 @@ if (!empty($_GET['id']) && $_AUTH && ACTION !== false && isset($_SETT['var_effec
     // Nobody should be able to hack their way through this. We might just assume that the user is authorized for editing the
     // selections in the SESSION array because the interface should have checked, but let's not make any assumptions here.
     // IDs should lead to only one screening. IDs' screening/analysis should be owned by the user.
-    $zScreenings = $_DB->query('SELECT s.* FROM ' . TABLE_SCREENINGS . ' AS s INNER JOIN ' . TABLE_SCR2VAR . ' AS s2v ON (s.id = s2v.screeningid) WHERE s2v.variantid IN (?' . str_repeat(', ?', count($aIDs) - 1) . ') GROUP BY s.id', $aIDs)->fetchAllAssoc();
+    $zScreenings = $_DB->q('SELECT s.* FROM ' . TABLE_SCREENINGS . ' AS s INNER JOIN ' . TABLE_SCR2VAR . ' AS s2v ON (s.id = s2v.screeningid) WHERE s2v.variantid IN (?' . str_repeat(', ?', count($aIDs) - 1) . ') GROUP BY s.id', $aIDs)->fetchAllAssoc();
     $bAuthorized = lovd_isAuthorized('screening_analysis', $zScreenings[0]['id']);
     if ($_AUTH['level'] < LEVEL_MANAGER) {
         if (count($zScreenings) > 1) {
@@ -70,7 +70,7 @@ if (!empty($_GET['id']) && $_AUTH && ACTION !== false && isset($_SETT['var_effec
     }
 
     $nSwitched = 0;
-    $q = $_DB->query('UPDATE ' . TABLE_VARIANTS . ' SET effectid = CAST(CONCAT' .
+    $q = $_DB->q('UPDATE ' . TABLE_VARIANTS . ' SET effectid = CAST(CONCAT' .
         ($bConcluded == false? '(?, RIGHT(effectid, 1))' : '(LEFT(effectid, 1), ?)') .
         ' AS UNSIGNED) WHERE id IN (?' . str_repeat(', ?', count($aIDs) - 1) . ')', array_merge(array(ACTION), $aIDs), false);
     if ($q) {

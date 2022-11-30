@@ -206,7 +206,7 @@ class LOVD_Screening extends LOVD_Custom
         global $_AUTH, $_DB, $nID;
 
         if ($_AUTH['level'] >= LEVEL_CURATOR) {
-            $aSelectOwner = $_DB->query('SELECT id, CONCAT(name, " (#", id, ")") as name_id FROM ' . TABLE_USERS .
+            $aSelectOwner = $_DB->q('SELECT id, CONCAT(name, " (#", id, ")") as name_id FROM ' . TABLE_USERS .
                 ' ORDER BY name')->fetchAllCombine();
             $aFormOwner = array('Owner of this data', '', 'select', 'owned_by', 1, $aSelectOwner, false, false, false);
         } else {
@@ -214,7 +214,7 @@ class LOVD_Screening extends LOVD_Custom
         }
 
         // Get list of genes.
-        $aGenesForm = $_DB->query('SELECT id, name FROM ' . TABLE_GENES . ' ORDER BY id')->fetchAllCombine();
+        $aGenesForm = $_DB->q('SELECT id, name FROM ' . TABLE_GENES . ' ORDER BY id')->fetchAllCombine();
         $nData = count($aGenesForm);
         foreach ($aGenesForm as $sID => $sGene) {
             $aGenesForm[$sID] = $sID . ' (' . lovd_shortenString($sGene, 50) . ')';
@@ -252,7 +252,7 @@ class LOVD_Screening extends LOVD_Custom
             // When creating, or when publishing without any changes, unset the authorization.
             unset($this->aFormData['authorization']);
         } elseif (lovd_getProjectFile() != '/import.php') {
-            if ($_DB->query('SELECT COUNT(variantid) FROM ' . TABLE_SCR2VAR . ' WHERE screeningid = ?', array($nID))->fetchColumn()) {
+            if ($_DB->q('SELECT COUNT(variantid) FROM ' . TABLE_SCR2VAR . ' WHERE screeningid = ?', array($nID))->fetchColumn()) {
                 unset($this->aFormData['variants_found']);
             };
         }

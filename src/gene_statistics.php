@@ -4,10 +4,10 @@
  * LEIDEN OPEN VARIATION DATABASE (LOVD)
  *
  * Created     : 2016-02-25
- * Modified    : 2019-08-19
- * For LOVD    : 3.0-21
+ * Modified    : 2022-11-30
+ * For LOVD+   : 3.0-29
  *
- * Copyright   : 2004-2019 Leiden University Medical Center; http://www.LUMC.nl/
+ * Copyright   : 2004-2022 Leiden University Medical Center; http://www.LUMC.nl/
  * Programmers : Anthony Marty <anthony.marty@unimelb.edu.au>
  *               Ivo F.A.C. Fokkema <I.F.A.C.Fokkema@LUMC.nl>
  *
@@ -69,7 +69,7 @@ if (PATH_COUNT == 1 && !ACTION) {
         // Check if there are any genes left after cleaning up the gene symbol string.
         if (count($aGeneSymbols) > 0) {
             // Load the genes and alternative names into an array.
-            $aGenesInLOVD = $_DB->query('SELECT UPPER(id), id FROM ' . TABLE_GENES)->fetchAllCombine();
+            $aGenesInLOVD = $_DB->q('SELECT UPPER(id), id FROM ' . TABLE_GENES)->fetchAllCombine();
             // Loop through all the gene symbols in the array and check them for any errors.
             foreach ($aGeneSymbols as $key => $sGeneSymbol) {
                 $sGeneSymbol = strtoupper($sGeneSymbol);
@@ -100,7 +100,7 @@ if (PATH_COUNT == 1 && !ACTION) {
                                       '        <TD>' . $sBadGeneSymbol . '</TD>' . "\n";
 
                     // Search within the database to see if this gene symbol is in the Alternative Names column.
-                    $sFoundInDB = $_DB->query('SELECT id FROM ' . TABLE_GENE_STATISTICS . ' WHERE CONCAT(" ", alternative_names, ",") LIKE ?', array('% ' . $sBadGeneSymbol . ',%'))->fetchColumn();
+                    $sFoundInDB = $_DB->q('SELECT id FROM ' . TABLE_GENE_STATISTICS . ' WHERE CONCAT(" ", alternative_names, ",") LIKE ?', array('% ' . $sBadGeneSymbol . ',%'))->fetchColumn();
                     if ($sFoundInDB) {
                         $sBadGenesHTML .= '        <TD>' . $sFoundInDB . '</TD>' . "\n";
                     } else {
@@ -312,12 +312,12 @@ if (PATH_COUNT == 1 && ACTION == 'import') {
             $_BAR = new ProgressBar('', 'Importing Gene Statistics Records');
             flush();
 
-            $_DB->query('TRUNCATE TABLE ' . TABLE_GENE_STATISTICS);
+            $_DB->q('TRUNCATE TABLE ' . TABLE_GENE_STATISTICS);
             $pdoInsert = $_DB->prepare('INSERT IGNORE INTO ' . TABLE_GENE_STATISTICS . ' (' . $sSQLColumnNames . ') VALUES (?' . str_repeat(', ?', count($aFileColumnNames) - 1) . ')');
 
             $aMissingGenes = array();
             // Get all the current gene symbols in LOVD.
-            $aGenesInLOVD = $_DB->query('SELECT UPPER(id), id FROM ' . TABLE_GENES)->fetchAllCombine();
+            $aGenesInLOVD = $_DB->q('SELECT UPPER(id), id FROM ' . TABLE_GENES)->fetchAllCombine();
             $sDateNow = date('Y-m-d H:i:s');
             $nAltSymbolKey = array_search('alternative_names',$aFileColumnNames); // Record the array location for the alternative gene names, used for matching statistics if there is not an exact gene name match.
             $nHGNCSymbolKey = array_search('hgnc',$aFileColumnNames); // Record the array location for the HGNC symbol, used for matching statistics if there is not an exact gene name match.

@@ -4,10 +4,10 @@
  * LEIDEN OPEN VARIATION DATABASE (LOVD)
  *
  * Created     : 2014-11-28
- * Modified    : 2020-11-23
- * For LOVD+   : 3.0-24
+ * Modified    : 2022-11-30
+ * For LOVD+   : 3.0-29
  *
- * Copyright   : 2004-2021 Leiden University Medical Center; http://www.LUMC.nl/
+ * Copyright   : 2004-2022 Leiden University Medical Center; http://www.LUMC.nl/
  * Programmers : Ivo F.A.C. Fokkema <I.F.A.C.Fokkema@LUMC.nl>
  *               Anthony Marty <anthony.marty@unimelb.edu.au>
  *               Juny Kesumadewi <juny.kesumadewi@unimelb.edu.au>
@@ -604,16 +604,16 @@ foreach ($aFiles as $sFileID) {
     $nAnnotationErrors = 0; // Count the number of lines we cannot import.
 
     // Get all the existing genes in one database call.
-    $aGenes = $_DB->query('SELECT id, id, name FROM ' . TABLE_GENES)->fetchAllGroupAssoc();
+    $aGenes = $_DB->q('SELECT id, id, name FROM ' . TABLE_GENES)->fetchAllGroupAssoc();
 
     // If we're receiving the HGNC ID, we'll collect all genes for their HGNC IDs as well. This will be used to help
     //  LOVD+ to handle changed gene symbols.
     if (in_array('id_hgnc', $aColumnMappings)) {
-        $aGenesHGNC = $_DB->query('SELECT id_hgnc, id FROM ' . TABLE_GENES . ' WHERE id_hgnc IS NOT NULL')->fetchAllCombine();
+        $aGenesHGNC = $_DB->q('SELECT id_hgnc, id FROM ' . TABLE_GENES . ' WHERE id_hgnc IS NOT NULL')->fetchAllCombine();
     }
 
     // Get all the existing transcript data in one database call.
-    $aTranscripts = $_DB->query('SELECT id_ncbi, id, geneid, id_ncbi, position_c_cds_end, position_g_mrna_start, position_g_mrna_end FROM ' . TABLE_TRANSCRIPTS . ' ORDER BY id_ncbi DESC, id DESC')->fetchAllGroupAssoc();
+    $aTranscripts = $_DB->q('SELECT id_ncbi, id, geneid, id_ncbi, position_c_cds_end, position_g_mrna_start, position_g_mrna_end FROM ' . TABLE_TRANSCRIPTS . ' ORDER BY id_ncbi DESC, id DESC')->fetchAllGroupAssoc();
 
 
 
@@ -794,7 +794,7 @@ foreach ($aFiles as $sFileID) {
             && (!preg_match('/^LOC[0-9]+$/', $aVariant['symbol']) || empty($_INSTANCE_CONFIG['conversion']['use_hgnc']) || empty($_INSTANCE_CONFIG['conversion']['enforce_hgnc_gene']))) {
             // First try to get this gene from the database, perhaps conversions run in parallel have created it now.
             // FIXME: This is duplicated code. Make it into a function, perhaps?
-            if ($aGene = $_DB->query('SELECT g.id, g.name FROM ' . TABLE_GENES . ' AS g WHERE g.id = ?', array($aVariant['symbol']))->fetchAssoc()) {
+            if ($aGene = $_DB->q('SELECT g.id, g.name FROM ' . TABLE_GENES . ' AS g WHERE g.id = ?', array($aVariant['symbol']))->fetchAssoc()) {
                 // We've got it in the database.
                 $aGenes[$aVariant['symbol']] = $aGene;
 
@@ -830,7 +830,7 @@ foreach ($aFiles as $sFileID) {
                         // Detect alias, and store these for next run.
                         lovd_printIfVerbose(VERBOSITY_MEDIUM, '\'' . $aVariant['symbol'] . '\' => \'' . $aGeneInfo['symbol'] . '\',' . "\n");
                         // FIXME: This is duplicated code. Make it into a function, perhaps?
-                        if ($aGene = $_DB->query('SELECT g.id, g.name FROM ' . TABLE_GENES . ' AS g WHERE g.id = ?', array($aGeneInfo['symbol']))->fetchAssoc()) {
+                        if ($aGene = $_DB->q('SELECT g.id, g.name FROM ' . TABLE_GENES . ' AS g WHERE g.id = ?', array($aGeneInfo['symbol']))->fetchAssoc()) {
                             // We've got the alias already in the database; store it under the symbol we're using so that we'll find it back easily.
                             $aGenes[$aVariant['symbol']] = $aGene;
                         }
@@ -855,7 +855,7 @@ foreach ($aFiles as $sFileID) {
                     }
 
                     // Create the gene, with whatever info we have.
-                    if (!$_DB->query('INSERT INTO ' . TABLE_GENES . '
+                    if (!$_DB->q('INSERT INTO ' . TABLE_GENES . '
                         (id, name, chromosome, chrom_band, refseq_genomic, refseq_UD, reference, url_homepage, url_external, allow_download, id_hgnc, id_entrez, id_omim, show_hgmd, show_genecards, show_genetests, note_index, note_listing, refseq, refseq_url, disclaimer, disclaimer_text, header, header_align, footer, footer_align, created_by, created_date, updated_by, updated_date)
                         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), ?, NOW())',
                         array($aGeneInfo['symbol'], $aGeneInfo['name'], $aGeneInfo['chromosome'], $aGeneInfo['chrom_band'], $_SETT['human_builds'][$_CONF['refseq_build']]['ncbi_sequences'][$aGeneInfo['chromosome']], '', '', '', '', 0, $aGeneInfo['hgnc_id'], $aGeneInfo['entrez_id'], (!$aGeneInfo['omim_id']? NULL : $aGeneInfo['omim_id']), 0, 0, 0, '', '', '', '', 0, '', '', 0, '', 0, 0, 0))
@@ -899,7 +899,7 @@ foreach ($aFiles as $sFileID) {
             //  we might as well rely on that completely.
             // Try to get this transcript from the database, ignoring (but preferring) version.
             // When not having a match on the version, we prefer the transcript most recently created.
-            if ($aTranscript = $_DB->query('SELECT id, geneid, id_ncbi, position_c_cds_end, position_g_mrna_start, position_g_mrna_end FROM ' . TABLE_TRANSCRIPTS . ' WHERE id_ncbi LIKE ? ORDER BY (id_ncbi = ?) DESC, id DESC LIMIT 1', array($aLine['transcript_noversion'] . '%', $aVariant['transcriptid']))->fetchAssoc()) {
+            if ($aTranscript = $_DB->q('SELECT id, geneid, id_ncbi, position_c_cds_end, position_g_mrna_start, position_g_mrna_end FROM ' . TABLE_TRANSCRIPTS . ' WHERE id_ncbi LIKE ? ORDER BY (id_ncbi = ?) DESC, id DESC LIMIT 1', array($aLine['transcript_noversion'] . '%', $aVariant['transcriptid']))->fetchAssoc()) {
                 // We've got it in the database.
                 $aTranscripts[$aVariant['transcriptid']] = $aTranscript;
 
@@ -983,7 +983,7 @@ foreach ($aFiles as $sFileID) {
                         }
 
                         // Add transcript to gene.
-                        if (!$_DB->query('INSERT INTO ' . TABLE_TRANSCRIPTS . '
+                        if (!$_DB->q('INSERT INTO ' . TABLE_TRANSCRIPTS . '
                              (id, geneid, name, id_ncbi, id_ensembl, id_protein_ncbi, id_protein_ensembl, id_protein_uniprot, remarks, position_c_mrna_start, position_c_mrna_end, position_c_cds_end, position_g_mrna_start, position_g_mrna_end, created_date, created_by)
                             VALUES (NULL, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), ?)',
                             array($aGenes[$aVariant['symbol']]['id'], $sTranscriptName, $aTranscript['id_ncbi'], '', $sTranscriptProtein, '', '', '', $aTranscript['cTransStart'], $aTranscript['sortableTransEnd'], $aTranscript['cCDSStop'], $aTranscript['chromTransStart'], $aTranscript['chromTransEnd'], 0))) {
@@ -1240,7 +1240,7 @@ foreach ($aFiles as $sFileID) {
                 $aVariant['VariantOnTranscript/Protein'] = 'p.?';
             } elseif (!$bDropTranscriptData && $aVariant['VariantOnTranscript/DNA']
                 // Try to prevent running Mutalyzer one last time. Fetch protein description from the database.
-                && ($aVOTFromDB = $_DB->query('
+                && ($aVOTFromDB = $_DB->q('
                     SELECT `VariantOnTranscript/RNA`, `VariantOnTranscript/Protein`, COUNT(*)
                     FROM ' . TABLE_VARIANTS_ON_TRANSCRIPTS . '
                     WHERE transcriptid = ? AND position_c_start = ? AND position_c_start_intron = ? AND position_c_end = ? AND position_c_end_intron = ? AND `VariantOnTranscript/DNA` = ?
@@ -1640,9 +1640,9 @@ foreach ($aFiles as $sFileID) {
 
     // OK, so file is done, and can be scheduled now. Just auto-schedule it, overwriting any possible errored entry.
     // FIXME: This can also be done with one INSERT ON DUPLICATE KEY UPDATE query.
-    if ($_DB->query('INSERT IGNORE INTO ' . TABLE_SCHEDULED_IMPORTS . ' (filename, scheduled_by, scheduled_date) VALUES (?, 0, NOW())', array(basename($sFileDone)))->rowCount()) {
+    if ($_DB->q('INSERT IGNORE INTO ' . TABLE_SCHEDULED_IMPORTS . ' (filename, scheduled_by, scheduled_date) VALUES (?, 0, NOW())', array(basename($sFileDone)))->rowCount()) {
         lovd_printIfVerbose(VERBOSITY_MEDIUM, 'File scheduled for import.' . "\n");
-    } elseif ($_DB->query('UPDATE ' . TABLE_SCHEDULED_IMPORTS . ' SET in_progress = 0, scheduled_by = 0, scheduled_date = NOW(), process_errors = NULL, processed_by = NULL, processed_date = NULL WHERE filename = ?', array(basename($sFileDone)))->rowCount()) {
+    } elseif ($_DB->q('UPDATE ' . TABLE_SCHEDULED_IMPORTS . ' SET in_progress = 0, scheduled_by = 0, scheduled_date = NOW(), process_errors = NULL, processed_by = NULL, processed_date = NULL WHERE filename = ?', array(basename($sFileDone)))->rowCount()) {
         lovd_printIfVerbose(VERBOSITY_MEDIUM, 'File rescheduled for import.' . "\n");
     } else {
         lovd_printIfVerbose(VERBOSITY_LOW, 'Error scheduling file for import!' . "\n");

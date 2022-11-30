@@ -4,10 +4,10 @@
  * LEIDEN OPEN VARIATION DATABASE (LOVD)
  *
  * Created     : 2017-02-13
- * Modified    : 2018-06-28
- * For LOVD    : 3.0-18
+ * Modified    : 2022-11-30
+ * For LOVD+   : 3.0-29
  *
- * Copyright   : 2004-2018 Leiden University Medical Center; http://www.LUMC.nl/
+ * Copyright   : 2004-2022 Leiden University Medical Center; http://www.LUMC.nl/
  * Programmers : Ivo F.A.C. Fokkema <I.F.A.C.Fokkema@LUMC.nl>
  *               Juny Kesumadewi <juny.kesumadewi@unimelb.edu.au>
  *
@@ -61,7 +61,7 @@ $sSQL = 'SELECT a.*, ar.*, s.individualid, af.has_config, GROUP_CONCAT(af.id,"|"
          WHERE ar.id = ? AND s.analysis_statusid < ?
          GROUP BY ar.id';
 $aSQL = array($nID, ANALYSIS_STATUS_CLOSED);
-$zData = $_DB->query($sSQL, $aSQL)->fetchAssoc();
+$zData = $_DB->q($sSQL, $aSQL)->fetchAssoc();
 if (!$zData) {
     die('alert("No such ID or not allowed!");');
 }
@@ -155,12 +155,12 @@ if (ACTION == 'clone' && POST) {
     }
 
     // Here, we also want to retrieve the configurations of each filter if they exist.
-    $zData['filters'] = $_DB->query('SELECT filterid, config_json FROM ' . TABLE_ANALYSES_RUN_FILTERS . ' WHERE runid = ? ORDER BY filter_order', array($nID))->fetchAllRow();
+    $zData['filters'] = $_DB->q('SELECT filterid, config_json FROM ' . TABLE_ANALYSES_RUN_FILTERS . ' WHERE runid = ? ORDER BY filter_order', array($nID))->fetchAllRow();
     $nFilters = count($zData['filters']);
 
     $_DB->beginTransaction();
     // First, copy the analysis run.
-    $_DB->query('INSERT INTO ' . TABLE_ANALYSES_RUN . ' (analysisid, screeningid, modified, created_by, created_date) VALUES (?, ?, ?, ?, NOW())',
+    $_DB->q('INSERT INTO ' . TABLE_ANALYSES_RUN . ' (analysisid, screeningid, modified, created_by, created_date) VALUES (?, ?, ?, ?, NOW())',
         array($zData['analysisid'], $zData['screeningid'], $zData['modified'], $_AUTH['id']));
     $nNewRunID = $_DB->lastInsertId();
 
@@ -179,7 +179,7 @@ if (ACTION == 'clone' && POST) {
             // Have this filter's description removed by JS.
             $aRemoveFiltersConfigDescription[] = $sFilter;
         }
-        $_DB->query('INSERT INTO ' . TABLE_ANALYSES_RUN_FILTERS . ' (runid, filterid, config_json, filter_order) VALUES (?, ?, ?, ?)', array($nNewRunID, $sFilter, $sConfigToInsert, $nOrder));
+        $_DB->q('INSERT INTO ' . TABLE_ANALYSES_RUN_FILTERS . ' (runid, filterid, config_json, filter_order) VALUES (?, ?, ?, ?)', array($nNewRunID, $sFilter, $sConfigToInsert, $nOrder));
     }
 
     $nPaddedNewRunID = str_pad($nNewRunID, $_SETT['objectid_length']['analysisruns'], '0', STR_PAD_LEFT);
@@ -252,7 +252,7 @@ if (ACTION == 'delete' && POST) {
     }
 
     // This also deletes the entries in TABLE_ANALYSES_RUN_FILTERS && TABLE_ANALYSES_RUN_RESULTS.
-    if (!$_DB->query('DELETE FROM ' . TABLE_ANALYSES_RUN . ' WHERE id = ?', array($nID), false)) {
+    if (!$_DB->q('DELETE FROM ' . TABLE_ANALYSES_RUN . ' WHERE id = ?', array($nID), false)) {
         die('alert("Failed to delete analysis run.\n' . htmlspecialchars($_DB->formatError()) . '");');
     }
 
@@ -274,7 +274,7 @@ if (ACTION == 'delete' && POST) {
 if (ACTION == 'showGenes' && GET) {
     // Request confirmation.
 
-    $sConfig = $_DB->query('SELECT config_json FROM ' . TABLE_ANALYSES_RUN_FILTERS . ' WHERE runid = ? AND filterid IN (?, ?)',
+    $sConfig = $_DB->q('SELECT config_json FROM ' . TABLE_ANALYSES_RUN_FILTERS . ' WHERE runid = ? AND filterid IN (?, ?)',
         array($nID, 'apply_selected_gene_panels', 'remove_in_gene_blacklist'))->fetchColumn();
     $aConfig = json_decode($sConfig, true);
 

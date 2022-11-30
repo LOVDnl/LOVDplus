@@ -225,7 +225,7 @@ if (PATH_COUNT >= 2 && ctype_digit($_PE[1]) && !ACTION && (PATH_COUNT == 2 || PA
     // If we are analyzing a screening, highlight it.
     if ($nScreeningToAnalyze) {
         // First, let's check if this analysis belongs to this individual.
-        if (!$_DB->query('SELECT COUNT(*) FROM ' . TABLE_SCREENINGS . ' WHERE id = ? AND individualid = ?', array($nScreeningToAnalyze, $nID))->fetchColumn()) {
+        if (!$_DB->q('SELECT COUNT(*) FROM ' . TABLE_SCREENINGS . ' WHERE id = ? AND individualid = ?', array($nScreeningToAnalyze, $nID))->fetchColumn()) {
             lovd_showInfoTable('No such screening defined for this individual!', 'stop');
             $_T->printFooter();
             exit;
@@ -265,26 +265,26 @@ if (PATH_COUNT >= 2 && ctype_digit($_PE[1]) && !ACTION && (PATH_COUNT == 2 || PA
 
         // If we're ready to analyze, or if we are analyzing already, show analysis options.
         // Analyses will be shown in separate tabs determined by the queries below.
-        $zAnalysesRun    = $_DB->query('SELECT a.id, a.name, a.version, a.description, GROUP_CONCAT(DISTINCT a2af.filterid ORDER BY a2af.filter_order ASC SEPARATOR ";") AS _filters, IFNULL(MAX(arf.run_time)>-1, 0) AS analysis_run, ar.id AS runid,   ar.modified, GROUP_CONCAT(DISTINCT arf.filterid, ";", IFNULL(arf.filtered_out, "-"), ";", IFNULL(arf.run_time, "-") ORDER BY arf.filter_order SEPARATOR ";;") AS __run_filters
+        $zAnalysesRun    = $_DB->q('SELECT a.id, a.name, a.version, a.description, GROUP_CONCAT(DISTINCT a2af.filterid ORDER BY a2af.filter_order ASC SEPARATOR ";") AS _filters, IFNULL(MAX(arf.run_time)>-1, 0) AS analysis_run, ar.id AS runid,   ar.modified, GROUP_CONCAT(DISTINCT arf.filterid, ";", IFNULL(arf.filtered_out, "-"), ";", IFNULL(arf.run_time, "-") ORDER BY arf.filter_order SEPARATOR ";;") AS __run_filters
                                         FROM ' . TABLE_ANALYSES . ' AS a INNER JOIN ' . TABLE_ANALYSES_RUN . ' AS ar ON (a.id = ar.analysisid)
                                         INNER JOIN ' . TABLE_ANALYSES_RUN_FILTERS . ' AS arf ON (ar.id = arf.runid)
                                         INNER JOIN ' . TABLE_A2AF . ' AS a2af ON (ar.analysisid = a2af.analysisid)
                                         WHERE ar.screeningid = ? GROUP BY ar.id ORDER BY ar.modified, ar.id', array($nScreeningToAnalyze))->fetchAllAssoc();
-        $zAnalysesGenePanel = $_DB->query('SELECT DISTINCT a.id, a.name, a.version, a.description, GROUP_CONCAT(DISTINCT a2af.filterid ORDER BY a2af.filter_order ASC SEPARATOR ";") AS _filters, 0                               AS analysis_run, 0     AS runid, 0 AS modified
+        $zAnalysesGenePanel = $_DB->q('SELECT DISTINCT a.id, a.name, a.version, a.description, GROUP_CONCAT(DISTINCT a2af.filterid ORDER BY a2af.filter_order ASC SEPARATOR ";") AS _filters, 0                               AS analysis_run, 0     AS runid, 0 AS modified
                                         FROM ' . TABLE_ANALYSES . ' AS a
                                         INNER JOIN ' . TABLE_A2AF . ' AS a2af ON (a.id = a2af.analysisid)
                                         INNER JOIN ' . TABLE_GP2A . ' AS gp2a ON (a.id = gp2a.analysisid) 
                                         INNER JOIN ' . TABLE_IND2GP . ' AS i2gp ON (gp2a.genepanelid = i2gp.genepanelid)
                                         WHERE i2gp.individualid = ? AND a.active = 1
                                         GROUP BY a.id ORDER BY a.sortid, a.id', array($nID))->fetchAllAssoc();
-        $zAnalysesAll = $_DB->query('SELECT a.id, a.name, a.version, a.description, GROUP_CONCAT(a2af.filterid ORDER BY a2af.filter_order ASC SEPARATOR ";") AS _filters, 0                               AS analysis_run, 0     AS runid, 0 AS modified
+        $zAnalysesAll = $_DB->q('SELECT a.id, a.name, a.version, a.description, GROUP_CONCAT(a2af.filterid ORDER BY a2af.filter_order ASC SEPARATOR ";") AS _filters, 0                               AS analysis_run, 0     AS runid, 0 AS modified
                                         FROM ' . TABLE_ANALYSES . ' AS a
                                         INNER JOIN ' . TABLE_A2AF . ' AS a2af ON (a.id = a2af.analysisid)
                                         WHERE a.active = 1 
                                         GROUP BY a.id ORDER BY a.sortid, a.id')->fetchAllAssoc();
-        $aFilterInfo = $_DB->query('SELECT id, name, description FROM ' . TABLE_ANALYSIS_FILTERS)->fetchAllGroupAssoc();
+        $aFilterInfo = $_DB->q('SELECT id, name, description FROM ' . TABLE_ANALYSIS_FILTERS)->fetchAllGroupAssoc();
         // Fetch all (numeric) variant IDs of all variants that have a curation status. They will be shown by default, when no analysis has been selected yet.
-        $aScreeningVariantIDs = $_DB->query('SELECT CAST(s2v.variantid AS UNSIGNED) FROM ' . TABLE_SCR2VAR . ' s2v INNER JOIN ' . TABLE_VARIANTS . ' AS vog ON (s2v.variantid = vog.id) WHERE s2v.screeningid = ? AND vog.curation_statusid IS NOT NULL', array($nScreeningToAnalyze))->fetchAllColumn();
+        $aScreeningVariantIDs = $_DB->q('SELECT CAST(s2v.variantid AS UNSIGNED) FROM ' . TABLE_SCR2VAR . ' s2v INNER JOIN ' . TABLE_VARIANTS . ' AS vog ON (s2v.variantid = vog.id) WHERE s2v.screeningid = ? AND vog.curation_statusid IS NOT NULL', array($nScreeningToAnalyze))->fetchAllColumn();
         require ROOT_PATH . 'inc-lib-analyses.php';
 
         // Array storing all the possible tabs and info that goes with them. This should be in the order in which they need to be displayed.
@@ -595,7 +595,7 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && in_array(ACTION, array('curate', 
     //  revoke editing authorization when the status is too high? We now have
     //  the check for screening status implemented in many different places.
     // Fetch only the analyses that we might have a successful authorization on.
-    $zScreenings = $_DB->query('SELECT id FROM ' . TABLE_SCREENINGS . ' WHERE individualid = ? AND analysis_statusid < ?',
+    $zScreenings = $_DB->q('SELECT id FROM ' . TABLE_SCREENINGS . ' WHERE individualid = ? AND analysis_statusid < ?',
         array($nID, ($_AUTH['level'] >= LEVEL_MANAGER? ANALYSIS_STATUS_WAIT_CONFIRMATION : ANALYSIS_STATUS_CLOSED)))->fetchAllColumn();
     if (!$zScreenings) {
         // Manager or not, the screenings are closed (assuming there are any).
@@ -653,7 +653,7 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && in_array(ACTION, array('curate', 
 
             $sSQL .= ' WHERE id = ?';
             $aSQL[] = $nID;
-            $_DB->query($sSQL, array_values($aSQL), true, true);
+            $_DB->q($sSQL, array_values($aSQL), true, true);
 
             if ($sCurationLog) {
                 // Write to log if any changes were detected.
@@ -758,7 +758,7 @@ if (PATH_COUNT == 4 && ctype_digit($_PE[1]) && $_PE[2] == 'analyze' && ctype_dig
 
 
     // This code is for all levels of closing, since the work is so very similar.
-    $zData = $_DB->query('SELECT *
+    $zData = $_DB->q('SELECT *
                           FROM ' . TABLE_SCREENINGS . ' AS s
                           WHERE id = ? AND individualid = ?', array($nScreeningID, $nIndividualID))->fetchAssoc();
     if (!$zData) {
@@ -806,7 +806,7 @@ if (PATH_COUNT == 4 && ctype_digit($_PE[1]) && $_PE[2] == 'analyze' && ctype_dig
         // All good, let's process the closure.
         // The next few queries should all be run, or non should be run.
         $_DB->beginTransaction();
-        if ($_DB->query('UPDATE ' . TABLE_SCREENINGS . ' SET analysis_statusid = ?, analysis_approved_by = ?, analysis_approved_date = NOW() WHERE id = ?',
+        if ($_DB->q('UPDATE ' . TABLE_SCREENINGS . ' SET analysis_statusid = ?, analysis_approved_by = ?, analysis_approved_date = NOW() WHERE id = ?',
             array($nNextStatus, $_AUTH['id'], $nScreeningID))) {
             $bLog = lovd_writeLog('Event', LOG_EVENT, 'Successfully increased analysis status to "' . $_SETT['analysis_status'][$nNextStatus] . '" for individual ' . $nIndividualID . ':' . $nScreeningID);
             if ($bLog) {
@@ -853,7 +853,7 @@ if (PATH_COUNT == 4 && ctype_digit($_PE[1]) && $_PE[2] == 'analyze' && ctype_dig
 
 
     // This code is for all levels of opening, since the work is so very similar.
-    $zData = $_DB->query('SELECT *
+    $zData = $_DB->q('SELECT *
                           FROM ' . TABLE_SCREENINGS . ' AS s
                           WHERE id = ? AND individualid = ?', array($nScreeningID, $nIndividualID))->fetchAssoc();
     if (!$zData) {
@@ -911,7 +911,7 @@ if (PATH_COUNT == 4 && ctype_digit($_PE[1]) && $_PE[2] == 'analyze' && ctype_dig
         // Choosing to overwrite the Approved By and Approved Date values as well,
         //  so that at least you can see who put the analysis in this state, and when.
         // You simply don't know the direction in which the status moved (up or down).
-        if ($_DB->query('UPDATE ' . TABLE_SCREENINGS . ' SET analysis_statusid = ?, analysis_approved_by = ?, analysis_approved_date = NOW() WHERE id = ?',
+        if ($_DB->q('UPDATE ' . TABLE_SCREENINGS . ' SET analysis_statusid = ?, analysis_approved_by = ?, analysis_approved_date = NOW() WHERE id = ?',
             array($nPreviousStatus, $_AUTH['id'], $nScreeningID))) {
             $bLog = lovd_writeLog('Event', LOG_EVENT, 'Successfully decreased analysis status to "' . $_SETT['analysis_status'][$nPreviousStatus] . '" for individual ' . $nIndividualID . ':' . $nScreeningID);
             if ($bLog) {
@@ -955,7 +955,7 @@ if ((PATH_COUNT == 1 || (!empty($_PE[1]) && !ctype_digit($_PE[1]))) && !ACTION) 
     // View all entries.
 
     if (!empty($_PE[1])) {
-        $sGene = $_DB->query('SELECT id FROM ' . TABLE_GENES . ' WHERE id = ?', array($_PE[1]))->fetchColumn();
+        $sGene = $_DB->q('SELECT id FROM ' . TABLE_GENES . ' WHERE id = ?', array($_PE[1]))->fetchColumn();
         if ($sGene) {
             lovd_isAuthorized('gene', $sGene); // To show non public entries.
             $_GET['search_genes_searched'] = '="' . $sGene . '"';
@@ -1013,10 +1013,10 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && !ACTION) {
     // This is non-standard, we normally rely on viewEntry() to sort that out.
     // But this individual may have been merged, after sending the submission
     //  confirmation email. Check the logs if that is the case, and forward.
-    if (!$_DB->query('SELECT COUNT(*) FROM ' . TABLE_INDIVIDUALS . ' WHERE id = ?',
+    if (!$_DB->q('SELECT COUNT(*) FROM ' . TABLE_INDIVIDUALS . ' WHERE id = ?',
             array($nID))->fetchColumn()) {
         // Entry doesn't exist. Can we find a merge log entry?
-        $nNewID = $_DB->query('
+        $nNewID = $_DB->q('
             SELECT RIGHT(log, ' . $_SETT['objectid_length'][$_PE[0]] . ')
             FROM ' . TABLE_LOGS . '
             WHERE name = ? AND event = ? AND log LIKE ?',
@@ -1059,7 +1059,7 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && !ACTION) {
             $aNavigation['javascript:$.get(\'ajax/curate_set.php?bySubmission&id=' . $nID . '\').fail(function(){alert(\'Request failed. Please try again.\');});'] = array('check.png', 'Publish (curate) entire submission', 1);
         }
         // You can only add phenotype information to this individual, when there are phenotype columns enabled.
-        if ($_DB->query('SELECT COUNT(*) FROM ' . TABLE_IND2DIS . ' AS i2d INNER JOIN ' . TABLE_SHARED_COLS . ' AS sc USING(diseaseid) WHERE i2d.individualid = ?', array($nID))->fetchColumn()) {
+        if ($_DB->q('SELECT COUNT(*) FROM ' . TABLE_IND2DIS . ' AS i2d INNER JOIN ' . TABLE_SHARED_COLS . ' AS sc USING(diseaseid) WHERE i2d.individualid = ?', array($nID))->fetchColumn()) {
             $aNavigation['phenotypes?create&amp;target=' . $nID] = array('menu_plus.png', 'Add phenotype information to individual', 1);
         }
         $aNavigation['screenings?create&amp;target=' . $nID]     = array('menu_plus.png', 'Add screening to individual', 1);
@@ -1079,7 +1079,7 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && !ACTION) {
         $_T->printTitle('Phenotypes', 'H4');
         // Repeat searching for diseases, since this individual might have a
         //  phenotype entry for a disease they don't have.
-        $zData['diseases'] = $_DB->query('SELECT id, symbol, name FROM ' . TABLE_DISEASES . ' WHERE id IN (?' . str_repeat(', ?', count($zData['phenotypes'])-1) . ')', $zData['phenotypes'])->fetchAllRow();
+        $zData['diseases'] = $_DB->q('SELECT id, symbol, name FROM ' . TABLE_DISEASES . ' WHERE id IN (?' . str_repeat(', ?', count($zData['phenotypes'])-1) . ')', $zData['phenotypes'])->fetchAllRow();
         require ROOT_PATH . 'class/object_phenotypes.php';
         foreach($zData['diseases'] as $aDisease) {
             list($nDiseaseID, $sSymbol, $sName) = $aDisease;
@@ -1184,7 +1184,7 @@ if (PATH_COUNT == 1 && ACTION == 'create') {
                 foreach ($_POST['active_diseases'] as $nDisease) {
                     // Add disease to gene.
                     if ($nDisease) {
-                        $q = $_DB->query('INSERT INTO ' . TABLE_IND2DIS . ' VALUES (?, ?)', array($nID, $nDisease), false);
+                        $q = $_DB->q('INSERT INTO ' . TABLE_IND2DIS . ' VALUES (?, ?)', array($nID, $nDisease), false);
                         if (!$q) {
                             // Silent error.
                             lovd_writeLog('Error', LOG_EVENT, 'Disease information entry ' . $nDisease . ' - could not be added to individual ' . $nID);
@@ -1320,7 +1320,7 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && in_array(ACTION, array('edit', 'p
 
             // Get genes which are modified only when individual and variant status is marked or public.
             if ($zData['statusid'] >= STATUS_MARKED || (isset($_POST['statusid']) && $_POST['statusid'] >= STATUS_MARKED)) {
-                $aGenes = $_DB->query('SELECT DISTINCT t.geneid FROM ' . TABLE_TRANSCRIPTS . ' AS t ' .
+                $aGenes = $_DB->q('SELECT DISTINCT t.geneid FROM ' . TABLE_TRANSCRIPTS . ' AS t ' .
                                       'INNER JOIN ' . TABLE_VARIANTS_ON_TRANSCRIPTS . ' AS vot ON (vot.transcriptid = t.id) ' .
                                       'INNER JOIN ' . TABLE_VARIANTS . ' AS vog ON (vog.id = vot.id) ' .
                                       'INNER JOIN ' . TABLE_SCR2VAR . ' AS s2v ON (s2v.variantid = vog.id) ' .
@@ -1345,7 +1345,7 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && in_array(ACTION, array('edit', 'p
                 }
             }
             if ($aToRemove) {
-                $q = $_DB->query('DELETE FROM ' . TABLE_IND2DIS . ' WHERE individualid = ? AND diseaseid IN (?' . str_repeat(', ?', count($aToRemove) - 1) . ')', array_merge(array($nID), $aToRemove), false);
+                $q = $_DB->q('DELETE FROM ' . TABLE_IND2DIS . ' WHERE individualid = ? AND diseaseid IN (?' . str_repeat(', ?', count($aToRemove) - 1) . ')', array_merge(array($nID), $aToRemove), false);
                 if (!$q) {
                     // Silent error.
                     lovd_writeLog('Error', LOG_EVENT, 'Disease information entr' . (count($aToRemove) == 1? 'y' : 'ies') . ' ' . implode(', ', $aToRemove) . ' could not be removed from individual ' . $nID);
@@ -1360,7 +1360,7 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && in_array(ACTION, array('edit', 'p
             foreach ($_POST['active_diseases'] as $nDisease) {
                 if (!in_array($nDisease, $zData['active_diseases'])) {
                     // Add disease to gene.
-                    $q = $_DB->query('INSERT IGNORE INTO ' . TABLE_IND2DIS . ' VALUES (?, ?)', array($nID, $nDisease), false);
+                    $q = $_DB->q('INSERT IGNORE INTO ' . TABLE_IND2DIS . ' VALUES (?, ?)', array($nID, $nDisease), false);
                     if (!$q) {
                         $aFailed[] = $nDisease;
                     } else {
@@ -1469,7 +1469,7 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && ACTION == 'edit_panels') {
     //  revoke editing authorization when the status is too high? We now have
     //  the check for screening status implemented in many different places.
     // Fetch only the analyses that we might have a successful authorization on.
-    $zScreenings = $_DB->query('SELECT id FROM ' . TABLE_SCREENINGS . ' WHERE individualid = ? AND analysis_statusid < ?',
+    $zScreenings = $_DB->q('SELECT id FROM ' . TABLE_SCREENINGS . ' WHERE individualid = ? AND analysis_statusid < ?',
         array($nID, ($_AUTH['level'] >= LEVEL_MANAGER? ANALYSIS_STATUS_WAIT_CONFIRMATION : ANALYSIS_STATUS_CLOSED)))->fetchAllColumn();
     if (!$zScreenings) {
         // Manager or not, the screenings are closed (assuming there are any).
@@ -1504,7 +1504,7 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && ACTION == 'edit_panels') {
 
         // Checks to make sure a valid gene panel ID is used.
         if (!empty($_POST['gene_panels'])) {
-            $aGenePanels = $_DB->query('SELECT id FROM ' . TABLE_GENE_PANELS)->fetchAllColumn();
+            $aGenePanels = $_DB->q('SELECT id FROM ' . TABLE_GENE_PANELS)->fetchAllColumn();
             foreach ($_POST['gene_panels'] as $nGenePanelID) {
                 if ($nGenePanelID && !in_array($nGenePanelID, $aGenePanels)) {
                     lovd_errorAdd('gene_panels', htmlspecialchars($nGenePanelID) . ' is not a valid gene panel ID.');
@@ -1520,7 +1520,7 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && ACTION == 'edit_panels') {
             // Check if there are any genes left after cleaning up the gene symbol string.
             if (count($aGeneSymbols) > 0) {
                 // Load the matching genes into an array.
-                $aGenesInLOVD = $_DB->query('SELECT UPPER(id), id FROM ' . TABLE_GENES . ' WHERE id IN (?' . str_repeat(', ?', count($aGeneSymbols) - 1) . ')', $aGeneSymbols)->fetchAllCombine();
+                $aGenesInLOVD = $_DB->q('SELECT UPPER(id), id FROM ' . TABLE_GENES . ' WHERE id IN (?' . str_repeat(', ?', count($aGeneSymbols) - 1) . ')', $aGeneSymbols)->fetchAllCombine();
                 // Loop through all the gene symbols in the array and check them for any errors.
                 foreach ($aGeneSymbols as $nKey => $sGeneSymbol) {
                     // Check to see if this gene symbol has been found within the database.
@@ -1567,7 +1567,7 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && ACTION == 'edit_panels') {
                 }
             }
             if ($aToRemove) {
-                $q = $_DB->query('DELETE FROM ' . TABLE_IND2GP . ' WHERE individualid = ? AND genepanelid IN (?' . str_repeat(', ?', count($aToRemove) - 1) . ')', array_merge(array($nID), $aToRemove), false);
+                $q = $_DB->q('DELETE FROM ' . TABLE_IND2GP . ' WHERE individualid = ? AND genepanelid IN (?' . str_repeat(', ?', count($aToRemove) - 1) . ')', array_merge(array($nID), $aToRemove), false);
                 if (!$q) {
                     // Silent error.
                     lovd_writeLog('Error', LOG_EVENT, 'Gene panel entr' . (count($aToRemove) == 1? 'y' : 'ies') . ' ' . implode(', ', $aToRemove) . ' could not be removed from individual ' . $nID);
@@ -1580,7 +1580,7 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && ACTION == 'edit_panels') {
             foreach ($_POST['gene_panels'] as $nGenePanel) {
                 if (!in_array($nGenePanel, $aGenePanels)) {
                     // Add gene panel to individual.
-                    $q = $_DB->query('INSERT IGNORE INTO ' . TABLE_IND2GP . ' VALUES (?, ?, ?, ?)', array($nID, $nGenePanel, $_AUTH['id'], $sDateNow), false);
+                    $q = $_DB->q('INSERT IGNORE INTO ' . TABLE_IND2GP . ' VALUES (?, ?, ?, ?)', array($nID, $nGenePanel, $_AUTH['id'], $sDateNow), false);
                     if (!$q) {
                         $aFailed[] = $nGenePanel;
                     } else {
@@ -1622,7 +1622,7 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && ACTION == 'edit_panels') {
             $aDiseases = $zData['active_diseases'];
 
             // Check to see if any gene panels share the individuals diseases.
-            $aDefaultGenePanels = $_DB->query('SELECT DISTINCT gp.id, gp.name, gp.type FROM ' . TABLE_GENE_PANELS . ' AS gp JOIN ' . TABLE_GP2DIS . ' AS gp2d ON (gp.id = gp2d.genepanelid) WHERE gp2d.diseaseid IN (?' . str_repeat(', ?', count($aDiseases)-1) . ') ORDER BY gp.type DESC, gp.name ASC', array_values($aDiseases))->fetchAllAssoc();
+            $aDefaultGenePanels = $_DB->q('SELECT DISTINCT gp.id, gp.name, gp.type FROM ' . TABLE_GENE_PANELS . ' AS gp JOIN ' . TABLE_GP2DIS . ' AS gp2d ON (gp.id = gp2d.genepanelid) WHERE gp2d.diseaseid IN (?' . str_repeat(', ?', count($aDiseases)-1) . ') ORDER BY gp.type DESC, gp.name ASC', array_values($aDiseases))->fetchAllAssoc();
 
             if ($aDefaultGenePanels) {
                 // Set the default gene panels in the form to these gene panels.
@@ -1647,7 +1647,7 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && ACTION == 'edit_panels') {
 
     // Get list of gene panels.
     // Note: CAST(id AS CHAR) is needed to preserve the zerofill.
-    $aGenePanelsForm = $_DB->query('(SELECT "optgroup2" AS id, "Mendeliome" AS name, "mendeliome_header" AS type)
+    $aGenePanelsForm = $_DB->q('(SELECT "optgroup2" AS id, "Mendeliome" AS name, "mendeliome_header" AS type)
                                      UNION
                                     (SELECT "optgroup1", "Gene Panels", "gene_panel_header")
                                      UNION
@@ -1733,7 +1733,7 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && ACTION == 'delete') {
     $zData = $_DATA->loadEntry($nID);
     require ROOT_PATH . 'inc-lib-form.php';
 
-    $aVariantsRemovable = $_DB->query('
+    $aVariantsRemovable = $_DB->q('
         SELECT s2v.variantid, MAX(s2.individualid)
         FROM lovd_v3_screenings AS s
           INNER JOIN lovd_v3_screenings2variants AS s2v ON (s.id = s2v.screeningid)
@@ -1764,7 +1764,7 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && ACTION == 'delete') {
             // Search for effected genes before the deletion, else we can't find the link.
             // Get genes which are modified only when individual and variant status is marked or public.
             if ($zData['statusid'] >= STATUS_MARKED) {
-                $aGenes = $_DB->query('SELECT DISTINCT t.geneid FROM ' . TABLE_TRANSCRIPTS . ' AS t ' .
+                $aGenes = $_DB->q('SELECT DISTINCT t.geneid FROM ' . TABLE_TRANSCRIPTS . ' AS t ' .
                     'INNER JOIN ' . TABLE_VARIANTS_ON_TRANSCRIPTS . ' AS vot ON (vot.transcriptid = t.id) ' .
                     'INNER JOIN ' . TABLE_VARIANTS . ' AS vog ON (vog.id = vot.id) ' .
                     'INNER JOIN ' . TABLE_SCR2VAR . ' AS s2v ON (s2v.variantid = vog.id) ' .
@@ -1774,7 +1774,7 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && ACTION == 'delete') {
 
             if (isset($_POST['remove_variants']) && $_POST['remove_variants'] == 'remove') {
                 // This also deletes the entries in TABLE_SCR2VAR.
-                $_DB->query('DELETE FROM ' . TABLE_VARIANTS . ' WHERE id IN (?' . str_repeat(', ?', count($aVariantsRemovable) - 1) . ')', $aVariantsRemovable);
+                $_DB->q('DELETE FROM ' . TABLE_VARIANTS . ' WHERE id IN (?' . str_repeat(', ?', count($aVariantsRemovable) - 1) . ')', $aVariantsRemovable);
             }
 
             // This also deletes the entries in TABLE_PHENOTYPES && TABLE_SCREENINGS && TABLE_SCR2VAR && TABLE_SCR2GENE.
@@ -1816,7 +1816,7 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && ACTION == 'delete') {
     // Table.
     print('      <FORM action="' . CURRENT_PATH . '?' . ACTION . '" method="post">' . "\n");
 
-    $nVariants = $_DB->query('SELECT COUNT(DISTINCT s2v.variantid) FROM ' . TABLE_SCREENINGS . ' AS s LEFT OUTER JOIN ' . TABLE_SCR2VAR . ' AS s2v ON (s.id = s2v.screeningid) WHERE s.individualid = ? GROUP BY s.individualid', array($nID))->fetchColumn();
+    $nVariants = $_DB->q('SELECT COUNT(DISTINCT s2v.variantid) FROM ' . TABLE_SCREENINGS . ' AS s LEFT OUTER JOIN ' . TABLE_SCR2VAR . ' AS s2v ON (s.id = s2v.screeningid) WHERE s.individualid = ? GROUP BY s.individualid', array($nID))->fetchColumn();
     $aOptions = array('remove' => 'Yes, remove ' . ($nVariantsRemovable == 1? 'this variant' : 'these variants') . ' attached to only this individual', 'keep' => 'No, keep ' . ($nVariantsRemovable == 1? 'this variant' : 'these variants') . ' as separate entries');
 
     // Array which will make up the form table.

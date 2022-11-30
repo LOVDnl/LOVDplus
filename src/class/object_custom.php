@@ -121,7 +121,7 @@ class LOVD_Custom extends LOVD_Object
                         'ORDER BY c.col_order';
             }
         }
-        $q = $_DB->query($sSQL, $aArgs);
+        $q = $_DB->q($sSQL, $aArgs);
         while ($z = $q->fetchAssoc()) {
             $z['custom_links'] = array();
             $z['form_type'] = explode('|', $z['form_type']);
@@ -139,7 +139,7 @@ class LOVD_Custom extends LOVD_Object
         // Gather the custom link information.
         // 2015-01-23; 3.0-13; But not when importing, then we don't need this at all.
         if (lovd_getProjectFile() != '/import.php') {
-            $aLinks = $_DB->query('SELECT l.*, GROUP_CONCAT(c2l.colid SEPARATOR ";") AS colids FROM ' . TABLE_LINKS . ' AS l INNER JOIN ' . TABLE_COLS2LINKS . ' AS c2l ON (l.id = c2l.linkid) WHERE c2l.colid LIKE ? GROUP BY l.id',
+            $aLinks = $_DB->q('SELECT l.*, GROUP_CONCAT(c2l.colid SEPARATOR ";") AS colids FROM ' . TABLE_LINKS . ' AS l INNER JOIN ' . TABLE_COLS2LINKS . ' AS c2l ON (l.id = c2l.linkid) WHERE c2l.colid LIKE ? GROUP BY l.id',
                 array($this->sCategory . '/%'))->fetchAllAssoc();
             foreach ($aLinks as $aLink) {
                 $aLink['regexp_pattern'] = '/' . str_replace(array('{', '}'), array('\{', '\}'), preg_replace('/\[\d\]/', '([^:]*)', $aLink['pattern_text'])) . '/';

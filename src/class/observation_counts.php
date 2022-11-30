@@ -4,10 +4,10 @@
  * LEIDEN OPEN VARIATION DATABASE (LOVD)
  *
  * Created     : 2017-01-12
- * Modified    : 2018-03-27
- * For LOVD    : 3.0-18
+ * Modified    : 2022-11-30
+ * For LOVD+   : 3.0-29
  *
- * Copyright   : 2004-2018 Leiden University Medical Center; http://www.LUMC.nl/
+ * Copyright   : 2004-2022 Leiden University Medical Center; http://www.LUMC.nl/
  * Programmers : Juny Kesumadewi <juny.kesumadewi@unimelb.edu.au>
  *               Ivo F.A.C. Fokkema <I.F.A.C.Fokkema@LUMC.nl>
  *
@@ -94,7 +94,7 @@ class LOVD_ObservationCounts
         define('LOG_EVENT', 'UpdateObsCounts');
 
         $aData = array();
-        $aData['population_size'] = $_DB->query(
+        $aData['population_size'] = $_DB->q(
             'SELECT COUNT(DISTINCT individualid) FROM ' . TABLE_SCREENINGS)->fetchColumn();
         foreach ($_INSTANCE_CONFIG['observation_counts'] as $sType => $aTypeSettings) {
             $this->aColumns = $this->validateColumns($sType, $aTypeSettings);
@@ -134,7 +134,7 @@ class LOVD_ObservationCounts
         $sObscountJson = json_encode($aData);
 
         $sSQL = 'UPDATE ' . TABLE_VARIANTS . ' SET obscount_json = ? WHERE id = ?';
-        $_DB->query($sSQL, array($sObscountJson, $this->nVariantID));
+        $_DB->q($sSQL, array($sObscountJson, $this->nVariantID));
 
         lovd_writeLog('Event', LOG_EVENT, 'Created Observation Counts for variant #' . $this->nVariantID . '. JSON DATA: ' . $sObscountJson);
 
@@ -160,7 +160,7 @@ class LOVD_ObservationCounts
                  FROM ' . TABLE_SCREENINGS . ' AS s
                  INNER JOIN ' . TABLE_SCR2VAR . ' AS s2v 
                  ON (s.id = s2v.screeningid AND s2v.variantid = ?)';
-        $aResult = $_DB->query($sSQL, array($this->nVariantID))->fetchAssoc();
+        $aResult = $_DB->q($sSQL, array($this->nVariantID))->fetchAssoc();
 
         if ($aResult['analysis_statusid'] == ANALYSIS_STATUS_IN_PROGRESS) {
             // If the status is in progress, you either need to be owner or up, or there should be no previous observation counts.
@@ -528,7 +528,7 @@ class LOVD_ObservationCounts
                             INNER JOIN ' . TABLE_SCREENINGS . ' AS s ON (s.individualid = i.id)
                             LEFT OUTER JOIN ' . TABLE_IND2GP . ' AS i2gp ON (i2gp.individualid = i.id) 
                           WHERE ' . $aRules['condition'];
-                $nCount = $_DB->query($sSQL, $aSQL)->fetchColumn();
+                $nCount = $_DB->q($sSQL, $aSQL)->fetchColumn();
                 $aCategoryData['total_individuals'] = $nCount;
 
                 // Number of individuals with screenings with this variant, matching the given conditions.
@@ -542,7 +542,7 @@ class LOVD_ObservationCounts
                          GROUP BY s.individualid';
                 $aCategoryData['variant_ids'] = array();
                 $aCategoryData['num_ind_with_variant'] = 0;
-                $zResult = $_DB->query($sSQL, array_merge(array($this->aIndividual['VariantOnGenome/DBID']), $aSQL));
+                $zResult = $_DB->q($sSQL, array_merge(array($this->aIndividual['VariantOnGenome/DBID']), $aSQL));
                 while ($aRow = $zResult->fetchAssoc()) {
                     $aCategoryData['num_ind_with_variant']++;
                     $aCategoryData['variant_ids'] = array_merge($aCategoryData['variant_ids'], explode(';', $aRow['variant_ids']));
@@ -564,7 +564,7 @@ class LOVD_ObservationCounts
                                INNER JOIN ' . TABLE_SCREENINGS . ' AS s ON (s.individualid = i.id AND i.`Individual/Affected` = "Affected")
                                LEFT OUTER JOIN ' . TABLE_IND2GP . ' AS i2gp ON (i2gp.individualid = i.id) 
                              WHERE ' . $aRules['condition'];
-                    $nCount = $_DB->query($sSQL, $aSQL)->fetchColumn();
+                    $nCount = $_DB->q($sSQL, $aSQL)->fetchColumn();
                     $aCategoryData['num_affected'] = $nCount;
                 }
 
@@ -575,7 +575,7 @@ class LOVD_ObservationCounts
                                INNER JOIN ' . TABLE_SCREENINGS . ' s ON (s.individualid = i.id AND i.`Individual/Affected` = "Not Affected")
                                LEFT OUTER JOIN ' . TABLE_IND2GP . ' AS i2gp ON (i2gp.individualid = i.id) 
                              WHERE ' . $aRules['condition'];
-                    $nCount = $_DB->query($sSQL, $aSQL)->fetchColumn();
+                    $nCount = $_DB->q($sSQL, $aSQL)->fetchColumn();
                     $aCategoryData['num_not_affected'] = $nCount;
                 }
             }
@@ -649,10 +649,10 @@ class LOVD_ObservationCounts
                    INNER JOIN ' . TABLE_SCREENINGS . ' AS s ON (s.id = s2v.screeningid) 
                    INNER JOIN ' . TABLE_INDIVIDUALS . ' AS i ON (s.individualid = i.id) 
                  GROUP BY i.id';
-        $aIndividual = $_DB->query($sSQL, array($this->nVariantID))->fetchAssoc();
+        $aIndividual = $_DB->q($sSQL, array($this->nVariantID))->fetchAssoc();
 
         // Easier to just separate the genepanel query, so we can receive it properly.
-        $aIndividual['genepanels'] = $_DB->query('SELECT gp.id, gp.name
+        $aIndividual['genepanels'] = $_DB->q('SELECT gp.id, gp.name
                                                   FROM ' . TABLE_GENE_PANELS . ' AS gp
                                                     INNER JOIN ' . TABLE_IND2GP . ' AS i2gp ON (gp.id = i2gp.genepanelid)
                                                   WHERE i2gp.individualid = ? AND (gp.type IS NULL OR gp.type != "blacklist")',
@@ -671,7 +671,7 @@ class LOVD_ObservationCounts
         global $_DB;
 
         $sSQL = 'SELECT obscount_json FROM ' . TABLE_VARIANTS . ' WHERE id = ?';
-        $zResult = $_DB->query($sSQL, array($this->nVariantID))->fetchAssoc();
+        $zResult = $_DB->q($sSQL, array($this->nVariantID))->fetchAssoc();
 
         return json_decode($zResult['obscount_json'], true);
     }
@@ -721,7 +721,7 @@ class LOVD_ObservationCounts
         );
 
         // Some columns require custom columns to be active.
-        $bIndAffectedColActive = $_DB->query(
+        $bIndAffectedColActive = $_DB->q(
             'SELECT COUNT(*) 
              FROM ' . TABLE_ACTIVE_COLS . '
              WHERE colid = "Individual/Affected"')->fetchColumn();

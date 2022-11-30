@@ -47,20 +47,20 @@ $aVOTCols = array('VariantOnTranscript/Distance_to_splice_site',
                   'VariantOnTranscript/Position');
 
 // We also need to get a list of standard VariantOnTranscript columns.
-$aColsStandard = $_DB->query('SELECT id FROM ' . TABLE_COLS . ' WHERE standard = 1 AND id IN ("' . implode('", "', $aVOTCols) . '")')->fetchAllColumn();
+$aColsStandard = $_DB->q('SELECT id FROM ' . TABLE_COLS . ' WHERE standard = 1 AND id IN ("' . implode('", "', $aVOTCols) . '")')->fetchAllColumn();
 
 
 
 
 $sColumnMessage = '';
-if (!$_DB->query('SELECT colid FROM ' . TABLE_ACTIVE_COLS . ' WHERE colid = "VariantOnGenome/Conservation_score/GERP"')->fetchColumn()) {
+if (!$_DB->q('SELECT colid FROM ' . TABLE_ACTIVE_COLS . ' WHERE colid = "VariantOnGenome/Conservation_score/GERP"')->fetchColumn()) {
     // Check whether the GERP column is enabled.
     $sColumnMessage = '<BR>VariantOnGenome/Conservation_score/GERP: currently not enabled (<A href="#" onclick="lovd_openWindow(\'' . lovd_getInstallURL() . 'columns/VariantOnGenome/Conservation_score/GERP?add&amp;in_window=true\', \'col\', 800, 300); return false;">enable</A>)';
 }
 
 // Check if all VariantOnTranscript columns are activated for all genes and whether they are standard.
-$nGenes = $_DB->query('SELECT COUNT(*) FROM ' . TABLE_GENES)->fetchColumn();
-$aColCounts = $_DB->query('SELECT colid, COUNT(*) AS count FROM ' . TABLE_SHARED_COLS . ' WHERE colid IN ("' . implode('", "', $aVOTCols) . '") GROUP BY colid')->fetchAllCombine();
+$nGenes = $_DB->q('SELECT COUNT(*) FROM ' . TABLE_GENES)->fetchColumn();
+$aColCounts = $_DB->q('SELECT colid, COUNT(*) AS count FROM ' . TABLE_SHARED_COLS . ' WHERE colid IN ("' . implode('", "', $aVOTCols) . '") GROUP BY colid')->fetchAllCombine();
 foreach ($aVOTCols as $sCol) {
     $b = true;
     if ((!isset($aColCounts[$sCol]) && $nGenes) || (isset($aColCounts[$sCol]) && $aColCounts[$sCol] != $nGenes)) {
