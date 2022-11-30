@@ -58,13 +58,13 @@ if (!$_AUTH && $_CONF['allow_unlock_accounts']) {
         sleep(1);
 
         // Find account.
-        $zData = array($_DB->query('SELECT * FROM ' . TABLE_USERS . ' WHERE username = ?',
+        $zData = array($_DB->q('SELECT * FROM ' . TABLE_USERS . ' WHERE username = ?',
             array($_POST['username']))->fetchAssoc());
         if ($zData == array(false)) {
-            $zData = $_DB->query('SELECT * FROM ' . TABLE_USERS . ' WHERE email = ?',
+            $zData = $_DB->q('SELECT * FROM ' . TABLE_USERS . ' WHERE email = ?',
                 array($_POST['username']))->fetchAllAssoc();
             if (!$zData) {
-                $zData = $_DB->query('SELECT * FROM ' . TABLE_USERS . ' WHERE email REGEXP ?',
+                $zData = $_DB->q('SELECT * FROM ' . TABLE_USERS . ' WHERE email REGEXP ?',
                     array("(^|\r\n)" . $_POST['username'] . "(\r\n|$)"))->fetchAllAssoc();
             }
         }
@@ -104,7 +104,7 @@ if (!$_AUTH && $_CONF['allow_unlock_accounts']) {
             }
 
             // Update database.
-            $_DB->query('UPDATE ' . TABLE_USERS . ' SET password_autogen = MD5(?) WHERE username = ?', array($sPasswd, $zData['username']));
+            $_DB->q('UPDATE ' . TABLE_USERS . ' SET password_autogen = MD5(?) WHERE username = ?', array($sPasswd, $zData['username']));
 
             lovd_writeLog('Auth', LOG_EVENT, $_SERVER['REMOTE_ADDR'] . ' (' . lovd_php_gethostbyaddr($_SERVER['REMOTE_ADDR']) . ') successfully reset password for account ' .
                 $_POST['username'] . ($_POST['username'] == $zData['username']? '' : ' (' . $zData['username'] . ')'));

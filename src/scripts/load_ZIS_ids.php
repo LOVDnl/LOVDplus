@@ -4,11 +4,11 @@
  * LEIDEN OPEN VARIATION DATABASE (LOVD)
  *
  * Created     : 2014-04-03
- * Modified    : 2016-04-05
- * For LOVD    : 3.0-15
+ * Modified    : 2022-11-30
+ * For LOVD+   : 3.0-29
  *
- * Copyright   : 2004-2016 Leiden University Medical Center; http://www.LUMC.nl/
- * Programmer  : Ing. Ivo F.A.C. Fokkema <I.F.A.C.Fokkema@LUMC.nl>
+ * Copyright   : 2004-2022 Leiden University Medical Center; http://www.LUMC.nl/
+ * Programmer  : Ivo F.A.C. Fokkema <I.F.A.C.Fokkema@LUMC.nl>
  *
  *
  * This file is part of LOVD.
@@ -41,7 +41,7 @@ session_write_close();
 
 
 // First, get list of individuals that need a ZIS nr.
-$aIndividuals = $_DB->query('SELECT id_miracle, id FROM ' . TABLE_INDIVIDUALS . ' WHERE id_zis IS NULL')->fetchAllCombine();
+$aIndividuals = $_DB->q('SELECT id_miracle, id FROM ' . TABLE_INDIVIDUALS . ' WHERE id_zis IS NULL')->fetchAllCombine();
 
 // Nothing to do? Bye...
 if (!$aIndividuals) {
@@ -78,7 +78,7 @@ while (($sFile = readdir($h)) !== false) {
         list($nMiracleID, $nZISID) = explode("\t", $sLine);
         if (isset($aIndividuals[$nMiracleID]) && ctype_digit($nZISID)) {
             // We know this one!
-            if ($_DB->query('UPDATE ' . TABLE_INDIVIDUALS . ' SET id_zis = ? WHERE id = ? AND id_miracle = ? AND id_zis IS NULL', array($nZISID, $aIndividuals[$nMiracleID], $nMiracleID))->rowCount()) {
+            if ($_DB->q('UPDATE ' . TABLE_INDIVIDUALS . ' SET id_zis = ? WHERE id = ? AND id_miracle = ? AND id_zis IS NULL', array($nZISID, $aIndividuals[$nMiracleID], $nMiracleID))->rowCount()) {
                 print('Added ZIS ID for Miracle ID ' . $nMiracleID . ".\n");
                 unset($aIndividuals[$nMiracleID]);
             }

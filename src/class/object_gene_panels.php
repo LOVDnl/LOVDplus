@@ -4,10 +4,10 @@
  * LEIDEN OPEN VARIATION DATABASE (LOVD)
  *
  * Created     : 2016-03-01
- * Modified    : 2019-08-19
- * For LOVD    : 3.0-21
+ * Modified    : 2022-11-30
+ * For LOVD+   : 3.0-29
  *
- * Copyright   : 2004-2019 Leiden University Medical Center; http://www.LUMC.nl/
+ * Copyright   : 2004-2022 Leiden University Medical Center; http://www.LUMC.nl/
  * Programmers : Anthony Marty <anthony.marty@unimelb.edu.au>
  *               Ivo F.A.C. Fokkema <I.F.A.C.Fokkema@LUMC.nl>
  *
@@ -195,7 +195,7 @@ class LOVD_GenePanel extends LOVD_Object
         global $_DB, $_AUTH;
 
         // Get Panel of diseases.
-        $aDiseasesForm = $_DB->query('SELECT id, IF(CASE symbol WHEN "-" THEN "" ELSE symbol END = "", name, CONCAT(symbol, " (", name, ")")) FROM ' . TABLE_DISEASES . ' WHERE id > 0 ORDER BY (symbol != "" AND symbol != "-") DESC, symbol, name')->fetchAllCombine();
+        $aDiseasesForm = $_DB->q('SELECT id, IF(CASE symbol WHEN "-" THEN "" ELSE symbol END = "", name, CONCAT(symbol, " (", name, ")")) FROM ' . TABLE_DISEASES . ' WHERE id > 0 ORDER BY (symbol != "" AND symbol != "-") DESC, symbol, name')->fetchAllCombine();
         $nDiseases = count($aDiseasesForm);
         if (!$nDiseases) {
             $aDiseasesForm = array('' => 'No disease entries available');
@@ -206,7 +206,7 @@ class LOVD_GenePanel extends LOVD_Object
         }
 
         // Get the available analyses.
-        $aAnalysesForm = $_DB->query('SELECT id, CONCAT(name, " (v", version, ")") FROM ' . TABLE_ANALYSES . ' ORDER BY name')->fetchAllCombine();
+        $aAnalysesForm = $_DB->q('SELECT id, CONCAT(name, " (v", version, ")") FROM ' . TABLE_ANALYSES . ' ORDER BY name')->fetchAllCombine();
         $nAnalyses = count($aAnalysesForm);
         if (!$nAnalyses) {
             $aAnalysesForm = array('' => 'No analysis entries available');

@@ -421,7 +421,7 @@ if ($argc != 1 && in_array($argv[1], array('--help', '-help', '-h', '-?'))) {
         }
 
 
-        if ($sIndDBID = $_DB->query('SELECT `id` FROM ' . TABLE_INDIVIDUALS . ' WHERE `Individual/Sample_ID` = ?', array($sVal['Sample_ID']))->fetchColumn()) {
+        if ($sIndDBID = $_DB->q('SELECT `id` FROM ' . TABLE_INDIVIDUALS . ' WHERE `Individual/Sample_ID` = ?', array($sVal['Sample_ID']))->fetchColumn()) {
             // Since we are generating one meta data file per child/singleton,
             // there will only ever be 1 individual record and screening.
             // Look up sample ID in the database to check if it exists.
@@ -463,7 +463,7 @@ if ($argc != 1 && in_array($argv[1], array('--help', '-help', '-h', '-?'))) {
             }
 
             // Insert the individual record and return the new individual record ID.
-            $_DB->query('INSERT INTO ' . TABLE_INDIVIDUALS . ' (`' . implode('`, `', array_keys($aIndFields)) . '`) VALUES (?' . str_repeat(', ?', count($aIndFields) - 1) . ')', array_values($aIndFields));
+            $_DB->q('INSERT INTO ' . TABLE_INDIVIDUALS . ' (`' . implode('`, `', array_keys($aIndFields)) . '`) VALUES (?' . str_repeat(', ?', count($aIndFields) - 1) . ')', array_values($aIndFields));
             $sIndividualID = sprintf('%08d', $_DB->lastInsertId());
             $aColumnsForScreening['individualid'] = $sIndividualID;
             $aColumnsForIndividual['id'] = $sIndividualID;

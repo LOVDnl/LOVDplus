@@ -7,7 +7,7 @@
  * Modified    : 2021-02-03
  * For LOVD    : 3.0-26
  *
- * Copyright   : 2004-2021 Leiden University Medical Center; http://www.LUMC.nl/
+ * Copyright   : 2004-2022 Leiden University Medical Center; http://www.LUMC.nl/
  * Programmers : Ivo F.A.C. Fokkema <I.F.A.C.Fokkema@LUMC.nl>
  *               Ivar C. Lugtenburg <I.C.Lugtenburg@LUMC.nl>
  *
@@ -92,7 +92,7 @@ if (PATH_COUNT == 1 && ACTION == 'edit') {
                 $aSQL[] = $_POST[$sField];
             }
 
-            $q = $_DB->query($sSQL, $aSQL, true, true);
+            $q = $_DB->q($sSQL, $aSQL, true, true);
 
             // Write to log...
             lovd_writeLog('Event', LOG_EVENT, 'Edited system configuration');

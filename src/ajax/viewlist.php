@@ -124,7 +124,7 @@ if ($_AUTH && $_AUTH['level'] < LEVEL_MANAGER && (!empty($_AUTH['curates']) || !
                         'VariantOnTranscriptUnique,VariantOnGenome',
                         'VariantOnTranscript,VariantOnGenome,Screening,Individual'
                     )) && (!isset($_REQUEST['search_transcriptid'])
-                    || !$_DB->query('SELECT COUNT(*) FROM ' . TABLE_TRANSCRIPTS . ' WHERE id = ? AND geneid = ?', array($_REQUEST['search_transcriptid'], $_REQUEST['id']))->fetchColumn())) {
+                    || !$_DB->q('SELECT COUNT(*) FROM ' . TABLE_TRANSCRIPTS . ' WHERE id = ? AND geneid = ?', array($_REQUEST['search_transcriptid'], $_REQUEST['id']))->fetchColumn())) {
                 die(AJAX_NO_AUTH);
             }
             lovd_isAuthorized('gene', $nID); // Authorize for the gene currently loaded.
@@ -138,7 +138,7 @@ if ($_AUTH && $_AUTH['level'] < LEVEL_MANAGER && (!empty($_AUTH['curates']) || !
             // Check if we have multiple screening IDs. If so, make sure they belong together.
             $aScreeningIDs = explode('|', $_REQUEST['search_screeningid']);
             if (count($aScreeningIDs) > 1) {
-                $nIndividuals = $_DB->query('SELECT COUNT(DISTINCT individualid) FROM ' . TABLE_SCREENINGS . ' WHERE id IN (?' . str_repeat(', ?', count($aScreeningIDs) - 1) . ')',
+                $nIndividuals = $_DB->q('SELECT COUNT(DISTINCT individualid) FROM ' . TABLE_SCREENINGS . ' WHERE id IN (?' . str_repeat(', ?', count($aScreeningIDs) - 1) . ')',
                     $aScreeningIDs)->fetchColumn();
                 if ($nIndividuals > 1) {
                     // This custom VL is only loaded for authorization on Screenings, and there's no reason to have multiple Individuals.

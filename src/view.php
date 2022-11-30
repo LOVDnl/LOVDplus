@@ -48,7 +48,7 @@ if (!ACTION && !empty($_PE[1]) && !ctype_digit($_PE[1])) {
     // URL: /view/DMD/NM_004006.2
     // View all entries in a specific gene, affecting a specific trancript, with all joinable data.
 
-    $qGene = $_DB->query('
+    $qGene = $_DB->q('
         SELECT g.id, COUNT(t.id)
         FROM ' . TABLE_GENES . ' AS g
           LEFT OUTER JOIN ' . TABLE_TRANSCRIPTS . ' AS t ON g.id = t.geneid
@@ -66,7 +66,7 @@ if (!ACTION && !empty($_PE[1]) && !ctype_digit($_PE[1])) {
 
         // Overview is given per transcript. If there is only one, it will be mentioned.
         // If there are more, you will be able to select which one you'd like to see.
-        $aTranscriptsWithVariants = $_DB->query(
+        $aTranscriptsWithVariants = $_DB->q(
             'SELECT t.id, t.id_ncbi
              FROM ' . TABLE_TRANSCRIPTS . ' AS t
                INNER JOIN ' . TABLE_VARIANTS_ON_TRANSCRIPTS . ' AS vot ON (t.id = vot.transcriptid)

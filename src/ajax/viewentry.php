@@ -98,7 +98,7 @@ if (!file_exists($sFile)) {
 if (in_array($sObject, array('Phenotype', 'Transcript_Variant', 'Custom_ViewList', 'ScreeningPLUS'))) {
     // Exception for VOT viewEntry, we need to isolate the gene from the ID to correctly pass this to the data object.
     if ($sObject == 'Transcript_Variant') {
-        $sObjectID = $_DB->query('SELECT geneid FROM ' . TABLE_TRANSCRIPTS . ' WHERE id = ?', array($nTranscriptID))->fetchColumn();
+        $sObjectID = $_DB->q('SELECT geneid FROM ' . TABLE_TRANSCRIPTS . ' WHERE id = ?', array($nTranscriptID))->fetchColumn();
     }
 }
 require $sFile;

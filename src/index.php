@@ -7,7 +7,7 @@
  * Modified    : 2017-07-20
  * For LOVD    : 3.0-20
  *
- * Copyright   : 2004-2017 Leiden University Medical Center; http://www.LUMC.nl/
+ * Copyright   : 2004-2022 Leiden University Medical Center; http://www.LUMC.nl/
  * Programmers : Ivo F.A.C. Fokkema <I.F.A.C.Fokkema@LUMC.nl>
  *               M. Kroon <m.kroon@lumc.nl>
  *
@@ -41,7 +41,7 @@ if ($_AUTH && $_AUTH['level'] >= LEVEL_MANAGER) {
     $sFile = 'genes/' . $_SESSION['currdb'];
 } else {
 
-    $aGeneIDs = $_DB->query('SELECT id FROM ' . TABLE_GENES . ' LIMIT 2')->fetchAllColumn();
+    $aGeneIDs = $_DB->q('SELECT id FROM ' . TABLE_GENES . ' LIMIT 2')->fetchAllColumn();
     if (count($aGeneIDs) == 1) {
         $sFile = 'genes/' . $aGeneIDs[0];
     } else {

@@ -4,10 +4,10 @@
  * LEIDEN OPEN VARIATION DATABASE (LOVD)
  *
  * Created     : 2016-05-03
- * Modified    : 2018-06-28
- * For LOVD    : 3.0-18
+ * Modified    : 2022-11-30
+ * For LOVD+   : 3.0-29
  *
- * Copyright   : 2004-2018 Leiden University Medical Center; http://www.LUMC.nl/
+ * Copyright   : 2004-2022 Leiden University Medical Center; http://www.LUMC.nl/
  * Programmers : Anthony Marty <anthony.marty@unimelb.edu.au>
  *               Ivo F.A.C. Fokkema <I.F.A.C.Fokkema@LUMC.nl>
  *               Juny Kesumadewi <juny.kesumadewi@unimelb.edu.au>
@@ -46,7 +46,7 @@ function lovd_getFilterConfigHTML ($nRunID, $sFilterID)
     global $_DB, $_SETT, $_INSTANCE_CONFIG;
 
     // Read filter configurations.
-    $sConfig = $_DB->query('SELECT config_json FROM ' . TABLE_ANALYSES_RUN_FILTERS . ' WHERE runid = ? AND filterid = ?', array($nRunID, $sFilterID))->fetchColumn();
+    $sConfig = $_DB->q('SELECT config_json FROM ' . TABLE_ANALYSES_RUN_FILTERS . ' WHERE runid = ? AND filterid = ?', array($nRunID, $sFilterID))->fetchColumn();
     $aConfig = (empty($sConfig)? array() : json_decode($sConfig, true));
 
     switch ($sFilterID) {
@@ -77,7 +77,7 @@ function lovd_getFilterConfigHTML ($nRunID, $sFilterID)
                          FROM ' . TABLE_SCREENINGS . ' AS s 
                            INNER JOIN ' . TABLE_INDIVIDUALS . ' AS i ON (s.individualid = i.id) 
                          WHERE s.id IN (?' . str_repeat(', ?', count($aScreeningIDs)-1) . ')';
-                $aScreenings = $_DB->query($sSQL, $aScreeningIDs)->fetchAllGroupAssoc();
+                $aScreenings = $_DB->q($sSQL, $aScreeningIDs)->fetchAllGroupAssoc();
 
                 foreach ($aConfig['groups'] as $aGroup) {
                     if (empty($sToolTip)) {
@@ -137,7 +137,7 @@ function lovd_getGenePanelLastModifiedDate ($nGpId) {
         return $aModified[$nGpId];
     }
 
-    $aModified[$nGpId] = $_DB->query(
+    $aModified[$nGpId] = $_DB->q(
         'SELECT
            GREATEST(
              IFNULL(
@@ -218,7 +218,7 @@ function lovd_getGenePanelsHTMLByRunID ($aConfig, $nRunID)
         $aGpIds = array_values(array_filter($aGpIds, 'ctype_digit'));
 
         if (!empty($aGpIds)) {
-            $aGpNames = $_DB->query('SELECT id, name FROM ' . TABLE_GENE_PANELS . ' WHERE id IN (?'. str_repeat(', ?', count($aGpIds)-1) . ')', $aGpIds)->fetchAllGroupAssoc();
+            $aGpNames = $_DB->q('SELECT id, name FROM ' . TABLE_GENE_PANELS . ' WHERE id IN (?'. str_repeat(', ?', count($aGpIds)-1) . ')', $aGpIds)->fetchAllGroupAssoc();
         }
         if (!empty($aConfig['gene_panels']['custom_panel'])) {
             $aGpNames['custom_panel'] = array('name' => 'Custom Panel');

@@ -4,10 +4,10 @@
  * LEIDEN OPEN VARIATION DATABASE (LOVD)
  *
  * Created     : 2016-03-01
- * Modified    : 2019-10-10
- * For LOVD    : 3.0-22
+ * Modified    : 2022-11-30
+ * For LOVD+   : 3.0-29
  *
- * Copyright   : 2004-2019 Leiden University Medical Center; http://www.LUMC.nl/
+ * Copyright   : 2004-2022 Leiden University Medical Center; http://www.LUMC.nl/
  * Programmers : Anthony Marty <anthony.marty@unimelb.edu.au>
  *               Ivo F.A.C. Fokkema <I.F.A.C.Fokkema@LUMC.nl>
  *               John-Paul Plazzer <johnpaul.plazzer@gmail.com>
@@ -61,7 +61,7 @@ function displayGenePanelHistory ($nID, $sFromDate, $sToDate)
     }
 
     // Query to get the gene panel revisions.
-    $aGenePanelRevs = $_DB->query('SELECT * FROM ' . TABLE_GENE_PANELS_REV . ' WHERE id = ? AND valid_from >= ? ORDER BY valid_from ASC', array($nID, $sFromDate))->fetchAll();
+    $aGenePanelRevs = $_DB->q('SELECT * FROM ' . TABLE_GENE_PANELS_REV . ' WHERE id = ? AND valid_from >= ? ORDER BY valid_from ASC', array($nID, $sFromDate))->fetchAll();
     $nCount = 0; // The number of Gene Panel revisions (modifications) in date range, not counting the "Created record" revision.
 
     // FIXME: Could we replace this with a Gene Panel Rev VL? There is quite some more info needed, though, so might not work...
@@ -110,7 +110,7 @@ function displayGenePanelHistory ($nID, $sFromDate, $sToDate)
 
     // This more complex query can handle the case of a gene that is added, removed, then added again.
     // Also, exclude genes where valid_from and valid_to do not overlap with the selected data range because they are not relevant and would produce wrong results.
-    $aGenePanelGeneRevs = $_DB->query('SELECT geneid, MIN(valid_from) AS valid_from, MAX(valid_to) AS valid_to FROM ' . TABLE_GP2GENE_REV . ' WHERE genepanelid = ? AND (valid_to >= ? and valid_from <= ?) GROUP BY geneid', array($nID, $sFromDate, $sToDate))->fetchAll();
+    $aGenePanelGeneRevs = $_DB->q('SELECT geneid, MIN(valid_from) AS valid_from, MAX(valid_to) AS valid_to FROM ' . TABLE_GP2GENE_REV . ' WHERE genepanelid = ? AND (valid_to >= ? and valid_from <= ?) GROUP BY geneid', array($nID, $sFromDate, $sToDate))->fetchAll();
     $nAddedCount = 0; // Number of genes that have been added between selected date range.
     $nRemovedCount = 0; // Number of genes that have been removed between selected date range.
 
@@ -201,7 +201,7 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && !ACTION) {
     require ROOT_PATH . 'class/object_gene_panels.php';
     $_DATA = new LOVD_GenePanel();
     // Increase the max group_concat() length, so that gene panels linked to many many diseases still have all diseases mentioned here.
-    $_DB->query('SET group_concat_max_len = 150000');
+    $_DB->q('SET group_concat_max_len = 150000');
     $zData = $_DATA->viewEntry($nID);
 
     $aNavigation = array();
@@ -286,7 +286,7 @@ if (PATH_COUNT == 1 && ACTION == 'create') {
                 foreach ($_POST['active_diseases'] as $nDisease) {
                     // Add disease to gene.
                     if ($nDisease) {
-                        $q = $_DB->query('INSERT INTO ' . TABLE_GP2DIS . ' VALUES (?, ?)', array($nID, $nDisease), false);
+                        $q = $_DB->q('INSERT INTO ' . TABLE_GP2DIS . ' VALUES (?, ?)', array($nID, $nDisease), false);
                         if (!$q) {
                             // Silent error.
                             lovd_writeLog('Error', LOG_EVENT, 'Disease information entry ' . $nDisease . ' - could not be added to gene panel ' . $nID);
@@ -307,7 +307,7 @@ if (PATH_COUNT == 1 && ACTION == 'create') {
                 foreach ($_POST['active_analyses'] as $nAnalysisID) {
                     // Add analyses to gene.
                     if ($nAnalysisID) {
-                        $q = $_DB->query('INSERT INTO ' . TABLE_GP2A . ' VALUES (?, ?)', array($nID, $nAnalysisID), false);
+                        $q = $_DB->q('INSERT INTO ' . TABLE_GP2A . ' VALUES (?, ?)', array($nID, $nAnalysisID), false);
                         if (!$q) {
                             // Silent error.
                             lovd_writeLog('Error', LOG_EVENT, 'Analysis information entry ' . $nAnalysisID . ' - could not be added to gene panel ' . $nID);
@@ -383,7 +383,7 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && ACTION == 'edit') {
     require ROOT_PATH . 'class/object_gene_panels.php';
     $_DATA = new LOVD_GenePanel();
     // Increase the max group_concat() length, so that gene panels linked to many many diseases still have all diseases mentioned here.
-    $_DB->query('SET group_concat_max_len = 150000');
+    $_DB->q('SET group_concat_max_len = 150000');
     $zData = $_DATA->loadEntry($nID);
     require ROOT_PATH . 'inc-lib-form.php';
     if (!empty($_POST)) {
@@ -421,7 +421,7 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && ACTION == 'edit') {
             }
 
             if ($aToRemove) {
-                $q = $_DB->query('DELETE FROM ' . TABLE_GP2DIS . ' WHERE genepanelid = ? AND diseaseid IN (?' . str_repeat(', ?', count($aToRemove) - 1) . ')', array_merge(array($zData['id']), $aToRemove), false);
+                $q = $_DB->q('DELETE FROM ' . TABLE_GP2DIS . ' WHERE genepanelid = ? AND diseaseid IN (?' . str_repeat(', ?', count($aToRemove) - 1) . ')', array_merge(array($zData['id']), $aToRemove), false);
                 if (!$q) {
                     // Silent error.
                     lovd_writeLog('Error', LOG_EVENT, 'Disease information entr' . (count($aToRemove) == 1 ? 'y' : 'ies') . ' ' . implode(', ', $aToRemove) . ' could not be removed from gene panel ' . $nID);
@@ -436,7 +436,7 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && ACTION == 'edit') {
             foreach ($_POST['active_diseases'] as $nDisease) {
                 if ($nDisease && !in_array($nDisease, $zData['active_diseases'])) {
                     // Add disease to gene.
-                    $q = $_DB->query('INSERT IGNORE INTO ' . TABLE_GP2DIS . ' VALUES (?, ?)', array($nID, $nDisease), false);
+                    $q = $_DB->q('INSERT IGNORE INTO ' . TABLE_GP2DIS . ' VALUES (?, ?)', array($nID, $nDisease), false);
                     if (!$q) {
                         $aFailed[] = $nDisease;
                     } else {
@@ -464,7 +464,7 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && ACTION == 'edit') {
             }
 
             if ($aToRemove) {
-                $q = $_DB->query('DELETE FROM ' . TABLE_GP2A . ' WHERE genepanelid = ? AND analysisid IN (?' . str_repeat(', ?', count($aToRemove) - 1) . ')', array_merge(array($zData['id']), $aToRemove), false);
+                $q = $_DB->q('DELETE FROM ' . TABLE_GP2A . ' WHERE genepanelid = ? AND analysisid IN (?' . str_repeat(', ?', count($aToRemove) - 1) . ')', array_merge(array($zData['id']), $aToRemove), false);
                 if (!$q) {
                     // Silent error.
                     lovd_writeLog('Error', LOG_EVENT, 'Analysis information entr' . (count($aToRemove) == 1 ? 'y' : 'ies') . ' ' . implode(', ', $aToRemove) . ' could not be removed from gene panel ' . $nID);
@@ -479,7 +479,7 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && ACTION == 'edit') {
             foreach ($_POST['active_analyses'] as $nAnalysisID) {
                 if ($nAnalysisID && !in_array($nAnalysisID, $zData['active_analyses'])) {
                     // Add analyses to gene.
-                    $q = $_DB->query('INSERT IGNORE INTO ' . TABLE_GP2A . ' VALUES (?, ?)', array($nID, $nAnalysisID), false);
+                    $q = $_DB->q('INSERT IGNORE INTO ' . TABLE_GP2A . ' VALUES (?, ?)', array($nID, $nAnalysisID), false);
                     if (!$q) {
                         $aFailed[] = $nAnalysisID;
                     } else {
@@ -647,7 +647,7 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && ACTION == 'manage_genes') {
     lovd_requireAUTH($_SETT['user_level_settings']['genepanels_manage_genes']);
     $bRemovableGenes = ($_AUTH['level'] >= $_SETT['user_level_settings']['genepanels_genes_delete']);
 
-    $zData = $_DB->query('SELECT * FROM ' . TABLE_GENE_PANELS . ' WHERE id = ?', array($nID))->fetchAssoc();
+    $zData = $_DB->q('SELECT * FROM ' . TABLE_GENE_PANELS . ' WHERE id = ?', array($nID))->fetchAssoc();
     if (!$zData) {
         define('PAGE_TITLE', 'Manage genes for gene panel entry #' . $nID);
         $_T->printHeader();
@@ -684,7 +684,7 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && ACTION == 'manage_genes') {
         // Check if there are any genes left after cleaning up the gene symbol string.
         if (count($aGeneSymbols) > 0) {
             // Load the genes and alternative names into an array.
-            $aGenesInLOVD = $_DB->query('SELECT UPPER(id), id FROM ' . TABLE_GENES)->fetchAllCombine();
+            $aGenesInLOVD = $_DB->q('SELECT UPPER(id), id FROM ' . TABLE_GENES)->fetchAllCombine();
             // Loop through all the gene symbols in the array and check them for any errors.
             foreach ($aGeneSymbols as $sGeneSymbol) {
                 $sGeneSymbolUpper = strtoupper($sGeneSymbol);
@@ -774,7 +774,7 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && ACTION == 'manage_genes') {
             $_DATA = new LOVD_GenePanelGene();
             $_DB->beginTransaction();
             // Get list of currently associated genes. Note that the genes are keys, to speed things up.
-            $aGenesCurrentlyAssociated = $_DB->query('SELECT geneid, 1 FROM ' . TABLE_GP2GENE . ' WHERE genepanelid = ?', array($nID))->fetchAllCombine();
+            $aGenesCurrentlyAssociated = $_DB->q('SELECT geneid, 1 FROM ' . TABLE_GP2GENE . ' WHERE genepanelid = ?', array($nID))->fetchAllCombine();
             $sDateNow = date('Y-m-d H:i:s');
             foreach ($_POST['genes'] as $nKey => $sGeneID) {
                 // Build up array for insertEntry() and updateEntry();
@@ -855,12 +855,12 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && ACTION == 'manage_genes') {
 
     // Now, build $aGenes, which contains info about the genes currently selected (from DB or, if available, POST!).
     $aGenes = array();
-    $_DB->query('SET group_concat_max_len = 10240'); // Make sure you can deal with long transcript lists.
+    $_DB->q('SET group_concat_max_len = 10240'); // Make sure you can deal with long transcript lists.
     if (!empty($_POST['genes'])) {
         // Form has already been sent. We're here because of errors. Use $_POST.
         // Retrieve data for selected genes.
         // FIXME; Do we need to change all IDs to integers because of possibly loosing the prepended zero's? Cross-browser check to verify?
-        $zGenes = $_DB->query(
+        $zGenes = $_DB->q(
             'SELECT g.id, IFNULL(CONCAT("<OPTION value=\"\">-- select --</OPTION>", GROUP_CONCAT(CONCAT("<OPTION value=\"", t.id, "\">", t.id_ncbi, "</OPTION>") ORDER BY t.id_ncbi SEPARATOR "")), "<OPTION value=\"\">-- no transcripts available --</OPTION>") AS transcripts_HTML
              FROM ' . TABLE_GENES . ' AS g LEFT OUTER JOIN ' . TABLE_TRANSCRIPTS . ' AS t ON (g.id = t.geneid)
              WHERE g.id IN (?' . str_repeat(', ?', count($_POST['genes'])-1) . ')
@@ -889,7 +889,7 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && ACTION == 'manage_genes') {
 
         // Retrieve current genes, alphabetically ordered (makes it a bit easier to work with new forms).
         // FIXME: This is where the new fetchAllCombine() will make sense...
-        $qGenes = $_DB->query(
+        $qGenes = $_DB->q(
             'SELECT gp2g.geneid, gp2g.geneid AS name, gp2g.transcriptid, gp2g.inheritance, gp2g.pmid, REPLACE(gp2g.remarks, "\r\n", " ") AS remarks, IFNULL(CONCAT("<OPTION value=\"\">-- select --</OPTION>", GROUP_CONCAT(CONCAT("<OPTION value=\"", t.id, "\">", t.id_ncbi, "</OPTION>") ORDER BY t.id_ncbi SEPARATOR "")), "<OPTION value=\"\">-- no transcripts available --</OPTION>") AS transcripts_HTML, 0 AS vlgene
              FROM ' . TABLE_GP2GENE . ' AS gp2g LEFT OUTER JOIN ' . TABLE_TRANSCRIPTS . ' AS t ON (gp2g.geneid = t.geneid)
              WHERE gp2g.genepanelid = ? GROUP BY gp2g.geneid ORDER BY gp2g.geneid', array($nID));
@@ -900,7 +900,7 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && ACTION == 'manage_genes') {
 
     if ($aSelectedGenes) {
         // Prepend the selected genes from the viewlist. Build an array of these selected genes.
-        $qGenes = $_DB->query(
+        $qGenes = $_DB->q(
             'SELECT g.id AS geneid, g.id AS name, null AS transcriptid, "" AS inheritance, null AS pmid, "" AS remarks, IFNULL(CONCAT("<OPTION value=\"\">-- select --</OPTION>", GROUP_CONCAT(CONCAT("<OPTION value=\"", t.id, "\">", t.id_ncbi, "</OPTION>") ORDER BY t.id_ncbi SEPARATOR "")), "<OPTION value=\"\">-- no transcripts available --</OPTION>") AS transcripts_HTML, 1 AS vlgene
              FROM ' . TABLE_GENES . ' AS g LEFT OUTER JOIN ' . TABLE_TRANSCRIPTS . ' AS t ON (g.id = t.geneid)
              WHERE g.id IN (?' . str_repeat(', ?', count($aSelectedGenes)-1) . ') GROUP BY g.id ORDER BY g.id', array_values($aSelectedGenes));

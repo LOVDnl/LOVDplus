@@ -4,8 +4,8 @@
  * LEIDEN OPEN VARIATION DATABASE (LOVD)
  *
  * Created     : 2013-11-07
- * Modified    : 2022-09-27
- * For LOVD    : 3.0-28
+ * Modified    : 2022-11-30
+ * For LOVD+   : 3.0-29
  *
  * Copyright   : 2004-2022 Leiden University Medical Center; http://www.LUMC.nl/
  * Programmers : Ivo F.A.C. Fokkema <I.F.A.C.Fokkema@LUMC.nl>
@@ -87,8 +87,8 @@ class LOVD_CustomViewListPLUS extends LOVD_CustomViewList
         }
 
         // Increase the max group_concat() length, so that lists of many many genes still have all genes mentioned here (22.000 genes take 193.940 bytes here).
-        $_DB->query('SET group_concat_max_len = 200000');
-        $q = $_DB->query($sSQL, $aSQL);
+        $_DB->q('SET group_concat_max_len = 200000');
+        $q = $_DB->q($sSQL, $aSQL);
         while ($z = $q->fetchAssoc()) {
             $z['custom_links'] = array();
             $z['form_type'] = explode('|', $z['form_type']);
@@ -143,7 +143,7 @@ class LOVD_CustomViewListPLUS extends LOVD_CustomViewList
                         // First data table in query.
                         $aSQL['SELECT'] .= ', vog.id AS row_id'; // To ensure other table's id columns don't interfere.
                         $aSQL['FROM'] = TABLE_VARIANTS . ' AS vog';
-                        $this->bEntryExists = (bool) $_DB->query('
+                        $this->bEntryExists = (bool) $_DB->q('
                             SELECT 1 FROM ' . TABLE_VARIANTS . ' LIMIT 1')->fetchColumn();
                         $aSQL['GROUP_BY'] = 'vog.id'; // Necessary for GROUP_CONCAT(), such as in Screening.
                         $aSQL['ORDER_BY'] = 'vog.chromosome ASC, vog.position_g_start';
@@ -171,7 +171,7 @@ class LOVD_CustomViewListPLUS extends LOVD_CustomViewList
                     $nKeyVOG = array_search('VariantOnGenome', $aObjects);
                     if ($nKeyVOG !== false && $nKeyVOG < $nKey) {
                         $aSQL['SELECT'] .= ', COUNT(DISTINCT os.individualid) AS obs_variant';
-                        $aSQL['SELECT'] .= ', (COUNT(DISTINCT os.individualid) / ' . $_DB->query('SELECT COUNT(*) FROM ' . TABLE_INDIVIDUALS)->fetchColumn() . ') AS obs_var_ind_ratio';
+                        $aSQL['SELECT'] .= ', (COUNT(DISTINCT os.individualid) / ' . $_DB->q('SELECT COUNT(*) FROM ' . TABLE_INDIVIDUALS)->fetchColumn() . ') AS obs_var_ind_ratio';
 
                         // Outer joins for the observation counts.
                         // Join the variants table using the DBID to get all of the variants that are the same as this one.
@@ -193,16 +193,16 @@ class LOVD_CustomViewListPLUS extends LOVD_CustomViewList
                             $sDiseaseIDs = '';
                             if (!empty($_GET['search_runid'])) {
                                 // We have selected an analysis and have to use the runid to find out the diseases this individual has.
-                                $sDiseaseIDs = $_DB->query('SELECT GROUP_CONCAT(i2d.diseaseid) FROM ' . TABLE_IND2DIS . ' AS i2d INNER JOIN ' . TABLE_SCREENINGS . ' AS scr ON (i2d.individualid = scr.individualid) INNER JOIN ' . TABLE_ANALYSES_RUN . ' AS ar ON (scr.id = ar.screeningid) WHERE ar.id = ?', array($_GET['search_runid']))->fetchColumn();
+                                $sDiseaseIDs = $_DB->q('SELECT GROUP_CONCAT(i2d.diseaseid) FROM ' . TABLE_IND2DIS . ' AS i2d INNER JOIN ' . TABLE_SCREENINGS . ' AS scr ON (i2d.individualid = scr.individualid) INNER JOIN ' . TABLE_ANALYSES_RUN . ' AS ar ON (scr.id = ar.screeningid) WHERE ar.id = ?', array($_GET['search_runid']))->fetchColumn();
                             } elseif (!empty($_GET['search_variantid'])) {
                                 preg_match('/^\d+/', $_GET['search_variantid'], $aRegs); // Find the first variant ID in the list of variants.
-                                $sDiseaseIDs = $_DB->query('SELECT GROUP_CONCAT(i2d.diseaseid) FROM ' . TABLE_IND2DIS . ' AS i2d INNER JOIN ' . TABLE_SCREENINGS . ' AS scr ON (i2d.individualid = scr.individualid) INNER JOIN ' . TABLE_SCR2VAR . ' AS s2v ON (scr.id = s2v.screeningid) WHERE s2v.variantid = ?', array($aRegs[0]))->fetchColumn();
+                                $sDiseaseIDs = $_DB->q('SELECT GROUP_CONCAT(i2d.diseaseid) FROM ' . TABLE_IND2DIS . ' AS i2d INNER JOIN ' . TABLE_SCREENINGS . ' AS scr ON (i2d.individualid = scr.individualid) INNER JOIN ' . TABLE_SCR2VAR . ' AS s2v ON (scr.id = s2v.screeningid) WHERE s2v.variantid = ?', array($aRegs[0]))->fetchColumn();
                             }
 
                             if ($sDiseaseIDs) {
                                 // If this individual has diseases, then setup the disease specific observation count columns.
                                 $aSQL['SELECT'] .= ', COUNT(DISTINCT odi2d.individualid) AS obs_disease' .
-                                                   ', (COUNT(DISTINCT odi2d.individualid) / ' . $_DB->query('SELECT COUNT(DISTINCT i2d.individualid) FROM ' . TABLE_IND2DIS . ' AS i2d WHERE i2d.diseaseid IN (' . $sDiseaseIDs . ')')->fetchColumn() . ') AS obs_var_dis_ind_ratio';
+                                                   ', (COUNT(DISTINCT odi2d.individualid) / ' . $_DB->q('SELECT COUNT(DISTINCT i2d.individualid) FROM ' . TABLE_IND2DIS . ' AS i2d WHERE i2d.diseaseid IN (' . $sDiseaseIDs . ')')->fetchColumn() . ') AS obs_var_dis_ind_ratio';
                                 // Join the individuals2diseases table to get the individuals with this variant and this individual's diseases.
                                 $aSQL['FROM'] .= ' LEFT OUTER JOIN ' . TABLE_IND2DIS . ' AS odi2d ON (os.individualid = odi2d.individualid AND odi2d.diseaseid IN (' . $sDiseaseIDs . '))';
                             } else {
@@ -219,17 +219,17 @@ class LOVD_CustomViewListPLUS extends LOVD_CustomViewList
                             $sGenePanelIDs = '';
                             if (!empty($_GET['search_runid'])) {
                                 // We have selected an analysis and have to use the runid to find out the gene panels this individual has.
-                                $sGenePanelIDs = $_DB->query('SELECT GROUP_CONCAT(i2gp.genepanelid) FROM ' . TABLE_IND2GP . ' AS i2gp INNER JOIN ' . TABLE_SCREENINGS . ' AS scr ON (i2gp.individualid = scr.individualid) INNER JOIN ' . TABLE_ANALYSES_RUN . ' AS ar ON (scr.id = ar.screeningid) WHERE ar.id = ?', array($_GET['search_runid']))->fetchColumn();
+                                $sGenePanelIDs = $_DB->q('SELECT GROUP_CONCAT(i2gp.genepanelid) FROM ' . TABLE_IND2GP . ' AS i2gp INNER JOIN ' . TABLE_SCREENINGS . ' AS scr ON (i2gp.individualid = scr.individualid) INNER JOIN ' . TABLE_ANALYSES_RUN . ' AS ar ON (scr.id = ar.screeningid) WHERE ar.id = ?', array($_GET['search_runid']))->fetchColumn();
                             } elseif (!empty($_GET['search_variantid'])) {
                                 // We are viewing the default VL that does not contain the runid but it does have some variants to find out the gene panels this individual has.
                                 preg_match('/^\d+/', $_GET['search_variantid'], $aRegs); // Find the first variant ID in the list of variants.
-                                $sGenePanelIDs = $_DB->query('SELECT GROUP_CONCAT(i2gp.genepanelid) FROM ' . TABLE_IND2GP . ' AS i2gp INNER JOIN ' . TABLE_SCREENINGS . ' AS scr ON (i2gp.individualid = scr.individualid) INNER JOIN ' . TABLE_SCR2VAR . ' AS s2v ON (scr.id = s2v.screeningid) WHERE s2v.variantid = ?', array($aRegs[0]))->fetchColumn();
+                                $sGenePanelIDs = $_DB->q('SELECT GROUP_CONCAT(i2gp.genepanelid) FROM ' . TABLE_IND2GP . ' AS i2gp INNER JOIN ' . TABLE_SCREENINGS . ' AS scr ON (i2gp.individualid = scr.individualid) INNER JOIN ' . TABLE_SCR2VAR . ' AS s2v ON (scr.id = s2v.screeningid) WHERE s2v.variantid = ?', array($aRegs[0]))->fetchColumn();
                             }
 
                             if ($sGenePanelIDs) {
                                 // If this individual has gene panels, then setup the gene panel specific observation count columns.
                                 $aSQL['SELECT'] .= ', COUNT(DISTINCT odi2gp.individualid) AS obs_genepanel' .
-                                                   ', (COUNT(DISTINCT odi2gp.individualid) / ' . $_DB->query('SELECT COUNT(DISTINCT i2gp.individualid) FROM ' . TABLE_IND2GP . ' AS i2gp WHERE i2gp.genepanelid IN (' . $sGenePanelIDs . ')')->fetchColumn() . ') AS obs_var_gp_ind_ratio';
+                                                   ', (COUNT(DISTINCT odi2gp.individualid) / ' . $_DB->q('SELECT COUNT(DISTINCT i2gp.individualid) FROM ' . TABLE_IND2GP . ' AS i2gp WHERE i2gp.genepanelid IN (' . $sGenePanelIDs . ')')->fetchColumn() . ') AS obs_var_gp_ind_ratio';
                                 // Join the individuals2gene_panels table to get the individuals with this variant and this individual's gene panels.
                                 $aSQL['FROM'] .= ' LEFT OUTER JOIN ' . TABLE_IND2GP . ' AS odi2gp ON (os.individualid = odi2gp.individualid AND odi2gp.genepanelid IN (' . $sGenePanelIDs . '))';
                             } else {
@@ -246,7 +246,7 @@ class LOVD_CustomViewListPLUS extends LOVD_CustomViewList
                         // First data table in query.
                         $aSQL['SELECT'] .= (!$aSQL['SELECT']? '' : ', ') . 'vot.*, vot.id AS row_id'; // To ensure other table's id columns don't interfere.
                         $aSQL['FROM'] = TABLE_VARIANTS_ON_TRANSCRIPTS . ' AS vot';
-                        $this->bEntryExists = (bool) $_DB->query('
+                        $this->bEntryExists = (bool) $_DB->q('
                             SELECT 1 FROM ' . TABLE_VARIANTS_ON_TRANSCRIPTS . ' LIMIT 1')->fetchColumn();
                         $aSQL['GROUP_BY'] = 'vot.id'; // Necessary for GROUP_CONCAT(), such as in Screening.
                     } elseif ($nKeyVOG !== false && $nKeyVOG < $nKey) {
@@ -634,7 +634,7 @@ class LOVD_CustomViewListPLUS extends LOVD_CustomViewList
 
 
         // Gather the custom link information. It's just easier to load all custom links, instead of writing code that checks for the appropiate objects.
-        $aLinks = $_DB->query('SELECT l.*, GROUP_CONCAT(c2l.colid SEPARATOR ";") AS colids FROM ' . TABLE_LINKS . ' AS l INNER JOIN ' . TABLE_COLS2LINKS . ' AS c2l ON (l.id = c2l.linkid) GROUP BY l.id')->fetchAllAssoc();
+        $aLinks = $_DB->q('SELECT l.*, GROUP_CONCAT(c2l.colid SEPARATOR ";") AS colids FROM ' . TABLE_LINKS . ' AS l INNER JOIN ' . TABLE_COLS2LINKS . ' AS c2l ON (l.id = c2l.linkid) GROUP BY l.id')->fetchAllAssoc();
         foreach ($aLinks as $aLink) {
             $aLink['regexp_pattern'] = '/' . str_replace(array('{', '}'), array('\{', '\}'), preg_replace('/\[\d\]/', '(.*)', $aLink['pattern_text'])) . '/';
             $aLink['replace_text'] = preg_replace('/\[(\d)\]/', '\$$1', $aLink['replace_text']);

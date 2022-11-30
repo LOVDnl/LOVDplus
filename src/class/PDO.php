@@ -7,7 +7,7 @@
  * Modified    : 2019-08-01
  * For LOVD    : 3.0-22
  *
- * Copyright   : 2004-2019 Leiden University Medical Center; http://www.LUMC.nl/
+ * Copyright   : 2004-2022 Leiden University Medical Center; http://www.LUMC.nl/
  * Programmers : Ivo F.A.C. Fokkema <I.F.A.C.Fokkema@LUMC.nl>
  *               Ivar C. Lugtenburg <I.C.Lugtenburg@LUMC.nl>
  *
@@ -44,29 +44,11 @@ class LOVD_PDO extends PDO
     // FIXME; lovd_queryDB() provided a $bDebug argument. How to implement that now?
     private $aLastError = array();
 
-    function __construct ($sBackend, $sDSN, $sUsername = '', $sPassword = '')
+    function __construct ($sDSN, $sUsername = '', $sPassword = '', $aOptions = array())
     {
         // Initiate database connection.
-
-        $sDSN = $sBackend . ':' . $sDSN;
-        $aOptions = array();
-        if ($sBackend == 'mysql') {
-            // This method for setting the charset works also before 5.3.6, when "charset" was introduced in the DSN.
-            // Fix #4; Implement fix for PHP 5.3.0 on Windows, where PDO::MYSQL_ATTR_INIT_COMMAND by accident is not available.
-            // https://bugs.php.net/bug.php?id=47224                  (other constants were also lost, but we don't use them)
-            // Can't define a class' constant, so I'll have to use this one. This can be removed (and MYSQL_ATTR_INIT_COMMAND
-            // below restored to PDO::MYSQL_ATTR_INIT_COMMAND) once we're sure they're no other 5.3.0 users left.
-            if (!defined('MYSQL_ATTR_INIT_COMMAND')) {
-                // Still needs check though, in case two PDO connections are opened.
-                define('MYSQL_ATTR_INIT_COMMAND', 1002);
-            }
-            $aOptions = array(
-                // ONLY_FULL_GROUP_BY is causing issues; even if we try to play nice,
-                //  the totally unnecessary MIN() and MAX() calls slow down queries a lot. See #386.
-                // STRICT_TRANS_TABLES can later be enabled again, when all columns have proper defaults.
-                MYSQL_ATTR_INIT_COMMAND => 'SET NAMES utf8, SQL_MODE = REPLACE(REPLACE(REPLACE(@@SQL_MODE, "NO_ZERO_DATE", ""), "ONLY_FULL_GROUP_BY", ""), "STRICT_TRANS_TABLES", "")',
-                PDO::MYSQL_ATTR_USE_BUFFERED_QUERY => TRUE,
-            );
+        if (!is_array($aOptions)) {
+            $aOptions = array();
         }
         try {
             parent::__construct($sDSN, $sUsername, $sPassword, $aOptions);
@@ -82,6 +64,9 @@ class LOVD_PDO extends PDO
 
 
 
+    // Suppress Deprecated notices in PHP8.1, warning us that our method is missing a return type.
+    // This suppression works for PHP <= 8; PHP9 will force us to define return types and therefore, drop PHP5 support.
+    #[\ReturnTypeWillChange]
     function exec ($sSQL, $bHalt = true)
     {
         // Wrapper around PDO::exec().
@@ -128,7 +113,10 @@ class LOVD_PDO extends PDO
 
 
 
-    function prepare ($sSQL, $bHalt = true, $aOptions = array())
+    // Suppress Deprecated notices in PHP8.1, warning us that our method is missing a return type.
+    // This suppression works for PHP <= 8; PHP9 will force us to define return types and therefore, drop PHP5 support.
+    #[\ReturnTypeWillChange]
+    function prepare ($sSQL, $aOptions = array(), $bHalt = true)
     {
         // Wrapper around PDO::prepare().
 
@@ -154,7 +142,7 @@ class LOVD_PDO extends PDO
 
 
 
-    function query ($sSQL, $aSQL = '', $bHalt = true, $bTrim = false)
+    function q ($sSQL, $aSQL = '', $bHalt = true, $bTrim = false)
     {
         // Wrapper around PDO::query() or PDO::prepare()->execute(), if arguments are passed.
         // THIS WRAPPER DOES NOT SUPPORT ANY OF THE MODES!
@@ -162,7 +150,7 @@ class LOVD_PDO extends PDO
 
         if ($aSQL === (array) $aSQL) { // Believe it or not, faster than is_array().
             // We'll do an prepare() and execute(), not a query()!
-            $q = $this->prepare($sSQL, $bHalt); // Error handling by our own PDO class.
+            $q = $this->prepare($sSQL, array(), $bHalt); // Error handling by our own PDO class.
             if ($q) {
                 $b = $q->execute($aSQL, $bHalt, $bTrim); // Error handling by our own PDOStatement class.
                 if (!$b) {
@@ -215,6 +203,9 @@ class LOVD_PDOStatement extends PDOStatement
     // This class provides a wrapper around PDOStatement such that database errors are handled automatically by LOVD and LOVD can use fetch*() features more easily.
     // FIXME; apparently we don't need to call parent::__construct()? I can't get that to work, and this wrapper seems to work without it anyway...
 
+    // Suppress Deprecated notices in PHP8.1, warning us that our method is missing a return type.
+    // This suppression works for PHP <= 8; PHP9 will force us to define return types and therefore, drop PHP5 support.
+    #[\ReturnTypeWillChange]
     function execute ($aSQL = array(), $bHalt = true, $bTrim = false) // Needs first argument as optional because the original function has it as optional.
     {
         // Wrapper around PDOStatement::execute().
@@ -271,7 +262,7 @@ class LOVD_PDOStatement extends PDOStatement
     {
         // Wrapper around PDOStatement::fetchAll(PDO::FETCH_COLUMN).
         // THIS WRAPPER ONLY SUPPORTS THE col number PDOStatement::fetchAll() ARGUMENT!
-        if (!ctype_digit($nCol)) {
+        if (!is_int($nCol) && !ctype_digit($nCol)) {
             $nCol = 0;
         }
         return $this->fetchAll(PDO::FETCH_COLUMN, $nCol);
@@ -285,10 +276,10 @@ class LOVD_PDOStatement extends PDOStatement
     {
         // Wrapper around PDOStatement::fetchAll() that creates an array with one field's
         //  results as the keys and the other field's results as values.
-        if (!ctype_digit($nCol1) && !is_int($nCol1)) {
+        if (!is_int($nCol1) && !ctype_digit($nCol1)) {
             $nCol1 = 0;
         }
-        if (!ctype_digit($nCol2) && !is_int($nCol2)) {
+        if (!is_int($nCol2) && !ctype_digit($nCol2)) {
             $nCol2 = 1;
         }
         // Optimization when using the first column as a key, we can rely on PDO's features.

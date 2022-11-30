@@ -4,10 +4,10 @@
  * LEIDEN OPEN VARIATION DATABASE (LOVD)
  *
  * Created     : 2017-08-15
- * Modified    : 2018-03-15
- * For LOVD+   : 3.0-18
+ * Modified    : 2022-11-30
+ * For LOVD+   : 3.0-29
  *
- * Copyright   : 2004-2018 Leiden University Medical Center; http://www.LUMC.nl/
+ * Copyright   : 2004-2022 Leiden University Medical Center; http://www.LUMC.nl/
  * Programmers : Juny Kesumadewi <juny.kesumadewi@unimelb.edu.au>
  *               Ivo F.A.C. Fokkema <I.F.A.C.Fokkema@LUMC.nl>
  *
@@ -26,7 +26,7 @@ require ROOT_PATH . 'inc-init.php';
 
 
 // Increase DB limits to allow concatenation of large number of gene IDs.
-$_DB->query('SET group_concat_max_len = 500000');
+$_DB->q('SET group_concat_max_len = 500000');
 
 // Fetch all the analysis runs that uses 'apply_selected_gene_panels'.
 print('Fetching all analysis filters to be updated...
@@ -34,7 +34,7 @@ print('Fetching all analysis filters to be updated...
 ob_flush();
 // Quite a complicated way to find out when a gene panel has last been edited, because we never used the gene panel's
 //  edited_date when its genes were modified. That would have saved us a great deal of work in this query.
-$zAnalysisRuns = $_DB->query(
+$zAnalysisRuns = $_DB->q(
     'SELECT
        arf.runid,
        GROUP_CONCAT(

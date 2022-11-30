@@ -7,7 +7,7 @@
  * Modified    : 2019-08-28
  * For LOVD    : 3.0-22
  *
- * Copyright   : 2004-2019 Leiden University Medical Center; http://www.LUMC.nl/
+ * Copyright   : 2004-2022 Leiden University Medical Center; http://www.LUMC.nl/
  * Programmers : Ivo F.A.C. Fokkema <I.F.A.C.Fokkema@LUMC.nl>
  *               Ivar C. Lugtenburg <I.C.Lugtenburg@LUMC.nl>
  *
@@ -38,7 +38,7 @@ if (!$_AUTH) {
     exit;
 }
 
-$_DB->query('UPDATE ' . TABLE_USERS . ' SET phpsessid = "" WHERE id = ?', array($_AUTH['id']), false);
+$_DB->q('UPDATE ' . TABLE_USERS . ' SET phpsessid = "" WHERE id = ?', array($_AUTH['id']), false);
 $nSec = time() - strtotime($_AUTH['last_login']);
 $sCurrDB = $_SESSION['currdb']; // Temp storage.
 $aMapping = (!isset($_SESSION['mapping'])? array() : $_SESSION['mapping']); // Temp storage.

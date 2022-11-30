@@ -4,10 +4,10 @@
  * LEIDEN OPEN VARIATION DATABASE (LOVD)
  *
  * Created     : 2017-06-05
- * Modified    : 2021-11-23
- * For LOVD+   : 3.0-24
+ * Modified    : 2022-11-30
+ * For LOVD+   : 3.0-29
  *
- * Copyright   : 2004-2021 Leiden University Medical Center; http://www.LUMC.nl/
+ * Copyright   : 2004-2022 Leiden University Medical Center; http://www.LUMC.nl/
  * Programmers : Juny Kesumadewi <juny.kesumadewi@unimelb.edu.au>
  *               Ivo F.A.C. Fokkema <I.F.A.C.Fokkema@LUMC.nl>
  *
@@ -53,7 +53,7 @@ $sSQL = 'SELECT DISTINCT vog.`VariantOnGenome/DBID`, vog.`VariantOnGenome/DNA`, 
          FROM ' . TABLE_VARIANTS . ' AS vog 
          INNER JOIN ' . TABLE_SUMMARY_ANNOTATIONS . ' AS sa ON (vog.`VariantOnGenome/DBID` = sa.id)';
 
-$zVariantsData = $_DB->query($sSQL)->fetchAllGroupAssoc();
+$zVariantsData = $_DB->q($sSQL)->fetchAllGroupAssoc();
 foreach ($zVariantsData as $sOldDBID => $zOneVariant) {
     $aMapOldToNew[$sOldDBID] = lovd_fetchDBID($zOneVariant);
 }
@@ -72,7 +72,7 @@ print(date('Y-m-d H:i:s') . ": Finished updating summary annotation records!\n")
 // This step has to be performed BEFORE we update VariantOnGenome/DBID in TABLE_VARIANTS
 print(date('Y-m-d H:i:s') . ": Updating summary annotation log entries...\n");
 $sSQL = 'SELECT date, mtime, event, log FROM ' . TABLE_LOGS . ' WHERE event IN ("SARCreate", "SAREdit")';
-$zLogs = $_DB->query($sSQL)->fetchAllAssoc();
+$zLogs = $_DB->q($sSQL)->fetchAllAssoc();
 
 $qUpdateQuery = $_DB->prepare('UPDATE ' . TABLE_LOGS . ' SET log = ? WHERE event = ? AND date = ? AND mtime = ? AND log = ?');
 foreach ($zLogs as $zOneLogEntry) {
@@ -87,7 +87,7 @@ foreach ($zLogs as $zOneLogEntry) {
                      FROM ' . TABLE_VARIANTS . ' AS vog
                      WHERE vog.`VariantOnGenome/DBID` = ?';
 
-            $zOneVariant = $_DB->query($sSQL, array($sOldDBID))->fetchAssoc();
+            $zOneVariant = $_DB->q($sSQL, array($sOldDBID))->fetchAssoc();
             if ($zOneVariant) {
                 $aMapOldToNew[$sOldDBID] = lovd_fetchDBID($zOneVariant);
             }
@@ -121,14 +121,14 @@ print(date('Y-m-d H:i:s') . ": Finished updating summary annotation log entries!
 // So do a quick SELECT first, and make this as fast as possible.
 // Such a "SELECT 1 ... LIMIT 1" is just as fast as a COUNT(*) when no matches
 //  are found, but much much faster when matches *are* found.
-$bOldDBIDs = (bool) $_DB->query('SELECT 1 FROM ' . TABLE_VARIANTS . ' WHERE BINARY `VariantOnGenome/DBID` REGEXP "^[A-Z]" LIMIT 1')->fetchColumn();
+$bOldDBIDs = (bool) $_DB->q('SELECT 1 FROM ' . TABLE_VARIANTS . ' WHERE BINARY `VariantOnGenome/DBID` REGEXP "^[A-Z]" LIMIT 1')->fetchColumn();
 if ($bOldDBIDs) {
     // At least one old DBID found; run an update, we hope this isn't that many variants.
     print(date('Y-m-d H:i:s') . ": Old LOVD3-style DBIDs found, running one large update query to get rid of those first...\n");
     // Running an update twice over the data is indeed slower, but I don't want to
     //  duplicate the below code and we'll only run this once on Leiden instances only.
     // The "chr?" will make clear it's a invalid value, but will trigger the below code.
-    $nUpdated = $_DB->query('UPDATE ' . TABLE_VARIANTS . ' SET `VariantOnGenome/DBID` = "chr?" WHERE BINARY `VariantOnGenome/DBID` REGEXP "^[A-Z]"')->rowCount();
+    $nUpdated = $_DB->q('UPDATE ' . TABLE_VARIANTS . ' SET `VariantOnGenome/DBID` = "chr?" WHERE BINARY `VariantOnGenome/DBID` REGEXP "^[A-Z]"')->rowCount();
     print(date('Y-m-d H:i:s') . ": Cleaned up $nUpdated old LOVD3-style DBIDs.\n");
 }
 
@@ -136,7 +136,7 @@ if ($bOldDBIDs) {
 
 // The LIKE "ch%" makes sure we don't match any SHA1 results, as that cannot include an 'h'.
 $sSQL = 'SELECT COUNT(id) AS num FROM ' . TABLE_VARIANTS . ' WHERE `VariantOnGenome/DBID` LIKE "ch%"';
-$nRow = $_DB->query($sSQL, array())->fetchColumn();
+$nRow = $_DB->q($sSQL, array())->fetchColumn();
 
 if (!$nRow) {
     print(date('Y-m-d H:i:s') . ": No DBIDs to update!\n");

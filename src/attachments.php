@@ -4,10 +4,10 @@
  * LEIDEN OPEN VARIATION DATABASE (LOVD)
  *
  * Created     : 2017-04-07
- * Modified    : 2017-09-11
- * For LOVD    : 3.0-18
+ * Modified    : 2022-11-30
+ * For LOVD+   : 3.0-29
  *
- * Copyright   : 2004-2017 Leiden University Medical Center; http://www.LUMC.nl/
+ * Copyright   : 2004-2022 Leiden University Medical Center; http://www.LUMC.nl/
  * Programmers : John-Paul Plazzer <johnpaul.plazzer@gmail.com>
  *               Juny Kesumadewi <juny.kesumadewi@unimelb.edu.au>
  *               Ivo F.A.C. Fokkema <I.F.A.C.Fokkema@LUMC.nl>
@@ -123,7 +123,7 @@ if (PATH_COUNT == 2 && ACTION == 'delete') {
     $_T->printTitle();
 
     // Analysis status should be "in progress" and $_AUTH level should be owner or higher.
-    list($nScreeningID, $nAnalysisStatus) = $_DB->query(
+    list($nScreeningID, $nAnalysisStatus) = $_DB->q(
         'SELECT s.id, s.analysis_statusid
          FROM ' . TABLE_SCREENINGS . ' AS s
          INNER JOIN ' . TABLE_SCR2VAR . ' AS s2v 
@@ -217,7 +217,7 @@ if (PATH_COUNT == 2 && ACTION == 'upload') {
     lovd_errorClean();
 
     // Analysis status should be "in progress" and $_AUTH level should be owner or higher.
-    list($nScreeningID, $nAnalysisStatus) = $_DB->query(
+    list($nScreeningID, $nAnalysisStatus) = $_DB->q(
         'SELECT s.id, s.analysis_statusid
          FROM ' . TABLE_SCREENINGS . ' AS s
          INNER JOIN ' . TABLE_SCR2VAR . ' AS s2v 

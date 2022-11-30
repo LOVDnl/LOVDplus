@@ -334,7 +334,7 @@ function getIndividualDBID($aMetadata) {
 
     $aMetadata['individual_exists'] = false;
     $sIndividualID = $aMetadata['Sample_ID'];
-    $sIndDBID = $_DB->query('SELECT `id` FROM ' . TABLE_INDIVIDUALS . ' WHERE `Individual/Sample_ID` = ?', array($sIndividualID))->fetchColumn();
+    $sIndDBID = $_DB->q('SELECT `id` FROM ' . TABLE_INDIVIDUALS . ' WHERE `Individual/Sample_ID` = ?', array($sIndividualID))->fetchColumn();
 
     // If the individual does not already exist in the database, then create it.
     if (!$sIndDBID) {
@@ -350,7 +350,7 @@ function getIndividualDBID($aMetadata) {
 
         // Add in any custom columns for the individual.
         $aIndFields = $aIndFields + getCustomColumnsData('Individual/', $aMetadata);
-        $_DB->query('INSERT INTO ' . TABLE_INDIVIDUALS . ' (`' . implode('`, `', array_keys($aIndFields)) . '`) VALUES (?' . str_repeat(', ?', count($aIndFields) - 1) . ')', array_values($aIndFields));
+        $_DB->q('INSERT INTO ' . TABLE_INDIVIDUALS . ' (`' . implode('`, `', array_keys($aIndFields)) . '`) VALUES (?' . str_repeat(', ?', count($aIndFields) - 1) . ')', array_values($aIndFields));
         $sIndDBID = sprintf('%08d', $_DB->lastInsertId());
     }
 
