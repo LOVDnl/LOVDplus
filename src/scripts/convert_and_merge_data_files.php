@@ -693,12 +693,14 @@ foreach ($aFiles as $sFileID) {
         // VOG/DNA and the position fields.
         lovd_getVariantDescription($aVariant, $aVariant['ref'], $aVariant['alt']);
         // dbSNP.
-        if (!empty($aVariant['VariantOnGenome/dbSNP']) && strpos($aVariant['VariantOnGenome/dbSNP'], ';') !== false) {
+        if (!empty($aVariant['VariantOnGenome/dbSNP'])
+            && (strpos($aVariant['VariantOnGenome/dbSNP'], ';') !== false
+                || strpos($aVariant['VariantOnGenome/dbSNP'], ',') !== false)) {
             // Sometimes we get two dbSNP IDs. Store the first one, only.
-            $aDbSNP = explode(';', $aVariant['VariantOnGenome/dbSNP']);
+            $aDbSNP = preg_split('/[,;&]/', $aVariant['VariantOnGenome/dbSNP']);
             $aVariant['VariantOnGenome/dbSNP'] = $aDbSNP[0];
         } elseif (empty($aVariant['VariantOnGenome/dbSNP']) && !empty($aVariant['existing_variation']) && $aVariant['existing_variation'] != 'unknown') {
-            $aIDs = explode('&', $aVariant['existing_variation']);
+            $aIDs = preg_split('/[,;&]/', $aVariant['existing_variation']);
             foreach ($aIDs as $sID) {
                 if (substr($sID, 0, 2) == 'rs') {
                     $aVariant['VariantOnGenome/dbSNP'] = $sID;
