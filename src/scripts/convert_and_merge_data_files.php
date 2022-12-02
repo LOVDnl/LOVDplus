@@ -968,7 +968,7 @@ foreach ($aFiles as $sFileID) {
                     // Comparison is made without looking at version numbers!
                     if (substr($aTranscript['id'], 0, strpos($aTranscript['id'] . '.', '.')+1) == $aLine['transcript_noversion']) {
                         // Store in database, prepare values.
-                        $sTranscriptName = str_replace($aGenes[$aVariant['symbol']]['name'] . ', ', '', $aTranscript['product']);
+                        $sTranscriptName = str_replace($aGenes[$aVariant['symbol']]['name'] . ', ', '', ($aTranscript['product'] ?: ''));
                         // 2018-06-13; The getTranscriptsAndInfo() feature on NCs has a bug that the product field is empty.
                         if (!$sTranscriptName) {
                             $sTranscriptName = $aTranscript['id'];
