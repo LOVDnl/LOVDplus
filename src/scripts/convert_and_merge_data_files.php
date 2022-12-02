@@ -4,7 +4,7 @@
  * LEIDEN OPEN VARIATION DATABASE (LOVD)
  *
  * Created     : 2014-11-28
- * Modified    : 2022-11-30
+ * Modified    : 2022-12-02
  * For LOVD+   : 3.0-29
  *
  * Copyright   : 2004-2022 Leiden University Medical Center; http://www.LUMC.nl/
@@ -341,7 +341,7 @@ function lovd_getVariantPosition ($sVariant, $aTranscript = array())
 
     if (preg_match('/^[cgmn]\.((?:\-|\*)?\d+)([-+]\d+)?(?:[ACGT]>[ACGT]|(?:_((?:\-|\*)?\d+)([-+]\d+)?)?(?:d(?:el(?:ins)?|up)|inv|ins)(?:[ACGT])*|\[[0-9]+\](?:[ACGT]+)?)$/', $sVariant, $aRegs)) {
         foreach (array(1, 3) as $i) {
-            if (isset($aRegs[$i]) && $aRegs[$i]{0} == '*') {
+            if (isset($aRegs[$i]) && $aRegs[$i][0] == '*') {
                 // Position in 3'UTR. Add CDS offset.
                 if ($aTranscript && isset($aTranscript['position_c_cds_end'])) {
                     $aRegs[$i] = (int) substr($aRegs[$i], 1) + $aTranscript['position_c_cds_end'];
