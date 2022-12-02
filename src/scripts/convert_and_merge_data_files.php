@@ -534,11 +534,11 @@ foreach ($aFiles as $sFileID) {
     }
 
     if (lovd_verifyInstance('leiden')) {
-        $nMiracleID = $_ADAPTER->aMetadata['Individuals']['id_miracle'];
-        if (!$nMiracleID) {
+        if (empty($_ADAPTER->aMetadata['Individuals']['id_miracle'])) {
             lovd_printIfVerbose(VERBOSITY_LOW, 'Error while parsing meta file: Unable to find the Miracle ID.' . "\n");
             continue; // Continue to try the next file.
         }
+        $nMiracleID = $_ADAPTER->aMetadata['Individuals']['id_miracle'];
     }
 
     $_ADAPTER->setScriptVars(compact('nScreeningID', 'nMiracleID'));
