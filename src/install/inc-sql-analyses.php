@@ -4,10 +4,10 @@
  * LEIDEN OPEN VARIATION DATABASE (LOVD)
  *
  * Created     : 2016-07-15
- * Modified    : 2019-07-31
- * For LOVD    : 3.0-18
+ * Modified    : 2022-12-02
+ * For LOVD    : 3.0-29
  *
- * Copyright   : 2004-2019 Leiden University Medical Center; http://www.LUMC.nl/
+ * Copyright   : 2004-2022 Leiden University Medical Center; http://www.LUMC.nl/
  * Programmers : Anthony Marty <anthony.marty@unimelb.edu.au>
  *               Ivo F.A.C. Fokkema <I.F.A.C.Fokkema@LUMC.nl>
  *               Juny Kesumadewi <juny.kesumadewi@unimelb.edu.au>
@@ -51,7 +51,7 @@ switch ($_INI['instance']['name']) {
                   (2, 2, "Gene panel",              "Filters for coding or splice site variants within the gene panel.", 2, 0, NOW(), NULL, NULL),
                   (3, 3, "X-linked recessive",      "Filters for X-linked recessive variants, not found in father, not homozygous in mother. High frequencies (> 3%) are also filtered out.", 2, 0, NOW(), NULL, NULL),
                   (4, 4, "Recessive (gene panel)",  "Filters for recessive variants, homozygous or compound heterozygous in patient, but not in the parents. High frequencies (> 3%) are also filtered out.", 2, 0, NOW(), NULL, NULL),
-                  (5, 5, "Recessive (whole exome)", "Filters for recessive variants, homozygous or compound heterozygous in patient, but not in the parents. High frequencies (> 3%) are also filtered out, and the gene black list is applied.", 2, 0, NOW(), NULL, NULL),
+                  (5, 5, "Recessive (whole exome)", "Filters for recessive variants, homozygous or compound heterozygous in patient, but not in the parents. High frequencies (> 3%) are also filtered out, and the gene black list is applied.", 3, 0, NOW(), NULL, NULL),
                   (6, 6, "Imprinted genes",         "Filters for variants found in imprinted genes.", 3, 0, NOW(), NULL, NULL),
                   (7, 7, "Mosaic",                  "Filters for mosaic variants.", 2, 0, NOW(), NULL, NULL)',
                 'INSERT INTO ' . TABLE_ANALYSIS_FILTERS . ' (`id`, `name`, `description`, `has_config`) VALUES 
@@ -149,24 +149,23 @@ switch ($_INI['instance']['name']) {
                   (4, "select_homozygous_or_heterozygous_not_from_one_parent", 18),
                   (5, "cross_screenings", 1),
                   (5, "remove_by_quality_lte_100", 2),
-                  (5, "select_gatkcaller_ug_hc", 3),
-                  (5, "remove_by_indb_count_hc_gte_5", 4),
-                  (5, "remove_by_indb_count_ug_gte_5", 5),
-                  (5, "remove_by_indb_count_hc_gte_2", 6),
-                  (5, "remove_by_indb_count_ug_gte_2", 7),
-                  (5, "remove_with_any_frequency_gt_3", 8),
-                  (5, "remove_variants_hom_in_father", 9),
-                  (5, "remove_variants_hom_in_mother", 10),
-                  (5, "remove_intronic_distance_gt_8", 11),
-                  (5, "remove_intronic_distance_gt_2", 12),
-                  (5, "remove_by_function_utr3", 13),
-                  (5, "remove_by_function_utr5", 14),
-                  (5, "remove_by_function_utr_or_intronic", 15),
-                  (5, "remove_by_function_coding_synonymous", 16),
-                  (5, "remove_by_function_utr_or_intronic_or_synonymous", 17),
-                  (5, "remove_missense_with_phylop_lte_2.5", 18),
-                  (5, "select_homozygous_or_heterozygous_not_from_one_parent", 19),
-                  (5, "remove_in_gene_blacklist", 20),
+                  (5, "remove_by_indb_count_hc_gte_5", 3),
+                  (5, "remove_by_indb_count_ug_gte_5", 4),
+                  (5, "remove_by_indb_count_hc_gte_2", 5),
+                  (5, "remove_by_indb_count_ug_gte_2", 6),
+                  (5, "remove_with_any_frequency_gt_3", 7),
+                  (5, "remove_variants_hom_in_father", 8),
+                  (5, "remove_variants_hom_in_mother", 9),
+                  (5, "remove_intronic_distance_gt_8", 10),
+                  (5, "remove_intronic_distance_gt_2", 11),
+                  (5, "remove_by_function_utr3", 12),
+                  (5, "remove_by_function_utr5", 13),
+                  (5, "remove_by_function_utr_or_intronic", 14),
+                  (5, "remove_by_function_coding_synonymous", 15),
+                  (5, "remove_by_function_utr_or_intronic_or_synonymous", 16),
+                  (5, "remove_missense_with_phylop_lte_2.5", 17),
+                  (5, "select_homozygous_or_heterozygous_not_from_one_parent", 18),
+                  (5, "remove_in_gene_blacklist", 19),
                   (6, "apply_selected_gene_panels", 1),
                   (6, "cross_screenings", 2),
                   (6, "remove_by_quality_lte_100", 3),
