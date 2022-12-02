@@ -208,7 +208,7 @@ function lovd_convertBytesToHRSize ($nValue)
 {
     // This function takes integers and converts it to sizes like "128M".
 
-    if (!ctype_digit($nValue) && !is_int($nValue)) {
+    if (!is_int($nValue) && !ctype_digit($nValue)) {
         return false;
     }
 
