@@ -4,7 +4,7 @@
  * LEIDEN OPEN VARIATION DATABASE (LOVD)
  *
  * Created     : 2014-11-28
- * Modified    : 2022-12-02
+ * Modified    : 2022-12-05
  * For LOVD+   : 3.0-29
  *
  * Copyright   : 2004-2022 Leiden University Medical Center; http://www.LUMC.nl/
@@ -733,14 +733,6 @@ foreach ($aFiles as $sFileID) {
 
         if (lovd_verifyInstance('leiden')) {
             // Some percentages we get need to be turned into decimals before it can be stored.
-            // 2015-10-28; Because of the double column mappings, we ended up with values divided twice.
-            // Flipping the array makes sure we get rid of double mappings.
-            foreach (array_flip($aColumnMappings) as $sLOVDColumn => $sVEPColumn) {
-                if (!empty($aVariant[$sLOVDColumn])
-                    && ($sVEPColumn == 'AFESP5400' || $sVEPColumn == 'ALTPERC' || strpos($sVEPColumn, 'ALTPERC_') === 0)) {
-                    $aVariant[$sLOVDColumn] /= 100;
-                }
-            }
         } else {
             // Calculate ALTPERC cols, if we can.
             foreach (array('', '/Father', '/Mother') as $sColPart) {
