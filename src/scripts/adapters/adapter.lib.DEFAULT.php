@@ -156,7 +156,7 @@ $_INSTANCE_CONFIG['conversion'] = array(
     'annotation_error_max_allowed' => 50, // Maximum number of errors with VOTs before the script dies anyway.
     'create_genes_and_transcripts' => true, // Allow automatic creation of genes, allow automatic creation of transcripts.
     'create_meta_file_if_missing' => true, // Should LOVD+ just create a meta file with default settings if it's missing?
-    'check_indel_description' => true, // Should we check all indels using Mutalyzer? Vep usually does a bad job at them.
+    'check_indel_description' => false, // Should we check all indels using Mutalyzer? Some versions of VEP do a bad job at them.
     'enforce_hgnc_gene' => true, // Enforce gene to exist in the HGNC (requires use_hgnc = true).
     'use_hgnc' => true, // Use the HGNC to collect gene information, and detect gene aliases (requires create_genes_and_transcripts = true).
     'verbosity_cron' => 5, // How verbose should we be when running through cron? (default: 5; currently supported: 0,3,5,7,9)
