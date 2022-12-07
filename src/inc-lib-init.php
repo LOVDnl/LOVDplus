@@ -1955,7 +1955,7 @@ function lovd_getVariantInfo ($sVariant, $sTranscriptID = '', $bCheckHGVS = fals
         }
 
     } elseif ($aResponse['type'] == 'repeat' && $aVariant['prefix'] == 'c') {
-        foreach(explode('[', $aVariant['type']) as $sRepeat) {
+        foreach (explode('[', $aVariant['type']) as $sRepeat) {
             if (ctype_alpha($sRepeat) && strlen($sRepeat) % 3) {
                 // Repeat variants on coding DNA should always have
                 //  a length of a multiple of three bases.

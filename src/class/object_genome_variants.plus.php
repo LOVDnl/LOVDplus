@@ -4,10 +4,10 @@
  * LEIDEN OPEN VARIATION DATABASE (LOVD)
  *
  * Created     : 2014-04-03
- * Modified    : 2019-10-09
- * For LOVD    : 3.0-22
+ * Modified    : 2022-12-07
+ * For LOVD    : 3.0-29
  *
- * Copyright   : 2004-2019 Leiden University Medical Center; http://www.LUMC.nl/
+ * Copyright   : 2004-2022 Leiden University Medical Center; http://www.LUMC.nl/
  * Programmer  : Ivo F.A.C. Fokkema <I.F.A.C.Fokkema@LUMC.nl>
  *
  *
@@ -131,7 +131,7 @@ class LOVD_GenomeVariantPLUS extends LOVD_GenomeVariant
         // Remove all except the remarks.
         $aFormFiltered = array();
 
-        foreach($aForm as $sCol => $val) {
+        foreach ($aForm as $sCol => $val) {
             if (strpos($sCol, 'VariantOnGenome/Curation/') !== false) {
                 $aFormFiltered[$sCol] = $aForm[$sCol];
             }

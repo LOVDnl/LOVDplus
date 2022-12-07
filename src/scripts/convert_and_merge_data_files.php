@@ -4,7 +4,7 @@
  * LEIDEN OPEN VARIATION DATABASE (LOVD)
  *
  * Created     : 2014-11-28
- * Modified    : 2022-12-05
+ * Modified    : 2022-12-07
  * For LOVD+   : 3.0-29
  *
  * Copyright   : 2004-2022 Leiden University Medical Center; http://www.LUMC.nl/
@@ -958,7 +958,7 @@ foreach ($aFiles as $sFileID) {
                 }
 
                 // Loop transcript options, add the one we need.
-                foreach($aTranscriptInfo as $aTranscript) {
+                foreach ($aTranscriptInfo as $aTranscript) {
                     // Comparison is made without looking at version numbers!
                     if (substr($aTranscript['id'], 0, strpos($aTranscript['id'] . '.', '.')+1) == $aLine['transcript_noversion']) {
                         // Store in database, prepare values.

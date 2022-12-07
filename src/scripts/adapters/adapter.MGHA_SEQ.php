@@ -62,7 +62,7 @@ $aBatchFolders = validateBatchFolders($aAllMetadata);
 print("> Batch folders names validated\n");
 
 // Loop through each batch folder to be processed
-foreach($aBatchFolders as $sBatchFolderName => $aBatchData) {
+foreach ($aBatchFolders as $sBatchFolderName => $aBatchData) {
     print("> Processing " . $sBatchFolderName . "\n");
 
     $aMetadata = $aAllMetadata[$aBatchData['metadataKey']];
@@ -600,7 +600,7 @@ function validateMetaDataFile($sPath) {
         exit(ERROR_MISSING_FILES);
     }
 
-    foreach($aMetadataFiles as $sFileName) {
+    foreach ($aMetadataFiles as $sFileName) {
         return $sFileName;
     }
 

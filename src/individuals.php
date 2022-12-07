@@ -636,7 +636,7 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && in_array(ACTION, array('curate', 
             $aSQL = array();
 
             $sCurationLog = ''; // Log to show any changes to the curation data.
-            foreach($_POST as $sCol => $val) {
+            foreach ($_POST as $sCol => $val) {
                 // Process any of the curation custom columns.
                 if ($sCol == 'Individual/Remarks' || strpos($sCol, 'Individual/Curation/') !== false) {
                     $sSQL .= ', `' . $sCol . '` = ?';
@@ -1081,7 +1081,7 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && !ACTION) {
         //  phenotype entry for a disease they don't have.
         $zData['diseases'] = $_DB->q('SELECT id, symbol, name FROM ' . TABLE_DISEASES . ' WHERE id IN (?' . str_repeat(', ?', count($zData['phenotypes'])-1) . ')', $zData['phenotypes'])->fetchAllRow();
         require ROOT_PATH . 'class/object_phenotypes.php';
-        foreach($zData['diseases'] as $aDisease) {
+        foreach ($zData['diseases'] as $aDisease) {
             list($nDiseaseID, $sSymbol, $sName) = $aDisease;
             if (in_array($nDiseaseID, $zData['phenotypes'])) {
                 $_GET['search_diseaseid'] = $nDiseaseID;
@@ -1613,7 +1613,7 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && ACTION == 'edit_panels') {
         // Not submitted, set default values for this form.
         $_POST = array_merge($_POST, $zData);
 
-        if(empty($_POST['gene_panels'])) {
+        if (empty($_POST['gene_panels'])) {
             $_POST['gene_panels'] = array();
         }
 

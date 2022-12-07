@@ -4,7 +4,7 @@
  * LEIDEN OPEN VARIATION DATABASE (LOVD)
  *
  * Created     : 2016-03-01
- * Modified    : 2022-11-30
+ * Modified    : 2022-12-07
  * For LOVD+   : 3.0-29
  *
  * Copyright   : 2004-2022 Leiden University Medical Center; http://www.LUMC.nl/
@@ -276,7 +276,7 @@ class LOVD_GenePanel extends LOVD_Object
             // Associated with diseases...
             $zData['diseases_'] = '';
             $zData['disease_omim_'] = '';
-            foreach($zData['diseases'] as $aDisease) {
+            foreach ($zData['diseases'] as $aDisease) {
                 list($nID, $nOMIMID, $sSymbol, $sName) = $aDisease;
                 // Link to disease entry in LOVD.
                 $zData['diseases_'] .= (!$zData['diseases_']? '' : ', ') . '<A href="diseases/' . $nID . '">' . $sSymbol . '</A>';

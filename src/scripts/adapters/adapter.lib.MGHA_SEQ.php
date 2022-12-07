@@ -490,7 +490,7 @@ class LOVD_MghaSeqDataConverter extends LOVD_DefaultDataConverter {
 
 
 
-        foreach($aFreqColumns as $sFreqColumn) {
+        foreach ($aFreqColumns as $sFreqColumn) {
 
             if ($aLine[$sFreqColumn] == 'unknown' || $aLine[$sFreqColumn] == '' || $sAlt == '' || empty($sAlt) || strlen($sAlt) == 0) {
                 $aLine[$sFreqColumn] = '';
