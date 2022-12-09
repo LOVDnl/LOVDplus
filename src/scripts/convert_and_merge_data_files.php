@@ -326,69 +326,6 @@ function lovd_getVariantDescription (&$aVariant, $sRef, $sAlt)
 
 
 
-// FIXME: Replace by lovd_getVariantInfo()?
-function lovd_getVariantPosition ($sVariant, $aTranscript = array())
-{
-    // Constructs an array with the position fields 'start', 'start_intron', 'end', 'end_intron', from the variant description.
-    // Whether the input is chromosomal or transcriptome positions, doesn't matter.
-
-    $aReturn = array(
-        'start' => 0,
-        'start_intron' => 0,
-        'end' => 0,
-        'end_intron' => 0,
-    );
-
-    if (preg_match('/^[cgmn]\.((?:\-|\*)?\d+)([-+]\d+)?(?:[ACGT]>[ACGT]|(?:_((?:\-|\*)?\d+)([-+]\d+)?)?(?:d(?:el(?:ins)?|up)|inv|ins)(?:[ACGT])*|\[[0-9]+\](?:[ACGT]+)?)$/', $sVariant, $aRegs)) {
-        foreach (array(1, 3) as $i) {
-            if (isset($aRegs[$i]) && $aRegs[$i][0] == '*') {
-                // Position in 3'UTR. Add CDS offset.
-                if ($aTranscript && isset($aTranscript['position_c_cds_end'])) {
-                    $aRegs[$i] = (int) substr($aRegs[$i], 1) + $aTranscript['position_c_cds_end'];
-                } else {
-                    // Whatever we'll do, it will be wrong anyway.
-                    return $aReturn;
-                }
-            }
-        }
-
-        $aReturn['start'] = (int) $aRegs[1];
-        if (isset($aRegs[2]) && $aRegs[2]) {
-            $aReturn['start_intron'] = (int) $aRegs[2]; // (int) to get rid of the '+' if it's there.
-        }
-        if (isset($aRegs[4]) && $aRegs[4]) {
-            $aReturn['end_intron'] = (int) $aRegs[4]; // (int) to get rid of the '+' if it's there.
-        }
-        if (isset($aRegs[3])) {
-            $aReturn['end'] = (int) $aRegs[3];
-        } else {
-            $aReturn['end'] = $aReturn['start'];
-            $aReturn['end_intron'] = $aReturn['start_intron'];
-        }
-
-        // If a variant is described poorly with a start > end, then we'll swap the positions so we will store them correctly.
-        if ($aReturn['start'] > $aReturn['end']) {
-            // There's many ways of doing this, but this method is the simplest to read.
-            $nTmp = $aReturn['start'];
-            $aReturn['start'] = $aReturn['end'];
-            $aReturn['end'] = $nTmp;
-
-            // And intronic, if needed.
-            if ($aReturn['start_intron'] || $aReturn['end_intron']) {
-                $nTmp = $aReturn['start_intron'];
-                $aReturn['start_intron'] = $aReturn['end_intron'];
-                $aReturn['end_intron'] = $nTmp;
-            }
-        }
-    }
-
-    return $aReturn;
-}
-
-
-
-
-
 // Run the "adapter" script for this instance, that will run actions that are meant to be run before anything else is done.
 $sInstanceName = strtoupper($_INI['instance']['name']);
 $sAdaptersDir = $_ADAPTER->sAdapterPath;
@@ -1187,7 +1124,29 @@ foreach ($aFiles as $sFileID) {
             }
 
             // For the position fields, VEP can generate data (CDS_position), but it's hardly usable. Calculate ourselves.
-            list($aVariant['position_c_start'], $aVariant['position_c_start_intron'], $aVariant['position_c_end'], $aVariant['position_c_end_intron']) = array_values(lovd_getVariantPosition($aVariant['VariantOnTranscript/DNA'], $aTranscripts[$aVariant['transcriptid']]));
+            // 2022-12-09; Updated to use LOVD's lovd_getVariantInfo() instead of LOVD+'s lovd_getVariantPosition().
+            // However, Mutalyzer gives us positions that aren't possible like n.-100 and n.*100. This happens when a
+            //  variant can't actually be mapped to a transcript. lovd_getVariantInfo() is too smart and doesn't allow
+            //  this and returns 0 as position. This won't allow us to sort these variants in the views. Therefore,
+            //  better manipulate lovd_getVariantInfo() to anyway get us positions by making it think we're submitting
+            //  c. variants.
+            $aVariantInfo = lovd_getVariantInfo(
+                str_replace('n.', 'c.', $aVariant['VariantOnTranscript/DNA']),
+                $aTranscripts[$aVariant['transcriptid']]
+            );
+            if ($aVariantInfo) {
+                list(
+                    $aVariant['position_c_start'],
+                    $aVariant['position_c_start_intron'],
+                    $aVariant['position_c_end'],
+                    $aVariant['position_c_end_intron']
+                ) = array(
+                    $aVariantInfo['position_start'],
+                    (empty($aVariantInfo['position_start_intron'])? 0 : $aVariantInfo['position_start_intron']),
+                    $aVariantInfo['position_end'],
+                    (empty($aVariantInfo['position_end_intron'])? 0 : $aVariantInfo['position_end_intron']),
+                );
+            }
 
             // VariantOnTranscript/Position is an integer column; so just copy the c_start.
             $aVariant['VariantOnTranscript/Position'] = $aVariant['position_c_start'];
