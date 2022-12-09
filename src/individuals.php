@@ -81,7 +81,7 @@ if (PATH_COUNT == 1 && !ACTION) {
 
     require ROOT_PATH . 'class/object_individuals.plus.php';
     $_DATA = new LOVD_IndividualPLUS();
-    $_DATA->setRowLink('Individuals', 'javascript:window.location.href=\'' . lovd_getInstallURL() . $_PE[0] . '/{{id}}/analyze/{{screeningid}}\'; return false');
+    $_DATA->setRowLink('Individuals', CURRENT_PATH . '/{{id}}/analyze/{{screeningid}}');
     $aVLOptions = array(
         'show_options' => (bool) ($_AUTH['level'] >= LEVEL_MANAGER),
     );
@@ -206,7 +206,7 @@ if (PATH_COUNT >= 2 && ctype_digit($_PE[1]) && !ACTION && (PATH_COUNT == 2 || PA
     $_DATA = new LOVD_ScreeningPLUS();
     $_DATA->setSortDefault('id');
     $_DATA->setRowID('Screenings_for_I_VE', 'Screening_{{screeningid}}');
-    $_DATA->setRowLink('Screenings_for_I_VE', 'javascript:window.location.href=\'' . lovd_getInstallURL() . $_PE[0] . '/' . $nID . '/analyze/{{screeningid}}\'; return false');
+    $_DATA->setRowLink('Screenings_for_I_VE', $_PE[0] . '/' . $nID . '/analyze/{{screeningid}}');
     // Restrict the columns of this VL, if given.
     if (isset($_INSTANCE_CONFIG['viewlists']['Screenings_for_I_VE']['cols_to_show'])) {
         $_DATA->setViewListCols($_INSTANCE_CONFIG['viewlists']['Screenings_for_I_VE']['cols_to_show']);

@@ -198,7 +198,7 @@ if (PATH_COUNT == 1 && !ACTION) {
     require ROOT_PATH . 'class/object_gene_statistics.php';
     $_DATA = new LOVD_GeneStatistic();
     // Redirect the link when clicking on genes to the genes info page.
-    //$_DATA->setRowLink($sViewListID, ROOT_PATH . 'genes/' . $_DATA->sRowID);
+    //$_DATA->setRowLink($sViewListID, 'genes/' . $_DATA->sRowID);
     // Bold the row when clicked. Not sure if this is better or going to the gene info is better. It might get annoying going away from this page as you lose the work you have done.
     $_DATA->setRowLink($sViewListID, 'javascript:$(\'#{{id}}\').toggleClass(\'colGreen\');');
     // Allow users to download this gene statistics selected gene list.

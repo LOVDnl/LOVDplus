@@ -4,7 +4,7 @@
  * LEIDEN OPEN VARIATION DATABASE (LOVD)
  *
  * Created     : 2016-03-01
- * Modified    : 2022-11-30
+ * Modified    : 2022-12-09
  * For LOVD+   : 3.0-29
  *
  * Copyright   : 2004-2022 Leiden University Medical Center; http://www.LUMC.nl/
@@ -1456,7 +1456,7 @@ if (PATH_COUNT == 1 && ACTION == 'add') {
     require ROOT_PATH . 'class/object_gene_panels.php';
     $_DATA = new LOVD_GenePanel();
     // Set the row link URL to point to the gene panel genes management along with the required $_GET values.
-    $_DATA->setRowLink('GenePanelSelect', 'javascript:window.location.href=\'' . lovd_getInstallURL() . 'gene_panels/{{id}}?manage_genes&select_genes_from=' . $sViewListID . '\'; return false');
+    $_DATA->setRowLink('GenePanelSelect', CURRENT_PATH . '/{{id}}?manage_genes&select_genes_from=' . $sViewListID);
     $_DATA->viewList('GenePanelSelect', array('show_options' => true));
 
     $_T->printFooter();
