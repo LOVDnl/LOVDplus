@@ -1216,8 +1216,6 @@ foreach ($aFiles as $sFileID) {
                     // VEP has p. notation, but without parentheses around them (see https://github.com/Ensembl/ensembl-vep/issues/498).
                     $aVariant['VariantOnTranscript/Protein'] = str_replace('p.', 'p.(', $aVariant['VariantOnTranscript/Protein'] . ')');
                 }
-                // VEP uses "Ter" where they should be using "*".
-                $aVariant['VariantOnTranscript/Protein'] = str_replace('Ter', '*', $aVariant['VariantOnTranscript/Protein']);
             } elseif (in_array(substr($aTranscripts[$aVariant['transcriptid']]['id_ncbi'], 0, 2), array('NR', 'XR'))) {
                 // Non coding transcript, no wonder we didn't get a protein field.
                 $aVariant['VariantOnTranscript/RNA'] = 'r.(?)';
