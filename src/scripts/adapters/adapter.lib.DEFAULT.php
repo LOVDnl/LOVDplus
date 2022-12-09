@@ -4,10 +4,10 @@
  * LEIDEN OPEN VARIATION DATABASE (LOVD)
  *
  * Created     : 2016-09-02
- * Modified    : 2020-09-09
- * For LOVD    : 3.0-24
+ * Modified    : 2022-12-09
+ * For LOVD    : 3.0-29
  *
- * Copyright   : 2004-2020 Leiden University Medical Center; http://www.LUMC.nl/
+ * Copyright   : 2004-2022 Leiden University Medical Center; http://www.LUMC.nl/
  * Programmers : Juny Kesumadewi <juny.kesumadewi@unimelb.edu.au>
  *               Ivo F.A.C. Fokkema <I.F.A.C.Fokkema@LUMC.nl>
  *
@@ -792,7 +792,11 @@ class LOVD_DefaultDataConverter {
         // near-gene-3 (nowadays: downstream-gene)
         // non-coding-exon
         // non-coding-exon-near-splice
-        // non-coding-intron-near-splice (CREATE THIS OURSELVES)
+        // non-coding-intron-near-splice (CREATED THIS OURSELVES)
+
+        // 2022-12-09; GenomeScan's annotation now also adds "transcript_variant". VEP doesn't know this. We don't
+        //  translate it, because I wouldn't know where to translate it to. Our GVS field isn't a selection list,
+        //  so "transcript_variant" will just be accepted during import.
 
         // This function loops quite a lot, and it would be more efficient if we'd store the results of the output.
         // Caching it will prevent lots of lookups, especially in big files.
@@ -835,6 +839,8 @@ class LOVD_DefaultDataConverter {
             'stop_lost' => 'stop-lost',
             'coding_sequence_variant&3_prime_UTR_variant' => 'codingComplex', // vep2lovd defined this, only found in ENSG.
             'coding_sequence_variant&5_prime_UTR_variant' => 'codingComplex', // vep2lovd defined this, only found in ENSG.
+            'splice_region_variant&3_prime_UTR_variant' => 'splice_region_variant',
+            'splice_region_variant&5_prime_UTR_variant' => 'splice_region_variant',
             '5_prime_UTR_variant' => 'utr-5',
             '3_prime_UTR_variant' => 'utr-3',
             'upstream_gene_variant' => 'utr-5',
