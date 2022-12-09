@@ -1441,7 +1441,7 @@ if (PATH_COUNT == 1 && ACTION == 'add') {
         $sViewListID = $_GET['select_genes_from'];
     } else {
         // We have not been provided with a viewlistid.
-        lovd_showInfoTable('Must supply a view list ID!', 'stop');
+        lovd_showInfoTable('You must specify where to select genes from!', 'stop');
         $_T->printFooter();
         exit;
     }
