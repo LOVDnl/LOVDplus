@@ -4,10 +4,10 @@
  * LEIDEN OPEN VARIATION DATABASE (LOVD)
  *
  * Created     : 2013-11-05
- * Modified    : 2018-03-26
- * For LOVD    : 3.0-18
+ * Modified    : 2022-12-07
+ * For LOVD    : 3.0-29
  *
- * Copyright   : 2004-2018 Leiden University Medical Center; http://www.LUMC.nl/
+ * Copyright   : 2004-2022 Leiden University Medical Center; http://www.LUMC.nl/
  * Programmers : Ivo F.A.C. Fokkema <I.F.A.C.Fokkema@LUMC.nl>
  *               Anthony Marty <anthony.marty@unimelb.edu.au>
  *               Juny Kesumadewi <juny.kesumadewi@unimelb.edu.au>
@@ -304,7 +304,7 @@ function lovd_processGenePanelSelectionForm ()
     // Processes the popover form that selects the gene panels for a particular analysis.
 
     // Get all the values from the checked checkboxes and read them into an array.
-    aSelectedGenePanels = $("#gene_panel_selection_form input:checkbox:checked").map(function(){
+    aSelectedGenePanels = $("#gene_panel_selection_form input:checkbox:checked").map(function() {
         return $(this).val();
     }).get();
 

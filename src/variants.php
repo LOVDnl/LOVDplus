@@ -410,7 +410,7 @@ if (!ACTION && !empty($_PE[1]) && !ctype_digit($_PE[1])) {
         if ($bUnique) {
             // When this ViewListID is changed, also change the prepareData in object_custom_viewluists.php
             $_DATA = new LOVD_CustomViewList(array('VariantOnTranscriptUnique', 'VariantOnGenome'), $sGene); // Restrict view to gene (correct custom column set, correct order).
-            $_DATA->setRowLink($sViewListID, 'variants/' . $sGene . '?search_position_c_start={{position_c_start}}&search_position_c_start_intron={{position_c_start_intron}}&search_position_c_end={{position_c_end}}&search_position_c_end_intron={{position_c_end_intron}}&search_vot_clean_dna_change=%3D%22{{vot_clean_dna_change}}%22&search_transcriptid={{transcriptid}}');
+            $_DATA->setRowLink($sViewListID, str_replace('/unique', '', CURRENT_PATH) . '?search_position_c_start={{position_c_start}}&search_position_c_start_intron={{position_c_start_intron}}&search_position_c_end={{position_c_end}}&search_position_c_end_intron={{position_c_end_intron}}&search_vot_clean_dna_change=%3D%22{{vot_clean_dna_change}}%22&search_transcriptid={{transcriptid}}');
         } else {
             $_DATA = new LOVD_CustomViewList(array('VariantOnTranscript', 'VariantOnGenome'), $sGene); // Restrict view to gene (correct custom column set, correct order).
         }
@@ -905,7 +905,7 @@ if ((empty($_PE[1]) || $_PE[1] == 'upload') && ACTION == 'create') {
             $bSubmit = true;
             $aSubmit = &$_AUTH['saved_work']['submissions']['screening'][$_POST['screeningid']];
         } elseif (isset($_POST['screeningid']) && isset($_AUTH['saved_work']['submissions']['individual'])) {
-            foreach($_AUTH['saved_work']['submissions']['individual'] as $nIndividualID => &$aSubmit) {
+            foreach ($_AUTH['saved_work']['submissions']['individual'] as $nIndividualID => &$aSubmit) {
                 if (isset($aSubmit['screenings']) && in_array($_POST['screeningid'], $aSubmit['screenings'])) {
                     $bSubmit = true;
                     break;
@@ -981,7 +981,7 @@ if (PATH_COUNT == 1 && ACTION == 'create') {
         require ROOT_PATH . 'class/object_genes.php';
         $_GET['page_size'] = 10;
         $_DATA = new LOVD_Gene();
-        $_DATA->setRowLink($sViewListID, 'variants?create&reference=Transcript&geneid=' . $_DATA->sRowID . ($_GET['target']? '&target=' . $_GET['target'] : ''));
+        $_DATA->setRowLink($sViewListID, CURRENT_PATH . '?' . ACTION . '&reference=Transcript&geneid=' . $_DATA->sRowID . ($_GET['target']? '&target=' . $_GET['target'] : ''));
         $_GET['search_transcripts'] = '>0';
         print('      <DIV id="container" style="display : none;">' . "\n"); // Extra div is to prevent "No entries in the database yet!" error to show up if there are no genes in the database yet.
         lovd_showInfoTable('Please find the gene for which you wish to submit this variant below, using the search fields if needed. <B>Click on the gene to proceed to the variant entry form</B>.<BR>If a gene is not shown in this display, but it does exist in this LOVD, then it does not have a transcript configured yet.', 'information', 600);
@@ -1090,7 +1090,7 @@ if (PATH_COUNT == 1 && ACTION == 'create') {
 
             if (isset($sGene)) {
                 $_POST['id'] = $nID;
-                foreach($_POST['aTranscripts'] as $nTranscriptID => $aTranscript) {
+                foreach ($_POST['aTranscripts'] as $nTranscriptID => $aTranscript) {
                     if (!empty($_POST[$nTranscriptID . '_VariantOnTranscript/DNA']) && strlen($_POST[$nTranscriptID . '_VariantOnTranscript/DNA']) >= 6) {
                         // 2017-09-22; 3.0-20; Replacing the old API call to Mutalyzer with our new lovd_getVariantInfo() function.
                         // Don't bother with a fallback, this thing is more solid than Mutalyzer's service.
@@ -1236,7 +1236,7 @@ if (PATH_COUNT == 1 && ACTION == 'create') {
 
     if (isset($sGene)) {
         $i = 0;
-        foreach($_DATA['Transcript'][$sGene]->aTranscripts as $nTranscriptID => $aTranscript) {
+        foreach ($_DATA['Transcript'][$sGene]->aTranscripts as $nTranscriptID => $aTranscript) {
             list($sTranscriptNM, $sGeneSymbol, $sMutalyzerID) = $aTranscript;
             echo ($i? ',' . "\n" : '') . '            \'' . $nTranscriptID . '\' : [\'' . $sTranscriptNM . '\', \'' . $sGeneSymbol . '\', \'' . $sMutalyzerID . '\']';
             $i++;
@@ -1576,7 +1576,7 @@ if (PATH_COUNT == 2 && $_PE[1] == 'upload' && ACTION == 'create') {
             lovd_errorAdd('', 'There was an unknown problem with receiving the file properly, possibly because of the current server settings. If the problem persists, contact the database administrator.');
         }
 
-        if(!lovd_error()) {
+        if (!lovd_error()) {
             // No problems found. Start processing the file.
 
             // Initiate progress bar.
@@ -2824,7 +2824,7 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && in_array(ACTION, array('edit', 'p
                 }
 
                 // Remove the MAPPING_NOT_RECOGNIZED and MAPPING_DONE flags if the VariantOnGenome/DNA field changes.
-                $_POST['mapping_flags'] = $zData['mapping_flags'] & ~(MAPPING_NOT_RECOGNIZED | MAPPING_DONE);
+                $_POST['mapping_flags'] = (int) $zData['mapping_flags'] & ~(MAPPING_NOT_RECOGNIZED | MAPPING_DONE);
                 if (!$_POST['position_g_start']) {
                     // We couldn't get a position, mapping will fail.
                     $_POST['mapping_flags'] |= MAPPING_NOT_RECOGNIZED;
@@ -2849,7 +2849,7 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && in_array(ACTION, array('edit', 'p
             $_DATA['Genome']->updateEntry($nID, $_POST, $aFieldsGenome);
 
             if ($bGene) {
-                foreach($_POST['aTranscripts'] as $nTranscriptID => $aTranscript) {
+                foreach ($_POST['aTranscripts'] as $nTranscriptID => $aTranscript) {
                     if (!empty($_POST[$nTranscriptID . '_VariantOnTranscript/DNA']) && ($_POST[$nTranscriptID . '_VariantOnTranscript/DNA'] != $zData[$nTranscriptID . '_VariantOnTranscript/DNA'] || $zData[$nTranscriptID . '_position_c_start'] === NULL)) {
                         // 2017-09-22; 3.0-20; Replacing the old API call to Mutalyzer with our new lovd_getVariantInfo() function.
                         // Don't bother with a fallback, this thing is more solid than Mutalyzer's service.
@@ -2927,7 +2927,7 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && in_array(ACTION, array('edit', 'p
         }
         if ($bGene) {
             foreach ($aGenes as $sGene) {
-                foreach($_DATA['Transcript'][$sGene]->aTranscripts as $nTranscriptID => $aTranscript) {
+                foreach ($_DATA['Transcript'][$sGene]->aTranscripts as $nTranscriptID => $aTranscript) {
                     $_POST[$nTranscriptID . '_effect_reported'] = $zData[$nTranscriptID . '_effectid'][0];
                     $_POST[$nTranscriptID . '_effect_concluded'] = $zData[$nTranscriptID . '_effectid'][1];
                 }
@@ -2978,7 +2978,7 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && in_array(ACTION, array('edit', 'p
           '        var aUDrefseqs = {' . "\n");
     if ($bGene) {
         $i=0;
-        foreach($aGenes as $sGene) {
+        foreach ($aGenes as $sGene) {
             echo ($i? ',' . "\n" : '') . '            \'' . $sGene . '\' : \'' . $_DB->q('SELECT refseq_UD FROM ' . TABLE_GENES . ' WHERE id = ?', array($sGene))->fetchColumn() . '\'';
             $i++;
         }
@@ -2987,7 +2987,7 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && in_array(ACTION, array('edit', 'p
           '        var aTranscripts = {' . "\n");
     $i = 0;
     if ($bGene) {
-        foreach($_DATA['Transcript'][$sGene]->aTranscripts as $nTranscriptID => $aTranscript) {
+        foreach ($_DATA['Transcript'][$sGene]->aTranscripts as $nTranscriptID => $aTranscript) {
             list($sTranscriptNM, $sGeneSymbol, $sMutalyzerID) = $aTranscript;
             echo ($i? ',' . "\n" : '') . '            \'' . $nTranscriptID . '\' : [\'' . $sTranscriptNM . '\', \'' . $sGeneSymbol . '\', \'' . $sMutalyzerID . '\']';
             $i++;
@@ -3094,7 +3094,7 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && in_array(ACTION, array('curate', 
             $sSQL = 'UPDATE ' . TABLE_VARIANTS . ' SET `VariantOnGenome/Remarks` = ?, `effectid` = ?';
             $aSQL = array($_POST['VariantOnGenome/Remarks'], $_POST['effect_reported'] . $_POST['effect_concluded']);
 
-            foreach($_POST as $sCol => $val) {
+            foreach ($_POST as $sCol => $val) {
                 // Process any of the curation custom columns.
                 if (strpos($sCol, 'VariantOnGenome/Curation/') !== false) {
                     $sSQL .= ', `' . $sCol . '` = ?';
@@ -3173,7 +3173,7 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && in_array(ACTION, array('curate', 
     $zData = new LOVD_TranscriptVariant('VOT_for_curation', $nID);
     $_GET['search_id_'] = $nID;
 
-    $zData->setRowLink('VOT_for_curation', 'javascript:return false;');
+    $zData->setRowLink('VOT_for_curation', '');
     $aColsToShow = array('id_ncbi', 'geneid', 'VariantOnTranscript/DNA', 'VariantOnTranscript/Protein');
     $aVLOptions = array(
         'cols_to_skip' => array_diff(array_keys($zData->aColumnsViewList), $aColsToShow),
@@ -3465,7 +3465,7 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && in_array(ACTION, array('delete_no
                     $bAdded = false;
                     if (count($aVariantDescriptions[$zTranscript['geneid']])) {
                         // Loop through the mutalyzer output for this gene, see if we can find this transcript.
-                        foreach($aVariantDescriptions[$zTranscript['geneid']] as $key => $sVariant) {
+                        foreach ($aVariantDescriptions[$zTranscript['geneid']] as $key => $sVariant) {
                             // Check if our transcript is in the variant description for each value returned by mutalyzer.
                             if (!empty($sVariant) && preg_match('/^' . preg_quote($zTranscript['id_ncbi']) . ':([cn]\..+)$/', $sVariant, $aMatches)) {
                                 // Call the mappingInfo module of mutalyzer to get the start & stop positions of this variant on the transcript.

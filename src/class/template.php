@@ -883,7 +883,7 @@ if ($_SERVER['HTTP_HOST'] == 'leiden-test.diagnostics.lovd.nl') {
         }
         print('
 <SCRIPT type="text/javascript">
-  $(function(){
+  $(function() {
     var aMenuOptions = {
         widthOverflowOffset: 0,
         heightOverflowOffset: 1,' .
@@ -896,8 +896,7 @@ if ($_SERVER['HTTP_HOST'] == 'leiden-test.diagnostics.lovd.nl') {
         autoHide: true,
         delay: 100,
         onSelect: function(e, context){
-            if($(this).hasClass("disabled"))
-            {
+            if ($(this).hasClass("disabled")) {
                 return false;
             } else {
                 window.location = $(this).find("a").attr("href");

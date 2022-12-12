@@ -4,10 +4,10 @@
  * LEIDEN OPEN VARIATION DATABASE (LOVD)
  *
  * Created     : 2016-09-02
- * Modified    : 2020-09-09
- * For LOVD    : 3.0-24
+ * Modified    : 2022-12-09
+ * For LOVD    : 3.0-29
  *
- * Copyright   : 2004-2020 Leiden University Medical Center; http://www.LUMC.nl/
+ * Copyright   : 2004-2022 Leiden University Medical Center; http://www.LUMC.nl/
  * Programmers : Juny Kesumadewi <juny.kesumadewi@unimelb.edu.au>
  *               Ivo F.A.C. Fokkema <I.F.A.C.Fokkema@LUMC.nl>
  *
@@ -156,7 +156,7 @@ $_INSTANCE_CONFIG['conversion'] = array(
     'annotation_error_max_allowed' => 50, // Maximum number of errors with VOTs before the script dies anyway.
     'create_genes_and_transcripts' => true, // Allow automatic creation of genes, allow automatic creation of transcripts.
     'create_meta_file_if_missing' => true, // Should LOVD+ just create a meta file with default settings if it's missing?
-    'check_indel_description' => true, // Should we check all indels using Mutalyzer? Vep usually does a bad job at them.
+    'check_indel_description' => false, // Should we check all indels using Mutalyzer? Some versions of VEP do a bad job at them.
     'enforce_hgnc_gene' => true, // Enforce gene to exist in the HGNC (requires use_hgnc = true).
     'use_hgnc' => true, // Use the HGNC to collect gene information, and detect gene aliases (requires create_genes_and_transcripts = true).
     'verbosity_cron' => 5, // How verbose should we be when running through cron? (default: 5; currently supported: 0,3,5,7,9)
@@ -792,7 +792,11 @@ class LOVD_DefaultDataConverter {
         // near-gene-3 (nowadays: downstream-gene)
         // non-coding-exon
         // non-coding-exon-near-splice
-        // non-coding-intron-near-splice (CREATE THIS OURSELVES)
+        // non-coding-intron-near-splice (CREATED THIS OURSELVES)
+
+        // 2022-12-09; GenomeScan's annotation now also adds "transcript_variant". VEP doesn't know this. We don't
+        //  translate it, because I wouldn't know where to translate it to. Our GVS field isn't a selection list,
+        //  so "transcript_variant" will just be accepted during import.
 
         // This function loops quite a lot, and it would be more efficient if we'd store the results of the output.
         // Caching it will prevent lots of lookups, especially in big files.
@@ -835,6 +839,8 @@ class LOVD_DefaultDataConverter {
             'stop_lost' => 'stop-lost',
             'coding_sequence_variant&3_prime_UTR_variant' => 'codingComplex', // vep2lovd defined this, only found in ENSG.
             'coding_sequence_variant&5_prime_UTR_variant' => 'codingComplex', // vep2lovd defined this, only found in ENSG.
+            'splice_region_variant&3_prime_UTR_variant' => 'splice_region_variant',
+            'splice_region_variant&5_prime_UTR_variant' => 'splice_region_variant',
             '5_prime_UTR_variant' => 'utr-5',
             '3_prime_UTR_variant' => 'utr-3',
             'upstream_gene_variant' => 'utr-5',

@@ -81,7 +81,7 @@ if (PATH_COUNT == 1 && !ACTION) {
 
     require ROOT_PATH . 'class/object_individuals.plus.php';
     $_DATA = new LOVD_IndividualPLUS();
-    $_DATA->setRowLink('Individuals', 'javascript:window.location.href=\'' . lovd_getInstallURL() . $_PE[0] . '/{{id}}/analyze/{{screeningid}}\'; return false');
+    $_DATA->setRowLink('Individuals', CURRENT_PATH . '/{{id}}/analyze/{{screeningid}}');
     $aVLOptions = array(
         'show_options' => (bool) ($_AUTH['level'] >= LEVEL_MANAGER),
     );
@@ -206,7 +206,7 @@ if (PATH_COUNT >= 2 && ctype_digit($_PE[1]) && !ACTION && (PATH_COUNT == 2 || PA
     $_DATA = new LOVD_ScreeningPLUS();
     $_DATA->setSortDefault('id');
     $_DATA->setRowID('Screenings_for_I_VE', 'Screening_{{screeningid}}');
-    $_DATA->setRowLink('Screenings_for_I_VE', 'javascript:window.location.href=\'' . lovd_getInstallURL() . $_PE[0] . '/' . $nID . '/analyze/{{screeningid}}\'; return false');
+    $_DATA->setRowLink('Screenings_for_I_VE', $_PE[0] . '/' . $nID . '/analyze/{{screeningid}}');
     // Restrict the columns of this VL, if given.
     if (isset($_INSTANCE_CONFIG['viewlists']['Screenings_for_I_VE']['cols_to_show'])) {
         $_DATA->setViewListCols($_INSTANCE_CONFIG['viewlists']['Screenings_for_I_VE']['cols_to_show']);
@@ -636,7 +636,7 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && in_array(ACTION, array('curate', 
             $aSQL = array();
 
             $sCurationLog = ''; // Log to show any changes to the curation data.
-            foreach($_POST as $sCol => $val) {
+            foreach ($_POST as $sCol => $val) {
                 // Process any of the curation custom columns.
                 if ($sCol == 'Individual/Remarks' || strpos($sCol, 'Individual/Curation/') !== false) {
                     $sSQL .= ', `' . $sCol . '` = ?';
@@ -1081,7 +1081,7 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && !ACTION) {
         //  phenotype entry for a disease they don't have.
         $zData['diseases'] = $_DB->q('SELECT id, symbol, name FROM ' . TABLE_DISEASES . ' WHERE id IN (?' . str_repeat(', ?', count($zData['phenotypes'])-1) . ')', $zData['phenotypes'])->fetchAllRow();
         require ROOT_PATH . 'class/object_phenotypes.php';
-        foreach($zData['diseases'] as $aDisease) {
+        foreach ($zData['diseases'] as $aDisease) {
             list($nDiseaseID, $sSymbol, $sName) = $aDisease;
             if (in_array($nDiseaseID, $zData['phenotypes'])) {
                 $_GET['search_diseaseid'] = $nDiseaseID;
@@ -1413,7 +1413,7 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && in_array(ACTION, array('edit', 'p
     $_T->printTitle();
 
     // If we're not the creator nor the owner, warn.
-    if ($_POST['created_by'] != $_AUTH['id'] && $_POST['owned_by'] != $_AUTH['id']) {
+    if ($zData['created_by'] != $_AUTH['id'] && $zData['owned_by'] != $_AUTH['id']) {
         lovd_showInfoTable('Warning: You are editing data not created or owned by you. You are free to correct errors such as data inserted into the wrong field or typographical errors, but make sure that all other edits are made in consultation with the submitter. If you disagree with the submitter\'s findings, add a remark rather than removing or overwriting data.', 'warning', 760);
     }
 
@@ -1613,7 +1613,7 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && ACTION == 'edit_panels') {
         // Not submitted, set default values for this form.
         $_POST = array_merge($_POST, $zData);
 
-        if(empty($_POST['gene_panels'])) {
+        if (empty($_POST['gene_panels'])) {
             $_POST['gene_panels'] = array();
         }
 

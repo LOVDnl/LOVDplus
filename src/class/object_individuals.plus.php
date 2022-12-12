@@ -4,10 +4,10 @@
  * LEIDEN OPEN VARIATION DATABASE (LOVD)
  *
  * Created     : 2013-10-28
- * Modified    : 2019-10-09
- * For LOVD    : 3.0-22
+ * Modified    : 2022-12-07
+ * For LOVD    : 3.0-29
  *
- * Copyright   : 2004-2019 Leiden University Medical Center; http://www.LUMC.nl/
+ * Copyright   : 2004-2022 Leiden University Medical Center; http://www.LUMC.nl/
  * Programmers : Ivo F.A.C. Fokkema <I.F.A.C.Fokkema@LUMC.nl>
  *               Anthony Marty <anthony.marty@unimelb.edu.au>
  *               Juny Kesumadewi <juny.kesumadewi@unimelb.edu.au>
@@ -234,7 +234,7 @@ class LOVD_IndividualPLUS extends LOVD_Individual
         // Remove all except the remarks.
         $aFormFiltered = array();
 
-        foreach($aForm as $sCol => $val) {
+        foreach ($aForm as $sCol => $val) {
             if (strpos($sCol, 'Individual/Curation/') !== false) {
                 $aFormFiltered[$sCol] = $aForm[$sCol];
             }
@@ -288,12 +288,12 @@ class LOVD_IndividualPLUS extends LOVD_Individual
         } else {
             // Make the custom panel link to the genes.
             $zData['custom_panel_'] = '';
-            foreach(explode(', ', $zData['custom_panel']) as $sGene) {
+            foreach (explode(', ', $zData['custom_panel']) as $sGene) {
                 $zData['custom_panel_'] .= (!$zData['custom_panel_']? '' : ', ') . '<A href="genes/' . $sGene . '">' . $sGene . '</A>';
             }
             // Gene panels assigned.
             $zData['gene_panels_'] = '';
-            foreach($zData['gene_panels'] as $aGenePanels) {
+            foreach ($zData['gene_panels'] as $aGenePanels) {
                 list($nID, $sName, $sType) = $aGenePanels;
                 $zData['gene_panels_'] .= (!$zData['gene_panels_']? '' : ', ') . '<A href="gene_panels/' . $nID . '">' . $sName . '</A>';
             }

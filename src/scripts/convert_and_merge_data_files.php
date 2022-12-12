@@ -4,7 +4,7 @@
  * LEIDEN OPEN VARIATION DATABASE (LOVD)
  *
  * Created     : 2014-11-28
- * Modified    : 2022-11-30
+ * Modified    : 2022-12-09
  * For LOVD+   : 3.0-29
  *
  * Copyright   : 2004-2022 Leiden University Medical Center; http://www.LUMC.nl/
@@ -14,8 +14,7 @@
  *
  *************/
 
-//define('ROOT_PATH', '../');
-define('ROOT_PATH', str_replace('\\', '/', dirname(__FILE__) . '/../'));
+define('ROOT_PATH', str_replace('\\', '/', dirname(__FILE__) . '/../')); // Allow script to be run from a different dir.
 define('FORMAT_ALLOW_TEXTPLAIN', true);
 
 $_GET['format'] = 'text/plain';
@@ -326,69 +325,6 @@ function lovd_getVariantDescription (&$aVariant, $sRef, $sAlt)
 
 
 
-// FIXME: Replace by lovd_getVariantInfo()?
-function lovd_getVariantPosition ($sVariant, $aTranscript = array())
-{
-    // Constructs an array with the position fields 'start', 'start_intron', 'end', 'end_intron', from the variant description.
-    // Whether the input is chromosomal or transcriptome positions, doesn't matter.
-
-    $aReturn = array(
-        'start' => 0,
-        'start_intron' => 0,
-        'end' => 0,
-        'end_intron' => 0,
-    );
-
-    if (preg_match('/^[cgmn]\.((?:\-|\*)?\d+)([-+]\d+)?(?:[ACGT]>[ACGT]|(?:_((?:\-|\*)?\d+)([-+]\d+)?)?(?:d(?:el(?:ins)?|up)|inv|ins)(?:[ACGT])*|\[[0-9]+\](?:[ACGT]+)?)$/', $sVariant, $aRegs)) {
-        foreach (array(1, 3) as $i) {
-            if (isset($aRegs[$i]) && $aRegs[$i]{0} == '*') {
-                // Position in 3'UTR. Add CDS offset.
-                if ($aTranscript && isset($aTranscript['position_c_cds_end'])) {
-                    $aRegs[$i] = (int) substr($aRegs[$i], 1) + $aTranscript['position_c_cds_end'];
-                } else {
-                    // Whatever we'll do, it will be wrong anyway.
-                    return $aReturn;
-                }
-            }
-        }
-
-        $aReturn['start'] = (int) $aRegs[1];
-        if (isset($aRegs[2]) && $aRegs[2]) {
-            $aReturn['start_intron'] = (int) $aRegs[2]; // (int) to get rid of the '+' if it's there.
-        }
-        if (isset($aRegs[4]) && $aRegs[4]) {
-            $aReturn['end_intron'] = (int) $aRegs[4]; // (int) to get rid of the '+' if it's there.
-        }
-        if (isset($aRegs[3])) {
-            $aReturn['end'] = (int) $aRegs[3];
-        } else {
-            $aReturn['end'] = $aReturn['start'];
-            $aReturn['end_intron'] = $aReturn['start_intron'];
-        }
-
-        // If a variant is described poorly with a start > end, then we'll swap the positions so we will store them correctly.
-        if ($aReturn['start'] > $aReturn['end']) {
-            // There's many ways of doing this, but this method is the simplest to read.
-            $nTmp = $aReturn['start'];
-            $aReturn['start'] = $aReturn['end'];
-            $aReturn['end'] = $nTmp;
-
-            // And intronic, if needed.
-            if ($aReturn['start_intron'] || $aReturn['end_intron']) {
-                $nTmp = $aReturn['start_intron'];
-                $aReturn['start_intron'] = $aReturn['end_intron'];
-                $aReturn['end_intron'] = $nTmp;
-            }
-        }
-    }
-
-    return $aReturn;
-}
-
-
-
-
-
 // Run the "adapter" script for this instance, that will run actions that are meant to be run before anything else is done.
 $sInstanceName = strtoupper($_INI['instance']['name']);
 $sAdaptersDir = $_ADAPTER->sAdapterPath;
@@ -534,11 +470,11 @@ foreach ($aFiles as $sFileID) {
     }
 
     if (lovd_verifyInstance('leiden')) {
-        $nMiracleID = $_ADAPTER->aMetadata['Individuals']['id_miracle'];
-        if (!$nMiracleID) {
+        if (empty($_ADAPTER->aMetadata['Individuals']['id_miracle'])) {
             lovd_printIfVerbose(VERBOSITY_LOW, 'Error while parsing meta file: Unable to find the Miracle ID.' . "\n");
             continue; // Continue to try the next file.
         }
+        $nMiracleID = $_ADAPTER->aMetadata['Individuals']['id_miracle'];
     }
 
     $_ADAPTER->setScriptVars(compact('nScreeningID', 'nMiracleID'));
@@ -693,12 +629,14 @@ foreach ($aFiles as $sFileID) {
         // VOG/DNA and the position fields.
         lovd_getVariantDescription($aVariant, $aVariant['ref'], $aVariant['alt']);
         // dbSNP.
-        if (!empty($aVariant['VariantOnGenome/dbSNP']) && strpos($aVariant['VariantOnGenome/dbSNP'], ';') !== false) {
+        if (!empty($aVariant['VariantOnGenome/dbSNP'])
+            && (strpos($aVariant['VariantOnGenome/dbSNP'], ';') !== false
+                || strpos($aVariant['VariantOnGenome/dbSNP'], ',') !== false)) {
             // Sometimes we get two dbSNP IDs. Store the first one, only.
-            $aDbSNP = explode(';', $aVariant['VariantOnGenome/dbSNP']);
+            $aDbSNP = preg_split('/[,;&]/', $aVariant['VariantOnGenome/dbSNP']);
             $aVariant['VariantOnGenome/dbSNP'] = $aDbSNP[0];
         } elseif (empty($aVariant['VariantOnGenome/dbSNP']) && !empty($aVariant['existing_variation']) && $aVariant['existing_variation'] != 'unknown') {
-            $aIDs = explode('&', $aVariant['existing_variation']);
+            $aIDs = preg_split('/[,;&]/', $aVariant['existing_variation']);
             foreach ($aIDs as $sID) {
                 if (substr($sID, 0, 2) == 'rs') {
                     $aVariant['VariantOnGenome/dbSNP'] = $sID;
@@ -731,14 +669,6 @@ foreach ($aFiles as $sFileID) {
 
         if (lovd_verifyInstance('leiden')) {
             // Some percentages we get need to be turned into decimals before it can be stored.
-            // 2015-10-28; Because of the double column mappings, we ended up with values divided twice.
-            // Flipping the array makes sure we get rid of double mappings.
-            foreach (array_flip($aColumnMappings) as $sLOVDColumn => $sVEPColumn) {
-                if (!empty($aVariant[$sLOVDColumn])
-                    && ($sVEPColumn == 'AFESP5400' || $sVEPColumn == 'ALTPERC' || strpos($sVEPColumn, 'ALTPERC_') === 0)) {
-                    $aVariant[$sLOVDColumn] /= 100;
-                }
-            }
         } else {
             // Calculate ALTPERC cols, if we can.
             foreach (array('', '/Father', '/Mother') as $sColPart) {
@@ -964,11 +894,11 @@ foreach ($aFiles as $sFileID) {
                 }
 
                 // Loop transcript options, add the one we need.
-                foreach($aTranscriptInfo as $aTranscript) {
+                foreach ($aTranscriptInfo as $aTranscript) {
                     // Comparison is made without looking at version numbers!
                     if (substr($aTranscript['id'], 0, strpos($aTranscript['id'] . '.', '.')+1) == $aLine['transcript_noversion']) {
                         // Store in database, prepare values.
-                        $sTranscriptName = str_replace($aGenes[$aVariant['symbol']]['name'] . ', ', '', $aTranscript['product']);
+                        $sTranscriptName = str_replace($aGenes[$aVariant['symbol']]['name'] . ', ', '', ($aTranscript['product'] ?: ''));
                         // 2018-06-13; The getTranscriptsAndInfo() feature on NCs has a bug that the product field is empty.
                         if (!$sTranscriptName) {
                             $sTranscriptName = $aTranscript['id'];
@@ -1193,7 +1123,29 @@ foreach ($aFiles as $sFileID) {
             }
 
             // For the position fields, VEP can generate data (CDS_position), but it's hardly usable. Calculate ourselves.
-            list($aVariant['position_c_start'], $aVariant['position_c_start_intron'], $aVariant['position_c_end'], $aVariant['position_c_end_intron']) = array_values(lovd_getVariantPosition($aVariant['VariantOnTranscript/DNA'], $aTranscripts[$aVariant['transcriptid']]));
+            // 2022-12-09; Updated to use LOVD's lovd_getVariantInfo() instead of LOVD+'s lovd_getVariantPosition().
+            // However, Mutalyzer gives us positions that aren't possible like n.-100 and n.*100. This happens when a
+            //  variant can't actually be mapped to a transcript. lovd_getVariantInfo() is too smart and doesn't allow
+            //  this and returns 0 as position. This won't allow us to sort these variants in the views. Therefore,
+            //  better manipulate lovd_getVariantInfo() to anyway get us positions by making it think we're submitting
+            //  c. variants.
+            $aVariantInfo = lovd_getVariantInfo(
+                str_replace('n.', 'c.', $aVariant['VariantOnTranscript/DNA']),
+                $aTranscripts[$aVariant['transcriptid']]
+            );
+            if ($aVariantInfo) {
+                list(
+                    $aVariant['position_c_start'],
+                    $aVariant['position_c_start_intron'],
+                    $aVariant['position_c_end'],
+                    $aVariant['position_c_end_intron']
+                ) = array(
+                    $aVariantInfo['position_start'],
+                    (empty($aVariantInfo['position_start_intron'])? 0 : $aVariantInfo['position_start_intron']),
+                    $aVariantInfo['position_end'],
+                    (empty($aVariantInfo['position_end_intron'])? 0 : $aVariantInfo['position_end_intron']),
+                );
+            }
 
             // VariantOnTranscript/Position is an integer column; so just copy the c_start.
             $aVariant['VariantOnTranscript/Position'] = $aVariant['position_c_start'];
@@ -1207,7 +1159,9 @@ foreach ($aFiles as $sFileID) {
             if ($aVariant['VariantOnTranscript/Protein']) {
                 // VEP came up with something...
                 $aVariant['VariantOnTranscript/RNA'] = 'r.(?)';
-                $aVariant['VariantOnTranscript/Protein'] = substr($aVariant['VariantOnTranscript/Protein'], strpos($aVariant['VariantOnTranscript/Protein'], ':')+1); // NP_000000.1:p.Met1? -> p.Met1?
+                if (strpos($aVariant['VariantOnTranscript/Protein'], ':') !== false) {
+                    $aVariant['VariantOnTranscript/Protein'] = substr($aVariant['VariantOnTranscript/Protein'], strpos($aVariant['VariantOnTranscript/Protein'], ':')+1); // NP_000000.1:p.Met1? -> p.Met1?
+                }
                 if ($aVariant['VariantOnTranscript/Protein'] == $aVariant['VariantOnTranscript/DNA/VEP'] . '(p.=)'
                     || preg_match('/^p\.([A-Z][a-z]{2})+([0-9]+)=$/', $aVariant['VariantOnTranscript/Protein'])) {
                     // But sometimes VEP messes up; DNA: c.4482G>A; Prot: c.4482G>A(p.=) or
@@ -1220,8 +1174,6 @@ foreach ($aFiles as $sFileID) {
                     // VEP has p. notation, but without parentheses around them (see https://github.com/Ensembl/ensembl-vep/issues/498).
                     $aVariant['VariantOnTranscript/Protein'] = str_replace('p.', 'p.(', $aVariant['VariantOnTranscript/Protein'] . ')');
                 }
-                // VEP uses "Ter" where they should be using "*".
-                $aVariant['VariantOnTranscript/Protein'] = str_replace('Ter', '*', $aVariant['VariantOnTranscript/Protein']);
             } elseif (in_array(substr($aTranscripts[$aVariant['transcriptid']]['id_ncbi'], 0, 2), array('NR', 'XR'))) {
                 // Non coding transcript, no wonder we didn't get a protein field.
                 $aVariant['VariantOnTranscript/RNA'] = 'r.(?)';

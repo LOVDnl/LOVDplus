@@ -4,7 +4,7 @@
  * LEIDEN OPEN VARIATION DATABASE (LOVD)
  *
  * Created     : 2013-11-06
- * Modified    : 2022-11-30
+ * Modified    : 2022-12-02
  * For LOVD+   : 3.0-29
  *
  * Copyright   : 2004-2022 Leiden University Medical Center; http://www.LUMC.nl/
@@ -305,7 +305,8 @@ if ($aVariantIDs) {
             // Als SNPs en ALS missense (dus exonic): phyloP>2.5 OF wobble base (3e base codon) bewaren
             //   (voor mezelf: wobble base posities hebben een lagere phyloP score, vandaar de controle)
             // ALS SNPs, en intronisch: phyloP>2.5 bewaren
-            $aVariantIDsFiltered = $_DB->q('SELECT DISTINCT CAST(vog.id AS UNSIGNED) FROM ' . TABLE_VARIANTS . ' AS vog LEFT OUTER JOIN ' . TABLE_VARIANTS_ON_TRANSCRIPTS . ' AS vot USING (id) WHERE (vot.`VariantOnTranscript/GVS/Function` IS NULL OR (!(vog.type = "subst" AND vot.`VariantOnTranscript/GVS/Function` = "missense" AND vog.`VariantOnGenome/Conservation_score/PhyloP` <= 2.5 AND vot.position_c_start%3 != 0) AND !(vog.type = "subst" AND vot.`VariantOnTranscript/GVS/Function` = "intron" AND vog.`VariantOnGenome/Conservation_score/PhyloP` <= 2.5))) AND vog.id IN (?' . str_repeat(', ?', count($aVariantIDs) - 1) . ')', $aVariantIDs, false)->fetchAllColumn();
+            // Added an IFNULL() around PhyloP to convert NULL into a high value to prevent it from being filtered out.
+            $aVariantIDsFiltered = $_DB->q('SELECT DISTINCT CAST(vog.id AS UNSIGNED) FROM ' . TABLE_VARIANTS . ' AS vog LEFT OUTER JOIN ' . TABLE_VARIANTS_ON_TRANSCRIPTS . ' AS vot USING (id) WHERE (vot.`VariantOnTranscript/GVS/Function` IS NULL OR (!(vog.type = "subst" AND vot.`VariantOnTranscript/GVS/Function` = "missense" AND IFNULL(vog.`VariantOnGenome/Conservation_score/PhyloP`, 99) <= 2.5 AND vot.position_c_start%3 != 0) AND !(vog.type = "subst" AND vot.`VariantOnTranscript/GVS/Function` = "intron" AND vog.`VariantOnGenome/Conservation_score/PhyloP` <= 2.5))) AND vog.id IN (?' . str_repeat(', ?', count($aVariantIDs) - 1) . ')', $aVariantIDs, false)->fetchAllColumn();
             break;
         case 'remove_not_imprinted':
             // The imprinted list could be looked up, but since the name can change and we know the ID, we'll just use that.

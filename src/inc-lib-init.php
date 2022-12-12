@@ -208,7 +208,7 @@ function lovd_convertBytesToHRSize ($nValue)
 {
     // This function takes integers and converts it to sizes like "128M".
 
-    if (!ctype_digit($nValue) && !is_int($nValue)) {
+    if (!is_int($nValue) && !ctype_digit($nValue)) {
         return false;
     }
 
@@ -1188,6 +1188,11 @@ function lovd_getVariantInfo ($sVariant, $sTranscriptID = '', $bCheckHGVS = fals
                 if (is_numeric($sTranscriptID)) {
                     $sRefSeqID = $_DB->q('SELECT `' . $sField . '` FROM ' . TABLE_TRANSCRIPTS . ' WHERE id = ?',
                         array($sTranscriptID))->fetchColumn();
+                } elseif (is_array($sTranscriptID)) {
+                    // LOVD+ sends us an array object instead of an ID, during conversion.
+                    $sRefSeqID =
+                        (isset($sTranscriptID['id_ncbi'])? $sTranscriptID['id_ncbi'] :
+                            (isset($sTranscriptID['id'])? $sTranscriptID['id'] : ''));
                 } else {
                     $sRefSeqID = $sTranscriptID;
                 }
@@ -1540,7 +1545,19 @@ function lovd_getVariantInfo ($sVariant, $sTranscriptID = '', $bCheckHGVS = fals
 
 
     // If given, check if we already know this transcript.
-    if ($sTranscriptID === false || !$_DB) {
+    if (is_array($sTranscriptID)) {
+        // LOVD+ sends us an array object instead of an ID, during conversion.
+        $nID =
+            (isset($sTranscriptID['id_ncbi'])? $sTranscriptID['id_ncbi'] :
+                (isset($sTranscriptID['id'])? $sTranscriptID['id'] :
+                    @implode($sTranscriptID)));
+        if (!isset($aTranscriptOffsets[$nID])) {
+            $aTranscriptOffsets[$nID] =
+                (isset($sTranscriptID['position_c_cds_end'])? $sTranscriptID['position_c_cds_end'] : 0);
+        }
+        $sTranscriptID = $nID;
+
+    } elseif ($sTranscriptID === false || !$_DB) {
         // If the transcript ID is passed as false, we are asked to ignore not
         //  having the transcript. Pick some random number, high enough to not
         //  be smaller than position_start if that's not in the UTR.
@@ -1955,7 +1972,7 @@ function lovd_getVariantInfo ($sVariant, $sTranscriptID = '', $bCheckHGVS = fals
         }
 
     } elseif ($aResponse['type'] == 'repeat' && $aVariant['prefix'] == 'c') {
-        foreach(explode('[', $aVariant['type']) as $sRepeat) {
+        foreach (explode('[', $aVariant['type']) as $sRepeat) {
             if (ctype_alpha($sRepeat) && strlen($sRepeat) % 3) {
                 // Repeat variants on coding DNA should always have
                 //  a length of a multiple of three bases.
@@ -3360,7 +3377,7 @@ function lovd_php_htmlspecialchars ($Var)
     if (is_array($Var)) {
         return array_map('lovd_php_htmlspecialchars', $Var);
     } else {
-        return htmlspecialchars($Var);
+        return htmlspecialchars($Var ?: '');
     }
 }
 

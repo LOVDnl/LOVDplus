@@ -742,7 +742,7 @@ class LOVD_MghaDataConverter extends LOVD_DefaultDataConverter {
             'AA_MAF'
         );
 
-        foreach($aAltFreqColumns as $sFreqColumn) {
+        foreach ($aAltFreqColumns as $sFreqColumn) {
             if (!isset($aLine[$sFreqColumn]) || $aLine[$sFreqColumn] == 'unknown' || $aLine[$sFreqColumn] == '' || $sAlt == '' || empty($sAlt) || strlen($sAlt) == 0) {
                 $aLine[$sFreqColumn] = '';
             } else {

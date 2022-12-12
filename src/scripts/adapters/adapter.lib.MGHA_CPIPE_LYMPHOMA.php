@@ -643,7 +643,7 @@ class LOVD_MghaCpipeLymphomaDataConverter extends LOVD_MghaDataConverter {
             'AA_AF'
         );
 
-        foreach($aAltFreqColumns as $sFreqColumn) {
+        foreach ($aAltFreqColumns as $sFreqColumn) {
             if ($aLine[$sFreqColumn] == 'unknown' || $aLine[$sFreqColumn] == '') {
                 $aLine[$sFreqColumn] = '';
             } else {

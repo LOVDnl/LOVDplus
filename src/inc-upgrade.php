@@ -1470,6 +1470,33 @@ if ($sCalcVersionFiles != $sCalcVersionDB) {
             }
             $aUpdates['3.0-17s'][] = 'ALTER TABLE ' . TABLE_ANALYSES . ' ADD COLUMN active BOOLEAN NOT NULL DEFAULT 1 AFTER version';
         }
+        if ($sCalcVersionDB < lovd_calculateVersion('3.0-28b')) {
+            if (lovd_verifyInstance('leiden')) {
+                $aUpdates['3.0-28b'][] = 'INSERT INTO ' . TABLE_ANALYSES . ' (`sortid`, `name`, `description`, `version`, `created_by`, `created_date`) VALUES
+                    (5, "Recessive (whole exome)", "Filters for recessive variants, homozygous or compound heterozygous in patient, but not in the parents. High frequencies (> 3%) are also filtered out, and the gene black list is applied.", 3, 0, NOW())';
+                $aUpdates['3.0-28b'][] = 'SET @nID := (SELECT last_insert_id())';
+                $aUpdates['3.0-28b'][] = 'INSERT INTO ' . TABLE_A2AF . ' (`analysisid`, `filterid`, `filter_order`) VALUES
+                    (@nID, "cross_screenings", 1),
+                    (@nID, "remove_by_quality_lte_100", 2),
+                    (@nID, "remove_by_indb_count_hc_gte_5", 3),
+                    (@nID, "remove_by_indb_count_ug_gte_5", 4),
+                    (@nID, "remove_by_indb_count_hc_gte_2", 5),
+                    (@nID, "remove_by_indb_count_ug_gte_2", 6),
+                    (@nID, "remove_with_any_frequency_gt_3", 7),
+                    (@nID, "remove_variants_hom_in_father", 8),
+                    (@nID, "remove_variants_hom_in_mother", 9),
+                    (@nID, "remove_intronic_distance_gt_8", 10),
+                    (@nID, "remove_intronic_distance_gt_2", 11),
+                    (@nID, "remove_by_function_utr3", 12),
+                    (@nID, "remove_by_function_utr5", 13),
+                    (@nID, "remove_by_function_utr_or_intronic", 14),
+                    (@nID, "remove_by_function_coding_synonymous", 15),
+                    (@nID, "remove_by_function_utr_or_intronic_or_synonymous", 16),
+                    (@nID, "remove_missense_with_phylop_lte_2.5", 17),
+                    (@nID, "select_homozygous_or_heterozygous_not_from_one_parent", 18),
+                    (@nID, "remove_in_gene_blacklist", 19)';
+            }
+        }
     }
 
 
