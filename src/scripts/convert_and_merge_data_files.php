@@ -14,8 +14,7 @@
  *
  *************/
 
-//define('ROOT_PATH', '../');
-define('ROOT_PATH', str_replace('\\', '/', dirname(__FILE__) . '/../'));
+define('ROOT_PATH', str_replace('\\', '/', dirname(__FILE__) . '/../')); // Allow script to be run from a different dir.
 define('FORMAT_ALLOW_TEXTPLAIN', true);
 
 $_GET['format'] = 'text/plain';
