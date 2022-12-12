@@ -4,7 +4,7 @@
  * LEIDEN OPEN VARIATION DATABASE (LOVD)
  *
  * Created     : 2014-01-03
- * Modified    : 2022-11-30
+ * Modified    : 2022-12-12
  * For LOVD+   : 3.0-29
  *
  * Copyright   : 2004-2022 Leiden University Medical Center; http://www.LUMC.nl/
@@ -238,7 +238,9 @@ class LOVD_ScreeningPLUS extends LOVD_Screening
                     ($_AUTH['level'] >= LEVEL_MANAGER && $zData['analysis_statusid'] < ANALYSIS_STATUS_WAIT_CONFIRMATION)
                 ) {
                     // Managers are allowed to export the variants as well.
-                    $zData['variants_to_be_confirmed_'] .= ' (<A id="export_variants" href="#" onclick="$.get(\'screenings/' . $zData['id'] . '?exportToBeConfirmed\',function(sResponse){if(sResponse.substring(0,1)==\'1\'){alert(\'Successfully exported \'+sResponse.substring(2)+\' lines of variant data.\');$(\'#export_variants\').replaceWith($(\'#export_variants\').html());}else{alert(\'Error while exporting file:\n\'+sResponse);}}).error(function(){alert(\'Error while exporting file.\');});return false;">export to Miracle</A>)';
+                    // There are now two ways of doing this. The "normal" txt export to Prinia that will then forward
+                    //  the data to Miracle, or a direct XML export to Miracle.
+                    $zData['variants_to_be_confirmed_'] .= ' (<A id="export_variants" href="#" onclick="$.get(\'screenings/' . $zData['id'] . '?exportToBeConfirmedTXT\',function(sResponse){if(sResponse.substring(0,1)==\'1\'){alert(\'Successfully exported \'+sResponse.substring(2)+\' lines of variant data.\');$(\'#export_variants\').replaceWith($(\'#export_variants\').html());}else{alert(\'Error while exporting file:\n\'+sResponse);}}).error(function(){alert(\'Error while exporting file.\');});return false;">export to Prinia</A>)';
                 }
             }
         }
