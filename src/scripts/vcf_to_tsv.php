@@ -240,7 +240,7 @@ $aArgs = $_SERVER['argv'];
 $nArgs = $_SERVER['argc'];
 $sScriptName = array_shift($aArgs);
 $nArgs --;
-$bWarningsOcurred = false;
+$bWarningsOccurred = false;
 
 // We need at least one argument, the file to convert.
 // FIXME: If we'll ever support more arguments, adapt this if().
@@ -319,7 +319,7 @@ while ($sLine = fgets($fInput)) {
             // This header doesn't contain an ID... Eh?
             lovd_printIfVerbose(VERBOSITY_HIGH,
                 'Warning: Found ' . $sHeaderType . ' header without ID. Got:' . "\n" . $sLine . "\n");
-            $bWarningsOcurred = true;
+            $bWarningsOccurred = true;
             continue;
         }
         $sHeaderID = $aRegs[2][$nKeyID];
@@ -344,7 +344,7 @@ while ($sLine = fgets($fInput)) {
                 // This annotation header doesn't contain a Description... Eh?
                 lovd_printIfVerbose(VERBOSITY_HIGH,
                     'Warning: Found ' . $sHeaderID . ' annotation INFO header without Description. Got:' . "\n" . $sLine . "\n");
-                $bWarningsOcurred = true;
+                $bWarningsOccurred = true;
                 continue;
             }
 
@@ -358,7 +358,7 @@ while ($sLine = fgets($fInput)) {
             if (strlen($sDescription) < 2 || strlen($sFields) < 2) {
                 lovd_printIfVerbose(VERBOSITY_HIGH,
                     'Warning: Found ' . $sHeaderID . ' annotation INFO header without any fields in the description? Got:' . "\n" . $sLine . "\n");
-                $bWarningsOcurred = true;
+                $bWarningsOccurred = true;
                 continue;
             }
             // Report. If there is a dot, also report first sentence.
@@ -504,7 +504,7 @@ while ($sLine = fgets($fInput)) {
         // Annotation not found. Don't die.
         lovd_printIfVerbose(VERBOSITY_MEDIUM,
             'Warning: Line ' . $nLine . ' does not contain any annotation. Looking for ' . $sAnnotationTag . ' in the INFO field.' . "\n");
-        $bWarningsOcurred = true;
+        $bWarningsOccurred = true;
         $aVOTs = array(
             '', // Just empty data.
         );
@@ -526,7 +526,7 @@ while ($sLine = fgets($fInput)) {
             // Eh? Different number of sample fields found than defined in the FORMAT value?
             lovd_printIfVerbose(VERBOSITY_MEDIUM,
                 'Warning: Line ' . $nLine . ' does not contain correct number of FORMAT fields. Looking for ' . count($aFormatFields) . ' fields, found ' . count($aSampleValues) . ".\n");
-            $bWarningsOcurred = true;
+            $bWarningsOccurred = true;
             // Not sure if this ever happens, but let's try to pad the data we received.
             // If it contains more fields than the field listing, feel free to fail completely.
             $aSampleValues = array_pad($aSampleValues, count($aFormatFields), '');
@@ -585,7 +585,7 @@ while ($sLine = fgets($fInput)) {
             if ($nPosAnnotation !== false) {
                 lovd_printIfVerbose(VERBOSITY_MEDIUM,
                     'Warning: Line ' . $nLine . ' does not contain correct number of annotation fields. Looking for ' . $nAnnotationFields . ' fields, found ' . count($aVOT) . ".\n");
-                $bWarningsOcurred = true;
+                $bWarningsOccurred = true;
             }
             // Not sure if this ever happens, but let's try to pad the data we received.
             // If it contains more fields than the header, feel free to fail completely.
@@ -598,7 +598,7 @@ while ($sLine = fgets($fInput)) {
         if (!in_array($aVOT['__allele__'], $aALTsCleaned) && $nPosAnnotation !== false) {
             lovd_printIfVerbose(VERBOSITY_MEDIUM,
                 'Warning: Line ' . $nLine . ' contains annotation for Allele = "' . $aVOT['__allele__'] . '", which cannot be mapped to one of ("' . implode('", "', $aALTsCleaned) . '").' . "\n");
-            $bWarningsOcurred = true;
+            $bWarningsOccurred = true;
             continue;
         }
 
@@ -693,5 +693,5 @@ while ($sLine = fgets($fInput)) {
     }
 }
 
-die($bWarningsOcurred? EXIT_WARNINGS_OCCURRED : EXIT_OK);
+die($bWarningsOccurred? EXIT_WARNINGS_OCCURRED : EXIT_OK);
 ?>
