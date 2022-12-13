@@ -38,9 +38,10 @@ require ROOT_PATH . 'inc-init.php';
 
 
 
-if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && in_array(ACTION, array('downloadToBeConfirmed', 'exportToBeConfirmed'))) {
+if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && in_array(ACTION, array('downloadToBeConfirmed', 'exportToBeConfirmed', 'exportToBeConfirmedTXT', 'exportToBeConfirmedXML'))) {
     // URL: /screenings/0000000001?downloadToBeConfirmed
     // URL: /screenings/0000000001?exportToBeConfirmed
+    // URL: /screenings/0000000001?exportToBeConfirmedTXT (alias)
     // Download, or export, the variants to be confirmed in the format for the pipeline.
 
     $nID = sprintf('%010d', $_PE[1]);
@@ -53,7 +54,7 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && in_array(ACTION, array('downloadT
     $zData = $_DB->q('SELECT * FROM ' . TABLE_SCREENINGS . ' WHERE id = ?', array($nID))->fetchAssoc();
 
     // Export depends on user level (Owner or Manager) and status.
-    if (ACTION == 'exportToBeConfirmed') {
+    if (ACTION != 'downloadToBeConfirmed') {
         if (!$bAuthorized) {
             // Either returned false or 0. Both are bad in this case.
             die('9|No authorization on this screening.');
@@ -101,71 +102,151 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && in_array(ACTION, array('downloadT
     $sPath = rtrim($_INI['paths']['confirm_variants'], '/') . '/';
     $sFile = 'LOVD_VariantsToBeConfirmed_' . $sLabID . '_' . date('Y-m-d_H.i.s') . '.txt';
     header('Content-type: text/plain; charset=UTF-8');
-    if (ACTION == 'downloadToBeConfirmed') {
-        header('Content-Disposition: attachment; filename="' . $sFile . '"');
-        header('Pragma: public');
+
+    if (ACTION == 'exportToBeConfirmedXML' && lovd_verifyInstance('leiden')) {
+        // The new direct-to-Miracle export only for Leiden.
+        $sFileContentsXML = '
+<?xml version=\'1.0\' encoding=\'ASCII\'?>
+<DOCUMENT>
+  <TYPE>PRIM_MIR</TYPE>
+  <VERSIE>2.0</VERSIE>
+  <ANALYSE>
+    <ID>1234</ID>
+    <DATUM>' . date('Y-m-d H:i:s') . '</DATUM>
+    <METHODE>PANEL</METHODE>';
+
+        foreach ($aGenePanels as $aGenePanel) {
+            $sFileContentsXML .= '
+    <PANELDATUM>(' . $aGenePanel['id'] . ', ' . $aGenePanel['name'] . ', ' . $aGenePanel['edited_date'] . ', ' . $aGenePanel['genes'] . ' genes)</PANELDATUM>';
+        }
+
+        $sFileContentsXML .= '
+    <RESULTS>
+      <MIRACLE_ID>' . $sLabID . '</MIRACLE_ID>';
+
+        foreach ($aVariants as $aVariant) {
+            $aVariant['genomic_id_ncbi'] = $_SETT['human_builds'][$_CONF['refseq_build']]['ncbi_sequences'][$aVariant['chromosome']];
+            $sFileContentsXML .= '
+      <UITSLAG>
+        <VARIANT>
+          <CHROMOSOOM>' . $aVariant['chromosome'] . '</CHROMOSOOM>
+          <COORDINATE_FROM>' . $aVariant['position_g_start'] . '</COORDINATE_FROM>
+          <COORDINATE_TO>' . $aVariant['position_g_end'] . '</COORDINATE_TO>
+          <GEN>
+            <CHROMOSOOM>' . $aVariant['chromosome'] . '</CHROMOSOOM>
+            <CODE>' . $aVariant['gene_id'] . '</CODE>
+            <NAAM>' . $aVariant['gene_name'] . '</NAAM>
+            <LOCATIE/>
+          </GEN>
+          <BUILD>GRCh37</BUILD>
+          <GENOOM_REF_SEQ>' . $aVariant['genomic_id_ncbi'] . '</GENOOM_REF_SEQ>
+          <WIJZIGING_GENOOM>' . htmlspecialchars($aVariant['VariantOnGenome/DNA']) . '</WIJZIGING_GENOOM>
+          <TR_REF_SEQ>' . $aVariant['transcript_id_ncbi'] . '</TR_REF_SEQ>
+          <WIJZIGING_GEN>' . htmlspecialchars($aVariant['VariantOnTranscript/DNA']) . '</WIJZIGING_GEN>
+          <WIJZIGING_RNA>' . $aVariant['VariantOnTranscript/RNA'] . '</WIJZIGING_RNA>
+          <WIJZIGING_EIWIT>' . $aVariant['VariantOnTranscript/Protein'] . '</WIJZIGING_EIWIT>
+          <PRIMERS/>
+        </VARIANT>
+        <OPMERKING>NO PRIMERS SEARCHED</OPMERKING>
+        <DE_NOVO>' . (in_array($aVariant['is_present_father'], array(1, 2)) && in_array($aVariant['is_present_mother'], array(1, 2))? 'J' : 'N') . '</DE_NOVO>
+        <PATERNAAL>' . ($aVariant['is_present_father'] >= 5? 'J' : 'N') . '</PATERNAAL>
+        <MATERNAAL>' . ($aVariant['is_present_mother'] >= 5? 'J' : 'N') . '</MATERNAAL>
+        <UITSLAG_CODE>' . ($aVariant['allele'] == '3'? 'HOM' : 'HET') . '</UITSLAG_CODE>
+        <BEVESTIGEN>N</BEVESTIGEN>
+      </UITSLAG>';
+            // UITSLAG_CODE can be HOM, HET, or HEMI. We have no implementation for HEMI.
+        }
+
+        $sFileContentsXML .= '
+    </RESULTS>
+  </ANALYSE>
+</DOCUMENT>
+';
+
+        // Prepare the export.
+        // We need a different folder. Instead of having a Leiden-specific config setting, I'm just hard-coding it here.
+        $sPath = str_replace('LOVD_PRIMERDESIGN', 'PRIMERDESIGN_Miracle', $sPath);
+        // And, we're not creating a .txt file.
+        $sFile = str_replace('.txt', '.xml', $sFile);
+
+        $f = @fopen($sPath . $sFile, 'w');
+        if ($f) {
+            fputs($f, $sFileContentsXML);
+            fclose($f);
+            die('1|' . count($aVariants));
+        }
+
+        die('0|Could not create file ' . $sPath . $sFile);
+
+
+
     } else {
-        // Collect the file's contents, so we can write it to disk.
-        ob_start();
-    }
-    print('# ' . (lovd_verifyInstance('leiden')? 'id_miracle' : 'lab_id') . ' = ' . $sLabID . "\r\n");
-    foreach ($aGenePanels as $aGenePanel) {
-        print('# active_gene_panel = (' . $aGenePanel['id'] . ', ' . $aGenePanel['name'] . ', ' . $aGenePanel['edited_date'] . ', ' . $aGenePanel['genes'] . ' genes)' . "\r\n");
-    }
-    if (!lovd_verifyInstance('leiden')) {
-        // Not in use outside of Leiden.
-        unset($aVariants[0]['VariantOnGenome/Genetic_origin']);
-    }
-    print('"{{' . implode('}}"' . "\t" . '"{{', array_keys($aVariants[0])) . '}}"' . "\r\n");
-
-    foreach ($aVariants as $aVariant) {
-        $aVariant['genomic_id_ncbi'] = $_SETT['human_builds'][$_CONF['refseq_build']]['ncbi_sequences'][$aVariant['chromosome']];
-        switch($aVariant['allele']) {
-            case '3':
-                $aVariant['allele'] = 'Homozygous';
-                break;
-            case '10':
-            case '11':
-                $aVariant['allele'] = 'Paternal';
-                break;
-            case '20':
-            case '21':
-                $aVariant['allele'] = 'Maternal';
-                break;
-            default:
-                $aVariant['allele'] = 'Heterozygous';
-        }
-        if (lovd_verifyInstance('leiden')) {
-            if (in_array($aVariant['is_present_father'], array(1, 2)) && in_array($aVariant['is_present_mother'], array(1, 2))) {
-                $aVariant['VariantOnGenome/Genetic_origin'] = 'De novo';
-            } elseif ($aVariant['is_present_father'] >= 5 || $aVariant['is_present_mother'] >= 5) {
-                $aVariant['VariantOnGenome/Genetic_origin'] = 'Germline (inherited)';
-            } else {
-                $aVariant['VariantOnGenome/Genetic_origin'] = 'Unknown';
-            }
-        }
-        // Extra gene panel checks, for the custom panel.
-        if (!$aVariant['in_gene_panel'] && $aCustomPanel && in_array($aVariant['gene_id'], $aCustomPanel)) {
-            $aVariant['in_gene_panel'] = 1;
-        }
-        print('"' . implode('"' . "\t" . '"', $aVariant) . "\"\r\n");
-    }
-
-    if (ACTION == 'exportToBeConfirmed') {
-        $sFileContents = ob_get_contents();
-        ob_end_clean();
-
-        if ($sFileContents) {
-            $f = @fopen($sPath . $sFile, 'w');
-            if ($f) {
-                fputs($f, $sFileContents);
-                fclose($f);
-                die('1|' . count($aVariants));
-            }
-
-            die('0|Could not create file ' . $sPath . $sFile);
+        if (ACTION == 'downloadToBeConfirmed') {
+            header('Content-Disposition: attachment; filename="' . $sFile . '"');
+            header('Pragma: public');
         } else {
-            die('0|No output generated.');
+            // Collect the file's contents, so we can write it to disk.
+            ob_start();
+        }
+        print('# ' . (lovd_verifyInstance('leiden')? 'id_miracle' : 'lab_id') . ' = ' . $sLabID . "\r\n");
+        foreach ($aGenePanels as $aGenePanel) {
+            print('# active_gene_panel = (' . $aGenePanel['id'] . ', ' . $aGenePanel['name'] . ', ' . $aGenePanel['edited_date'] . ', ' . $aGenePanel['genes'] . ' genes)' . "\r\n");
+        }
+        if (!lovd_verifyInstance('leiden')) {
+            // Not in use outside of Leiden.
+            unset($aVariants[0]['VariantOnGenome/Genetic_origin']);
+        }
+        print('"{{' . implode('}}"' . "\t" . '"{{', array_keys($aVariants[0])) . '}}"' . "\r\n");
+
+        foreach ($aVariants as $aVariant) {
+            $aVariant['genomic_id_ncbi'] = $_SETT['human_builds'][$_CONF['refseq_build']]['ncbi_sequences'][$aVariant['chromosome']];
+            switch($aVariant['allele']) {
+                case '3':
+                    $aVariant['allele'] = 'Homozygous';
+                    break;
+                case '10':
+                case '11':
+                    $aVariant['allele'] = 'Paternal';
+                    break;
+                case '20':
+                case '21':
+                    $aVariant['allele'] = 'Maternal';
+                    break;
+                default:
+                    $aVariant['allele'] = 'Heterozygous';
+            }
+            if (lovd_verifyInstance('leiden')) {
+                if (in_array($aVariant['is_present_father'], array(1, 2)) && in_array($aVariant['is_present_mother'], array(1, 2))) {
+                    $aVariant['VariantOnGenome/Genetic_origin'] = 'De novo';
+                } elseif ($aVariant['is_present_father'] >= 5 || $aVariant['is_present_mother'] >= 5) {
+                    $aVariant['VariantOnGenome/Genetic_origin'] = 'Germline (inherited)';
+                } else {
+                    $aVariant['VariantOnGenome/Genetic_origin'] = 'Unknown';
+                }
+            }
+            // Extra gene panel checks, for the custom panel.
+            if (!$aVariant['in_gene_panel'] && $aCustomPanel && in_array($aVariant['gene_id'], $aCustomPanel)) {
+                $aVariant['in_gene_panel'] = 1;
+            }
+            print('"' . implode('"' . "\t" . '"', $aVariant) . "\"\r\n");
+        }
+
+        if (ACTION != 'downloadToBeConfirmed') {
+            $sFileContents = ob_get_contents();
+            ob_end_clean();
+
+            if ($sFileContents) {
+                $f = @fopen($sPath . $sFile, 'w');
+                if ($f) {
+                    fputs($f, $sFileContents);
+                    fclose($f);
+                    die('1|' . count($aVariants));
+                }
+
+                die('0|Could not create file ' . $sPath . $sFile);
+            } else {
+                die('0|No output generated.');
+            }
         }
     }
 

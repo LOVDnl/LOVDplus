@@ -69,7 +69,7 @@ $_CONFIG = array(
 
 // More exit codes.
 define('EXIT_ERROR_DATA_DIR_CANT_OPEN', 65);
-$bWarningsOcurred = false;
+$bWarningsOccurred = false;
 
 
 
@@ -108,10 +108,10 @@ foreach ($aFiles as $sID => $aFileTypes) {
     passthru($sCmd, $nResult);
     if ($nResult == EXIT_WARNINGS_OCCURRED) {
         lovd_printIfVerbose(VERBOSITY_LOW, "VCF converter completed with warnings.\n");
-        $bWarningsOcurred = true;
+        $bWarningsOccurred = true;
     } elseif ($nResult !== EXIT_OK) {
         lovd_printIfVerbose(VERBOSITY_LOW, "VCF converter failed.\n");
-        $bWarningsOcurred = true;
+        $bWarningsOccurred = true;
     }
     $aFiles[$sID][] = $_INSTANCE_CONFIG['conversion']['suffixes']['vep'];
 
@@ -173,11 +173,11 @@ if (!empty($_INSTANCE_CONFIG['conversion']['create_meta_file_if_missing'])) {
                 lovd_printIfVerbose(VERBOSITY_MEDIUM, 'Created default meta data file for sample ' . $sID . '.' . "\n");
             } else {
                 lovd_printIfVerbose(VERBOSITY_LOW, 'Failed creating meta data file for sample ' . $sID . '.' . "\n");
-                $bWarningsOcurred = true;
+                $bWarningsOccurred = true;
             }
         }
     }
 }
 
-die($bWarningsOcurred? EXIT_WARNINGS_OCCURRED : EXIT_OK);
+die($bWarningsOccurred? EXIT_WARNINGS_OCCURRED : EXIT_OK);
 ?>
