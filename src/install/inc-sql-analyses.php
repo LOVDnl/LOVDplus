@@ -4,10 +4,10 @@
  * LEIDEN OPEN VARIATION DATABASE (LOVD)
  *
  * Created     : 2016-07-15
- * Modified    : 2022-12-02
+ * Modified    : 2023-01-11
  * For LOVD    : 3.0-29
  *
- * Copyright   : 2004-2022 Leiden University Medical Center; http://www.LUMC.nl/
+ * Copyright   : 2004-2023 Leiden University Medical Center; http://www.LUMC.nl/
  * Programmers : Anthony Marty <anthony.marty@unimelb.edu.au>
  *               Ivo F.A.C. Fokkema <I.F.A.C.Fokkema@LUMC.nl>
  *               Juny Kesumadewi <juny.kesumadewi@unimelb.edu.au>
@@ -47,13 +47,13 @@ switch ($_INI['instance']['name']) {
         $aAnalysesSQL =
             array(
                 'INSERT INTO ' . TABLE_ANALYSES . ' (`id`, `sortid`, `name`, `description`, `version`, `created_by`, `created_date`, `edited_by`, `edited_date`) VALUES
-                  (1, 1, "De novo",                 "Filters for de novo variants, not reported before in known databases.", 3, 0, NOW(), NULL, NULL),
-                  (2, 2, "Gene panel",              "Filters for coding or splice site variants within the gene panel.", 2, 0, NOW(), NULL, NULL),
-                  (3, 3, "X-linked recessive",      "Filters for X-linked recessive variants, not found in father, not homozygous in mother. High frequencies (> 3%) are also filtered out.", 2, 0, NOW(), NULL, NULL),
-                  (4, 4, "Recessive (gene panel)",  "Filters for recessive variants, homozygous or compound heterozygous in patient, but not in the parents. High frequencies (> 3%) are also filtered out.", 2, 0, NOW(), NULL, NULL),
-                  (5, 5, "Recessive (whole exome)", "Filters for recessive variants, homozygous or compound heterozygous in patient, but not in the parents. High frequencies (> 3%) are also filtered out, and the gene black list is applied.", 3, 0, NOW(), NULL, NULL),
-                  (6, 6, "Imprinted genes",         "Filters for variants found in imprinted genes.", 3, 0, NOW(), NULL, NULL),
-                  (7, 7, "Mosaic",                  "Filters for mosaic variants.", 2, 0, NOW(), NULL, NULL)',
+                  (1, 1, "De novo",                 "Filters for de novo variants, not reported before in known databases.", 4, 0, NOW(), NULL, NULL),
+                  (2, 2, "Gene panel",              "Filters for coding or splice site variants within the gene panel.", 3, 0, NOW(), NULL, NULL),
+                  (3, 3, "X-linked recessive",      "Filters for X-linked recessive variants, not found in father, not homozygous in mother. High frequencies (> 3%) are also filtered out.", 3, 0, NOW(), NULL, NULL),
+                  (4, 4, "Recessive (gene panel)",  "Filters for recessive variants, homozygous or compound heterozygous in patient, but not in the parents. High frequencies (> 3%) are also filtered out.", 3, 0, NOW(), NULL, NULL),
+                  (5, 5, "Recessive (whole exome)", "Filters for recessive variants, homozygous or compound heterozygous in patient, but not in the parents. High frequencies (> 3%) are also filtered out, and the gene black list is applied.", 4, 0, NOW(), NULL, NULL),
+                  (6, 6, "Imprinted genes",         "Filters for variants found in imprinted genes.", 4, 0, NOW(), NULL, NULL),
+                  (7, 7, "Mosaic",                  "Filters for mosaic variants.", 3, 0, NOW(), NULL, NULL)',
                 'INSERT INTO ' . TABLE_ANALYSIS_FILTERS . ' (`id`, `name`, `description`, `has_config`) VALUES 
                   ("apply_selected_gene_panels", "Apply selected gene panels", "Select only variants that are associated with a gene that is in the selected gene panels and not within the selected blacklists.", 1),
                   ("chromosome_X", "Select X chromosome", "Select only variants that are located on the X chromosome.", 0),
@@ -72,6 +72,7 @@ switch ($_INI['instance']['name']) {
                   ("remove_by_indb_count_hc_gte_5", "Remove with inhouse DB count >= 5 (hc)", "Remove variants that have an inhouse database count of 5 or higher, called by the Haplotype Caller.", 0),
                   ("remove_by_indb_count_ug_gte_2", "Remove with inhouse DB count >= 2 (ug)", "Remove variants that have an inhouse database count of 2 or higher, called by the Unified Genotyper.", 0),
                   ("remove_by_indb_count_ug_gte_5", "Remove with inhouse DB count >= 5 (ug)", "Remove variants that have an inhouse database count of 5 or higher, called by the Unified Genotyper.", 0),
+                  ("remove_by_quality_lte_15", "Remove variants with sequencing quality <= 15", "Remove all variants with a sequencing quality score that is less than, or equal to, 15.", 0),
                   ("remove_by_quality_lte_100", "Remove variants with sequencing quality <= 100", "Remove all variants with a sequencing quality score that is less than, or equal to, 100.", 0),
                   ("remove_in_gene_blacklist", "Apply gene blacklist", "Remove all variants mapped to only genes in the system\'s blacklist(s).", 1),
                   ("remove_intronic_distance_gt_2", "Remove intronic with distance > 2 bp", "Remove all variants that are only mapped to introns, more than 2 bp from the exon.", 0),
@@ -91,7 +92,7 @@ switch ($_INI['instance']['name']) {
                 'INSERT INTO ' . TABLE_A2AF . ' (`analysisid`, `filterid`, `filter_order`) VALUES
                   (1, "apply_selected_gene_panels", 1),
                   (1, "cross_screenings", 2),
-                  (1, "remove_by_quality_lte_100", 3),
+                  (1, "remove_by_quality_lte_15", 3),
                   (1, "remove_by_indb_count_hc_gte_2", 4),
                   (1, "remove_by_indb_count_ug_gte_2", 5),
                   (1, "remove_with_any_frequency_gt_2", 6),
@@ -111,12 +112,12 @@ switch ($_INI['instance']['name']) {
                   (1, "remove_by_function_utr_or_intronic_or_synonymous", 21),
                   (2, "apply_selected_gene_panels", 1),
                   (2, "cross_screenings", 2),
-                  (2, "remove_by_quality_lte_100", 3),
+                  (2, "remove_by_quality_lte_15", 3),
                   (2, "remove_by_function_utr_or_intronic_gt_20", 4),
                   (3, "chromosome_X", 1),
                   (3, "apply_selected_gene_panels", 2),
                   (3, "cross_screenings", 3),
-                  (3, "remove_by_quality_lte_100", 4),
+                  (3, "remove_by_quality_lte_15", 4),
                   (3, "remove_by_indb_count_hc_gte_2", 5),
                   (3, "remove_by_indb_count_ug_gte_2", 6),
                   (3, "remove_with_any_frequency_gt_3", 7),
@@ -131,7 +132,7 @@ switch ($_INI['instance']['name']) {
                   (3, "remove_by_function_utr_or_intronic_or_synonymous", 16),
                   (4, "apply_selected_gene_panels", 1),
                   (4, "cross_screenings", 2),
-                  (4, "remove_by_quality_lte_100", 3),
+                  (4, "remove_by_quality_lte_15", 3),
                   (4, "remove_by_indb_count_hc_gte_5", 4),
                   (4, "remove_by_indb_count_ug_gte_5", 5),
                   (4, "remove_by_indb_count_hc_gte_2", 6),
@@ -148,7 +149,7 @@ switch ($_INI['instance']['name']) {
                   (4, "remove_by_function_utr_or_intronic_or_synonymous", 17),
                   (4, "select_homozygous_or_heterozygous_not_from_one_parent", 18),
                   (5, "cross_screenings", 1),
-                  (5, "remove_by_quality_lte_100", 2),
+                  (5, "remove_by_quality_lte_15", 2),
                   (5, "remove_by_indb_count_hc_gte_5", 3),
                   (5, "remove_by_indb_count_ug_gte_5", 4),
                   (5, "remove_by_indb_count_hc_gte_2", 5),
@@ -168,7 +169,7 @@ switch ($_INI['instance']['name']) {
                   (5, "remove_in_gene_blacklist", 19),
                   (6, "apply_selected_gene_panels", 1),
                   (6, "cross_screenings", 2),
-                  (6, "remove_by_quality_lte_100", 3),
+                  (6, "remove_by_quality_lte_15", 3),
                   (6, "remove_not_imprinted", 4),
                   (6, "remove_by_indb_count_hc_gte_2", 5),
                   (6, "remove_by_indb_count_ug_gte_2", 6),
@@ -185,7 +186,7 @@ switch ($_INI['instance']['name']) {
                   (6, "remove_by_function_utr_or_intronic_or_synonymous", 18),
                   (7, "apply_selected_gene_panels", 1),
                   (7, "cross_screenings", 2),
-                  (7, "remove_by_quality_lte_100", 3),
+                  (7, "remove_by_quality_lte_15", 3),
                   (7, "remove_by_indb_count_hc_gte_2", 4),
                   (7, "remove_by_indb_count_ug_gte_2", 5),
                   (7, "remove_intronic_distance_gt_8", 6),

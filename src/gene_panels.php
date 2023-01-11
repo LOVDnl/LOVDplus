@@ -4,10 +4,10 @@
  * LEIDEN OPEN VARIATION DATABASE (LOVD)
  *
  * Created     : 2016-03-01
- * Modified    : 2022-12-09
+ * Modified    : 2023-01-11
  * For LOVD+   : 3.0-29
  *
- * Copyright   : 2004-2022 Leiden University Medical Center; http://www.LUMC.nl/
+ * Copyright   : 2004-2023 Leiden University Medical Center; http://www.LUMC.nl/
  * Programmers : Anthony Marty <anthony.marty@unimelb.edu.au>
  *               Ivo F.A.C. Fokkema <I.F.A.C.Fokkema@LUMC.nl>
  *               John-Paul Plazzer <johnpaul.plazzer@gmail.com>
@@ -1117,14 +1117,14 @@ if (PATH_COUNT == 3 && preg_match('/^[a-z][a-z0-9#@-]+$/i', rawurldecode($_PE[2]
     $zData = $_DATA->viewEntry(array('genepanelid' => $nGenePanelID, 'geneid' => $sGeneID));
 
     $aNavigation = array();
-
-    if ($_AUTH['level'] >= $_SETT['user_level_settings']['genepanels_genes_edit']) {
-        $aNavigation[CURRENT_PATH . '?edit'] = array('menu_edit.png', 'Edit gene information', 1);
+    if ($_AUTH) {
+        if ($_AUTH['level'] >= $_SETT['user_level_settings']['genepanels_genes_edit']) {
+            $aNavigation[CURRENT_PATH . '?edit'] = array('menu_edit.png', 'Edit gene information', 1);
+        }
+        if ($_AUTH['level'] >= $_SETT['user_level_settings']['genepanels_genes_delete']) {
+            $aNavigation[CURRENT_PATH . '?delete'] = array('cross.png', 'Remove gene entry', 1);
+        }
     }
-    if ($_AUTH['level'] >= $_SETT['user_level_settings']['genepanels_genes_delete']) {
-        $aNavigation[CURRENT_PATH . '?delete'] = array('cross.png', 'Remove gene entry', 1);
-    }
-
     lovd_showJGNavigation($aNavigation, 'GenePanelGene');
 
     $_T->printFooter();

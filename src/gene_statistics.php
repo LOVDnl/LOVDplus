@@ -4,10 +4,10 @@
  * LEIDEN OPEN VARIATION DATABASE (LOVD)
  *
  * Created     : 2016-02-25
- * Modified    : 2022-11-30
+ * Modified    : 2023-01-11
  * For LOVD+   : 3.0-29
  *
- * Copyright   : 2004-2022 Leiden University Medical Center; http://www.LUMC.nl/
+ * Copyright   : 2004-2023 Leiden University Medical Center; http://www.LUMC.nl/
  * Programmers : Anthony Marty <anthony.marty@unimelb.edu.au>
  *               Ivo F.A.C. Fokkema <I.F.A.C.Fokkema@LUMC.nl>
  *
@@ -47,7 +47,7 @@ if (PATH_COUNT == 1 && !ACTION) {
     // View all entries.
 
     // Submitters are allowed to download this list...
-    if ($_AUTH['level'] >= LEVEL_SUBMITTER) {
+    if ($_AUTH && $_AUTH['level'] >= LEVEL_SUBMITTER) {
         define('FORMAT_ALLOW_TEXTPLAIN', true);
     }
     lovd_requireAUTH(LEVEL_SUBMITTER);

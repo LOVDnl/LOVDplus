@@ -4,10 +4,10 @@
  * LEIDEN OPEN VARIATION DATABASE (LOVD)
  *
  * Created     : 2011-02-16
- * Modified    : 2022-06-03
- * For LOVD    : 3.0-28
+ * Modified    : 2023-01-11
+ * For LOVD    : 3.0-29
  *
- * Copyright   : 2004-2022 Leiden University Medical Center; http://www.LUMC.nl/
+ * Copyright   : 2004-2023 Leiden University Medical Center; http://www.LUMC.nl/
  * Programmers : Ivar C. Lugtenburg <I.C.Lugtenburg@LUMC.nl>
  *               Ivo F.A.C. Fokkema <I.F.A.C.Fokkema@LUMC.nl>
  *               Daan Asscheman <D.Asscheman@LUMC.nl>
@@ -67,7 +67,7 @@ if (PATH_COUNT == 1 && !ACTION) {
     // View all entries.
 
     // Managers are allowed to download this list...
-    if ($_AUTH['level'] >= LEVEL_MANAGER) {
+    if ($_AUTH && $_AUTH['level'] >= LEVEL_MANAGER) {
         define('FORMAT_ALLOW_TEXTPLAIN', true);
     }
 
@@ -608,7 +608,7 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && in_array(ACTION, array('curate', 
 
     // If we get here, there are screenings to authorize against. Managers are
     //  always cool at this point, we need at least LEVEL_OWNER.
-    if ($_AUTH['level'] < LEVEL_OWNER) {
+    if ($_AUTH && $_AUTH['level'] < LEVEL_OWNER) {
         foreach ($zScreenings as $nScreeningID) {
             lovd_isAuthorized('screening_analysis', $nScreeningID);
             // If we're authorized, we can skip the rest.
@@ -1482,7 +1482,7 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && ACTION == 'edit_panels') {
 
     // If we get here, there are screenings to authorize against. Managers are
     //  always cool at this point, we need at least LEVEL_OWNER.
-    if ($_AUTH['level'] < LEVEL_OWNER) {
+    if ($_AUTH && $_AUTH['level'] < LEVEL_OWNER) {
         foreach ($zScreenings as $nScreeningID) {
             lovd_isAuthorized('screening_analysis', $nScreeningID);
             // If we're authorized, we can skip the rest.
