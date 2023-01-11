@@ -4,10 +4,10 @@
  * LEIDEN OPEN VARIATION DATABASE (LOVD)
  *
  * Created     : 2017-01-12
- * Modified    : 2022-11-30
+ * Modified    : 2023-01-11
  * For LOVD+   : 3.0-29
  *
- * Copyright   : 2004-2022 Leiden University Medical Center; http://www.LUMC.nl/
+ * Copyright   : 2004-2023 Leiden University Medical Center; http://www.LUMC.nl/
  * Programmers : Juny Kesumadewi <juny.kesumadewi@unimelb.edu.au>
  *               Ivo F.A.C. Fokkema <I.F.A.C.Fokkema@LUMC.nl>
  *
@@ -164,7 +164,7 @@ class LOVD_ObservationCounts
 
         if ($aResult['analysis_statusid'] == ANALYSIS_STATUS_IN_PROGRESS) {
             // If the status is in progress, you either need to be owner or up, or there should be no previous observation counts.
-            if ($_AUTH['level'] >= LEVEL_OWNER || !$this->loadExistingData()) {
+            if (($_AUTH && $_AUTH['level'] >= LEVEL_OWNER) || !$this->loadExistingData()) {
                 return true;
             }
         }

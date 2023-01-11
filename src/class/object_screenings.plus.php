@@ -4,10 +4,10 @@
  * LEIDEN OPEN VARIATION DATABASE (LOVD)
  *
  * Created     : 2014-01-03
- * Modified    : 2022-12-12
+ * Modified    : 2023-01-11
  * For LOVD+   : 3.0-29
  *
- * Copyright   : 2004-2022 Leiden University Medical Center; http://www.LUMC.nl/
+ * Copyright   : 2004-2023 Leiden University Medical Center; http://www.LUMC.nl/
  * Programmer  : Ivo F.A.C. Fokkema <I.F.A.C.Fokkema@LUMC.nl>
  *
  *
@@ -180,7 +180,7 @@ class LOVD_ScreeningPLUS extends LOVD_Screening
             $zData['analysis_approved_date_'] = substr($zData['analysis_approved_date'], 0, 10);
         } else {
             $zData['individualid_'] = '<A href="individuals/' . $zData['individualid'] . '">' . $zData['individualid'] . '</A>';
-            if ($_AUTH['level'] >= $_SETT['user_level_settings']['see_nonpublic_data']) {
+            if ($_AUTH && $_AUTH['level'] >= $_SETT['user_level_settings']['see_nonpublic_data']) {
                 $zData['individualid_'] .= ' <SPAN style="color : #' . $this->getStatusColor($zData['individual_statusid']) . '">(' . $_SETT['data_status'][$zData['individual_statusid']] . ')</SPAN>';
             }
             $zData['variants_found_link'] = $zData['variants_found_'];
@@ -191,27 +191,29 @@ class LOVD_ScreeningPLUS extends LOVD_Screening
             $zData['analysis_status'] = $_SETT['analysis_status'][$zData['analysis_statusid']];
             // Add link to action, depending on level and current status.
             $sOpen = $sClose = '';
-            if ($zData['analysis_statusid'] == ANALYSIS_STATUS_IN_PROGRESS) {
-                if ($_AUTH['level'] >= LEVEL_OWNER) {
-                    $sClose = 'Close';
-                }
-            } elseif ($zData['analysis_statusid'] == ANALYSIS_STATUS_CLOSED) {
-                if ($_AUTH['level'] >= LEVEL_OWNER && $zData['analysis_approved_by'] == $_AUTH['id']) {
-                    $sOpen = 'Re-open for analysis';
-                }
-                if ($_AUTH['level'] >= LEVEL_MANAGER) {
-                    $sClose = 'Close as waiting for confirmation';
-                }
-            } elseif ($zData['analysis_statusid'] == ANALYSIS_STATUS_WAIT_CONFIRMATION) {
-                if ($_AUTH['level'] >= LEVEL_MANAGER) {
-                    $sOpen = 'Re-open';
-                    if ($_AUTH['level'] >= LEVEL_ADMIN) {
-                        $sClose = 'Confirm';
+            if ($_AUTH) {
+                if ($zData['analysis_statusid'] == ANALYSIS_STATUS_IN_PROGRESS) {
+                    if ($_AUTH['level'] >= LEVEL_OWNER) {
+                        $sClose = 'Close';
                     }
-                }
-            } elseif ($zData['analysis_statusid'] == ANALYSIS_STATUS_CONFIRMED) {
-                if ($_AUTH['level'] >= LEVEL_ADMIN) {
-                    $sOpen = 'Re-open';
+                } elseif ($zData['analysis_statusid'] == ANALYSIS_STATUS_CLOSED) {
+                    if ($_AUTH['level'] >= LEVEL_OWNER && $zData['analysis_approved_by'] == $_AUTH['id']) {
+                        $sOpen = 'Re-open for analysis';
+                    }
+                    if ($_AUTH['level'] >= LEVEL_MANAGER) {
+                        $sClose = 'Close as waiting for confirmation';
+                    }
+                } elseif ($zData['analysis_statusid'] == ANALYSIS_STATUS_WAIT_CONFIRMATION) {
+                    if ($_AUTH['level'] >= LEVEL_MANAGER) {
+                        $sOpen = 'Re-open';
+                        if ($_AUTH['level'] >= LEVEL_ADMIN) {
+                            $sClose = 'Confirm';
+                        }
+                    }
+                } elseif ($zData['analysis_statusid'] == ANALYSIS_STATUS_CONFIRMED) {
+                    if ($_AUTH['level'] >= LEVEL_ADMIN) {
+                        $sOpen = 'Re-open';
+                    }
                 }
             }
             // In the following two links I cannot use CURRENT_PATH, because this file can also have been loaded through ajax/viewentry.php!
