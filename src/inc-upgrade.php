@@ -1499,8 +1499,192 @@ if ($sCalcVersionFiles != $sCalcVersionDB) {
         }
         if ($sCalcVersionDB < lovd_calculateVersion('3.0-28c')) {
             // Add new filter.
-            $aUpdates['3.0-28c'][] = 'INSERT INTO ' . TABLE_ANALYSIS_FILTERS . ' (`id`, `name`, `description`, `has_config`) VALUES
+            $aUpdates['3.0-28c'][] = 'INSERT IGNORE INTO ' . TABLE_ANALYSIS_FILTERS . ' (`id`, `name`, `description`, `has_config`) VALUES
                 ("remove_by_quality_lte_15", "Remove variants with sequencing quality <= 15", "Remove all variants with a sequencing quality score that is less than, or equal to, 15.", 0)';
+
+            // Update all analyses, for Leiden only.
+            if (lovd_verifyInstance('leiden')) {
+                // Instead of writing all the queries out, generate them by code.
+                $aAnalyses = array(
+                    array(
+                        'analysis' => array(
+                            1, "De novo", "Filters for de novo variants, not reported before in known databases.", 4,
+                        ),
+                        'filters' => array(
+                            "apply_selected_gene_panels",
+                            "cross_screenings",
+                            "remove_by_quality_lte_15",
+                            "remove_by_indb_count_hc_gte_2",
+                            "remove_by_indb_count_ug_gte_2",
+                            "remove_with_any_frequency_gt_2",
+                            "remove_with_any_frequency_1000G",
+                            "remove_with_any_frequency_goNL",
+                            "remove_with_any_frequency_EVS",
+                            "is_present_mother_lte_4",
+                            "is_present_father_lte_4",
+                            "is_present_mother_1",
+                            "is_present_father_1",
+                            "remove_intronic_distance_gt_8",
+                            "remove_intronic_distance_gt_2",
+                            "remove_by_function_utr3",
+                            "remove_by_function_utr5",
+                            "remove_by_function_utr_or_intronic",
+                            "remove_by_function_coding_synonymous",
+                            "remove_by_function_utr_or_intronic_or_synonymous",
+                        ),
+                    ),
+                    array(
+                        'analysis' => array(
+                            2, "Gene panel", "Filters for coding or splice site variants within the gene panel.", 3,
+                        ),
+                        'filters' => array(
+                            "apply_selected_gene_panels",
+                            "cross_screenings",
+                            "remove_by_quality_lte_15",
+                            "remove_by_function_utr_or_intronic_gt_20",
+                        ),
+                    ),
+                    array(
+                        'analysis' => array(
+                            3, "X-linked recessive", "Filters for X-linked recessive variants, not found in father, not homozygous in mother. High frequencies (> 3%) are also filtered out.", 3,
+                        ),
+                        'filters' => array(
+                            "chromosome_X",
+                            "apply_selected_gene_panels",
+                            "cross_screenings",
+                            "remove_by_quality_lte_15",
+                            "remove_by_indb_count_hc_gte_2",
+                            "remove_by_indb_count_ug_gte_2",
+                            "remove_with_any_frequency_gt_3",
+                            "is_present_father_lte_4",
+                            "remove_variants_hom_in_mother",
+                            "remove_intronic_distance_gt_8",
+                            "remove_intronic_distance_gt_2",
+                            "remove_by_function_utr3",
+                            "remove_by_function_utr5",
+                            "remove_by_function_utr_or_intronic",
+                            "remove_by_function_coding_synonymous",
+                            "remove_by_function_utr_or_intronic_or_synonymous",
+                        ),
+                    ),
+                    array(
+                        'analysis' => array(
+                            4, "Recessive (gene panel)", "Filters for recessive variants, homozygous or compound heterozygous in patient, but not in the parents. High frequencies (> 3%) are also filtered out.", 3,
+                        ),
+                        'filters' => array(
+                            "apply_selected_gene_panels",
+                            "cross_screenings",
+                            "remove_by_quality_lte_15",
+                            "remove_by_indb_count_hc_gte_5",
+                            "remove_by_indb_count_ug_gte_5",
+                            "remove_by_indb_count_hc_gte_2",
+                            "remove_by_indb_count_ug_gte_2",
+                            "remove_with_any_frequency_gt_3",
+                            "remove_variants_hom_in_father",
+                            "remove_variants_hom_in_mother",
+                            "remove_intronic_distance_gt_8",
+                            "remove_intronic_distance_gt_2",
+                            "remove_by_function_utr3",
+                            "remove_by_function_utr5",
+                            "remove_by_function_utr_or_intronic",
+                            "remove_by_function_coding_synonymous",
+                            "remove_by_function_utr_or_intronic_or_synonymous",
+                            "select_homozygous_or_heterozygous_not_from_one_parent",
+                        ),
+                    ),
+                    array(
+                        'analysis' => array(
+                            5, "Recessive (whole exome)", "Filters for recessive variants, homozygous or compound heterozygous in patient, but not in the parents. High frequencies (> 3%) are also filtered out, and the gene black list is applied.", 4,
+                        ),
+                        'filters' => array(
+                            "cross_screenings",
+                            "remove_by_quality_lte_15",
+                            "remove_by_indb_count_hc_gte_5",
+                            "remove_by_indb_count_ug_gte_5",
+                            "remove_by_indb_count_hc_gte_2",
+                            "remove_by_indb_count_ug_gte_2",
+                            "remove_with_any_frequency_gt_3",
+                            "remove_variants_hom_in_father",
+                            "remove_variants_hom_in_mother",
+                            "remove_intronic_distance_gt_8",
+                            "remove_intronic_distance_gt_2",
+                            "remove_by_function_utr3",
+                            "remove_by_function_utr5",
+                            "remove_by_function_utr_or_intronic",
+                            "remove_by_function_coding_synonymous",
+                            "remove_by_function_utr_or_intronic_or_synonymous",
+                            "remove_missense_with_phylop_lte_2.5",
+                            "select_homozygous_or_heterozygous_not_from_one_parent",
+                            "remove_in_gene_blacklist",
+                        ),
+                    ),
+                    array(
+                        'analysis' => array(
+                            6, "Imprinted genes", "Filters for variants found in imprinted genes.", 4,
+                        ),
+                        'filters' => array(
+                            "apply_selected_gene_panels",
+                            "cross_screenings",
+                            "remove_by_quality_lte_15",
+                            "remove_not_imprinted",
+                            "remove_by_indb_count_hc_gte_2",
+                            "remove_by_indb_count_ug_gte_2",
+                            "remove_with_any_frequency_gt_2",
+                            "remove_with_any_frequency_1000G",
+                            "remove_with_any_frequency_goNL",
+                            "remove_with_any_frequency_EVS",
+                            "remove_intronic_distance_gt_8",
+                            "remove_intronic_distance_gt_2",
+                            "remove_by_function_utr3",
+                            "remove_by_function_utr5",
+                            "remove_by_function_utr_or_intronic",
+                            "remove_by_function_coding_synonymous",
+                            "remove_by_function_utr_or_intronic_or_synonymous",
+                        ),
+                    ),
+                    array(
+                        'analysis' => array(
+                            7, "Mosaic", "Filters for mosaic variants.", 3,
+                        ),
+                        'filters' => array(
+                            "apply_selected_gene_panels",
+                            "cross_screenings",
+                            "remove_by_quality_lte_15",
+                            "remove_by_indb_count_hc_gte_2",
+                            "remove_by_indb_count_ug_gte_2",
+                            "remove_intronic_distance_gt_8",
+                            "remove_intronic_distance_gt_2",
+                            "remove_by_function_utr3",
+                            "remove_by_function_utr5",
+                            "remove_by_function_utr_or_intronic",
+                            "remove_by_function_coding_synonymous",
+                            "remove_by_function_utr_or_intronic_or_synonymous",
+                        ),
+                    ),
+                );
+
+                foreach ($aAnalyses as $aAnalysis) {
+                    $aUpdates['3.0-28c'][] = 'INSERT INTO ' . TABLE_ANALYSES . ' (`sortid`, `name`, `description`, `version`, `created_by`, `created_date`) VALUES
+                        (' . implode(', ', array_map(
+                            function ($Value)
+                            {
+                                if (is_int($Value) || ctype_digit($Value)) {
+                                    return (int) $Value;
+                                } else {
+                                    return '"' . addslashes($Value) . '"';
+                                }
+                            }, $aAnalysis['analysis'])) . ', 0, NOW())';
+                    $aUpdates['3.0-28c'][] = 'SET @nID := (SELECT last_insert_id())';
+                    $nFilter = 0;
+                    $aUpdates['3.0-28c'][] = 'INSERT INTO ' . TABLE_A2AF . ' (`analysisid`, `filterid`, `filter_order`) VALUES ' .
+                        implode(', ', array_map(
+                            function ($sFilter) use (&$nFilter)
+                            {
+                                $nFilter ++;
+                                return '(@nID, "' . $sFilter . '", ' . $nFilter . ')';
+                            }, $aAnalysis['filters']));
+                }
+            }
         }
     }
 
