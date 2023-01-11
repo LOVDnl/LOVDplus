@@ -1497,6 +1497,11 @@ if ($sCalcVersionFiles != $sCalcVersionDB) {
                     (@nID, "remove_in_gene_blacklist", 19)';
             }
         }
+        if ($sCalcVersionDB < lovd_calculateVersion('3.0-28c')) {
+            // Add new filter.
+            $aUpdates['3.0-28c'][] = 'INSERT INTO ' . TABLE_ANALYSIS_FILTERS . ' (`id`, `name`, `description`, `has_config`) VALUES
+                ("remove_by_quality_lte_15", "Remove variants with sequencing quality <= 15", "Remove all variants with a sequencing quality score that is less than, or equal to, 15.", 0)';
+        }
     }
 
 

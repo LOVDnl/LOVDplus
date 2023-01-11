@@ -4,10 +4,10 @@
  * LEIDEN OPEN VARIATION DATABASE (LOVD)
  *
  * Created     : 2016-07-15
- * Modified    : 2022-12-02
+ * Modified    : 2023-01-11
  * For LOVD    : 3.0-29
  *
- * Copyright   : 2004-2022 Leiden University Medical Center; http://www.LUMC.nl/
+ * Copyright   : 2004-2023 Leiden University Medical Center; http://www.LUMC.nl/
  * Programmers : Anthony Marty <anthony.marty@unimelb.edu.au>
  *               Ivo F.A.C. Fokkema <I.F.A.C.Fokkema@LUMC.nl>
  *               Juny Kesumadewi <juny.kesumadewi@unimelb.edu.au>
@@ -72,6 +72,7 @@ switch ($_INI['instance']['name']) {
                   ("remove_by_indb_count_hc_gte_5", "Remove with inhouse DB count >= 5 (hc)", "Remove variants that have an inhouse database count of 5 or higher, called by the Haplotype Caller.", 0),
                   ("remove_by_indb_count_ug_gte_2", "Remove with inhouse DB count >= 2 (ug)", "Remove variants that have an inhouse database count of 2 or higher, called by the Unified Genotyper.", 0),
                   ("remove_by_indb_count_ug_gte_5", "Remove with inhouse DB count >= 5 (ug)", "Remove variants that have an inhouse database count of 5 or higher, called by the Unified Genotyper.", 0),
+                  ("remove_by_quality_lte_15", "Remove variants with sequencing quality <= 15", "Remove all variants with a sequencing quality score that is less than, or equal to, 15.", 0),
                   ("remove_by_quality_lte_100", "Remove variants with sequencing quality <= 100", "Remove all variants with a sequencing quality score that is less than, or equal to, 100.", 0),
                   ("remove_in_gene_blacklist", "Apply gene blacklist", "Remove all variants mapped to only genes in the system\'s blacklist(s).", 1),
                   ("remove_intronic_distance_gt_2", "Remove intronic with distance > 2 bp", "Remove all variants that are only mapped to introns, more than 2 bp from the exon.", 0),
