@@ -4,7 +4,7 @@
  * LEIDEN OPEN VARIATION DATABASE (LOVD)
  *
  * Created     : 2016-03-01
- * Modified    : 2023-01-11
+ * Modified    : 2023-01-27
  * For LOVD+   : 3.0-29
  *
  * Copyright   : 2004-2023 Leiden University Medical Center; http://www.LUMC.nl/
@@ -782,9 +782,9 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && ACTION == 'manage_genes') {
                     'genepanelid' => $nID,
                     'geneid' => $sGeneID,
                     'transcriptid' => (empty($_POST['transcriptids'][$nKey])? NULL : $_POST['transcriptids'][$nKey]),
-                    'inheritance' => $_POST['inheritances'][$nKey],
-                    'pmid' => $_POST['pmids'][$nKey],
-                    'remarks' => $_POST['remarkses'][$nKey],
+                    'inheritance' => ($_POST['inheritances'][$nKey] ?? ''),
+                    'pmid' => ($_POST['pmids'][$nKey] ?? NULL),
+                    'remarks' => ($_POST['remarkses'][$nKey] ?? ''),
                 );
                 if (!isset($aGenesCurrentlyAssociated[$sGeneID])) {
                     // Needs an insert. This will also take care of the revision table.
