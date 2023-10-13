@@ -4,10 +4,10 @@
  * LEIDEN OPEN VARIATION DATABASE (LOVD)
  *
  * Created     : 2010-12-20
- * Modified    : 2022-02-10
- * For LOVD    : 3.0-28
+ * Modified    : 2023-02-02
+ * For LOVD    : 3.0-29
  *
- * Copyright   : 2004-2022 Leiden University Medical Center; http://www.LUMC.nl/
+ * Copyright   : 2004-2023 Leiden University Medical Center; http://www.LUMC.nl/
  * Programmers : Ivar C. Lugtenburg <I.C.Lugtenburg@LUMC.nl>
  *               Ivo F.A.C. Fokkema <I.F.A.C.Fokkema@LUMC.nl>
  *               Daan Asscheman <D.Asscheman@LUMC.nl>
@@ -318,7 +318,7 @@ class LOVD_GenomeVariant extends LOVD_Custom
         } else {
             $aChromosomes = array_keys($_SETT['human_builds'][$_CONF['refseq_build']]['ncbi_sequences']);
             $aSelectChromosome = array_combine($aChromosomes, $aChromosomes);
-            $aFormChromosome = array('Chromosome', '', 'select', 'chromosome', 1, $aSelectChromosome, false, false, false);
+            $aFormChromosome = array('Chromosome', '', 'select', 'chromosome', 1, $aSelectChromosome, true, false, false);
         }
 
         if ($_AUTH['level'] >= LEVEL_CURATOR) {
@@ -577,7 +577,7 @@ class LOVD_GenomeVariant extends LOVD_Custom
         }
         // Replace rs numbers with dbSNP links.
         if (!empty($zData['VariantOnGenome/dbSNP'])) {
-            $zData['VariantOnGenome/dbSNP'] = preg_replace('/(rs\d+)/', '<SPAN' . ($sView != 'list'? '' : ' onclick="cancelParentEvent(event);"') . '><A href="https://www.ncbi.nlm.nih.gov/SNP/snp_ref.cgi?rs=' . "$1" . '" target="_blank">' . "$1" . '</A></SPAN>', $zData['VariantOnGenome/dbSNP']);
+            $zData['VariantOnGenome/dbSNP'] = preg_replace('/(rs\d+)/', '<SPAN' . ($sView != 'list'? '' : ' onclick="cancelParentEvent(event);"') . '><A href="' . lovd_getExternalSource('dbsnp', "$1") . '" target="_blank">' . "$1" . '</A></SPAN>', $zData['VariantOnGenome/dbSNP']);
         }
 
         return $zData;
