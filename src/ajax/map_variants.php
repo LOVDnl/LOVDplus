@@ -4,8 +4,8 @@
  * LEIDEN OPEN VARIATION DATABASE (LOVD)
  *
  * Created     : 2010-01-15
- * Modified    : 2021-01-06
- * For LOVD    : 3.0-26
+ * Modified    : 2022-12-14
+ * For LOVD    : 3.0-29
  *
  * Copyright   : 2004-2022 Leiden University Medical Center; http://www.LUMC.nl/
  * Programmers : Jerry Hoogenboom <J.Hoogenboom@LUMC.nl>

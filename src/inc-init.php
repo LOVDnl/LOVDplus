@@ -4,10 +4,10 @@
  * LEIDEN OPEN VARIATION DATABASE (LOVD)
  *
  * Created     : 2009-10-19
- * Modified    : 2022-07-15
- * For LOVD    : 3.0-28
+ * Modified    : 2023-02-15
+ * For LOVD    : 3.0-29
  *
- * Copyright   : 2004-2022 Leiden University Medical Center; http://www.LUMC.nl/
+ * Copyright   : 2004-2023 Leiden University Medical Center; http://www.LUMC.nl/
  * Programmers : Ivo F.A.C. Fokkema <I.F.A.C.Fokkema@LUMC.nl>
  *               Ivar C. Lugtenburg <I.C.Lugtenburg@LUMC.nl>
  *               Daan Asscheman <D.Asscheman@LUMC.nl>
@@ -176,7 +176,7 @@ $aRequired =
 $_SETT = array(
                 'system' =>
                      array(
-                            'version' => '3.0-28c',
+                            'version' => '3.0-29',
                           ),
                 'user_levels' =>
                      array(
@@ -306,6 +306,9 @@ $_SETT = array(
                     'cc_by-nc-sa_4.0' => 'Creative Commons Attribution-NonCommercial-ShareAlike 4.0 International',
                     'cc_by-nd_4.0' => 'Creative Commons Attribution-NoDerivatives 4.0 International',
                     'cc_by-sa_4.0' => 'Creative Commons Attribution-ShareAlike 4.0 International',
+                ),
+                'external_sources' => array(
+                    'dbsnp' => 'https://www.ncbi.nlm.nih.gov/snp/{{ID}}',
                 ),
                 'update_levels' =>
                      array(
@@ -915,7 +918,7 @@ if (!defined('NOT_INSTALLED')) {
     if ($_AUTH && $_CONF['lovd_read_only'] && $_AUTH['level'] < LEVEL_MANAGER) {
         // We won't let the user know, because this usually only happens when a
         //  new message has appeared that sets the installation to read-only.
-        // So let's hope the new message on the screen attracks attention and
+        // So let's hope the new message on the screen attracts attention and
         //  that it speaks for itself.
         // (In principle, it can also happen when an existing message is edited
         //   to lock the installation.)
@@ -940,11 +943,17 @@ if (!defined('NOT_INSTALLED')) {
     }
 
     // Define $_PE ($_PATH_ELEMENTS) and CURRENT_PATH.
-    // FIXME: Running lovd_cleanDirName() on the entire URI causes it to run also on the arguments.
-    //  If there are arguments with ../ in there, this will take effect and arguments or even the path itself is eaten.
-    $sPath = preg_replace('/^' . preg_quote(lovd_getInstallURL(false), '/') . '/', '', lovd_cleanDirName(html_entity_decode(rawurldecode($_SERVER['REQUEST_URI']), ENT_HTML5))); // 'login' or 'genes?create' or 'users/00001?edit'
+    // Take the part of REQUEST_URI before the '?' before rawurldecode()ing the string and running lovd_cleanDirName(),
+    //  to make sure URL encoded question marks and arguments with '../' don't break the URL parsing.
+    $sPath = preg_replace(
+        '/^' . preg_quote(lovd_getInstallURL(false), '/') . '/',
+        '',
+        lovd_cleanDirName(
+            html_entity_decode(
+                rawurldecode(
+                    strstr($_SERVER['REQUEST_URI'] . '?', '?', true)
+                ), ENT_HTML5))); // 'login' or 'genes?create' or 'users/00001?edit'
     $sPath = strip_tags($sPath); // XSS tag removal on entire string (and no longer on individual parts).
-    $sPath = strstr($sPath . '?', '?', true); // Cut off the Query string, that will be handled later.
     foreach (array("'", '"', '`', '+') as $sChar) {
         // All these kind of quotes that we'll never have unless somebody is messing with us.
         if (strpos($sPath, $sChar) !== false) {
@@ -1051,6 +1060,10 @@ if (!defined('NOT_INSTALLED')) {
             } else {
                 // Replace with what we have in the database, so we won't run into issues on other pages when CurrDB is used for navigation to other tabs.
                 $_SESSION['currdb'] = $_SETT['currdb']['id'];
+                if (!empty($_PE[1]) && strtoupper($_PE[1]) == strtoupper($_SESSION['currdb'])) {
+                    // Also update the URL, just in case.
+                    $_PE[1] = $_SESSION['currdb'];
+                }
             }
         } else {
             $_SESSION['currdb'] = false;
