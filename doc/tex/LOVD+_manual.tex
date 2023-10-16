@@ -7,7 +7,7 @@
 % To convert the manual to an html file use: pdf2htmlEX --zoom 1.3 --embed-css 2 manual.pdf
 
 %%%%% SETTINGS FOR THE TITLE PAGE %%%%%
-\setLOVDversion{3.0-17s}
+\setLOVDversion{3.0-29}
 \title{LOVD\textsuperscript{+} user manual \\
   \vskip 0.2cm Whole exome sequencing analysis \\
   \vskip 0.2cm Build \LOVDversion}
@@ -55,13 +55,13 @@ LOVD\textsuperscript{+} is built on top of \href{http://LOVD.nl/3.0/}{LOVD 3.0} 
  comes with a user-friendly environment familiar to LOVD users.
 \vskip \baselineskip
 
-LOVD\textsuperscript{+} is developed and actively used by collaborating teams from the
+LOVD\textsuperscript{+} has been developed and actively used by collaborating teams from the
  \href{http://www.lumc.nl/?setlanguage=English&setcountry=en}{Leiden University Medical Center} (Netherlands) and the
  \href{http://www.melbournegenomics.org.au/}{Melbourne Genomics Health Alliance} (Australia).
-Currently, over 10 institutes world-wide use LOVD\textsuperscript{+}
+Over 10 institutes world-wide use or have used LOVD\textsuperscript{+}
  for analyzing their gene panels or whole exome data.
-LOVD\textsuperscript{+} is open source, released under the
- \href{http://www.gnu.org/licenses/gpl.html}{GPL license}, and is under active development.
+LOVD\textsuperscript{+} is open source and released under the
+ \href{http://www.gnu.org/licenses/gpl.html}{GPL license}.
 \vskip \baselineskip
 
 As LOVD\textsuperscript{+} is web based software, it is usually installed on a server rather than your local computer.
@@ -82,12 +82,33 @@ Currently, the latest release is \LOVDversion.
 %Keep an eye on our \href{http://www.lovd.nl/plus/news}{news page} for the latest information on LOVD\textsuperscript{+} development.
 \vskip \baselineskip
 
-\begin{infotable}
-Please note that this manual is work in progress.
-Since LOVD\textsuperscript{+} is actively under development and the development is the focus of our efforts,
- many features in LOVD\textsuperscript{+} are not yet described in this manual.
-Please bear with us while we finish this manual.
-\end{infotable}
+%\begin{infotable}
+%Please note that this manual is work in progress.
+%Since LOVD\textsuperscript{+} is actively under development and the development is the focus of our efforts,
+% many features in LOVD\textsuperscript{+} are not yet described in this manual.
+%Please bear with us while we finish this manual.
+%\end{infotable}
+
+
+
+
+
+\section{Version naming}
+LOVD\textsuperscript{+} follows the LOVD3 version numbering.
+LOVD\textsuperscript{+} 3.0-29 is based on the LOVD 3.0-29 code,
+ with the LOVD\textsuperscript{+} additions applied on top.
+LOVD\textsuperscript{+} sometimes releases new features or bug fixes after a new major release.
+Since LOVD\textsuperscript{+} needs to wait for a new LOVD release to increase the version number,
+ these changes are indicated with a letter following the version number.
+For instance, LOVD\textsuperscript{+} 3.0-28b consists of the LOVD 3.0-28 code base,
+ the LOVD\textsuperscript{+} additions, and then new features or bug fixes added to the
+ LOVD\textsuperscript{+} code after the release of LOVD\textsuperscript{+} 3.0-28.
+\vskip \baselineskip
+
+Using this versioning scheme, it's possible that, e.g.,
+ LOVD\textsuperscript{+} 3.0-28c and LOVD\textsuperscript{+} 3.0-29 have no difference in functionality.
+The changes have merely taken place in the LOVD3 backend of the software,
+ and not all features of the LOVD3 backend are in use in LOVD\textsuperscript{+}.
 
 
 

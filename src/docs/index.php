@@ -47,7 +47,7 @@ if (PATH_COUNT == 1 && !ACTION) {
     if (LOVD_plus) {
         print('      The LOVD+ documentation is continuously being updated.<BR>Currently available is the LOVD+ user manual, in PDF format.<BR>' .
               '      <UL>' . "\n" .
-              '        <LI>LOVD manual 3.0-17r (<A href="docs/LOVD+_manual.pdf" target="_blank"><B>PDF</B>, 21 pages, 1.2Mb</A>) - last updated March 13th, 2019</LI></UL>' . "\n\n");
+              '        <LI>LOVD manual 3.0-29 (<A href="docs/LOVD+_manual.pdf" target="_blank"><B>PDF</B>, 22 pages, 1.2Mb</A>) - last updated October 16th, 2023</LI></UL>' . "\n\n");
     } else {
         print('      The LOVD 3.0 documentation is continuously being updated.<BR>Currently available is the LOVD 3.0 user manual, in PDF and HTML formats.<BR>' .
               '      <UL>' . "\n" .
