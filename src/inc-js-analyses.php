@@ -4,10 +4,10 @@
  * LEIDEN OPEN VARIATION DATABASE (LOVD)
  *
  * Created     : 2013-11-05
- * Modified    : 2022-12-07
- * For LOVD    : 3.0-29
+ * Modified    : 2023-11-16
+ * For LOVD+   : 3.0-29
  *
- * Copyright   : 2004-2022 Leiden University Medical Center; http://www.LUMC.nl/
+ * Copyright   : 2004-2023 Leiden University Medical Center; http://www.LUMC.nl/
  * Programmers : Ivo F.A.C. Fokkema <I.F.A.C.Fokkema@LUMC.nl>
  *               Anthony Marty <anthony.marty@unimelb.edu.au>
  *               Juny Kesumadewi <juny.kesumadewi@unimelb.edu.au>
@@ -189,8 +189,8 @@ function lovd_runNextFilter (nAnalysisID, nRunID, sElementID)
                     // Success! Mark line and continue to the next, or stop if we're done...
                     oTR = $('#' + sElementID + '_filter_' + dataObj.sFilterID.replace(/[^a-z0-9_]/i, '_'));
                     oTR.attr('class', 'filter_completed');
-                    oTR.children('td:eq(1)').html(dataObj.nTime);
-                    oTR.children('td:eq(2)').html(dataObj.nVariantsLeft);
+                    oTR.children('td').eq(1).html(dataObj.nTime);
+                    oTR.children('td').eq(2).html(dataObj.nVariantsLeft);
 
                     // For filters with configuration, show the details underneath the filter.
                     if (dataObj.sFilterConfig.length) {
