@@ -4,7 +4,7 @@
  * LEIDEN OPEN VARIATION DATABASE (LOVD)
  *
  * Created     : 2016-03-01
- * Modified    : 2023-01-27
+ * Modified    : 2023-11-29
  * For LOVD+   : 3.0-29
  *
  * Copyright   : 2004-2023 Leiden University Medical Center; http://www.LUMC.nl/
@@ -1069,7 +1069,7 @@ if (PATH_COUNT == 2 && ctype_digit($_PE[1]) && ACTION == 'manage_genes') {
             '<TD><INPUT type="text" name="pmids[]" value="" size="10"></TD>' +
             '<TD><INPUT type="text" name="remarkses[]" value="" size="40"></TD>' +
             '<TD width="30" align="right"><A href="#" onclick="lovd_removeGene(\'' + sViewListID + '\', \'' + sID + '\'); return false;"><IMG src="gfx/mark_0.png" alt="Remove" width="11" height="11" border="0"></A></TD>';
-        $(objGenes).select('tbody').prepend(oTR);
+        $(objGenes).children('tbody').prepend(oTR);
         $(objGenes).parent().scrollTop(0);
         objElement.style.cursor = '';
 
