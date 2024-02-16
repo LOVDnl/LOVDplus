@@ -298,6 +298,7 @@ class LOVD_DefaultDataConverter {
             '1/.' => '0/1', // ALT + no GT due to multi allelic SNP taken as heterozygous ALT.
 
             '1/0' => '0/1', // Just making sure we only have one way to describe HET calls.
+            '1|0' => '0|1', // Just making sure we only have one way to describe HET calls.
         );
 
         if (isset($aGenotypes[$sGenoType])) {
