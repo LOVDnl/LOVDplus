@@ -1137,4 +1137,38 @@ class LOVD_LeidenDataConverter extends LOVD_DefaultDataConverter {
 
         return $aColumnMappings;
     }
+
+
+
+
+
+    function prepareVariantData (&$aLine)
+    {
+        // Reformat a line of raw variant data into the format that works for this instance.
+        // To stop certain variants being imported add some logic to check for these variants
+        //  and then set $aLine['lovd_ignore_variant'] to something non-false.
+        // Possible values:
+        // 'silent' - for silently ignoring the variant.
+        // 'log' - for ignoring the variant and logging the line number.
+        // 'separate' - for storing the variant in a separate screening (not implemented yet).
+        // When set to something else, 'log' is assumed.
+        // Note that when verbosity is set to low (3) or none (0), then no logging will occur.
+
+        // Clean Filter values that are too long. Leiden allows only 50 chars max.
+        // We don't have a very complex logic; just remove some values we don't use, and force
+        //  a shorter length when that is not enough.
+        $aLine['FILTERvcf'] = trim(
+            str_replace(
+                array('read_position', 'weak_evidence', ',,', ',,'),
+                array('', '', ',', ','),
+                $aLine['FILTERvcf'],
+            ),
+            ','
+        );
+        if (strlen($aLine['FILTERvcf']) > 50) {
+            $aLine['FILTERvcf'] = substr($aLine['FILTERvcf'], 0, 50);
+        }
+
+        return $aLine;
+    }
 }
