@@ -106,7 +106,7 @@ if (!LOVD_plus && $_STAT['update_level']) { // Not for LOVD+, unless we build a 
 }
 
 // Check if we have a system-default license, and if we need one at all anyway.
-if ($_DB->q('SELECT default_license FROM ' . TABLE_USERS . ' WHERE id = 0')->fetchColumn() == '') {
+if (!LOVD_plus && $_DB->q('SELECT default_license FROM ' . TABLE_USERS . ' WHERE id = 0')->fetchColumn() == '') {
     // There's no default license. Do we need one?
     if ($_DB->q('SELECT COUNT(*) FROM ' . TABLE_VARIANTS . ' WHERE created_by = 0')->fetchColumn() > 0) {
         lovd_showInfoTable(
