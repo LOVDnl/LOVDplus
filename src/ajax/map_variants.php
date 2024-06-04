@@ -4,10 +4,10 @@
  * LEIDEN OPEN VARIATION DATABASE (LOVD)
  *
  * Created     : 2010-01-15
- * Modified    : 2022-12-14
- * For LOVD    : 3.0-29
+ * Modified    : 2024-05-24
+ * For LOVD    : 3.0-30
  *
- * Copyright   : 2004-2022 Leiden University Medical Center; http://www.LUMC.nl/
+ * Copyright   : 2004-2024 Leiden University Medical Center; http://www.LUMC.nl/
  * Programmers : Jerry Hoogenboom <J.Hoogenboom@LUMC.nl>
  *               Ivar Lugtenburg <I.C.Lugtenburg@LUMC.nl>
  *               Ivo F.A.C. Fokkema <I.F.A.C.Fokkema@LUMC.nl>
@@ -177,7 +177,7 @@ if (!isset($_SESSION['mapping']['total_todo'])) {
     $_SESSION['mapping']['total_todo'] = 0;
 }
 // 0.5 sec for 1M variants. Add index to mapping_flags and/or position_g_start to speed up?
-$_SESSION['mapping']['todo'] = $_DB->q('SELECT COUNT(*) FROM ' . TABLE_VARIANTS . ' WHERE mapping_flags & ' . MAPPING_ALLOW . ' AND NOT mapping_flags & ' . (MAPPING_NOT_RECOGNIZED | MAPPING_DONE) . ' AND position_g_start IS NOT NULL AND position_g_start != 0')->fetchColumn();
+$_SESSION['mapping']['todo'] = $_DB->q('SELECT COUNT(*) FROM ' . TABLE_VARIANTS . ' WHERE mapping_flags & ' . MAPPING_ALLOW . ' AND NOT mapping_flags & ' . (MAPPING_NOT_RECOGNIZED | MAPPING_DONE) . ' AND position_g_start IS NOT NULL AND position_g_start NOT IN (0, 1) AND position_g_end != 4294967295')->fetchColumn();
 if ($_SESSION['mapping']['todo'] > $_SESSION['mapping']['total_todo']) {
     // We didn't have a total set yet, or more variants were added in the process that now need to be mapped as well.
     $_SESSION['mapping']['total_todo'] = $_SESSION['mapping']['todo'];
@@ -296,13 +296,14 @@ if (!empty($_GET['variantid'])) {
                              'FROM ' . TABLE_VARIANTS . ' AS vog, (' .
                                  'SELECT chromosome, position_g_start ' .
                                  'FROM ' . TABLE_VARIANTS . ' ' .
-                                 'WHERE mapping_flags & ' . MAPPING_ALLOW . ' AND NOT mapping_flags & ' . (MAPPING_NOT_RECOGNIZED | MAPPING_DONE | MAPPING_IN_PROGRESS) . ' AND position_g_start IS NOT NULL AND position_g_start != 0 ' .
+                                 'WHERE mapping_flags & ' . MAPPING_ALLOW . ' AND NOT mapping_flags & ' . (MAPPING_NOT_RECOGNIZED | MAPPING_DONE | MAPPING_IN_PROGRESS) .
+                                 '  AND position_g_start IS NOT NULL AND position_g_start NOT IN (0, 1) AND position_g_end != 4294967295 ' .
                                  (empty($aArgs)? '' : 'AND chromosome = ? AND position_g_start >= ? ') .
-                                 ($_SESSION['mapping']['todo'] > 10000? '' : 'ORDER BY RAND() ') .
+                                 (!empty($aArgs) || $_SESSION['mapping']['todo'] > 10000? 'ORDER BY id ' : 'ORDER BY RAND() ') .
                                  'LIMIT 1' .
                              ') AS first ' .
-                             'WHERE vog.chromosome = first.chromosome AND vog.position_g_start BETWEEN first.position_g_start AND first.position_g_start + ' . $nRange . ' ' .
-                                 'AND vog.mapping_flags & ' . MAPPING_ALLOW . ' AND NOT vog.mapping_flags & ' . (MAPPING_NOT_RECOGNIZED | MAPPING_DONE | MAPPING_IN_PROGRESS) . ' ' .
+                             'WHERE vog.chromosome = first.chromosome AND vog.position_g_start BETWEEN first.position_g_start AND first.position_g_start + ' . $nRange .
+                             '  AND vog.position_g_end != 4294967295 AND vog.mapping_flags & ' . MAPPING_ALLOW . ' AND NOT vog.mapping_flags & ' . (MAPPING_NOT_RECOGNIZED | MAPPING_DONE | MAPPING_IN_PROGRESS) . ' ' .
                              'ORDER BY vog.position_g_start ' .
                              'LIMIT ' . $nMaxVariants,
                              $aArgs)->fetchAllAssoc();
@@ -475,24 +476,15 @@ if (!empty($aVariants)) {
                 }
                 list($sHgncID, $sSymbol, $sGeneName, $sChromLocation, $sLocusType, $sEntrez, $sOmim, $sRefseq1, $sRefseq2) = array_values($aGeneInfoFromHgnc);
 
-                // Get LRG if it exists.
-                if (!$sRefseqGenomic = lovd_getLRGbyGeneSymbol($sSymbol)) {
-                    // No LRG, get NG if it exists.
-                    if (!$sRefseqGenomic = lovd_getNGbyGeneSymbol($sSymbol)) {
-                        // Also no NG, use the NC instead.
-                        $sRefseqGenomic = $_SETT['human_builds'][$_CONF['refseq_build']]['ncbi_sequences'][$sChromosome];
-                    }
+                // Get NG if it exists.
+                if (!$sRefseqGenomic = lovd_getNGbyGeneSymbol($sSymbol)) {
+                    // No NG, use the NC instead.
+                    $sRefseqGenomic = $_SETT['human_builds'][$_CONF['refseq_build']]['ncbi_sequences'][$sChromosome];
                 }
-
-                // Get UD.
-                $sRef = $sRefseqUD = lovd_getUDForGene($_CONF['refseq_build'], $sSymbol);
-                if (!is_string($sRefseqUD) || substr($sRefseqUD, 0, 3) != 'UD_') {
-                    $sRefseqUD = false;
-                    $sRef = $sRefseqGenomic;
-                }
+                $sRefseqUD = $_SETT['human_builds'][$_CONF['refseq_build']]['ncbi_sequences'][$sChromosome];
 
                 // Get transcripts and info.
-                $aTranscriptsInUD = lovd_callMutalyzer('getTranscriptsAndInfo', array('genomicReference' => $sRef, 'geneName' => $sSymbol));
+                $aTranscriptsInUD = lovd_callMutalyzer('getTranscriptsAndInfo', array('genomicReference' => $sRefseqUD, 'geneName' => $sSymbol));
                 if (empty($aTranscriptsInUD)) {
                     // Mutalyzer has no transcripts for this gene. Try the next.
                     continue;
@@ -510,8 +502,10 @@ if (!empty($aVariants)) {
                 }
                 if (empty($aRefseqsTranscript)) {
                     // The HGNC does not have a transcript accession for this gene. Get one from LOVD.
-                    $sGeneLink = @substr($sGeneLink = @implode("\n", @lovd_php_file('http://www.lovd.nl/' . $sSymbol . '?getURL')), 0, @strpos($sGeneLink, "\n"));
-                    $aGeneInfo = @lovd_php_file($sGeneLink . 'api/rest.php/genes/' . $sSymbol);
+                    $sGeneLink = @substr($sGeneLink = implode("\n", (lovd_php_file('http://www.lovd.nl/' . $sSymbol . '?getURL') ?: [])), 0, strpos($sGeneLink, "\n"));
+                    if ($sGeneLink) {
+                        $aGeneInfo = @lovd_php_file($sGeneLink . 'api/rest.php/genes/' . $sSymbol);
+                    }
                     if (!empty($aGeneInfo) && is_array($aGeneInfo)) {
                         foreach ($aGeneInfo as $sLine) {
                             preg_match('/refseq_mrna[\s]*:[\s]*([\S]+\.[\S]+)/', $sLine, $aMatches);
@@ -568,7 +562,7 @@ if (!empty($aVariants)) {
                                                        'name' => str_replace($sGeneName . ', ', '', $aTranscriptInUD['product']),
                                                        'id_mutalyzer' => str_replace($sSymbol . '_v', '', $aTranscriptInUD['name']),
                             // FIXME: Using this and the modification of the if above, we allow different versions of NMs to be matched.
-                            // This happens when the mapping database doesn't catch up with the UD, or possiby when the UD is getting too old.
+                            // This happens when the mapping database doesn't catch up with the UD, or possibly when the UD is getting too old.
                             // We need a better solution for this, though. First, try and find full match, otherwise match w/ different version number.
 //                                                       'id_ncbi' => $aTranscriptInUD['id'],
                                                        'id_ncbi' => $sTranscriptNM,
@@ -579,8 +573,8 @@ if (!empty($aVariants)) {
                                                        'position_c_mrna_start' => $aTranscriptInUD['cTransStart'],
                                                        'position_c_mrna_end' => $aTranscriptInUD['sortableTransEnd'],
                                                        'position_c_cds_end' => $aTranscriptInUD['cCDSStop'],
-                                                       'position_g_mrna_start' => $aTranscriptData[substr($sTranscriptNM, 0, strpos($sTranscriptNM, '.'))]['start'],
-                                                       'position_g_mrna_end' => $aTranscriptData[substr($sTranscriptNM, 0, strpos($sTranscriptNM, '.'))]['end'],
+                                                       'position_g_mrna_start' => $aTranscriptInUD['chromTransStart'],
+                                                       'position_g_mrna_end' => $aTranscriptInUD['chromTransEnd'],
                                                        'created_by' => 0,
                                                        'created_date' => date('Y-m-d H:i:s'));
                             break 2;
@@ -593,8 +587,8 @@ if (!empty($aVariants)) {
                     // Mapping is going to succeed! Let's add this gene and transcript.
                     $aVariantOnTranscriptSQL = $aVariantOnTranscriptSQL[$aFieldsTranscript['id_ncbi']];
 
-                    // But first check if the gene was already there without transcripts.
-                    if (!$_DB->q('SELECT COUNT(*) FROM ' . TABLE_GENES . ' WHERE id = ?', array($sSymbol))->fetchColumn()) {
+                    // But first check if the gene was already there without transcripts, or with a different symbol.
+                    if (!$_DB->q('SELECT COUNT(*) FROM ' . TABLE_GENES . ' WHERE id_hgnc = ?', array($sHgncID))->fetchColumn()) {
                         $aFields = array('id' => $sSymbol,
                                          'name' => $sGeneName,
                                          'chromosome' => $sChromosome,
@@ -638,6 +632,12 @@ if (!empty($aVariants)) {
 
                         // Also activate default custom columns for this gene.
                         lovd_addAllDefaultCustomColumns('gene', $sSymbol, 0);
+
+                    } else {
+                        // Make sure we update the gene symbol for the transcript information,
+                        //  because likely we had the wrong gene symbol in the database.
+                        $sGeneSymbol = $_DB->q('SELECT id FROM ' . TABLE_GENES . ' WHERE id_hgnc = ?', array($sHgncID))->fetchColumn();
+                        $aFieldsTranscript['geneid'] = $sGeneSymbol;
                     }
 
                     // Now insert the transcript.
