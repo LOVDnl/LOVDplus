@@ -4,10 +4,10 @@
  * LEIDEN OPEN VARIATION DATABASE (LOVD)
  *
  * Created     : 2012-03-27
- * Modified    : 2023-01-27
- * For LOVD    : 3.0-29
+ * Modified    : 2024-01-25
+ * For LOVD    : 3.0-30
  *
- * Copyright   : 2004-2023 Leiden University Medical Center; http://www.LUMC.nl/
+ * Copyright   : 2004-2024 Leiden University Medical Center; http://www.LUMC.nl/
  * Programmers : Ivo F.A.C. Fokkema <I.F.A.C.Fokkema@LUMC.nl>
  *               Ivar C. Lugtenburg <I.C.Lugtenburg@LUMC.nl>
  *               Daan Asscheman <D.Asscheman@LUMC.nl>
@@ -363,7 +363,7 @@ class LOVD_Template
 
         }
         print('  Powered by <A href="' . $_SETT['upstream_URL'] . $_STAT['tree'] . '/" target="_blank">LOVD v.' . $_STAT['tree'] . '</A> Build ' . $_STAT['build'] . '<BR>' . "\n" .
-              '  LOVD' . (LOVD_plus? '+' : '') . ' software &copy;2004-2023 <A href="http://www.lumc.nl/" target="_blank">Leiden University Medical Center</A>' . "\n");
+              '  LOVD' . (LOVD_plus? '+' : '') . ' software &copy;2004-2024 <A href="http://www.lumc.nl/" target="_blank">Leiden University Medical Center</A>' . "\n");
 ?>
     </TD>
     <TD width="42" align="right">
@@ -372,7 +372,9 @@ class LOVD_Template
     <TD width="42" align="right">
 <?php
         if (!(defined('NOT_INSTALLED') || defined('MISSING_CONF') || defined('MISSING_STAT'))) {
-            if ((time() - strtotime($_STAT['update_checked_date'])) > (60*60*24)) {
+            // When we've just installed (update_checked_date is NULL) or when it's been 24 hours, check for updates.
+            if (empty($_STAT['update_checked_date'])
+                || (time() - strtotime($_STAT['update_checked_date'])) > (60*60*24)) {
                 // Check for updates!
                 $sImgURL = 'check_update?icon';
                 $sImgAlt = 'Checking for LOVD updates...';

@@ -4,10 +4,10 @@
  * LEIDEN OPEN VARIATION DATABASE (LOVD)
  *
  * Created     : 2016-04-21
- * Modified    : 2022-11-22
- * For LOVD    : 3.0-29
+ * Modified    : 2024-05-23
+ * For LOVD    : 3.0-30
  *
- * Copyright   : 2004-2022 Leiden University Medical Center; http://www.LUMC.nl/
+ * Copyright   : 2004-2024 Leiden University Medical Center; http://www.LUMC.nl/
  * Programmers : M. Kroon <m.kroon@lumc.nl>
  *               Ivo F.A.C. Fokkema <I.F.A.C.Fokkema@LUMC.nl>
  *
@@ -72,7 +72,7 @@ EMAILDOC
 define('EMAIL_SHARER_NEW_COLLEAGUE', <<<EMAILDOC
 Dear %1\$s,
 
-%2\$s (%3\s) has granted access to your data to the following people:
+%2\$s (%3\$s) has granted access to your data to the following people:
 %5\$s
 
 If you think this was a mistake, please contact %2\$s (%4\$s).
@@ -126,7 +126,7 @@ function lovd_mailNewColleagues ($sUserID, $sUserFullname, $sUserInstitute, $sUs
         foreach ($zColleagues as $zColleague) {
             $aRecipients[] = '* ' . $zColleague['name'] . ' (' . $zColleague['institute'] . ')';
         }
-        $sRecipients = join("\n", $aRecipients);
+        $sRecipients = implode("\n", $aRecipients);
         $sSharerAccountURL = $sApplicationURL . 'users/' . $sUserID;
         $sSharerMailbody = sprintf(EMAIL_SHARER_NEW_COLLEAGUE, $sUserFullname, $_AUTH['name'],
                                    $_AUTH['institute'], $sGranterEmail, $sRecipients,
@@ -334,12 +334,12 @@ function lovd_setColleagues ($sUserID, $sUserFullname, $sUserInsititute, $sUserE
     for ($i = 0; $i < count($aNewColleagueIDs); $i++) {
         $aNewColleagueIDs[$i] = 'user #' . $aNewColleagueIDs[$i];
     }
-    $sMessage .= $aNewColleagueIDs? join(', ', $aNewColleagueIDs) : 'none';
+    $sMessage .= $aNewColleagueIDs? implode(', ', $aNewColleagueIDs) : 'none';
     $sMessage .= "\nRemoved: ";
     for ($i = 0; $i < count($aColleagueIDsRemoved); $i++) {
         $aColleagueIDsRemoved[$i] = 'user #' . $aColleagueIDsRemoved[$i];
     }
-    $sMessage .= ($aColleagueIDsRemoved? join(', ', $aColleagueIDsRemoved) : 'none');
+    $sMessage .= ($aColleagueIDsRemoved? implode(', ', $aColleagueIDsRemoved) : 'none');
     $sMessage .= "\n";
     lovd_writeLog('Event', LOG_EVENT, $sMessage);
 }

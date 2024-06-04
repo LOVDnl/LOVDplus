@@ -4,10 +4,10 @@
  * LEIDEN OPEN VARIATION DATABASE (LOVD)
  *
  * Created     : 2009-10-21
- * Modified    : 2023-02-03
- * For LOVD    : 3.0-29
+ * Modified    : 2024-05-07
+ * For LOVD    : 3.0-30
  *
- * Copyright   : 2004-2023 Leiden University Medical Center; http://www.LUMC.nl/
+ * Copyright   : 2004-2024 Leiden University Medical Center; http://www.LUMC.nl/
  * Programmers : Ivo F.A.C. Fokkema <I.F.A.C.Fokkema@LUMC.nl>
  *               Ivar C. Lugtenburg <I.C.Lugtenburg@LUMC.nl>
  *               M. Kroon <m.kroon@lumc.nl>
@@ -573,12 +573,31 @@ function lovd_buildOptionTable ($aOptionsList = array())
 
 
 
-function lovd_matchDate ($s, $bTime = false)
+function lovd_matchDate ($s, $bTime = false, $bNoZeroDate = false)
 {
     // Function kindly provided by Ileos.nl in the interest of Open Source.
     // Matches a string to the date pattern, one that MySQL can understand.
 
-    return (preg_match('/^[0-9]{4}[.\/-][0-9]{2}[.\/-][0-9]{2}' . ($bTime? ' [0-2][0-9]\:[0-5][0-9]\:[0-5][0-9]' : '') . '$/', $s));
+    $bFormat = preg_match('/^[0-9]{4}[.\/-][0-9]{2}[.\/-][0-9]{2}' . ($bTime? ' [0-2][0-9]\:[0-5][0-9]\:[0-5][0-9]' : '') . '$/', $s);
+    if (!$bFormat) {
+        return false;
+    }
+
+    // We'll need this a few times.
+    $sDate = substr($s, 0, 10);
+
+    // We need a valid date, always.
+    if (strtotime($s) === false) {
+        return false;
+    }
+
+    // Finally, since strtotime() allows 31 days in months that have 30, do a better check.
+    list($nYear, $nMonth, $nDay) = explode('-', $sDate);
+    if (!checkdate($nMonth, $nDay, $nYear) && !(!$bNoZeroDate && $sDate == '0000-00-00')) {
+        return false;
+    }
+
+    return true;
 }
 
 
@@ -672,11 +691,11 @@ function lovd_recaptchaV2_verify ($sUserResponse)
         // Verify reCaptcha V2 user response with Google.
         $aPostVars = array('secret' => '6Lf_XBsUAAAAAIjtOpBdpVyzwsWYO4AtgmgjxDcb',
             'response' => $sUserResponse);
-        $aResponseRaw = lovd_php_file('https://www.recaptcha.net/recaptcha/api/siteverify', false,
-            http_build_query($aPostVars), 'Accept: application/json');
+        $aResponseRaw = (lovd_php_file('https://www.recaptcha.net/recaptcha/api/siteverify', false,
+            http_build_query($aPostVars), 'Accept: application/json') ?: []);
         // Note: "error-codes" in the response object is optional, even when
         // verification fails.
-        $aResponse = json_decode(join('', $aResponseRaw), true);
+        $aResponse = json_decode(implode($aResponseRaw), true);
         return $aResponse['success'];
     } catch (Exception $e) {
         // FIXME: Consider logging debug information here.
@@ -1231,5 +1250,4 @@ function utf8_encode_array ($Data)
         return $Data;
     }
 }
-
 ?>

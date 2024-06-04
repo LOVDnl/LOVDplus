@@ -4,10 +4,10 @@
  * LEIDEN OPEN VARIATION DATABASE (LOVD)
  *
  * Created     : 2021-04-22
- * Modified    : 2023-02-15
- * For LOVD    : 3.0-29
+ * Modified    : 2024-05-20
+ * For LOVD    : 3.0-30
  *
- * Copyright   : 2004-2023 Leiden University Medical Center; http://www.LUMC.nl/
+ * Copyright   : 2004-2024 Leiden University Medical Center; http://www.LUMC.nl/
  * Programmer  : Ivo F.A.C. Fokkema <I.F.A.C.Fokkema@LUMC.nl>
  *
  *
@@ -602,7 +602,7 @@ class LOVD_API_GA4GH
         $this->aURLElements = array_pad($aURLElements, 3, '');
 
         // No further elements given, then forward to the table list.
-        if (!implode('', $this->aURLElements)) {
+        if (!implode($this->aURLElements)) {
             $this->API->nHTTPStatus = 302; // Send 302 Moved Temporarily (302 Found in HTTP 1.1).
             $this->API->aResponse['messages'][] = 'Location: ' . lovd_getInstallURL() . 'api/v' . $this->API->nVersion . '/ga4gh/service-info';
             return true;
@@ -960,7 +960,9 @@ class LOVD_API_GA4GH
                        IFNULL(
                          CONCAT(
                            IFNULL(uo.orcid_id, ""), "##", uo.name, "##", uo.email
-                         ), "")
+                         ), ""), "||",
+                       IFNULL(NULLIF(vog.created_date, "0000-00-00 00:00:00"), ""), "||",
+                       IFNULL(NULLIF(IFNULL(vog.edited_date, vog.created_date), "0000-00-00 00:00:00"), "")
                      )
                    ) ORDER BY vog.id SEPARATOR ";;") AS variants,
                  MIN(NULLIF(vog.created_date, "0000-00-00 00:00:00")) AS created_date,
@@ -1142,7 +1144,9 @@ class LOVD_API_GA4GH
                         $sRemarks,
                         $sVOTs,
                         $sCreator,
-                        $sOwner
+                        $sOwner,
+                        $sCreatedDate,
+                        $sEditedDate
                     ) = explode('||', $sVariant);
 
                     // Ignore the full variant entry when the license isn't
@@ -1177,6 +1181,8 @@ class LOVD_API_GA4GH
                             ),
                         )),
                         'pathogenicities' => array(),
+                        'creation_date' => array(),
+                        'modification_date' => array(),
                     );
 
                     if (!$aVariant['aliases']) {
@@ -1187,6 +1193,18 @@ class LOVD_API_GA4GH
                         current($this->convertEffectsToVML($nID . ':' . $sEffects)),
                         array_values($this->convertClassificationToVML($nID . ':' . $sClassification . ':' . $sClassificationMethod))
                     );
+
+                    // Leave out dates when they're missing.
+                    if ($sCreatedDate) {
+                        $aVariant['creation_date']['value'] = date('c', strtotime($sCreatedDate));
+                    } else {
+                        unset($aVariant['creation_date']);
+                    }
+                    if ($sEditedDate) {
+                        $aVariant['modification_date']['value'] = date('c', strtotime($sEditedDate));
+                    } else {
+                        unset($aVariant['modification_date']);
+                    }
 
                     // For GV shared type "SUMMARY records", overwrite the data_source.
                     if ($sOrigin && $sOrigin == 'summary record') {
@@ -1385,13 +1403,17 @@ class LOVD_API_GA4GH
                             (SELECT
                                GROUP_CONCAT(
                                  CONCAT(
-                                   t.geneid, "##", t.id_ncbi, "##", REPLACE(vot.`VariantOnTranscript/DNA`, "||", "|"), "##", vot.`VariantOnTranscript/RNA`, "##", t.id_protein_ncbi, "##", vot.`VariantOnTranscript/Protein`)
+                                   t.geneid, "##", t.id_ncbi, "##", REPLACE(vot.`VariantOnTranscript/DNA`, "||", "|"), "##", IFNULL(vot.`VariantOnTranscript/RNA`, "r.(?)"), "##", t.id_protein_ncbi, "##", IFNULL(vot.`VariantOnTranscript/Protein`, "p.?"))
                                  SEPARATOR "$$")
                              FROM ' . TABLE_VARIANTS_ON_TRANSCRIPTS . ' AS vot
                                INNER JOIN ' . TABLE_TRANSCRIPTS . ' AS t ON (vot.transcriptid = t.id)
-                             WHERE vot.id = vog.id), "")
+                             WHERE vot.id = vog.id), ""), "||",
+                          IFNULL(NULLIF(vog.created_date, "0000-00-00 00:00:00"), ""), "||",
+                          IFNULL(NULLIF(IFNULL(vog.edited_date, vog.created_date), "0000-00-00 00:00:00"), "")
                         )
-                        ORDER BY vog.chromosome, vog.position_g_start, vog.position_g_end, vog.`VariantOnGenome/DNA`, vog.id SEPARATOR ";;") AS variants
+                        ORDER BY vog.chromosome, vog.position_g_start, vog.position_g_end, vog.`VariantOnGenome/DNA`, vog.id SEPARATOR ";;") AS variants,
+                      IFNULL(NULLIF(i.created_date, "0000-00-00 00:00:00"), "") AS created_date,
+                      IFNULL(NULLIF(IFNULL(i.edited_date, i.created_date), "0000-00-00 00:00:00"), "") AS edited_date
                     FROM ' . TABLE_INDIVIDUALS . ' AS i
                       LEFT OUTER JOIN ' . TABLE_IND2DIS . ' AS i2d ON (i.id = i2d.individualid)
                       LEFT OUTER JOIN ' . TABLE_PHENOTYPES . ' AS p ON (i.id = p.individualid AND p.statusid >= ?)
@@ -1497,6 +1519,10 @@ class LOVD_API_GA4GH
                                 'term' => trim($sPhenotype),
                                 'inheritance_pattern' => $aInheritance,
                             );
+
+                        } else {
+                            // Nothing to do here.
+                            continue;
                         }
                     }
 
@@ -1584,6 +1610,14 @@ class LOVD_API_GA4GH
                         $aIndividual['phenotypes'],
                         SORT_REGULAR)
                 );
+
+                // Leave out dates when they're missing.
+                if ($aSubmission['created_date']) {
+                    $aIndividual['creation_date'] = array('value' => date('c', strtotime($aSubmission['created_date'])));
+                }
+                if ($aSubmission['edited_date']) {
+                    $aIndividual['modification_date'] = array('value' => date('c', strtotime($aSubmission['edited_date'])));
+                }
 
                 if (!empty($aSubmission['remarks'])) {
                     $aIndividual['comments'] = $this->addComment(array(), $aSubmission['remarks']);
@@ -1678,7 +1712,9 @@ class LOVD_API_GA4GH
                         $sRemarks,
                         $sTemplate,
                         $sTechnique,
-                        $sVOTs
+                        $sVOTs,
+                        $sCreatedDate,
+                        $sEditedDate
                     ) = explode('||', $sVariant);
                     $aVariant = array(
                         'id' => $nID,
@@ -1705,6 +1741,8 @@ class LOVD_API_GA4GH
                             ),
                         )),
                         'pathogenicities' => array(),
+                        'creation_date' => array(),
+                        'modification_date' => array(),
                     );
 
                     // Large submissions generate a lot of data and waste resources (CPU time and disk space),
@@ -1784,6 +1822,18 @@ class LOVD_API_GA4GH
                             },
                             $aVariant['pathogenicities']
                         );
+                    }
+
+                    // Leave out dates when they're missing.
+                    if ($sCreatedDate) {
+                        $aVariant['creation_date']['value'] = date('c', strtotime($sCreatedDate));
+                    } else {
+                        unset($aVariant['creation_date']);
+                    }
+                    if ($sEditedDate) {
+                        $aVariant['modification_date']['value'] = date('c', strtotime($sEditedDate));
+                    } else {
+                        unset($aVariant['modification_date']);
                     }
 
                     if ($sOrigin && isset($this->aValueMappings['genetic_origin'][$sOrigin])) {
@@ -2069,6 +2119,14 @@ class LOVD_API_GA4GH
                         if (!empty($aSubmission['phenotypes'])) {
                             foreach (array_keys($aVariantObservation['pathogenicities']) as $nPathogenicity) {
                                 $aVariantObservation['pathogenicities'][$nPathogenicity]['phenotypes'] = $aSubmission['phenotypes'];
+                            }
+                        }
+
+                        // Copy the dates; they may not be correct, as the individual's dates are
+                        //  not those of the variant, but it's better than nothing.
+                        foreach (array('creation_date', 'modification_date') as $sDate) {
+                            if (isset($aSubmission[$sDate])) {
+                                $aVariantObservation[$sDate] = $aSubmission[$sDate];
                             }
                         }
 
