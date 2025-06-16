@@ -341,6 +341,8 @@ if (ACTION == 'schedule' && PATH_COUNT == 1) {
                 // Files to be converted.
                 $sErrorFile = $_INI['paths']['data_files'] . '/' . str_replace($_INSTANCE_CONFIG['conversion']['suffixes']['vep'], $_INSTANCE_CONFIG['conversion']['suffixes']['error'], $sFile);
                 $bError = (file_exists($sErrorFile) && filesize($sErrorFile) > 0);
+                $sMetaFile = $_INI['paths']['data_files'] . '/' . str_replace($_INSTANCE_CONFIG['conversion']['suffixes']['vep'], $_INSTANCE_CONFIG['conversion']['suffixes']['meta'], $sFile);
+                $bMeta = (file_exists($sMetaFile) && filesize($sMetaFile) > 0);
                 $aErrors = (!$bError? array() : (file($sErrorFile, FILE_IGNORE_NEW_LINES) ?: []));
                 $bProcessing = ($aFile['scheduled'] // Processing if total tmp file exists, and ...
                     && (!$aErrors // (there are no errors, or ...
@@ -348,7 +350,7 @@ if (ACTION == 'schedule' && PATH_COUNT == 1) {
                             && count($aErrors) < $_INSTANCE_CONFIG['conversion']['annotation_error_max_allowed']))); // we didn't reach the maximum of errors yet).
 
                 print("\n" .
-                      '                <TR class="' . ($bProcessing? 'del' : 'data') . ($bError? ' colRed' : '') . '">');
+                      '                <TR class="' . (!$bMeta || $bProcessing? 'del' : 'data') . ($bError? ' colRed' : '') . '">');
             } else {
                 // Converted but not already processed files.
                 $bError = false;
@@ -393,7 +395,8 @@ if (ACTION == 'schedule' && PATH_COUNT == 1) {
             print('
                   <TD>' . $sDownloadHTML . $sInformationHTML . $sPriorityHTML . $sProcessingHTML . $sErrorsHTML . '
                     <B>' . $sFileDisplayName . '</B><BR>
-                    <SPAN class="S11">' . ($aFile['file_lost']? 'File not found' : date('Y-m-d H:i:s P (T)', strtotime($aFile['file_date'])) . ' - ' . ($bAPI? 'Submitted' : (LOVD_plus && $bConverted? 'Converted' : 'Created')) . ' ' . $sAge . ' ago') . '</SPAN>
+                    <SPAN class="S11">' . ($aFile['file_lost']? 'File not found' : date('Y-m-d H:i:s P (T)', strtotime($aFile['file_date'])) . ' - ' . ($bAPI? 'Submitted' : (LOVD_plus && $bConverted? 'Converted' : 'Created')) . ' ' . $sAge . ' ago')
+                . (!isset($bMeta) || $bMeta? '' : '<BR>Meta data file is missing — cannot process data file') . '</SPAN>
                   </TD></TR>');
         }
         print('</TABLE><BR>' .
