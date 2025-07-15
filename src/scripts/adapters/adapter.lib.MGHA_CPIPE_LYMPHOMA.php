@@ -220,7 +220,7 @@ class LOVD_MghaCpipeLymphomaDataConverter extends LOVD_MghaDataConverter {
             'ALT' => 'alt',
             'vog_alt' => 'VariantOnGenome/Alt',
             'Existing_variation' => 'existingvariation',
-            'Feature' => 'transcriptid',
+            'Feature' => 'id_ncbi',
             // VariantOnGenome/DNA - constructed by the HGVS syntax checker later on.
             'CHROM' => 'chromosome',
             'POS' => 'position', // We need this to construct the DNA field.

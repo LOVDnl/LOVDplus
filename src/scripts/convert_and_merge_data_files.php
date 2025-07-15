@@ -635,10 +635,11 @@ foreach ($aFiles as $sFileID) {
                 $aGeneAliases[$aVariant['symbol_vep']] = $aVariant['symbol'];
             }
         }
+
         // Verify gene exists, and create it if needed.
         // LOC* genes always fail here, so those we don't try unless we don't care about the HGNC.
         // Also, don't do anything if we're ignoring the transcript - what good will it do?
-        if (!empty($aVariant['symbol']) && !isset($aGenes[$aVariant['symbol']]) && !in_array($aVariant['symbol'], $aGenesToIgnore) && !$_ADAPTER->ignoreTranscript($aVariant['transcriptid'])
+        if (!empty($aVariant['symbol']) && !isset($aGenes[$aVariant['symbol']]) && !in_array($aVariant['symbol'], $aGenesToIgnore) && !$_ADAPTER->ignoreTranscript($aVariant['id_ncbi'])
             && (!preg_match('/^LOC[0-9]+$/', $aVariant['symbol']) || empty($_INSTANCE_CONFIG['conversion']['use_hgnc']) || empty($_INSTANCE_CONFIG['conversion']['enforce_hgnc_gene']))) {
             // First try to get this gene from the database, perhaps conversions run in parallel have created it now.
             // FIXME: This is duplicated code. Make it into a function, perhaps?
@@ -734,22 +735,21 @@ foreach ($aFiles as $sFileID) {
 
 
         // Store transcript ID without version, we'll use it plenty of times.
-        // FIXME: Using 'transcriptid' for the NCBI ID is confusing. Better map it to 'id_ncbi'? (check everywhere)
-        $aLine['transcript_noversion'] = substr($aVariant['transcriptid'], 0, strpos($aVariant['transcriptid'] . '.', '.')+1);
+        $aLine['transcript_noversion'] = substr($aVariant['id_ncbi'], 0, strpos($aVariant['id_ncbi'] . '.', '.')+1);
         if (empty($aVariant['symbol']) || !isset($aGenes[$aVariant['symbol']]) || !$aGenes[$aVariant['symbol']]) {
             // We really couldn't do anything with this gene (now, or last time).
             $aGenes[$aVariant['symbol']] = false;
 
-        } elseif (!empty($aVariant['transcriptid']) && !isset($aTranscripts[$aVariant['transcriptid']])) {
+        } elseif (!empty($aVariant['id_ncbi']) && !isset($aTranscripts[$aVariant['id_ncbi']])) {
             // Gene found, transcript given but not yet seen before. Get transcript information.
             // We could loop through $aTranscripts to look for the NCBI ID with a different version, but since a
             //  different process might have created this transcript and therefore we prefer checking the database,
             //  we might as well rely on that completely.
             // Try to get this transcript from the database, ignoring (but preferring) version.
             // When not having a match on the version, we prefer the transcript most recently created.
-            if ($aTranscript = $_DB->q('SELECT id, geneid, id_ncbi, position_c_cds_end, position_g_mrna_start, position_g_mrna_end FROM ' . TABLE_TRANSCRIPTS . ' WHERE id_ncbi LIKE ? ORDER BY (id_ncbi = ?) DESC, id DESC LIMIT 1', array($aLine['transcript_noversion'] . '%', $aVariant['transcriptid']))->fetchAssoc()) {
+            if ($aTranscript = $_DB->q('SELECT id, geneid, id_ncbi, position_c_cds_end, position_g_mrna_start, position_g_mrna_end FROM ' . TABLE_TRANSCRIPTS . ' WHERE id_ncbi LIKE ? ORDER BY (id_ncbi = ?) DESC, id DESC LIMIT 1', array($aLine['transcript_noversion'] . '%', $aVariant['id_ncbi']))->fetchAssoc()) {
                 // We've got it in the database.
-                $aTranscripts[$aVariant['transcriptid']] = $aTranscript;
+                $aTranscripts[$aVariant['id_ncbi']] = $aTranscript;
 
             } elseif (!empty($_INSTANCE_CONFIG['conversion']['create_genes_and_transcripts'])) {
                 // To prevent us from having to check the available transcripts all the time, we store the available transcripts, but only insert those we need.
@@ -798,7 +798,7 @@ foreach ($aFiles as $sFileID) {
                                     // Usually this is the case. Not always an error.
                                     lovd_printIfVerbose(VERBOSITY_MEDIUM, 'No available transcripts for gene ' . $aGenes[$aVariant['symbol']]['id'] . ' found.' . "\n");
                                 }
-                                $aTranscripts[$aVariant['transcriptid']] = false; // Ignore transcript.
+                                $aTranscripts[$aVariant['id_ncbi']] = false; // Ignore transcript.
                                 $aTranscriptInfo = array(array('id' => 'NO_TRANSCRIPTS')); // Basically, any text will do. Just stop searching for other transcripts for this gene.
                             } else {
                                 // Found transcripts. Don't look for any other gene. Use the $aTranscriptInfo that we have.
@@ -849,24 +849,24 @@ foreach ($aFiles as $sFileID) {
                         flush();
 
                         // Store in memory.
-                        $aTranscripts[$aVariant['transcriptid']] = array_merge($aTranscript, array('id' => $nTranscriptID)); // Contains a lot more info than needed, but whatever.
+                        $aTranscripts[$aVariant['id_ncbi']] = array_merge($aTranscript, array('id' => $nTranscriptID)); // Contains a lot more info than needed, but whatever.
                     }
                 }
 
-                if (!isset($aTranscripts[$aVariant['transcriptid']])) {
+                if (!isset($aTranscripts[$aVariant['id_ncbi']])) {
                     // We don't have it, we can't get it... Stop looking for it, please!
-                    $aTranscripts[$aVariant['transcriptid']] = false;
+                    $aTranscripts[$aVariant['id_ncbi']] = false;
                 }
             }
         }
         // We created the transcript if possible, but we might still not have it.
-        // $aVariant['transcriptid']                           // How we received the transcript from VEP.
-        // $aTranscripts[$aVariant['transcriptid']]['id_ncbi'] // The NCBI ID of the transcript in the database (can be different version).
+        // $aVariant['id_ncbi']                                // How we received the transcript from VEP.
+        // $aTranscripts[$aVariant['id_ncbi']]['id_ncbi']      // The NCBI ID of the transcript in the database (can be different version).
 
         // Now check, if we managed to get the transcript ID. If not, then we'll have to continue without it.
-        if (empty($aVariant['transcriptid']) || $_ADAPTER->ignoreTranscript($aVariant['transcriptid']) || empty($aTranscripts[$aVariant['transcriptid']])) {
+        if (empty($aVariant['id_ncbi']) || $_ADAPTER->ignoreTranscript($aVariant['id_ncbi']) || empty($aTranscripts[$aVariant['id_ncbi']])) {
             // When the transcript still doesn't exist, or it evaluates to false (we don't have it, we can't get it), then skip it.
-            $aVariant['transcriptid'] = '';
+            $aVariant['id_ncbi'] = '';
         } else { // We'll handle this transcript.
             // Handle the rest of the VOT columns.
             // First, take off the transcript name, so we can easily check for a del/ins checking for an underscore.
@@ -927,12 +927,12 @@ foreach ($aFiles as $sFileID) {
                 }
 
                 // Find mapping of variant on the currently handled transcript.
-                if (isset($aMappings[$aTranscripts[$aVariant['transcriptid']]['id_ncbi']])) {
+                if (isset($aMappings[$aTranscripts[$aVariant['id_ncbi']]['id_ncbi']])) {
                     // Successfully mapped on the transcript version that we have in the database.
-                    $aVariant['VariantOnTranscript/DNA'] = $aMappings[$aTranscripts[$aVariant['transcriptid']]['id_ncbi']];
-                } elseif (isset($aMappings[$aVariant['transcriptid']])) {
+                    $aVariant['VariantOnTranscript/DNA'] = $aMappings[$aTranscripts[$aVariant['id_ncbi']]['id_ncbi']];
+                } elseif (isset($aMappings[$aVariant['id_ncbi']])) {
                     // Successfully mapped on the transcript version received by VEP.
-                    $aVariant['VariantOnTranscript/DNA'] = $aMappings[$aVariant['transcriptid']];
+                    $aVariant['VariantOnTranscript/DNA'] = $aMappings[$aVariant['id_ncbi']];
                 } else {
                     // Somehow, we can't find the transcript in the mapping info.
                     // This can only happen either when the NC has a different transcript than the one we have in the
@@ -946,7 +946,7 @@ foreach ($aFiles as $sFileID) {
                         }
                     }
                     if ($aAlternativeVersions) {
-                        lovd_printIfVerbose(VERBOSITY_FULL, 'Found alternative by searching: ' . $aVariant['transcriptid'] . ' [' . implode(', ', $aAlternativeVersions) . ']' . "\n");
+                        lovd_printIfVerbose(VERBOSITY_FULL, 'Found alternative by searching: ' . $aVariant['id_ncbi'] . ' [' . implode(', ', $aAlternativeVersions) . ']' . "\n");
                         $aVariant['VariantOnTranscript/DNA'] = $aMappings[$aAlternativeVersions[0]];
                     } else {
                         // This happens when VEP says we can map on a known transcript, but doesn't provide us a valid mapping,
@@ -1011,8 +1011,8 @@ foreach ($aFiles as $sFileID) {
                                     krsort($aMutalyzerMappings);
                                     $sTranscriptName = '';
                                     // First check if we have the exact right version for it.
-                                    if (isset($aMutalyzerMappings[substr(strrchr($aVariant['transcriptid'], '.'), 1)])) {
-                                        $sTranscriptName = $aMutalyzerMappings[substr($aVariant['transcriptid'], strlen($aLine['transcript_noversion']))];
+                                    if (isset($aMutalyzerMappings[substr(strrchr($aVariant['id_ncbi'], '.'), 1)])) {
+                                        $sTranscriptName = $aMutalyzerMappings[substr($aVariant['id_ncbi'], strlen($aLine['transcript_noversion']))];
                                     } else {
                                         $sTranscriptName = current($aMutalyzerMappings);
                                     }
@@ -1049,7 +1049,7 @@ foreach ($aFiles as $sFileID) {
             //  c. variants.
             $aVariantInfo = lovd_getVariantInfo(
                 str_replace('n.', 'c.', $aVariant['VariantOnTranscript/DNA']),
-                $aTranscripts[$aVariant['transcriptid']]
+                $aTranscripts[$aVariant['id_ncbi']]
             );
             if ($aVariantInfo) {
                 list(
@@ -1092,12 +1092,12 @@ foreach ($aFiles as $sFileID) {
                     // VEP has p. notation, but without parentheses around them (see https://github.com/Ensembl/ensembl-vep/issues/498).
                     $aVariant['VariantOnTranscript/Protein'] = str_replace('p.', 'p.(', $aVariant['VariantOnTranscript/Protein'] . ')');
                 }
-            } elseif (in_array(substr($aTranscripts[$aVariant['transcriptid']]['id_ncbi'], 0, 2), array('NR', 'XR'))) {
+            } elseif (in_array(substr($aTranscripts[$aVariant['id_ncbi']]['id_ncbi'], 0, 2), array('NR', 'XR'))) {
                 // Non coding transcript, no wonder we didn't get a protein field.
                 $aVariant['VariantOnTranscript/RNA'] = 'r.(?)';
                 $aVariant['VariantOnTranscript/Protein'] = '-';
             } elseif (($aVariant['position_c_start'] < 0 && $aVariant['position_c_end'] < 0)
-                || ($aVariant['position_c_start'] > $aTranscripts[$aVariant['transcriptid']]['position_c_cds_end'] && $aVariant['position_c_end'] > $aTranscripts[$aVariant['transcriptid']]['position_c_cds_end'])
+                || ($aVariant['position_c_start'] > $aTranscripts[$aVariant['id_ncbi']]['position_c_cds_end'] && $aVariant['position_c_end'] > $aTranscripts[$aVariant['id_ncbi']]['position_c_cds_end'])
                 || ($aVariant['position_c_start_intron'] && $aVariant['position_c_end_intron'] && min(abs($aVariant['position_c_start_intron']), abs($aVariant['position_c_end_intron'])) > 5
                     && ($aVariant['position_c_start'] == $aVariant['position_c_end'] || ($aVariant['position_c_start'] == ($aVariant['position_c_end']-1) && $aVariant['position_c_start_intron'] > 0 && $aVariant['position_c_end_intron'] < 0)))) {
                 // 5'UTR, 3'UTR, fully intronic in one intron only (at least 5 bases away from exon border).
@@ -1117,7 +1117,7 @@ foreach ($aFiles as $sFileID) {
                     GROUP BY `VariantOnTranscript/RNA`, `VariantOnTranscript/Protein`
                     ORDER BY COUNT(*) DESC LIMIT 1',
                     array(
-                        $aTranscripts[$aVariant['transcriptid']]['id'],
+                        $aTranscripts[$aVariant['id_ncbi']]['id'],
                         $aVariant['position_c_start'],
                         $aVariant['position_c_start_intron'],
                         $aVariant['position_c_end'],
@@ -1132,7 +1132,7 @@ foreach ($aFiles as $sFileID) {
                     $_SETT['human_builds'][$_CONF['refseq_build']]['ncbi_sequences'][$aVariant['chromosome']] .
                     ':' . $aVariant['VariantOnGenome/DNA'] .
                     ' (' . $aVariant['chromosome'] . ':' . $aVariant['position'] . $aVariant['ref'] . '>' . $aVariant['alt'] .
-                    ' @ ' . $aVariant['transcriptid'] . ")\n");
+                    ' @ ' . $aVariant['id_ncbi'] . ")\n");
                 $nSleepTime = 2;
                 // Retry Mutalyzer call several times until successful.
                 $sJSONResponse = false;
@@ -1225,8 +1225,8 @@ foreach ($aFiles as $sFileID) {
                         $sTranscriptName = '';
 
                         // First check if we have the exact right version for it.
-                        if (isset($aMutalyzerMappings[substr(strrchr($aVariant['transcriptid'], '.'), 1)])) {
-                            $sTranscriptName = $aMutalyzerMappings[substr($aVariant['transcriptid'], strlen($aLine['transcript_noversion']))];
+                        if (isset($aMutalyzerMappings[substr(strrchr($aVariant['id_ncbi'], '.'), 1)])) {
+                            $sTranscriptName = $aMutalyzerMappings[substr($aVariant['id_ncbi'], strlen($aLine['transcript_noversion']))];
                         } else {
                             $sTranscriptName = current($aMutalyzerMappings);
                         }
@@ -1263,7 +1263,7 @@ foreach ($aFiles as $sFileID) {
                     $_SETT['human_builds'][$_CONF['refseq_build']]['ncbi_sequences'][$aVariant['chromosome']] .
                     ':' . $aVariant['VariantOnGenome/DNA'] .
                     ' (' . $aVariant['chromosome'] . ':' . $aVariant['position'] . $aVariant['ref'] . '>' . $aVariant['alt'] .
-                    ' @ ' . $aVariant['transcriptid'] . ').';
+                    ' @ ' . $aVariant['id_ncbi'] . ').';
                 $nAnnotationErrors = lovd_handleAnnotationError($aVariant, $sErrorMsg);
                 $bDropTranscriptData = $_INSTANCE_CONFIG['conversion']['annotation_error_drops_line'];
             }
@@ -1311,11 +1311,8 @@ foreach ($aFiles as $sFileID) {
             }
         }
 
-        // Replace the ncbi ID with the transcripts LOVD database ID to be used when creating the VOT record.
-        // This used to be done at the start of this else statement but since we have switched from using the headers in the file
-        // to using the column mappings (much more robust) we no longer had the ncbi ID available as it was overwritten.
-        // By moving this code down here we retain the ncbi ID for use and then overwrite at the last step.
-        $aVariant['transcriptid'] = (!isset($aTranscripts[$aVariant['transcriptid']]['id'])? '' : $aTranscripts[$aVariant['transcriptid']]['id']);
+        // Fill in the transcript's LOVD database ID to be used when creating the VOT record.
+        $aVariant['transcriptid'] = (!isset($aTranscripts[$aVariant['id_ncbi']]['id'])? '' : $aTranscripts[$aVariant['id_ncbi']]['id']);
 
 
 
@@ -1339,7 +1336,7 @@ foreach ($aFiles as $sFileID) {
         $_ADAPTER->postValueAssignmentUpdate($sKey, $aVariant, $aData);
 
         // Now, store VOT data. Because I had received test files with repeated lines, and allowing repeated lines will break import, also here we will check for the key.
-        // Also check for a set transcriptid, because it can be empty (transcript could not be created).
+        // Also check for a set transcript ID, because it can be empty (transcript could not be created).
         if (!$bDropTranscriptData && !isset($aData[$sKey][$aVariant['transcriptid']]) && $aVariant['transcriptid']) {
             $aVOT = array();
             foreach ($aVariant as $sCol => $sVal) {

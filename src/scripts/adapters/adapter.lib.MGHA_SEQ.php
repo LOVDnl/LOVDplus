@@ -189,7 +189,7 @@ class LOVD_MghaSeqDataConverter extends LOVD_DefaultDataConverter {
             'QUAL' => 'VariantOnGenome/Sequencing/Quality',
             'SYMBOL' => 'symbol',
 
-            'Feature' => 'transcriptid',
+            'Feature' => 'id_ncbi',
             'HGVSc' => 'VariantOnTranscript/DNA',
             'HGVSp' => 'VariantOnTranscript/Protein',
 
@@ -637,7 +637,7 @@ class LOVD_MghaSeqDataConverter extends LOVD_DefaultDataConverter {
 
 
 
-    function postValueAssignmentUpdate($sKey, &$aVariant, &$aData)
+    function postValueAssignmentUpdate ($sKey, &$aVariant, &$aData)
     {
         // We want to use different BAM file for different screening types.
         $aLinkTypes = array();

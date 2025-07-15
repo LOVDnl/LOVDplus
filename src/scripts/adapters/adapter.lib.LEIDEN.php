@@ -1077,7 +1077,7 @@ class LOVD_LeidenDataConverter extends LOVD_DefaultDataConverter {
             'FILTERvcf' => 'VariantOnGenome/Sequencing/Filter',
             'Consequence' => 'VariantOnTranscript/GVS/Function', // Will be translated.
             // 'GATKCaller' => 'VariantOnGenome/Sequencing/GATKcaller',
-            'Feature' => 'transcriptid',
+            'Feature' => 'id_ncbi',
             'CDS_position' => 'VariantOnTranscript/Position',
             'HGVSc' => 'VariantOnTranscript/DNA',
             'HGVSp' => 'VariantOnTranscript/Protein',
