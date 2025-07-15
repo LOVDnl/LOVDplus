@@ -569,9 +569,9 @@ class LOVD_DefaultDataConverter {
 
         $aColumnMappings = array(
             '#CHROM' => 'chromosome',
-            'POS' => 'position', // lovd_getVariantDescription() needs this.
-            'REF' => 'ref',      // lovd_getVariantDescription() needs this.
-            'ALT' => 'alt',      // lovd_getVariantDescription() needs this.
+            'POS' => 'position', // We need this to construct the DNA field.
+            'REF' => 'ref',      // We need this to construct the DNA field.
+            'ALT' => 'alt',      // We need this to construct the DNA field.
             'QUAL' => 'VariantOnGenome/Sequencing/Quality',
             'FILTER' => 'VariantOnGenome/Sequencing/Filter',
             'Consequence' => 'VariantOnTranscript/GVS/Function', // Will be translated.

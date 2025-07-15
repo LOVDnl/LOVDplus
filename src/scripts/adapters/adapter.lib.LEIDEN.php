@@ -1072,7 +1072,7 @@ class LOVD_LeidenDataConverter extends LOVD_DefaultDataConverter {
 
         $aColumnMappings = array(
             'chromosome' => 'chromosome',
-            'position' => 'position', // lovd_getVariantDescription() needs this.
+            'position' => 'position', // We need this to construct the DNA field.
             'QUAL' => 'VariantOnGenome/Sequencing/Quality',
             'FILTERvcf' => 'VariantOnGenome/Sequencing/Filter',
             'Consequence' => 'VariantOnTranscript/GVS/Function', // Will be translated.
@@ -1129,7 +1129,7 @@ class LOVD_LeidenDataConverter extends LOVD_DefaultDataConverter {
 
             // Mappings for fields used to process other fields but not imported into the database.
             'SYMBOL' => 'symbol',
-            'HGNC_ID' => 'id_hgnc',
+            'HGNC' => 'id_hgnc',
             'REF' => 'ref',
             'ALT' => 'alt',
             'Existing_variation' => 'existing_variation'

@@ -309,9 +309,9 @@ class LOVD_MghaDataConverter extends LOVD_DefaultDataConverter {
             'vog_alt' => 'VariantOnGenome/Alt',
             'Existing_variation' => 'existing_variation',
             'Feature' => 'transcriptid',
-            // VariantOnGenome/DNA - constructed by the lovd_getVariantDescription function later on.
+            // VariantOnGenome/DNA - constructed by the HGVS syntax checker later on.
             'CHROM' => 'chromosome',
-            'POS' => 'position', // lovd_getVariantDescription() needs this.
+            'POS' => 'position', // We need this to construct the DNA field.
             'vog_pos' => 'VariantOnGenome/Position',
             'ID' => 'VariantOnGenome/dbSNP',
             'QUAL' => 'VariantOnGenome/Sequencing/Quality',
