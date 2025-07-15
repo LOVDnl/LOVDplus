@@ -616,7 +616,18 @@ foreach ($aFiles as $sFileID) {
         if (!isset($aGenes[$aVariant['symbol']])) {
             if (isset($aGeneAliases[$aVariant['symbol']])) {
                 $aVariant['symbol'] = $aGeneAliases[$aVariant['symbol']];
-            } elseif (!empty($aVariant['id_hgnc']) && isset($aGenesHGNC[$aVariant['id_hgnc']])) {
+            } elseif (empty($aVariant['id_hgnc'])) {
+                // Use the HGVS syntax checker, and store the alias.
+                $HGVS = HGVS_Gene::check($aVariant['symbol']);
+                $nHGNC = ($HGVS->getInfo()['data']['hgnc_id'] ?? 0);
+                $sSymbol = $_DB->q('SELECT id FROM ' . TABLE_GENES . ' WHERE id_hgnc = ?', array($nHGNC))->fetchColumn();
+                if ($sSymbol) {
+                    // Store for the rest of the variants in this file.
+                    $aGeneAliases[$aVariant['symbol']] = $sSymbol;
+                    $aVariant['symbol'] = $sSymbol;
+                    lovd_printIfVerbose(VERBOSITY_MEDIUM, 'Gene stored as \'' . $aVariant['symbol'] . '\' is given to us as \'' . $aVariant['symbol_vep'] . '\'; using our gene symbol.' . "\n");
+                }
+            } elseif (isset($aGenesHGNC[$aVariant['id_hgnc']])) {
                 // VEP has a newer gene symbol. Better warn about this.
                 $aVariant['symbol'] = $aGenesHGNC[$aVariant['id_hgnc']];
                 lovd_printIfVerbose(VERBOSITY_MEDIUM, 'Gene stored as \'' . $aVariant['symbol'] . '\' is given to us as \'' . $aVariant['symbol_vep'] . '\'; using our gene symbol.' . "\n");
