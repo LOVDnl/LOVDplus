@@ -4,7 +4,7 @@
  * LEIDEN OPEN VARIATION DATABASE (LOVD)
  *
  * Created     : 2014-11-28
- * Modified    : 2025-07-15
+ * Modified    : 2025-07-16
  * For LOVD+   : 3.0-30
  *
  * Copyright   : 2004-2025 Leiden University Medical Center; http://www.LUMC.nl/
@@ -433,7 +433,7 @@ foreach ($aFiles as $sFileID) {
     $nAnnotationErrors = 0; // Count the number of lines we cannot import.
 
     // Get all the existing genes in one database call.
-    $aGenes = $_DB->q('SELECT id, id, name FROM ' . TABLE_GENES)->fetchAllGroupAssoc();
+    $aGenes = $_DB->q('SELECT id, id, id_hgnc, name FROM ' . TABLE_GENES)->fetchAllGroupAssoc();
 
     // If we're receiving the HGNC ID, we'll collect all genes for their HGNC IDs as well. This will be used to help
     //  LOVD+ to handle changed gene symbols.
@@ -643,7 +643,7 @@ foreach ($aFiles as $sFileID) {
             && (!preg_match('/^LOC[0-9]+$/', $aVariant['symbol']) || empty($_INSTANCE_CONFIG['conversion']['use_hgnc']) || empty($_INSTANCE_CONFIG['conversion']['enforce_hgnc_gene']))) {
             // First try to get this gene from the database, perhaps conversions run in parallel have created it now.
             // FIXME: This is duplicated code. Make it into a function, perhaps?
-            if ($aGene = $_DB->q('SELECT g.id, g.name FROM ' . TABLE_GENES . ' AS g WHERE g.id = ?', array($aVariant['symbol']))->fetchAssoc()) {
+            if ($aGene = $_DB->q('SELECT g.id, g.id_hgnc, g.name FROM ' . TABLE_GENES . ' AS g WHERE g.id = ?', array($aVariant['symbol']))->fetchAssoc()) {
                 // We've got it in the database.
                 $aGenes[$aVariant['symbol']] = $aGene;
 
@@ -679,7 +679,7 @@ foreach ($aFiles as $sFileID) {
                         // Detect alias, and store these for next run.
                         lovd_printIfVerbose(VERBOSITY_MEDIUM, '\'' . $aVariant['symbol'] . '\' => \'' . $aGeneInfo['symbol'] . '\',' . "\n");
                         // FIXME: This is duplicated code. Make it into a function, perhaps?
-                        if ($aGene = $_DB->q('SELECT g.id, g.name FROM ' . TABLE_GENES . ' AS g WHERE g.id = ?', array($aGeneInfo['symbol']))->fetchAssoc()) {
+                        if ($aGene = $_DB->q('SELECT g.id, g.id_hgnc, g.name FROM ' . TABLE_GENES . ' AS g WHERE g.id = ?', array($aGeneInfo['symbol']))->fetchAssoc()) {
                             // We've got the alias already in the database; store it under the symbol we're using so that we'll find it back easily.
                             $aGenes[$aVariant['symbol']] = $aGene;
                         }
@@ -705,9 +705,9 @@ foreach ($aFiles as $sFileID) {
 
                     // Create the gene, with whatever info we have.
                     if (!$_DB->q('INSERT INTO ' . TABLE_GENES . '
-                        (id, name, chromosome, chrom_band, refseq_genomic, refseq_UD, reference, url_homepage, url_external, allow_download, id_hgnc, id_entrez, id_omim, show_hgmd, show_genecards, show_genetests, note_index, note_listing, refseq, refseq_url, disclaimer, disclaimer_text, header, header_align, footer, footer_align, created_by, created_date, updated_by, updated_date)
-                        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), ?, NOW())',
-                        array($aGeneInfo['symbol'], $aGeneInfo['name'], $aGeneInfo['chromosome'], $aGeneInfo['chrom_band'], $_SETT['human_builds'][$_CONF['refseq_build']]['ncbi_sequences'][$aGeneInfo['chromosome']], '', '', '', '', 0, $aGeneInfo['hgnc_id'], $aGeneInfo['entrez_id'], (!$aGeneInfo['omim_id']? NULL : $aGeneInfo['omim_id']), 0, 0, 0, '', '', '', '', 0, '', '', 0, '', 0, 0, 0))
+                          (id, name, chromosome, chrom_band, refseq_genomic, id_hgnc, id_entrez, id_omim, disclaimer, created_by, created_date, updated_by, updated_date)
+                        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 0, NOW(), 0, NOW())',
+                        array($aGeneInfo['symbol'], $aGeneInfo['name'], $aGeneInfo['chromosome'], $aGeneInfo['chrom_band'], $_SETT['human_builds'][$_CONF['refseq_build']]['ncbi_sequences'][$aGeneInfo['chromosome']], $aGeneInfo['hgnc_id'], $aGeneInfo['entrez_id'], (!$aGeneInfo['omim_id']? NULL : $aGeneInfo['omim_id']), 0))
                     ) {
                         $sMessage = 'Can\'t create gene ' . $aVariant['symbol'] . '.';
                         lovd_printIfVerbose(VERBOSITY_LOW, $sMessage . "\n");
@@ -723,7 +723,7 @@ foreach ($aFiles as $sFileID) {
                     flush();
 
                     // Store this gene, again under the original symbol, so we can easily find it back.
-                    $aGenes[$aVariant['symbol']] = array('id' => $aGeneInfo['symbol'], 'name' => $aGeneInfo['name']);
+                    $aGenes[$aVariant['symbol']] = array('id' => $aGeneInfo['symbol'], 'id_hgnc' => $aGeneInfo['hgnc_id'], 'name' => $aGeneInfo['name']);
                 }
             }
         }
