@@ -29,6 +29,8 @@ $_SERVER = array_merge($_SERVER, array(
 require ROOT_PATH . 'inc-init.php';
 require ROOT_PATH . 'inc-lib-genes.php';
 require ROOT_PATH . 'libs/HGVS-syntax-checker/HGVS.php';
+require ROOT_PATH . 'libs/HGVS-syntax-checker/variant_validator.php';
+$_VV = new LOVD_VV();
 // This script is optimized for speed, not memory usage. As such, it can use quite a lot of memory, but it's as fast as
 // we can make it. Loading all the gene and transcript data uses quite a lot of memory. An top of that, if the input
 // file is very large (unfiltered VCFs, for instance), this script can halt without warning.
@@ -59,16 +61,6 @@ if ($_CONF['proxy_host']) {
 }
 if (!empty($_CONF['proxy_username']) && !empty($_CONF['proxy_password'])) {
     curl_setopt($ch, CURLOPT_PROXYUSERPWD, $_CONF['proxy_username'] . ':' . $_CONF['proxy_password']);
-}
-
-function mutalyzer_getTranscriptsAndInfo ($ref, $gene)
-{
-    global $ch, $_CONF;
-
-    $sUrl = str_replace('/services', '', $_CONF['mutalyzer_soap_url']) . '/json/getTranscriptsAndInfo?genomicReference=' . $ref . '&geneName=' . $gene;
-    curl_setopt($ch, CURLOPT_URL, $sUrl);
-
-    return curl_exec($ch);
 }
 
 function mutalyzer_numberConversion ($build, $variant)
@@ -734,81 +726,46 @@ foreach ($aFiles as $sFileID) {
 
 
 
-        // Store transcript ID without version, we'll use it plenty of times.
-        $aLine['transcript_noversion'] = substr($aVariant['id_ncbi'], 0, strpos($aVariant['id_ncbi'] . '.', '.')+1);
-        if (empty($aVariant['symbol']) || !isset($aGenes[$aVariant['symbol']]) || !$aGenes[$aVariant['symbol']]) {
+        if (empty($aVariant['symbol']) || empty($aGenes[$aVariant['symbol']])) {
             // We really couldn't do anything with this gene (now, or last time).
             $aGenes[$aVariant['symbol']] = false;
 
         } elseif (!empty($aVariant['id_ncbi']) && !isset($aTranscripts[$aVariant['id_ncbi']])) {
             // Gene found, transcript given but not yet seen before. Get transcript information.
-            // We could loop through $aTranscripts to look for the NCBI ID with a different version, but since a
-            //  different process might have created this transcript and therefore we prefer checking the database,
-            //  we might as well rely on that completely.
-            // Try to get this transcript from the database, ignoring (but preferring) version.
-            // When not having a match on the version, we prefer the transcript most recently created.
-            if ($aTranscript = $_DB->q('SELECT id, geneid, id_ncbi, position_c_cds_end, position_g_mrna_start, position_g_mrna_end FROM ' . TABLE_TRANSCRIPTS . ' WHERE id_ncbi LIKE ? ORDER BY (id_ncbi = ?) DESC, id DESC LIMIT 1', array($aLine['transcript_noversion'] . '%', $aVariant['id_ncbi']))->fetchAssoc()) {
+            // We could loop through $aTranscripts to look for the NCBI ID, but since a different process might have
+            //  created this transcript, we prefer checking the database, we might as well rely on that completely.
+            // We used to ignore the transcript version here, but we no longer do that.
+            if ($aTranscript = $_DB->q('SELECT id, geneid, id_ncbi, position_c_cds_end, position_g_mrna_start, position_g_mrna_end FROM ' . TABLE_TRANSCRIPTS . ' WHERE id_ncbi = ?', array($aVariant['id_ncbi']))->fetchAssoc()) {
                 // We've got it in the database.
                 $aTranscripts[$aVariant['id_ncbi']] = $aTranscript;
 
             } elseif (!empty($_INSTANCE_CONFIG['conversion']['create_genes_and_transcripts'])) {
                 // To prevent us from having to check the available transcripts all the time, we store the available transcripts, but only insert those we need.
-                if (isset($aGenes[$aVariant['symbol']]['transcripts_in_NC'])) {
-                    $aTranscriptInfo = $aGenes[$aVariant['symbol']]['transcripts_in_NC'];
+                if (isset($aGenes[$aVariant['symbol']]['available_transcripts'])) {
+                    $aTranscriptInfo = $aGenes[$aVariant['symbol']]['available_transcripts'];
 
                 } else {
-                    $aTranscriptInfo = array();
                     lovd_printIfVerbose(VERBOSITY_HIGH, 'Loading transcript information for ' . $aGenes[$aVariant['symbol']]['id'] . '...' . "\n");
-                    $nSleepTime = 2;
-                    // Since we're using the NC as a source now, try multiple gene symbols to use.
-                    // Genes can change, and we're not 100% sure about which gene symbol is in the NC.
-                    // Start with the one we have in the database, then our alias, then the VEP one.
-                    // (note that we could retrieve the entire chromosome's list of transcripts, but that'll be slow)
-                    $aGenesToTry = array_unique(array($aGenes[$aVariant['symbol']]['id'], $aVariant['symbol'], $aVariant['symbol_vep']));
-                    foreach ($aGenesToTry as $sGeneToTry) {
-                        // Retry Mutalyzer call several times until successful.
-                        $sJSONResponse = false;
-                        for ($i = 0; $i <= $nMutalyzerRetries; $i++) {
-                            $aMutalyzerCalls['getTranscriptsAndInfo']++;
-                            $tMutalyzerStart = microtime(true);
-                            $sJSONResponse = mutalyzer_getTranscriptsAndInfo($_SETT['human_builds'][$_CONF['refseq_build']]['ncbi_sequences'][$aVariant['chromosome']], $sGeneToTry);
-                            $tMutalyzerCalls += (microtime(true) - $tMutalyzerStart);
-                            $nMutalyzer++;
-                            if ($sJSONResponse === false) {
-                                // The Mutalyzer call has failed.
-                                sleep($nSleepTime); // Sleep for some time.
-                                $nSleepTime = $nSleepTime * 2; // Double the amount of time that we sleep each time.
-                            } else {
-                                break;
-                            }
-                        }
-                        if ($sJSONResponse === false) {
-                            lovd_printIfVerbose(VERBOSITY_LOW, '>>>>> Attempted to call Mutalyzer ' . $nMutalyzerRetries . ' times to getTranscriptsAndInfo and failed on line ' . $nLine . '.' . "\n");
 
-                        } elseif ($aResponse = json_decode($sJSONResponse, true)) {
-                            // Before we had to go two layers deep; through the result, then read out the info.
-                            // But now apparently this service just returns the string with quotes (the latter are removed by json_decode()).
-                            $aTranscriptInfo = $aResponse;
+                    // Fetch the transcripts using the HGNC ID, so we won't have issues with gene symbols.
+                    $tMutalyzerStart = microtime(true);
+                    $aTranscriptInfo = $_VV->getTranscriptsByID('HGNC:' . $aGenes[$aVariant['symbol']]['id_hgnc']);
+                    $tMutalyzerCalls += (microtime(true) - $tMutalyzerStart);
+                    $aMutalyzerCalls['getTranscriptsAndInfo']++;
+                    $nMutalyzer++;
 
-                            if (empty($aTranscriptInfo) || !is_array($aTranscriptInfo) || !empty($aTranscriptInfo['faultcode'])) {
-                                if (!empty($aTranscriptInfo['faultcode'])) {
-                                    // Something went wrong. Let the user know.
-                                    lovd_printIfVerbose(VERBOSITY_MEDIUM, 'Error while retrieving transcripts for gene ' . $aGenes[$aVariant['symbol']]['id'] . ' (' . $aTranscriptInfo['faultcode'] . '): ' . $aTranscriptInfo['faultstring'] . '.' . "\n");
-                                } else {
-                                    // Usually this is the case. Not always an error.
-                                    lovd_printIfVerbose(VERBOSITY_MEDIUM, 'No available transcripts for gene ' . $aGenes[$aVariant['symbol']]['id'] . ' found.' . "\n");
-                                }
-                                $aTranscripts[$aVariant['id_ncbi']] = false; // Ignore transcript.
-                                $aTranscriptInfo = array(array('id' => 'NO_TRANSCRIPTS')); // Basically, any text will do. Just stop searching for other transcripts for this gene.
-                            } else {
-                                // Found transcripts. Don't look for any other gene. Use the $aTranscriptInfo that we have.
-                                break;
-                            }
-                        }
+                    if (!$aTranscriptInfo || !empty($aTranscriptInfo['errors'])) {
+                        // Something went wrong. Let the user know.
+                        lovd_printIfVerbose(VERBOSITY_MEDIUM, 'Error while retrieving transcripts for gene ' . $aGenes[$aVariant['symbol']]['id'] . ': ' . implode('; ', $aTranscriptInfo['errors']) . '.' . "\n");
+
+                    } elseif (empty($aTranscriptInfo['data'])) {
+                        // No results, unfortunately.
+                        lovd_printIfVerbose(VERBOSITY_MEDIUM, 'No available transcripts for gene ' . $aGenes[$aVariant['symbol']]['id'] . ' found.' . "\n");
                     }
 
                     // Store for next time.
-                    $aGenes[$aVariant['symbol']]['transcripts_in_NC'] = $aTranscriptInfo;
+                    $aTranscriptInfo = ($aTranscriptInfo['data'] ?? []);
+                    $aGenes[$aVariant['symbol']]['available_transcripts'] = $aTranscriptInfo;
                 }
 
                 // Loop transcript options, add the one we need.
@@ -863,6 +820,8 @@ foreach ($aFiles as $sFileID) {
         // $aVariant['id_ncbi']                                // How we received the transcript from VEP.
         // $aTranscripts[$aVariant['id_ncbi']]['id_ncbi']      // The NCBI ID of the transcript in the database (can be different version).
 
+        // Store transcript ID without version, we'll use it plenty of times.
+        $aLine['transcript_noversion'] = strstr($aVariant['id_ncbi'], '.', true);
         // Now check, if we managed to get the transcript ID. If not, then we'll have to continue without it.
         if (empty($aVariant['id_ncbi']) || $_ADAPTER->ignoreTranscript($aVariant['id_ncbi']) || empty($aTranscripts[$aVariant['id_ncbi']])) {
             // When the transcript still doesn't exist, or it evaluates to false (we don't have it, we can't get it), then skip it.
