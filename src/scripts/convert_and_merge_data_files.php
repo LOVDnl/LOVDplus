@@ -769,30 +769,29 @@ foreach ($aFiles as $sFileID) {
                 }
 
                 // Loop transcript options, add the one we need.
-                foreach ($aTranscriptInfo as $aTranscript) {
-                    // Comparison is made without looking at version numbers!
-                    if (substr($aTranscript['id'], 0, strpos($aTranscript['id'] . '.', '.')+1) == $aLine['transcript_noversion']) {
+                foreach ($aTranscriptInfo as $sTranscript => $aTranscript) {
+                    if ($sTranscript == $aVariant['id_ncbi']) {
                         // Store in database, prepare values.
-                        $sTranscriptName = str_replace($aGenes[$aVariant['symbol']]['name'] . ', ', '', ($aTranscript['product'] ?: ''));
-                        // 2018-06-13; The getTranscriptsAndInfo() feature on NCs has a bug that the product field is empty.
-                        if (!$sTranscriptName) {
-                            $sTranscriptName = $aTranscript['id'];
-                        }
-                        $aTranscript['id_ncbi'] = $aTranscript['id'];
-                        $sTranscriptProtein = (!isset($aTranscript['proteinTranscript']['id'])? '' : $aTranscript['proteinTranscript']['id']);
-                        $aTranscript['position_c_cds_end'] = $aTranscript['cCDSStop']; // To calculate VOT variant position, if in 3'UTR.
-                        // 2018-06-13; The getTranscriptsAndInfo() feature on NCs has a bug that chrom* fields are not available.
-                        if (!isset($aTranscript['chromTransStart']) || !isset($aTranscript['chromTransEnd'])) {
-                            $aTranscript['chromTransStart'] = $aTranscript['gTransStart'];
-                            $aTranscript['chromTransEnd'] = $aTranscript['gTransEnd'];
-                        }
+                        $aSQL = array(
+                            'geneid' => $aGenes[$aVariant['symbol']]['id'],
+                            'name' => $aTranscript['name'],
+                            'id_ncbi' => $sTranscript,
+                            'id_protein_ncbi' => ($aTranscript['id_ncbi_protein'] ?? ''),
+                            'position_g_mrna_start' => ($aTranscript['genomic_positions'][$_CONF['refseq_build']][$aVariant['chromosome']]['start'] ?? 0),
+                            'position_g_mrna_end' => ($aTranscript['genomic_positions'][$_CONF['refseq_build']][$aVariant['chromosome']]['end'] ?? 0),
+                            'position_c_mrna_start' => -$aTranscript['transcript_positions']['cds_start'] + 1,
+                            'position_c_mrna_end' => $aTranscript['transcript_positions']['length'] - $aTranscript['transcript_positions']['cds_start'] + 1,
+                            'position_c_cds_end' => ($aTranscript['transcript_positions']['cds_length'] ?: 0),
+                        );
 
                         // Add transcript to gene.
-                        if (!$_DB->q('INSERT INTO ' . TABLE_TRANSCRIPTS . '
-                             (id, geneid, name, id_ncbi, id_ensembl, id_protein_ncbi, id_protein_ensembl, id_protein_uniprot, remarks, position_c_mrna_start, position_c_mrna_end, position_c_cds_end, position_g_mrna_start, position_g_mrna_end, created_date, created_by)
-                            VALUES (NULL, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), ?)',
-                            array($aGenes[$aVariant['symbol']]['id'], $sTranscriptName, $aTranscript['id_ncbi'], '', $sTranscriptProtein, '', '', '', $aTranscript['cTransStart'], $aTranscript['sortableTransEnd'], $aTranscript['cCDSStop'], $aTranscript['chromTransStart'], $aTranscript['chromTransEnd'], 0))) {
-                            $sMessage = 'Can\'t create transcript ' . $aTranscript['id_ncbi'] . ' for gene ' . $aVariant['symbol'] . '.';
+                        if (!$_DB->q('
+                            INSERT INTO ' . TABLE_TRANSCRIPTS . '
+                              (id, ' . implode(', ', array_keys($aSQL)) . ', created_date, created_by)
+                            VALUES (NULL, ' . str_repeat('?, ', count($aSQL)) . 'NOW(), 0)',
+                            array_values($aSQL))
+                        ) {
+                            $sMessage = 'Can\'t create transcript ' . $sTranscript . ' for gene ' . $aVariant['symbol'] . '.';
                             lovd_printIfVerbose(VERBOSITY_LOW, $sMessage . "\n");
                             lovd_handleAnnotationError($aVariant, $sMessage);
                         }
@@ -801,12 +800,12 @@ foreach ($aFiles as $sFileID) {
                         $nTranscriptID = str_pad($_DB->lastInsertId(), $_SETT['objectid_length']['transcripts'], '0', STR_PAD_LEFT);
 
                         // Write to log...
-                        lovd_writeLog('Event', LOG_EVENT, 'Transcript entry successfully added to gene ' . $aGenes[$aVariant['symbol']]['id'] . ' - ' . $sTranscriptName);
-                        lovd_printIfVerbose(VERBOSITY_MEDIUM, 'Created transcript ' . $aTranscript['id'] . ".\n");
+                        lovd_writeLog('Event', LOG_EVENT, 'Transcript entry successfully added to gene ' . $aGenes[$aVariant['symbol']]['id'] . ' - ' . $sTranscript);
+                        lovd_printIfVerbose(VERBOSITY_MEDIUM, 'Created transcript ' . $sTranscript . ".\n");
                         flush();
 
                         // Store in memory.
-                        $aTranscripts[$aVariant['id_ncbi']] = array_merge($aTranscript, array('id' => $nTranscriptID)); // Contains a lot more info than needed, but whatever.
+                        $aTranscripts[$aVariant['id_ncbi']] = array_merge(array('id' => $nTranscriptID), $aTranscript); // Contains a lot more info than needed, but whatever.
                     }
                 }
 
@@ -817,8 +816,8 @@ foreach ($aFiles as $sFileID) {
             }
         }
         // We created the transcript if possible, but we might still not have it.
-        // $aVariant['id_ncbi']                                // How we received the transcript from VEP.
-        // $aTranscripts[$aVariant['id_ncbi']]['id_ncbi']      // The NCBI ID of the transcript in the database (can be different version).
+        // $aVariant['id_ncbi']                // How we received the transcript from VEP.
+        // $aTranscripts[$aVariant['id_ncbi']] // The rest of the transcript information, from the database.
 
         // Store transcript ID without version, we'll use it plenty of times.
         $aLine['transcript_noversion'] = strstr($aVariant['id_ncbi'], '.', true);
