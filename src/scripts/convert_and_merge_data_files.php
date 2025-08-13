@@ -884,6 +884,16 @@ foreach ($aFiles as $sFileID) {
             $aVariant['VariantOnTranscript/DNA/VEP'] = $aVariant['VariantOnTranscript/DNA'];
             if ($bCallVV) {
                 // We don't have a DNA field from VEP, or we don't trust it (see above).
+                // Speed things up and reduce API calls by checking our own database, first. Fetch the most recent mapping from the same variant.
+                lovd_printIfVerbose(VERBOSITY_FULL, 'Checking our database for mapping info, DNA was: "' . $aVariant['VariantOnTranscript/DNA'] . '"' . "\n");
+                $aMapping = $_DB->q('
+                    SELECT vot.`VariantOnTranscript/DNA`, vot.`VariantOnTranscript/RNA`, vot.`VariantOnTranscript/Protein`
+                    FROM ' . TABLE_VARIANTS_ON_TRANSCRIPTS . ' AS vot
+                      INNER JOIN ' . TABLE_VARIANTS . ' AS vog ON (vot.id = vog.id)
+                    WHERE vot.transcriptid = ? AND vog.chromosome = ? AND vog.position_g_start = ? AND vog.position_g_end = ? AND vog.`VariantOnGenome/DNA` = ?
+                    ORDER BY vog.id DESC LIMIT 1',
+                    array($aTranscripts[$aVariant['id_ncbi']]['id'], $aVariant['chromosome'], $aVariant['position_g_start'], $aVariant['position_g_end'], substr(strstr($aVariant['VariantOnGenome/DNA'], ':'), 1)))->fetchAllAssoc();
+
                 // Call Mutalyzer, but first check if I did that before already.
                 if (empty($aMappings)) {
                     $aMappings = array();
