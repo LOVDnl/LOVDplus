@@ -414,7 +414,6 @@ foreach ($aFiles as $sFileID) {
     flush();
 
     $nLine = 0;
-    $sLastVariant = '';
     $aVOT = array();
     $aGenes = array(); // GENE => array(<gene_info_from_database>)
     $aGenesHGNC = array(); // HGNC ID => GENE (used only if we're receiving HGNC IDs).
@@ -592,12 +591,6 @@ foreach ($aFiles as $sFileID) {
                             , 3);
                 }
             }
-        }
-
-        // When seeing a new variant, reset these variables. We don't want them too big; it's useless and takes up a lot of memory.
-        if ($sLastVariant != $aVariant['chromosome'] . ':' . $aVariant['VariantOnGenome/DNA']) {
-            $sLastVariant = $aVariant['chromosome'] . ':' . $aVariant['VariantOnGenome/DNA'];
-            $aMappings = array(); // array(NM_000001.1 => 'c.123del', ...); // To prevent us from running numberConversion too many times.
         }
 
         // Now, VOT fields.
@@ -894,154 +887,60 @@ foreach ($aFiles as $sFileID) {
                     ORDER BY vog.id DESC LIMIT 1',
                     array($aTranscripts[$aVariant['id_ncbi']]['id'], $aVariant['chromosome'], $aVariant['position_g_start'], $aVariant['position_g_end'], substr(strstr($aVariant['VariantOnGenome/DNA'], ':'), 1)))->fetchAllAssoc();
 
-                // Call Mutalyzer, but first check if I did that before already.
-                if (empty($aMappings)) {
-                    $aMappings = array();
-                    lovd_printIfVerbose(VERBOSITY_FULL, 'Running position converter, DNA was: "' . $aVariant['VariantOnTranscript/DNA'] . '"' . "\n");
+                if (!$aMapping) {
+                    lovd_printIfVerbose(VERBOSITY_FULL, 'Running VariantValidator, DNA was: "' . $aVariant['VariantOnTranscript/DNA'] . '"' . "\n");
 
-                    $nSleepTime = 2;
-                    // Retry Mutalyzer call several times until successful.
-                    $sJSONResponse = false;
-                    for ($i=0; $i <= $nMutalyzerRetries; $i++) {
-                        $aMutalyzerCalls['numberConversion'] ++;
-                        $tMutalyzerStart = microtime(true);
-                        $sJSONResponse = mutalyzer_numberConversion($_CONF['refseq_build'], $_SETT['human_builds'][$_CONF['refseq_build']]['ncbi_sequences'][$aVariant['chromosome']] . ':' . $aVariant['VariantOnGenome/DNA']);
-                        $tMutalyzerCalls += (microtime(true) - $tMutalyzerStart);
-                        $nMutalyzer++;
-                        if ($sJSONResponse === false) {
-                            // The Mutalyzer call has failed.
-                            sleep($nSleepTime); // Sleep for some time.
-                            $nSleepTime = $nSleepTime * 2; // Double the amount of time that we sleep each time.
+                    $tMutalyzerStart = microtime(true);
+                    $aVV = $_VV->verifyGenomicAndPredictProtein($aVariant['VariantOnGenome/DNA'], $aVariant['id_ncbi']);
+                    $tMutalyzerCalls += (microtime(true) - $tMutalyzerStart);
+                    $aMutalyzerCalls['numberConversion']++;
+                    $nMutalyzer++;
+
+                    // Check if we got anything at all.
+                    if (!$aVV || empty($aVV['data']['DNA'])) {
+                        // VV failed completely.
+                        lovd_printIfVerbose(VERBOSITY_LOW, '>>>>> Attempted to call VV for mapping info and failed on line ' . $nLine . '.' . "\n");
+                    }
+
+                    // Check then if we received the mapping.
+                    if (isset($aVV['data']['transcript_mappings'][$aVariant['id_ncbi']])) {
+                        // VV returned the requested information; collect it.
+                        $aVV = $aVV['data']['transcript_mappings'][$aVariant['id_ncbi']];
+                        $aMapping = [
+                            'VariantOnTranscript/DNA' => $aVV['DNA'],
+                            'VariantOnTranscript/RNA' => $aVV['RNA'],
+                            'VariantOnTranscript/Protein' => $aVV['protein'],
+                        ];
+
+                    } else {
+                        // VV doesn't know how to map this variant to that transcript.
+                        // If we didn't get transcript mappings, we may be dealing with an intergenic variant.
+                        // We saw this with NC_000001.10:g.7917160_7917161insAAGGAAGGAAGGAAGGAAGGAAGG getting mapped to NM_006786.4 without a DNA field.
+                        // We used to have all kinds of fallbacks here; trying a different version of the transcript,
+                        //  or trying a different API endpoint to get something back.
+                        // The chances that this will help are very small, and they're not worth the effort.
+
+                        // If we did have DNA from VEP, we'll just accept that. Otherwise, we call it an error.
+                        $sErrorMsg = 'Can\'t map variant ' . $aVariant['VariantOnGenome/DNA'] .
+                            ' (' . $aVariant['chromosome'] . ':' . $aVariant['position'] . $aVariant['ref'] . '>' . $aVariant['alt'] . ')' .
+                            ' onto transcript ' . $aVariant['id_ncbi'] . '.';
+                        if ($aVariant['VariantOnTranscript/DNA']) {
+                            $sErrorMsg .= "\n" .
+                                'Falling back to VEP\'s DNA description!' . "\n";
+                            lovd_printIfVerbose(VERBOSITY_FULL, $sErrorMsg);
                         } else {
-                            break;
-                        }
-                    }
-
-                    if ($sJSONResponse === false) {
-                        lovd_printIfVerbose(VERBOSITY_LOW, '>>>>> Attempted to call Mutalyzer ' . $nMutalyzerRetries . ' times for numberConversion and failed on line ' . $nLine . '.' . "\n");
-                    }
-
-                    if ($sJSONResponse && $aResponse = json_decode($sJSONResponse, true)) {
-                        // Before we had to go two layers deep; through the result, then read out the string.
-                        // But now apparently this service just returns the string with quotes (the latter are removed by json_decode()).
-                        foreach ($aResponse as $sResponse) {
-                            list($sRef, $sDNA) = explode(':', $sResponse, 2);
-                            $aMappings[$sRef] = $sDNA;
+                            $nAnnotationErrors = lovd_handleAnnotationError($aVariant, $sErrorMsg);
+                            $bDropTranscriptData = $_INSTANCE_CONFIG['conversion']['annotation_error_drops_line'];
                         }
                     }
                 }
 
-                // Find mapping of variant on the currently handled transcript.
-                if (isset($aMappings[$aTranscripts[$aVariant['id_ncbi']]['id_ncbi']])) {
-                    // Successfully mapped on the transcript version that we have in the database.
-                    $aVariant['VariantOnTranscript/DNA'] = $aMappings[$aTranscripts[$aVariant['id_ncbi']]['id_ncbi']];
-                } elseif (isset($aMappings[$aVariant['id_ncbi']])) {
-                    // Successfully mapped on the transcript version received by VEP.
-                    $aVariant['VariantOnTranscript/DNA'] = $aMappings[$aVariant['id_ncbi']];
-                } else {
-                    // Somehow, we can't find the transcript in the mapping info.
-                    // This can only happen either when the NC has a different transcript than the one we have in the
-                    //  position converter database,
-                    //  or when VEP says the variant maps, but Mutalyzer disagrees (variant may be outside of gene).
-                    // Try finding the transcript for other versions. Just take first one you find.
-                    $aAlternativeVersions = array();
-                    foreach ($aMappings as $sRef => $sDNA) {
-                        if (strpos($sRef, $aLine['transcript_noversion']) === 0) {
-                            $aAlternativeVersions[] = $sRef;
-                        }
-                    }
-                    if ($aAlternativeVersions) {
-                        lovd_printIfVerbose(VERBOSITY_FULL, 'Found alternative by searching: ' . $aVariant['id_ncbi'] . ' [' . implode(', ', $aAlternativeVersions) . ']' . "\n");
-                        $aVariant['VariantOnTranscript/DNA'] = $aMappings[$aAlternativeVersions[0]];
-                    } else {
-                        // This happens when VEP says we can map on a known transcript, but doesn't provide us a valid mapping,
-                        // *and* Mutalyzer at the same time doesn't seem to be able to map to this transcript at all.
-                        // This happens sometimes with variants outside of genes, that VEP apparently considers close enough,
-                        //  or differences between the position converter database versus de NC-based database.
-
-                        // Still no mapping. If we did have DNA from VEP, we'll just accept that. Otherwise, we call it an error.
-                        $sErrorMsg = 'Can\'t map variant ' .
-                            $_SETT['human_builds'][$_CONF['refseq_build']]['ncbi_sequences'][$aVariant['chromosome']] .
-                            ':' . $aVariant['VariantOnGenome/DNA'] .
-                            ' (' . $aVariant['chromosome'] . ':' . $aVariant['position'] . $aVariant['ref'] . '>' . $aVariant['alt'] . ') ' .
-                            'onto transcript ' . $aLine['transcript_noversion'] . '*.';
-                        if ($aVariant['VariantOnTranscript/DNA']) {
-                            $sErrorMsg .= "\n" .
-                                          'Falling back to VEP\'s DNA description!' . "\n";
-                            lovd_printIfVerbose(VERBOSITY_FULL, $sErrorMsg);
-                        } else {
-                            // We have one more solution - call the name checker and try to find the mapping there.
-                            // This is a very slow procedure and will hopefully not be used often, but due to recent
-                            //  developments, Mutalyzer's position converter database diverged from the maintained database.
-
-                            // FIXME: This is a lot of repeated code again. Better clean it up.
-                            lovd_printIfVerbose(VERBOSITY_FULL, 'Mutalyzer\'s position converter doesn\'t know transcript, falling back to the name checker instead!' . "\n");
-                            $nSleepTime = 2;
-                            // Retry Mutalyzer call several times until successful.
-                            $sJSONResponse = false;
-                            for ($i=0; $i <= $nMutalyzerRetries; $i++) {
-                                $aMutalyzerCalls['runMutalyzer'] ++;
-                                $tMutalyzerStart = microtime(true);
-                                $sJSONResponse = mutalyzer_runMutalyzer(rawurlencode($_SETT['human_builds'][$_CONF['refseq_build']]['ncbi_sequences'][$aVariant['chromosome']] . ':' . $aVariant['VariantOnGenome/DNA']));
-                                $tMutalyzerCalls += (microtime(true) - $tMutalyzerStart);
-                                $nMutalyzer++;
-                                if ($sJSONResponse === false) {
-                                    // The Mutalyzer call has failed.
-                                    sleep($nSleepTime); // Sleep for some time.
-                                    $nSleepTime = $nSleepTime * 2; // Double the amount of time that we sleep each time.
-                                } else {
-                                    break;
-                                }
-                            }
-                            if ($sJSONResponse === false) {
-                                lovd_printIfVerbose(VERBOSITY_LOW, '>>>>> Attempted to call Mutalyzer ' . $nMutalyzerRetries . ' times to runMutalyzer and failed on line ' . $nLine . '.' . "\n");
-                            }
-
-                            if ($sJSONResponse && $aResponse = json_decode($sJSONResponse, true)) {
-                                // Find DNA mapping in mutalyzer output.
-                                if (!empty($aResponse['legend']) && !empty($aResponse['transcriptDescriptions'])) {
-                                    // Store the *versions* of the wanted transcript. Only versions, so it sorts nicely.
-                                    // Store the transcript names (v-numbers) that we find.
-                                    $aMutalyzerMappings = array(); // array("1" => PRAMEF22_v001).
-
-                                    // Loop over legend records to find transcript name (v-number).
-                                    // Mutalyzer can provide both the wanted transcript and other versions here,
-                                    //  sometimes both at the same time, e.g. with NC_000001.10:g.13183634G>A.
-                                    foreach ($aResponse['legend'] as $aRecord) {
-                                        if (isset($aRecord['id']) && strpos($aRecord['id'], $aLine['transcript_noversion']) === 0) {
-                                            $aMutalyzerMappings[substr($aRecord['id'], strlen($aLine['transcript_noversion']))] = $aRecord['name'];
-                                        }
-                                    }
-                                    // Sort the found transcripts on their version, descending.
-                                    krsort($aMutalyzerMappings);
-                                    $sTranscriptName = '';
-                                    // First check if we have the exact right version for it.
-                                    if (isset($aMutalyzerMappings[substr(strrchr($aVariant['id_ncbi'], '.'), 1)])) {
-                                        $sTranscriptName = $aMutalyzerMappings[substr($aVariant['id_ncbi'], strlen($aLine['transcript_noversion']))];
-                                    } else {
-                                        $sTranscriptName = current($aMutalyzerMappings);
-                                    }
-
-                                    if ($sTranscriptName) {
-                                        // Select DNA mapping based on the found v-number.
-                                        foreach ($aResponse['transcriptDescriptions'] as $sMutalyzerMapping) {
-                                            if (strpos($sMutalyzerMapping, $_SETT['human_builds'][$_CONF['refseq_build']]['ncbi_sequences'][$aVariant['chromosome']] . '(' . $sTranscriptName . '):') === 0) {
-                                                // Match on v-number in given mappings.
-                                                $aVariant['VariantOnTranscript/DNA'] = substr(strchr($sMutalyzerMapping, ':'), 1);
-                                                break;
-                                            }
-                                        }
-                                    }
-                                }
-                            }
-
-                            if (!$aVariant['VariantOnTranscript/DNA']) {
-                                // This fallback also failed :(
-                                $nAnnotationErrors = lovd_handleAnnotationError($aVariant, $sErrorMsg);
-                                $bDropTranscriptData = $_INSTANCE_CONFIG['conversion']['annotation_error_drops_line'];
-                            }
-                        }
-                    }
+                if ($aMapping) {
+                    // Copy everything over to $aVariant.
+                    $aVariant = array_merge(
+                        $aVariant,
+                        $aMapping
+                    );
                 }
             }
 
