@@ -849,25 +849,40 @@ foreach ($aFiles as $sFileID) {
 
         } else { // We'll handle this transcript.
             // Handle the rest of the VOT columns.
-            // First, take off the transcript name, so we can easily check for a del/ins checking for an underscore.
-            $aVariant['VariantOnTranscript/DNA'] = substr($aVariant['VariantOnTranscript/DNA'], strpos($aVariant['VariantOnTranscript/DNA'], ':')+1); // NM_000000.1:c.1del -> c.1del
+            if ($aVariant['VariantOnTranscript/DNA']) {
+                // First, take off the transcript name, so we can easily check for a del/ins checking for an underscore.
+                $aVariant['VariantOnTranscript/DNA'] = substr(strstr($aVariant['VariantOnTranscript/DNA'], ':'), 1); // NM_000000.1:c.1del -> c.1del.
+            } else {
+                // No DNA field. We accept that in a few cases.
+                if (!empty($aVariant['VariantOnTranscript/GVS/Function']) && in_array($aVariant['VariantOnTranscript/GVS/Function'], ['utr-3', 'utr-5', 'intergenic'])) {
+                    $aVariant['VariantOnTranscript/DNA'] = 'c.?';
+                }
+            }
 
-            // Decide if we need to call Mutalyzer's position converter to generate the VOT/DNA.
+            // Decide if we need to call VV to generate the VOT data (DNA, RNA, protein).
             // For sure, we need to do so, when there is no VOT/DNA from VEP.
-            $bCallMutalyzer = (!$aVariant['VariantOnTranscript/DNA']);
+            $bCallVV = (!$aVariant['VariantOnTranscript/DNA']);
+
+            // If we don't have a protein change, we may also want to check.
+            if (!$bCallVV && empty($aVariant['VariantOnTranscript/Protein'])) {
+                // However, if we have information from VEP that this is an UTR or intronic variant, never mind.
+                $bCallVV = !(!empty($aVariant['VariantOnTranscript/GVS/Function'])
+                    && in_array($aVariant['VariantOnTranscript/GVS/Function'], ['utr-3', 'utr-5', 'intergenic', 'intron', 'non-coding-exon', 'non-coding-intron-near-splice', 'splice']));
+            }
+
             // If VEP did come up with something, check if this LOVD+ instance trusts VEP's output for indels.
             if ($_INSTANCE_CONFIG['conversion']['check_indel_description']) {
                 // This LOVD+ instance chooses to ignore VEP's predictions looking like indels.
                 // VEP doesn't understand that when the gene is on reverse, they have to switch the positions.
                 // Also, sometimes a delins is simply a substitution, when the VCF file was complicated (ACGT to ACCT for example).
                 // We've also seen cases where VEP's intronic positions in the DNA field were simply wrong.
-                // Call Mutalyzer to fix these errors.
-                $bCallMutalyzer = ($bCallMutalyzer || (strpos($aVariant['VariantOnTranscript/DNA'], '_') !== false));
+                // Call VV to fix these errors.
+                $bCallVV = ($bCallVV || (strpos($aVariant['VariantOnTranscript/DNA'], '_') !== false));
             }
 
             // We still need the original later.
             $aVariant['VariantOnTranscript/DNA/VEP'] = $aVariant['VariantOnTranscript/DNA'];
-            if ($bCallMutalyzer) {
+            if ($bCallVV) {
                 // We don't have a DNA field from VEP, or we don't trust it (see above).
                 // Call Mutalyzer, but first check if I did that before already.
                 if (empty($aMappings)) {
