@@ -4,7 +4,7 @@
  * LEIDEN OPEN VARIATION DATABASE (LOVD)
  *
  * Created     : 2014-11-28
- * Modified    : 2025-07-16
+ * Modified    : 2025-08-13
  * For LOVD+   : 3.0-30
  *
  * Copyright   : 2004-2025 Leiden University Medical Center; http://www.LUMC.nl/
@@ -744,6 +744,24 @@ foreach ($aFiles as $sFileID) {
                 if (isset($aGenes[$aVariant['symbol']]['available_transcripts'])) {
                     $aTranscriptInfo = $aGenes[$aVariant['symbol']]['available_transcripts'];
 
+                } elseif (empty($aGenes[$aVariant['symbol']]['id_hgnc'])) {
+                    // This is a manually created gene, and we have no HGNC ID. We have no other choice than to manually create this transcript.
+                    // To make sure that we'll be able to manually create more transcripts for this gene, don't set the 'available_transcripts' key.
+                    lovd_printIfVerbose(VERBOSITY_HIGH, 'Faking transcript information for ' . $aVariant['id_ncbi'] . '...' . "\n");
+                    $aTranscriptInfo = [
+                        $aVariant['id_ncbi'] => [
+                            'name' => $aVariant['id_ncbi'] . ' (automatically created transcript)',
+                            'id_ncbi_protein' => '',
+                            'genomic_positions' => [],
+                            'transcript_positions' => [
+                                'cds_start' => null,
+                                'cds_length' => null,
+                                'length' => null,
+                            ],
+                            'select' => false,
+                        ],
+                    ];
+
                 } else {
                     lovd_printIfVerbose(VERBOSITY_HIGH, 'Loading transcript information for ' . $aGenes[$aVariant['symbol']]['id'] . '...' . "\n");
 
@@ -756,7 +774,9 @@ foreach ($aFiles as $sFileID) {
 
                     if (!$aTranscriptInfo || !empty($aTranscriptInfo['errors'])) {
                         // Something went wrong. Let the user know.
-                        lovd_printIfVerbose(VERBOSITY_MEDIUM, 'Error while retrieving transcripts for gene ' . $aGenes[$aVariant['symbol']]['id'] . ': ' . implode('; ', $aTranscriptInfo['errors']) . '.' . "\n");
+                        lovd_printIfVerbose(
+                            VERBOSITY_MEDIUM,
+                            'Error while retrieving transcripts for gene ' . $aGenes[$aVariant['symbol']]['id'] . ': ' . rtrim(implode('; ', ($aTranscriptInfo['errors'] ?? [])), '.') . '.' . "\n");
 
                     } elseif (empty($aTranscriptInfo['data'])) {
                         // No results, unfortunately.
@@ -811,13 +831,14 @@ foreach ($aFiles as $sFileID) {
 
                 if (!isset($aTranscripts[$aVariant['id_ncbi']])) {
                     // We don't have it, we can't get it... Stop looking for it, please!
+                    // We've seen this with NM_001395685.1, a suppressed record. VV dropped it.
                     $aTranscripts[$aVariant['id_ncbi']] = false;
                 }
             }
         }
         // We created the transcript if possible, but we might still not have it.
         // $aVariant['id_ncbi']                // How we received the transcript from VEP.
-        // $aTranscripts[$aVariant['id_ncbi']] // The rest of the transcript information, from the database.
+        // $aTranscripts[$aVariant['id_ncbi']] // The rest of the transcript information, from the database. Can be set to false.
 
         // Store transcript ID without version, we'll use it plenty of times.
         $aLine['transcript_noversion'] = strstr($aVariant['id_ncbi'], '.', true);
@@ -825,6 +846,7 @@ foreach ($aFiles as $sFileID) {
         if (empty($aVariant['id_ncbi']) || $_ADAPTER->ignoreTranscript($aVariant['id_ncbi']) || empty($aTranscripts[$aVariant['id_ncbi']])) {
             // When the transcript still doesn't exist, or it evaluates to false (we don't have it, we can't get it), then skip it.
             $aVariant['id_ncbi'] = '';
+
         } else { // We'll handle this transcript.
             // Handle the rest of the VOT columns.
             // First, take off the transcript name, so we can easily check for a del/ins checking for an underscore.
