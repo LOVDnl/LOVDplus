@@ -972,218 +972,53 @@ foreach ($aFiles as $sFileID) {
                     ($aVariant['position_c_start_intron']?
                         abs($aVariant['position_c_start_intron']) : abs($aVariant['position_c_end_intron'])));
 
-            // VariantOnTranscript/RNA && VariantOnTranscript/Protein.
-            // Try to do as much as possible by ourselves.
-            $aVariant['VariantOnTranscript/RNA'] = '';
-            // Convert VEP's (p.%3D) to (p.=). They have to encode = to prevent parser errors.
-            $aVariant['VariantOnTranscript/Protein'] = urldecode($aVariant['VariantOnTranscript/Protein']);
-            if ($aVariant['VariantOnTranscript/Protein']) {
-                // VEP came up with something...
-                $aVariant['VariantOnTranscript/RNA'] = 'r.(?)';
-                if (strpos($aVariant['VariantOnTranscript/Protein'], ':') !== false) {
-                    $aVariant['VariantOnTranscript/Protein'] = substr($aVariant['VariantOnTranscript/Protein'], strpos($aVariant['VariantOnTranscript/Protein'], ':')+1); // NP_000000.1:p.Met1? -> p.Met1?
-                }
-                if ($aVariant['VariantOnTranscript/Protein'] == $aVariant['VariantOnTranscript/DNA/VEP'] . '(p.=)'
-                    || preg_match('/^p\.([A-Z][a-z]{2})+([0-9]+)=$/', $aVariant['VariantOnTranscript/Protein'])) {
-                    // But sometimes VEP messes up; DNA: c.4482G>A; Prot: c.4482G>A(p.=) or
-                    //  Prot: p.ValSerThrAspHisAlaThrSerLeuProValThrIleProSerAlaAla1225=
-                    // 2019-06-19; May have been fixed, not observed anymore.
-                    $aVariant['VariantOnTranscript/Protein'] = 'p.(=)';
-                } elseif (substr($aVariant['VariantOnTranscript/Protein'], 0, 2) == 'p.'
-                    && (substr($aVariant['VariantOnTranscript/Protein'], 2, 1) != '('
-                        || substr($aVariant['VariantOnTranscript/Protein'], -1) != ')')) {
-                    // VEP has p. notation, but without parentheses around them (see https://github.com/Ensembl/ensembl-vep/issues/498).
-                    $aVariant['VariantOnTranscript/Protein'] = str_replace('p.', 'p.(', $aVariant['VariantOnTranscript/Protein'] . ')');
-                }
-            } elseif (in_array(substr($aTranscripts[$aVariant['id_ncbi']]['id_ncbi'], 0, 2), array('NR', 'XR'))) {
-                // Non coding transcript, no wonder we didn't get a protein field.
-                $aVariant['VariantOnTranscript/RNA'] = 'r.(?)';
-                $aVariant['VariantOnTranscript/Protein'] = '-';
-            } elseif (($aVariant['position_c_start'] < 0 && $aVariant['position_c_end'] < 0)
-                || ($aVariant['position_c_start'] > $aTranscripts[$aVariant['id_ncbi']]['position_c_cds_end'] && $aVariant['position_c_end'] > $aTranscripts[$aVariant['id_ncbi']]['position_c_cds_end'])
-                || ($aVariant['position_c_start_intron'] && $aVariant['position_c_end_intron'] && min(abs($aVariant['position_c_start_intron']), abs($aVariant['position_c_end_intron'])) > 5
-                    && ($aVariant['position_c_start'] == $aVariant['position_c_end'] || ($aVariant['position_c_start'] == ($aVariant['position_c_end']-1) && $aVariant['position_c_start_intron'] > 0 && $aVariant['position_c_end_intron'] < 0)))) {
-                // 5'UTR, 3'UTR, fully intronic in one intron only (at least 5 bases away from exon border).
-                $aVariant['VariantOnTranscript/RNA'] = 'r.(=)';
-                $aVariant['VariantOnTranscript/Protein'] = 'p.(=)';
-            } elseif (($aVariant['position_c_start_intron'] && (!$aVariant['position_c_end_intron'] || abs($aVariant['position_c_start_intron']) <= 5))
-                || ($aVariant['position_c_end_intron'] && (!$aVariant['position_c_start_intron'] || abs($aVariant['position_c_end_intron']) <= 5))) {
-                // Partially intronic, or variants spanning multiple introns, or within first/last 5 bases of an intron.
-                $aVariant['VariantOnTranscript/RNA'] = 'r.spl?';
-                $aVariant['VariantOnTranscript/Protein'] = 'p.?';
-            } elseif (!$bDropTranscriptData && $aVariant['VariantOnTranscript/DNA']
-                // Try to prevent running Mutalyzer one last time. Fetch protein description from the database.
-                && ($aVOTFromDB = $_DB->q('
-                    SELECT `VariantOnTranscript/RNA`, `VariantOnTranscript/Protein`, COUNT(*)
-                    FROM ' . TABLE_VARIANTS_ON_TRANSCRIPTS . '
-                    WHERE transcriptid = ? AND position_c_start = ? AND position_c_start_intron = ? AND position_c_end = ? AND position_c_end_intron = ? AND `VariantOnTranscript/DNA` = ?
-                    GROUP BY `VariantOnTranscript/RNA`, `VariantOnTranscript/Protein`
-                    ORDER BY COUNT(*) DESC LIMIT 1',
-                    array(
-                        $aTranscripts[$aVariant['id_ncbi']]['id'],
-                        $aVariant['position_c_start'],
-                        $aVariant['position_c_start_intron'],
-                        $aVariant['position_c_end'],
-                        $aVariant['position_c_end_intron'],
-                        $aVariant['VariantOnTranscript/DNA']))->fetchRow()) && $aVOTFromDB) {
-                // Variant has been found in the database. Use the most common RNA and Protein description we found.
-                $aVariant['VariantOnTranscript/RNA'] = $aVOTFromDB[0];
-                $aVariant['VariantOnTranscript/Protein'] = $aVOTFromDB[1];
-            } elseif (!$bDropTranscriptData && $aVariant['VariantOnTranscript/DNA']) {
-                // OK, too bad, we need to run Mutalyzer anyway (only if we're using this VOT line).
-                lovd_printIfVerbose(VERBOSITY_MEDIUM, 'Running mutalyzer to predict protein change for ' .
-                    $_SETT['human_builds'][$_CONF['refseq_build']]['ncbi_sequences'][$aVariant['chromosome']] .
-                    ':' . $aVariant['VariantOnGenome/DNA'] .
-                    ' (' . $aVariant['chromosome'] . ':' . $aVariant['position'] . $aVariant['ref'] . '>' . $aVariant['alt'] .
-                    ' @ ' . $aVariant['id_ncbi'] . ")\n");
-                $nSleepTime = 2;
-                // Retry Mutalyzer call several times until successful.
-                $sJSONResponse = false;
-                for ($i=0; $i <= $nMutalyzerRetries; $i++) {
-                    $aMutalyzerCalls['runMutalyzer'] ++;
-                    $tMutalyzerStart = microtime(true);
-                    $sJSONResponse = mutalyzer_runMutalyzer(rawurlencode($_SETT['human_builds'][$_CONF['refseq_build']]['ncbi_sequences'][$aVariant['chromosome']] . ':' . $aVariant['VariantOnGenome/DNA']));
-                    $tMutalyzerCalls += (microtime(true) - $tMutalyzerStart);
-                    $nMutalyzer++;
-                    if ($sJSONResponse === false) {
-                        // The Mutalyzer call has failed.
-                        sleep($nSleepTime); // Sleep for some time.
-                        $nSleepTime = $nSleepTime * 2; // Double the amount of time that we sleep each time.
-                    } else {
-                        break;
+            // Fill in VariantOnTranscript/RNA && VariantOnTranscript/Protein. Try to do as much as possible by
+            //  ourselves. However, we may already have this, if we queried the database or asked VV for a mapping.
+            // Only do this, when we don't have the RNA field yet.
+            if (empty($aVariant['VariantOnTranscript/RNA'])) {
+                // We didn't query the database, and we didn't ask VV for a mapping. So we only have VEPs DNA and protein fields.
+                if (!empty($aVariant['VariantOnTranscript/Protein'])) {
+                    // VEP came up with something...
+                    if (strpos($aVariant['VariantOnTranscript/Protein'], ':') !== false) {
+                        $aVariant['VariantOnTranscript/Protein'] = substr(strstr($aVariant['VariantOnTranscript/Protein'], ':'), 1); // NP_000000.1:p.Met1? -> p.Met1?
+                    }
+                    // Convert VEP's (p.%3D) to (p.=). They have to encode = to prevent parser errors.
+                    $aVariant['VariantOnTranscript/Protein'] = urldecode($aVariant['VariantOnTranscript/Protein']);
+                    if ($aVariant['VariantOnTranscript/Protein'] == $aVariant['VariantOnTranscript/DNA/VEP'] . '(p.=)'
+                        || preg_match('/^p\.([A-Z][a-z]{2})+([0-9]+)=$/', $aVariant['VariantOnTranscript/Protein'])) {
+                        // But sometimes VEP messes up; DNA: c.4482G>A; Prot: c.4482G>A(p.=) or
+                        //  Prot: p.ValSerThrAspHisAlaThrSerLeuProValThrIleProSerAlaAla1225=
+                        // 2019-06-19; May have been fixed, not observed anymore.
+                        $aVariant['VariantOnTranscript/Protein'] = 'p.(=)';
+                    } elseif (substr($aVariant['VariantOnTranscript/Protein'], 0, 2) == 'p.'
+                        && (substr($aVariant['VariantOnTranscript/Protein'], 2, 1) != '('
+                            || substr($aVariant['VariantOnTranscript/Protein'], -1) != ')')) {
+                        // VEP has p. notation, but without parentheses around them (see https://github.com/Ensembl/ensembl-vep/issues/498).
+                        $aVariant['VariantOnTranscript/Protein'] = str_replace('p.', 'p.(', $aVariant['VariantOnTranscript/Protein'] . ')');
                     }
                 }
-                if ($sJSONResponse === false) {
-                    lovd_printIfVerbose(VERBOSITY_LOW, '>>>>> Attempted to call Mutalyzer ' . $nMutalyzerRetries . ' times to runMutalyzer and failed on line ' . $nLine . '.' . "\n");
-                }
 
-                if ($sJSONResponse && $aResponse = json_decode($sJSONResponse, true)) {
-                    // Predict RNA && Protein change.
-                    // 'Intelligent' error handling.
-                    // FIXME: Implement lovd_getRNAProteinPrediction() here.
-                    // LOVD3's version is CURL-ready and uses JSON.
-                    foreach ($aResponse['messages'] as $aError) {
-                        // Pass other errors on to the users?
-                        // FIXME: This is implemented as well in inc-lib-variants.php (LOVD3.0-15).
-                        //  When we update LOVD+ to LOVD 3.0-15, use this lib so we don't duplicate code...
-                        if (isset($aError['errorcode']) && $aError['errorcode'] == 'ERANGE') {
-                            // Ignore 'ERANGE' as an actual error, because we can always interpret this as p.(=), p.? or p.0.
-                            $aVariantRange = explode('_', $aVariant['VariantOnTranscript/DNA']);
-                            // Check what the variant looks like and act accordingly.
-                            if (count($aVariantRange) === 2 && preg_match('/-\d+/', $aVariantRange[0]) && preg_match('/-\d+/', $aVariantRange[1])) {
-                                // Variant has 2 positions. Variant has both the start and end positions upstream of the transcript, we can assume that the product will not be affected.
-                                $sPredictR = 'r.(=)';
-                                $sPredictP = 'p.(=)';
-                            } elseif (count($aVariantRange) === 2 && preg_match('/-\d+/', $aVariantRange[0]) && preg_match('/\*\d+/', $aVariantRange[1])) {
-                                // Variant has 2 positions. Variant has an upstream start position and a downstream end position, we can assume that the product will not be expressed.
-                                $sPredictR = 'r.0?';
-                                $sPredictP = 'p.0?';
-                            } elseif (count($aVariantRange) == 2 && preg_match('/\*\d+/', $aVariantRange[0]) && preg_match('/\*\d+/', $aVariantRange[1])) {
-                                // Variant has 2 positions. Variant has both the start and end positions downstream of the transcript, we can assume that the product will not be affected.
-                                $sPredictR = 'r.(=)';
-                                $sPredictP = 'p.(=)';
-                            } elseif (count($aVariantRange) == 1 && preg_match('/-\d+/', $aVariantRange[0]) || preg_match('/\*\d+/', $aVariantRange[0])) {
-                                // Variant has 1 position and is either upstream or downstream from the transcript, we can assume that the product will not be affected.
-                                $sPredictR = 'r.(=)';
-                                $sPredictP = 'p.(=)';
-                            } else {
-                                // One of the positions of the variant falls within the transcript, so we can not make any assumptions based on that.
-                                $sPredictR = 'r.?';
-                                $sPredictP = 'p.?';
-                            }
-                            // Fill in our assumption to forge that this information came from Mutalyzer.
-                            $aVariant['VariantOnTranscript/RNA'] = $sPredictR;
-                            $aVariant['VariantOnTranscript/Protein'] = $sPredictP;
-                            break;
-                        } elseif (isset($aError['errorcode']) && $aError['errorcode'] == 'WSPLICE') {
-                            $aVariant['VariantOnTranscript/RNA'] = 'r.spl?';
-                            $aVariant['VariantOnTranscript/Protein'] = 'p.?';
-                            break;
-                        } elseif (isset($aError['errorcode']) && $aError['errorcode'] == 'EREF') {
-                            // This can happen, because we have UDs from hg38, but the alignment and variant calling is done on hg19... :(  Sequence can be different.
-                            $aVariant['VariantOnTranscript/RNA'] = 'r.(?)';
-                            $aVariant['VariantOnTranscript/Protein'] = 'p.?';
-                            lovd_printIfVerbose(VERBOSITY_MEDIUM, 'Mutalyzer returned EREF error, hg19/hg38 error?' . "\n");
-                            // We don't break here, because if there is also a WSPLICE we rather go with that one.
-                        }
-                    }
+                // We used to have very complicated code here, but we can just rely on the VV library.
+                // We have the same functionality there, so why reinvent the wheel? This function is better.
+                $aMapping = [
+                    'DNA' => $aVariant['VariantOnTranscript/DNA'],
+                    'protein' => ($aVariant['VariantOnTranscript/Protein'] ?? ''),
+                ];
+                $_VV->getRNAProteinPrediction($aMapping, $aVariant['id_ncbi']);
 
-                    // Find protein prediction in mutalyzer output.
-                    if (!$aVariant['VariantOnTranscript/Protein'] && !empty($aResponse['legend']) && !empty($aResponse['proteinDescriptions'])) {
-                        // Store the *versions* of the wanted transcript. Only versions, so it sorts nicely.
-                        // Store the transcript names (v-numbers) that we find.
-                        $aMutalyzerMappings = array(); // array("1" => PRAMEF22_v001).
-
-                        // Loop over legend records to find transcript name (v-number).
-                        // Mutalyzer can provide both the wanted transcript and other versions here,
-                        //  sometimes both at the same time, e.g. with NC_000001.10:g.13183634G>A.
-                        foreach ($aResponse['legend'] as $aRecord) {
-                            if (isset($aRecord['id']) && strpos($aRecord['id'], $aLine['transcript_noversion']) === 0
-                                && substr($aRecord['name'], -4, 1) == 'v') {
-                                $aMutalyzerMappings[substr($aRecord['id'], strlen($aLine['transcript_noversion']))] = $aRecord['name'];
-                            }
-                        }
-                        // Sort the found transcripts on their version, descending.
-                        krsort($aMutalyzerMappings);
-                        $sTranscriptName = '';
-
-                        // First check if we have the exact right version for it.
-                        if (isset($aMutalyzerMappings[substr(strrchr($aVariant['id_ncbi'], '.'), 1)])) {
-                            $sTranscriptName = $aMutalyzerMappings[substr($aVariant['id_ncbi'], strlen($aLine['transcript_noversion']))];
-                        } else {
-                            $sTranscriptName = current($aMutalyzerMappings);
-                        }
-
-                        if ($sTranscriptName) {
-                            // Generate protein isoform name (i-number) from transcript name (v-number).
-                            $sProteinName = str_replace('_v', '_i', $sTranscriptName);
-
-                            // Select protein description based on protein isoform (i-number).
-                            foreach ($aResponse['proteinDescriptions'] as $sMutalyzerMapping) {
-                                if (strpos($sMutalyzerMapping, $_SETT['human_builds'][$_CONF['refseq_build']]['ncbi_sequences'][$aVariant['chromosome']] . '(' . $sProteinName . '):') === 0) {
-                                    // Match on i-number in given mappings.
-                                    $aVariant['VariantOnTranscript/Protein'] = substr(strchr($sMutalyzerMapping, ':'), 1);
-                                    if ($aVariant['VariantOnTranscript/Protein'] == 'p.?') {
-                                        $aVariant['VariantOnTranscript/RNA'] = 'r.?';
-                                    } elseif ($aVariant['VariantOnTranscript/Protein'] == 'p.(=)') {
-                                        // FIXME: Not correct in case of substitutions e.g. in the third position of the codon, not leading to a protein change.
-                                        $aVariant['VariantOnTranscript/RNA'] = 'r.(=)';
-                                    } else {
-                                        // RNA will default to r.(?).
-                                        $aVariant['VariantOnTranscript/RNA'] = 'r.(?)';
-                                    }
-                                    break;
-                                }
-                            }
-                        }
-                    }
-                }
-                // Any errors related to the prediction of Exon, RNA or Protein are silently ignored.
+                // And now copy it back.
+                $aVariant['VariantOnTranscript/RNA'] = $aMapping['RNA'];
+                $aVariant['VariantOnTranscript/Protein'] = $aMapping['protein'];
             }
 
             if (!$bDropTranscriptData && $aVariant['VariantOnTranscript/DNA'] && !$aVariant['VariantOnTranscript/RNA']) {
-                $sErrorMsg = 'Missing VariantOnTranscript/RNA for ' .
-                    $_SETT['human_builds'][$_CONF['refseq_build']]['ncbi_sequences'][$aVariant['chromosome']] .
-                    ':' . $aVariant['VariantOnGenome/DNA'] .
+                $sErrorMsg = 'Missing VariantOnTranscript/RNA for ' . $aVariant['VariantOnGenome/DNA'] .
                     ' (' . $aVariant['chromosome'] . ':' . $aVariant['position'] . $aVariant['ref'] . '>' . $aVariant['alt'] .
                     ' @ ' . $aVariant['id_ncbi'] . ').';
                 $nAnnotationErrors = lovd_handleAnnotationError($aVariant, $sErrorMsg);
                 $bDropTranscriptData = $_INSTANCE_CONFIG['conversion']['annotation_error_drops_line'];
             }
 
-            if (!$bDropTranscriptData) {
-                // OK, so we're not dropping the line. But we may not have DNA, RNA or Protein.
-                // So we'll need to make sure LOVD+ can actually import the data, then!
-                if (!$aVariant['VariantOnTranscript/DNA']) {
-                    $aVariant['VariantOnTranscript/DNA'] = 'c.?';
-                }
-                if (!$aVariant['VariantOnTranscript/RNA']) {
-                    $aVariant['VariantOnTranscript/RNA'] = 'r.(?)';
-                }
-                if (!$aVariant['VariantOnTranscript/Protein']) {
-                    $aVariant['VariantOnTranscript/Protein'] = 'p.(?)';
-                }
-            }
         }
 
         // DNA fields and protein field can be super long with long inserts.
