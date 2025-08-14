@@ -997,11 +997,11 @@ foreach ($aFiles as $sFileID) {
         }
 
         // DNA fields and protein field can be super long with long inserts.
-        // For the DNA fields, shorten insAAAAAA to ins(6), for DNA descriptions >100 characters.
+        // For the DNA fields, shorten insAAAAAA to insN[6], for DNA descriptions >100 characters.
         // FIXME: Better make this dependent on the field length; there are LOVDs out there that allow more data, and they should get it.
         foreach (array('VariantOnGenome/DNA', 'VariantOnTranscript/DNA') as $sField) {
             if (isset($aVariant[$sField]) && strlen($aVariant[$sField]) > 100 && preg_match('/ins([ACTG]+)$/', $aVariant[$sField], $aRegs)) {
-                $aVariant[$sField] = str_replace('ins' . $aRegs[1], 'ins(' . strlen($aRegs[1]) . ')', $aVariant[$sField]);
+                $aVariant[$sField] = str_replace('ins' . $aRegs[1], 'insN[' . strlen($aRegs[1]) . ']', $aVariant[$sField]);
             }
         }
         // Don't put this in the output file.
@@ -1011,9 +1011,9 @@ foreach ($aFiles as $sFileID) {
         // FIXME: Better make this dependent on the field length; there are LOVDs out there that allow more data, and they should get it.
         $sField = 'VariantOnTranscript/Protein';
         if (isset($aVariant[$sField]) && strlen($aVariant[$sField]) > 100) {
-            // For the protein field, shorten insArgArgArg to ins(3), for protein descriptions >100 characters.
+            // For the protein field, shorten insArgArgArg to insXaa[3], for protein descriptions >100 characters.
             if (preg_match('/ins(([A-Z][a-z]{2})+)\)$/', $aVariant[$sField], $aRegs)) {
-                $aVariant[$sField] = str_replace('ins' . $aRegs[1], 'ins(' . strlen($aRegs[1]) . ')', $aVariant[$sField]);
+                $aVariant[$sField] = str_replace('ins' . $aRegs[1], 'insXaa[' . strlen($aRegs[1]) . ']', $aVariant[$sField]);
             }
             // Vep produces interestingly long deletions and duplications as well.
             // p.TerSerProProGlyLysProGlnGlyProProProGlnGlyGlyAsnGlnProGlnGlyProProProProProGlyLysProGlnGlyProProProGlnGlyGlyLysLysProGlnGlyProProProProGlyLysProGlnGlyProProProGlnGlyAspLysSerArgSerSer152del -> p.Ter152_Ser212del
