@@ -63,26 +63,6 @@ if (!empty($_CONF['proxy_username']) && !empty($_CONF['proxy_password'])) {
     curl_setopt($ch, CURLOPT_PROXYUSERPWD, $_CONF['proxy_username'] . ':' . $_CONF['proxy_password']);
 }
 
-function mutalyzer_numberConversion ($build, $variant)
-{
-    global $ch, $_CONF;
-
-    $sUrl = str_replace('/services', '', $_CONF['mutalyzer_soap_url']) . '/json/numberConversion?build=' . $build . '&variant=' . $variant;
-    curl_setopt($ch, CURLOPT_URL, $sUrl);
-
-    return curl_exec($ch);
-}
-
-function mutalyzer_runMutalyzer ($variant)
-{
-    global $ch, $_CONF;
-
-    $sUrl = str_replace('/services', '', $_CONF['mutalyzer_soap_url']) . '/json/runMutalyzerLight?variant=' . $variant;
-    curl_setopt($ch, CURLOPT_URL, $sUrl);
-
-    return curl_exec($ch);
-}
-
 
 
 
@@ -158,7 +138,6 @@ $aDefaultValues = array(
 
 
 
-$nMutalyzerRetries = 5; // The number of times we retry the Mutalyzer API call if the connection fails.
 $nFilesBeingMerged = 0; // We're counting how many files are being merged at the time, because we don't want to stress the system too much.
 $nMaxFilesBeingMerged = 5; // We're allowing only five processes working concurrently on merging files (or so many failed attempts that have not been cleaned up).
 $aFiles = array(); // array(ID => array(files), ...);
@@ -403,12 +382,11 @@ foreach ($aFiles as $sFileID) {
 
     // Now start parsing the file, reading it out line by line, building up the variant data in $aData.
     $dStart = time();
-    $aMutalyzerCalls = array(
-        'getTranscriptsAndInfo' => 0,
-        'numberConversion' => 0,
-        'runMutalyzer' => 0,
+    $aVVCalls = array(
+        'getTranscriptsByID' => 0,
+        'verifyGenomicAndPredictProtein' => 0,
     );
-    $tMutalyzerCalls = 0; // Time spent doing Mutalyzer calls.
+    $tVVCalls = 0; // Time spent doing VV calls.
     $aData = array(); // 'chr1:1234567C>G' => array(array(genomic_data), array(transcript1), array(transcript2), ...)
     lovd_printIfVerbose(VERBOSITY_LOW, 'Parsing file. Current time: ' . date('Y-m-d H:i:s') . ".\n");
     flush();
@@ -420,7 +398,6 @@ foreach ($aFiles as $sFileID) {
     $aTranscripts = array(); // NM_000001.1 => array(<transcript_info>)
     $nHGNC = 0; // Count the number of times HGNC is called.
     $tHGNCCalls = 0; // Time spent doing HGNC calls.
-    $nMutalyzer = 0; // Count the number of times Mutalyzer is called.
     $nAnnotationErrors = 0; // Count the number of lines we cannot import.
 
     // Get all the existing genes in one database call.
@@ -759,11 +736,10 @@ foreach ($aFiles as $sFileID) {
                     lovd_printIfVerbose(VERBOSITY_HIGH, 'Loading transcript information for ' . $aGenes[$aVariant['symbol']]['id'] . '...' . "\n");
 
                     // Fetch the transcripts using the HGNC ID, so we won't have issues with gene symbols.
-                    $tMutalyzerStart = microtime(true);
+                    $tVVStart = microtime(true);
                     $aTranscriptInfo = $_VV->getTranscriptsByID('HGNC:' . $aGenes[$aVariant['symbol']]['id_hgnc']);
-                    $tMutalyzerCalls += (microtime(true) - $tMutalyzerStart);
-                    $aMutalyzerCalls['getTranscriptsAndInfo']++;
-                    $nMutalyzer++;
+                    $tVVCalls += (microtime(true) - $tVVStart);
+                    $aVVCalls['getTranscriptsByID']++;
 
                     if (!$aTranscriptInfo || !empty($aTranscriptInfo['errors'])) {
                         // Something went wrong. Let the user know.
@@ -890,11 +866,10 @@ foreach ($aFiles as $sFileID) {
                 if (!$aMapping) {
                     lovd_printIfVerbose(VERBOSITY_FULL, 'Running VariantValidator, DNA was: "' . $aVariant['VariantOnTranscript/DNA'] . '"' . "\n");
 
-                    $tMutalyzerStart = microtime(true);
+                    $tVVStart = microtime(true);
                     $aVV = $_VV->verifyGenomicAndPredictProtein($aVariant['VariantOnGenome/DNA'], $aVariant['id_ncbi']);
-                    $tMutalyzerCalls += (microtime(true) - $tMutalyzerStart);
-                    $aMutalyzerCalls['numberConversion']++;
-                    $nMutalyzer++;
+                    $tVVCalls += (microtime(true) - $tVVStart);
+                    $aVVCalls['verifyGenomicAndPredictProtein']++;
 
                     // Check if we got anything at all.
                     if (!$aVV || empty($aVV['data']['DNA'])) {
@@ -1107,13 +1082,14 @@ foreach ($aFiles as $sFileID) {
     fclose($fInput); // Close input file.
 
     lovd_printIfVerbose(VERBOSITY_MEDIUM, str_repeat('-', 70) . "\n" . 'Done parsing file. Current time: ' . date('Y-m-d H:i:s') . ".\n");
-    // Show the number of times HGNC and Mutalyzer were called.
+    // Show the number of times HGNC and VariantValidator were called.
+    $nVV = array_sum($aVVCalls);
     lovd_printIfVerbose(VERBOSITY_MEDIUM,
         'Number of times HGNC called: ' . $nHGNC . (!$nHGNC? '' :
             ', taking ' . round($tHGNCCalls/60) . ' minutes, ' . round($tHGNCCalls/$nHGNC, 2) . ' sec/call') . ".\n" .
-        'Number of times Mutalyzer called: ' . $nMutalyzer . (!$nMutalyzer? '' :
-            ', taking ' . round($tMutalyzerCalls/60) . ' minutes, ' . round($tMutalyzerCalls/$nMutalyzer, 2) . ' sec/call') . ".\n");
-    foreach ($aMutalyzerCalls as $sFunction => $nCalls) {
+        'Number of times VariantValidator called: ' . $nVV . (!$nVV? '' :
+            ', taking ' . round($tVVCalls/60) . ' minutes, ' . round($tVVCalls/$nVV, 2) . ' sec/call') . ".\n");
+    foreach ($aVVCalls as $sFunction => $nCalls) {
         lovd_printIfVerbose(VERBOSITY_MEDIUM, '  ' . $sFunction . ': ' . $nCalls . "\n");
     }
     lovd_printIfVerbose(VERBOSITY_MEDIUM, 'Parsing took ' . round((time() - $dStart)/60) . ' minutes in total.' . "\n" .
