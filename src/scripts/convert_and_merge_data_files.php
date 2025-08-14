@@ -4,7 +4,7 @@
  * LEIDEN OPEN VARIATION DATABASE (LOVD)
  *
  * Created     : 2014-11-28
- * Modified    : 2025-08-13
+ * Modified    : 2025-08-14
  * For LOVD+   : 3.0-30
  *
  * Copyright   : 2004-2025 Leiden University Medical Center; http://www.LUMC.nl/
@@ -944,34 +944,33 @@ foreach ($aFiles as $sFileID) {
                 }
             }
 
-            // For the position fields, VEP can generate data (CDS_position), but it's hardly usable. Calculate ourselves.
-            // 2022-12-09; Updated to use LOVD's lovd_getVariantInfo() instead of LOVD+'s lovd_getVariantPosition().
-            // However, Mutalyzer gives us positions that aren't possible like n.-100 and n.*100. This happens when a
-            //  variant can't actually be mapped to a transcript. lovd_getVariantInfo() is too smart and doesn't allow
-            //  this and returns 0 as position. This won't allow us to sort these variants in the views. Therefore,
-            //  better manipulate lovd_getVariantInfo() to anyway get us positions by making it think we're submitting
-            //  c. variants.
-            $aVariantInfo = lovd_getVariantInfo(
-                str_replace('n.', 'c.', $aVariant['VariantOnTranscript/DNA']),
-                $aTranscripts[$aVariant['id_ncbi']]
-            );
-            if ($aVariantInfo) {
-                list(
-                    $aVariant['position_c_start'],
-                    $aVariant['position_c_start_intron'],
-                    $aVariant['position_c_end'],
-                    $aVariant['position_c_end_intron']
-                ) = array(
-                    $aVariantInfo['position_start'],
-                    (empty($aVariantInfo['position_start_intron'])? 0 : $aVariantInfo['position_start_intron']),
-                    $aVariantInfo['position_end'],
-                    (empty($aVariantInfo['position_end_intron'])? 0 : $aVariantInfo['position_end_intron']),
-                );
+            // If everything failed, choose a default.
+            if (!$aVariant['VariantOnTranscript/DNA']) {
+                $aVariant['VariantOnTranscript/DNA'] = 'c.?';
             }
+
+            // For the position fields, VEP can generate data (CDS_position), but it's hardly usable. Calculate ourselves.
+            $aVariantInfo = lovd_getVariantInfo($aVariant['VariantOnTranscript/DNA'], $aTranscripts[$aVariant['id_ncbi']]);
+            list(
+                $aVariant['position_c_start'],
+                $aVariant['position_c_start_intron'],
+                $aVariant['position_c_end'],
+                $aVariant['position_c_end_intron'],
+            ) = array(
+                ($aVariantInfo['position_start'] ?? 0),
+                ($aVariantInfo['position_start_intron'] ?? 0),
+                ($aVariantInfo['position_end'] ?? 0),
+                ($aVariantInfo['position_end_intron'] ?? 0),
+            );
 
             // VariantOnTranscript/Position is an integer column; so just copy the c_start.
             $aVariant['VariantOnTranscript/Position'] = $aVariant['position_c_start'];
-            $aVariant['VariantOnTranscript/Distance_to_splice_site'] = ((bool) $aVariant['position_c_start_intron'] == (bool) $aVariant['position_c_end_intron']? min(abs($aVariant['position_c_start_intron']), abs($aVariant['position_c_end_intron'])) : ($aVariant['position_c_start_intron']? abs($aVariant['position_c_start_intron']) : abs($aVariant['position_c_end_intron'])));
+            // Calculate the "DistanceToSplice" ourselves. That's easy to do, so we won't have to rely on it.
+            $aVariant['VariantOnTranscript/Distance_to_splice_site'] =
+                ((bool) $aVariant['position_c_start_intron'] == (bool) $aVariant['position_c_end_intron']?
+                    min(abs($aVariant['position_c_start_intron']), abs($aVariant['position_c_end_intron'])) :
+                    ($aVariant['position_c_start_intron']?
+                        abs($aVariant['position_c_start_intron']) : abs($aVariant['position_c_end_intron'])));
 
             // VariantOnTranscript/RNA && VariantOnTranscript/Protein.
             // Try to do as much as possible by ourselves.
