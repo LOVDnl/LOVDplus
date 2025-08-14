@@ -809,8 +809,6 @@ foreach ($aFiles as $sFileID) {
         // $aVariant['id_ncbi']                // How we received the transcript from VEP.
         // $aTranscripts[$aVariant['id_ncbi']] // The rest of the transcript information, from the database. Can be set to false.
 
-        // Store transcript ID without version, we'll use it plenty of times.
-        $aLine['transcript_noversion'] = strstr($aVariant['id_ncbi'], '.', true);
         // Now check, if we managed to get the transcript ID. If not, then we'll have to continue without it.
         if (empty($aVariant['id_ncbi']) || $_ADAPTER->ignoreTranscript($aVariant['id_ncbi']) || empty($aTranscripts[$aVariant['id_ncbi']])) {
             // When the transcript still doesn't exist, or it evaluates to false (we don't have it, we can't get it), then skip it.
@@ -994,6 +992,8 @@ foreach ($aFiles as $sFileID) {
                 $bDropTranscriptData = $_INSTANCE_CONFIG['conversion']['annotation_error_drops_line'];
             }
 
+            // Don't put this in the output file.
+            unset($aVariant['VariantOnTranscript/DNA/VEP']);
         }
 
         // DNA fields and protein field can be super long with long inserts.
@@ -1004,8 +1004,6 @@ foreach ($aFiles as $sFileID) {
                 $aVariant[$sField] = str_replace('ins' . $aRegs[1], 'insN[' . strlen($aRegs[1]) . ']', $aVariant[$sField]);
             }
         }
-        // Don't put this in the output file.
-        unset($aVariant['VariantOnTranscript/DNA/VEP']);
 
         // For the protein field, protein descriptions >100 characters can be shortened.
         // FIXME: Better make this dependent on the field length; there are LOVDs out there that allow more data, and they should get it.
@@ -1034,6 +1032,9 @@ foreach ($aFiles as $sFileID) {
         // Build the key.
         $sKey = $aVariant['chromosome'] . ':' . $aVariant['position'] . $aVariant['ref'] . '>' . $aVariant['alt'];
 
+        // Fix the VOG's DNA field, we still kept the NC in there.
+        $aVariant['VariantOnGenome/DNA'] = substr(strstr($aVariant['VariantOnGenome/DNA'], ':'), 1);
+
         if (!isset($aData[$sKey])) {
             // Create key, put in VOG data.
             $aVOG = array();
@@ -1048,7 +1049,8 @@ foreach ($aFiles as $sFileID) {
         // Perform any postprocessing, for instance based all this VOG's VOTs.
         $_ADAPTER->postValueAssignmentUpdate($sKey, $aVariant, $aData);
 
-        // Now, store VOT data. Because I had received test files with repeated lines, and allowing repeated lines will break import, also here we will check for the key.
+        // Now, store VOT data. Because I had received test files with repeated lines,
+        //  and allowing repeated lines will break import, also here we will check for the key.
         // Also check for a set transcript ID, because it can be empty (transcript could not be created).
         if (!$bDropTranscriptData && !isset($aData[$sKey][$aVariant['transcriptid']]) && $aVariant['transcriptid']) {
             $aVOT = array();
