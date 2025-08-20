@@ -77,7 +77,7 @@ Then, for any user with write access to the data directory insert the following
 cronjob to facilitate automatic conversion of meta and data files into LOVD+
 import files:
 
-*/15 * * * * php -f /path_to_LOVD/scripts/convert_and_merge_data_files.php
+*/15 * * * * php -f /path_to_LOVD+/scripts/convert_and_merge_data_files.php
 
 Make sure the directory in which `php` resides, is in the PATH environment
 variable. Feel free to change the time settings, but note that running the
@@ -89,6 +89,13 @@ the number of genes and transcripts from the data files that are not yet
 imported into LOVD+. The conversion of data files does not interfere with normal
 functionality of LOVD+, and as such can run 24 hours a day, also whenever LOVD+
 is in use.
+
+The data conversion makes use of the LOVD HGVS syntax checker library. This
+library contains a gene cache, that should be updated regularly. There is an
+update script available that will update the gene cache if it's a week old or
+older. You can automate running this updater by using a crontab as well, e.g.:
+
+45 5 * * 0 php -f /path_to_LOVD+/libs/HGVS-syntax-checker/cache/update.php
 
 Converted files can be scheduled for automatic import by the scheduling feature
 available from the Setup area. To facilitate automatic import of the scheduled
