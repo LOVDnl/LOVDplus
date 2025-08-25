@@ -220,10 +220,10 @@ class LOVD_MghaCpipeLymphomaDataConverter extends LOVD_MghaDataConverter {
             'ALT' => 'alt',
             'vog_alt' => 'VariantOnGenome/Alt',
             'Existing_variation' => 'existingvariation',
-            'Feature' => 'transcriptid',
-            // VariantOnGenome/DNA - constructed by the lovd_getVariantDescription function later on.
+            'Feature' => 'id_ncbi',
+            // VariantOnGenome/DNA - constructed by the HGVS syntax checker later on.
             'CHROM' => 'chromosome',
-            'POS' => 'position', // lovd_getVariantDescription() needs this.
+            'POS' => 'position', // We need this to construct the DNA field.
             'vog_pos' => 'VariantOnGenome/Position',
             'ID' => 'VariantOnGenome/dbSNP',
             'QUAL' => 'VariantOnGenome/Sequencing/Quality',

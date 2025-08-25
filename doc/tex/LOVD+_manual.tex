@@ -7,7 +7,7 @@
 % To convert the manual to an html file use: pdf2htmlEX --zoom 1.3 --embed-css 2 manual.pdf
 
 %%%%% SETTINGS FOR THE TITLE PAGE %%%%%
-\setLOVDversion{3.0-29}
+\setLOVDversion{3.0-30}
 \title{LOVD\textsuperscript{+} user manual \\
   \vskip 0.2cm Whole exome sequencing analysis \\
   \vskip 0.2cm Build \LOVDversion}
@@ -522,13 +522,20 @@ To automate the file conversion on Linux servers,
 To run it just once, open the \texttt{scripts} folder from your browser and run the
  \texttt{convert\_and\_merge\_data\_files.php} script.
 
+The data conversion makes use of the LOVD HGVS syntax checker library.
+This library contains a gene cache, that should be updated regularly.
+There is an update script available that will update the gene cache if it's a week old or older.
+You can automate running this updater by using a crontab as well.
+
 \begin{figure}[ht]
   \begin{shaded}
 \begin{verbatim}
 */15 * * * * php -f /path_to_LOVD+/scripts/convert_and_merge_data_files.php
+  45 5 * * 0 php -f /path_to_LOVD+/libs/HGVS-syntax-checker/cache/update.php
 \end{verbatim}
   \caption{%
     Example cronjob to facilitate automatic conversion of meta and data files into LOVD import files.
+    The second cronjob is to make sure that the gene cache gets refreshed every week.
     Make sure the directory in which `php' resides, is in the PATH environment variable.
     Also, change ``\texttt{path\_to\_LOVD+}'' to the full path of your LOVD\textsuperscript{+} installation.
     Feel free to change the time settings, but note that running the conversion script in parallel

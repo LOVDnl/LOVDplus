@@ -4,10 +4,10 @@
  * LEIDEN OPEN VARIATION DATABASE (LOVD)
  *
  * Created     : 2016-09-02
- * Modified    : 2022-12-09
- * For LOVD    : 3.0-29
+ * Modified    : 2025-07-15
+ * For LOVD    : 3.0-30
  *
- * Copyright   : 2004-2022 Leiden University Medical Center; http://www.LUMC.nl/
+ * Copyright   : 2004-2025 Leiden University Medical Center; http://www.LUMC.nl/
  * Programmers : Juny Kesumadewi <juny.kesumadewi@unimelb.edu.au>
  *               Ivo F.A.C. Fokkema <I.F.A.C.Fokkema@LUMC.nl>
  *
@@ -569,14 +569,14 @@ class LOVD_DefaultDataConverter {
 
         $aColumnMappings = array(
             '#CHROM' => 'chromosome',
-            'POS' => 'position', // lovd_getVariantDescription() needs this.
-            'REF' => 'ref',      // lovd_getVariantDescription() needs this.
-            'ALT' => 'alt',      // lovd_getVariantDescription() needs this.
+            'POS' => 'position', // We need this to construct the DNA field.
+            'REF' => 'ref',      // We need this to construct the DNA field.
+            'ALT' => 'alt',      // We need this to construct the DNA field.
             'QUAL' => 'VariantOnGenome/Sequencing/Quality',
             'FILTER' => 'VariantOnGenome/Sequencing/Filter',
             'Consequence' => 'VariantOnTranscript/GVS/Function', // Will be translated.
             'SYMBOL' => 'symbol',
-            'Feature' => 'transcriptid',
+            'Feature' => 'id_ncbi',
             'HGVSc' => 'VariantOnTranscript/DNA',
             'HGVSp' => 'VariantOnTranscript/Protein',
             'Existing_variation' => 'existing_variation', // This is where we'll find the dbSNP data.

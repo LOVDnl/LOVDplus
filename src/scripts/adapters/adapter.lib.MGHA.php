@@ -308,10 +308,10 @@ class LOVD_MghaDataConverter extends LOVD_DefaultDataConverter {
             'ALT' => 'alt',
             'vog_alt' => 'VariantOnGenome/Alt',
             'Existing_variation' => 'existing_variation',
-            'Feature' => 'transcriptid',
-            // VariantOnGenome/DNA - constructed by the lovd_getVariantDescription function later on.
+            'Feature' => 'id_ncbi',
+            // VariantOnGenome/DNA - constructed by the HGVS syntax checker later on.
             'CHROM' => 'chromosome',
-            'POS' => 'position', // lovd_getVariantDescription() needs this.
+            'POS' => 'position', // We need this to construct the DNA field.
             'vog_pos' => 'VariantOnGenome/Position',
             'ID' => 'VariantOnGenome/dbSNP',
             'QUAL' => 'VariantOnGenome/Sequencing/Quality',
@@ -900,7 +900,7 @@ class LOVD_MghaDataConverter extends LOVD_DefaultDataConverter {
 
 
 
-    function postValueAssignmentUpdate($sKey, &$aVariant, &$aData)
+    function postValueAssignmentUpdate ($sKey, &$aVariant, &$aData)
     {
         // Update $aData if there is any aggregated data that we need to update after each input line is read.
         // 0 index in  $aData[$sKey] is where we store the VOG data
